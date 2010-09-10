@@ -93,7 +93,7 @@ __device__ void computeBSplinePoint(float4* thetai, float w, float* array)
     // copy coefficients from temporary to permanent storage
 
     for (int i = 1; i <= AMOEBA_PME_ORDER; i++)
-        thetai[i] = make_float4(ARRAY(AMOEBA_PME_ORDER,i), ARRAY(AMOEBA_PME_ORDER-1,i), ARRAY(AMOEBA_PME_ORDER-2,i), ARRAY(AMOEBA_PME_ORDER-3,i));
+        thetai[i-1] = make_float4(ARRAY(AMOEBA_PME_ORDER,i), ARRAY(AMOEBA_PME_ORDER-1,i), ARRAY(AMOEBA_PME_ORDER-2,i), ARRAY(AMOEBA_PME_ORDER-3,i));
 }
 
 /**
@@ -197,15 +197,15 @@ void kGridSpreadFixedMultipoles_kernel()
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
                     float atomCharge = cSim.pPosq[atomIndex].w;
-                    float atomDipoleX = cAmoebaSim.pLabFrameDipole[atomIndex+3];
-                    float atomDipoleY = cAmoebaSim.pLabFrameDipole[atomIndex+3+1];
-                    float atomDipoleZ = cAmoebaSim.pLabFrameDipole[atomIndex+3+2];
-                    float atomQuadrupoleXX = cAmoebaSim.pLabFrameQuadrupole[atomIndex+9];
-                    float atomQuadrupoleXY = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+1];
-                    float atomQuadrupoleXZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+2];
-                    float atomQuadrupoleYY = cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+4];
-                    float atomQuadrupoleYZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+5];
-                    float atomQuadrupoleZZ = cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+8];
+                    float atomDipoleX = cAmoebaSim.pLabFrameDipole[atomIndex*3];
+                    float atomDipoleY = cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
+                    float atomDipoleZ = cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
+                    float atomQuadrupoleXX = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
+                    float atomQuadrupoleXY = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
+                    float atomQuadrupoleXZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
+                    float atomQuadrupoleYY = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
+                    float atomQuadrupoleYZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
+                    float atomQuadrupoleZZ = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
                     float4 t = cAmoebaSim.pThetai1[atomIndex+ix*cSim.atoms];
                     float4 u = cAmoebaSim.pThetai2[atomIndex+iy*cSim.atoms];
                     float4 v = cAmoebaSim.pThetai3[atomIndex+iz*cSim.atoms];
@@ -227,15 +227,15 @@ void kGridSpreadFixedMultipoles_kernel()
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
                         float atomCharge = cSim.pPosq[atomIndex].w;
-                        float atomDipoleX = cAmoebaSim.pLabFrameDipole[atomIndex+3];
-                        float atomDipoleY = cAmoebaSim.pLabFrameDipole[atomIndex+3+1];
-                        float atomDipoleZ = cAmoebaSim.pLabFrameDipole[atomIndex+3+2];
-                        float atomQuadrupoleXX = cAmoebaSim.pLabFrameQuadrupole[atomIndex+9];
-                        float atomQuadrupoleXY = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+1];
-                        float atomQuadrupoleXZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+2];
-                        float atomQuadrupoleYY = cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+4];
-                        float atomQuadrupoleYZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+5];
-                        float atomQuadrupoleZZ = cAmoebaSim.pLabFrameQuadrupole[atomIndex+9+8];
+                        float atomDipoleX = cAmoebaSim.pLabFrameDipole[atomIndex*3];
+                        float atomDipoleY = cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
+                        float atomDipoleZ = cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
+                        float atomQuadrupoleXX = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
+                        float atomQuadrupoleXY = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
+                        float atomQuadrupoleXZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
+                        float atomQuadrupoleYY = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
+                        float atomQuadrupoleYZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
+                        float atomQuadrupoleZZ = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
                         float4 t = cAmoebaSim.pThetai1[atomIndex+ix*cSim.atoms];
                         float4 u = cAmoebaSim.pThetai2[atomIndex+iy*cSim.atoms];
                         float4 v = cAmoebaSim.pThetai3[atomIndex+iz*cSim.atoms];
@@ -290,12 +290,12 @@ void kGridSpreadInducedDipoles_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                    float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex+3];
-                    float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex+3+1];
-                    float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex+3+2];
-                    float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex+3];
-                    float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex+3+1];
-                    float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex+3+2];
+                    float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex*3];
+                    float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex*3+1];
+                    float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex*3+2];
+                    float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex*3];
+                    float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex*3+1];
+                    float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex*3+2];
                     float4 t = cAmoebaSim.pThetai1[atomIndex+ix*cSim.atoms];
                     float4 u = cAmoebaSim.pThetai2[atomIndex+iy*cSim.atoms];
                     float4 v = cAmoebaSim.pThetai3[atomIndex+iz*cSim.atoms];
@@ -318,12 +318,12 @@ void kGridSpreadInducedDipoles_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                        float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex+3];
-                        float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex+3+1];
-                        float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex+3+2];
-                        float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex+3];
-                        float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex+3+1];
-                        float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex+3+2];
+                        float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex*3];
+                        float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex*3+1];
+                        float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex*3+2];
+                        float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex*3];
+                        float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex*3+1];
+                        float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex*3+2];
                         float4 t = cAmoebaSim.pThetai1[atomIndex+ix*cSim.atoms];
                         float4 u = cAmoebaSim.pThetai2[atomIndex+iy*cSim.atoms];
                         float4 v = cAmoebaSim.pThetai3[atomIndex+iz*cSim.atoms];
@@ -720,15 +720,15 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
         // Compute the force and energy.
 
         multipole[0] = cSim.pPosq[i].w;
-        multipole[1] = cAmoebaSim.pLabFrameDipole[i+3];
-        multipole[2] = cAmoebaSim.pLabFrameDipole[i+3+1];
-        multipole[3] = cAmoebaSim.pLabFrameDipole[i+3+2];
-        multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i+9];
-        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+1];
-        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+2];
-        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i+9+4];
-        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+5];
-        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i+9+8];
+        multipole[1] = cAmoebaSim.pLabFrameDipole[i*3];
+        multipole[2] = cAmoebaSim.pLabFrameDipole[i*3+1];
+        multipole[3] = cAmoebaSim.pLabFrameDipole[i*3+2];
+        multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i*9];
+        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+1];
+        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
+        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
+        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
+        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         for (int k = 0; k < 10; k++) {
             energy += multipole[k]*cAmoebaSim.pPhi[20*i+k];
@@ -755,7 +755,7 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
                       + 2.0f*(multipole[4]-multipole[6])*cAmoebaSim.pPhi[9]
                       + multipole[7]*cAmoebaSim.pPhi[9] + multipole[8]*cAmoebaSim.pPhi[6]
                       - multipole[8]*cAmoebaSim.pPhi[4] - multipole[9]*cAmoebaSim.pPhi[7];
-        cAmoebaSim.pTorque[3*i+1] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
+        cAmoebaSim.pTorque[3*i+2] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
                       + 2.0f*(multipole[5]-multipole[4])*cAmoebaSim.pPhi[7]
                       + multipole[7]*cAmoebaSim.pPhi[4] + multipole[9]*cAmoebaSim.pPhi[8]
                       - multipole[7]*cAmoebaSim.pPhi[5] - multipole[8]*cAmoebaSim.pPhi[9];
@@ -784,21 +784,21 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         // Compute the force and energy.
 
         multipole[0] = cSim.pPosq[i].w;
-        multipole[1] = cAmoebaSim.pLabFrameDipole[i+3];
-        multipole[2] = cAmoebaSim.pLabFrameDipole[i+3+1];
-        multipole[3] = cAmoebaSim.pLabFrameDipole[i+3+2];
-        multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i+9];
-        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+1];
-        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+2];
-        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i+9+4];
-        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+5];
-        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i+9+8];
-        inducedDipole[0] = cAmoebaSim.pInducedDipole[i+3];
-        inducedDipole[1] = cAmoebaSim.pInducedDipole[i+3+1];
-        inducedDipole[2] = cAmoebaSim.pInducedDipole[i+3+2];
-        inducedDipolePolar[0] = cAmoebaSim.pInducedDipolePolar[i+3];
-        inducedDipolePolar[1] = cAmoebaSim.pInducedDipolePolar[i+3+1];
-        inducedDipolePolar[2] = cAmoebaSim.pInducedDipolePolar[i+3+2];
+        multipole[1] = cAmoebaSim.pLabFrameDipole[i*3];
+        multipole[2] = cAmoebaSim.pLabFrameDipole[i*3+1];
+        multipole[3] = cAmoebaSim.pLabFrameDipole[i*3+2];
+        multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i*9];
+        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+1];
+        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
+        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
+        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
+        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
+        inducedDipole[0] = cAmoebaSim.pInducedDipole[i*3];
+        inducedDipole[1] = cAmoebaSim.pInducedDipole[i*3+1];
+        inducedDipole[2] = cAmoebaSim.pInducedDipole[i*3+2];
+        inducedDipolePolar[0] = cAmoebaSim.pInducedDipolePolar[i*3];
+        inducedDipolePolar[1] = cAmoebaSim.pInducedDipolePolar[i*3+1];
+        inducedDipolePolar[2] = cAmoebaSim.pInducedDipolePolar[i*3+2];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
@@ -833,7 +833,7 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
                       + 2.0f*(multipole[4]-multipole[6])*cAmoebaSim.pPhi[9]
                       + multipole[7]*cAmoebaSim.pPhi[9] + multipole[8]*cAmoebaSim.pPhi[6]
                       - multipole[8]*cAmoebaSim.pPhi[4] - multipole[9]*cAmoebaSim.pPhi[7];
-        cAmoebaSim.pTorque[3*i+1] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
+        cAmoebaSim.pTorque[3*i+2] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
                       + 2.0f*(multipole[5]-multipole[4])*cAmoebaSim.pPhi[7]
                       + multipole[7]*cAmoebaSim.pPhi[4] + multipole[9]*cAmoebaSim.pPhi[8]
                       - multipole[7]*cAmoebaSim.pPhi[5] - multipole[8]*cAmoebaSim.pPhi[9];

@@ -2226,6 +2226,8 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
     amoebaGpu->amoebaSim.pPhip = amoebaGpu->psPhip->_pDevData;
     amoebaGpu->psPhidp = new CUDAStream<float>(20*gpu->natoms, 1, "phidp");
     amoebaGpu->amoebaSim.pPhidp = amoebaGpu->psPhidp->_pDevData;
+    gpu->psPmeAtomRange = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
+    gpu->sim.pPmeAtomRange = gpu->psPmeAtomRange->_pDevData;
     gpu->psPmeAtomGridIndex = new CUDAStream<int2>(gpu->natoms, 1, "PmeAtomGridIndex");
     gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
     gpu->psPmeBsplineTheta = new CUDAStream<float4>(1, 1, "PmeBsplineTheta"); // Not actually uesd
@@ -2305,6 +2307,7 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
             }
             bsmod[i-1] = bsmod[i-1]*zeta*zeta;
         }
+        gpu->psPmeBsplineModuli[dim]->Upload();
     }
 }
 
