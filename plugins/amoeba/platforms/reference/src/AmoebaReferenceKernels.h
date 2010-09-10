@@ -248,35 +248,44 @@ private:
     std::vector<RealOpenMM> kParameters;
     System& system;
 };
-// 
-// /**
-//  * This kernel is invoked by AmoebaOutOfPlaneBendForce to calculate the forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
-// public:
-//     ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     int numOutOfPlaneBends;
-//     System& system;
-// };
-// 
+
+/**
+ * This kernel is invoked by AmoebaOutOfPlaneBendForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
+public:
+    ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numOutOfPlaneBends;
+    std::vector<int>   particle1;
+    std::vector<int>   particle2;
+    std::vector<int>   particle3;
+    std::vector<int>   particle4;
+    std::vector<RealOpenMM> kParameters;
+    RealOpenMM globalOutOfPlaneBendAngleCubic;
+    RealOpenMM globalOutOfPlaneBendAngleQuartic;
+    RealOpenMM globalOutOfPlaneBendAnglePentic;
+    RealOpenMM globalOutOfPlaneBendAngleSextic;
+    System& system;
+};
+
 // /**
 //  * This kernel is invoked by AmoebaTorsionTorsionForce to calculate the forces acting on the system and the energy of the system.
 //  */

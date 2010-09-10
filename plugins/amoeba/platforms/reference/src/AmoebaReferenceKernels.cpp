@@ -31,6 +31,7 @@
 #include "AmoebaReferenceTorsionForce.h"
 #include "AmoebaReferencePiTorsionForce.h"
 #include "AmoebaReferenceStretchBendForce.h"
+#include "AmoebaReferenceOutOfPlaneBendForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
@@ -374,48 +375,58 @@ double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, 
     return static_cast<double>(energy);
 }
 
-//ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system) :
-//          CalcAmoebaOutOfPlaneBendForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaOutOfPlaneBendForceKernel::~ReferenceCalcAmoebaOutOfPlaneBendForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, const AmoebaOutOfPlaneBendForce& force) {
-//
-//    data.setAmoebaLocalForcesKernel( this );
-//    numOutOfPlaneBends                     = force.getNumOutOfPlaneBends();
-//
-//    std::vector<int>   particle1(numOutOfPlaneBends);
-//    std::vector<int>   particle2(numOutOfPlaneBends);
-//    std::vector<int>   particle3(numOutOfPlaneBends);
-//    std::vector<int>   particle4(numOutOfPlaneBends);
-//    std::vector<RealOpenMM> kParameters(numOutOfPlaneBends);
-//
-//    for (int i = 0; i < numOutOfPlaneBends; i++) {
-//
-//        double k;
-//
-//        force.getOutOfPlaneBendParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], k);
-//        kParameters[i] = static_cast<RealOpenMM>(k);
-//    }
-//    gpuSetAmoebaOutOfPlaneBendParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, kParameters,
-//                                         static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendCubic()),
-//                                         static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendQuartic()),
-//                                         static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendPentic()),
-//                                         static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendSextic() ) );
-//
-//}
-//
-//double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if( data.getAmoebaLocalForcesKernel() == this ){
-//        computeAmoebaLocalForces( data );
-//    }
-//    return 0.0;
-//}
-//
+ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system) :
+          CalcAmoebaOutOfPlaneBendForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaOutOfPlaneBendForceKernel::~ReferenceCalcAmoebaOutOfPlaneBendForceKernel() {
+}
+
+void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, const AmoebaOutOfPlaneBendForce& force) {
+
+    numOutOfPlaneBends = force.getNumOutOfPlaneBends();
+    for (int ii = 0; ii < numOutOfPlaneBends; ii++) {
+
+        int particle1Index, particle2Index, particle3Index, particle4Index;
+        double k;
+
+        force.getOutOfPlaneBendParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index, k);
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        particle3.push_back( particle3Index ); 
+        particle4.push_back( particle4Index ); 
+        kParameters.push_back( static_cast<RealOpenMM>(k) );
+    }
+    globalOutOfPlaneBendAngleCubic      = static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendCubic());
+    globalOutOfPlaneBendAngleQuartic    = static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendQuartic());
+    globalOutOfPlaneBendAnglePentic     = static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendPentic());
+    globalOutOfPlaneBendAngleSextic     = static_cast<RealOpenMM>( force.getAmoebaGlobalOutOfPlaneBendSextic());
+
+}
+
+double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    RealOpenMM energy      = 0.0; 
+    for (unsigned int ii = 0; ii < numOutOfPlaneBends; ii++) {
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+        RealOpenMM angleK       = kParameters[ii];
+        RealOpenMM* forces[4];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+        energy                 += AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( 
+                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                       angleK, globalOutOfPlaneBendAngleCubic, globalOutOfPlaneBendAngleQuartic,
+                                       globalOutOfPlaneBendAnglePentic, globalOutOfPlaneBendAngleSextic, forces );
+    }
+    return static_cast<double>(energy);
+}
+
 //ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, System& system) :
 //                CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {
 //    data.incrementKernelCount();
