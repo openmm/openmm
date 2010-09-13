@@ -2008,6 +2008,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
         multipoleForce->setNonbondedMethod( AmoebaMultipoleForce::NoCutoff );
     }
     multipoleForce->setCutoffDistance( cutoffDistance );
+    multipoleForce->setAEwald( aewald );
     system.setDefaultPeriodicBoxVectors( Vec3(box[0], 0.0, 0.0), Vec3(0.0, box[1], 0.0), Vec3(0.0, 0.0, box[2]) );
     if( log ){
         (void) fprintf( log, "%s number of MultipoleParameter terms=%d usePme=%d aewald=%15.7e cutoffDistance=%12.4f\n",
@@ -2111,6 +2112,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
         double polarityConversion      = AngstromToNm*AngstromToNm*AngstromToNm;
         double dampingFactorConversion = sqrt( AngstromToNm );
       
+        multipoleForce->setAEwald(                multipoleForce->getAEwald()/AngstromToNm );
         multipoleForce->setCutoffDistance(        multipoleForce->getCutoffDistance()*AngstromToNm );
         multipoleForce->setScalingDistanceCutoff( multipoleForce->getScalingDistanceCutoff()*AngstromToNm );
 
@@ -2165,8 +2167,8 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
                         (useOpenMMUnits ? "OpenMM" : "Amoeba") );
 
         std::string nonbondedMethod = multipoleForce->getNonbondedMethod( ) == AmoebaMultipoleForce::PME ? "PME" : "NoCutoff";
-        (void) fprintf( log, "NonbondedMethod=%s cutoff=%15.7e.\n", nonbondedMethod.c_str(),
-                         multipoleForce->getCutoffDistance() );
+        (void) fprintf( log, "NonbondedMethod=%s aEwald=%15.7e cutoff=%15.7e.\n", nonbondedMethod.c_str(),
+                        multipoleForce->getAEwald(), multipoleForce->getCutoffDistance() );
 
         Vec3 a,b,c;
         system.getDefaultPeriodicBoxVectors( a, b, c );

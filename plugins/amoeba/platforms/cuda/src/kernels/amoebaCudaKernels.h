@@ -106,9 +106,9 @@ extern void SetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu );
 
-extern void SetCalculateAmoebaRealSpaceEwaldSim( amoebaGpuContext amoebaGpu );
-extern void GetCalculateAmoebaRealSpaceEwaldSim( amoebaGpuContext amoebaGpu );
-extern void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu );
+extern void SetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpuContext amoebaGpu );
+extern void GetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpuContext amoebaGpu );
+extern void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu );
 
 extern void SetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);

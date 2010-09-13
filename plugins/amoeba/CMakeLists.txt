@@ -38,8 +38,7 @@ ENDIF(LOG)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-#SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi platforms/reference)
-SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi )
+SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi platforms/reference)
 
 # Collect up information about the version of the OpenMM library we're building
 # and make it available to the code so it can be built into the binaries.
@@ -103,8 +102,10 @@ FOREACH(subdir ${OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS})
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
 
-#INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src)
-#INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src/SimTKReference)
+INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src)
+INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src/SimTKReference)
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src)
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src/SimTKReference)
 
 # ----------------------------------------------------------------------------
 IF(LOG)
@@ -158,7 +159,7 @@ IF(OPENMM_BUILD_STATIC_LIB)
   TARGET_LINK_LIBRARIES( ${STATIC_AMOEBA_TARGET} ${STATIC_TARGET} )
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
-#ADD_SUBDIRECTORY(platforms/reference/tests)
+ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 IF(CUDA_FOUND)

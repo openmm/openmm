@@ -322,7 +322,7 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
    --------------------------------------------------------------------------------------- */
 
-void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
+static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 {
   
    // ---------------------------------------------------------------------------------------
@@ -486,4 +486,10 @@ void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
 
          }
+}
+
+void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
+{
+    cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
+    kCalculateAmoebaPMEFixedMultipoleField( amoebaGpu );
 }

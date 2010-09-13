@@ -56,6 +56,14 @@ void AmoebaMultipoleForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
+double AmoebaMultipoleForce::getAEwald() const {		 
+    return aewald;		 
+}		 
+		 
+void AmoebaMultipoleForce::setAEwald(double inputAewald ) {			 
+    aewald = inputAewald;		 
+}		 
+ 
 AmoebaMultipoleForce::MutualInducedIterationMethod AmoebaMultipoleForce::getMutualInducedIterationMethod( void ) const {
     return mutualInducedIterationMethod;
 }

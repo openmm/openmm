@@ -34,15 +34,8 @@ __launch_bounds__(128, 1)
 #else
 __launch_bounds__(64, 1)
 #endif
-void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
-                            unsigned int* workUnit,
-                            float4* atomCoord,
-                            float* labFrameDipole,
-                            float* labFrameQuadrupole,
-                            float* inducedDipole,
-                            float* inducedDipolePolar,
-                            float* outputForce,
-                            float* outputTorque
+void METHOD_NAME(kCalculateAmoebaPmeDirectElectrostatic, Forces_kernel)(
+                            unsigned int* workUnit, float* outputForce, float* outputTorque
 
 #ifdef AMOEBA_DEBUG
                            , float4* debugArray, unsigned int targetAtom
@@ -50,10 +43,11 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
 ){
 
 #ifdef AMOEBA_DEBUG
+    int pullIndexMax = 12;
     float4 pullBack[20];
 #endif
 
-    extern __shared__ RealSpaceEwaldParticle sA[];
+    extern __shared__ PmeDirectElectrostaticParticle sA[];
 
     unsigned int totalWarps      = gridDim.x*blockDim.x/GRID;
     unsigned int warp            = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
@@ -80,12 +74,10 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
         unsigned int tbx              = threadIdx.x - tgx;
         unsigned int tj               = tgx;
 
-        RealSpaceEwaldParticle* psA    = &sA[tbx];
+        PmeDirectElectrostaticParticle* psA    = &sA[tbx];
         unsigned int atomI            = x + tgx;
-        RealSpaceEwaldParticle localParticle;
-        loadRealSpaceEwaldShared(&localParticle, atomI,
-                                atomCoord, labFrameDipole, labFrameQuadrupole,
-                                inducedDipole, inducedDipolePolar, cAmoebaSim.pDampingFactorAndThole );
+        PmeDirectElectrostaticParticle localParticle;
+        loadPmeDirectElectrostaticShared(&localParticle, atomI );
 
         localParticle.force[0]                   = 0.0f;
         localParticle.force[1]                   = 0.0f;
@@ -105,9 +97,7 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
 
             // load shared data
 
-           loadRealSpaceEwaldShared( &(sA[threadIdx.x]), atomI,
-                                    atomCoord, labFrameDipole, labFrameQuadrupole,
-                                    inducedDipole, inducedDipolePolar, cAmoebaSim.pDampingFactorAndThole );
+            loadPmeDirectElectrostaticShared( &(sA[threadIdx.x]), atomI );
 
             if (!bExclusionFlag)
             {
@@ -122,9 +112,8 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
                     float torque[2][3];
 
                     float energy;
-                    calculateRealSpaceEwaldPairIxn_kernel( localParticle,                              psA[j],
-                                                          cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
-                                                          force, torque, &energy
+                    calculatePmeDirectElectrostaticPairIxn_kernel( localParticle, psA[j],
+                                                                   scalingFactors, force, torque, &energy
 #ifdef AMOEBA_DEBUG
 , pullBack
 #endif
@@ -142,7 +131,7 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
                     localParticle.torque[1]           += mask ? torque[0][1] : 0.0f;
                     localParticle.torque[2]           += mask ? torque[0][2] : 0.0f;
  
-                    totalEnergy            += mask ? 0.5*energy   : 0.0f;
+                    totalEnergy                       += mask ? 0.5*energy   : 0.0f;
                 }
 
             }
@@ -171,9 +160,8 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
                     // force
 
                     float energy;
-                    calculateRealSpaceEwaldPairIxn_kernel( localParticle,                              psA[j],
-                                                          cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
-                                                          force, torque, &energy
+                    calculatePmeDirectElectrostaticPairIxn_kernel( localParticle,   psA[j],
+                                                                   scalingFactors, force, torque, &energy
 #ifdef AMOEBA_DEBUG
 , pullBack
 #endif
@@ -194,61 +182,57 @@ void METHOD_NAME(kCalculateAmoebaCudaRealSpaceEwald, Forces_kernel)(
                     localParticle.torque[1]           += mask ? torque[0][1] : 0.0f;
                     localParticle.torque[2]           += mask ? torque[0][2] : 0.0f;
 
-                    totalEnergy            += mask ? 0.5*energy   : 0.0f;
+                    totalEnergy                       += mask ? 0.5*energy   : 0.0f;
 
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom ){
-            unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
+    unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
+    float blockId                      = 1.0f;
 
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) atomJ;
-            debugArray[index].z                = 1.0f;
-            debugArray[index].w                = (float) y;
-/*
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                = mask ? force[0]     : 0.0f;
-            debugArray[index].y                = mask ? force[1]     : 0.0f;
-            debugArray[index].z                = mask ? force[2]     : 0.0f;
+    debugArray[index].x                = (float) atomI;
+    debugArray[index].y                = (float) atomJ;
+    debugArray[index].z                = (float) y;
+    debugArray[index].w                = blockId;
+
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = mask ? force[0]     : 0.0f;
+    debugArray[index].y                = mask ? force[1]     : 0.0f;
+    debugArray[index].z                = mask ? force[2]     : 0.0f;
+    debugArray[index].w                = blockId;
 
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                = mask ? torque[0][0] : 0.0f;
-            debugArray[index].y                = mask ? torque[0][1] : 0.0f;
-            debugArray[index].z                = mask ? torque[0][2] : 0.0f;
-*/
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = mask ? torque[0][0] : 0.0f;
+    debugArray[index].y                = mask ? torque[0][1] : 0.0f;
+    debugArray[index].z                = mask ? torque[0][2] : 0.0f;
+    debugArray[index].w                = blockId;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
-            int pullIndex                      = 0;
-            debugArray[index].x                = pullBack[pullIndex].x;
-            debugArray[index].y                = pullBack[pullIndex].y;
-            debugArray[index].z                = pullBack[pullIndex].z;
-            debugArray[index].w                = pullBack[pullIndex].w;
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = mask ? torque[0][0] : 0.0f;
+    debugArray[index].y                = mask ? torque[0][1] : 0.0f;
+    debugArray[index].z                = mask ? torque[0][2] : 0.0f;
+    debugArray[index].w                = blockId;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
-            pullIndex++;
-            debugArray[index].x                = pullBack[pullIndex].x;
-            debugArray[index].y                = pullBack[pullIndex].y;
-            debugArray[index].z                = pullBack[pullIndex].z;
-            debugArray[index].w                = pullBack[pullIndex].w;
-
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
-            pullIndex++;
-            debugArray[index].x                = pullBack[pullIndex].x;
-            debugArray[index].y                = pullBack[pullIndex].y;
-            debugArray[index].z                = pullBack[pullIndex].z;
-            debugArray[index].w                = pullBack[pullIndex].w;
-
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
-            pullIndex++;
-            debugArray[index].x                = pullBack[pullIndex].x;
-            debugArray[index].y                = pullBack[pullIndex].y;
-            debugArray[index].z                = pullBack[pullIndex].z;
-            debugArray[index].w                = pullBack[pullIndex].w;
-
+    for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
+        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        debugArray[index].x                = pullBack[pullIndex].x;
+        debugArray[index].y                = pullBack[pullIndex].y;
+        debugArray[index].z                = pullBack[pullIndex].z;
+        debugArray[index].w                = pullBack[pullIndex].w;
+    }
 }
 #endif
 
                 }
+            }
+
+            // include self energy and self torque
+
+            if( atomI < cAmoebaSim.numberOfAtoms ){
+                calculatePmeSelfTorqueElectrostaticPairIxn_kernel( localParticle );
+                //float energy;
+                //calculatePmeSelfEnergyElectrostaticPairIxn_kernel( localParticle, &energy );
+                //totalEnergy += energy;
             }
 
             // Write results
@@ -300,9 +284,7 @@ if( atomI == targetAtom ){
             {
                 // load shared data
 
-               loadRealSpaceEwaldShared( &(sA[threadIdx.x]), (y+tgx),
-                                        atomCoord, labFrameDipole, labFrameQuadrupole,
-                                        inducedDipole, inducedDipolePolar, cAmoebaSim.pDampingFactorAndThole );
+               loadPmeDirectElectrostaticShared( &(sA[threadIdx.x]), (y+tgx) );
 
             }
 
@@ -325,9 +307,8 @@ if( atomI == targetAtom ){
                     unsigned int atomJ = y + tj;
 
                     float energy;
-                    calculateRealSpaceEwaldPairIxn_kernel( localParticle,                              psA[tj],
-                                                                 cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
-                                                                 force, torque, &energy
+                    calculatePmeDirectElectrostaticPairIxn_kernel( localParticle,  psA[tj],
+                                                                   scalingFactors, force, torque, &energy
 #ifdef AMOEBA_DEBUG
 , pullBack
 #endif
@@ -345,75 +326,59 @@ if( atomI == targetAtom ){
                            localParticle.torque[1]        += mask ? torque[0][1]  : 0.0f;
                            localParticle.torque[2]        += mask ? torque[0][2]  : 0.0f;
 
-                           totalEnergy         += mask ? energy        : 0.0f;
+                           totalEnergy                    += mask ? energy        : 0.0f;
            
                            // add force and torque to atom J due atom I
        
-                           psA[tj].force[0]     -= mask ?  force[0]     : 0.0f;
-                           psA[tj].force[1]     -= mask ?  force[1]     : 0.0f;
-                           psA[tj].force[2]     -= mask ?  force[2]     : 0.0f;
+                           psA[tj].force[0]               -= mask ?  force[0]     : 0.0f;
+                           psA[tj].force[1]               -= mask ?  force[1]     : 0.0f;
+                           psA[tj].force[2]               -= mask ?  force[2]     : 0.0f;
        
-                           psA[tj].torque[0]    += mask ?  torque[1][0] : 0.0f;
-                           psA[tj].torque[1]    += mask ?  torque[1][1] : 0.0f;
-                           psA[tj].torque[2]    += mask ?  torque[1][2] : 0.0f;
+                           psA[tj].torque[0]              += mask ?  torque[1][0] : 0.0f;
+                           psA[tj].torque[1]              += mask ?  torque[1][1] : 0.0f;
+                           psA[tj].torque[2]              += mask ?  torque[1][2] : 0.0f;
        
        
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom  || atomJ == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
-        unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-        unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
-        float forceSign                    = (atomI == targetAtom) ? 1.0f : -1.0f;
 
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) atomJ;
-        debugArray[index].z                = 2.0f;
-        debugArray[index].w                = (float) y;
-/*
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? forceSign*force[0]     : 0.0f;
-        debugArray[index].y                = mask ? forceSign*force[1]     : 0.0f;
-        debugArray[index].z                = mask ? forceSign*force[2]     : 0.0f;
+    unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
+    unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
+    unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
+    float forceSign                    = (atomI == targetAtom) ? 1.0f : -1.0f;
+    float blockId                      = 2.0f;
+
+    debugArray[index].x                = (float) atomI;
+    debugArray[index].y                = (float) atomJ;
+    debugArray[index].z                = (float) y;
+    debugArray[index].w                = blockId;
+
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = mask ? forceSign*force[0]     : 0.0f;
+    debugArray[index].y                = mask ? forceSign*force[1]     : 0.0f;
+    debugArray[index].z                = mask ? forceSign*force[2]     : 0.0f;
+    debugArray[index].w                = blockId;
 
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? torque[indexI][0] : 0.0f;
-        debugArray[index].y                = mask ? torque[indexI][1] : 0.0f;
-        debugArray[index].z                = mask ? torque[indexI][2] : 0.0f;
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = mask ? torque[indexI][0] : 0.0f;
+    debugArray[index].y                = mask ? torque[indexI][1] : 0.0f;
+    debugArray[index].z                = mask ? torque[indexI][2] : 0.0f;
+    debugArray[index].w                = blockId;
 
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = mask ? torque[indexJ][0] : 0.0f;
+    debugArray[index].y                = mask ? torque[indexJ][1] : 0.0f;
+    debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
+    debugArray[index].w                = blockId;
+
+    for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? torque[indexJ][0] : 0.0f;
-        debugArray[index].y                = mask ? torque[indexJ][1] : 0.0f;
-        debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
-*/
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        int pullIndex                      = 0;
         debugArray[index].x                = pullBack[pullIndex].x;
         debugArray[index].y                = pullBack[pullIndex].y;
         debugArray[index].z                = pullBack[pullIndex].z;
         debugArray[index].w                = pullBack[pullIndex].w;
-
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        pullIndex++;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
-
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        pullIndex++;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
-       
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        pullIndex++;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
-       
+    }
 }
 #endif
        
@@ -449,9 +414,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                            // force
        
                     float energy;
-                    calculateRealSpaceEwaldPairIxn_kernel( localParticle,                              psA[tj],
-                                                          cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
-                                                          force, torque, &energy
+                    calculatePmeDirectElectrostaticPairIxn_kernel( localParticle,   psA[tj],
+                                                                   scalingFactors, force, torque, &energy
 #ifdef AMOEBA_DEBUG
 , pullBack
 #endif
@@ -471,74 +435,58 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                     localParticle.torque[1]        += mask ? torque[0][1]  : 0.0f;
                     localParticle.torque[2]        += mask ? torque[0][2]  : 0.0f;
     
-                    totalEnergy         += mask ? energy        : 0.0f;
+                    totalEnergy                    += mask ? energy        : 0.0f;
 
                     // add force and torque to atom J due atom I
 
-                    psA[tj].force[0]     -= mask ?  force[0]     : 0.0f;
-                    psA[tj].force[1]     -= mask ?  force[1]     : 0.0f;
-                    psA[tj].force[2]     -= mask ?  force[2]     : 0.0f;
+                    psA[tj].force[0]               -= mask ?  force[0]     : 0.0f;
+                    psA[tj].force[1]               -= mask ?  force[1]     : 0.0f;
+                    psA[tj].force[2]               -= mask ?  force[2]     : 0.0f;
 
-                    psA[tj].torque[0]    += mask ?  torque[1][0] : 0.0f;
-                    psA[tj].torque[1]    += mask ?  torque[1][1] : 0.0f;
-                    psA[tj].torque[2]    += mask ?  torque[1][2] : 0.0f;
+                    psA[tj].torque[0]              += mask ?  torque[1][0] : 0.0f;
+                    psA[tj].torque[1]              += mask ?  torque[1][1] : 0.0f;
+                    psA[tj].torque[2]              += mask ?  torque[1][2] : 0.0f;
 
 
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom  || atomJ == targetAtom ){
-         unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
-         unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-         unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
-         float forceSign                    = (atomI == targetAtom) ? 1.0f : -1.0f;
+        unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
+        unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
+        unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
+        float forceSign                    = (atomI == targetAtom) ? 1.0f : -1.0f;
+        float blockId                      = 3.0f;
 
-         debugArray[index].x                = (float) atomI;
-         debugArray[index].y                = (float) atomJ;
-         debugArray[index].z                = 3.0f;
-         debugArray[index].w                = (float) y;
-/*
-         index                             += cAmoebaSim.paddedNumberOfAtoms;
-         debugArray[index].x                = mask ? forceSign*force[0]     : 0.0f;
-         debugArray[index].y                = mask ? forceSign*force[1]     : 0.0f;
-         debugArray[index].z                = mask ? forceSign*force[2]     : 0.0f;
-
-
-         index                             += cAmoebaSim.paddedNumberOfAtoms;
-         debugArray[index].x                = mask ? torque[indexI][0] : 0.0f;
-         debugArray[index].y                = mask ? torque[indexI][1] : 0.0f;
-         debugArray[index].z                = mask ? torque[indexI][2] : 0.0f;
-
-         index                             += cAmoebaSim.paddedNumberOfAtoms;
-         debugArray[index].x                = mask ? torque[indexJ][0] : 0.0f;
-         debugArray[index].y                = mask ? torque[indexJ][1] : 0.0f;
-         debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
-*/
+        debugArray[index].x                = (float) atomI;
+        debugArray[index].y                = (float) atomJ;
+        debugArray[index].z                = (float) y;
+        debugArray[index].w                = blockId;
         index                             += cAmoebaSim.paddedNumberOfAtoms;
-        int pullIndex                      = 0;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
+
+        debugArray[index].x                = mask ? forceSign*force[0]     : 0.0f;
+        debugArray[index].y                = mask ? forceSign*force[1]     : 0.0f;
+        debugArray[index].z                = mask ? forceSign*force[2]     : 0.0f;
+        debugArray[index].w                = blockId;
+
 
         index                             += cAmoebaSim.paddedNumberOfAtoms;
-        pullIndex++;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
+        debugArray[index].x                = mask ? torque[indexI][0] : 0.0f;
+        debugArray[index].y                = mask ? torque[indexI][1] : 0.0f;
+        debugArray[index].z                = mask ? torque[indexI][2] : 0.0f;
+        debugArray[index].w                = blockId;
 
         index                             += cAmoebaSim.paddedNumberOfAtoms;
-        pullIndex++;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
-       
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        pullIndex++;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
+        debugArray[index].x                = mask ? torque[indexJ][0] : 0.0f;
+        debugArray[index].y                = mask ? torque[indexJ][1] : 0.0f;
+        debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
+        debugArray[index].w                = blockId;
+
+        for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
+            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            debugArray[index].x                = pullBack[pullIndex].x;
+            debugArray[index].y                = pullBack[pullIndex].y;
+            debugArray[index].z                = pullBack[pullIndex].z;
+            debugArray[index].w                = pullBack[pullIndex].w;
+        }
        
 #if 0
             index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -550,13 +498,6 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             debugArray[index].x                = scalingFactors[MScaleIndex];
             debugArray[index].y                = mScaleVal;
-            for( int pIndex = 0; pIndex < 14; pIndex++ ){
-                index                             += cAmoebaSim.paddedNumberOfAtoms;
-                debugArray[index].x                = pullBack[pIndex].x;
-                debugArray[index].y                = pullBack[pIndex].y;
-                debugArray[index].z                = pullBack[pIndex].z;
-                debugArray[index].w                = pullBack[pIndex].w;
-            }
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             debugArray[index].x                = labFrameDipole[3*atomI];

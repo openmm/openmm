@@ -589,6 +589,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
                                     static_cast<float>( force.getMutualInducedTargetEpsilon()),
                                     nonbondedMethod,
                                     static_cast<float>( force.getCutoffDistance()),
+                                    static_cast<float>( force.getAEwald()),
                                     static_cast<float>( force.getElectricConstant()) );
     if (nonbondedMethod == AmoebaMultipoleForce::PME) {
         double alpha;

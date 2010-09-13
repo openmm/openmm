@@ -307,7 +307,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange,
                                      int mutualInducedIterationMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, float cutoffDistance, float electricConstant );
+                                     int nonbondedMethod, float cutoffDistance,  float alphaEwald, float electricConstant );
 
 
 extern "C"

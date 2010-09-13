@@ -11,34 +11,24 @@
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
 
-void SetCalculateAmoebaRealSpaceEwaldSim(amoebaGpuContext amoebaGpu)
+void SetCalculateAmoebaPmeDirectElectrostaticSim(amoebaGpuContext amoebaGpu)
 {
     cudaError_t status;
     gpuContext gpu = amoebaGpu->gpuContext;
     status         = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));    
-    RTERROR(status, "SetCalculateAmoebaRealSpaceEwaldSim: cudaMemcpyToSymbol: SetSim copy to cSim failed");
+    RTERROR(status, "SetCalculateAmoebaPmeDirectElectrostaticSim: cudaMemcpyToSymbol: SetSim copy to cSim failed");
     status         = cudaMemcpyToSymbol(cAmoebaSim, &amoebaGpu->amoebaSim, sizeof(cudaAmoebaGmxSimulation));    
-    RTERROR(status, "SetCalculateAmoebaRealSpaceEwaldSim: cudaMemcpyToSymbol: SetSim copy to cAmoebaSim failed");
+    RTERROR(status, "SetCalculateAmoebaPmeDirectElectrostaticSim: cudaMemcpyToSymbol: SetSim copy to cAmoebaSim failed");
 }
 
-void GetCalculateAmoebaRealSpaceEwaldSim(amoebaGpuContext amoebaGpu)
+void GetCalculateAmoebaPmeDirectElectrostaticSim(amoebaGpuContext amoebaGpu)
 {
     cudaError_t status;
     gpuContext gpu = amoebaGpu->gpuContext;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));    
-    RTERROR(status, "GetCalculateAmoebaRealSpaceEwaldSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
+    RTERROR(status, "GetCalculateAmoebaPmeDirectElectrostaticSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
     status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));    
-    RTERROR(status, "GetCalculateAmoebaRealSpaceEwaldSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
-}
-texture<float, 1, cudaReadModeElementType> tabulatedErfcRef;
-
-static __device__ float fastErfc(float r)
-{
-    float normalized = cSim.tabulatedErfcScale*r;
-    int index = (int) normalized;
-    float fract2 = normalized-index;
-    float fract1 = 1.0f-fract2;
-    return fract1*tex1Dfetch(tabulatedErfcRef, index) + fract2*tex1Dfetch(tabulatedErfcRef, index+1);
+    RTERROR(status, "GetCalculateAmoebaPmeDirectElectrostaticSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
 static int const PScaleIndex            =  0; 
@@ -60,7 +50,7 @@ static int const MScaleIndex            =  3;
 //static int const Ddsc72Index            = 16;
 static int const LastScalingIndex       = 4;
 
-struct RealSpaceEwaldParticle {
+struct PmeDirectElectrostaticParticle {
 
     // coordinates charge
 
@@ -97,30 +87,59 @@ struct RealSpaceEwaldParticle {
 
 };
 
-__device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& atomI,   RealSpaceEwaldParticle& atomJ,
-                                                       float scalingDistanceCutoff,   float* scalingFactors,
-                                                       float*  outputForce,           float  outputTorque[2][3],
-                                                       float* energy
+// self-energy for PME
+
+__device__ static void calculatePmeSelfEnergyElectrostaticPairIxn_kernel( PmeDirectElectrostaticParticle& atomI, float* energy)
+{
+    float term   = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
+    float fterm  = -(cAmoebaSim.electric/cAmoebaSim.dielec)*cSim.alphaEwald/cAmoebaSim.sqrtPi;
+
+    float cii    = atomI.q*atomI.q;
+
+    float dii    = atomI.labFrameDipole[0]*atomI.labFrameDipole[0] +
+                   atomI.labFrameDipole[1]*atomI.labFrameDipole[1] +
+                   atomI.labFrameDipole[2]*atomI.labFrameDipole[2];
+
+    float qii    = atomI.labFrameQuadrupole[0]*atomI.labFrameQuadrupole[0] +
+                   atomI.labFrameQuadrupole[4]*atomI.labFrameQuadrupole[4] +
+                   atomI.labFrameQuadrupole[8]*atomI.labFrameQuadrupole[8] + 2.0f*(
+                   atomI.labFrameQuadrupole[1]*atomI.labFrameQuadrupole[1] +
+                   atomI.labFrameQuadrupole[2]*atomI.labFrameQuadrupole[2] +
+                   atomI.labFrameQuadrupole[5]*atomI.labFrameQuadrupole[5]);
+
+    float uii    = atomI.labFrameDipole[0]*atomI.inducedDipole[0] + atomI.labFrameDipole[1]*atomI.inducedDipole[1] + atomI.labFrameDipole[2]*atomI.inducedDipole[2];
+
+    *energy      = (cii + term*(dii/3.0f + 2.0f*term*qii/5.0f));
+    *energy     += term*uii/3.0f;
+    *energy     *= fterm;
+}
+
+// self-torque for PME
+
+__device__ static void calculatePmeSelfTorqueElectrostaticPairIxn_kernel( PmeDirectElectrostaticParticle& atomI)
+{
+    float term       = (4.0f/3.0f)*(cAmoebaSim.electric/cAmoebaSim.dielec)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
+
+    float uix        = 0.5f*(atomI.inducedDipole[0] + atomI.inducedDipoleP[0]);
+    float uiy        = 0.5f*(atomI.inducedDipole[1] + atomI.inducedDipoleP[1]);
+    float uiz        = 0.5f*(atomI.inducedDipole[2] + atomI.inducedDipoleP[2]);
+
+    atomI.torque[0] += term*(atomI.labFrameDipole[1]*uiz - atomI.labFrameDipole[2]*uiy);
+    atomI.torque[1] += term*(atomI.labFrameDipole[2]*uix - atomI.labFrameDipole[0]*uiz);
+    atomI.torque[2] += term*(atomI.labFrameDipole[0]*uiy - atomI.labFrameDipole[1]*uix);
+}
+
+__device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectrostaticParticle& atomI,   PmeDirectElectrostaticParticle& atomJ,
+                                                               float* scalingFactors, float*  outputForce, float  outputTorque[2][3],
+                                                               float* energy
 #ifdef AMOEBA_DEBUG
-                                                    ,float4* debugArray 
+                                                               ,float4* debugArray 
 #endif
  ){
   
 
-    float e,ei,f;
-    //float gfd,gfdr;
-    //float xix,yix,zix;
-    //float xiy,yiy,ziy;
-    //float xiz,yiz,ziz;
-    //float xkx,ykx,zkx;
-    //float xky,yky,zky;
-    //float xkz,ykz,zkz;
-    //float rr1,rr3;
-    //float rr5,rr7,rr9,rr11;
+    float e,ei;
     float erl,erli;
-    //float frcxi[4],frcxk[4];
-    //float frcyi[4],frcyk[4];
-    //float frczi[4],frczk[4];
     float di[4],qi[10];
     float dk[4],qk[10];
     float fridmp[4],findmp[4];
@@ -130,7 +149,6 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
     float ttm2i[4],ttm3i[4];
     float ttm2r[4],ttm3r[4];
     float ttm2ri[4],ttm3ri[4];
-    //float fdir[4]
     float dixdk[4];
     float dkxui[4],dixuk[4];
     float dixukp[4],dkxuip[4];
@@ -159,7 +177,7 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
     float gfr[8],gfri[7];
     float gti[7],gtri[7];
 
-    f = (cAmoebaSim.electric/cAmoebaSim.dielec);
+    float conversionFactor   = (cAmoebaSim.electric/cAmoebaSim.dielec);
 
     // set the permanent multipole and induced dipole values;
 
@@ -193,28 +211,29 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
 
     float r2    = xr*xr + yr*yr + zr*zr;
     if( r2 <= cAmoebaSim.cutoffDistance2 ){
+
         float r      = sqrt(r2);
         float ck     = atomJ.q;
       
-              dk[1]  = atomJ.labFrameDipole[0];
-              dk[2]  = atomJ.labFrameDipole[1];
-              dk[3]  = atomJ.labFrameDipole[2];
+        dk[1]  = atomJ.labFrameDipole[0];
+        dk[2]  = atomJ.labFrameDipole[1];
+        dk[3]  = atomJ.labFrameDipole[2];
       
-              qk[1]  = atomJ.labFrameQuadrupole[0];
-              qk[2]  = atomJ.labFrameQuadrupole[1];
-              qk[3]  = atomJ.labFrameQuadrupole[2];
-              qk[4]  = atomJ.labFrameQuadrupole[3];
-              qk[5]  = atomJ.labFrameQuadrupole[4];
-              qk[6]  = atomJ.labFrameQuadrupole[5];
-              qk[7]  = atomJ.labFrameQuadrupole[6];
-              qk[8]  = atomJ.labFrameQuadrupole[7];
-              qk[9]  = atomJ.labFrameQuadrupole[8];
+        qk[1]  = atomJ.labFrameQuadrupole[0];
+        qk[2]  = atomJ.labFrameQuadrupole[1];
+        qk[3]  = atomJ.labFrameQuadrupole[2];
+        qk[4]  = atomJ.labFrameQuadrupole[3];
+        qk[5]  = atomJ.labFrameQuadrupole[4];
+        qk[6]  = atomJ.labFrameQuadrupole[5];
+        qk[7]  = atomJ.labFrameQuadrupole[6];
+        qk[8]  = atomJ.labFrameQuadrupole[7];
+        qk[9]  = atomJ.labFrameQuadrupole[8];
       
         // calculate the real space error function terms;
 
         float ralpha = cSim.alphaEwald*r;
 
-               bn[0] = fastErfc(ralpha)/r;
+               bn[0] = erfc(ralpha)/r;
 
         float alsq2  = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n = 0.0f;
@@ -250,17 +269,17 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
         float scale5 = 1.0f;
         float scale7 = 1.0f;
 
-            ddsc3[0] = 0.0f;
             ddsc3[1] = 0.0f;
             ddsc3[2] = 0.0f;
+            ddsc3[3] = 0.0f;
 
-            ddsc5[0] = 0.0f;
             ddsc5[1] = 0.0f;
             ddsc5[2] = 0.0f;
+            ddsc5[3] = 0.0f;
 
-            ddsc7[0] = 0.0f;
             ddsc7[1] = 0.0f;
             ddsc7[2] = 0.0f;
+            ddsc7[3] = 0.0f;
 
         float pdk    = atomJ.damp;
         float ptk    = atomJ.thole;
@@ -280,9 +299,11 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
                    ddsc3[1] = temp3 * xr;
                    ddsc3[2] = temp3 * yr;
                    ddsc3[3] = temp3 * zr;
+
                    ddsc5[1] = temp5 * ddsc3[1];
                    ddsc5[2] = temp5 * ddsc3[2];
                    ddsc5[3] = temp5 * ddsc3[3];
+
                    ddsc7[1] = temp7 * ddsc5[1];
                    ddsc7[2] = temp7 * ddsc5[2];
                    ddsc7[3] = temp7 * ddsc5[3];
@@ -508,8 +529,8 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
                     + rr7*gli[3]*psc7);
         e = e - (1.0f-scalingFactors[MScaleIndex])*erl;
         ei = ei - erli;
-        e = f * e;
-        ei = f * ei;
+        e = conversionFactor * e;
+        ei = conversionFactor * ei;
 //        em = em + e;
 //        ep = ep + ei;
 
@@ -679,12 +700,9 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
                                    +(glip[2]+glip[7])*scalingFactors[DScaleIndex]);
         float temp7 = 0.5f * rr7 * (gli[3]*scalingFactors[PScaleIndex]
                                    +glip[3]*scalingFactors[DScaleIndex]);
-        fridmp[1] = temp3*ddsc3[1] + temp5*ddsc5[1]
-                         + temp7*ddsc7[1];
-        fridmp[2] = temp3*ddsc3[2] + temp5*ddsc5[2]
-                         + temp7*ddsc7[2];
-        fridmp[3] = temp3*ddsc3[3] + temp5*ddsc5[3]
-                         + temp7*ddsc7[3];
+        fridmp[1] = temp3*ddsc3[1] + temp5*ddsc5[1] + temp7*ddsc7[1];
+        fridmp[2] = temp3*ddsc3[2] + temp5*ddsc5[2] + temp7*ddsc7[2];
+        fridmp[3] = temp3*ddsc3[3] + temp5*ddsc5[3] + temp7*ddsc7[3];
 
         // find some scaling terms for induced-induced force
 
@@ -833,84 +851,186 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
         // handle the case where scaling is used
 
         for( int j = 1; j <= 3; j++ ){
-           ftm2[j] = f * (ftm2[j]-(1.0f-scalingFactors[MScaleIndex])*ftm2r[j]);
-           ftm2i[j] = f * (ftm2i[j]-ftm2ri[j]);
-           ttm2[j] = f * (ttm2[j]-(1.0f-scalingFactors[MScaleIndex])*ttm2r[j]);
-           ttm2i[j] = f * (ttm2i[j]-ttm2ri[j]);
-           ttm3[j] = f * (ttm3[j]-(1.0f-scalingFactors[MScaleIndex])*ttm3r[j]);
-           ttm3i[j] = f * (ttm3i[j]-ttm3ri[j]);
+           ftm2[j]  = (ftm2[j]-(1.0f-scalingFactors[MScaleIndex])*ftm2r[j]);
+           ftm2i[j] = (ftm2i[j]-ftm2ri[j]);
+           ttm2[j]  = (ttm2[j]-(1.0f-scalingFactors[MScaleIndex])*ttm2r[j]);
+           ttm2i[j] = (ttm2i[j]-ttm2ri[j]);
+           ttm3[j]  = (ttm3[j]-(1.0f-scalingFactors[MScaleIndex])*ttm3r[j]);
+           ttm3i[j] = (ttm3i[j]-ttm3ri[j]);
         }
 
         // increment gradient due to force and torque on first site;
+
+        outputForce[0]           = -conversionFactor*(ftm2[1] + ftm2i[1]);
+        outputForce[1]           = -conversionFactor*(ftm2[2] + ftm2i[2]);
+        outputForce[2]           = -conversionFactor*(ftm2[3] + ftm2i[3]);
+        
+        outputTorque[0][0]       = conversionFactor*(ttm2[1] + ttm2i[1]);
+        outputTorque[0][1]       = conversionFactor*(ttm2[2] + ttm2i[2]);
+        outputTorque[0][2]       = conversionFactor*(ttm2[3] + ttm2i[3]);
+    
+        outputTorque[1][0]       = conversionFactor*(ttm3[1] + ttm3i[1]);
+        outputTorque[1][1]       = conversionFactor*(ttm3[2] + ttm3i[2]);
+        outputTorque[1][2]       = conversionFactor*(ttm3[3] + ttm3i[3]);
+        //outputTorque[1][2]    = conversionFactor*(ttm3_2 + ttm3i_2);
+
+#ifdef AMOEBA_DEBUG
+    int debugIndex               = 0;
+    float idTracker              = 1.0f;
 /*
-        dem(1,ii) = dem(1,ii) + ftm2[1];
-        dem(2,ii) = dem(2,ii) + ftm2[2];
-        dem(3,ii) = dem(3,ii) + ftm2[3];
-        dep(1,ii) = dep(1,ii) + ftm2i[1];
-        dep(2,ii) = dep(2,ii) + ftm2i[2];
-        dep(3,ii) = dep(3,ii) + ftm2i[3];
-        call torque (i,ttm2,ttm2i,frcxi,frcyi,frczi);
+    debugArray[debugIndex].x = atomI.labFrameDipole[0];
+    debugArray[debugIndex].y = atomI.labFrameDipole[1];
+    debugArray[debugIndex].z = atomI.labFrameDipole[2];
+    debugArray[debugIndex].w = r2;
 
-        // increment gradient due to force and torque on second site;
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = atomJ.labFrameDipole[0];
+    debugArray[debugIndex].y = atomJ.labFrameDipole[1];
+    debugArray[debugIndex].z = atomJ.labFrameDipole[2];
+    debugArray[debugIndex].w = cSim.alphaEwald;
 
-        dem(1,kk) = dem(1,kk) - ftm2[1];
-        dem(2,kk) = dem(2,kk) - ftm2[2];
-        dem(3,kk) = dem(3,kk) - ftm2[3];
-        dep(1,kk) = dep(1,kk) - ftm2i[1];
-        dep(2,kk) = dep(2,kk) - ftm2i[2];
-        dep(3,kk) = dep(3,kk) - ftm2i[3];
-        call torque (k,ttm3,ttm3i,frcxk,frcyk,frczk);
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = atomI.inducedDipole[0];
+    debugArray[debugIndex].y = atomI.inducedDipole[1];
+    debugArray[debugIndex].z = atomI.inducedDipole[2];
+    debugArray[debugIndex].w = idTracker;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = atomJ.inducedDipole[0];
+    debugArray[debugIndex].y = atomJ.inducedDipole[1];
+    debugArray[debugIndex].z = atomJ.inducedDipole[2];
+    debugArray[debugIndex].w = idTracker;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = atomI.inducedDipoleP[0];
+    debugArray[debugIndex].y = atomI.inducedDipoleP[1];
+    debugArray[debugIndex].z = atomI.inducedDipoleP[2];
+    debugArray[debugIndex].w = idTracker;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = atomJ.inducedDipoleP[0];
+    debugArray[debugIndex].y = atomJ.inducedDipoleP[1];
+    debugArray[debugIndex].z = atomJ.inducedDipoleP[2];
+    debugArray[debugIndex].w = idTracker;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = conversionFactor*ftm2[1];
+    debugArray[debugIndex].y = conversionFactor*ftm2[2];
+    debugArray[debugIndex].z = conversionFactor*ftm2[3];
+    debugArray[debugIndex].w = idTracker;
+    debugIndex++;
 */
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = conversionFactor*ftm2i[1];
+    debugArray[debugIndex].y = conversionFactor*ftm2i[2];
+    debugArray[debugIndex].z = conversionFactor*ftm2i[3];
+    debugArray[debugIndex].w = r2;
 
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = conversionFactor*fridmp[1];
+    debugArray[debugIndex].y = conversionFactor*fridmp[2];
+    debugArray[debugIndex].z = conversionFactor*fridmp[3];
+    debugArray[debugIndex].w = cSim.alphaEwald;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = conversionFactor*findmp[1];
+    debugArray[debugIndex].y = conversionFactor*findmp[2];
+    debugArray[debugIndex].z = conversionFactor*findmp[3];
+    debugArray[debugIndex].w = cSim.alphaEwald + 1.0f;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = conversionFactor*ttm2[1];
+    debugArray[debugIndex].y = conversionFactor*ttm2[2];
+    debugArray[debugIndex].z = conversionFactor*ttm2[3];
+    debugArray[debugIndex].w = idTracker;
+
+    debugIndex++;
+    idTracker               += 1.0;
+    debugArray[debugIndex].x = conversionFactor*ttm2i[1];
+    debugArray[debugIndex].y = conversionFactor*ttm2i[2];
+    debugArray[debugIndex].z = conversionFactor*ttm2i[3];
+    debugArray[debugIndex].w = idTracker;
+#endif
+
+    } else {
+
+        outputForce[0]           = 0.0f;
+        outputForce[1]           = 0.0f;
+        outputForce[2]           = 0.0f;
+        
+        outputTorque[0][0]       = 0.0f;
+        outputTorque[0][1]       = 0.0f;
+        outputTorque[0][2]       = 0.0f;
+    
+        outputTorque[1][0]       = 0.0f;
+        outputTorque[1][1]       = 0.0f;
+        outputTorque[1][2]       = 0.0f;
+
+#ifdef AMOEBA_DEBUG
+for( int ii = 0; ii < 20; ii++ ){
+    debugArray[ii].x = 0.0f;
+    debugArray[ii].y = 0.0f;
+    debugArray[ii].z = 0.0f;
+    debugArray[ii].w = (float) ii;
+}
+#endif
+   
     }
 
     return;
 
 }
 
-__device__ void loadRealSpaceEwaldShared( struct RealSpaceEwaldParticle* sA, unsigned int atomI,
-                                       float4* atomCoord, float* labFrameDipoleJ, float* labQuadrupole,
-                                       float* inducedDipole, float* inducedDipolePolar, float2* dampingFactorAndThole )
+__device__ void loadPmeDirectElectrostaticShared( struct PmeDirectElectrostaticParticle* sA, unsigned int atomI )
 {
     // coordinates & charge
-
-    sA->x                        = atomCoord[atomI].x;
-    sA->y                        = atomCoord[atomI].y;
-    sA->z                        = atomCoord[atomI].z;
-    sA->q                        = atomCoord[atomI].w;
+    sA->x                        = cSim.pPosq[atomI].x;
+    sA->y                        = cSim.pPosq[atomI].y;
+    sA->z                        = cSim.pPosq[atomI].z;
+    sA->q                        = cSim.pPosq[atomI].w;
 
     // lab dipole
 
-    sA->labFrameDipole[0]         = labFrameDipoleJ[atomI*3];
-    sA->labFrameDipole[1]         = labFrameDipoleJ[atomI*3+1];
-    sA->labFrameDipole[2]         = labFrameDipoleJ[atomI*3+2];
+    sA->labFrameDipole[0]        = cAmoebaSim.pLabFrameDipole[atomI*3];
+    sA->labFrameDipole[1]        = cAmoebaSim.pLabFrameDipole[atomI*3+1];
+    sA->labFrameDipole[2]        = cAmoebaSim.pLabFrameDipole[atomI*3+2];
+
 
     // lab quadrupole
 
-    sA->labFrameQuadrupole[0]    = labQuadrupole[atomI*9];
-    sA->labFrameQuadrupole[1]    = labQuadrupole[atomI*9+1];
-    sA->labFrameQuadrupole[2]    = labQuadrupole[atomI*9+2];
-    sA->labFrameQuadrupole[3]    = labQuadrupole[atomI*9+3];
-    sA->labFrameQuadrupole[4]    = labQuadrupole[atomI*9+4];
-    sA->labFrameQuadrupole[5]    = labQuadrupole[atomI*9+5];
-    sA->labFrameQuadrupole[6]    = labQuadrupole[atomI*9+6];
-    sA->labFrameQuadrupole[7]    = labQuadrupole[atomI*9+7];
-    sA->labFrameQuadrupole[8]    = labQuadrupole[atomI*9+8];
+    sA->labFrameQuadrupole[0]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9];
+    sA->labFrameQuadrupole[1]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+1];
+    sA->labFrameQuadrupole[2]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+2];
+    sA->labFrameQuadrupole[3]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+3];
+    sA->labFrameQuadrupole[4]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+4];
+    sA->labFrameQuadrupole[5]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+5];
+    sA->labFrameQuadrupole[6]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+6];
+    sA->labFrameQuadrupole[7]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+7];
+    sA->labFrameQuadrupole[8]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+8];
 
     // induced dipole
 
-    sA->inducedDipole[0]          = inducedDipole[atomI*3];
-    sA->inducedDipole[1]          = inducedDipole[atomI*3+1];
-    sA->inducedDipole[2]          = inducedDipole[atomI*3+2];
+    sA->inducedDipole[0]         =  cAmoebaSim.pInducedDipole[atomI*3];
+    sA->inducedDipole[1]         =  cAmoebaSim.pInducedDipole[atomI*3+1];
+    sA->inducedDipole[2]         =  cAmoebaSim.pInducedDipole[atomI*3+2];
 
     // induced dipole polar
 
-    sA->inducedDipoleP[0]         = inducedDipolePolar[atomI*3];
-    sA->inducedDipoleP[1]         = inducedDipolePolar[atomI*3+1];
-    sA->inducedDipoleP[2]         = inducedDipolePolar[atomI*3+2];
+    sA->inducedDipoleP[0]        =  cAmoebaSim.pInducedDipolePolar[atomI*3];
+    sA->inducedDipoleP[1]        =  cAmoebaSim.pInducedDipolePolar[atomI*3+1];
+    sA->inducedDipoleP[2]        =  cAmoebaSim.pInducedDipolePolar[atomI*3+2];
 
-    sA->damp                     = dampingFactorAndThole[atomI].x;
-    sA->thole                    = dampingFactorAndThole[atomI].y;
+    sA->damp                     = cAmoebaSim.pDampingFactorAndThole[atomI].x;
+    sA->thole                    = cAmoebaSim.pDampingFactorAndThole[atomI].y;
 
 }
 
@@ -918,11 +1038,11 @@ __device__ void loadRealSpaceEwaldShared( struct RealSpaceEwaldParticle* sA, uns
 
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define METHOD_NAME(a, b) a##N2##b
-#include "kCalculateAmoebaCudaRealSpaceEwald.h"
+#include "kCalculateAmoebaCudaPmeDirectElectrostatic.h"
 #define USE_OUTPUT_BUFFER_PER_WARP
 #undef METHOD_NAME
 #define METHOD_NAME(a, b) a##N2ByWarp##b
-#include "kCalculateAmoebaCudaRealSpaceEwald.h"
+#include "kCalculateAmoebaCudaPmeDirectElectrostatic.h"
 
 // reduce psWorkArray_3_1 -> force
 // reduce psWorkArray_3_2 -> torque
@@ -932,23 +1052,27 @@ static void kReduceForceTorque(amoebaGpuContext amoebaGpu )
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                              amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
                              amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psForce->_pDevStream[0] );
-    LAUNCHERROR("kReduceRealSpaceEwaldForce");
+    LAUNCHERROR("kReducePmeDirectElectrostaticForce");
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                              amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
                              amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psTorque->_pDevStream[0] );
-    LAUNCHERROR("kReduceRealSpaceEwaldTorque");
+    LAUNCHERROR("kReducePmeDirectElectrostaticTorque");
 }
+
+//#define GET_INDUCED_DIPOLE_FROM_FILE
+#ifdef GET_INDUCED_DIPOLE_FROM_FILE
+#include <stdlib.h>
+#endif
 
 /**---------------------------------------------------------------------------------------
 
-   Compute Amoeba electrostatic force & torque
+   Compute Amoeba dirrect space portion of electrostatic force & torque
 
    @param amoebaGpu        amoebaGpu context
-   @param gpu              OpenMM gpu Cuda context
 
    --------------------------------------------------------------------------------------- */
 
-void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
+void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 {
   
    // ---------------------------------------------------------------------------------------
@@ -956,7 +1080,7 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
     static unsigned int threadsPerBlock = 0;
 
 #ifdef AMOEBA_DEBUG
-    static const char* methodName = "cudaComputeAmoebaRealSpaceEwald";
+    static const char* methodName = "cudaComputeAmoebaPmeDirectElectrostatic";
     static int timestep = 0;
     std::vector<int> fileId;
     timestep++;
@@ -983,7 +1107,38 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
     CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
     memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
-    unsigned int targetAtom                   = 0;
+    unsigned int targetAtom                   = 10;
+#endif
+
+#ifdef GET_INDUCED_DIPOLE_FROM_FILE
+    std::string fileName = "waterInducedDipole.txt";
+    StringVectorVector fileContents;
+    readFile( fileName, fileContents );
+    unsigned int offset  = 0;
+    (void) fprintf( amoebaGpu->log, "Read file: %s %u\n", fileName.c_str(), fileContents.size() ); fflush(  amoebaGpu->log );
+    for( unsigned int ii = 1; ii < fileContents.size()-1; ii++ ){
+
+        StringVector lineTokens     = fileContents[ii];
+        unsigned int lineTokenIndex = 1;
+
+        // (void) fprintf( amoebaGpu->log, "   %u %s %s\n", ii, lineTokens[0].c_str(), lineTokens[lineTokenIndex].c_str() ); fflush(  amoebaGpu->log );
+        amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str())); 
+        offset                                              -= 3;        
+        amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+    }
+    float conversion = 0.1f;
+    for( int ii = 0; ii < 3*gpu->natoms; ii++ ){
+        amoebaGpu->psInducedDipole->_pSysStream[0][ii]       *= conversion;
+        amoebaGpu->psInducedDipolePolar->_pSysStream[0][ii]  *= conversion;
+    }
+    amoebaGpu->gpuContext->sim.alphaEwald = 5.4459052e+00f;
+    SetCalculateAmoebaPmeDirectElectrostaticSim(amoebaGpu);
+    amoebaGpu->psInducedDipole->Upload();
+    amoebaGpu->psInducedDipolePolar->Upload();
 #endif
 
     // on first pass, set threads/block
@@ -996,20 +1151,15 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
           maxThreads = 128;
       else
           maxThreads = 64;
-      threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(RealSpaceEwaldParticle)), maxThreads);
+      threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)), maxThreads);
     }
 
     kClearFields_3( amoebaGpu, 2 );
 
     if (gpu->bOutputBufferPerWarp){
 
-      kCalculateAmoebaCudaRealSpaceEwaldN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(RealSpaceEwaldParticle)*threadsPerBlock>>>(
+      kCalculateAmoebaPmeDirectElectrostaticN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                          amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                         gpu->psPosq4->_pDevStream[0],
-                                                                         amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                         amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
-                                                                         amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                                         amoebaGpu->psInducedDipolePolar->_pDevStream[0],
                                                                          amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                          amoebaGpu->psWorkArray_3_2->_pDevStream[0],
@@ -1021,22 +1171,14 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
     } else {
 
 #ifdef AMOEBA_DEBUG
-      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaRealSpaceEwaldN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
                       amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                      sizeof(RealSpaceEwaldParticle), sizeof(RealSpaceEwaldParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                      sizeof(PmeDirectElectrostaticParticle), sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
       (void) fflush( amoebaGpu->log );
 #endif
 
-      cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
-      cudaBindTexture(NULL, &tabulatedErfcRef, gpu->psTabulatedErfc->_pDevData, &channelDesc, gpu->psTabulatedErfc->_length*sizeof(float));
-
-      kCalculateAmoebaCudaRealSpaceEwaldN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(RealSpaceEwaldParticle)*threadsPerBlock>>>(
+      kCalculateAmoebaPmeDirectElectrostaticN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                          amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                         gpu->psPosq4->_pDevStream[0],
-                                                                         amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                         amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
-                                                                         amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                                         amoebaGpu->psInducedDipolePolar->_pDevStream[0],
                                                                          amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                          amoebaGpu->psWorkArray_3_2->_pDevStream[0],
@@ -1045,108 +1187,69 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
                                                                          amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
 #endif
     }
-    LAUNCHERROR("kCalculateAmoebaCudaRealSpaceEwaldN2Forces");
+    LAUNCHERROR("kCalculateAmoebaPmeDirectElectrostaticN2Forces");
     kReduceForceTorque( amoebaGpu );
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
 
-      amoebaGpu->psForce->Download();
-      amoebaGpu->psTorque->Download();
-      debugArray->Download();
-
-      (void) fprintf( amoebaGpu->log, "Finished RealSpaceEwald kernel execution\n" ); (void) fflush( amoebaGpu->log );
-
-      int maxPrint        = 1400;
-      for( int ii = 0; ii < gpu->natoms; ii++ ){
-         (void) fprintf( amoebaGpu->log, "%5d ", ii); 
-
-          int indexOffset     = ii*3;
-    
-         // force
-
-         (void) fprintf( amoebaGpu->log,"RealSpaceEwaldF [%16.9e %16.9e %16.9e] ",
-                         amoebaGpu->psForce->_pSysStream[0][indexOffset],
-                         amoebaGpu->psForce->_pSysStream[0][indexOffset+1],
-                         amoebaGpu->psForce->_pSysStream[0][indexOffset+2] );
-    
-         // torque
-
-         (void) fprintf( amoebaGpu->log,"RealSpaceEwaldT [%16.9e %16.9e %16.9e] ",
-                         amoebaGpu->psTorque->_pSysStream[0][indexOffset],
-                         amoebaGpu->psTorque->_pSysStream[0][indexOffset+1],
-                         amoebaGpu->psTorque->_pSysStream[0][indexOffset+2] );
-
-         // coords
-
-#if 0
-          (void) fprintf( amoebaGpu->log,"x[%16.9e %16.9e %16.9e] ",
-                          gpu->psPosq4->_pSysStream[0][ii].x,
-                          gpu->psPosq4->_pSysStream[0][ii].y,
-                          gpu->psPosq4->_pSysStream[0][ii].z);
-
-
-         for( int jj = 0; jj < gpu->natoms && jj < 5; jj++ ){
-             int debugIndex = jj*gpu->natoms + ii;
-             float xx       =  gpu->psPosq4->_pSysStream[0][jj].x -  gpu->psPosq4->_pSysStream[0][ii].x;
-             float yy       =  gpu->psPosq4->_pSysStream[0][jj].y -  gpu->psPosq4->_pSysStream[0][ii].y;
-             float zz       =  gpu->psPosq4->_pSysStream[0][jj].z -  gpu->psPosq4->_pSysStream[0][ii].z;
-             (void) fprintf( amoebaGpu->log,"\n%4d %4d delta [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] ",
-                             ii, jj, xx, yy, zz,
-                             debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y, debugArray->_pSysStream[0][debugIndex].z );
-
+        amoebaGpu->psForce->Download();
+        amoebaGpu->psTorque->Download();
+        debugArray->Download();
+  
+        (void) fprintf( amoebaGpu->log, "Finished PmeDirectElectrostatic kernel execution\n" ); (void) fflush( amoebaGpu->log );
+  
+        int maxPrint        = 1400;
+        float conversion    = 1.0f/41.84f;
+        for( int ii = 0; ii < gpu->natoms; ii++ ){
+            (void) fprintf( amoebaGpu->log, "%5d ", ii); 
+  
+            int indexOffset     = ii*3;
+      
+            // force
+  
+            (void) fprintf( amoebaGpu->log,"PmeDirectElectrostaticF [%16.9e %16.9e %16.9e] ",
+                            conversion*amoebaGpu->psForce->_pSysStream[0][indexOffset],
+                            conversion*amoebaGpu->psForce->_pSysStream[0][indexOffset+1],
+                            conversion*amoebaGpu->psForce->_pSysStream[0][indexOffset+2] );
+      
+            // torque
+  
+            (void) fprintf( amoebaGpu->log,"PmeDirectElectrostaticT [%16.9e %16.9e %16.9e] ",
+                            conversion*amoebaGpu->psTorque->_pSysStream[0][indexOffset],
+                            conversion*amoebaGpu->psTorque->_pSysStream[0][indexOffset+1],
+                            conversion*amoebaGpu->psTorque->_pSysStream[0][indexOffset+2] );
+  
+            (void) fprintf( amoebaGpu->log,"\n" );
+            if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
+                ii = gpu->natoms - maxPrint;
+            }
+        }
+        if( 1 ){
+            (void) fprintf( amoebaGpu->log,"DebugElec\n" );
+            int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+            for( int jj = 0; jj < gpu->natoms; jj++ ){
+                int debugIndex = jj;
+                for( int kk = 0; kk < 15; kk++ ){
+                    (void) fprintf( amoebaGpu->log,"%5d %5d [%16.9e %16.9e %16.9e %16.9e] E11\n", targetAtom, jj,
+                                    debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
+                                    debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                    debugIndex += paddedNumberOfAtoms;
+                }
+                (void) fprintf( amoebaGpu->log,"\n" );
+            }
+        }
+        (void) fflush( amoebaGpu->log );
+  
+        if( 1 ){
+            std::vector<int> fileId;
+            //fileId.push_back( 0 );
+            VectorOfDoubleVectors outputVector;
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector);
+            cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectForceTorque", fileId, outputVector );
          }
-#endif
-         (void) fprintf( amoebaGpu->log,"\n" );
-         if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
-              ii = gpu->natoms - maxPrint;
-         }
-      }
-      if( 1 ){
-          (void) fprintf( amoebaGpu->log,"DebugElec\n" );
-          int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-          for( int jj = 0; jj < gpu->natoms; jj++ ){
-              int debugIndex = jj;
-              for( int kk = 0; kk < 5; kk++ ){
-                  (void) fprintf( amoebaGpu->log,"%5d %5d [%16.9e %16.9e %16.9e %16.9e] E11\n", targetAtom, jj,
-                                  debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
-                                  debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
-                  debugIndex += paddedNumberOfAtoms;
-              }
-              (void) fprintf( amoebaGpu->log,"\n" );
-          }
-      }
-      (void) fflush( amoebaGpu->log );
-
-      if( 0 ){
-          (void) fprintf( amoebaGpu->log, "%s Tiled F & T\n", methodName ); fflush( amoebaGpu->log );
-          int maxPrint = 12;
-          for( int ii = 0; ii < gpu->natoms; ii++ ){
-    
-              // print cpu & gpu reductions
-    
-              int offset  = 3*ii;
-    
-              (void) fprintf( amoebaGpu->log,"%6d F[%16.7e %16.7e %16.7e] T[%16.7e %16.7e %16.7e]\n", ii,
-                              amoebaGpu->psForce->_pSysStream[0][offset],
-                              amoebaGpu->psForce->_pSysStream[0][offset+1],
-                              amoebaGpu->psForce->_pSysStream[0][offset+2],
-                              amoebaGpu->psTorque->_pSysStream[0][offset],
-                              amoebaGpu->psTorque->_pSysStream[0][offset+1],
-                              amoebaGpu->psTorque->_pSysStream[0][offset+2] );
-              if( (ii == maxPrint) && (ii < (gpu->natoms - maxPrint)) )ii = gpu->natoms - maxPrint; 
-          }   
-      }   
-
-      if( 1 ){
-          std::vector<int> fileId;
-          //fileId.push_back( 0 );
-          VectorOfDoubleVectors outputVector;
-          cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector );
-          cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector );
-          cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector);
-          cudaWriteVectorOfDoubleVectorsToFile( "CudaForceTorque", fileId, outputVector );
-       }
 
     }   
     delete debugArray;
@@ -1155,3 +1258,19 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
 
    // ---------------------------------------------------------------------------------------
 }
+
+/**---------------------------------------------------------------------------------------
+
+   Compute Amoeba electrostatic force & torque using PME
+
+   @param amoebaGpu        amoebaGpu context
+
+   --------------------------------------------------------------------------------------- */
+
+void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
+{
+ 
+    cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpu );
+    kCalculateAmoebaPME( amoebaGpu );
+} 
+

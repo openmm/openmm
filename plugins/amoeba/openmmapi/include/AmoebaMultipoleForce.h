@@ -113,6 +113,20 @@ public:
      */
     void setCutoffDistance(double distance);
 
+   /**		   
+     * Get the aEwald parameter		 
+     *		 
+     * @return the Ewald parameter		 
+     */		 
+    double getAEwald() const;			 
+		 
+    /**		 
+     * Set the aEwald parameter		 
+     *		 
+     * @param Ewald parameter			 
+     */		 
+    void setAEwald(double aewald);		 
+		 
     /**
      * Add multipole-related info for a particle 
      *
@@ -279,6 +293,7 @@ private:
 
     AmoebaNonbondedMethod nonbondedMethod;
     double cutoffDistance;
+    double aewald;
     MutualInducedIterationMethod mutualInducedIterationMethod;
     int mutualInducedMaxIterations;
     double mutualInducedTargetEpsilon;
