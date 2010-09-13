@@ -26,58 +26,50 @@ struct MutualInducedParticle {
 #endif
 };
 
-__device__ void loadMutualInducedShared( struct MutualInducedParticle* sA, unsigned int atomI,
-                                         float4* atomCoord,
-                                         float* inducedDipole, float* inducedDipolePolar,
-                                         float2* dampingFactorAndThole 
-#ifdef GK
-                                         , float* bornRadii, float* inducedDipoleS, float* inducedDipolePolarS
-#endif
-)
-
+__device__ static void loadMutualInducedShared( MutualInducedParticle* sA, unsigned int atomI )
 {
     // coordinates & charge
 
-    sA->x                        = atomCoord[atomI].x;
-    sA->y                        = atomCoord[atomI].y;
-    sA->z                        = atomCoord[atomI].z;
-    sA->q                        = atomCoord[atomI].w;
+    sA->x                        = cSim.pPosq[atomI].x;
+    sA->y                        = cSim.pPosq[atomI].y;
+    sA->z                        = cSim.pPosq[atomI].z;
+    sA->q                        = cSim.pPosq[atomI].w;
 
     // dipole
 
-    sA->inducedDipole[0]         = inducedDipole[atomI*3];
-    sA->inducedDipole[1]         = inducedDipole[atomI*3+1];
-    sA->inducedDipole[2]         = inducedDipole[atomI*3+2];
+    sA->inducedDipole[0]         = cAmoebaSim.pInducedDipole[atomI*3];
+    sA->inducedDipole[1]         = cAmoebaSim.pInducedDipole[atomI*3+1];
+    sA->inducedDipole[2]         = cAmoebaSim.pInducedDipole[atomI*3+2];
 
     // dipole polar
 
-    sA->inducedDipolePolar[0]    = inducedDipolePolar[atomI*3];
-    sA->inducedDipolePolar[1]    = inducedDipolePolar[atomI*3+1];
-    sA->inducedDipolePolar[2]    = inducedDipolePolar[atomI*3+2];
+    sA->inducedDipolePolar[0]    = cAmoebaSim.pInducedDipolePolar[atomI*3];
+    sA->inducedDipolePolar[1]    = cAmoebaSim.pInducedDipolePolar[atomI*3+1];
+    sA->inducedDipolePolar[2]    = cAmoebaSim.pInducedDipolePolar[atomI*3+2];
 
-    sA->damp                     = dampingFactorAndThole[atomI].x;
-    sA->thole                    = dampingFactorAndThole[atomI].y;
+    sA->damp                     = cAmoebaSim.pDampingFactorAndThole[atomI].x;
+    sA->thole                    = cAmoebaSim.pDampingFactorAndThole[atomI].y;
 
 #ifdef GK
 
-    sA->bornRadius               = bornRadii[atomI];
+    sA->bornRadius               =  cSim.pBornRadii[atomI];
 
     // dipoleS
 
-    sA->inducedDipoleS[0]        = inducedDipoleS[atomI*3];
-    sA->inducedDipoleS[1]        = inducedDipoleS[atomI*3+1];
-    sA->inducedDipoleS[2]        = inducedDipoleS[atomI*3+2];
+    sA->inducedDipoleS[0]        = cAmoebaSim.pInducedDipoleS[atomI*3];
+    sA->inducedDipoleS[1]        = cAmoebaSim.pInducedDipoleS[atomI*3+1];
+    sA->inducedDipoleS[2]        = cAmoebaSim.pInducedDipoleS[atomI*3+2];
 
     // dipole polar S
 
-    sA->inducedDipolePolarS[0]   = inducedDipolePolarS[atomI*3];
-    sA->inducedDipolePolarS[1]   = inducedDipolePolarS[atomI*3+1];
-    sA->inducedDipolePolarS[2]   = inducedDipolePolarS[atomI*3+2];
+    sA->inducedDipolePolarS[0]   = cAmoebaSim.pInducedDipolePolarS[atomI*3];
+    sA->inducedDipolePolarS[1]   = cAmoebaSim.pInducedDipolePolarS[atomI*3+1];
+    sA->inducedDipolePolarS[2]   = cAmoebaSim.pInducedDipolePolarS[atomI*3+2];
 
 #endif
 }
 
-__device__ static void zeroMutualInducedParticleSharedField( struct MutualInducedParticle* sA )
+__device__ static void zeroMutualInducedParticleSharedField( MutualInducedParticle* sA )
 
 {
     // zero shared fields
@@ -101,44 +93,3 @@ __device__ static void zeroMutualInducedParticleSharedField( struct MutualInduce
 #endif
 
 }
-
-// load struct and arrays w/ shared data in sA
-
-__device__ void loadMutualInducedData( struct MutualInducedParticle* sA,  float4* jCoord,
-                                       float* jInducedDipole,  float* jInducedDipolePolar
-#ifdef GK
-                                      , float* jBornRadius, float* jInducedDipoleS, float* jInducedDipolePolarS
-#endif
-)
-{
-
-    // load coords, charge, ...
-
-    jCoord->x                = sA->x;
-    jCoord->y                = sA->y;
-    jCoord->z                = sA->z;
-    jCoord->w                = sA->q;
- 
-    jInducedDipole[0]        = sA->inducedDipole[0];
-    jInducedDipole[1]        = sA->inducedDipole[1];
-    jInducedDipole[2]        = sA->inducedDipole[2];
- 
-    jInducedDipolePolar[0]   = sA->inducedDipolePolar[0];
-    jInducedDipolePolar[1]   = sA->inducedDipolePolar[1];
-    jInducedDipolePolar[2]   = sA->inducedDipolePolar[2];
-
-#ifdef GK
-    *jBornRadius             = sA->bornRadius;
-
-    jInducedDipoleS[0]       = sA->inducedDipoleS[0];
-    jInducedDipoleS[1]       = sA->inducedDipoleS[1];
-    jInducedDipoleS[2]       = sA->inducedDipoleS[2];
- 
-    jInducedDipolePolarS[0]  = sA->inducedDipolePolarS[0];
-    jInducedDipolePolarS[1]  = sA->inducedDipolePolarS[1];
-    jInducedDipolePolarS[2]  = sA->inducedDipolePolarS[2];
-
-#endif
- 
-}
-

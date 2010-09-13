@@ -2763,6 +2763,7 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu)
     SetCalculateAmoebaCudaVdw14_7Sim( amoebaGpu );
     SetCalculateAmoebaCudaWcaDispersionSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedFieldSim( amoebaGpu );
+    SetCalculateAmoebaCudaPmeMutualInducedFieldSim( amoebaGpu );
     SetCalculateAmoebaCudaPmeFixedEFieldSim( amoebaGpu );
     SetCalculateAmoebaElectrostaticSim( amoebaGpu );
     SetCalculateAmoebaRealSpaceEwaldSim( amoebaGpu );

@@ -373,6 +373,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
             cudaComputeAmoebaMutualInducedField( amoebaGpu );
         } else {
             cudaComputeAmoebaPmeFixedEField( amoebaGpu );
+            cudaComputeAmoebaPmeMutualInducedField( amoebaGpu );
         }
     }
 

@@ -88,6 +88,10 @@ extern void SetCalculateAmoebaCudaMutualInducedFieldSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaMutualInducedFieldSim(amoebaGpuContext gpu);
 extern void cudaComputeAmoebaMutualInducedField( amoebaGpuContext gpu);
 
+extern void SetCalculateAmoebaCudaPmeMutualInducedFieldSim(amoebaGpuContext gpu);
+extern void GetCalculateAmoebaCudaPmeMutualInducedFieldSim(amoebaGpuContext gpu);
+extern void cudaComputeAmoebaPmeMutualInducedField( amoebaGpuContext gpu);
+
 // mutual induced and Gk
 
 extern void SetCalculateAmoebaCudaMutualInducedAndGkFieldsSim(amoebaGpuContext amoebaGpu);

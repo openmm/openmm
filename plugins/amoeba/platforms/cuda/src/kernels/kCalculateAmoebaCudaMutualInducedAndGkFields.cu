@@ -36,14 +36,11 @@ void GetCalculateAmoebaCudaMutualInducedAndGkFieldsSim(amoebaGpuContext amoebaGp
 //#define AMOEBA_DEBUG
 #undef AMOEBA_DEBUG
 
-__device__ void calculateMutualInducedAndGkFieldsPairIxn_kernel( float4 atomCoordinatesI, float4 atomCoordinatesJ,
-                                                                 float dampingFactorI,    float dampingFactorJ,
-                                                                 float tholeI,            float tholeJ,
-                                                                 float* inducedDipoleI,   float* inducedDipolePolarI,
-                                                                 float* inducedDipoleJ,   float* inducedDipolePolarJ,
-                                                                 float* inducedDipoleSI,  float* inducedDipolePolarSI,
-                                                                 float* inducedDipoleSJ,  float* inducedDipolePolarSJ,
-                                                                 float scalingDistanceCutoff,
+#define GK
+#include "kCalculateAmoebaCudaMutualInducedParticle.h"
+#undef GK
+
+__device__ void calculateMutualInducedAndGkFieldsPairIxn_kernel( MutualInducedParticle& atomI, MutualInducedParticle& atomJ,
                                                                  float fields[8][3]
 
 #ifdef AMOEBA_DEBUG
@@ -59,9 +56,9 @@ __device__ void calculateMutualInducedAndGkFieldsPairIxn_kernel( float4 atomCoor
     
     // get deltaR, and r between 2 atoms
     
-    deltaR[0]                                    = atomCoordinatesJ.x - atomCoordinatesI.x;
-    deltaR[1]                                    = atomCoordinatesJ.y - atomCoordinatesI.y;
-    deltaR[2]                                    = atomCoordinatesJ.z - atomCoordinatesI.z;
+    deltaR[0]                                    = atomJ.x - atomI.x;
+    deltaR[1]                                    = atomJ.y - atomI.y;
+    deltaR[2]                                    = atomJ.z - atomI.z;
 
     float r                                      =  sqrtf( deltaR[0]*deltaR[0] + deltaR[1]*deltaR[1] + deltaR[2]*deltaR[2] );
     float rI                                     =  1.0f/r;
@@ -69,112 +66,59 @@ __device__ void calculateMutualInducedAndGkFieldsPairIxn_kernel( float4 atomCoor
     float rr3                                    = -rI*r2I;
     float rr5                                    = -3.0f*rr3*r2I;
     
-    float dampProd                               = dampingFactorI*dampingFactorJ;
+    float dampProd                               = atomI.damp*atomJ.damp;
     float ratio                                  = (dampProd != 0.0f) ? (r/dampProd) : 1.0f;
-    float pGamma                                 = tholeJ > tholeI ? tholeI : tholeJ;
+    float pGamma                                 = atomI.thole > atomJ.thole ? atomJ.thole: atomI.thole;
     float damp                                   = ratio*ratio*ratio*pGamma;
-    float dampExp                                = ( (dampProd != 0.0f) && (r < scalingDistanceCutoff) ) ? expf( -damp ) : 0.0f; 
+    float dampExp                                = ( (dampProd != 0.0f) && (r < cAmoebaSim.scalingDistanceCutoff) ) ? expf( -damp ) : 0.0f; 
 
     rr3                                         *= (1.0f - dampExp);
     rr5                                         *= (1.0f - ( 1.0f + damp )*dampExp);
         
-    float* dipole                                = inducedDipoleJ;
-    float dDotDelta                              = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[0][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[0][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[0][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    float dDotDelta                              = rr5*(deltaR[0]*atomJ.inducedDipole[0]    + deltaR[1]*atomJ.inducedDipole[1]    + deltaR[2]*atomJ.inducedDipole[2] );
+    fields[0][0]                                 = rr3*atomJ.inducedDipole[0] + dDotDelta*deltaR[0];
+    fields[0][1]                                 = rr3*atomJ.inducedDipole[1] + dDotDelta*deltaR[1];
+    fields[0][2]                                 = rr3*atomJ.inducedDipole[2] + dDotDelta*deltaR[2];
    
-    dipole                                       = inducedDipolePolarJ;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[1][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[1][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[1][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomJ.inducedDipolePolar[0]    + deltaR[1]*atomJ.inducedDipolePolar[1]    + deltaR[2]*atomJ.inducedDipolePolar[2] );
+    fields[1][0]                                 = rr3*atomJ.inducedDipolePolar[0] + dDotDelta*deltaR[0];
+    fields[1][1]                                 = rr3*atomJ.inducedDipolePolar[1] + dDotDelta*deltaR[1];
+    fields[1][2]                                 = rr3*atomJ.inducedDipolePolar[2] + dDotDelta*deltaR[2];
   
-    dipole                                       = inducedDipoleI;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[2][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[2][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[2][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomI.inducedDipole[0]    + deltaR[1]*atomI.inducedDipole[1]    + deltaR[2]*atomI.inducedDipole[2] );
+    fields[2][0]                                 = rr3*atomI.inducedDipole[0] + dDotDelta*deltaR[0];
+    fields[2][1]                                 = rr3*atomI.inducedDipole[1] + dDotDelta*deltaR[1];
+    fields[2][2]                                 = rr3*atomI.inducedDipole[2] + dDotDelta*deltaR[2];
    
-    dipole                                       = inducedDipolePolarI;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[3][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[3][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[3][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomI.inducedDipolePolar[0]    + deltaR[1]*atomI.inducedDipolePolar[1]    + deltaR[2]*atomI.inducedDipolePolar[2] );
+    fields[3][0]                                 = rr3*atomI.inducedDipolePolar[0] + dDotDelta*deltaR[0];
+    fields[3][1]                                 = rr3*atomI.inducedDipolePolar[1] + dDotDelta*deltaR[1];
+    fields[3][2]                                 = rr3*atomI.inducedDipolePolar[2] + dDotDelta*deltaR[2];
 
-    dipole                                       = inducedDipoleSJ;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[4][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[4][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[4][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomJ.inducedDipoleS[0]    + deltaR[1]*atomJ.inducedDipoleS[1]    + deltaR[2]*atomJ.inducedDipoleS[2] );
+    fields[4][0]                                 = rr3*atomJ.inducedDipoleS[0] + dDotDelta*deltaR[0];
+    fields[4][1]                                 = rr3*atomJ.inducedDipoleS[1] + dDotDelta*deltaR[1];
+    fields[4][2]                                 = rr3*atomJ.inducedDipoleS[2] + dDotDelta*deltaR[2];
    
-    dipole                                       = inducedDipolePolarSJ;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[5][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[5][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[5][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomJ.inducedDipolePolarS[0]    + deltaR[1]*atomJ.inducedDipolePolarS[1]    + deltaR[2]*atomJ.inducedDipolePolarS[2] );
+    fields[5][0]                                 = rr3*atomJ.inducedDipolePolarS[0] + dDotDelta*deltaR[0];
+    fields[5][1]                                 = rr3*atomJ.inducedDipolePolarS[1] + dDotDelta*deltaR[1];
+    fields[5][2]                                 = rr3*atomJ.inducedDipolePolarS[2] + dDotDelta*deltaR[2];
   
-    dipole                                       = inducedDipoleSI;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[6][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[6][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[6][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomI.inducedDipoleS[0]    + deltaR[1]*atomI.inducedDipoleS[1]    + deltaR[2]*atomI.inducedDipoleS[2] );
+    fields[6][0]                                 = rr3*atomI.inducedDipoleS[0] + dDotDelta*deltaR[0];
+    fields[6][1]                                 = rr3*atomI.inducedDipoleS[1] + dDotDelta*deltaR[1];
+    fields[6][2]                                 = rr3*atomI.inducedDipoleS[2] + dDotDelta*deltaR[2];
    
-    dipole                                       = inducedDipolePolarSI;
-    dDotDelta                                    = rr5*(deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-    fields[7][0]                                 = rr3*dipole[0] + dDotDelta*deltaR[0];
-    fields[7][1]                                 = rr3*dipole[1] + dDotDelta*deltaR[1];
-    fields[7][2]                                 = rr3*dipole[2] + dDotDelta*deltaR[2];
+    dDotDelta                                    = rr5*(deltaR[0]*atomI.inducedDipolePolarS[0]    + deltaR[1]*atomI.inducedDipolePolarS[1]    + deltaR[2]*atomI.inducedDipolePolarS[2] );
+    fields[7][0]                                 = rr3*atomI.inducedDipolePolarS[0] + dDotDelta*deltaR[0];
+    fields[7][1]                                 = rr3*atomI.inducedDipolePolarS[1] + dDotDelta*deltaR[1];
+    fields[7][2]                                 = rr3*atomI.inducedDipolePolarS[2] + dDotDelta*deltaR[2];
 
-#ifdef AMOEBA_DEBUGX
-//int n2         = numberOfAtoms*numberOfAtoms;
-//int debugIndex = atomI*numberOfAtoms + atomJ;
-if( atomI == 0 ){
-int debugIndex               = atomJ;
-    debugArray[debugIndex].x = rr3;
-    debugArray[debugIndex].y = rr5;
-
-    dipole                                       = &inducedDipole[atomJ*3];
-    debugArray[debugIndex].z = (deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-
-    dipole                                       = &inducedDipole[atomI*3];
-    debugArray[debugIndex].w = (deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-
-    debugIndex              += numberOfAtoms;
-    dipole                                       = &inducedDipolePolar[atomJ*3];
-    debugArray[debugIndex].x = (deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-
-    dipole                                       = &inducedDipolePolar[atomI*3];
-    debugArray[debugIndex].y = (deltaR[0]*dipole[0]    + deltaR[1]*dipole[1]    + deltaR[2]*dipole[2] );
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = fields1[atomI*numberOfAtoms*3 + atomJ*3 +0];
-    debugArray[debugIndex].y = fields1[atomI*numberOfAtoms*3 + atomJ*3 +1];
-    debugArray[debugIndex].z = fields1[atomI*numberOfAtoms*3 + atomJ*3 +2];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = fields1[atomJ*numberOfAtoms*3 + atomI*3 +0];
-    debugArray[debugIndex].y = fields1[atomJ*numberOfAtoms*3 + atomI*3 +1];
-    debugArray[debugIndex].z = fields1[atomJ*numberOfAtoms*3 + atomI*3 +2];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = fields2[atomI*numberOfAtoms*3 + atomJ*3 +0];
-    debugArray[debugIndex].y = fields2[atomI*numberOfAtoms*3 + atomJ*3 +1];
-    debugArray[debugIndex].z = fields2[atomI*numberOfAtoms*3 + atomJ*3 +2];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = fields2[atomJ*numberOfAtoms*3 + atomI*3 +0];
-    debugArray[debugIndex].y = fields2[atomJ*numberOfAtoms*3 + atomI*3 +1];
-    debugArray[debugIndex].z = fields2[atomJ*numberOfAtoms*3 + atomI*3 +2];
-
-}
-#endif
 
 }
 
-__device__ void calculateMutualInducedAndGkFieldsGkPairIxn_kernel( float4 atomCoordinatesI, float4 atomCoordinatesJ, float rb2,
-                                                                   float* inducedDipoleSI,  float* inducedDipolePolarSI,
-                                                                   float* inducedDipoleSJ,  float* inducedDipolePolarSJ,
+__device__ void calculateMutualInducedAndGkFieldsGkPairIxn_kernel( MutualInducedParticle& atomI, MutualInducedParticle& atomJ,
                                                                    float gkField[8][3]
 
 #ifdef AMOEBA_DEBUG
@@ -191,13 +135,15 @@ __device__ void calculateMutualInducedAndGkFieldsGkPairIxn_kernel( float4 atomCo
     
     // ---------------------------------------------------------------------------------------
     
-    float xr               = atomCoordinatesJ.x - atomCoordinatesI.x;
-    float yr               = atomCoordinatesJ.y - atomCoordinatesI.y;
-    float zr               = atomCoordinatesJ.z - atomCoordinatesI.z;
+    float xr               = atomJ.x - atomI.x;
+    float yr               = atomJ.y - atomI.y;
+    float zr               = atomJ.z - atomI.z;
 
     float xr2              = xr*xr;
     float yr2              = yr*yr;
     float zr2              = zr*zr;
+
+    float rb2              = atomI.bornRadius*atomJ.bornRadius;
 
     float r2               = xr2 + yr2 + zr2;
     float expterm          = expf(-r2/(cAmoebaSim.gkc*rb2));
@@ -209,21 +155,21 @@ __device__ void calculateMutualInducedAndGkFieldsGkPairIxn_kernel( float4 atomCo
     float gf3              = gf2 * gf;
     float gf5              = gf3 * gf2;
 
-    float duixs            = inducedDipoleSI[0];
-    float duiys            = inducedDipoleSI[1];
-    float duizs            = inducedDipoleSI[2];
+    float duixs            = atomI.inducedDipoleS[0];
+    float duiys            = atomI.inducedDipoleS[1];
+    float duizs            = atomI.inducedDipoleS[2];
 
-    float puixs            = inducedDipolePolarSI[0];
-    float puiys            = inducedDipolePolarSI[1];
-    float puizs            = inducedDipolePolarSI[2];
+    float puixs            = atomI.inducedDipolePolarS[0];
+    float puiys            = atomI.inducedDipolePolarS[1];
+    float puizs            = atomI.inducedDipolePolarS[2];
  
-    float dukxs            = inducedDipoleSJ[0];
-    float dukys            = inducedDipoleSJ[1];
-    float dukzs            = inducedDipoleSJ[2];
+    float dukxs            = atomJ.inducedDipoleS[0];
+    float dukys            = atomJ.inducedDipoleS[1];
+    float dukzs            = atomJ.inducedDipoleS[2];
 
-    float pukxs            = inducedDipolePolarSJ[0];
-    float pukys            = inducedDipolePolarSJ[1];
-    float pukzs            = inducedDipolePolarSJ[2];
+    float pukxs            = atomJ.inducedDipolePolarS[0];
+    float pukys            = atomJ.inducedDipolePolarS[1];
+    float pukzs            = atomJ.inducedDipolePolarS[2];
  
     // reaction potential auxiliary terms
  
@@ -280,9 +226,6 @@ __device__ static int debugAccumulate( int index, float4* debugArray, float* fie
 }
 #endif
 
-#define GK
-#include "kCalculateAmoebaCudaMutualInducedParticle.h"
-#undef GK
 
 // Include versions of the kernels for N^2 calculations.
 
@@ -587,24 +530,16 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
     }
     
     if (gpu->bOutputBufferPerWarp){
-#if 0
-        (void) fprintf( amoebaGpu->log, "N2 warp\n" ); (void) fflush( amoebaGpu->log );
-
-        kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks,
-                                                                  amoebaGpu->nonbondThreadsPerBlock,
-                                                                  sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
-
+        kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                 gpu->psPosq4->_pDevStream[0],
-                                                                 amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                                 amoebaGpu->psInducedDipolePolar->_pDevStream[0],
                                                                  amoebaGpu->psWorkArray_3_1->_pDevStream[0],
-#ifdef AMOEBA_DEBUG
                                                                  amoebaGpu->psWorkArray_3_2->_pDevStream[0],
+                                                                 amoebaGpu->psWorkArray_3_3->_pDevStream[0],
+#ifdef AMOEBA_DEBUG
+                                                                 amoebaGpu->psWorkArray_3_4->_pDevStream[0],
                                                                  debugArray->_pDevStream[0], targetAtom );
 #else
-                                                                 amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
-#endif
+                                                                 amoebaGpu->psWorkArray_3_4->_pDevStream[0] );
 #endif
     } else {
 
@@ -619,12 +554,6 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
 
         kCalculateAmoebaMutualInducedAndGkFieldsN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                            gpu->psPosq4->_pDevStream[0],
-                                                            gpu->psBornRadii->_pDevStream[0],
-                                                            amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                            amoebaGpu->psInducedDipolePolar->_pDevStream[0],
-                                                            amoebaGpu->psInducedDipoleS->_pDevStream[0],
-                                                            amoebaGpu->psInducedDipolePolarS->_pDevStream[0],
                                                             amoebaGpu->psWorkArray_3_1->_pDevStream[0],
                                                             amoebaGpu->psWorkArray_3_2->_pDevStream[0],
                                                             amoebaGpu->psWorkArray_3_3->_pDevStream[0],

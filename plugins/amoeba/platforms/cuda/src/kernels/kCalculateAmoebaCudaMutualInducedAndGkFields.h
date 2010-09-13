@@ -36,12 +36,6 @@ __launch_bounds__(64, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
                             unsigned int* workUnit,
-                            float4* atomCoord,
-                            float*  bornRadii,
-                            float* inducedDipole,
-                            float* inducedDipolePolar,
-                            float* inducedDipoleS,
-                            float* inducedDipolePolarS,
                             float* outputField,
                             float* outputFieldPolar,
                             float* outputFieldS,
@@ -60,13 +54,6 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
 
-    float4 jCoord;
-    float  jBornRadius;
-    float  jDipole[3];     
-    float  jDipolePolar[3];     
-    float  jDipoleS[3];     
-    float  jDipolePolarS[3];     
-
     while (pos < end)
     {
 
@@ -84,7 +71,8 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
 
         MutualInducedParticle*  psA      = &sA[tbx];
         unsigned int atomI               = x + tgx;
-        float4 iCoord                    = atomCoord[atomI];
+        MutualInducedParticle localParticle;
+        loadMutualInducedShared( &localParticle, atomI );
 
         float fieldSum[3];
         float fieldPolarSum[3];
@@ -115,9 +103,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
 
             // load shared data
 
-            loadMutualInducedShared( &(sA[threadIdx.x]), atomI,
-                                     atomCoord, inducedDipole, inducedDipolePolar, cAmoebaSim.pDampingFactorAndThole,
-                                     bornRadii, inducedDipoleS, inducedDipolePolarS );
+            loadMutualInducedShared( &(sA[threadIdx.x]), atomI );
 
             for (unsigned int j = 0; j < GRID; j++)
             {
@@ -126,16 +112,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
 
                 // load coords, charge, ...
 
-                loadMutualInducedData( &(psA[j]), &jCoord, jDipole, jDipolePolar, &jBornRadius, jDipoleS, jDipolePolarS ); 
-
-                calculateMutualInducedAndGkFieldsPairIxn_kernel( iCoord,                                          jCoord,
-                                         cAmoebaSim.pDampingFactorAndThole[atomI].x,      psA[j].damp,
-                                         cAmoebaSim.pDampingFactorAndThole[atomI].y,      psA[j].thole,
-                                         &(inducedDipole[atomI*3]),                       &(inducedDipolePolar[atomI*3]),
-                                         jDipole,                                         jDipolePolar,
-                                         &(inducedDipoleS[atomI*3]),                      &(inducedDipolePolarS[atomI*3]),
-                                         jDipoleS,                                        jDipolePolarS,
-                                         cAmoebaSim.scalingDistanceCutoff,                ijField
+                calculateMutualInducedAndGkFieldsPairIxn_kernel( localParticle, psA[j], ijField
 #ifdef AMOEBA_DEBUG
 ,  debugArray
 #endif
@@ -177,10 +154,7 @@ if( atomI == targetAtom ){
         index                              = debugAccumulate( index, debugArray, ijField[5],   mask, 4.0f );
 }
 #endif
-                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( iCoord,                                          jCoord, bornRadii[atomI]*jBornRadius,
-                                                                   &(inducedDipoleS[atomI*3]),                      &(inducedDipolePolarS[atomI*3]),
-                                                                   jDipoleS,                                        jDipolePolarS,
-                                                                   ijField
+                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( localParticle, psA[j], ijField
 #ifdef AMOEBA_DEBUG
                                                                    , debugArray
 #endif
@@ -247,9 +221,7 @@ if( atomI == targetAtom ){
             {
                 // load coordinates, charge, ...
 
-                loadMutualInducedShared( &(sA[threadIdx.x]), (y+tgx),
-                                         atomCoord, inducedDipole,
-                                         inducedDipolePolar, cAmoebaSim.pDampingFactorAndThole, bornRadii, inducedDipoleS, inducedDipolePolarS );
+                loadMutualInducedShared( &(sA[threadIdx.x]), (y+tgx) );
             }
 
            // zero shared fields
@@ -263,16 +235,7 @@ if( atomI == targetAtom ){
 
                 // load coords, charge, ...
 
-                loadMutualInducedData( &(psA[tj]), &jCoord, jDipole, jDipolePolar, &jBornRadius, jDipoleS, jDipolePolarS ); 
-
-                calculateMutualInducedAndGkFieldsPairIxn_kernel( iCoord,                  jCoord,
-                                         cAmoebaSim.pDampingFactorAndThole[atomI].x,      psA[tj].damp,
-                                         cAmoebaSim.pDampingFactorAndThole[atomI].y,      psA[tj].thole,
-                                         &(inducedDipole[atomI*3]),                       &(inducedDipolePolar[atomI*3]),
-                                         jDipole,                                         jDipolePolar,
-                                         &(inducedDipoleS[atomI*3]),                      &(inducedDipolePolarS[atomI*3]),
-                                         jDipoleS,                                        jDipolePolarS,
-                                         cAmoebaSim.scalingDistanceCutoff, ijField
+                calculateMutualInducedAndGkFieldsPairIxn_kernel( localParticle, psA[tj], ijField
 #ifdef AMOEBA_DEBUG
 ,  debugArray
 #endif
@@ -344,10 +307,7 @@ if( atomI == targetAtom  || (y + tj) == targetAtom ){
         index                              = debugAccumulate( index, debugArray, ijField[indexI+5], maskD, -4.0f );
 }
 #endif
-                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( iCoord,                                          jCoord, bornRadii[atomI]*jBornRadius,
-                                                                   &(inducedDipoleS[atomI*3]),                      &(inducedDipolePolarS[atomI*3]),
-                                                                   jDipoleS,                                        jDipolePolarS,
-                                                                   ijField
+                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( localParticle, psA[tj], ijField
 #ifdef AMOEBA_DEBUG
 ,  debugArray
 #endif
