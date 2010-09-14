@@ -729,12 +729,13 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
         multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
         multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
         multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
+        float* phi = &cAmoebaSim.pPhi[20*i];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         for (int k = 0; k < 10; k++) {
-            energy += multipole[k]*cAmoebaSim.pPhi[20*i+k];
-            f.x += multipole[k]*cAmoebaSim.pPhi[20*i+deriv1[k]];
-            f.y += multipole[k]*cAmoebaSim.pPhi[20*i+deriv2[k]];
-            f.z += multipole[k]*cAmoebaSim.pPhi[20*i+deriv3[k]];
+            energy += multipole[k]*phi[k];
+            f.x += multipole[k]*phi[deriv1[k]];
+            f.y += multipole[k]*phi[deriv2[k]];
+            f.z += multipole[k]*phi[deriv3[k]];
         }
         f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
         f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
@@ -747,18 +748,18 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
 
         // Compute the torque.
 
-        cAmoebaSim.pTorque[3*i] = multipole[3]*cAmoebaSim.pPhi[2] - multipole[2]*cAmoebaSim.pPhi[3]
-                      + 2.0f*(multipole[6]-multipole[5])*cAmoebaSim.pPhi[9]
-                      + multipole[8]*cAmoebaSim.pPhi[7] + multipole[9]*cAmoebaSim.pPhi[5]
-                      - multipole[7]*cAmoebaSim.pPhi[8] - multipole[9]*cAmoebaSim.pPhi[6];
-        cAmoebaSim.pTorque[3*i+1] = multipole[1]*cAmoebaSim.pPhi[3] - multipole[3]*cAmoebaSim.pPhi[1]
-                      + 2.0f*(multipole[4]-multipole[6])*cAmoebaSim.pPhi[9]
-                      + multipole[7]*cAmoebaSim.pPhi[9] + multipole[8]*cAmoebaSim.pPhi[6]
-                      - multipole[8]*cAmoebaSim.pPhi[4] - multipole[9]*cAmoebaSim.pPhi[7];
-        cAmoebaSim.pTorque[3*i+2] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
-                      + 2.0f*(multipole[5]-multipole[4])*cAmoebaSim.pPhi[7]
-                      + multipole[7]*cAmoebaSim.pPhi[4] + multipole[9]*cAmoebaSim.pPhi[8]
-                      - multipole[7]*cAmoebaSim.pPhi[5] - multipole[8]*cAmoebaSim.pPhi[9];
+        cAmoebaSim.pTorque[3*i] = multipole[3]*phi[2] - multipole[2]*phi[3]
+                      + 2.0f*(multipole[6]-multipole[5])*phi[9]
+                      + multipole[8]*phi[7] + multipole[9]*phi[5]
+                      - multipole[7]*phi[8] - multipole[9]*phi[6];
+        cAmoebaSim.pTorque[3*i+1] = multipole[1]*phi[3] - multipole[3]*phi[1]
+                      + 2.0f*(multipole[4]-multipole[6])*phi[9]
+                      + multipole[7]*phi[9] + multipole[8]*phi[6]
+                      - multipole[8]*phi[4] - multipole[9]*phi[7];
+        cAmoebaSim.pTorque[3*i+2] = multipole[2]*phi[1] - multipole[1]*phi[2]
+                      + 2.0f*(multipole[5]-multipole[4])*phi[7]
+                      + multipole[7]*phi[4] + multipole[9]*phi[8]
+                      - multipole[7]*phi[5] - multipole[8]*phi[9];
     }
     cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
 }
@@ -799,15 +800,18 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         inducedDipolePolar[0] = cAmoebaSim.pInducedDipolePolar[i*3];
         inducedDipolePolar[1] = cAmoebaSim.pInducedDipolePolar[i*3+1];
         inducedDipolePolar[2] = cAmoebaSim.pInducedDipolePolar[i*3+2];
+        float* phi = &cAmoebaSim.pPhi[20*i];
+        float* phip = &cAmoebaSim.pPhip[20*i];
+        float* phid = &cAmoebaSim.pPhid[20*i];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
             int j2 = deriv1[k+2];
             int j3 = deriv1[k+3];
-            energy += inducedDipole[k]*cAmoebaSim.pPhi[20*i+k+1];
-            f.x += (inducedDipole[k]+inducedDipolePolar[k])*cAmoebaSim.pPhi[20*i+j1] + inducedDipole[k]*cAmoebaSim.pPhip[20*i+j1] + inducedDipolePolar[k]*cAmoebaSim.pPhid[20*i+j1];
-            f.y += (inducedDipole[k]+inducedDipolePolar[k])*cAmoebaSim.pPhi[20*i+j2] + inducedDipole[k]*cAmoebaSim.pPhip[20*i+j2] + inducedDipolePolar[k]*cAmoebaSim.pPhid[20*i+j2];
-            f.z += (inducedDipole[k]+inducedDipolePolar[k])*cAmoebaSim.pPhi[20*i+j3] + inducedDipole[k]*cAmoebaSim.pPhip[20*i+j3] + inducedDipolePolar[k]*cAmoebaSim.pPhid[20*i+j3];
+            energy += inducedDipole[k]*phi[k+1];
+            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1] + inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1];
+            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2] + inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
+            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3] + inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3];
         }
         for (int k = 0; k < 10; k++) {
             f.x += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv1[k]];
@@ -825,20 +829,57 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
 
         // Compute the torque.
 
-        cAmoebaSim.pTorque[3*i] = multipole[3]*cAmoebaSim.pPhi[2] - multipole[2]*cAmoebaSim.pPhi[3]
-                      + 2.0f*(multipole[6]-multipole[5])*cAmoebaSim.pPhi[9]
-                      + multipole[8]*cAmoebaSim.pPhi[7] + multipole[9]*cAmoebaSim.pPhi[5]
-                      - multipole[7]*cAmoebaSim.pPhi[8] - multipole[9]*cAmoebaSim.pPhi[6];
-        cAmoebaSim.pTorque[3*i+1] = multipole[1]*cAmoebaSim.pPhi[3] - multipole[3]*cAmoebaSim.pPhi[1]
-                      + 2.0f*(multipole[4]-multipole[6])*cAmoebaSim.pPhi[9]
-                      + multipole[7]*cAmoebaSim.pPhi[9] + multipole[8]*cAmoebaSim.pPhi[6]
-                      - multipole[8]*cAmoebaSim.pPhi[4] - multipole[9]*cAmoebaSim.pPhi[7];
-        cAmoebaSim.pTorque[3*i+2] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
-                      + 2.0f*(multipole[5]-multipole[4])*cAmoebaSim.pPhi[7]
-                      + multipole[7]*cAmoebaSim.pPhi[4] + multipole[9]*cAmoebaSim.pPhi[8]
-                      - multipole[7]*cAmoebaSim.pPhi[5] - multipole[8]*cAmoebaSim.pPhi[9];
+        cAmoebaSim.pTorque[3*i] = multipole[3]*phi[2] - multipole[2]*phi[3]
+                      + 2.0f*(multipole[6]-multipole[5])*phi[9]
+                      + multipole[8]*phi[7] + multipole[9]*phi[5]
+                      - multipole[7]*phi[8] - multipole[9]*phi[6];
+        cAmoebaSim.pTorque[3*i+1] = multipole[1]*phi[3] - multipole[3]*phi[1]
+                      + 2.0f*(multipole[4]-multipole[6])*phi[9]
+                      + multipole[7]*phi[9] + multipole[8]*phi[6]
+                      - multipole[8]*phi[4] - multipole[9]*phi[7];
+        cAmoebaSim.pTorque[3*i+2] = multipole[2]*phi[1] - multipole[1]*phi[2]
+                      + 2.0f*(multipole[5]-multipole[4])*phi[7]
+                      + multipole[7]*phi[4] + multipole[9]*phi[8]
+                      - multipole[7]*phi[5] - multipole[8]*phi[9];
     }
     cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(768, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(384, 1)
+#else
+__launch_bounds__(192, 1)
+#endif
+void kRecordFixedMultipoleField_kernel(float* output)
+{
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
+        output[3*i] -= cAmoebaSim.pPhi[20*i];
+        output[3*i+1] -= cAmoebaSim.pPhi[20*i+1];
+        output[3*i+2] -= cAmoebaSim.pPhi[20*i+2];
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(768, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(384, 1)
+#else
+__launch_bounds__(192, 1)
+#endif
+void kRecordInducedDipoleField_kernel(float* output, float* outputPolar)
+{
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
+        output[3*i] -= cAmoebaSim.pPhid[20*i];
+        output[3*i+1] -= cAmoebaSim.pPhid[20*i+1];
+        output[3*i+2] -= cAmoebaSim.pPhid[20*i+2];
+        outputPolar[3*i] -= cAmoebaSim.pPhip[20*i];
+        outputPolar[3*i+1] -= cAmoebaSim.pPhip[20*i+1];
+        outputPolar[3*i+2] -= cAmoebaSim.pPhip[20*i+2];
+    }
 }
 
 extern void cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float4>* psOutputForce);
@@ -875,6 +916,8 @@ void kCalculateAmoebaPMEFixedMultipoleField(amoebaGpuContext amoebaGpu)
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
     kComputeFixedPotentialFromGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeFixedPotentialFromGrid");
+    kRecordFixedMultipoleField_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(amoebaGpu->psE_Field->_pDevData);
+    LAUNCHERROR("kRecordFixedMultipoleField");
 }
 
 /**
@@ -893,6 +936,8 @@ void kCalculateAmoebaPMEInducedDipoleField(amoebaGpuContext amoebaGpu)
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
     kComputeInducedPotentialFromGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeInducedPotentialFromGrid");
+    kRecordInducedDipoleField_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(amoebaGpu->psE_Field->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData);
+    LAUNCHERROR("kRecordInducedDipoleField");
 }
 
 /**
