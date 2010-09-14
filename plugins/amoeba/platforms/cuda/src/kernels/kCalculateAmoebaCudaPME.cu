@@ -101,11 +101,11 @@ __device__ void computeBSplinePoint(float4* thetai, float w, float* array)
  */
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(512, 1)
+__launch_bounds__(448, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(256, 1)
+__launch_bounds__(160, 1)
 #else
-__launch_bounds__(128, 1)
+__launch_bounds__(160, 1)
 #endif
 void kComputeAmoebaBsplines_kernel()
 {
@@ -854,11 +854,11 @@ void kCalculateAmoebaPMEFixedMultipoleField(amoebaGpuContext amoebaGpu)
     int threads;
     gpuContext gpu = amoebaGpu->gpuContext;
     if (gpu->sm_version >= SM_20)
-        threads = 512;
+        threads = 448;
     else if (gpu->sm_version >= SM_12)
-        threads = 256;
+        threads = 160;
     else
-        threads = 128;
+        threads = 160;
     kComputeAmoebaBsplines_kernel<<<gpu->sim.blocks, threads, threads*AMOEBA_PME_ORDER*AMOEBA_PME_ORDER*sizeof(float)>>>();
     LAUNCHERROR("kComputeAmoebaBsplines");
     bbSort(gpu->psPmeAtomGridIndex->_pDevData, gpu->natoms);
