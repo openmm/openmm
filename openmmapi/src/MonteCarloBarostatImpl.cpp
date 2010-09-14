@@ -61,7 +61,7 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
 }
 
 void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
-    if (++step < owner.getFrequency())
+    if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
     step = 0;
 

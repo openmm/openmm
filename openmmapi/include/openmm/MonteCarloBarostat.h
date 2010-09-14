@@ -75,13 +75,15 @@ public:
         return defaultPressure;
     }
     /**
-     * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.
+     * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
+     * 0, the barostat is disabled.
      */
     int getFrequency() const {
         return frequency;
     }
     /**
-     * Set the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.
+     * Set the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
+     * 0, the barostat is disabled.
      */
     void setFrequency(int freq) {
         frequency = freq;
