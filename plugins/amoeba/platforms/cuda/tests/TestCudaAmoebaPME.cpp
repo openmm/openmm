@@ -63,7 +63,9 @@ void testPMEWater() {
     quadrupole[0] = 3.540307211e-2;
     quadrupole[4] = -3.902570771e-2;
     quadrupole[8] = 3.622635596e-3;
-    mp->addParticle(-0.51966, dipole, quadrupole, 1, 1, 2, 0.39, 9.707801995e-1, 0.837);
+    double damp = 9.707801995e-01*sqrt(0.1);
+    double polarity = 0.837*0.001;
+    mp->addParticle(-0.51966, dipole, quadrupole, 1, 1, 2, 0.39, damp, polarity);
     dipole[0] = -2.042094848e-2;
     dipole[2] = -3.078753000e-2;
     quadrupole[0] = -3.428482490e-3;
@@ -71,10 +73,30 @@ void testPMEWater() {
     quadrupole[4] = -1.002408752e-2;
     quadrupole[6] = -1.894859639e-4;
     quadrupole[8] = 1.345257001e-2;
-    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 2, 0.39, 8.897068742e-1, 0.496);
-    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 1, 0.39, 8.897068742e-1, 0.496);
+    damp          = 8.897068742e-01*sqrt(0.1);
+    polarity      = 0.496*0.001;
+    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 2, 0.39, damp, polarity);
+    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 1, 0.39, damp, polarity);
     mp->setCutoffDistance(1.0);
-//    nonbonded->setEwaldErrorTolerance(TOL);
+
+    std::vector<int> intVector;
+    intVector.push_back( 0 );
+    intVector.push_back( 1 );
+    intVector.push_back( 2 );
+    mp->setCovalentMap( 0, AmoebaMultipoleForce::PolarizationCovalent11, intVector );
+    mp->setCovalentMap( 1, AmoebaMultipoleForce::PolarizationCovalent11, intVector );
+    mp->setCovalentMap( 2, AmoebaMultipoleForce::PolarizationCovalent11, intVector );
+
+    intVector.resize(0); intVector.push_back( 1 ); intVector.push_back( 2 );
+    mp->setCovalentMap( 0, AmoebaMultipoleForce::Covalent12, intVector );
+
+    intVector.resize(0); intVector.push_back( 0 ); intVector.push_back( 2 );
+    mp->setCovalentMap( 1, AmoebaMultipoleForce::Covalent12, intVector );
+
+    intVector.resize(0); intVector.push_back( 0 ); intVector.push_back( 1 );
+    mp->setCovalentMap( 2, AmoebaMultipoleForce::Covalent12, intVector );
+
+    mp->setEwaldErrorTolerance(TOL);
     system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
     system.addForce(mp);
     Context context(system, integrator, platform);
@@ -87,6 +109,13 @@ void testPMEWater() {
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
+    (void) fprintf( stderr, "PME forces\n" );
+        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+            (void) fprintf( stderr, "%6u [%14.7e %14.7e %14.7e]\n", ii, 
+                            forces[ii][0], forces[ii][1], forces[ii][2] );
+    }
+    (void) fflush( stderr );
+
 }
 
 int main() {

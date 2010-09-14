@@ -429,7 +429,8 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log && iteration == 1 ){
-        (void) fprintf( amoebaGpu->log, "Finished maxtrixMultiply kernel execution %d\n", iteration ); (void) fflush( amoebaGpu->log );
+        (void) fprintf( amoebaGpu->log, "Finished maxtrixMultiply kernel execution %d -- Direct only -- self added in kSorUpdateMutualInducedField_kernel\n",
+                        iteration ); (void) fflush( amoebaGpu->log );
         outputArray->Download();
         outputPolarArray->Download();
         debugArray->Download();
@@ -556,6 +557,9 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         amoebaGpu->psE_Field->_pSysStream[0][ii]       *= conversion;
         amoebaGpu->psE_FieldPolar->_pSysStream[0][ii]  *= conversion;
     }
+    amoebaGpu->gpuContext->sim.alphaEwald = 5.4459052e+00f;
+    (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaPmeMutualInducedFieldBySOR: forcing alphaEwald=%15.7e\n", amoebaGpu->gpuContext->sim.alphaEwald );
+    SetCalculateAmoebaCudaPmeMutualInducedFieldSim(amoebaGpu);
     amoebaGpu->psE_Field->Upload();
     amoebaGpu->psE_FieldPolar->Upload();
 #endif
@@ -584,7 +588,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         amoebaGpu->psPolarizability->Download();
         (void) fprintf( amoebaGpu->log, "%s Initial setup for matrix multiply\n", methodName );
         int offset   = 0;
-        int maxPrint = 20000;
+        int maxPrint = 10;
         for( int ii = 0; ii < gpu->natoms; ii++ ){
             (void) fprintf( amoebaGpu->log, "%4d pol=%12.4e ", ii, 
                             amoebaGpu->psPolarizability->_pSysStream[0][offset] );
@@ -616,7 +620,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         // matrix multiply
 
         cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpu, amoebaGpu->psWorkVector[0],  amoebaGpu->psWorkVector[1] );
-        kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
+        //kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
         LAUNCHERROR("cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply Loop\n");  
 
 
