@@ -521,5 +521,5 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
 {
     cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
-    //kCalculateAmoebaPMEFixedMultipoleField( amoebaGpu );
+    kCalculateAmoebaPMEFixedMultipoleField( amoebaGpu );
 }

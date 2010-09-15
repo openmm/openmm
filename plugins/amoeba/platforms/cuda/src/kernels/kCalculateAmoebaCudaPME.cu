@@ -119,9 +119,6 @@ void kComputeAmoebaBsplines_kernel()
         posq.x -= floor(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
         posq.y -= floor(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
         posq.z -= floor(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
-        float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX)*cSim.pmeGridSize.x,
-                               (posq.y*cSim.invPeriodicBoxSizeY)*cSim.pmeGridSize.y,
-                               (posq.z*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z);
 
         // First axis.
 
@@ -153,7 +150,14 @@ void kComputeAmoebaBsplines_kernel()
         // Record the grid point.
 
         cAmoebaSim.pIgrid[i] = make_int4(igrid1, igrid2, igrid3, 0);
-        cSim.pPmeAtomGridIndex[i] = make_int2(i, igrid1*cSim.pmeGridSize.y*cSim.pmeGridSize.z+igrid2*cSim.pmeGridSize.z+igrid3);
+        float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX)*cSim.pmeGridSize.x,
+                               (posq.y*cSim.invPeriodicBoxSizeY)*cSim.pmeGridSize.y,
+                               (posq.z*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z);
+        float4 dr = make_float4(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+        int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
+                              ((int) t.y) % cSim.pmeGridSize.y,
+                              ((int) t.z) % cSim.pmeGridSize.z);
+        cSim.pPmeAtomGridIndex[i] = make_int2(i, gridIndex.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridIndex.y*cSim.pmeGridSize.z+gridIndex.z);
     }
 }
 
@@ -660,24 +664,24 @@ void kComputeInducedPotentialFromGrid_kernel()
             tuv012 += tu01*v.z;
             tuv111 += tu11*v.y;
         }
-        cAmoebaSim.pPhid[20*m+1] = tuv100_1;
-        cAmoebaSim.pPhid[20*m+2] = tuv010_1;
-        cAmoebaSim.pPhid[20*m+3] = tuv001_1;
-        cAmoebaSim.pPhid[20*m+4] = tuv200_1;
-        cAmoebaSim.pPhid[20*m+5] = tuv020_1;
-        cAmoebaSim.pPhid[20*m+6] = tuv002_1;
-        cAmoebaSim.pPhid[20*m+7] = tuv110_1;
-        cAmoebaSim.pPhid[20*m+8] = tuv101_1;
-        cAmoebaSim.pPhid[20*m+9] = tuv011_1;
-        cAmoebaSim.pPhip[20*m+1] = tuv100_2;
-        cAmoebaSim.pPhip[20*m+2] = tuv010_2;
-        cAmoebaSim.pPhip[20*m+3] = tuv001_2;
-        cAmoebaSim.pPhip[20*m+4] = tuv200_2;
-        cAmoebaSim.pPhip[20*m+5] = tuv020_2;
-        cAmoebaSim.pPhip[20*m+6] = tuv002_2;
-        cAmoebaSim.pPhip[20*m+7] = tuv110_2;
-        cAmoebaSim.pPhip[20*m+8] = tuv101_2;
-        cAmoebaSim.pPhip[20*m+9] = tuv011_2;
+        cAmoebaSim.pPhid[10*m+1] = tuv100_1;
+        cAmoebaSim.pPhid[10*m+2] = tuv010_1;
+        cAmoebaSim.pPhid[10*m+3] = tuv001_1;
+        cAmoebaSim.pPhid[10*m+4] = tuv100_1;
+        cAmoebaSim.pPhid[10*m+5] = tuv010_1;
+        cAmoebaSim.pPhid[10*m+6] = tuv002_1;
+        cAmoebaSim.pPhid[10*m+7] = tuv110_1;
+        cAmoebaSim.pPhid[10*m+8] = tuv101_1;
+        cAmoebaSim.pPhid[10*m+9] = tuv011_1;
+        cAmoebaSim.pPhip[10*m+1] = tuv100_2;
+        cAmoebaSim.pPhip[10*m+2] = tuv010_2;
+        cAmoebaSim.pPhip[10*m+3] = tuv001_2;
+        cAmoebaSim.pPhip[10*m+4] = tuv100_2;
+        cAmoebaSim.pPhip[10*m+5] = tuv010_2;
+        cAmoebaSim.pPhip[10*m+6] = tuv002_2;
+        cAmoebaSim.pPhip[10*m+7] = tuv110_2;
+        cAmoebaSim.pPhip[10*m+8] = tuv101_2;
+        cAmoebaSim.pPhip[10*m+9] = tuv011_2;
         cAmoebaSim.pPhidp[20*m] = tuv000;
         cAmoebaSim.pPhidp[20*m+1] = tuv100;
         cAmoebaSim.pPhidp[20*m+2] = tuv010;
@@ -712,9 +716,9 @@ __launch_bounds__(192, 1)
 void kComputeFixedMultipoleForceAndEnergy_kernel()
 {
     float multipole[10];
-    const int deriv1[] = {2, 5,  8,  9, 11, 16, 18, 14, 15, 20};
-    const int deriv2[] = {3, 8,  6, 10, 14, 12, 19, 16, 20, 17};
-    const int deriv3[] = {4, 9, 10,  7, 15, 17, 13, 20, 18, 19};
+    const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
+    const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
+    const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
     float energy = 0.0f;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
         // Compute the force and energy.
@@ -777,9 +781,9 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
     float multipole[10];
     float inducedDipole[3];
     float inducedDipolePolar[3];
-    const int deriv1[] = {2, 5,  8,  9, 11, 16, 18, 14, 15, 20};
-    const int deriv2[] = {3, 8,  6, 10, 14, 12, 19, 16, 20, 17};
-    const int deriv3[] = {4, 9, 10,  7, 15, 17, 13, 20, 18, 19};
+    const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
+    const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
+    const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
     float energy = 0.0f;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
         // Compute the force and energy.
@@ -801,8 +805,8 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         inducedDipolePolar[1] = cAmoebaSim.pInducedDipolePolar[i*3+1];
         inducedDipolePolar[2] = cAmoebaSim.pInducedDipolePolar[i*3+2];
         float* phi = &cAmoebaSim.pPhi[20*i];
-        float* phip = &cAmoebaSim.pPhip[20*i];
-        float* phid = &cAmoebaSim.pPhid[20*i];
+        float* phip = &cAmoebaSim.pPhip[10*i];
+        float* phid = &cAmoebaSim.pPhid[10*i];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
@@ -813,10 +817,11 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
             f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2] + inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
             f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3] + inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3];
         }
+        float* phidp = &cAmoebaSim.pPhidp[20*i];
         for (int k = 0; k < 10; k++) {
-            f.x += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv1[k]];
-            f.y += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv2[k]];
-            f.z += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv3[k]];
+            f.x += multipole[k]*phidp[deriv1[k]];
+            f.y += multipole[k]*phidp[deriv2[k]];
+            f.z += multipole[k]*phidp[deriv3[k]];
         }
         f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
         f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
@@ -856,9 +861,9 @@ __launch_bounds__(192, 1)
 void kRecordFixedMultipoleField_kernel(float* output)
 {
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
-        output[3*i] -= cAmoebaSim.pPhi[20*i];
-        output[3*i+1] -= cAmoebaSim.pPhi[20*i+1];
-        output[3*i+2] -= cAmoebaSim.pPhi[20*i+2];
+        output[3*i] -= cAmoebaSim.pPhi[20*i+1];
+        output[3*i+1] -= cAmoebaSim.pPhi[20*i+2];
+        output[3*i+2] -= cAmoebaSim.pPhi[20*i+3];
     }
 }
 
@@ -873,12 +878,12 @@ __launch_bounds__(192, 1)
 void kRecordInducedDipoleField_kernel(float* output, float* outputPolar)
 {
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
-        output[3*i] -= cAmoebaSim.pPhid[20*i];
-        output[3*i+1] -= cAmoebaSim.pPhid[20*i+1];
-        output[3*i+2] -= cAmoebaSim.pPhid[20*i+2];
-        outputPolar[3*i] -= cAmoebaSim.pPhip[20*i];
-        outputPolar[3*i+1] -= cAmoebaSim.pPhip[20*i+1];
-        outputPolar[3*i+2] -= cAmoebaSim.pPhip[20*i+2];
+        output[3*i] -= cAmoebaSim.pPhid[20*i+1];
+        output[3*i+1] -= cAmoebaSim.pPhid[20*i+2];
+        output[3*i+2] -= cAmoebaSim.pPhid[20*i+3];
+        outputPolar[3*i] -= cAmoebaSim.pPhip[20*i+1];
+        outputPolar[3*i+1] -= cAmoebaSim.pPhip[20*i+2];
+        outputPolar[3*i+2] -= cAmoebaSim.pPhip[20*i+3];
     }
 }
 

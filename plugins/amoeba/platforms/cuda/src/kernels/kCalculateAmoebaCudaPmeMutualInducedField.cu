@@ -620,7 +620,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         // matrix multiply
 
         cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpu, amoebaGpu->psWorkVector[0],  amoebaGpu->psWorkVector[1] );
-        //kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
+        kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
         LAUNCHERROR("cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply Loop\n");  
 
 
