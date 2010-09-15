@@ -205,13 +205,13 @@ if( atomI == targetAtom ){
     debugArray[index].x                = mask ? torque[0][0] : 0.0f;
     debugArray[index].y                = mask ? torque[0][1] : 0.0f;
     debugArray[index].z                = mask ? torque[0][2] : 0.0f;
-    debugArray[index].w                = blockId;
+    debugArray[index].w                = mask ? energy       : 0.0f;
 
     index                             += cAmoebaSim.paddedNumberOfAtoms;
     debugArray[index].x                = mask ? torque[0][0] : 0.0f;
     debugArray[index].y                = mask ? torque[0][1] : 0.0f;
     debugArray[index].z                = mask ? torque[0][2] : 0.0f;
-    debugArray[index].w                = blockId;
+    debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
 
     for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -364,13 +364,13 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
     debugArray[index].x                = mask ? torque[indexI][0] : 0.0f;
     debugArray[index].y                = mask ? torque[indexI][1] : 0.0f;
     debugArray[index].z                = mask ? torque[indexI][2] : 0.0f;
-    debugArray[index].w                = blockId;
+    debugArray[index].w                = mask ? energy       : 0.0f;
 
     index                             += cAmoebaSim.paddedNumberOfAtoms;
     debugArray[index].x                = mask ? torque[indexJ][0] : 0.0f;
     debugArray[index].y                = mask ? torque[indexJ][1] : 0.0f;
     debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
-    debugArray[index].w                = blockId;
+    debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
 
     for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -460,25 +460,24 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
         debugArray[index].y                = (float) atomJ;
         debugArray[index].z                = (float) y;
         debugArray[index].w                = blockId;
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
 
+        index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = mask ? forceSign*force[0]     : 0.0f;
         debugArray[index].y                = mask ? forceSign*force[1]     : 0.0f;
         debugArray[index].z                = mask ? forceSign*force[2]     : 0.0f;
         debugArray[index].w                = blockId;
 
-
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = mask ? torque[indexI][0] : 0.0f;
         debugArray[index].y                = mask ? torque[indexI][1] : 0.0f;
         debugArray[index].z                = mask ? torque[indexI][2] : 0.0f;
-        debugArray[index].w                = blockId;
+        debugArray[index].w                = energy;
 
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = mask ? torque[indexJ][0] : 0.0f;
         debugArray[index].y                = mask ? torque[indexJ][1] : 0.0f;
         debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
-        debugArray[index].w                = blockId;
+        debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
 
         for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
             index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -611,5 +610,6 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
         pos++;
     }
+//printf( "Hello thread: %d %d %d %d\n", blockIdx.x * blockDim.x + threadIdx.x, blockIdx.x, blockDim.x, threadIdx.x );
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += totalEnergy;
 }
