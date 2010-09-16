@@ -351,6 +351,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pM_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pM_ScaleIndices );
     (void) fprintf( log, "     sqrtPi                             %15.7e\n",  amoebaGpu->amoebaSim.sqrtPi );
     (void) fprintf( log, "     alpha Ewald                        %15.7e\n",  gpu->sim.alphaEwald );
+    (void) fprintf( log, "     PME grid dimensions                %6d %6d %6d\n",  gpu->sim.pmeGridSize.x, gpu->sim.pmeGridSize.y, gpu->sim.pmeGridSize.z);
     (void) fprintf( log, "     cutoffDistance2                    %15.7e\n",  amoebaGpu->amoebaSim.cutoffDistance2 );
     (void) fprintf( log, "     electric                           %15.7e\n",  amoebaGpu->amoebaSim.electric );
     (void) fprintf( log, "     box                                %15.7e %15.7e %15.7e\n", gpu->sim.periodicBoxSizeX, gpu->sim.periodicBoxSizeY, gpu->sim.periodicBoxSizeZ);

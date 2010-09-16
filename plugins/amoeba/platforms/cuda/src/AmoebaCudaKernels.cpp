@@ -597,7 +597,16 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         NonbondedForce nb;
         nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
         nb.setCutoffDistance(force.getCutoffDistance());
-        NonbondedForceImpl::calcPMEParameters(system, nb, alpha, xsize, ysize, zsize);
+        std::vector<int> pmeGridDimension;
+        force.getPmeGridDimensions( pmeGridDimension );
+        if( 1 || pmeGridDimension[0] == 0 ){
+            NonbondedForceImpl::calcPMEParameters(system, nb, alpha, xsize, ysize, zsize);
+        } else {
+            alpha = force.getAEwald();
+            xsize = pmeGridDimension[0];
+            ysize = pmeGridDimension[1];
+            zsize = pmeGridDimension[2];
+        }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
     }
 

@@ -127,6 +127,34 @@ public:
      */		 
     void setAEwald(double aewald);		 
 		 
+   /**		   
+     * Get the B-spline order parameter		 
+     *		 
+     * @return the B-spline order parameter
+     */		 
+    int getPmeBSplineOrder( ) const;
+        
+   /**		   
+     * Set the B-spline order parameter		 
+     *		 
+     * @param the B-spline order parameter
+     */		 
+    void setPmeBSplineOrder(int inputBSplineOrder);
+     
+   /**		   
+     * Get the PME grid dimensions		 
+     *		 
+     * @return the PME grid dimensions
+     */		 
+    void getPmeGridDimensions( std::vector<int>& gridDimension ) const;
+         
+   /**		   
+     * Set the PME grid dimensions		 
+     *		 
+     * @param the PME grid dimensions
+     */		 
+    void setPmeGridDimensions( const std::vector<int>& gridDimension );
+    
     /**
      * Add multipole-related info for a particle 
      *
@@ -294,6 +322,8 @@ private:
     AmoebaNonbondedMethod nonbondedMethod;
     double cutoffDistance;
     double aewald;
+    int pmeBSplineOrder;
+    std::vector<int> pmeGridDimension;
     MutualInducedIterationMethod mutualInducedIterationMethod;
     int mutualInducedMaxIterations;
     double mutualInducedTargetEpsilon;

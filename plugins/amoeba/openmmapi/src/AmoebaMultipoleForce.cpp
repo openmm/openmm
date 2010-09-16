@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), ewaldErrorTol(5e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
+AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(5e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
                                                mutualInducedTargetEpsilon(1.0e-05), scalingDistanceCutoff(100.0), electricConstant(138.9354558456) {
 }
 
@@ -62,6 +62,36 @@ double AmoebaMultipoleForce::getAEwald() const {
 		 
 void AmoebaMultipoleForce::setAEwald(double inputAewald ) {			 
     aewald = inputAewald;		 
+}		 
+ 
+int AmoebaMultipoleForce::getPmeBSplineOrder( void ) const {		 
+    return pmeBSplineOrder;		 
+}		 
+		 
+void AmoebaMultipoleForce::setPmeBSplineOrder(int inputBSplineOrder) {			 
+    pmeBSplineOrder = inputBSplineOrder;		 
+}		 
+ 
+void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension ) const {		 
+    if( gridDimension.size() < 3 ){
+        gridDimension.resize(3);
+    }
+    if( pmeGridDimension.size() > 2 ){
+        gridDimension[0] = pmeGridDimension[0];
+        gridDimension[1] = pmeGridDimension[1];
+        gridDimension[2] = pmeGridDimension[2];
+    } else {
+        gridDimension[0] = gridDimension[1] = gridDimension[2] = 0;
+    }
+    return;
+}		 
+		 
+void AmoebaMultipoleForce::setPmeGridDimensions( const std::vector<int>& gridDimension ) {
+    pmeGridDimension.resize(3);
+    pmeGridDimension[0] = gridDimension[0];
+    pmeGridDimension[1] = gridDimension[1];
+    pmeGridDimension[2] = gridDimension[2];
+    return;
 }		 
  
 AmoebaMultipoleForce::MutualInducedIterationMethod AmoebaMultipoleForce::getMutualInducedIterationMethod( void ) const {

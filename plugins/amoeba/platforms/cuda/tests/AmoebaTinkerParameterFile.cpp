@@ -1985,21 +1985,33 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
 
     // load in parameters
  
-    int numberOfMultipoles            = atoi( tokens[1].c_str() );
+    unsigned int tokenIndex           = 1;
+    int numberOfMultipoles            = atoi( tokens[tokenIndex++].c_str() );
     int usePme                        = 0;
+    int bsOrder                       = 0;
+    std::vector<int> grid(3,0);
     double aewald                     = 0.0;
     double cutoffDistance             = 0.0;
-    double box[3]                     = { 10.0, 10.0, 10.0 };
+    std::vector<double> box(3,10.0);
 
     // usePme, aewald, cutoffDistance added w/ Version 1
 
     if( version > 0 ){
-        usePme                        = atoi( tokens[2].c_str() );
-        aewald                        = atof( tokens[3].c_str() );
-        cutoffDistance                = atof( tokens[4].c_str() );
-        box[0]                        = atof( tokens[5].c_str() );
-        box[1]                        = atof( tokens[6].c_str() );
-        box[2]                        = atof( tokens[7].c_str() );
+        usePme                        = atoi( tokens[tokenIndex++].c_str() );
+        aewald                        = atof( tokens[tokenIndex++].c_str() );
+        cutoffDistance                = atof( tokens[tokenIndex++].c_str() );
+
+        box[0]                        = atof( tokens[tokenIndex++].c_str() );
+        box[1]                        = atof( tokens[tokenIndex++].c_str() );
+        box[2]                        = atof( tokens[tokenIndex++].c_str() );
+
+        //double electric               = atof( tokens[tokenIndex++].c_str() );
+                                        tokenIndex++;
+
+        bsOrder                       = atoi( tokens[tokenIndex++].c_str() );
+        grid[0]                       = atoi( tokens[tokenIndex++].c_str() );
+        grid[1]                       = atoi( tokens[tokenIndex++].c_str() );
+        grid[2]                       = atoi( tokens[tokenIndex++].c_str() );
     }
   
     if( usePme ){
@@ -2009,6 +2021,8 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
     }
     multipoleForce->setCutoffDistance( cutoffDistance );
     multipoleForce->setAEwald( aewald );
+    multipoleForce->setPmeBSplineOrder( bsOrder );
+    multipoleForce->setPmeGridDimensions( grid );
     system.setDefaultPeriodicBoxVectors( Vec3(box[0], 0.0, 0.0), Vec3(0.0, box[1], 0.0), Vec3(0.0, 0.0, box[2]) );
     if( log ){
         (void) fprintf( log, "%s number of MultipoleParameter terms=%d usePme=%d aewald=%15.7e cutoffDistance=%12.4f\n",
@@ -3605,15 +3619,19 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                 readVec3( filePtr, tokens, forces[AMOEBA_GK_FORCE], &lineCount, field, log );
             } else if( field == "AmoebaGkAndCavityForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_GK_CAVITY_FORCE], &lineCount, field, log );
-            } else if( field == "AmoebaGk_A_ForceAndTorque"            || 
-                       field == "AmoebaGk_A_Force"                     ||
-                       field == "AmoebaSurfaceParameters"              ||
-                       field == "AmoebaGk_A_DrB"                       ||
-                       field == "AmoebaDBorn"                          ||
-                       field == "AmoebaBorn1Force"                     ||
-                       field == "AmoebaBornForce"                      ||
-                       field == "AmoebaGkEdiffForceAndTorque"          ||
-                       field == "AmoebaGkEdiffForce"                   ){
+            } else if( field == "AmoebaGk_A_ForceAndTorque"                     || 
+                       field == "AmoebaGk_A_Force"                              ||
+                       field == "AmoebaSurfaceParameters"                       ||
+                       field == "AmoebaGk_A_DrB"                                ||
+                       field == "AmoebaDBorn"                                   ||
+                       field == "AmoebaBorn1Force"                              ||
+                       field == "AmoebaBornForce"                               ||
+                       field == "AmoebaGkEdiffForceAndTorque"                   ||
+                       field == "AmoebaGkEdiffForce"                            ||
+                       field == "PmeDirectForceAndTorqueOutLoop"                ||
+                       field == "PmeDirectForceIncludingMappedTorqueOutLoop"    ||
+                       field == "PmeDirectForceTorqueInLoop"                    
+                    ){
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
                 readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, &lineCount, field, log );
                 supplementary[field] = vectorOfDoubleVectors;

@@ -6,7 +6,7 @@
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 
-//#define AMOEBA_DEBUG
+#define AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -39,7 +39,57 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
-void kReduceDirectSelfFields_kernel( unsigned int fieldComponents, unsigned int outputBuffers,  float* fieldIn, float* fieldOut )
+static void kReducePmeEFieldPolar_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* EFieldReciprocal,  float* fieldIn, float* fieldOut )
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Reduce field
+
+    const float term = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
+    //const float term = 0.0f;
+    while (pos < fieldComponents)
+    {   
+
+        // self-term included here
+
+        float totalField = EFieldReciprocal[pos] + term*cAmoebaSim.pLabFrameDipole[pos];
+
+        float* pFt       = fieldIn + pos;
+        unsigned int i   = outputBuffers;
+        while (i >= 4)
+        {   
+            totalField += pFt[0] + pFt[fieldComponents] + pFt[2*fieldComponents] + pFt[3*fieldComponents];
+            pFt        += fieldComponents*4;
+            i          -= 4;
+        }   
+
+        if (i >= 2)
+        {   
+            totalField += pFt[0] + pFt[fieldComponents];
+            pFt        += fieldComponents*2;
+            i          -= 2;
+        }   
+
+        if (i > 0)
+        {   
+            totalField += pFt[0];
+        }   
+
+        fieldOut[pos]   = totalField;
+        pos            += gridDim.x * blockDim.x;
+    }   
+}
+
+
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+static void kReducePmeEField_kernel( unsigned int fieldComponents, unsigned int outputBuffers,  float* fieldIn, float* fieldOut )
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -75,7 +125,7 @@ void kReduceDirectSelfFields_kernel( unsigned int fieldComponents, unsigned int 
             totalField += pFt[0];
         }   
 
-        fieldOut[pos]   = totalField;
+        fieldOut[pos]  += totalField;
         pos            += gridDim.x * blockDim.x;
     }   
 }
@@ -85,14 +135,19 @@ void kReduceDirectSelfFields_kernel( unsigned int fieldComponents, unsigned int 
 
 static void kReducePmeDirectE_Fields(amoebaGpuContext amoebaGpu )
 {
-    kReduceDirectSelfFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psE_Field->_pDevStream[0] );
+
+    // E_FieldPolar = E_Field (reciprocal) + E_FieldPolar (direct) + self
+
+    kReducePmeEFieldPolar_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
+                                   amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+                                   amoebaGpu->psE_Field->_pDevStream[0], amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psE_FieldPolar->_pDevStream[0] );
     LAUNCHERROR("kReducePmeE_Fields1");
 
-    kReduceDirectSelfFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                               amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psE_FieldPolar->_pDevStream[0] );
+    // E_Field = E_Field (reciprocal) + E_Field (direct) + self
+
+    kReducePmeEField_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
+                              amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+                              amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psE_Field->_pDevStream[0] );
     LAUNCHERROR("kReducePmeE_Fields2");
 }
 
@@ -320,6 +375,20 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
 /**---------------------------------------------------------------------------------------
 
+   Report whether a number is a nan or infinity
+
+   @param number               number to test
+   @return 1 if number is  nan or infinity; else return 0
+
+   --------------------------------------------------------------------------------------- */
+
+static int isNanOrInfinity( double number ){
+    return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0; 
+}
+
+
+/**---------------------------------------------------------------------------------------
+
    Compute fixed electric field using PME
 
    @param amoebaGpu        amoebaGpu context
@@ -335,6 +404,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     gpuContext gpu    = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
+
     static const char* methodName = "computeCudaAmoebaPmeFixedEField";
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "\n%s\n", methodName ); (void) fflush( amoebaGpu->log );
@@ -347,21 +417,36 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
 
-    (*gpu->psInteractionCount)[0]              = gpu->sim.workUnits;
-    gpu->psInteractionCount->Upload();
-
     // print intermediate results for the targetAtom 
 
     unsigned int targetAtom  = 0;
+
+    int maxPrint             = 3002;
+    amoebaGpu->psE_Field->Download();
+    (void) fprintf( amoebaGpu->log, "Recip EFields In\n" );
+    for( int ii = 0; ii < gpu->natoms; ii++ ){
+        (void) fprintf( amoebaGpu->log, "%5d ", ii); 
+
+        int indexOffset     = ii*3;
+
+        // E_Field
+
+        int isNan  = isNanOrInfinity( amoebaGpu->psE_Field->_pSysStream[0][indexOffset] );
+            isNan += isNanOrInfinity( amoebaGpu->psE_Field->_pSysStream[0][indexOffset+1] );
+            isNan += isNanOrInfinity( amoebaGpu->psE_Field->_pSysStream[0][indexOffset+2] );
+
+        (void) fprintf( amoebaGpu->log,"E[%16.9e %16.9e %16.9e] %s\n",
+                        amoebaGpu->psE_Field->_pSysStream[0][indexOffset],
+                        amoebaGpu->psE_Field->_pSysStream[0][indexOffset+1],
+                        amoebaGpu->psE_Field->_pSysStream[0][indexOffset+2], (isNan ? "XXX" :"") );
+   
+        if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
+            ii = gpu->natoms - maxPrint;
+        }
+    }
+    (void) fflush( amoebaGpu->log );
+    (void) fprintf( amoebaGpu->log, "Recip EFields End\n" );
 #endif
-
-//#define SET_ALPHA_EWALD
-//#ifdef SET_ALPHA_EWALD
-//    amoebaGpu->gpuContext->sim.alphaEwald = 5.4459052e+00f;
-//    (void) fprintf( amoebaGpu->log, "computeCudaAmoebaPmeFixedEField: forceing alphaEwald=%15.7e\n", amoebaGpu->gpuContext->sim.alphaEwald );
-//    SetCalculateAmoebaCudaPmeFixedEFieldSim(amoebaGpu);
-//#endif
-
 
     kClearFields_3( amoebaGpu, 2 );
 
@@ -413,12 +498,10 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
                         sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->energyOutputBuffers, 
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->bOutputBufferPerWarp );
         (void) fflush( amoebaGpu->log );
+/*
+        (void) fprintf( amoebaGpu->log, "Out WorkArray_3_[1,2]  paddedNumberOfAtoms=%d\n",  amoebaGpu->paddedNumberOfAtoms, amoebaGpu->outputBuffers );
         amoebaGpu->psWorkArray_3_1->Download();
         amoebaGpu->psWorkArray_3_2->Download();
-        amoebaGpu->psE_Field->Download();
-        amoebaGpu->psE_FieldPolar->Download();
-        (void) fprintf( amoebaGpu->log, "Out WorkArray_3_[1,2]  paddedNumberOfAtoms=%d\n",  amoebaGpu->paddedNumberOfAtoms, amoebaGpu->outputBuffers );
-        int maxPrint        = 32;
         for( int ii = 0; ii < amoebaGpu->paddedNumberOfAtoms; ii++ ){
            (void) fprintf( amoebaGpu->log, "%5d ", ii); 
 
@@ -444,8 +527,9 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
            }
         }
         (void) fflush( amoebaGpu->log );
-        (void) fprintf( amoebaGpu->log, "EFields End\n" );
-
+*/
+        amoebaGpu->psE_Field->Download();
+        amoebaGpu->psE_FieldPolar->Download();
         for( int ii = 0; ii < gpu->natoms; ii++ ){
            (void) fprintf( amoebaGpu->log, "%5d ", ii); 
 
@@ -520,6 +604,14 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 
 void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
 {
-    cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
+
+// zero field?
+
+unsigned int offset = 3*amoebaGpu->paddedNumberOfAtoms*sizeof( float );
+memset( amoebaGpu->psE_Field->_pSysStream[0], 0, offset );
+amoebaGpu->psE_Field->Upload();
+
+
     kCalculateAmoebaPMEFixedMultipoleField( amoebaGpu );
+    cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
 }
