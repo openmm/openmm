@@ -6,7 +6,7 @@
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 
-#define AMOEBA_DEBUG
+//#define AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -421,6 +421,8 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 
     unsigned int targetAtom  = 0;
 
+#endif
+
     int maxPrint             = 3002;
     amoebaGpu->psE_Field->Download();
     (void) fprintf( amoebaGpu->log, "Recip EFields In\n" );
@@ -446,7 +448,6 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     }
     (void) fflush( amoebaGpu->log );
     (void) fprintf( amoebaGpu->log, "Recip EFields End\n" );
-#endif
 
     kClearFields_3( amoebaGpu, 2 );
 
