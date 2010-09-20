@@ -296,8 +296,8 @@ int main( int numberOfArguments, char* argv[] ) {
         std::cout << "TestCudaAmoebaHarmonicAngleForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         //FILE* log = fopen( "AmoebaHarmonicAngleForce.log", "w" );;
-        //FILE* log = NULL;
-        FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = stderr;
 
         testOneAngle( log );
         if( log && log != stderr )

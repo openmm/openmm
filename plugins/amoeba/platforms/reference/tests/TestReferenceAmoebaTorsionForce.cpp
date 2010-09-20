@@ -156,7 +156,6 @@ static void computeAmoebaTorsionForce(int bondIndex,  std::vector<Vec3>& positio
     for( int ii = 0; ii < 3; ii++ ){
         dEdPhi += torsions[ii][0]*((double) (ii+1))*( cosine[ii]*sin( torsions[ii][1] ) - sine[ii]*cos( torsions[ii][1] ) );
     }
-fprintf( stderr,"Tst: dEdPhi=%15.7e\n", dEdPhi ); fflush( stderr );
  
     // ---------------------------------------------------------------------------------------
   
@@ -333,8 +332,8 @@ int main( int numberOfArguments, char* argv[] ) {
     try {
         std::cout << "TestReferenceAmoebaTorsionForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        FILE* log = stderr;
-        //FILE* log = NULL;
+        //FILE* log = stderr;
+        FILE* log = NULL;
         //FILE* log = fopen( "AmoebaTorsionForce.log", "w" );;
         testOneTorsion( log );
         if( log && log != stderr )

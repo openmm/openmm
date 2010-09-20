@@ -495,8 +495,8 @@ int main( int numberOfArguments, char* argv[] ) {
         std::cout << "TestReferenceAmoebaOutOfPlaneBendForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
 
-        FILE* log = stderr;
-        //FILE* log = NULL;
+        //FILE* log = stderr;
+        FILE* log = NULL;
         //FILE* log = fopen( "AmoebaOutOfPlaneBendForce.log", "w" );;
 
         testOneOutOfPlaneBend( log );

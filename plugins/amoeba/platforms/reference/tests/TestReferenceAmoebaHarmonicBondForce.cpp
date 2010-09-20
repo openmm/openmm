@@ -204,8 +204,8 @@ int main( int numberOfArguments, char* argv[] ) {
     try {
         std::cout << "TestReferenceAmoebaHarmonicBondForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        //FILE* log = NULL;
-        FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = stderr;
 
         //testOneBond( log );
         testTwoBond( log );

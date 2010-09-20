@@ -303,8 +303,8 @@ int main( int numberOfArguments, char* argv[] ) {
     try {
         std::cout << "TestReferenceAmoebaPiTorsionForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        //FILE* log = NULL;
-        FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaPiTorsionForce1.log", "w" );;
 
         testOnePiTorsion( log );

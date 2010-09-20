@@ -34,7 +34,6 @@
 using namespace OpenMM;
 
 extern "C" void OPENMM_AMOEBA_REFERENCE_EXPORT registerKernelFactories() {
-fprintf( stderr,"In registerKernelFactories AmoebaReferenceKernelFactory\n" ); fflush( stderr );
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
         if( platform.getName() == "Reference" ){

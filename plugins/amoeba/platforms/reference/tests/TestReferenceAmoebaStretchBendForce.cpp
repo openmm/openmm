@@ -287,8 +287,8 @@ int main( int numberOfArguments, char* argv[] ) {
         std::cout << "TestReferenceAmoebaStretchBendForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
 
-        //FILE* log = NULL;
-        FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaStretchBendForce1.log", "w" );;
         testOneStretchBend( log );
         if( log && log != stderr )
