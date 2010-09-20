@@ -53,5 +53,17 @@ void HarmonicBondForceProxy::serialize(const void* object, SerializationNode& no
 }
 
 void* HarmonicBondForceProxy::deserialize(const SerializationNode& node) const {
-    return new HarmonicBondForce();
+    HarmonicBondForce* force = new HarmonicBondForce();
+    try {
+        const SerializationNode& bonds = node.getChildNode("Bonds");
+        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
+            const SerializationNode& constraint = bonds.getChildren()[i];
+            force->addBond(constraint.getDoubleProperty("p1"), constraint.getDoubleProperty("p2"), constraint.getDoubleProperty("d"), constraint.getDoubleProperty("k"));
+        }
+    }
+    catch (...) {
+        delete force;
+        throw;
+    }
+    return force;
 }

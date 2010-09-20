@@ -31,7 +31,6 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/HarmonicBondForce.h"
-#include "openmm/System.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
@@ -40,49 +39,34 @@ using namespace OpenMM;
 using namespace std;
 
 void testSerialization() {
-    // Create a System.
+    // Create a Force.
 
-    System system;
-    for (int i = 0; i < 5; i++)
-        system.addParticle(0.1*i+1);
-    system.addConstraint(0, 1, 3.0);
-    system.addConstraint(1, 2, 2.5);
-    system.addConstraint(4, 1, 1.001);
-    system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 1.5));
-    system.addForce(new HarmonicBondForce());
+    HarmonicBondForce force;
+    force.addBond(0, 1, 1.0, 2.0);
+    force.addBond(0, 2, 2.0, 2.1);
+    force.addBond(2, 3, 3.0, 2.2);
+    force.addBond(5, 1, 4.0, 2.3);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<System>(&system, "System", buffer);
-    System* copy = XmlSerializer::deserialize<System>(buffer);
+    XmlSerializer::serialize<HarmonicBondForce>(&force, "Force", buffer);
+    HarmonicBondForce* copy = XmlSerializer::deserialize<HarmonicBondForce>(buffer);
 
     // Compare the two systems to see if they are identical.
 
-    System& system2 = *copy;
-    ASSERT_EQUAL(system.getNumParticles(), system2.getNumParticles());
-    for (int i = 0; i < system.getNumParticles(); i++)
-        ASSERT_EQUAL(system.getParticleMass(i), system2.getParticleMass(i));
-    ASSERT_EQUAL(system.getNumConstraints(), system2.getNumConstraints());
-    for (int i = 0; i < system.getNumConstraints(); i++) {
-        int p1, p2, p3, p4;
-        double d1, d2;
-        system.getConstraintParameters(i, p1, p2, d1);
-        system2.getConstraintParameters(i, p3, p4, d2);
-        ASSERT_EQUAL(p1, p3);
-        ASSERT_EQUAL(p2, p4);
-        ASSERT_EQUAL(d1, d2);
+    HarmonicBondForce& force2 = *copy;
+    ASSERT_EQUAL(force.getNumBonds(), force2.getNumBonds());
+    for (int i = 0; i < force.getNumBonds(); i++) {
+        int a1, a2, b1, b2;
+        double da, db, ka, kb;
+        force.getBondParameters(i, a1, a2, da, ka);
+        force.getBondParameters(i, b1, b2, db, kb);
+        ASSERT_EQUAL(a1, b1);
+        ASSERT_EQUAL(a2, b2);
+        ASSERT_EQUAL(da, db);
+        ASSERT_EQUAL(ka, kb);
     }
-    Vec3 a, b, c;
-    Vec3 a2, b2, c2;
-    system.getDefaultPeriodicBoxVectors(a, b, c);
-    system2.getDefaultPeriodicBoxVectors(a2, b2, c2);
-    ASSERT_EQUAL_VEC(a, a2, 0);
-    ASSERT_EQUAL_VEC(b, b2, 0);
-    ASSERT_EQUAL_VEC(c, c2, 0);
-    ASSERT_EQUAL(system.getNumForces(), system2.getNumForces());
-    for (int i = 0; i < system.getNumForces(); i++)
-        ASSERT(typeid(system.getForce(i)) == typeid(system2.getForce(i)))
 }
 
 int main() {
@@ -96,5 +80,4 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-
 

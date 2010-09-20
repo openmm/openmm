@@ -1,3 +1,6 @@
+#ifndef OPENMM_HARMONICANGLEFORCE_PROXY_H_
+#define OPENMM_HARMONICANGLEFORCE_PROXY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,72 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "../../../tests/AssertionUtilities.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/System.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include <iostream>
-#include <sstream>
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-void testSerialization() {
-    // Create a System.
+/**
+ * This is a proxy for serializing HarmonicAngleForce objects.
+ */
 
-    System system;
-    for (int i = 0; i < 5; i++)
-        system.addParticle(0.1*i+1);
-    system.addConstraint(0, 1, 3.0);
-    system.addConstraint(1, 2, 2.5);
-    system.addConstraint(4, 1, 1.001);
-    system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 1.5));
-    system.addForce(new HarmonicBondForce());
+class OPENMM_EXPORT HarmonicAngleForceProxy : public SerializationProxy {
+public:
+    HarmonicAngleForceProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
+};
 
-    // Serialize and then deserialize it.
+} // namespace OpenMM
 
-    stringstream buffer;
-    XmlSerializer::serialize<System>(&system, "System", buffer);
-    System* copy = XmlSerializer::deserialize<System>(buffer);
-
-    // Compare the two systems to see if they are identical.
-
-    System& system2 = *copy;
-    ASSERT_EQUAL(system.getNumParticles(), system2.getNumParticles());
-    for (int i = 0; i < system.getNumParticles(); i++)
-        ASSERT_EQUAL(system.getParticleMass(i), system2.getParticleMass(i));
-    ASSERT_EQUAL(system.getNumConstraints(), system2.getNumConstraints());
-    for (int i = 0; i < system.getNumConstraints(); i++) {
-        int p1, p2, p3, p4;
-        double d1, d2;
-        system.getConstraintParameters(i, p1, p2, d1);
-        system2.getConstraintParameters(i, p3, p4, d2);
-        ASSERT_EQUAL(p1, p3);
-        ASSERT_EQUAL(p2, p4);
-        ASSERT_EQUAL(d1, d2);
-    }
-    Vec3 a, b, c;
-    Vec3 a2, b2, c2;
-    system.getDefaultPeriodicBoxVectors(a, b, c);
-    system2.getDefaultPeriodicBoxVectors(a2, b2, c2);
-    ASSERT_EQUAL_VEC(a, a2, 0);
-    ASSERT_EQUAL_VEC(b, b2, 0);
-    ASSERT_EQUAL_VEC(c, c2, 0);
-    ASSERT_EQUAL(system.getNumForces(), system2.getNumForces());
-    for (int i = 0; i < system.getNumForces(); i++)
-        ASSERT(typeid(system.getForce(i)) == typeid(system2.getForce(i)))
-}
-
-int main() {
-    try {
-        testSerialization();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
-}
-
-
+#endif /*OPENMM_HARMONICANGLEFORCE_PROXY_H_*/
