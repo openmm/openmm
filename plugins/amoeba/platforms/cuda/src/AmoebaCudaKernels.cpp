@@ -398,20 +398,19 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
     std::vector< std::vector< std::vector< std::vector<float> > > > floatGrids;
 
     floatGrids.resize(numTorsionTorsionGrids);
-    for (int i = 0; i < numTorsionTorsionGrids; i++) {
+    for (int gridIndex = 0; gridIndex < numTorsionTorsionGrids; gridIndex++) {
 
-        TorsionTorsionGrid grid;
-        force.getTorsionTorsionGrid(i, grid );
+        const TorsionTorsionGrid& grid = force.getTorsionTorsionGrid( gridIndex );
 
-        floatGrids[i].resize( grid.size() );
+        floatGrids[gridIndex].resize( grid.size() );
         for (unsigned int ii = 0; ii < grid.size(); ii++) {
 
-            floatGrids[i][ii].resize( grid[ii].size() );
+            floatGrids[gridIndex][ii].resize( grid[ii].size() );
             for (unsigned int jj = 0; jj < grid[ii].size(); jj++) {
 
-                floatGrids[i][ii][jj].resize( grid[ii][jj].size() );
+                floatGrids[gridIndex][ii][jj].resize( grid[ii][jj].size() );
                 for (unsigned int kk = 0; kk < grid[ii][kk].size(); kk++) {
-                    floatGrids[i][ii][jj][kk] = static_cast<float>(grid[ii][jj][kk]);
+                    floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(grid[ii][jj][kk]);
                 }
             }
         }

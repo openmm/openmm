@@ -68,8 +68,8 @@ void AmoebaTorsionTorsionForce::setTorsionTorsionParameters(int index, int parti
     torsionTorsions[index].gridIndex              = gridIndex;
 }
 
-void AmoebaTorsionTorsionForce::getTorsionTorsionGrid(int index, TorsionTorsionGrid& grid ) const {
-   grid = torsionTorsionGrids[index];
+const TorsionTorsionGrid& AmoebaTorsionTorsionForce::getTorsionTorsionGrid(int index ) const {
+   return torsionTorsionGrids[index].getTorsionTorsionGrid();
 }
 
 void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, TorsionTorsionGrid& grid ) {

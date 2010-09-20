@@ -950,9 +950,9 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     // 4 (grids) * (25 *25 grid)*(2 +4 a1, a2, f, f1,f2, f12) = 15000
     for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
         amoebaGpu->amoebaSim.amoebaTorTorGridOffset[ii] = (totalGridEntries/4);
-        amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii]  = -180.0f;
-        amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii]  =   15.0f;
-        amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]     =   25;
+        amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii]  = floatGrids[ii][0][0][0];
+        amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii]  = 360.0f/static_cast<float>(floatGrids[ii].size()-1);
+        amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]     = floatGrids[ii].size();
         for (unsigned int jj = 0; jj < floatGrids[ii].size(); jj++) {
             for (unsigned int kk = 0; kk < floatGrids[ii][jj].size(); kk++) {
                 totalGridEntries += (floatGrids[ii][jj][kk].size() - 2);
@@ -966,7 +966,11 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     amoebaGpu->amoebaSim.pAmoebaTorsionTorsionGrids      = psTorsionTorsionGrids->_pDevStream[0];
 
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "totalGridEntries=%u totalFloat4 entries=%u\n", totalGridEntries, totalEntries );
+        (void) fprintf( amoebaGpu->log, "Grids %u totalGridEntries=%u totalFloat4 entries=%u\n", torsionTorsionGrids, totalGridEntries, totalEntries );
+        for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
+            (void) fprintf( amoebaGpu->log, "Grid %u offset=%d begin=%.3f delta=%.3f Ny=%d\n", ii, amoebaGpu->amoebaSim.amoebaTorTorGridOffset[ii],
+                            amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii], amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii], amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]);
+        }
     }
 
     unsigned int index    = 0;
@@ -982,7 +986,7 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "TorsionTorsionGrid: %d %5d [%5d %5d ] [%10.3f %10.3f] [%15.7e %15.7e %15.7e %15.7e]\n", index, ii, jj, kk,
+         (void) fprintf( amoebaGpu->log, "TorsionTorsionGrid: %5d %5d [%5d %5d ] [%10.3f %10.3f] [%15.7e %15.7e %15.7e %15.7e]\n", index, ii, jj, kk,
                   floatGrids[ii][jj][kk][0], floatGrids[ii][jj][kk][1],
                   (*psTorsionTorsionGrids)[index].x, (*psTorsionTorsionGrids)[index].y, (*psTorsionTorsionGrids)[index].z, (*psTorsionTorsionGrids)[index].w );
 #endif

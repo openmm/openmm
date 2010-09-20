@@ -32,6 +32,7 @@
 #include "AmoebaReferencePiTorsionForce.h"
 #include "AmoebaReferenceStretchBendForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
+#include "AmoebaReferenceTorsionTorsionForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
@@ -427,72 +428,95 @@ double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& contex
     return static_cast<double>(energy);
 }
 
-//ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, System& system) :
-//                CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaTorsionTorsionForceKernel::~ReferenceCalcAmoebaTorsionTorsionForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, const AmoebaTorsionTorsionForce& force) {
-//
-//    data.setAmoebaLocalForcesKernel( this );
-//    numTorsionTorsions = force.getNumTorsionTorsions();
-//
-//    // torsion-torsion parameters
-//
-//    std::vector<int>   particle1(numTorsionTorsions);
-//    std::vector<int>   particle2(numTorsionTorsions);
-//    std::vector<int>   particle3(numTorsionTorsions);
-//    std::vector<int>   particle4(numTorsionTorsions);
-//    std::vector<int>   particle5(numTorsionTorsions);
-//    std::vector<int>   chiralCheckAtomIndex(numTorsionTorsions);
-//    std::vector<int>   gridIndices(numTorsionTorsions);
-//
-//    for (int i = 0; i < numTorsionTorsions; i++) {
-//        force.getTorsionTorsionParameters(i, particle1[i], particle2[i], particle3[i],
-//                                             particle4[i], particle5[i],
-//                                             chiralCheckAtomIndex[i], gridIndices[i]);
-//    }
-//    gpuSetAmoebaTorsionTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, particle5, chiralCheckAtomIndex, gridIndices );
-//
-//    // torsion-torsion grids
-//
-//    numTorsionTorsionGrids = force.getNumTorsionTorsionGrids();
-//    std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > > RealOpenMMGrids;
-//
-//    RealOpenMMGrids.resize(numTorsionTorsionGrids);
-//    for (int i = 0; i < numTorsionTorsionGrids; i++) {
-//
-//        TorsionTorsionGrid grid;
-//        force.getTorsionTorsionGrid(i, grid );
-//
-//        RealOpenMMGrids[i].resize( grid.size() );
-//        for (unsigned int ii = 0; ii < grid.size(); ii++) {
-//
-//            RealOpenMMGrids[i][ii].resize( grid[ii].size() );
-//            for (unsigned int jj = 0; jj < grid[ii].size(); jj++) {
-//
-//                RealOpenMMGrids[i][ii][jj].resize( grid[ii][jj].size() );
-//                for (unsigned int kk = 0; kk < grid[ii][kk].size(); kk++) {
-//                    RealOpenMMGrids[i][ii][jj][kk] = static_cast<RealOpenMM>(grid[ii][jj][kk]);
-//                }
-//            }
-//        }
-//    }
-//    gpuSetAmoebaTorsionTorsionGrids(data.getAmoebaGpu(), RealOpenMMGrids );
-//
-//}
-//
-//double CudaCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if( data.getAmoebaLocalForcesKernel() == this ){
-//        computeAmoebaLocalForces( data );
-//    }
-//    return 0.0;
-//}
-//
+ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, System& system) :
+                CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaTorsionTorsionForceKernel::~ReferenceCalcAmoebaTorsionTorsionForceKernel() {
+}
+
+void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, const AmoebaTorsionTorsionForce& force) {
+
+    numTorsionTorsions = force.getNumTorsionTorsions();
+
+    // torsion-torsion parameters
+
+    for (int ii = 0; ii < numTorsionTorsions; ii++) {
+        int particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, chiralCheckAtomIndex, gridIndex;
+        force.getTorsionTorsionParameters(ii, particle1Index, particle2Index, particle3Index,
+                                          particle4Index, particle5Index, chiralCheckAtomIndex, gridIndex);
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        particle3.push_back( particle3Index ); 
+        particle4.push_back( particle4Index ); 
+        particle5.push_back( particle5Index ); 
+        chiralCheckAtom.push_back( chiralCheckAtomIndex ); 
+        gridIndices.push_back( gridIndex ); 
+    }
+
+    // torsion-torsion grids
+
+    numTorsionTorsionGrids = force.getNumTorsionTorsionGrids();
+    torsionTorsionGrids.resize(numTorsionTorsionGrids);
+    for (int ii = 0; ii < numTorsionTorsionGrids; ii++) {
+
+        const TorsionTorsionGrid grid = force.getTorsionTorsionGrid( ii );
+
+        torsionTorsionGrids[ii].resize( grid.size() );
+        for (unsigned int kk = 0; kk < grid.size(); kk++) {
+
+            torsionTorsionGrids[ii][kk].resize( grid[kk].size() );
+            for (unsigned int jj = 0; jj < grid[kk].size(); jj++) {
+
+                torsionTorsionGrids[ii][kk][jj].resize( grid[kk][jj].size() );
+                for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
+                    torsionTorsionGrids[ii][kk][jj][ll] = static_cast<RealOpenMM>(grid[kk][jj][ll]);
+                }
+            }
+        }
+    }
+}
+
+double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    RealOpenMM energy      = 0.0; 
+
+    for( unsigned int ii = 0; ii < numTorsionTorsions; ii++ ){
+
+        int particle1Index       = particle1[ii];
+        int particle2Index       = particle2[ii];
+        int particle3Index       = particle3[ii];
+        int particle4Index       = particle4[ii];
+        int particle5Index       = particle5[ii];
+
+        int chiralCheckAtomIndex = chiralCheckAtom[ii];
+
+        int gridIndex            = gridIndices[ii];
+
+        RealOpenMM* forces[5];
+        forces[0]                = forceData[particle1Index];
+        forces[1]                = forceData[particle2Index];
+        forces[2]                = forceData[particle3Index];
+        forces[3]                = forceData[particle4Index];
+        forces[4]                = forceData[particle5Index];
+
+        RealOpenMM* chiralCheckAtom;
+        if( chiralCheckAtomIndex >= 0 ){
+            chiralCheckAtom = posData[chiralCheckAtomIndex];
+        } else {
+            chiralCheckAtom = NULL;
+        }
+        energy                 += AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( 
+                                       posData[particle1Index], posData[particle2Index],
+                                       posData[particle3Index], posData[particle4Index],
+                                       posData[particle5Index], chiralCheckAtom, torsionTorsionGrids[gridIndex],
+                                       forces );
+    }
+    return static_cast<double>(energy);
+}
+
 ///* -------------------------------------------------------------------------- *
 // *                             AmoebaMultipole                                *
 // * -------------------------------------------------------------------------- */

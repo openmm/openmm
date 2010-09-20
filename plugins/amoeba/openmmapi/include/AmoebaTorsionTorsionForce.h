@@ -34,6 +34,7 @@
 
 #include "openmm/Force.h"
 #include <vector>
+#include <cmath>
 #include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
@@ -41,29 +42,30 @@ namespace OpenMM {
 typedef std::vector< std::vector< std::vector<double> > > TorsionTorsionGrid;
 
 /**
- * This class implements the Amoeba Out-of-plane bend interaction
+ * This class implements the Amoeba torsion-torsion interaction
  * To use it, create a TorsionTorsionForce object then call addTorsionTorsion() once for each torsionTorsion.  After
  * a torsionTorsion has been added, you can modify its force field parameters by calling setTorsionTorsionParameters().
  */
 
 class OPENMM_EXPORT AmoebaTorsionTorsionForce : public Force {
+
 public:
     /**
      * Create a Amoeba TorsionTorsionForce.
      */
-    AmoebaTorsionTorsionForce();
+    AmoebaTorsionTorsionForce( void );
 
     /**
      * Get the number of torsionTorsion terms in the potential function
      */
-    int getNumTorsionTorsions() const {
+    int getNumTorsionTorsions( void ) const {
         return torsionTorsions.size();
     }
 
     /**
      * Get the number of torsionTorsion grids
      */
-    int getNumTorsionTorsionGrids() const {
+    int getNumTorsionTorsionGrids( void ) const {
         return torsionTorsionGrids.size();
     }
 
@@ -76,13 +78,13 @@ public:
      * @param particle4                 the index of the fourth particle connected by the torsionTorsion
      * @param particle5                 the index of the fifth particle connected by the torsionTorsion
      * @param chiralCheckAtomIndex      the index of the particle connected to particle3, but not particle2 or particle4 to be used in chirality check
-     * @param gridIndex                 the grid index
-     * @return             the index of the torsionTorsion that was added
+     * @param gridIndex                 the index to the grid to be used
+     * @return                          the index of the torsionTorsion that was added
      */
     int addTorsionTorsion(int particle1, int particle2, int particle3, int particle4, int particle5, int chiralCheckAtomIndex, int gridIndex );
 
     /**
-     * Get             the force field parameters for a torsionTorsion term.
+     * Get the force field parameters for a torsionTorsion term.
      * 
      * @param index                     the index of the torsionTorsion for which to get parameters
      * @param particle1                 the index of the first particle connected by the torsionTorsion
@@ -93,10 +95,10 @@ public:
      * @param chiralCheckAtomIndex      the index of the particle connected to particle3, but not particle2 or particle4 to be used in chirality check
      * @param gridIndex                 the grid index
      */
-    void getTorsionTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& chiralCheckAtomIndex, int& gridIndex ) const;
+    void getTorsionTorsionParameters( int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& chiralCheckAtomIndex, int& gridIndex ) const;
 
     /**
-     * Set             the force field parameters for a torsionTorsion term.
+     * Set the force field parameters for a torsionTorsion term.
      * 
      * @param index                     the index of the torsionTorsion for which to set parameters
      * @param particle1                 the index of the first particle connected by the torsionTorsion
@@ -107,15 +109,15 @@ public:
      * @param chiralCheckAtomIndex      the index of the particle connected to particle3, but not particle2 or particle4 to be used in chirality check
      * @param gridIndex                 the grid index
      */
-    void setTorsionTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int particle5, int chiralCheckAtomIndex, int gridIndex );
+    void setTorsionTorsionParameters( int index, int particle1, int particle2, int particle3, int particle4, int particle5, int chiralCheckAtomIndex, int gridIndex );
 
     /**
      * Get the torsion-torsion grid at the specified index
      * 
      * @param gridIndex     the grid index
-     * @param grid          the grid
+     * @return grid         return grid reference
      */
-    void getTorsionTorsionGrid(int index, TorsionTorsionGrid& grid ) const;
+    const TorsionTorsionGrid& getTorsionTorsionGrid( int index ) const;
 
     /**
      * Set the torsion-torsion grid at the specified index
@@ -136,6 +138,7 @@ protected:
 private:
 
     class TorsionTorsionInfo;
+    class TorsionTorsionGridInfo;
 
 // Retarded visual studio compiler complains about being unable to 
 // export private stl class members.
@@ -145,7 +148,7 @@ private:
 #pragma warning(disable:4251)
 #endif
     std::vector<TorsionTorsionInfo> torsionTorsions;
-    std::vector<TorsionTorsionGrid> torsionTorsionGrids;
+    std::vector<TorsionTorsionGridInfo> torsionTorsionGrids;
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
@@ -166,6 +169,63 @@ public:
                        particle4(particle4), particle5(particle5), gridIndex(gridIndex), chiralCheckAtomIndex(chiralCheckAtomIndex) {
      
     }
+};
+
+class AmoebaTorsionTorsionForce::TorsionTorsionGridInfo {
+
+public:
+
+    TorsionTorsionGridInfo( ) {
+        _size[0]        = _size[1]        = 0;
+        _startValues[0] = _startValues[1] = 0.0;
+        _spacing[0]     = _spacing[1]     = 1.0;
+    }
+
+    TorsionTorsionGridInfo( const TorsionTorsionGrid& grid ) {
+
+        _grid.resize( grid.size() );
+        for( unsigned int kk = 0; kk < grid.size(); kk++ ){
+            _grid[kk].resize( grid[kk].size() );
+            for( unsigned int jj = 0; jj < grid[kk].size(); jj++ ){
+                _grid[kk][jj].resize( grid[kk][jj].size() );
+                for( unsigned int ii = 0; ii < grid[kk][jj].size(); ii++ ){
+                    _grid[kk][jj][ii] = grid[kk][jj][ii];
+                }
+            }
+        }   
+
+        _startValues[0] =  _grid[0][0][0];
+        _startValues[1] =  _grid[0][0][1];
+
+        //_spacing[0]     =  fabs( _grid[1][0][0] - _grid[0][0][0] );
+        //_spacing[1]     =  fabs( _grid[0][1][1] - _grid[0][0][1] );
+        _spacing[0]     = static_cast<double>(_grid.size()-1)/360.0;
+        _spacing[1]     = static_cast<double>(grid.size()-1)/360.0;
+
+        _size[0]        = static_cast<int>(grid.size());
+        _size[1]        = static_cast<int>(grid[0].size());
+
+    }
+
+    const TorsionTorsionGrid& getTorsionTorsionGrid( void ) const {
+        return _grid;
+    }
+    int getDimensionSize( int index ) const {
+        return _size[index];
+    }
+    double getStartValue( int index ) const {
+        return _startValues[index];
+    }
+    double getSpacing( int index ) const {
+        return _spacing[index];
+    }
+
+private:
+
+    TorsionTorsionGrid _grid;
+    int _size[2];
+    double _startValues[2];
+    double _spacing[2];
 };
 
 } // namespace OpenMM
