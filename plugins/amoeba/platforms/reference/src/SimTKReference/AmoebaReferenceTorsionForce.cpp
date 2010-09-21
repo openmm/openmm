@@ -1,4 +1,3 @@
-
 /* Portions copyright (c) 2006 Stanford University and Simbios.
  * Contributors: Pande Group
  *
@@ -24,7 +23,6 @@
 
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceTorsionForce.h"
-#include <vector>
 
 /**---------------------------------------------------------------------------------------
 
@@ -43,12 +41,12 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceTorsionForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                 const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                                                 const std::vector<RealOpenMM>& torsionParameters1,
-                                                                 const std::vector<RealOpenMM>& torsionParameters2,
-                                                                 const std::vector<RealOpenMM>& torsionParameters3,
-                                                                 RealOpenMM** forces ){
+RealOpenMM AmoebaReferenceTorsionForce::calculateTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                                             const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                                             const std::vector<RealOpenMM>& torsionParameters1,
+                                                             const std::vector<RealOpenMM>& torsionParameters2,
+                                                             const std::vector<RealOpenMM>& torsionParameters3,
+                                                             RealOpenMM** forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -210,3 +208,31 @@ RealOpenMM AmoebaReferenceTorsionForce::calculateForceAndEnergy( const RealOpenM
 
     return energy;
 }
+
+RealOpenMM AmoebaReferenceTorsionForce::calculateForceAndEnergy( int numTorsions, RealOpenMM** posData,
+                                                                 const std::vector<int>&  particle1,
+                                                                 const std::vector<int>&  particle2,
+                                                                 const std::vector<int>&  particle3,
+                                                                 const std::vector<int>&  particle4,
+                                                                 const std::vector< std::vector<RealOpenMM> >& torsionParameters1,
+                                                                 const std::vector< std::vector<RealOpenMM> >& torsionParameters2,
+                                                                 const std::vector< std::vector<RealOpenMM> >& torsionParameters3,
+                                                                 RealOpenMM** forceData ) const {
+    RealOpenMM energy      = 0.0; 
+    for (unsigned int ii = 0; ii < numTorsions; ii++) {
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+        RealOpenMM* forces[4];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+        energy                 += calculateTorsionIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                                       torsionParameters1[ii], torsionParameters2[ii], torsionParameters3[ii], forces );
+    }   
+    return energy;
+}
+
+

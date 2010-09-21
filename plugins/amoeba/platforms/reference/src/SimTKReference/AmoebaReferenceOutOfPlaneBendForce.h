@@ -26,6 +26,7 @@
 #define __AmoebaReferenceOutOfPlaneBendForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceOutOfPlaneBendForce( );
+    AmoebaReferenceOutOfPlaneBendForce( ){};
  
     /**---------------------------------------------------------------------------------------
        
@@ -47,11 +48,47 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceOutOfPlaneBendForce( );
+    ~AmoebaReferenceOutOfPlaneBendForce( ){};
  
     /**---------------------------------------------------------------------------------------
+     
+        Calculate Amoeba out-of-plane-bend angle (force and energy)
+     
+        @param numOutOfPlaneBends      number of angles
+        @param posData                 particle positions
+        @param particle1               particle 1 indices
+        @param particle2               particle 2 indices
+        @param particle3               particle 3 indices
+        @param particle4               particle 4 indices
+        @param kAngle                  angle force constant
+        @param angleCubic              cubic force parameter
+        @param angleQuartic            quartic force parameter
+        @param anglePentic             pentic force parameter
+        @param angleSexic              sextic force parameter
+        @param forces                  output force vector
+     
+        @return total energy
+
+     
+        --------------------------------------------------------------------------------------- */
+
+    RealOpenMM calculateForceAndEnergy( int numOutOfPlaneBends, RealOpenMM** posData,
+                                        const std::vector<int>&  particle1,
+                                        const std::vector<int>&  particle2,
+                                        const std::vector<int>&  particle3,
+                                        const std::vector<int>&  particle4,
+                                        const std::vector<RealOpenMM>&  kAngle,
+                                        RealOpenMM angleCubic,
+                                        RealOpenMM angleQuartic,
+                                        RealOpenMM anglePentic,
+                                        RealOpenMM angleSextic,
+                                        RealOpenMM** forceData) const;
+
+private:
+
+    /**---------------------------------------------------------------------------------------
     
-       Calculate Amoeba harmonic angle ixn (force and energy)
+       Calculate Amoeba Out-Of-Plane-Bend ixn (force and energy)
     
        @param positionAtomA           Cartesian coordinates of atom A
        @param positionAtomB           Cartesian coordinates of atom B
@@ -68,12 +105,12 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                               const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                               RealOpenMM angleK,
-                                               RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                               RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                               RealOpenMM** forces );
+    RealOpenMM calculateOutOfPlaneBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                           const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                           RealOpenMM angleK,
+                                           RealOpenMM angleCubic,     RealOpenMM angleQuartic,
+                                           RealOpenMM anglePentic,    RealOpenMM angleSextic,
+                                           RealOpenMM** forces ) const;
          
 };
 

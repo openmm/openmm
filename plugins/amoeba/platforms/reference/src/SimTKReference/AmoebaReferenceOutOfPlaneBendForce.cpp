@@ -24,11 +24,10 @@
 
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
-#include <vector>
 
 /**---------------------------------------------------------------------------------------
 
-   Calculate Amoeba harmonic angle ixn (force and energy)
+   Calculate Amoeba Out-Of-Plane-Bend  ixn (force and energy)
 
    @param positionAtomA           Cartesian coordinates of atom A
    @param positionAtomB           Cartesian coordinates of atom B
@@ -46,12 +45,12 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                              const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                                                              RealOpenMM angleK,
-                                                                              RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
-                                                                              RealOpenMM anglePentic,                RealOpenMM angleSextic,
-                                                                              RealOpenMM** forces ){
+RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                                                           const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                                                           RealOpenMM angleK,
+                                                                           RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
+                                                                           RealOpenMM anglePentic,                RealOpenMM angleSextic,
+                                                                           RealOpenMM** forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -193,3 +192,33 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( const Re
 
     return energy;
 }
+
+RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numOutOfPlaneBends, RealOpenMM** posData,
+                                                                       const std::vector<int>&  particle1,
+                                                                       const std::vector<int>&  particle2,
+                                                                       const std::vector<int>&  particle3,
+                                                                       const std::vector<int>&  particle4,
+                                                                       const std::vector<RealOpenMM>&  kQuadratic,
+                                                                       RealOpenMM angleCubic,
+                                                                       RealOpenMM angleQuartic,
+                                                                       RealOpenMM anglePentic,
+                                                                       RealOpenMM angleSextic,
+                                                                       RealOpenMM** forceData) const {
+    RealOpenMM energy      = 0.0; 
+    for (unsigned int ii = 0; ii < numOutOfPlaneBends; ii++) {
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+        RealOpenMM kAngle       = kQuadratic[ii];
+        RealOpenMM* forces[4];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+        energy                 += calculateOutOfPlaneBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                                              kAngle, angleCubic, angleQuartic, anglePentic, angleSextic, forces );
+    }   
+    return energy;
+}
+

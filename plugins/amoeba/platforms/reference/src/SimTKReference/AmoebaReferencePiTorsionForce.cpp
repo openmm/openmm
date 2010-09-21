@@ -43,10 +43,10 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                   const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                                                   const RealOpenMM* positionAtomE, const RealOpenMM* positionAtomF,
-                                                                   RealOpenMM piTorsionK, RealOpenMM** forces ){
+RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                                                 const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                                                 const RealOpenMM* positionAtomE, const RealOpenMM* positionAtomF,
+                                                                 RealOpenMM piTorsionK, RealOpenMM** forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -181,4 +181,38 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( const RealOpe
  
     return piTorsionK*phi2; 
  
+}
+
+RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTorsions, RealOpenMM** posData,
+                                                                   const std::vector<int>&  particle1,
+                                                                   const std::vector<int>&  particle2,
+                                                                   const std::vector<int>&  particle3,
+                                                                   const std::vector<int>&  particle4,
+                                                                   const std::vector<int>&  particle5,
+                                                                   const std::vector<int>&  particle6,
+                                                                   const std::vector<RealOpenMM>& kTorsion,
+                                                                   RealOpenMM** forceData ) const {
+    RealOpenMM energy  = 0.0; 
+    for (unsigned int ii = 0; ii < numPiTorsions; ii++) {
+
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+        int particle5Index      = particle5[ii];
+        int particle6Index      = particle6[ii];
+
+        RealOpenMM* forces[6];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+        forces[4]               = forceData[particle5Index];
+        forces[5]               = forceData[particle6Index];
+        energy                 += calculatePiTorsionIxn( posData[particle1Index], posData[particle2Index],
+                                                         posData[particle3Index], posData[particle4Index],
+                                                         posData[particle5Index], posData[particle6Index],
+                                                         kTorsion[ii], forces );
+    }   
+    return energy;
 }

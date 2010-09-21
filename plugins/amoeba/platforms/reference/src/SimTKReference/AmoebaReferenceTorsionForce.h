@@ -26,6 +26,7 @@
 #define __AmoebaReferenceTorsionForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceTorsionForce( );
+    AmoebaReferenceTorsionForce( ){};
  
     /**---------------------------------------------------------------------------------------
        
@@ -47,8 +48,40 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceTorsionForce( );
+    ~AmoebaReferenceTorsionForce( ){};
  
+     /**---------------------------------------------------------------------------------------
+     
+        Calculate Amoeba torsion ixns (force and energy)
+     
+        @param numTorsions             number of torsions
+        @param posData                 particle positions
+        @param particle1               particle 1 indices
+        @param particle2               particle 2 indices
+        @param particle3               particle 3 indices
+        @param particle4               particle 4 indices
+        @param torsionParameters1      first  index torsion parameters (amplitude, phase, fold)
+        @param torsionParameters2      second index torsion parameters (amplitude, phase, fold)
+        @param torsionParameters3      third  index torsion parameters (amplitude, phase, fold)
+        @param forces                  output force vector
+     
+        @return total energy
+
+     
+        --------------------------------------------------------------------------------------- */
+
+    RealOpenMM calculateForceAndEnergy( int numTorsions, RealOpenMM** posData,
+                                        const std::vector<int>&  particle1,
+                                        const std::vector<int>&  particle2,
+                                        const std::vector<int>&  particle3,
+                                        const std::vector<int>&  particle4,
+                                        const std::vector< std::vector<RealOpenMM> >& torsionParameters1,
+                                        const std::vector< std::vector<RealOpenMM> >& torsionParameters2,
+                                        const std::vector< std::vector<RealOpenMM> >& torsionParameters3,
+                                        RealOpenMM** forceData ) const;
+
+private:
+
     /**---------------------------------------------------------------------------------------
     
        Calculate Amoeba harmonic angle ixn (force and energy)
@@ -66,14 +99,15 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+    RealOpenMM calculateTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
                                                const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
                                                const std::vector<RealOpenMM>& torsionParameters1,
                                                const std::vector<RealOpenMM>& torsionParameters2,
                                                const std::vector<RealOpenMM>& torsionParameters3,
-                                               RealOpenMM** forces );
+                                               RealOpenMM** forces ) const;
          
 };
+
 
 // ---------------------------------------------------------------------------------------
 

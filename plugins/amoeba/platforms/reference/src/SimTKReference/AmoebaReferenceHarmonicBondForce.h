@@ -26,6 +26,7 @@
 #define __AmoebaReferenceHarmonicBondForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -47,12 +48,40 @@ public:
        
         --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceHarmonicBondForce( );
+    ~AmoebaReferenceHarmonicBondForce( ){};
  
  
      /**---------------------------------------------------------------------------------------
      
-        Calculate Amoeba harmonic bond ixn (force and energy)
+        Calculate Amoeba harmonic bond ixns (force and energy)
+     
+        @param numBonds                number of bonds
+        @param posData                 particle positions
+        @param particle1               particle 1 indices
+        @param particle2               particle 2 indices
+        @param bondLength              bond length
+        @param bondK                   bond force
+        @param bondCubic               cubic bond force parameter
+        @param bondQuartic             quartic bond force parameter
+        @param forces                  output force vector
+     
+        @return total energy
+     
+        --------------------------------------------------------------------------------------- */
+     
+    RealOpenMM calculateForceAndEnergy( int numBonds, RealOpenMM** posData,
+                                        const std::vector<int>& particle1,
+                                        const std::vector<int>&  particle2,
+                                        const std::vector<RealOpenMM>& bondLength,
+                                        const std::vector<RealOpenMM>& bondK,
+                                        RealOpenMM bondCubic, RealOpenMM bondQuartic,
+                                        RealOpenMM** forceData ) const;
+
+private:
+
+     /**---------------------------------------------------------------------------------------
+     
+        Calculate Amoeba harmonic bond ixns (force and energy)
      
         @param positionAtomA           Cartesian coordinates of atom A
         @param positionAtomB           Cartesian coordinates of atom B
@@ -66,10 +95,10 @@ public:
      
         --------------------------------------------------------------------------------------- */
      
-    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                               RealOpenMM bondLength, RealOpenMM bondK,
-                                               RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                               RealOpenMM** forces );
+    RealOpenMM calculateBondIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                 RealOpenMM bondLength, RealOpenMM bondK,
+                                 RealOpenMM bondCubic, RealOpenMM bondQuartic,
+                                 RealOpenMM** forces ) const;
      
 };
 

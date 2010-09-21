@@ -28,7 +28,7 @@
 
 /**---------------------------------------------------------------------------------------
 
-   Calculate Amoeba harmonic angle ixn (force and energy)
+   Calculate Amoeba stretch bend angle ixn (force and energy)
 
    @param positionAtomA           Cartesian coordinates of atom A
    @param positionAtomB           Cartesian coordinates of atom B
@@ -46,11 +46,11 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
                                                                      const RealOpenMM* positionAtomC,
                                                                      RealOpenMM lengthAB,      RealOpenMM lengthCB,
                                                                      RealOpenMM idealAngle,    RealOpenMM kParameter,
-                                                                     RealOpenMM** forces ){
+                                                                     RealOpenMM** forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -141,6 +141,34 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( const RealO
  
     // ---------------------------------------------------------------------------------------
  
-    // return energy
     return (kParameter*dt*dr);
 }
+
+RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStretchBends, RealOpenMM** posData,
+                                                                       const std::vector<int>&  particle1,
+                                                                       const std::vector<int>&  particle2,
+                                                                       const std::vector<int>&  particle3,
+                                                                       const std::vector<RealOpenMM>& lengthABParameters,
+                                                                       const std::vector<RealOpenMM>& lengthCBParameters,
+                                                                       const std::vector<RealOpenMM>&  angle,
+                                                                       const std::vector<RealOpenMM>&  kQuadratic,
+                                                                       RealOpenMM** forceData) const {
+    RealOpenMM energy      = 0.0; 
+    for (unsigned int ii = 0; ii < numStretchBends; ii++) {
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        RealOpenMM abLength     = lengthABParameters[ii];
+        RealOpenMM cbLength     = lengthCBParameters[ii];
+        RealOpenMM idealAngle   = angle[ii];
+        RealOpenMM angleK       = kQuadratic[ii];
+        RealOpenMM* forces[3];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        energy                 += calculateStretchBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index],
+                                                           abLength, cbLength, idealAngle, angleK, forces );
+    }   
+    return energy;
+}
+

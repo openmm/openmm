@@ -97,19 +97,10 @@ void ReferenceCalcAmoebaHarmonicBondForceKernel::initialize(const System& system
 double ReferenceCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for (int ii = 0; ii < numBonds; ii++) {
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        RealOpenMM bondLength   = length[ii];
-        RealOpenMM bondK        = kQuadratic[ii];
-        RealOpenMM* forces[2];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        energy                 += AmoebaReferenceHarmonicBondForce::calculateForceAndEnergy( posData[particle1Index], posData[particle2Index],
-                                                                      bondLength, bondK, globalHarmonicBondCubic, globalHarmonicBondQuartic,
-                                                                      forces );
-    }
+    AmoebaReferenceHarmonicBondForce amoebaReferenceHarmonicBondForce;
+    RealOpenMM energy      = amoebaReferenceHarmonicBondForce.calculateForceAndEnergy( numBonds, posData, particle1, particle2, length, kQuadratic,
+                                                                                       globalHarmonicBondCubic, globalHarmonicBondQuartic,
+                                                                                       forceData );
     return static_cast<double>(energy);
 }
 
@@ -143,22 +134,9 @@ void ReferenceCalcAmoebaHarmonicAngleForceKernel::initialize(const System& syste
 double ReferenceCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for (unsigned int ii = 0; ii < numAngles; ii++) {
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-        RealOpenMM idealAngle   = angle[ii];
-        RealOpenMM angleK       = kQuadratic[ii];
-        RealOpenMM* forces[3];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        energy                 += AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index], posData[particle3Index],
-                                       idealAngle, angleK, globalHarmonicAngleCubic, globalHarmonicAngleQuartic,
-                                       globalHarmonicAnglePentic, globalHarmonicAngleSextic, forces );
-    }
+    AmoebaReferenceHarmonicAngleForce amoebaReferenceHarmonicAngleForce;
+    RealOpenMM energy      = amoebaReferenceHarmonicAngleForce.calculateForceAndEnergy( numAngles, 
+                                       posData, particle1, particle2, particle3, angle, kQuadratic, globalHarmonicAngleCubic, globalHarmonicAngleQuartic, globalHarmonicAnglePentic, globalHarmonicAngleSextic, forceData );
     return static_cast<double>(energy);
 }
 
@@ -190,26 +168,13 @@ void ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System
 }
 
 double ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for (unsigned int ii = 0; ii < numAngles; ii++) {
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-        int particle4Index      = particle4[ii];
-        RealOpenMM idealAngle   = angle[ii];
-        RealOpenMM angleK       = kQuadratic[ii];
-        RealOpenMM* forces[4];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
-        energy                 += AmoebaReferenceHarmonicInPlaneAngleForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
-                                       idealAngle, angleK, globalHarmonicInPlaneAngleCubic, globalHarmonicInPlaneAngleQuartic,
-                                       globalHarmonicInPlaneAnglePentic, globalHarmonicInPlaneAngleSextic, forces );
-    }
+    AmoebaReferenceHarmonicInPlaneAngleForce amoebaReferenceHarmonicInPlaneAngleForce;
+    RealOpenMM energy      = amoebaReferenceHarmonicInPlaneAngleForce.calculateForceAndEnergy( numAngles, posData, particle1, particle2, particle3, particle4, 
+                                                                                               angle, kQuadratic, globalHarmonicInPlaneAngleCubic, globalHarmonicInPlaneAngleQuartic,
+                                                                                               globalHarmonicInPlaneAnglePentic, globalHarmonicInPlaneAngleSextic, forceData );
     return static_cast<double>(energy);
 }
 
@@ -256,24 +221,9 @@ void ReferenceCalcAmoebaTorsionForceKernel::initialize(const System& system, con
 double ReferenceCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for (unsigned int ii = 0; ii < numTorsions; ii++) {
-
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-        int particle4Index      = particle4[ii];
-
-        RealOpenMM* forces[4];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
-
-        energy                 += AmoebaReferenceTorsionForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
-                                       torsionParameters1[ii], torsionParameters2[ii], torsionParameters3[ii],  forces );
-    }
+    AmoebaReferenceTorsionForce amoebaReferenceTorsionForce;
+    RealOpenMM energy      = amoebaReferenceTorsionForce.calculateForceAndEnergy( numTorsions, posData, particle1, particle2, particle3, particle4,
+                                                                                  torsionParameters1, torsionParameters2, torsionParameters3, forceData );
     return static_cast<double>(energy);
 }
 
@@ -305,28 +255,10 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, c
 double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for( unsigned int ii = 0; ii < numPiTorsions; ii++ ){
-
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-        int particle4Index      = particle4[ii];
-        int particle5Index      = particle5[ii];
-        int particle6Index      = particle6[ii];
-
-        RealOpenMM* forces[6];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
-        forces[4]               = forceData[particle5Index];
-        forces[5]               = forceData[particle6Index];
-
-        energy                 += AmoebaReferencePiTorsionForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
-                                       posData[particle5Index], posData[particle6Index], kTorsion[ii], forces );
-    }
+    AmoebaReferencePiTorsionForce amoebaReferencePiTorsionForce;
+    RealOpenMM energy      = amoebaReferencePiTorsionForce.calculateForceAndEnergy( numPiTorsions, posData, particle1, particle2,
+                                                                                    particle3, particle4, particle5, particle6,
+                                                                                    kTorsion, forceData );
     return static_cast<double>(energy);
 }
 
@@ -357,23 +289,9 @@ void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system,
 double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for( unsigned int ii = 0; ii < numStretchBends; ii++ ){
-
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-
-        RealOpenMM* forces[3];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-
-        energy                 += AmoebaReferenceStretchBendForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index], posData[particle3Index],
-                                       lengthABParameters[ii], lengthCBParameters[ii],
-                                       angleParameters[ii], kParameters[ii], forces );
-    }
+    AmoebaReferenceStretchBendForce amoebaReferenceStretchBendForce;
+    RealOpenMM energy      = amoebaReferenceStretchBendForce.calculateForceAndEnergy( numStretchBends, posData, particle1, particle2, particle3,
+                                                                                      lengthABParameters, lengthCBParameters, angleParameters, kParameters, forceData );
     return static_cast<double>(energy);
 }
 
@@ -409,23 +327,14 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& syst
 double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-    for (unsigned int ii = 0; ii < numOutOfPlaneBends; ii++) {
-        int particle1Index      = particle1[ii];
-        int particle2Index      = particle2[ii];
-        int particle3Index      = particle3[ii];
-        int particle4Index      = particle4[ii];
-        RealOpenMM angleK       = kParameters[ii];
-        RealOpenMM* forces[4];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
-        energy                 += AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
-                                       angleK, globalOutOfPlaneBendAngleCubic, globalOutOfPlaneBendAngleQuartic,
-                                       globalOutOfPlaneBendAnglePentic, globalOutOfPlaneBendAngleSextic, forces );
-    }
+    AmoebaReferenceOutOfPlaneBendForce amoebaReferenceOutOfPlaneBendForce;
+    RealOpenMM energy      = amoebaReferenceOutOfPlaneBendForce.calculateForceAndEnergy( numOutOfPlaneBends, posData,
+                                                                                         particle1, particle2, particle3, particle4,
+                                                                                         kParameters, 
+                                                                                         globalOutOfPlaneBendAngleCubic,
+                                                                                         globalOutOfPlaneBendAngleQuartic,
+                                                                                         globalOutOfPlaneBendAnglePentic,
+                                                                                         globalOutOfPlaneBendAngleSextic, forceData ); 
     return static_cast<double>(energy);
 }
 
@@ -482,39 +391,10 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
 
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    RealOpenMM energy      = 0.0; 
-
-    for( unsigned int ii = 0; ii < numTorsionTorsions; ii++ ){
-
-        int particle1Index       = particle1[ii];
-        int particle2Index       = particle2[ii];
-        int particle3Index       = particle3[ii];
-        int particle4Index       = particle4[ii];
-        int particle5Index       = particle5[ii];
-
-        int chiralCheckAtomIndex = chiralCheckAtom[ii];
-
-        int gridIndex            = gridIndices[ii];
-
-        RealOpenMM* forces[5];
-        forces[0]                = forceData[particle1Index];
-        forces[1]                = forceData[particle2Index];
-        forces[2]                = forceData[particle3Index];
-        forces[3]                = forceData[particle4Index];
-        forces[4]                = forceData[particle5Index];
-
-        RealOpenMM* chiralCheckAtom;
-        if( chiralCheckAtomIndex >= 0 ){
-            chiralCheckAtom = posData[chiralCheckAtomIndex];
-        } else {
-            chiralCheckAtom = NULL;
-        }
-        energy                 += AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( 
-                                       posData[particle1Index], posData[particle2Index],
-                                       posData[particle3Index], posData[particle4Index],
-                                       posData[particle5Index], chiralCheckAtom, torsionTorsionGrids[gridIndex],
-                                       forces );
-    }
+    AmoebaReferenceTorsionTorsionForce amoebaReferenceTorsionTorsionForce;
+    RealOpenMM energy      = amoebaReferenceTorsionTorsionForce.calculateForceAndEnergy( numTorsionTorsions, posData,
+                                                                                         particle1, particle2, particle3, particle4, particle5,
+                                                                                         chiralCheckAtom, gridIndices, torsionTorsionGrids, forceData );
     return static_cast<double>(energy);
 }
 

@@ -26,6 +26,7 @@
 #define __AmoebaReferenceHarmonicInPlaneAngleForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceHarmonicInPlaneAngleForce( );
+    AmoebaReferenceHarmonicInPlaneAngleForce( ){};
  
     /**---------------------------------------------------------------------------------------
        
@@ -47,8 +48,46 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceHarmonicInPlaneAngleForce( );
+    ~AmoebaReferenceHarmonicInPlaneAngleForce( ){};
  
+     /**---------------------------------------------------------------------------------------
+     
+        Calculate Amoeba harmonic in-plane angle ixns (force and energy)
+     
+        @param numBonds                number of angles
+        @param posData                 particle positions
+        @param particle1               particle 1 indices
+        @param particle2               particle 2 indices
+        @param particle3               particle 3 indices
+        @param particle4               particle 4 indices
+        @param angle                   ideal angle 
+        @param angleK                  angle force constant
+        @param angleCubic              cubic force parameter
+        @param angleQuartic            quartic force parameter
+        @param anglePentic             pentic force parameter
+        @param angleSexic              sextic force parameter
+        @param forces                  output force vector
+     
+        @return total energy
+
+     
+        --------------------------------------------------------------------------------------- */
+
+    RealOpenMM calculateForceAndEnergy( int numAngles, RealOpenMM** posData,
+                                        const std::vector<int>& particle1,
+                                        const std::vector<int>&  particle2,
+                                        const std::vector<int>&  particle3,
+                                        const std::vector<int>&  particle4,
+                                        const std::vector<RealOpenMM>& angle,
+                                        const std::vector<RealOpenMM>& kQuadratic,
+                                        RealOpenMM globalHarmonicAngleCubic,
+                                        RealOpenMM globalHarmonicAngleQuartic,
+                                        RealOpenMM globalHarmonicAnglePentic,
+                                        RealOpenMM globalHarmonicAngleSextic,
+                                        RealOpenMM** forceData ) const;
+
+private:
+
     /**---------------------------------------------------------------------------------------
     
        Get dEdT and energy prefactor given cosine of angle :: the calculation for different
@@ -67,10 +106,10 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM idealAngle, RealOpenMM angleK,
-                                                     RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                                     RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                                     RealOpenMM* dEdR );
+    RealOpenMM getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM idealAngle, RealOpenMM angleK,
+                                              RealOpenMM angleCubic,     RealOpenMM angleQuartic,
+                                              RealOpenMM anglePentic,    RealOpenMM angleSextic,
+                                              RealOpenMM* dEdR ) const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -92,12 +131,12 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                               const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                               RealOpenMM angle,          RealOpenMM angleK,
-                                               RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                               RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                               RealOpenMM** forces );
+    RealOpenMM calculateAngleIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                  const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                  RealOpenMM angle,          RealOpenMM angleK,
+                                  RealOpenMM angleCubic,     RealOpenMM angleQuartic,
+                                  RealOpenMM anglePentic,    RealOpenMM angleSextic,
+                                  RealOpenMM** forces ) const;
          
 };
 

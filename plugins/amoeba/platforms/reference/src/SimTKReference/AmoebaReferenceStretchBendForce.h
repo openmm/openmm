@@ -26,6 +26,7 @@
 #define __AmoebaReferenceStretchBendForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -39,7 +40,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceStretchBendForce( );
+    AmoebaReferenceStretchBendForce( ){};
  
     /**---------------------------------------------------------------------------------------
        
@@ -47,11 +48,44 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceStretchBendForce( );
+    ~AmoebaReferenceStretchBendForce( ){};
+
+     /**---------------------------------------------------------------------------------------
+     
+        Calculate Amoeba stretch bend ixns (force and energy)
+     
+        @param numBonds                number of angles
+        @param posData                 particle positions
+        @param particle1               particle 1 indices
+        @param particle2               particle 2 indices
+        @param particle3               particle 3 indices
+        @param lengthABParameters      ideal AB bond length 
+        @param lengthCBParameters      ideal CB bond length 
+        @param angle                   ideal angle 
+        @param kQuadratic              force constant
+        @param forces                  output force vector
+     
+        @return total energy
+
+     
+        --------------------------------------------------------------------------------------- */
+
+    RealOpenMM calculateForceAndEnergy( int numAngles, RealOpenMM** posData,
+                                        const std::vector<int>& particle1,
+                                        const std::vector<int>&  particle2,
+                                        const std::vector<int>&  particle3,
+                                        const std::vector<RealOpenMM>& lengthABParameters,
+                                        const std::vector<RealOpenMM>& lengthCBParameters,
+                                        const std::vector<RealOpenMM>&  angle,
+                                        const std::vector<RealOpenMM>&  kQuadratic,
+                                        RealOpenMM** forceData ) const;
+
+
+private:
 
     /**---------------------------------------------------------------------------------------
     
-       Calculate Amoeba harmonic angle ixn (force and energy)
+       Calculate Amoeba stretch bend angle ixn (force and energy)
     
        @param positionAtomA           Cartesian coordinates of atom A
        @param positionAtomB           Cartesian coordinates of atom B
@@ -65,11 +99,12 @@ public:
        @return energy
     
        --------------------------------------------------------------------------------------- */
-    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                               const RealOpenMM* positionAtomC,
-                                               RealOpenMM lengthAB,      RealOpenMM lengthCB,
-                                               RealOpenMM idealAngle,    RealOpenMM kParameter,
-                                               RealOpenMM** forces );
+
+    RealOpenMM calculateStretchBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                        const RealOpenMM* positionAtomC,
+                                        RealOpenMM lengthAB,      RealOpenMM lengthCB,
+                                        RealOpenMM idealAngle,    RealOpenMM kParameter,
+                                        RealOpenMM** forces ) const;
  
 };
 
