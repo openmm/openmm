@@ -33,6 +33,7 @@
 #include "AmoebaReferenceStretchBendForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
+#include "AmoebaReferenceVdwForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
@@ -731,67 +732,58 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
 //    // handled in computeAmoebaMultipoleForce()
 //    return 0.0;
 //}
-//
-//static void computeAmoebaVdwForce( AmoebaReferenceData& data ) {
-//
-//    amoebaGpuContext gpu = data.getAmoebaGpu();
-//    data.initializeGpu();
-//
-//    // Vdw14_7F
-//
-//    kCalculateAmoebaVdw14_7Forces(gpu);
-//}
-//
-//ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system) :
-//       CalcAmoebaVdwForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaVdwForceKernel::~ReferenceCalcAmoebaVdwForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
-//
-//    // per-particle parameters
-//
-//    int numParticles = system.getNumParticles();
-//
-//    std::vector<int> indexIVs(numParticles);
-//    std::vector<int> indexClasses(numParticles);
-//    std::vector< std::vector<int> > allExclusions(numParticles);
-//    std::vector<RealOpenMM> sigmas(numParticles);
-//    std::vector<RealOpenMM> epsilons(numParticles);
-//    std::vector<RealOpenMM> reductions(numParticles);
-//    for( int ii = 0; ii < numParticles; ii++ ){
-//
-//        int indexIV, indexClass;
-//        double sigma, epsilon, reduction;
-//        std::vector<int> exclusions;
-//
-//        force.getParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
-//        force.getParticleExclusions( ii, exclusions );
-//        for( unsigned int jj = 0; jj < exclusions.size(); jj++ ){
-//           allExclusions[ii].push_back( exclusions[jj] );
-//        }
-//
-//        indexIVs[ii]      = indexIV;
-//        indexClasses[ii]  = indexClass;
-//        sigmas[ii]        = static_cast<RealOpenMM>( sigma );
-//        epsilons[ii]      = static_cast<RealOpenMM>( epsilon );
-//        reductions[ii]    = static_cast<RealOpenMM>( reduction );
-//    }   
-//
-//    gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, indexClasses, sigmas, epsilons, reductions,
-//                               force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
-//                               allExclusions );
-//}
-//
-//double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    computeAmoebaVdwForce( data );
-//    return 0.0;
-//}
-//
+
+ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system) :
+       CalcAmoebaVdwForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaVdwForceKernel::~ReferenceCalcAmoebaVdwForceKernel() {
+}
+
+void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
+
+    // per-particle parameters
+
+    numParticles = system.getNumParticles();
+
+    indexIVs.resize( numParticles );
+    indexClasses.resize( numParticles );
+    allExclusions.resize( numParticles );
+    sigmas.resize( numParticles );
+    epsilons.resize( numParticles );
+    reductions.resize( numParticles );
+
+    for( int ii = 0; ii < numParticles; ii++ ){
+
+        int indexIV, indexClass;
+        double sigma, epsilon, reduction;
+        std::vector<int> exclusions;
+
+        force.getParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
+        force.getParticleExclusions( ii, exclusions );
+        for( unsigned int jj = 0; jj < exclusions.size(); jj++ ){
+           allExclusions[ii].push_back( exclusions[jj] );
+        }
+
+        indexIVs[ii]      = indexIV;
+        indexClasses[ii]  = indexClass;
+        sigmas[ii]        = static_cast<RealOpenMM>( sigma );
+        epsilons[ii]      = static_cast<RealOpenMM>( epsilon );
+        reductions[ii]    = static_cast<RealOpenMM>( reduction );
+    }   
+    sigmaCombiningRule   = force.getSigmaCombiningRule();
+    epsilonCombiningRule = force.getEpsilonCombiningRule();
+}
+
+double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    AmoebaReferenceVdwForce vdwForce( sigmaCombiningRule, epsilonCombiningRule, AmoebaReferenceVdwForce::NoCutoff );
+    RealOpenMM energy      = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, indexClasses, sigmas, epsilons, reductions, allExclusions, forceData);
+    return static_cast<double>(energy);
+}
+
 ///* -------------------------------------------------------------------------- *
 // *                           AmoebaWcaDispersion                              *
 // * -------------------------------------------------------------------------- */

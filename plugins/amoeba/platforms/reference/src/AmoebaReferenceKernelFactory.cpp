@@ -46,6 +46,7 @@ extern "C" void OPENMM_AMOEBA_REFERENCE_EXPORT registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
 /*
              platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
@@ -84,6 +85,9 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
         return new ReferenceCalcAmoebaTorsionTorsionForceKernel(name, platform, context.getSystem());
+
+    if (name == CalcAmoebaVdwForceKernel::Name())
+        return new ReferenceCalcAmoebaVdwForceKernel(name, platform, context.getSystem());
 /*
 
     if (name == CalcAmoebaMultipoleForceKernel::Name())
@@ -91,9 +95,6 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     if (name == CalcAmoebaGeneralizedKirkwoodForceKernel::Name())
         return new ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, context.getSystem());
-
-    if (name == CalcAmoebaVdwForceKernel::Name())
-        return new ReferenceCalcAmoebaVdwForceKernel(name, platform, context.getSystem());
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new ReferenceCalcAmoebaWcaDispersionForceKernel(name, platform, context.getSystem());

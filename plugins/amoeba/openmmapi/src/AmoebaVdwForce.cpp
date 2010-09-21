@@ -93,9 +93,11 @@ void AmoebaVdwForce::setParticleExclusions( int particleIndex, std::vector< int 
 
 void AmoebaVdwForce::getParticleExclusions( int particleIndex, std::vector< int >& outputExclusions ) const {
 
-   outputExclusions.resize( exclusions[particleIndex].size() );
-   for( unsigned int ii = 0; ii < exclusions[particleIndex].size(); ii++ ){
-       outputExclusions[ii] = exclusions[particleIndex][ii];
+   if( particleIndex < exclusions.size() ){
+       outputExclusions.resize( exclusions[particleIndex].size() );
+       for( unsigned int ii = 0; ii < exclusions[particleIndex].size(); ii++ ){
+           outputExclusions[ii] = exclusions[particleIndex][ii];
+       }
    }
 
 }

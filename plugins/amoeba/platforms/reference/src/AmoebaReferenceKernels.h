@@ -379,34 +379,43 @@ private:
 // private:
 //     System& system;
 // };
-// 
-// /**
-//  * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
-// public:
-//     ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaVdwForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaMultipoleForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaVdwForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     System& system;
-// };
-// 
+
+/**
+ * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
+public:
+    ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaVdwForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaVdwForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numParticles;
+    std::vector<int> indexIVs;
+    std::vector<int> indexClasses;
+    std::vector< std::vector<int> > allExclusions;
+    std::vector<RealOpenMM> sigmas;
+    std::vector<RealOpenMM> epsilons;
+    std::vector<RealOpenMM> reductions;
+    std::string sigmaCombiningRule;
+    std::string epsilonCombiningRule;
+    System& system;
+};
+
 // /**
 //  * This kernel is invoked to calculate the WCA dispersion forces acting on the system and the energy of the system.
 //  */
