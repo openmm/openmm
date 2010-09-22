@@ -416,32 +416,45 @@ private:
     System& system;
 };
 
-// /**
-//  * This kernel is invoked to calculate the WCA dispersion forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
-// public:
-//     ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaWcaDispersionForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaMultipoleForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaWcaDispersionForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     System& system;
-// };
+/**
+ * This kernel is invoked to calculate the WCA dispersion forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
+public:
+    ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaWcaDispersionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaWcaDispersionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+
+    int numParticles;
+    std::vector<RealOpenMM> radii;
+    std::vector<RealOpenMM> epsilons;
+    RealOpenMM epso; 
+    RealOpenMM epsh; 
+    RealOpenMM rmino; 
+    RealOpenMM rminh; 
+    RealOpenMM awater; 
+    RealOpenMM shctd; 
+    RealOpenMM dispoff;
+    RealOpenMM slevy;
+    RealOpenMM totalMaximumDispersionEnergy;
+    System& system;
+};
 
 } // namespace OpenMM
 

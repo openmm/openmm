@@ -34,10 +34,11 @@
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
 #include "AmoebaReferenceVdwForce.h"
+#include "AmoebaReferenceWcaDispersionForce.h"
+#include "internal/AmoebaWcaDispersionForceImpl.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
-//#include "internal/AmoebaWcaDispersionForceImpl.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -664,60 +665,49 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     return static_cast<double>(energy);
 }
 
-///* -------------------------------------------------------------------------- *
-// *                           AmoebaWcaDispersion                              *
-// * -------------------------------------------------------------------------- */
-//
-//static void computeAmoebaWcaDispersionForce( AmoebaReferenceData& data ) {
-//
-//    data.initializeGpu();
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "Calling computeAmoebaWcaDispersionForce  " ); (void) fflush( data.getLog() );
-//    }
-//
-//    kCalculateAmoebaWcaDispersionForces( data.getAmoebaGpu() );
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), " -- completed\n" ); (void) fflush( data.getLog() );
-//    }
-//}
-//
-//ReferenceCalcAmoebaWcaDispersionForceKernel::ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, System& system) : 
-//           CalcAmoebaWcaDispersionForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaWcaDispersionForceKernel::~ReferenceCalcAmoebaWcaDispersionForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, const AmoebaWcaDispersionForce& force) {
-//
-//    // per-particle parameters
-//
-//    int numParticles = system.getNumParticles();
-//    std::vector<RealOpenMM> radii(numParticles);
-//    std::vector<RealOpenMM> epsilons(numParticles);
-//    for( int ii = 0; ii < numParticles; ii++ ){
-//
-//        double radius, epsilon;
-//        force.getParticleParameters( ii, radius, epsilon );
-//
-//        radii[ii]         = static_cast<RealOpenMM>( radius );
-//        epsilons[ii]      = static_cast<RealOpenMM>( epsilon );
-//    }   
-//    RealOpenMM totalMaximumDispersionEnergy =  static_cast<RealOpenMM>( AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy( force ) );
-//    gpuSetAmoebaWcaDispersionParameters( data.getAmoebaGpu(), radii, epsilons, totalMaximumDispersionEnergy,
-//                                          static_cast<RealOpenMM>( force.getEpso( )),
-//                                          static_cast<RealOpenMM>( force.getEpsh( )),
-//                                          static_cast<RealOpenMM>( force.getRmino( )),
-//                                          static_cast<RealOpenMM>( force.getRminh( )),
-//                                          static_cast<RealOpenMM>( force.getAwater( )),
-//                                          static_cast<RealOpenMM>( force.getShctd( )),
-//                                          static_cast<RealOpenMM>( force.getDispoff( ) ) );
-//}
-//
-//double ReferenceCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    computeAmoebaWcaDispersionForce( data );
-//    return 0.0;
-//}
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaWcaDispersion                              *
+ * -------------------------------------------------------------------------- */
+
+ReferenceCalcAmoebaWcaDispersionForceKernel::ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, System& system) : 
+           CalcAmoebaWcaDispersionForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaWcaDispersionForceKernel::~ReferenceCalcAmoebaWcaDispersionForceKernel() {
+}
+
+void ReferenceCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, const AmoebaWcaDispersionForce& force) {
+
+    // per-particle parameters
+
+    numParticles = system.getNumParticles();
+    radii.resize(numParticles);
+    epsilons.resize(numParticles);
+    for( int ii = 0; ii < numParticles; ii++ ){
+
+        double radius, epsilon;
+        force.getParticleParameters( ii, radius, epsilon );
+
+        radii[ii]         = static_cast<RealOpenMM>( radius );
+        epsilons[ii]      = static_cast<RealOpenMM>( epsilon );
+    }   
+
+    totalMaximumDispersionEnergy = static_cast<RealOpenMM>( AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy( force ) );
+
+    epso                         = static_cast<RealOpenMM>( force.getEpso()   );
+    epsh                         = static_cast<RealOpenMM>( force.getEpsh()   );
+    rmino                        = static_cast<RealOpenMM>( force.getRmino()  );
+    rminh                        = static_cast<RealOpenMM>( force.getRminh()  );
+    awater                       = static_cast<RealOpenMM>( force.getAwater() );
+    shctd                        = static_cast<RealOpenMM>( force.getShctd()  );
+    dispoff                      = static_cast<RealOpenMM>( force.getDispoff());
+    slevy                        = static_cast<RealOpenMM>( force.getSlevy()  );
+}
+
+double ReferenceCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    AmoebaReferenceWcaDispersionForce amoebaReferenceWcaDispersionForce( epso, epsh, rmino, rminh, awater, shctd, dispoff, slevy );
+    RealOpenMM energy      = amoebaReferenceWcaDispersionForce.calculateForceAndEnergy( numParticles, posData, radii, epsilons, totalMaximumDispersionEnergy, forceData);
+    return static_cast<double>(energy);
+}

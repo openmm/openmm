@@ -4332,11 +4332,12 @@ Context* createContext( const std::string& amoebaTinkerParameterFileName, MapStr
 // ---------------------------------------------------------------------------------------
 
     static const std::string methodName      = "createContext";
+    std::string platformName                 = "Cuda";
     int  cudaDevice                          = -1;
  
 // ---------------------------------------------------------------------------------------
  
-    setIntFromMap(    inputArgumentMap, "cudaDevice", cudaDevice );
+    setStringFromMap(    inputArgumentMap, "platform", platformName );
 
     System* system  = new System();
  
@@ -4358,20 +4359,26 @@ Context* createContext( const std::string& amoebaTinkerParameterFileName, MapStr
  
     Integrator* integrator = getIntegrator( inputArgumentMap, log );
 
-    Platform& platform = Platform::getPlatformByName("Cuda");
+    if( log ){
+        (void) fprintf( log, "Setting platform to %s.\n", platformName.c_str() );
+    }
+    Platform& platform = Platform::getPlatformByName( platformName );
     map<string, string> properties;
-    if( getenv("CudaDevice") || cudaDevice > -1 ){
-        std::string cudaDeviceStr;
-        if( getenv("CudaDevice") ){
-            cudaDeviceStr = getenv("CudaDevice");
-        } else {
-            std::stringstream cudaDeviceStrStr;
-            cudaDeviceStrStr << cudaDevice;
-            cudaDeviceStr = cudaDeviceStrStr.str();
-        }
-        properties["CudaDevice"] = cudaDeviceStr;
-        if( log ){
-            (void) fprintf( log, "Setting Cuda device to %s.\n", cudaDeviceStr.c_str() );
+    if( platformName == "Cuda" ){
+        setIntFromMap(       inputArgumentMap, "cudaDevice", cudaDevice );
+        if( getenv("CudaDevice") || cudaDevice > -1 ){
+            std::string cudaDeviceStr;
+            if( getenv("CudaDevice") ){
+                cudaDeviceStr = getenv("CudaDevice");
+            } else {
+                std::stringstream cudaDeviceStrStr;
+                cudaDeviceStrStr << cudaDevice;
+                cudaDeviceStr = cudaDeviceStrStr.str();
+            }
+            properties["CudaDevice"] = cudaDeviceStr;
+            if( log ){
+                (void) fprintf( log, "Setting Cuda device to %s.\n", cudaDeviceStr.c_str() );
+            }
         }
     }
     Context* context = new Context(*system, *integrator, platform, properties);

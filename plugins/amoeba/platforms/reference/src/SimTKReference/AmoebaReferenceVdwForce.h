@@ -28,6 +28,7 @@
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 #include "openmm/Vec3.h"
 #include <string>
+#include <vector>
 
 using namespace OpenMM;
 
