@@ -29,42 +29,58 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "../../../tests/AssertionUtilities.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/serialization/XmlSerializer.h"
+#include <iostream>
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
-}
+void testSerialization() {
+    // Create a Force.
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
+    PeriodicTorsionForce force;
+    force.addTorsion(0, 1, 2, 3, 2, 1.0, 2.0);
+    force.addTorsion(0, 2, 3, 4, 2, 2.0, 2.1);
+    force.addTorsion(2, 3, 4, 7, 1, 3.0, 2.2);
+    force.addTorsion(5, 1, 2, 3, 3, 4.0, 2.3);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<PeriodicTorsionForce>(&force, "Force", buffer);
+    PeriodicTorsionForce* copy = XmlSerializer::deserialize<PeriodicTorsionForce>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    PeriodicTorsionForce& force2 = *copy;
+    ASSERT_EQUAL(force.getNumTorsions(), force2.getNumTorsions());
+    for (int i = 0; i < force.getNumTorsions(); i++) {
+        int a1, a2, a3, a4, b1, b2, b3, b4, perioda, periodb;
+        double phasea, phaseb, ka, kb;
+        force.getTorsionParameters(i, a1, a2, a3, a4, perioda, phasea, ka);
+        force2.getTorsionParameters(i, b1, b2, b3, b4, periodb, phaseb, kb);
+        ASSERT_EQUAL(a1, b1);
+        ASSERT_EQUAL(a2, b2);
+        ASSERT_EQUAL(a3, b3);
+        ASSERT_EQUAL(a4, b4);
+        ASSERT_EQUAL(perioda, periodb);
+        ASSERT_EQUAL(phasea, phaseb);
+        ASSERT_EQUAL(ka, kb);
     }
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+int main() {
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getDoubleProperty("p1"), angle.getDoubleProperty("p2"), angle.getDoubleProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
+        testSerialization();
     }
-    catch (...) {
-        delete force;
-        throw;
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
     }
-    return force;
+    cout << "Done" << endl;
+    return 0;
 }
 

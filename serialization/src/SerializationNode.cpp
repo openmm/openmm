@@ -36,6 +36,9 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" char* g_fmt(char*, double);
+extern "C" double strtod(const char* s00, char** se);
+
 const string& SerializationNode::getName() const {
     return name;
 }
@@ -122,25 +125,20 @@ double SerializationNode::getDoubleProperty(const string& name) const {
     map<string, string>::const_iterator iter = properties.find(name);
     if (iter == properties.end())
         throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
-    double value;
-    stringstream(iter->second) >> value;
-    return value;
+    return strtod(iter->second.c_str(), NULL);
 }
 
 double SerializationNode::getDoubleProperty(const string& name, double defaultValue) const {
     map<string, string>::const_iterator iter = properties.find(name);
     if (iter == properties.end())
         return defaultValue;
-    double value;
-    stringstream(iter->second) >> value;
-    return value;
+    return strtod(iter->second.c_str(), NULL);
 }
 
 SerializationNode& SerializationNode::setDoubleProperty(const string& name, double value) {
-    stringstream s;
-    s.precision(16);
-    s << value;
-    properties[name] = s.str();
+    char buffer[32];
+    g_fmt(buffer, value);
+    properties[name] = string(buffer);
     return *this;
 }
 

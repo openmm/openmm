@@ -53,7 +53,7 @@ void testSerialization() {
     XmlSerializer::serialize<HarmonicAngleForce>(&force, "Force", buffer);
     HarmonicAngleForce* copy = XmlSerializer::deserialize<HarmonicAngleForce>(buffer);
 
-    // Compare the two systems to see if they are identical.
+    // Compare the two forces to see if they are identical.
 
     HarmonicAngleForce& force2 = *copy;
     ASSERT_EQUAL(force.getNumAngles(), force2.getNumAngles());
@@ -61,7 +61,7 @@ void testSerialization() {
         int a1, a2, a3, b1, b2, b3;
         double da, db, ka, kb;
         force.getAngleParameters(i, a1, a2, a3, da, ka);
-        force.getAngleParameters(i, b1, b2, b3, db, kb);
+        force2.getAngleParameters(i, b1, b2, b3, db, kb);
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
         ASSERT_EQUAL(a3, b3);

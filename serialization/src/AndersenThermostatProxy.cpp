@@ -29,42 +29,35 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/AndersenThermostat.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+AndersenThermostatProxy::AndersenThermostatProxy() : SerializationProxy("AndersenThermostat") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
-    }
+void AndersenThermostatProxy::serialize(const void* object, SerializationNode& node) const {
+    const AndersenThermostat& force = *reinterpret_cast<const AndersenThermostat*>(object);
+    node.setDoubleProperty("temperature", force.getDefaultTemperature());
+    node.setDoubleProperty("frequency", force.getDefaultCollisionFrequency());
+    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+void* AndersenThermostatProxy::deserialize(const SerializationNode& node) const {
+    AndersenThermostat* force = NULL;
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getDoubleProperty("p1"), angle.getDoubleProperty("p2"), angle.getDoubleProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
+        AndersenThermostat* force = new AndersenThermostat(node.getDoubleProperty("temperature"), node.getDoubleProperty("frequency"));
+        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+        return force;
     }
     catch (...) {
-        delete force;
+        if (force != NULL)
+            delete force;
         throw;
     }
-    return force;
 }
-

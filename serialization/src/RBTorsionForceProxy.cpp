@@ -29,36 +29,38 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/RBTorsionForce.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+RBTorsionForceProxy::RBTorsionForceProxy() : SerializationProxy("RBTorsionForce") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
+void RBTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
+    const RBTorsionForce& force = *reinterpret_cast<const RBTorsionForce*>(object);
+    SerializationNode& torsions = node.createChildNode("Torsions");
+    for (int i = 0; i < force.getNumTorsions(); i++) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        torsions.createChildNode("Torsion").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4).setDoubleProperty("c0", c0).setDoubleProperty("c1", c1).setDoubleProperty("c2", c2).setDoubleProperty("c3", c3).setDoubleProperty("c4", c4).setDoubleProperty("c5", c5);
     }
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+void* RBTorsionForceProxy::deserialize(const SerializationNode& node) const {
+    RBTorsionForce* force = new RBTorsionForce();
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getDoubleProperty("p1"), angle.getDoubleProperty("p2"), angle.getDoubleProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
+        const SerializationNode& torsions = node.getChildNode("Torsions");
+        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
+            const SerializationNode& torsion = torsions.getChildren()[i];
+            force->addTorsion(torsion.getDoubleProperty("p1"), torsion.getDoubleProperty("p2"), torsion.getDoubleProperty("p3"), torsion.getDoubleProperty("p4"),
+                    torsion.getDoubleProperty("c0"), torsion.getDoubleProperty("c1"), torsion.getDoubleProperty("c2"),
+                    torsion.getDoubleProperty("c3"), torsion.getDoubleProperty("c4"), torsion.getDoubleProperty("c5"));
         }
     }
     catch (...) {

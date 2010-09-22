@@ -29,36 +29,37 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/PeriodicTorsionForce.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+PeriodicTorsionForceProxy::PeriodicTorsionForceProxy() : SerializationProxy("PeriodicTorsionForce") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
+void PeriodicTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
+    const PeriodicTorsionForce& force = *reinterpret_cast<const PeriodicTorsionForce*>(object);
+    SerializationNode& torsions = node.createChildNode("Torsions");
+    for (int i = 0; i < force.getNumTorsions(); i++) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        torsions.createChildNode("Torsion").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4).setIntProperty("periodicity", periodicity).setDoubleProperty("phase", phase).setDoubleProperty("k", k);
     }
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+void* PeriodicTorsionForceProxy::deserialize(const SerializationNode& node) const {
+    PeriodicTorsionForce* force = new PeriodicTorsionForce();
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getDoubleProperty("p1"), angle.getDoubleProperty("p2"), angle.getDoubleProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
+        const SerializationNode& torsions = node.getChildNode("Torsions");
+        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
+            const SerializationNode& torsion = torsions.getChildren()[i];
+            force->addTorsion(torsion.getDoubleProperty("p1"), torsion.getDoubleProperty("p2"), torsion.getDoubleProperty("p3"), torsion.getDoubleProperty("p4"),
+                    torsion.getIntProperty("periodicity"), torsion.getDoubleProperty("phase"), torsion.getDoubleProperty("k"));
         }
     }
     catch (...) {
@@ -67,4 +68,3 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
     }
     return force;
 }
-

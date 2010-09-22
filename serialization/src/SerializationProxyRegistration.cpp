@@ -29,12 +29,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/AndersenThermostat.h"
 #include "openmm/HarmonicAngleForce.h"
+#include "openmm/GBSAOBCForce.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/RBTorsionForce.h"
 #include "openmm/System.h"
 #include "openmm/serialization/SerializationProxy.h"
+#include "openmm/serialization/AndersenThermostatProxy.h"
+#include "openmm/serialization/GBSAOBCForceProxy.h"
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
+#include "openmm/serialization/NonbondedForceProxy.h"
+#include "openmm/serialization/PeriodicTorsionForceProxy.h"
+#include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/SystemProxy.h"
 
 #if defined(WIN32)
@@ -52,7 +62,12 @@
 using namespace OpenMM;
 
 extern "C" void registerSerializationProxies() {
+    SerializationProxy::registerProxy(typeid(AndersenThermostat), new AndersenThermostatProxy());
+    SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
+    SerializationProxy::registerProxy(typeid(NonbondedForce), new NonbondedForceProxy());
+    SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
+    SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
 }

@@ -1,3 +1,6 @@
+#ifndef OPENMM_ANDERSENTHERMOSTAT_PROXY_H_
+#define OPENMM_ANDERSENTHERMOSTAT_PROXY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,42 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
-#include <sstream>
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
-}
+/**
+ * This is a proxy for serializing AndersenThermostat objects.
+ */
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
-    }
-}
+class OPENMM_EXPORT AndersenThermostatProxy : public SerializationProxy {
+public:
+    AndersenThermostatProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
+};
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    HarmonicAngleForce* force = new HarmonicAngleForce();
-    try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getDoubleProperty("p1"), angle.getDoubleProperty("p2"), angle.getDoubleProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
-    }
-    catch (...) {
-        delete force;
-        throw;
-    }
-    return force;
-}
+} // namespace OpenMM
 
+#endif /*OPENMM_ANDERSENTHERMOSTAT_PROXY_H_*/

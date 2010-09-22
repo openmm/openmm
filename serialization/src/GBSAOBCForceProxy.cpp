@@ -29,36 +29,43 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/GBSAOBCForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/GBSAOBCForce.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+GBSAOBCForceProxy::GBSAOBCForceProxy() : SerializationProxy("GBSAOBCForce") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
+void GBSAOBCForceProxy::serialize(const void* object, SerializationNode& node) const {
+    const GBSAOBCForce& force = *reinterpret_cast<const GBSAOBCForce*>(object);
+    node.setIntProperty("method", (int) force.getNonbondedMethod());
+    node.setDoubleProperty("cutoff", force.getCutoffDistance());
+    node.setDoubleProperty("soluteDielectric", force.getSoluteDielectric());
+    node.setDoubleProperty("solventDielectric", force.getSolventDielectric());
+    SerializationNode& particles = node.createChildNode("Particles");
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, radius, scale;
+        force.getParticleParameters(i, charge, radius, scale);
+        particles.createChildNode("Particle").setDoubleProperty("q", charge).setDoubleProperty("r", radius).setDoubleProperty("scale", scale);
     }
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+void* GBSAOBCForceProxy::deserialize(const SerializationNode& node) const {
+    GBSAOBCForce* force = new GBSAOBCForce();
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getDoubleProperty("p1"), angle.getDoubleProperty("p2"), angle.getDoubleProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
+        force->setNonbondedMethod((GBSAOBCForce::NonbondedMethod) node.getIntProperty("method"));
+        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
+        force->setSoluteDielectric(node.getDoubleProperty("soluteDielectric"));
+        force->setSolventDielectric(node.getDoubleProperty("solventDielectric"));
+        const SerializationNode& particles = node.getChildNode("Particles");
+        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
+            const SerializationNode& particle = particles.getChildren()[i];
+            force->addParticle(particle.getDoubleProperty("q"), particle.getDoubleProperty("r"), particle.getDoubleProperty("scale"));
         }
     }
     catch (...) {
@@ -67,4 +74,3 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
     }
     return force;
 }
-

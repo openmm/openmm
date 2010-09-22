@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
@@ -41,31 +41,54 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    HarmonicBondForce force;
-    force.addBond(0, 1, 1.0, 2.0);
-    force.addBond(0, 2, 2.0, 2.1);
-    force.addBond(2, 3, 3.0, 2.2);
-    force.addBond(5, 1, 4.0, 2.3);
+    NonbondedForce force;
+    force.setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    force.setCutoffDistance(2.0);
+    force.setEwaldErrorTolerance(1e-3);
+    force.setReactionFieldDielectric(50.0);
+    force.setUseDispersionCorrection(false);
+    force.addParticle(1, 0.1, 0.01);
+    force.addParticle(0.5, 0.2, 0.02);
+    force.addParticle(-0.5, 0.3, 0.03);
+    force.addException(0, 1, 2, 0.5, 0.1);
+    force.addException(1, 2, 0.2, 0.4, 0.2);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<HarmonicBondForce>(&force, "Force", buffer);
-    HarmonicBondForce* copy = XmlSerializer::deserialize<HarmonicBondForce>(buffer);
+    XmlSerializer::serialize<NonbondedForce>(&force, "Force", buffer);
+    NonbondedForce* copy = XmlSerializer::deserialize<NonbondedForce>(buffer);
 
     // Compare the two forces to see if they are identical.
 
-    HarmonicBondForce& force2 = *copy;
-    ASSERT_EQUAL(force.getNumBonds(), force2.getNumBonds());
-    for (int i = 0; i < force.getNumBonds(); i++) {
+    NonbondedForce& force2 = *copy;
+    ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
+    ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
+    ASSERT_EQUAL(force.getEwaldErrorTolerance(), force2.getEwaldErrorTolerance());
+    ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());
+    ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
+    ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge1, sigma1, epsilon1;
+        double charge2, sigma2, epsilon2;
+        force.getParticleParameters(i, charge1, sigma1, epsilon1);
+        force2.getParticleParameters(i, charge2, sigma2, epsilon2);
+        ASSERT_EQUAL(charge1, charge2);
+        ASSERT_EQUAL(sigma1, sigma2);
+        ASSERT_EQUAL(epsilon1, epsilon2);
+    }
+    ASSERT_EQUAL(force.getNumExceptions(), force2.getNumExceptions());
+    for (int i = 0; i < force.getNumExceptions(); i++) {
         int a1, a2, b1, b2;
-        double da, db, ka, kb;
-        force.getBondParameters(i, a1, a2, da, ka);
-        force2.getBondParameters(i, b1, b2, db, kb);
-        ASSERT_EQUAL(a1, b1);
-        ASSERT_EQUAL(a2, b2);
-        ASSERT_EQUAL(da, db);
-        ASSERT_EQUAL(ka, kb);
+        double charge1, sigma1, epsilon1;
+        double charge2, sigma2, epsilon2;
+        force.getExceptionParameters(i, a1, b1, charge1, sigma1, epsilon1);
+        force2.getExceptionParameters(i, a2, b2, charge2, sigma2, epsilon2);
+        ASSERT_EQUAL(a1, a2);
+        ASSERT_EQUAL(b1, b2);
+        ASSERT_EQUAL(charge1, charge2);
+        ASSERT_EQUAL(sigma1, sigma2);
+        ASSERT_EQUAL(epsilon1, epsilon2);
     }
 }
 
@@ -80,4 +103,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-
