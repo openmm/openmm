@@ -91,7 +91,7 @@ public:
     /**
      * Get the temperature at which the system is being maintained, measured in Kelvin.
      */
-    double getTemperature() {
+    double getTemperature() const {
         return temperature;
     }
     /**
