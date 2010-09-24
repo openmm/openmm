@@ -57,7 +57,7 @@
 
 #if defined(WIN32)
     #include <windows.h>
-    extern "C" void initOpenMMPlugin();
+    extern "C" void registerSerializationProxies();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
             registerSerializationProxies();

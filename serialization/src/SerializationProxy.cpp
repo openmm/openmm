@@ -52,7 +52,7 @@ void SerializationProxy::registerProxy(const type_info& type, const Serializatio
 }
 
 const SerializationProxy& SerializationProxy::getProxy(const string& typeName) {
-    map<string, const SerializationProxy*>::const_iterator iter = proxiesByName.find(typeName);
+    map<const string, const SerializationProxy*>::const_iterator iter = proxiesByName.find(typeName);
     if (iter == proxiesByName.end())
         throw OpenMMException("There is no serialization proxy registered for type '"+string(typeName)+"'");
     return *iter->second;
