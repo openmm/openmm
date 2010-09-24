@@ -25,6 +25,7 @@
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceVdwForce.h"
 #include <algorithm>
+#include <cctype>
 
 AmoebaReferenceVdwForce::AmoebaReferenceVdwForce( ) : _nonbondedMethod(NoCutoff) {
 
