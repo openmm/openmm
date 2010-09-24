@@ -29,45 +29,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "../../../tests/AssertionUtilities.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/serialization/XmlSerializer.h"
+#include <iostream>
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+void testSerialization() {
+    // Create a Force.
+
+    CMMotionRemover force(5);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<CMMotionRemover>(&force, "Force", buffer);
+    CMMotionRemover* copy = XmlSerializer::deserialize<CMMotionRemover>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    CMMotionRemover& force2 = *copy;
+    ASSERT_EQUAL(force.getFrequency(), force2.getFrequency());
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
-    }
-}
-
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
-        throw OpenMMException("Unsupported version number");
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+int main() {
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
+        testSerialization();
     }
-    catch (...) {
-        delete force;
-        throw;
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
     }
-    return force;
+    cout << "Done" << endl;
+    return 0;
 }
-

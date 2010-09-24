@@ -42,6 +42,7 @@ PeriodicTorsionForceProxy::PeriodicTorsionForceProxy() : SerializationProxy("Per
 }
 
 void PeriodicTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
     const PeriodicTorsionForce& force = *reinterpret_cast<const PeriodicTorsionForce*>(object);
     SerializationNode& torsions = node.createChildNode("Torsions");
     for (int i = 0; i < force.getNumTorsions(); i++) {
@@ -53,12 +54,14 @@ void PeriodicTorsionForceProxy::serialize(const void* object, SerializationNode&
 }
 
 void* PeriodicTorsionForceProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
     PeriodicTorsionForce* force = new PeriodicTorsionForce();
     try {
         const SerializationNode& torsions = node.getChildNode("Torsions");
         for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
             const SerializationNode& torsion = torsions.getChildren()[i];
-            force->addTorsion(torsion.getDoubleProperty("p1"), torsion.getDoubleProperty("p2"), torsion.getDoubleProperty("p3"), torsion.getDoubleProperty("p4"),
+            force->addTorsion(torsion.getIntProperty("p1"), torsion.getIntProperty("p2"), torsion.getIntProperty("p3"), torsion.getIntProperty("p4"),
                     torsion.getIntProperty("periodicity"), torsion.getDoubleProperty("phase"), torsion.getDoubleProperty("k"));
         }
     }

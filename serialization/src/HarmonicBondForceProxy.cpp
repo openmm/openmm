@@ -42,6 +42,7 @@ HarmonicBondForceProxy::HarmonicBondForceProxy() : SerializationProxy("HarmonicB
 }
 
 void HarmonicBondForceProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
     const HarmonicBondForce& force = *reinterpret_cast<const HarmonicBondForce*>(object);
     SerializationNode& bonds = node.createChildNode("Bonds");
     for (int i = 0; i < force.getNumBonds(); i++) {
@@ -53,12 +54,14 @@ void HarmonicBondForceProxy::serialize(const void* object, SerializationNode& no
 }
 
 void* HarmonicBondForceProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
     HarmonicBondForce* force = new HarmonicBondForce();
     try {
         const SerializationNode& bonds = node.getChildNode("Bonds");
         for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
             const SerializationNode& bond = bonds.getChildren()[i];
-            force->addBond(bond.getDoubleProperty("p1"), bond.getDoubleProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
+            force->addBond(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
         }
     }
     catch (...) {

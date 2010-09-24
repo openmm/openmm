@@ -42,6 +42,7 @@ SystemProxy::SystemProxy() : SerializationProxy("System") {
 }
 
 void SystemProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
     const System& system = *reinterpret_cast<const System*>(object);
     Vec3 a, b, c;
     system.getDefaultPeriodicBoxVectors(a, b, c);
@@ -65,6 +66,8 @@ void SystemProxy::serialize(const void* object, SerializationNode& node) const {
 }
 
 void* SystemProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
     System* system = new System();
     try {
         const SerializationNode& box = node.getChildNode("PeriodicBoxVectors");

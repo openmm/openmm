@@ -29,39 +29,58 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/GBVIForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/GBVIForce.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+GBVIForceProxy::GBVIForceProxy() : SerializationProxy("GBVIForce") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+void GBVIForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
+    const GBVIForce& force = *reinterpret_cast<const GBVIForce*>(object);
+    node.setIntProperty("method", (int) force.getNonbondedMethod());
+    node.setDoubleProperty("cutoff", force.getCutoffDistance());
+    node.setDoubleProperty("soluteDielectric", force.getSoluteDielectric());
+    node.setDoubleProperty("solventDielectric", force.getSolventDielectric());
+    SerializationNode& particles = node.createChildNode("Particles");
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, radius, gamma;
+        force.getParticleParameters(i, charge, radius, gamma);
+        particles.createChildNode("Particle").setDoubleProperty("q", charge).setDoubleProperty("r", radius).setDoubleProperty("gamma", gamma);
+    }
+    SerializationNode& bonds = node.createChildNode("Bonds");
+    for (int i = 0; i < force.getNumBonds(); i++) {
+        int particle1, particle2;
+        double distance;
+        force.getBondParameters(i, particle1, particle2, distance);
+        bonds.createChildNode("Bond").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setDoubleProperty("d", distance);
     }
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
+void* GBVIForceProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+    GBVIForce* force = new GBVIForce();
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
+        force->setNonbondedMethod((GBVIForce::NonbondedMethod) node.getIntProperty("method"));
+        force->setCutoffDistance(node.getDoubleProperty("cutoff"));
+        force->setSoluteDielectric(node.getDoubleProperty("soluteDielectric"));
+        force->setSolventDielectric(node.getDoubleProperty("solventDielectric"));
+        const SerializationNode& particles = node.getChildNode("Particles");
+        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
+            const SerializationNode& particle = particles.getChildren()[i];
+            force->addParticle(particle.getDoubleProperty("q"), particle.getDoubleProperty("r"), particle.getDoubleProperty("gamma"));
+        }
+        const SerializationNode& bonds = node.getChildNode("Bonds");
+        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
+            const SerializationNode& bond = bonds.getChildren()[i];
+            force->addBond(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"));
         }
     }
     catch (...) {
@@ -70,4 +89,3 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
     }
     return force;
 }
-

@@ -42,6 +42,7 @@ GBSAOBCForceProxy::GBSAOBCForceProxy() : SerializationProxy("GBSAOBCForce") {
 }
 
 void GBSAOBCForceProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
     const GBSAOBCForce& force = *reinterpret_cast<const GBSAOBCForce*>(object);
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -56,6 +57,8 @@ void GBSAOBCForceProxy::serialize(const void* object, SerializationNode& node) c
 }
 
 void* GBSAOBCForceProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
     GBSAOBCForce* force = new GBSAOBCForce();
     try {
         force->setNonbondedMethod((GBSAOBCForce::NonbondedMethod) node.getIntProperty("method"));

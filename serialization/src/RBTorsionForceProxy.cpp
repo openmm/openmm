@@ -42,6 +42,7 @@ RBTorsionForceProxy::RBTorsionForceProxy() : SerializationProxy("RBTorsionForce"
 }
 
 void RBTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
     const RBTorsionForce& force = *reinterpret_cast<const RBTorsionForce*>(object);
     SerializationNode& torsions = node.createChildNode("Torsions");
     for (int i = 0; i < force.getNumTorsions(); i++) {
@@ -53,12 +54,14 @@ void RBTorsionForceProxy::serialize(const void* object, SerializationNode& node)
 }
 
 void* RBTorsionForceProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
     RBTorsionForce* force = new RBTorsionForce();
     try {
         const SerializationNode& torsions = node.getChildNode("Torsions");
         for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
             const SerializationNode& torsion = torsions.getChildren()[i];
-            force->addTorsion(torsion.getDoubleProperty("p1"), torsion.getDoubleProperty("p2"), torsion.getDoubleProperty("p3"), torsion.getDoubleProperty("p4"),
+            force->addTorsion(torsion.getIntProperty("p1"), torsion.getIntProperty("p2"), torsion.getIntProperty("p3"), torsion.getIntProperty("p4"),
                     torsion.getDoubleProperty("c0"), torsion.getDoubleProperty("c1"), torsion.getDoubleProperty("c2"),
                     torsion.getDoubleProperty("c3"), torsion.getDoubleProperty("c4"), torsion.getDoubleProperty("c5"));
         }

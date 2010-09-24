@@ -29,39 +29,59 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/CMAPTorsionForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
-#include <sstream>
+#include "openmm/CMAPTorsionForce.h"
+#include <vector>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+CMAPTorsionForceProxy::CMAPTorsionForceProxy() : SerializationProxy("CMAPTorsionForce") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+void CMAPTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
+    const CMAPTorsionForce& force = *reinterpret_cast<const CMAPTorsionForce*>(object);
+    SerializationNode& maps = node.createChildNode("Maps");
+    for (int i = 0; i < force.getNumMaps(); i++) {
+        int size;
+        vector<double> energy;
+        force.getMapParameters(i, size, energy);
+        SerializationNode& map = maps.createChildNode("Torsion").setIntProperty("size", size);
+        for (int i = 0; i < (int) energy.size(); i++)
+            map.createChildNode("Energy").setDoubleProperty("e", energy[i]);
+    }
+    SerializationNode& torsions = node.createChildNode("Torsions");
+    for (int i = 0; i < force.getNumTorsions(); i++) {
+        int map, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(i, map, a1, a2, a3, a4, b1, b2, b3, b4);
+        torsions.createChildNode("Torsion").setIntProperty("a1", a1).setIntProperty("a2", a2).setIntProperty("a3", a3).setIntProperty("a4", a4).setIntProperty("b1", b1).setIntProperty("b2", b2).setIntProperty("b3", b3).setIntProperty("b4", b4).setIntProperty("map", map);
     }
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
+void* CMAPTorsionForceProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+    CMAPTorsionForce* force = new CMAPTorsionForce();
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
+        const SerializationNode& maps = node.getChildNode("Maps");
+        for (int i = 0; i < (int) maps.getChildren().size(); i++) {
+            const SerializationNode& map = maps.getChildren()[i];
+            int size = map.getIntProperty("size");
+            if (size*size != map.getChildren().size())
+                throw OpenMMException("Wrong number of values specified for CMAP");
+            vector<double> energy(size*size);
+            for (int j = 0; j < (int) energy.size(); j++)
+                energy[j] = map.getChildren()[j].getDoubleProperty("e");
+            force->addMap(size, energy);
+        }
+        const SerializationNode& torsions = node.getChildNode("Torsions");
+        for (int i = 0; i < (int) torsions.getChildren().size(); i++) {
+            const SerializationNode& torsion = torsions.getChildren()[i];
+            force->addTorsion(torsion.getIntProperty("map"), torsion.getIntProperty("a1"), torsion.getIntProperty("a2"), torsion.getIntProperty("a3"), torsion.getIntProperty("a4"),
+                    torsion.getIntProperty("b1"), torsion.getIntProperty("b2"), torsion.getIntProperty("b3"), torsion.getIntProperty("b4"));
         }
     }
     catch (...) {
@@ -70,4 +90,3 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
     }
     return force;
 }
-

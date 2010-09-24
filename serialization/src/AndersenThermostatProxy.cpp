@@ -42,6 +42,7 @@ AndersenThermostatProxy::AndersenThermostatProxy() : SerializationProxy("Anderse
 }
 
 void AndersenThermostatProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
     const AndersenThermostat& force = *reinterpret_cast<const AndersenThermostat*>(object);
     node.setDoubleProperty("temperature", force.getDefaultTemperature());
     node.setDoubleProperty("frequency", force.getDefaultCollisionFrequency());
@@ -49,6 +50,8 @@ void AndersenThermostatProxy::serialize(const void* object, SerializationNode& n
 }
 
 void* AndersenThermostatProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
     AndersenThermostat* force = NULL;
     try {
         AndersenThermostat* force = new AndersenThermostat(node.getDoubleProperty("temperature"), node.getDoubleProperty("frequency"));

@@ -29,45 +29,35 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/CMMotionRemoverProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/CMMotionRemover.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+CMMotionRemoverProxy::CMMotionRemoverProxy() : SerializationProxy("CMMotionRemover") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+void CMMotionRemoverProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
-    }
+    const CMMotionRemover& force = *reinterpret_cast<const CMMotionRemover*>(object);
+    node.setIntProperty("frequency", force.getFrequency());
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
+void* CMMotionRemoverProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+    CMMotionRemover* force = NULL;
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
+        CMMotionRemover* force = new CMMotionRemover(node.getIntProperty("frequency"));
+        return force;
     }
     catch (...) {
-        delete force;
+        if (force != NULL)
+            delete force;
         throw;
     }
-    return force;
 }
-

@@ -29,45 +29,39 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/HarmonicAngleForceProxy.h"
+#include "openmm/serialization/MonteCarloBarostatProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/HarmonicAngleForce.h"
+#include "openmm/MonteCarloBarostat.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-HarmonicAngleForceProxy::HarmonicAngleForceProxy() : SerializationProxy("HarmonicAngleForce") {
+MonteCarloBarostatProxy::MonteCarloBarostatProxy() : SerializationProxy("MonteCarloBarostat") {
 }
 
-void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Angles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
-        int particle1, particle2, particle3;
-        double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("a", angle).setDoubleProperty("k", k);
-    }
+    const MonteCarloBarostat& force = *reinterpret_cast<const MonteCarloBarostat*>(object);
+    node.setDoubleProperty("pressure", force.getDefaultPressure());
+    node.setDoubleProperty("temperature", force.getTemperature());
+    node.setIntProperty("frequency", force.getFrequency());
+    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
 }
 
-void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
+void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    HarmonicAngleForce* force = new HarmonicAngleForce();
+    MonteCarloBarostat* force = NULL;
     try {
-        const SerializationNode& angles = node.getChildNode("Angles");
-        for (int i = 0; i < (int) angles.getChildren().size(); i++) {
-            const SerializationNode& angle = angles.getChildren()[i];
-            force->addAngle(angle.getIntProperty("p1"), angle.getIntProperty("p2"), angle.getIntProperty("p3"), angle.getDoubleProperty("a"), angle.getDoubleProperty("k"));
-        }
+        MonteCarloBarostat* force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
+        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+        return force;
     }
     catch (...) {
-        delete force;
+        if (force != NULL)
+            delete force;
         throw;
     }
-    return force;
 }
-
