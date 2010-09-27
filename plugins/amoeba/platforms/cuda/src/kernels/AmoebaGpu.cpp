@@ -1490,7 +1490,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
     std::string minId;
     if( mutualInducedIterativeMethod == 0 ){
-        minId = "SOR";
+         minId = "SOR";
     } else if( mutualInducedIterativeMethod == 1 ){
         minId = "ConjugateGradient";
     }
@@ -1689,7 +1689,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
 #ifdef AMOEBA_DEBUG
         //if( amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (charges.size() - maxPrint) ) ) || ( ii == targetAtoms[0] || ii == targetAtoms[1]) ) ){
-        if( amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (charges.size() - maxPrint) ) ) ) ){
+        if( (amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (charges.size() - maxPrint) )) ) ) ){
 
             // axis particles
 
@@ -2912,19 +2912,25 @@ static void getScalingDegrees( amoebaGpuContext amoebaGpu, unsigned int particle
     int particlesOffset                        = particleI*amoebaGpu->maxCovalentDegreeSz;
 
     unsigned int minCovalentIndex              = static_cast<unsigned int>(amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset]);
-    unsigned int minCovalentPolarizationIndex  = static_cast<unsigned int>( amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset]);
+    unsigned int minCovalentPolarizationIndex  = static_cast<unsigned int>(amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset]);
 
-    if( particleJ < minCovalentIndex || particleJ > (minCovalentIndex + amoebaGpu->maxCovalentDegreeSz) ){
+    if( particleJ < minCovalentIndex || particleJ >= (minCovalentIndex + amoebaGpu->maxCovalentDegreeSz-1) ){
         *covalentDegree     = 0;
     } else {
         *covalentDegree     = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset + (particleJ-minCovalentIndex) + 1];
     }
 
-    if( particleJ < minCovalentPolarizationIndex || particleJ > (minCovalentPolarizationIndex + amoebaGpu->maxCovalentDegreeSz) ){
+    if( particleJ < minCovalentPolarizationIndex || particleJ >= (minCovalentPolarizationIndex + amoebaGpu->maxCovalentDegreeSz-1) ){
         *polarizationDegree = 0;
     } else {
         *polarizationDegree = amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset + (particleJ-minCovalentPolarizationIndex) + 1];
     }
+
+/* if( *covalentDegree > 5 || *polarizationDegree > 5 ){
+fprintf( stderr, "getScalingDegrees error: off=%d maxSz=%d [%u %u] deg=[%d %d] minIndex=[%u %u]\n", particlesOffset, amoebaGpu->maxCovalentDegreeSz,
+         particleI, particleJ, *covalentDegree, *polarizationDegree, minCovalentIndex, minCovalentPolarizationIndex );
+} */
+         
 }
 
 extern "C"
@@ -3302,7 +3308,7 @@ static unsigned int targetAtoms[2] = { 0, 1};
                         ps_M_ScaleIndices->_pSysStream[0][scaleOffset].y |= (1 << kk);
                     }
 
-                    if( 0 && amoebaGpu->log && ( (atomI == targetAtoms[0]) || (atomI == targetAtoms[1]) ) ){
+                    if( amoebaGpu->log && ( (atomI == targetAtoms[0]) || (atomI == targetAtoms[1]) ) ){
                         (void) fprintf( amoebaGpu->log, "XXX cell=%u [%u %u] [%d %d] p[%d %d] m[%d %d] scaleOffset=%d kk=%d\n", 
                                         ii, atomI, atomJ, covalentDegree, polarizationDegree, pX, pY, mX, mY, scaleOffset, kk );
                     }
@@ -3396,7 +3402,7 @@ static unsigned int targetAtoms[2] = { 0, 1};
         }
         (void) fflush( amoebaGpu->log );
 
-#if 1
+#if 0
         unsigned int totalWarps      = (amoebaGpu->nonbondBlocks*amoebaGpu->nonbondThreadsPerBlock)/GRID;
         //unsigned int warp            = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
         //unsigned int numWorkUnits    = cSim.pInteractionCount[0];
