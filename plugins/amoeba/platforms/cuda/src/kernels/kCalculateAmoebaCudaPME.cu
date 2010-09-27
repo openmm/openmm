@@ -215,6 +215,9 @@ __launch_bounds__(192, 1)
 #endif
 void kGridSpreadFixedMultipoles_kernel()
 {
+    const float xscale = cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     unsigned int numGridPoints = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
     unsigned int numThreads = gridDim.x*blockDim.x;
     for (int gridIndex = blockIdx.x*blockDim.x+threadIdx.x; gridIndex < numGridPoints; gridIndex += numThreads)
@@ -244,16 +247,16 @@ void kGridSpreadFixedMultipoles_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                    float atomCharge = cSim.pPosq[atomIndex].w;
-                    float atomDipoleX = cAmoebaSim.pLabFrameDipole[atomIndex*3];
-                    float atomDipoleY = cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
-                    float atomDipoleZ = cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
-                    float atomQuadrupoleXX = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
-                    float atomQuadrupoleXY = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
-                    float atomQuadrupoleXZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
-                    float atomQuadrupoleYY = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
-                    float atomQuadrupoleYZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
-                    float atomQuadrupoleZZ = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
+                    float atomCharge = 10*cSim.pPosq[atomIndex].w;
+                    float atomDipoleX = 10*xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
+                    float atomDipoleY = 10*yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
+                    float atomDipoleZ = 10*zscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
+                    float atomQuadrupoleXX = 10*xscale*xscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
+                    float atomQuadrupoleXY = 20*xscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
+                    float atomQuadrupoleXZ = 20*xscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
+                    float atomQuadrupoleYY = 10*yscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
+                    float atomQuadrupoleYZ = 20*yscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
+                    float atomQuadrupoleZZ = 10*zscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
                     float4 t = cAmoebaSim.pThetai1[atomIndex*AMOEBA_PME_ORDER+ix];
                     float4 u = cAmoebaSim.pThetai2[atomIndex*AMOEBA_PME_ORDER+iy];
                     float4 v = cAmoebaSim.pThetai3[atomIndex*AMOEBA_PME_ORDER+iz];
@@ -274,16 +277,16 @@ void kGridSpreadFixedMultipoles_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                        float atomCharge = cSim.pPosq[atomIndex].w;
-                        float atomDipoleX = cAmoebaSim.pLabFrameDipole[atomIndex*3];
-                        float atomDipoleY = cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
-                        float atomDipoleZ = cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
-                        float atomQuadrupoleXX = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
-                        float atomQuadrupoleXY = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
-                        float atomQuadrupoleXZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
-                        float atomQuadrupoleYY = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
-                        float atomQuadrupoleYZ = 2*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
-                        float atomQuadrupoleZZ = cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
+                        float atomCharge = 10*cSim.pPosq[atomIndex].w;
+                        float atomDipoleX = 10*xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
+                        float atomDipoleY = 10*yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
+                        float atomDipoleZ = 10*zscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
+                        float atomQuadrupoleXX = 10*xscale*xscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
+                        float atomQuadrupoleXY = 20*xscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
+                        float atomQuadrupoleXZ = 20*xscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
+                        float atomQuadrupoleYY = 10*yscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
+                        float atomQuadrupoleYZ = 20*yscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
+                        float atomQuadrupoleZZ = 10*zscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
                         float4 t = cAmoebaSim.pThetai1[atomIndex*AMOEBA_PME_ORDER+ix];
                         float4 u = cAmoebaSim.pThetai2[atomIndex*AMOEBA_PME_ORDER+iy];
                         float4 v = cAmoebaSim.pThetai3[atomIndex*AMOEBA_PME_ORDER+iz];
@@ -309,6 +312,9 @@ __launch_bounds__(192, 1)
 #endif
 void kGridSpreadInducedDipoles_kernel()
 {
+    const float xscale = cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     unsigned int numGridPoints = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
     unsigned int numThreads = gridDim.x*blockDim.x;
     for (int gridIndex = blockIdx.x*blockDim.x+threadIdx.x; gridIndex < numGridPoints; gridIndex += numThreads)
@@ -338,12 +344,12 @@ void kGridSpreadInducedDipoles_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                    float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex*3];
-                    float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex*3+1];
-                    float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex*3+2];
-                    float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex*3];
-                    float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex*3+1];
-                    float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex*3+2];
+                    float inducedDipoleX = xscale*cAmoebaSim.pInducedDipole[atomIndex*3];
+                    float inducedDipoleY = yscale*cAmoebaSim.pInducedDipole[atomIndex*3+1];
+                    float inducedDipoleZ = zscale*cAmoebaSim.pInducedDipole[atomIndex*3+2];
+                    float inducedDipolePolarX = xscale*cAmoebaSim.pInducedDipolePolar[atomIndex*3];
+                    float inducedDipolePolarY = yscale*cAmoebaSim.pInducedDipolePolar[atomIndex*3+1];
+                    float inducedDipolePolarZ = zscale*cAmoebaSim.pInducedDipolePolar[atomIndex*3+2];
                     float4 t = cAmoebaSim.pThetai1[atomIndex*AMOEBA_PME_ORDER+ix];
                     float4 u = cAmoebaSim.pThetai2[atomIndex*AMOEBA_PME_ORDER+iy];
                     float4 v = cAmoebaSim.pThetai3[atomIndex*AMOEBA_PME_ORDER+iz];
@@ -366,12 +372,12 @@ void kGridSpreadInducedDipoles_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                        float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex*3];
-                        float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex*3+1];
-                        float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex*3+2];
-                        float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex*3];
-                        float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex*3+1];
-                        float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex*3+2];
+                        float inducedDipoleX = xscale*cAmoebaSim.pInducedDipole[atomIndex*3];
+                        float inducedDipoleY = yscale*cAmoebaSim.pInducedDipole[atomIndex*3+1];
+                        float inducedDipoleZ = zscale*cAmoebaSim.pInducedDipole[atomIndex*3+2];
+                        float inducedDipolePolarX = xscale*cAmoebaSim.pInducedDipolePolar[atomIndex*3];
+                        float inducedDipolePolarY = yscale*cAmoebaSim.pInducedDipolePolar[atomIndex*3+1];
+                        float inducedDipolePolarZ = zscale*cAmoebaSim.pInducedDipolePolar[atomIndex*3+2];
                         float4 t = cAmoebaSim.pThetai1[atomIndex*AMOEBA_PME_ORDER+ix];
                         float4 u = cAmoebaSim.pThetai2[atomIndex*AMOEBA_PME_ORDER+iy];
                         float4 v = cAmoebaSim.pThetai3[atomIndex*AMOEBA_PME_ORDER+iz];
@@ -520,26 +526,26 @@ void kComputeFixedPotentialFromGrid_kernel()
             tuv012 += tu01*v.z;
             tuv111 += tu11*v.y;
         }
-        cAmoebaSim.pPhi[20*m] = cAmoebaSim.electric*tuv000;
-        cAmoebaSim.pPhi[20*m+1] = cAmoebaSim.electric*tuv100;
-        cAmoebaSim.pPhi[20*m+2] = cAmoebaSim.electric*tuv010;
-        cAmoebaSim.pPhi[20*m+3] = cAmoebaSim.electric*tuv001;
-        cAmoebaSim.pPhi[20*m+4] = cAmoebaSim.electric*tuv200;
-        cAmoebaSim.pPhi[20*m+5] = cAmoebaSim.electric*tuv020;
-        cAmoebaSim.pPhi[20*m+6] = cAmoebaSim.electric*tuv002;
-        cAmoebaSim.pPhi[20*m+7] = cAmoebaSim.electric*tuv110;
-        cAmoebaSim.pPhi[20*m+8] = cAmoebaSim.electric*tuv101;
-        cAmoebaSim.pPhi[20*m+9] = cAmoebaSim.electric*tuv011;
-        cAmoebaSim.pPhi[20*m+10] = cAmoebaSim.electric*tuv300;
-        cAmoebaSim.pPhi[20*m+11] = cAmoebaSim.electric*tuv030;
-        cAmoebaSim.pPhi[20*m+12] = cAmoebaSim.electric*tuv003;
-        cAmoebaSim.pPhi[20*m+13] = cAmoebaSim.electric*tuv210;
-        cAmoebaSim.pPhi[20*m+14] = cAmoebaSim.electric*tuv201;
-        cAmoebaSim.pPhi[20*m+15] = cAmoebaSim.electric*tuv120;
-        cAmoebaSim.pPhi[20*m+16] = cAmoebaSim.electric*tuv021;
-        cAmoebaSim.pPhi[20*m+17] = cAmoebaSim.electric*tuv102;
-        cAmoebaSim.pPhi[20*m+18] = cAmoebaSim.electric*tuv012;
-        cAmoebaSim.pPhi[20*m+19] = cAmoebaSim.electric*tuv111;
+        cAmoebaSim.pPhi[20*m] = tuv000;
+        cAmoebaSim.pPhi[20*m+1] = tuv100;
+        cAmoebaSim.pPhi[20*m+2] = tuv010;
+        cAmoebaSim.pPhi[20*m+3] = tuv001;
+        cAmoebaSim.pPhi[20*m+4] = tuv200;
+        cAmoebaSim.pPhi[20*m+5] = tuv020;
+        cAmoebaSim.pPhi[20*m+6] = tuv002;
+        cAmoebaSim.pPhi[20*m+7] = tuv110;
+        cAmoebaSim.pPhi[20*m+8] = tuv101;
+        cAmoebaSim.pPhi[20*m+9] = tuv011;
+        cAmoebaSim.pPhi[20*m+10] = tuv300;
+        cAmoebaSim.pPhi[20*m+11] = tuv030;
+        cAmoebaSim.pPhi[20*m+12] = tuv003;
+        cAmoebaSim.pPhi[20*m+13] = tuv210;
+        cAmoebaSim.pPhi[20*m+14] = tuv201;
+        cAmoebaSim.pPhi[20*m+15] = tuv120;
+        cAmoebaSim.pPhi[20*m+16] = tuv021;
+        cAmoebaSim.pPhi[20*m+17] = tuv102;
+        cAmoebaSim.pPhi[20*m+18] = tuv012;
+        cAmoebaSim.pPhi[20*m+19] = tuv111;
     }
 }
 
@@ -641,7 +647,7 @@ void kComputeInducedPotentialFromGrid_kernel()
                     t0_2 += tq.y*tadd.x;
                     t1_2 += tq.y*tadd.y;
                     t2_2 += tq.y*tadd.z;
-                    t3 += (tq.x+tq.x)*tadd.w;
+                    t3 += (tq.x+tq.y)*tadd.w;
                 }
                 tu00_1 += t0_1*u.x;
                 tu10_1 += t1_1*u.x;
@@ -708,44 +714,44 @@ void kComputeInducedPotentialFromGrid_kernel()
             tuv012 += tu01*v.z;
             tuv111 += tu11*v.y;
         }
-        cAmoebaSim.pPhid[10*m+1] = cAmoebaSim.electric*tuv100_1;
-        cAmoebaSim.pPhid[10*m+2] = cAmoebaSim.electric*tuv010_1;
-        cAmoebaSim.pPhid[10*m+3] = cAmoebaSim.electric*tuv001_1;
-        cAmoebaSim.pPhid[10*m+4] = cAmoebaSim.electric*tuv100_1;
-        cAmoebaSim.pPhid[10*m+5] = cAmoebaSim.electric*tuv010_1;
-        cAmoebaSim.pPhid[10*m+6] = cAmoebaSim.electric*tuv002_1;
-        cAmoebaSim.pPhid[10*m+7] = cAmoebaSim.electric*tuv110_1;
-        cAmoebaSim.pPhid[10*m+8] = cAmoebaSim.electric*tuv101_1;
-        cAmoebaSim.pPhid[10*m+9] = cAmoebaSim.electric*tuv011_1;
-        cAmoebaSim.pPhip[10*m+1] = cAmoebaSim.electric*tuv100_2;
-        cAmoebaSim.pPhip[10*m+2] = cAmoebaSim.electric*tuv010_2;
-        cAmoebaSim.pPhip[10*m+3] = cAmoebaSim.electric*tuv001_2;
-        cAmoebaSim.pPhip[10*m+4] = cAmoebaSim.electric*tuv100_2;
-        cAmoebaSim.pPhip[10*m+5] = cAmoebaSim.electric*tuv010_2;
-        cAmoebaSim.pPhip[10*m+6] = cAmoebaSim.electric*tuv002_2;
-        cAmoebaSim.pPhip[10*m+7] = cAmoebaSim.electric*tuv110_2;
-        cAmoebaSim.pPhip[10*m+8] = cAmoebaSim.electric*tuv101_2;
-        cAmoebaSim.pPhip[10*m+9] = cAmoebaSim.electric*tuv011_2;
-        cAmoebaSim.pPhidp[20*m] = cAmoebaSim.electric*tuv000;
-        cAmoebaSim.pPhidp[20*m+1] = cAmoebaSim.electric*tuv100;
-        cAmoebaSim.pPhidp[20*m+2] = cAmoebaSim.electric*tuv010;
-        cAmoebaSim.pPhidp[20*m+3] = cAmoebaSim.electric*tuv001;
-        cAmoebaSim.pPhidp[20*m+4] = cAmoebaSim.electric*tuv200;
-        cAmoebaSim.pPhidp[20*m+5] = cAmoebaSim.electric*tuv020;
-        cAmoebaSim.pPhidp[20*m+6] = cAmoebaSim.electric*tuv002;
-        cAmoebaSim.pPhidp[20*m+7] = cAmoebaSim.electric*tuv110;
-        cAmoebaSim.pPhidp[20*m+8] = cAmoebaSim.electric*tuv101;
-        cAmoebaSim.pPhidp[20*m+9] = cAmoebaSim.electric*tuv011;
-        cAmoebaSim.pPhidp[20*m+10] = cAmoebaSim.electric*tuv300;
-        cAmoebaSim.pPhidp[20*m+11] = cAmoebaSim.electric*tuv030;
-        cAmoebaSim.pPhidp[20*m+12] = cAmoebaSim.electric*tuv003;
-        cAmoebaSim.pPhidp[20*m+13] = cAmoebaSim.electric*tuv210;
-        cAmoebaSim.pPhidp[20*m+14] = cAmoebaSim.electric*tuv201;
-        cAmoebaSim.pPhidp[20*m+15] = cAmoebaSim.electric*tuv120;
-        cAmoebaSim.pPhidp[20*m+16] = cAmoebaSim.electric*tuv021;
-        cAmoebaSim.pPhidp[20*m+17] = cAmoebaSim.electric*tuv102;
-        cAmoebaSim.pPhidp[20*m+18] = cAmoebaSim.electric*tuv012;
-        cAmoebaSim.pPhidp[20*m+19] = cAmoebaSim.electric*tuv111;
+        cAmoebaSim.pPhid[10*m+1] = tuv100_1;
+        cAmoebaSim.pPhid[10*m+2] = tuv010_1;
+        cAmoebaSim.pPhid[10*m+3] = tuv001_1;
+        cAmoebaSim.pPhid[10*m+4] = tuv100_1;
+        cAmoebaSim.pPhid[10*m+5] = tuv010_1;
+        cAmoebaSim.pPhid[10*m+6] = tuv002_1;
+        cAmoebaSim.pPhid[10*m+7] = tuv110_1;
+        cAmoebaSim.pPhid[10*m+8] = tuv101_1;
+        cAmoebaSim.pPhid[10*m+9] = tuv011_1;
+        cAmoebaSim.pPhip[10*m+1] = tuv100_2;
+        cAmoebaSim.pPhip[10*m+2] = tuv010_2;
+        cAmoebaSim.pPhip[10*m+3] = tuv001_2;
+        cAmoebaSim.pPhip[10*m+4] = tuv100_2;
+        cAmoebaSim.pPhip[10*m+5] = tuv010_2;
+        cAmoebaSim.pPhip[10*m+6] = tuv002_2;
+        cAmoebaSim.pPhip[10*m+7] = tuv110_2;
+        cAmoebaSim.pPhip[10*m+8] = tuv101_2;
+        cAmoebaSim.pPhip[10*m+9] = tuv011_2;
+        cAmoebaSim.pPhidp[20*m] = tuv000;
+        cAmoebaSim.pPhidp[20*m+1] = tuv100;
+        cAmoebaSim.pPhidp[20*m+2] = tuv010;
+        cAmoebaSim.pPhidp[20*m+3] = tuv001;
+        cAmoebaSim.pPhidp[20*m+4] = tuv200;
+        cAmoebaSim.pPhidp[20*m+5] = tuv020;
+        cAmoebaSim.pPhidp[20*m+6] = tuv002;
+        cAmoebaSim.pPhidp[20*m+7] = tuv110;
+        cAmoebaSim.pPhidp[20*m+8] = tuv101;
+        cAmoebaSim.pPhidp[20*m+9] = tuv011;
+        cAmoebaSim.pPhidp[20*m+10] = tuv300;
+        cAmoebaSim.pPhidp[20*m+11] = tuv030;
+        cAmoebaSim.pPhidp[20*m+12] = tuv003;
+        cAmoebaSim.pPhidp[20*m+13] = tuv210;
+        cAmoebaSim.pPhidp[20*m+14] = tuv201;
+        cAmoebaSim.pPhidp[20*m+15] = tuv120;
+        cAmoebaSim.pPhidp[20*m+16] = tuv021;
+        cAmoebaSim.pPhidp[20*m+17] = tuv102;
+        cAmoebaSim.pPhidp[20*m+18] = tuv012;
+        cAmoebaSim.pPhidp[20*m+19] = tuv111;
     }
 }
 
@@ -904,10 +910,13 @@ __launch_bounds__(192, 1)
 #endif
 void kRecordFixedMultipoleField_kernel(float* output)
 {
+    const float xscale = 0.1f*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = 0.1f*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = 0.1f*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
-        output[3*i] -= cAmoebaSim.pPhi[20*i+1];
-        output[3*i+1] -= cAmoebaSim.pPhi[20*i+2];
-        output[3*i+2] -= cAmoebaSim.pPhi[20*i+3];
+        output[3*i] = -xscale*cAmoebaSim.pPhi[20*i+1];
+        output[3*i+1] = -yscale*cAmoebaSim.pPhi[20*i+2];
+        output[3*i+2] = -zscale*cAmoebaSim.pPhi[20*i+3];
     }
 }
 
@@ -921,13 +930,16 @@ __launch_bounds__(192, 1)
 #endif
 void kRecordInducedDipoleField_kernel(float* output, float* outputPolar)
 {
+    const float xscale = 0.1f*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = 0.1f*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = 0.1f*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
-        output[3*i] -= cAmoebaSim.pPhid[10*i+1];
-        output[3*i+1] -= cAmoebaSim.pPhid[10*i+2];
-        output[3*i+2] -= cAmoebaSim.pPhid[10*i+3];
-        outputPolar[3*i] -= cAmoebaSim.pPhip[10*i+1];
-        outputPolar[3*i+1] -= cAmoebaSim.pPhip[10*i+2];
-        outputPolar[3*i+2] -= cAmoebaSim.pPhip[10*i+3];
+        output[3*i] -= xscale*cAmoebaSim.pPhid[10*i+1];
+        output[3*i+1] -= yscale*cAmoebaSim.pPhid[10*i+2];
+        output[3*i+2] -= zscale*cAmoebaSim.pPhid[10*i+3];
+        outputPolar[3*i] -= xscale*cAmoebaSim.pPhip[10*i+1];
+        outputPolar[3*i+1] -= yscale*cAmoebaSim.pPhip[10*i+2];
+        outputPolar[3*i+2] -= zscale*cAmoebaSim.pPhip[10*i+3];
     }
 }
 
@@ -984,7 +996,7 @@ void kCalculateAmoebaPMEInducedDipoleField(amoebaGpuContext amoebaGpu)
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
     kComputeInducedPotentialFromGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeInducedPotentialFromGrid");
-    kRecordInducedDipoleField_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(amoebaGpu->psE_Field->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData);
+    kRecordInducedDipoleField_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(amoebaGpu->psWorkVector[0]->_pDevData, amoebaGpu->psWorkVector[1]->_pDevData);
     LAUNCHERROR("kRecordInducedDipoleField");
 }
 
