@@ -247,16 +247,16 @@ void kGridSpreadFixedMultipoles_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                    float atomCharge = 10*cSim.pPosq[atomIndex].w;
-                    float atomDipoleX = 10*xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
-                    float atomDipoleY = 10*yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
-                    float atomDipoleZ = 10*zscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
-                    float atomQuadrupoleXX = 10*xscale*xscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
-                    float atomQuadrupoleXY = 20*xscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
-                    float atomQuadrupoleXZ = 20*xscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
-                    float atomQuadrupoleYY = 10*yscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
-                    float atomQuadrupoleYZ = 20*yscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
-                    float atomQuadrupoleZZ = 10*zscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
+                    float atomCharge = cSim.pPosq[atomIndex].w;
+                    float atomDipoleX = xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
+                    float atomDipoleY = yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
+                    float atomDipoleZ = zscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
+                    float atomQuadrupoleXX = xscale*xscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
+                    float atomQuadrupoleXY = 2*xscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
+                    float atomQuadrupoleXZ = 2*xscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
+                    float atomQuadrupoleYY = yscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
+                    float atomQuadrupoleYZ = 2*yscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
+                    float atomQuadrupoleZZ = zscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
                     float4 t = cAmoebaSim.pThetai1[atomIndex*AMOEBA_PME_ORDER+ix];
                     float4 u = cAmoebaSim.pThetai2[atomIndex*AMOEBA_PME_ORDER+iy];
                     float4 v = cAmoebaSim.pThetai3[atomIndex*AMOEBA_PME_ORDER+iz];
@@ -277,16 +277,16 @@ void kGridSpreadFixedMultipoles_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                        float atomCharge = 10*cSim.pPosq[atomIndex].w;
-                        float atomDipoleX = 10*xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
-                        float atomDipoleY = 10*yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
-                        float atomDipoleZ = 10*zscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
-                        float atomQuadrupoleXX = 10*xscale*xscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
-                        float atomQuadrupoleXY = 20*xscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
-                        float atomQuadrupoleXZ = 20*xscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
-                        float atomQuadrupoleYY = 10*yscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
-                        float atomQuadrupoleYZ = 20*yscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
-                        float atomQuadrupoleZZ = 10*zscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
+                        float atomCharge = cSim.pPosq[atomIndex].w;
+                        float atomDipoleX = xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
+                        float atomDipoleY = yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
+                        float atomDipoleZ = zscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+2];
+                        float atomQuadrupoleXX = xscale*xscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9];
+                        float atomQuadrupoleXY = 2*xscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+1];
+                        float atomQuadrupoleXZ = 2*xscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+2];
+                        float atomQuadrupoleYY = yscale*yscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+4];
+                        float atomQuadrupoleYZ = 2*yscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+5];
+                        float atomQuadrupoleZZ = zscale*zscale*cAmoebaSim.pLabFrameQuadrupole[atomIndex*9+8];
                         float4 t = cAmoebaSim.pThetai1[atomIndex*AMOEBA_PME_ORDER+ix];
                         float4 u = cAmoebaSim.pThetai2[atomIndex*AMOEBA_PME_ORDER+iy];
                         float4 v = cAmoebaSim.pThetai3[atomIndex*AMOEBA_PME_ORDER+iz];
@@ -769,21 +769,48 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
+    const float xscale = cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     float energy = 0.0f;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
-        // Compute the force and energy.
+        // Compute the torque.
 
         multipole[0] = cSim.pPosq[i].w;
         multipole[1] = cAmoebaSim.pLabFrameDipole[i*3];
         multipole[2] = cAmoebaSim.pLabFrameDipole[i*3+1];
         multipole[3] = cAmoebaSim.pLabFrameDipole[i*3+2];
         multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i*9];
-        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+1];
-        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
-        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
-        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
-        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
+        multipole[5] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
+        multipole[6] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
+        multipole[7] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+1];
+        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
+        multipole[9] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
         float* phi = &cAmoebaSim.pPhi[20*i];
+        cAmoebaSim.pTorque[3*i] = -cAmoebaSim.electric*(multipole[3]*yscale*phi[2] - multipole[2]*zscale*phi[3]
+                      + 2.0f*(multipole[6]-multipole[5])*zscale*zscale*phi[9]
+                      + multipole[8]*yscale*yscale*phi[7] + multipole[9]*xscale*yscale*phi[5]
+                      - multipole[7]*yscale*zscale*phi[8] - multipole[9]*xscale*zscale*phi[6]);
+        cAmoebaSim.pTorque[3*i+1] = -cAmoebaSim.electric*(multipole[1]*zscale*phi[3] - multipole[3]*xscale*phi[1]
+                      + 2.0f*(multipole[4]-multipole[6])*zscale*zscale*phi[8]
+                      + multipole[7]*zscale*zscale*phi[9] + multipole[8]*xscale*zscale*phi[6]
+                      - multipole[8]*xscale*xscale*phi[4] - multipole[9]*yscale*yscale*phi[7]);
+        cAmoebaSim.pTorque[3*i+2] = -cAmoebaSim.electric*(multipole[2]*xscale*phi[1] - multipole[1]*yscale*phi[2]
+                      + 2.0f*(multipole[5]-multipole[4])*yscale*yscale*phi[7]
+                      + multipole[7]*xscale*xscale*phi[4] + multipole[9]*yscale*zscale*phi[8]
+                      - multipole[7]*xscale*yscale*phi[5] - multipole[8]*zscale*zscale*phi[9]);
+
+        // Compute the force and energy.
+
+        multipole[1] *= xscale;
+        multipole[2] *= yscale;
+        multipole[3] *= zscale;
+        multipole[4] *= xscale*xscale;
+        multipole[5] *= xscale*yscale;
+        multipole[6] *= xscale*zscale;
+        multipole[7] *= yscale*yscale;
+        multipole[8] *= yscale*zscale;
+        multipole[9] *= zscale*zscale;
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         for (int k = 0; k < 10; k++) {
             energy += multipole[k]*phi[k];
@@ -791,31 +818,18 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
             f.y += multipole[k]*phi[deriv2[k]];
             f.z += multipole[k]*phi[deriv3[k]];
         }
-        f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
-        f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
-        f.z *= cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+        f.x *= cAmoebaSim.electric*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+        f.y *= cAmoebaSim.electric*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+        f.z *= cAmoebaSim.electric*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
         float4 force = cSim.pForce4[i];
         force.x += f.x;
         force.y += f.y;
         force.z += f.z;
         cSim.pForce4[i] = force;
 
-        // Compute the torque.
 
-        cAmoebaSim.pTorque[3*i] = multipole[3]*phi[2] - multipole[2]*phi[3]
-                      + 2.0f*(multipole[6]-multipole[5])*phi[9]
-                      + multipole[8]*phi[7] + multipole[9]*phi[5]
-                      - multipole[7]*phi[8] - multipole[9]*phi[6];
-        cAmoebaSim.pTorque[3*i+1] = multipole[1]*phi[3] - multipole[3]*phi[1]
-                      + 2.0f*(multipole[4]-multipole[6])*phi[9]
-                      + multipole[7]*phi[9] + multipole[8]*phi[6]
-                      - multipole[8]*phi[4] - multipole[9]*phi[7];
-        cAmoebaSim.pTorque[3*i+2] = multipole[2]*phi[1] - multipole[1]*phi[2]
-                      + 2.0f*(multipole[5]-multipole[4])*phi[7]
-                      + multipole[7]*phi[4] + multipole[9]*phi[8]
-                      - multipole[7]*phi[5] - multipole[8]*phi[9];
     }
-    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*cAmoebaSim.electric*energy;
 }
 
 __global__
@@ -834,20 +848,48 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
     const int deriv3[] = {3, 8, 9, 6, 14, 16, 12, 19, 17, 18};
+    const float xscale = cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     float energy = 0.0f;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
-        // Compute the force and energy.
+        // Compute the torque.
 
         multipole[0] = cSim.pPosq[i].w;
         multipole[1] = cAmoebaSim.pLabFrameDipole[i*3];
         multipole[2] = cAmoebaSim.pLabFrameDipole[i*3+1];
         multipole[3] = cAmoebaSim.pLabFrameDipole[i*3+2];
         multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i*9];
-        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+1];
-        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
-        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
-        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
-        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
+        multipole[5] = cAmoebaSim.pLabFrameQuadrupole[i*9+4];
+        multipole[6] = cAmoebaSim.pLabFrameQuadrupole[i*9+8];
+        multipole[7] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+1];
+        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
+        multipole[9] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
+        float* phidp = &cAmoebaSim.pPhidp[20*i];
+        cAmoebaSim.pTorque[3*i] = -0.5f*cAmoebaSim.electric*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
+                      + 2.0f*(multipole[6]-multipole[5])*zscale*zscale*phidp[9]
+                      + multipole[8]*yscale*yscale*phidp[7] + multipole[9]*xscale*yscale*phidp[5]
+                      - multipole[7]*yscale*zscale*phidp[8] - multipole[9]*xscale*zscale*phidp[6]);
+        cAmoebaSim.pTorque[3*i+1] = -0.5f*cAmoebaSim.electric*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
+                      + 2.0f*(multipole[4]-multipole[6])*zscale*zscale*phidp[8]
+                      + multipole[7]*zscale*zscale*phidp[9] + multipole[8]*xscale*zscale*phidp[6]
+                      - multipole[8]*xscale*xscale*phidp[4] - multipole[9]*yscale*yscale*phidp[7]);
+        cAmoebaSim.pTorque[3*i+2] = -0.5f*cAmoebaSim.electric*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
+                      + 2.0f*(multipole[5]-multipole[4])*yscale*yscale*phidp[7]
+                      + multipole[7]*xscale*xscale*phidp[4] + multipole[9]*yscale*zscale*phidp[8]
+                      - multipole[7]*xscale*yscale*phidp[5] - multipole[8]*zscale*zscale*phidp[9]);
+
+        // Compute the force and energy.
+
+        multipole[1] *= xscale;
+        multipole[2] *= yscale;
+        multipole[3] *= zscale;
+        multipole[4] *= xscale*xscale;
+        multipole[5] *= xscale*yscale;
+        multipole[6] *= xscale*zscale;
+        multipole[7] *= yscale*yscale;
+        multipole[8] *= yscale*zscale;
+        multipole[9] *= zscale*zscale;
         inducedDipole[0] = cAmoebaSim.pInducedDipole[i*3];
         inducedDipole[1] = cAmoebaSim.pInducedDipole[i*3+1];
         inducedDipole[2] = cAmoebaSim.pInducedDipole[i*3+2];
@@ -867,37 +909,21 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
             f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2] + inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
             f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3] + inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3];
         }
-        float* phidp = &cAmoebaSim.pPhidp[20*i];
         for (int k = 0; k < 10; k++) {
             f.x += multipole[k]*phidp[deriv1[k]];
             f.y += multipole[k]*phidp[deriv2[k]];
             f.z += multipole[k]*phidp[deriv3[k]];
         }
-        f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
-        f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
-        f.z *= cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+        f.x *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+        f.y *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+        f.z *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
         float4 force = cSim.pForce4[i];
         force.x += f.x;
         force.y += f.y;
         force.z += f.z;
         cSim.pForce4[i] = force;
-
-        // Compute the torque.
-
-        cAmoebaSim.pTorque[3*i] = multipole[3]*phi[2] - multipole[2]*phi[3]
-                      + 2.0f*(multipole[6]-multipole[5])*phi[9]
-                      + multipole[8]*phi[7] + multipole[9]*phi[5]
-                      - multipole[7]*phi[8] - multipole[9]*phi[6];
-        cAmoebaSim.pTorque[3*i+1] = multipole[1]*phi[3] - multipole[3]*phi[1]
-                      + 2.0f*(multipole[4]-multipole[6])*phi[9]
-                      + multipole[7]*phi[9] + multipole[8]*phi[6]
-                      - multipole[8]*phi[4] - multipole[9]*phi[7];
-        cAmoebaSim.pTorque[3*i+2] = multipole[2]*phi[1] - multipole[1]*phi[2]
-                      + 2.0f*(multipole[5]-multipole[4])*phi[7]
-                      + multipole[7]*phi[4] + multipole[9]*phi[8]
-                      - multipole[7]*phi[5] - multipole[8]*phi[9];
     }
-    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*cAmoebaSim.electric*energy;
 }
 
 __global__
@@ -910,9 +936,9 @@ __launch_bounds__(192, 1)
 #endif
 void kRecordFixedMultipoleField_kernel(float* output)
 {
-    const float xscale = 0.1f*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
-    const float yscale = 0.1f*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
-    const float zscale = 0.1f*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+    const float xscale = cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
         output[3*i] = -xscale*cAmoebaSim.pPhi[20*i+1];
         output[3*i+1] = -yscale*cAmoebaSim.pPhi[20*i+2];
@@ -930,9 +956,9 @@ __launch_bounds__(192, 1)
 #endif
 void kRecordInducedDipoleField_kernel(float* output, float* outputPolar)
 {
-    const float xscale = 0.1f*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
-    const float yscale = 0.1f*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
-    const float zscale = 0.1f*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+    const float xscale = cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+    const float yscale = cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+    const float zscale = cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
         output[3*i] -= xscale*cAmoebaSim.pPhid[10*i+1];
         output[3*i+1] -= yscale*cAmoebaSim.pPhid[10*i+2];
