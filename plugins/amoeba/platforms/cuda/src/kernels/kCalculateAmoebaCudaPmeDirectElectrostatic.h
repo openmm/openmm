@@ -43,8 +43,8 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectElectrostatic, Forces_kernel)(
 ){
 
 #ifdef AMOEBA_DEBUG
-    int pullIndexMax = 12;
-    float4 pullBack[20];
+    int maxPullIndex = 2;
+    float4 pullBack[12];
 #endif
 
     extern __shared__ PmeDirectElectrostaticParticle sA[];
@@ -185,6 +185,12 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectElectrostatic, Forces_kernel)(
                     totalEnergy                       += mask ? 0.5*energy   : 0.0f;
 
 #ifdef AMOEBA_DEBUG
+/*
+energy =  mask ? 0.5*energy   : 0.0f;
+if( atomI < 200 && (fabs( energy ) > 1.0e+8 || energy != energy) ){
+    debugSetup( atomI, atomJ, debugArray, pullBack );
+} */
+
 if( atomI == targetAtom ){
     unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
     float blockId                      = 1.0f;
@@ -213,7 +219,7 @@ if( atomI == targetAtom ){
     debugArray[index].z                = mask ? torque[0][2] : 0.0f;
     debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
 
-    for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
+    for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullBack[pullIndex].x;
         debugArray[index].y                = pullBack[pullIndex].y;
@@ -340,6 +346,11 @@ if( atomI == targetAtom ){
        
        
 #ifdef AMOEBA_DEBUG
+/*
+energy =  mask ? 0.5*energy   : 0.0f;
+if( atomI < 200 && (fabs( energy ) > 1.0e+8 || energy != energy) ){
+    debugSetup( atomI, atomJ, debugArray, pullBack );
+} */
 if( atomI == targetAtom  || atomJ == targetAtom ){
 
     unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
@@ -372,7 +383,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
     debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
     debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
 
-    for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
+    for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullBack[pullIndex].x;
         debugArray[index].y                = pullBack[pullIndex].y;
@@ -449,6 +460,11 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
 
 #ifdef AMOEBA_DEBUG
+/*
+energy =  mask ? 0.5*energy   : 0.0f;
+if( atomI < 200 && (fabs( energy ) > 1.0e+8 || energy != energy) ){
+    debugSetup( atomI, atomJ, debugArray, pullBack );
+} */
 if( atomI == targetAtom  || atomJ == targetAtom ){
         unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
         unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
@@ -479,7 +495,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
         debugArray[index].z                = mask ? torque[indexJ][2] : 0.0f;
         debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
 
-        for( int pullIndex = 0; pullIndex < pullIndexMax; pullIndex++ ){
+        for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullIndex].x;
             debugArray[index].y                = pullBack[pullIndex].y;

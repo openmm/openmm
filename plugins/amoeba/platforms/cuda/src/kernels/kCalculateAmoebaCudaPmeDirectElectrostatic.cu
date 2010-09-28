@@ -6,7 +6,7 @@
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 
-#define AMOEBA_DEBUG
+//#define AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -74,8 +74,31 @@ struct PmeDirectElectrostaticParticle {
 
 };
 
-// self-energy for PME
 
+/*
+__device__ static void debugSetup( unsigned int atomI, unsigned int atomJ,
+                                   float4* debugArray, float4* pullBack )
+{
+    unsigned int index                 = atomI + atomJ*cAmoebaSim.paddedNumberOfAtoms;
+    float blockId                      = 111.0f;
+
+    debugArray[index].x                = (float) atomI;
+    debugArray[index].y                = (float) atomJ;
+    debugArray[index].z                = 0.0f;
+    debugArray[index].w                = blockId;
+
+    for( int pullIndex = 0; pullIndex < 1; pullIndex++ ){
+        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        debugArray[index].x                = pullBack[pullIndex].x;
+        debugArray[index].y                = pullBack[pullIndex].y;
+        debugArray[index].z                = pullBack[pullIndex].z;
+        debugArray[index].w                = pullBack[pullIndex].w;
+    }   
+}
+*/
+
+// self-energy for PME
+/*
 __device__ static void calculatePmeSelfEnergyElectrostaticPairIxn_kernel( PmeDirectElectrostaticParticle& atomI, float* energy)
 {
     float term   = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
@@ -99,7 +122,7 @@ __device__ static void calculatePmeSelfEnergyElectrostaticPairIxn_kernel( PmeDir
     *energy      = (cii + term*(dii/3.0f + 2.0f*term*qii/5.0f));
     *energy     += term*uii/3.0f;
     *energy     *= fterm;
-}
+} */
 
 // self-torque for PME
 
@@ -517,10 +540,8 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
                     + rr7*gli[3]*psc7);
         e = e - (1.0f-scalingFactors[MScaleIndex])*erl;
         ei = ei - erli;
-        e = conversionFactor * e;
-        ei = conversionFactor * ei;
-//        em = em + e;
-//        ep = ep + ei;
+
+        *energy = conversionFactor*(e + ei);
 
         // increment the total intramolecular energy; assumes;
         // intramolecular distances are less than half of cell;
@@ -915,17 +936,17 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
     debugIndex++;
 */
     idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*ftm2i[1];
-    debugArray[debugIndex].y = conversionFactor*ftm2i[2];
-    debugArray[debugIndex].z = conversionFactor*ftm2i[3];
-    debugArray[debugIndex].w = r2;
+    debugArray[debugIndex].x = e;
+    debugArray[debugIndex].y = ei;
+    debugArray[debugIndex].z = erl;
+    debugArray[debugIndex].w = erli;
 
     debugIndex++;
     idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*fridmp[1];
-    debugArray[debugIndex].y = conversionFactor*fridmp[2];
+    debugArray[debugIndex].x = r2;
+    debugArray[debugIndex].y = cSim.alphaEwald;
     debugArray[debugIndex].z = conversionFactor*fridmp[3];
-    debugArray[debugIndex].w = cSim.alphaEwald;
+    debugArray[debugIndex].w = 115.0;
 
     debugIndex++;
     idTracker               += 1.0;
@@ -963,12 +984,14 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         outputTorque[1][1]       = 0.0f;
         outputTorque[1][2]       = 0.0f;
 
+        *energy                  = 0.0f;
+
 #ifdef AMOEBA_DEBUG
-for( int ii = 0; ii < 20; ii++ ){
+for( int ii = 0; ii < 5; ii++ ){
     debugArray[ii].x = 0.0f;
     debugArray[ii].y = 0.0f;
     debugArray[ii].z = 0.0f;
-    debugArray[ii].w = (float) ii;
+    debugArray[ii].w = (float) (11*ii);
 }
 #endif
    
@@ -1091,7 +1114,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                       amoebaGpu->maxCovalentDegreeSz, amoebaGpu->pGamma,
                       amoebaGpu->scalingDistanceCutoff );
     }   
-   int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+    int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
     memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
@@ -1218,6 +1241,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                 ii = gpu->natoms - maxPrint;
             }
         }
+        (void) fflush( amoebaGpu->log );
         gpu->psEnergy->Download();
         double energy = 0.0;
         for( unsigned int ii = 0; ii < gpu->sim.energyOutputBuffers; ii++ ){
@@ -1229,12 +1253,30 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
         }   
         (void) fprintf( amoebaGpu->log,"Force sums: [%16.9e %16.9e %16.9e] Energy=%16.9e\n", forceSum[0], forceSum[1], forceSum[2], energy );
 
+        if( 0 ){
+            (void) fprintf( amoebaGpu->log,"DebugElecAll\n" );
+            int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+            for( int jj = 0; jj < gpu->natoms*gpu->natoms; jj++ ){
+                if( fabs( debugArray->_pSysStream[0][jj].w - 111.0 ) < 1.0e-04 ){
+                    int debugIndex = jj;
+                    (void) fprintf( amoebaGpu->log,"%8d [%16.9e %16.9e %16.9e %16.9e] Enr11\n", jj,
+                                    debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
+                                    debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                    debugIndex += paddedNumberOfAtoms;
+                    (void) fprintf( amoebaGpu->log,"%8d [%16.9e %16.9e %16.9e %16.9e] Enr12\n", jj,
+                                    debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
+                                    debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                }
+            }
+        }
+        (void) fprintf( amoebaGpu->log,"\n" );
+
         if( 1 ){
             (void) fprintf( amoebaGpu->log,"DebugElec\n" );
             int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
             for( int jj = 0; jj < gpu->natoms; jj++ ){
                 int debugIndex = jj;
-                for( int kk = 0; kk < 15; kk++ ){
+                for( int kk = 0; kk < 6; kk++ ){
                     (void) fprintf( amoebaGpu->log,"%5d %5d [%16.9e %16.9e %16.9e %16.9e] E11\n", targetAtom, jj,
                                     debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
                                     debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );

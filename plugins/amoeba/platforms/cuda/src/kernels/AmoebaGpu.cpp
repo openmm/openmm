@@ -3308,7 +3308,7 @@ static unsigned int targetAtoms[2] = { 0, 1};
                         ps_M_ScaleIndices->_pSysStream[0][scaleOffset].y |= (1 << kk);
                     }
 
-                    if( amoebaGpu->log && ( (atomI == targetAtoms[0]) || (atomI == targetAtoms[1]) ) ){
+                    if( 0 && amoebaGpu->log && ( (atomI == targetAtoms[0]) || (atomI == targetAtoms[1]) ) ){
                         (void) fprintf( amoebaGpu->log, "XXX cell=%u [%u %u] [%d %d] p[%d %d] m[%d %d] scaleOffset=%d kk=%d\n", 
                                         ii, atomI, atomJ, covalentDegree, polarizationDegree, pX, pY, mX, mY, scaleOffset, kk );
                     }
