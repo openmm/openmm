@@ -1442,18 +1442,6 @@ void gpuKirkwoodAllocate( amoebaGpuContext amoebaGpu )
     
 }
 
-static void tabulateErfc(gpuContext gpu) 
-{
-    int tableSize = 2048;
-    gpu->sim.tabulatedErfcSize = tableSize;
-    gpu->sim.tabulatedErfcScale = tableSize/(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff);
-    gpu->psTabulatedErfc = new CUDAStream<float>(tableSize, 1, "TabulatedErfc");
-    gpu->sim.pTabulatedErfc = gpu->psTabulatedErfc->_pDevData;
-    for (int i = 0; i < tableSize; ++i) 
-        (*gpu->psTabulatedErfc)[i] = (float) erfc(i*(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff)/tableSize);
-    gpu->psTabulatedErfc->Upload();
-}
-
 /**---------------------------------------------------------------------------------------
 
    Create/initialize data structs associated w/ molecular -> lab frame calculation
@@ -1469,7 +1457,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange, 
                                      int mutualInducedIterativeMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, float cutoffDistance, float alphaEwald, float electricConstant ){
+                                     int nonbondedMethod, float cutoffDistance, float alphaEwald, float electricConstant ) {
 
 // ---------------------------------------------------------------------------------------
 
@@ -1569,7 +1557,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         (void) fflush( amoebaGpu->log );
     }
     amoebaGpu->amoebaSim.cutoffDistance2             = cutoffDistance*cutoffDistance;
-    amoebaGpu->amoebaSim.sqrtPi                      = sqrt( 3.1415926535897932384626433832795 );
+    amoebaGpu->amoebaSim.sqrtPi                      = std::sqrt( 3.14159265358f );
     amoebaGpu->amoebaSim.electric                    = electricConstant;
     amoebaGpu->gpuContext->sim.alphaEwald            = alphaEwald;
     amoebaGpu->gpuContext->sim.nonbondedCutoff       = cutoffDistance;
@@ -2270,19 +2258,19 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
                 sum1 = sum1 + bsarray[j]*cos(arg);
                 sum2 = sum2 + bsarray[j]*sin(arg);
             }
-            bsmod[i] = sum1*sum1 + sum2*sum2;
+            bsmod[i] = static_cast<float>(sum1*sum1 + sum2*sum2);
         }
 
         // fix for exponential Euler spline interpolation failure
 
         double eps = 1.0e-7;
         if (bsmod[0] < eps)
-            bsmod[0] = 0.5 * bsmod[1];
+            bsmod[0] = 0.5f * bsmod[1];
         for (int i = 1; i < size-1; i++)
             if (bsmod[i] < eps)
-                bsmod[i] = 0.5*(bsmod[i-1]+bsmod[i+1]);
+                bsmod[i] = 0.5f*(bsmod[i-1]+bsmod[i+1]);
         if (bsmod[size-1] < eps)
-            bsmod[size-1] = 0.5*bsmod[size-2];
+            bsmod[size-1] = 0.5f*bsmod[size-2];
 
         // compute and apply the optimal zeta coefficient
 
@@ -2310,7 +2298,7 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
                 }
                 zeta = sum2/sum1;
             }
-            bsmod[i-1] = bsmod[i-1]*zeta*zeta;
+            bsmod[i-1] = bsmod[i-1]*static_cast<float>(zeta*zeta);
         }
         gpu->psPmeBsplineModuli[dim]->Upload();
     }

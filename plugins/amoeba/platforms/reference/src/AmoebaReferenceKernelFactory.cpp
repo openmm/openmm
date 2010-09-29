@@ -27,13 +27,13 @@
 #include "AmoebaReferenceKernelFactory.h"
 #include "AmoebaReferenceKernels.h"
 #include "ReferencePlatform.h"
-#include "windowsExportAmoebaReference.h"
+#include "openmm/internal/windowsExport.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-extern "C" void OPENMM_AMOEBA_REFERENCE_EXPORT registerKernelFactories() {
+extern "C" void OPENMM_EXPORT registerKernelFactories() {
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
         if( platform.getName() == "Reference" ){
