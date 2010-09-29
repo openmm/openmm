@@ -84,7 +84,7 @@ void* SystemProxy::deserialize(const SerializationNode& node) const {
         const SerializationNode& constraints = node.getChildNode("Constraints");
         for (int i = 0; i < (int) constraints.getChildren().size(); i++) {
             const SerializationNode& constraint = constraints.getChildren()[i];
-            system->addConstraint(constraint.getIntProperty("p1"), constraint.getIntProperty("p2"), constraint.getIntProperty("d"));
+            system->addConstraint(constraint.getIntProperty("p1"), constraint.getIntProperty("p2"), constraint.getDoubleProperty("d"));
         }
         const SerializationNode& forces = node.getChildNode("Forces");
         for (int i = 0; i < (int) forces.getChildren().size(); i++) {
