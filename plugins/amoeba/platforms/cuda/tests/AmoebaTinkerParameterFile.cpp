@@ -40,8 +40,6 @@
 #include <sys/time.h>
 #endif
 
-extern int isNanOrInfinity( double number );
-
 using namespace std;
 
 
@@ -589,6 +587,19 @@ static int readIntVector( FILE* filePtr, const StringVector& tokens, int numberT
     }
  
     return static_cast<int>(intVector.size());
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Report whether a number is a nan or infinity
+
+   @param number               number to test
+   @return 1 if number is  nan or infinity; else return 0
+
+   --------------------------------------------------------------------------------------- */
+
+int isNan( double number ){
+    return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0; 
 }
 
 /**---------------------------------------------------------------------------------------
@@ -3766,7 +3777,7 @@ void initializeForceMap( MapStringInt& forceMap, int initialValue ){
      return;
 
 }
-
+/*
 void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVectors& supplementary,
                                            int useOpenMMUnits, FILE* log ) {
 
@@ -3939,7 +3950,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
         (void) fflush( log );
     }
 
-}
+} */
 
 void calculateBorn1( System& amoebaSystem, std::vector<Vec3>& tinkerCoordinates, FILE* log ) {
 /*
@@ -4725,7 +4736,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     if( gkIsActive == false ){
         isPresent = forceMap.find( AMOEBA_MULTIPOLE_FORCE );
         if( isPresent != forceMap.end() && isPresent->second != 0 ){
-             checkIntermediateMultipoleQuantities( context, supplementary, useOpenMMUnits, log );
+             //checkIntermediateMultipoleQuantities( context, supplementary, useOpenMMUnits, log );
         }
     }
 
@@ -4813,15 +4824,15 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
  
     // check norm is not nan
  
-    if( isNanOrInfinity( forceNorm ) ){ 
+    if( isNan( forceNorm ) ){ 
         if( log ){
             (void) fprintf( log, "%s norm of force is nan -- aborting.\n", methodName.c_str() );
             unsigned int hitNan = 0;
             for( unsigned int ii = 0; (ii < forces.size()) && (hitNan < 10); ii++ ){
    
-               if( isNanOrInfinity( forces[ii][0] ) ||
-                   isNanOrInfinity( forces[ii][1] ) ||
-                   isNanOrInfinity( forces[ii][2] ) )hitNan++;
+               if( isNan( forces[ii][0] ) ||
+                   isNan( forces[ii][1] ) ||
+                   isNan( forces[ii][2] ) )hitNan++;
    
                 (void) fprintf( log, "%6u x[%15.7e %15.7e %15.7e] f[%15.7e %15.7e %15.7e]\n", ii,
                                 coordinates[ii][0], coordinates[ii][1], coordinates[ii][2],
@@ -4974,15 +4985,15 @@ void testEnergyForceByFiniteDifference( std::string parameterFileName, MapString
  
     // check norm is not nan
  
-    if( isNanOrInfinity( forceNorm ) ){ 
+    if( isNan( forceNorm ) ){ 
         if( log ){
             (void) fprintf( log, "%s norm of force is nan -- aborting.\n", methodName.c_str() );
             unsigned int hitNan = 0;
             for( unsigned int ii = 0; (ii < forces.size()) && (hitNan < 10); ii++ ){
    
-               if( isNanOrInfinity( forces[ii][0] ) ||
-                   isNanOrInfinity( forces[ii][1] ) ||
-                   isNanOrInfinity( forces[ii][2] ) )hitNan++;
+               if( isNan( forces[ii][0] ) ||
+                   isNan( forces[ii][1] ) ||
+                   isNan( forces[ii][2] ) )hitNan++;
    
                 (void) fprintf( log, "%6u x[%15.7e %15.7e %15.7e] f[%15.7e %15.7e %15.7e]\n", ii,
                                 coordinates[ii][0], coordinates[ii][1], coordinates[ii][2],
@@ -5696,7 +5707,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             }
         }
   
-        if( isNanOrInfinity( totalEnergy ) ){
+        if( isNan( totalEnergy ) ){
             char buffer[1024];
             (void) sprintf( buffer, "%s nans detected at time %12.3f -- aborting.\n", methodName.c_str(), currentTime );
             throwException(__FILE__, __LINE__, buffer );

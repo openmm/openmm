@@ -97,7 +97,7 @@ extern void SetCalculateObcGbsaBornSumSim(gpuContext gpu);
 extern void GetCalculateObcGbsaBornSumSim(gpuContext gpu);
 extern void SetCalculateGBVIBornSumSim(gpuContext gpu);
 extern void GetCalculateGBVIBornSumSim(gpuContext gpu);
-extern void SetCalculateObcGbsaForces2Sim(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT SetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void GetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void SetCalculateGBVIForces2Sim(gpuContext gpu);
 extern void GetCalculateGBVIForces2Sim(gpuContext gpu);

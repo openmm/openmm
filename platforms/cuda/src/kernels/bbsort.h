@@ -10,6 +10,7 @@
  */
 #ifndef _BBSORT_H_
 #define _BBSORT_H_
+#include "windowsExportCuda.h"
 
 #define BLOCK_SIZE 512
 
@@ -18,6 +19,6 @@
 #define AUTO_EVALUATE 2
 
 template <typename T>
-void bbSort(T* dData,int number,int listOrder=AUTO_EVALUATE);
+void OPENMMCUDA_EXPORT bbSort(T* dData,int number,int listOrder=AUTO_EVALUATE);
 
 #endif // _BBSORT_H_

@@ -45,7 +45,7 @@ namespace OpenMM {
  * This is the internal implementation of AmoebaWcaDispersionForce.
  */
 
-class AmoebaWcaDispersionForceImpl : public ForceImpl {
+class OPENMM_EXPORT AmoebaWcaDispersionForceImpl : public ForceImpl {
 public:
     AmoebaWcaDispersionForceImpl(AmoebaWcaDispersionForce& owner);
     ~AmoebaWcaDispersionForceImpl();

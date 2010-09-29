@@ -45,7 +45,7 @@ class System;
  * This is the internal implementation of AndersenThermostat.
  */
 
-class AndersenThermostatImpl : public ForceImpl {
+class OPENMM_EXPORT AndersenThermostatImpl : public ForceImpl {
 public:
     AndersenThermostatImpl(AndersenThermostat& owner);
     void initialize(ContextImpl& context);
