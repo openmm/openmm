@@ -605,14 +605,6 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 
 void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
 {
-
-// zero field?
-
-unsigned int offset = 3*amoebaGpu->paddedNumberOfAtoms*sizeof( float );
-memset( amoebaGpu->psE_Field->_pSysStream[0], 0, offset );
-amoebaGpu->psE_Field->Upload();
-
-
     kCalculateAmoebaPMEFixedMultipoleField( amoebaGpu );
     cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
 }
