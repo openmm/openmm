@@ -245,7 +245,7 @@ private:
 
     enum ScaleType { D_SCALE, P_SCALE, M_SCALE, U_SCALE, LAST_SCALE_TYPE_INDEX };
     std::vector<  std::vector< MapIntRealOpenMM > > _scaleMaps;
-    std::vector<int> _maxScaleIndex;
+    std::vector<unsigned int> _maxScaleIndex;
     RealOpenMM _dScale[5];
     RealOpenMM _pScale[5];
     RealOpenMM _mScale[5];
@@ -362,7 +362,7 @@ private:
                                FILE* log = stderr, unsigned int itemsPerVector = 1, int maxPrint = -1 ) const;
 
     void logParticleData( const std::string& header, const std::vector<MultipoleParticleData>& particleData,
-                          unsigned int printFlag, FILE* log, int maxPrint ) const;
+                          unsigned int printFlag, FILE* log, unsigned int maxPrint ) const;
 
     void showScaleMapForParticle( unsigned int particleI, FILE* log ) const;
 
@@ -462,7 +462,7 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateNoCutoffForceAndEnergy( int numParticles, RealOpenMM** particlePositions,
+    RealOpenMM calculateNoCutoffForceAndEnergy( unsigned int numParticles, RealOpenMM** particlePositions,
                                                 const std::vector<RealOpenMM>& charges,
                                                 const std::vector<RealOpenMM>& dipoles,
                                                 const std::vector<RealOpenMM>& quadrupoles,

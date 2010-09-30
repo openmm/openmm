@@ -193,7 +193,7 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTors
                                                                    const std::vector<RealOpenMM>& kTorsion,
                                                                    RealOpenMM** forceData ) const {
     RealOpenMM energy  = 0.0; 
-    for (unsigned int ii = 0; ii < numPiTorsions; ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(numPiTorsions); ii++) {
 
         int particle1Index      = particle1[ii];
         int particle2Index      = particle2[ii];

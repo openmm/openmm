@@ -205,7 +205,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numO
                                                                        RealOpenMM angleSextic,
                                                                        RealOpenMM** forceData) const {
     RealOpenMM energy      = 0.0; 
-    for (unsigned int ii = 0; ii < numOutOfPlaneBends; ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(numOutOfPlaneBends); ii++) {
         int particle1Index      = particle1[ii];
         int particle2Index      = particle2[ii];
         int particle3Index      = particle3[ii];

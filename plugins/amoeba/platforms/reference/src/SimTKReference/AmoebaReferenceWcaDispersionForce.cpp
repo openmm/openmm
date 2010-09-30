@@ -281,7 +281,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numPa
 
     RealOpenMM intermediateValues[LastIntermediateValueIndex];
 
-    for( unsigned int ii = 0; ii < numParticles; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++ ){
  
         RealOpenMM epsi              = epsilons[ii];
         RealOpenMM rmini             = radii[ii];
@@ -316,7 +316,7 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numPa
 
         intermediateValues[AH]       = emixh*rmixh7;
 
-        for( unsigned int jj = 0; jj < numParticles; jj++ ){
+        for( unsigned int jj = 0; jj < static_cast<unsigned int>(numParticles); jj++ ){
 
             if( ii == jj )continue;
 

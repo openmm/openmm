@@ -220,7 +220,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateNoCutoffForceAndEnergy( int numPart
 
     std::vector<Vec3> reducedPositions;
     reducedPositions.resize(numParticles);
-    for( unsigned int ii = 0; ii < numParticles; ii++ ){
+    for( unsigned int ii = 0; ii <  static_cast<unsigned int>(numParticles); ii++ ){
         if( reductions[ii] != zero ){
             int reductionIndex     = indexIVs[ii];
             reducedPositions[ii]   = Vec3( reductions[ii]*( particlePositions[ii][0] - particlePositions[reductionIndex][0] ) + particlePositions[reductionIndex][0], 
@@ -236,7 +236,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateNoCutoffForceAndEnergy( int numPart
 
     RealOpenMM energy = zero;
     std::vector<unsigned int> exclusions(numParticles, 0);
-    for( unsigned int ii = 0; ii < numParticles; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++ ){
  
         RealOpenMM sigmaI      = sigmas[ii];
         RealOpenMM epsilonI    = epsilons[ii];
@@ -244,7 +244,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateNoCutoffForceAndEnergy( int numPart
             exclusions[allExclusions[ii][jj]] = 1;
         }
 
-        for( unsigned int jj = ii+1; jj < numParticles; jj++ ){
+        for( unsigned int jj = ii+1; jj < static_cast<unsigned int>(numParticles); jj++ ){
             if( exclusions[jj] == 0 ){
 
                 RealOpenMM combindedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj] );

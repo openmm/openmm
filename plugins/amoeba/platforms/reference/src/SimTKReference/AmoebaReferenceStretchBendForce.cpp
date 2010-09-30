@@ -154,7 +154,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
                                                                        const std::vector<RealOpenMM>&  kQuadratic,
                                                                        RealOpenMM** forceData) const {
     RealOpenMM energy      = 0.0; 
-    for (unsigned int ii = 0; ii < numStretchBends; ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(numStretchBends); ii++) {
         int particle1Index      = particle1[ii];
         int particle2Index      = particle2[ii];
         int particle3Index      = particle3[ii];

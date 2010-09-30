@@ -182,7 +182,7 @@ void AmoebaReferenceMultipoleForce::logRealOpenMMVectors( const std::string& hea
 }
 
 void AmoebaReferenceMultipoleForce::logParticleData( const std::string& header, const std::vector<MultipoleParticleData>& particleData,
-                                                     unsigned int printFlag, FILE* log, int maxPrint ) const {
+                                                     unsigned int printFlag, FILE* log, unsigned int maxPrint ) const {
 
     (void) fprintf( log, "%s", header.c_str() );
 
@@ -224,7 +224,7 @@ void AmoebaReferenceMultipoleForce::logParticleData( const std::string& header, 
  */ 
 void AmoebaReferenceMultipoleForce::showScaleMapForParticle( unsigned int particleI, FILE* log ) const {
 
-    (void) fprintf( log, "Scale map particle %5u maxIndex=%d\n", particleI, _maxScaleIndex[particleI] );
+    (void) fprintf( log, "Scale map particle %5u maxIndex=%u\n", particleI, _maxScaleIndex[particleI] );
 
     std::string scaleNames[LAST_SCALE_TYPE_INDEX] = { "D", "P", "M" }; 
     for( unsigned int ii = 0; ii < _scaleMaps[particleI].size(); ii++ ){
@@ -269,7 +269,7 @@ void AmoebaReferenceMultipoleForce::setupScaleMaps( const std::vector< std::vect
         for( unsigned jj = 0; jj < AmoebaMultipoleForce::PolarizationCovalent11; jj++ ){
             const std::vector<int> covalentList    = covalentInfo[jj];
             for( unsigned int kk = 0; kk < covalentList.size(); kk++ ){
-                int covalentIndex                      = covalentList[kk];
+                unsigned int covalentIndex             = static_cast<unsigned int>(covalentList[kk]);
                 if( covalentIndex < ii )continue;
 
                 // handle 0.5 factor for p14
@@ -293,7 +293,7 @@ void AmoebaReferenceMultipoleForce::setupScaleMaps( const std::vector< std::vect
         for( unsigned jj = AmoebaMultipoleForce::PolarizationCovalent11; jj < covalentInfo.size(); jj++ ){
             const std::vector<int> covalentList = covalentInfo[jj];
             for( unsigned int kk = 0; kk < covalentList.size(); kk++ ){
-                int covalentIndex                      = covalentList[kk];
+                unsigned int covalentIndex             = static_cast<unsigned int>(covalentList[kk]);
                 if( covalentIndex < ii )continue;
                 _scaleMaps[ii][D_SCALE][covalentIndex] = _dScale[jj-4];
                 _scaleMaps[ii][U_SCALE][covalentIndex] = _uScale[jj-4];
@@ -802,7 +802,7 @@ fprintf( stderr, "MIb %3u eps=%15.7e %15.7e %15.7e\n", iteration, epsilonDirect,
             setMutualInducedDipoleConverged( true );
             done = true;
         }
-        if( currentEpsilon < epsilon || iteration >= getMaximumMutualInducedDipoleIterations() ){
+        if( currentEpsilon < epsilon || static_cast<int>(iteration) >= getMaximumMutualInducedDipoleIterations() ){
             done = true;
         }
         currentEpsilon = epsilon;
@@ -848,7 +848,7 @@ off2
 
     // ---------------------------------------------------------------------------------------
 
-    RealOpenMM e,ei,fgrp,gfd;
+    RealOpenMM e,ei;
     RealOpenMM damp,expdamp;
     RealOpenMM pdi,pti,pgamma;
     RealOpenMM scale3,scale3i;
@@ -858,26 +858,28 @@ off2
     RealOpenMM psc3,psc5,psc7;
     RealOpenMM dsc3,dsc5,dsc7;
     RealOpenMM xr,yr,zr;
-    RealOpenMM xix,yix,zix;
-    RealOpenMM xiy,yiy,ziy;
-    RealOpenMM xiz,yiz,ziz;
-    RealOpenMM xkx,ykx,zkx;
-    RealOpenMM xky,yky,zky;
-    RealOpenMM xkz,ykz,zkz;
+    //RealOpenMM xix,yix,zix;
+    //RealOpenMM xiy,yiy,ziy;
+    //RealOpenMM xiz,yiz,ziz;
+    //RealOpenMM xkx,ykx,zkx;
+    //RealOpenMM xky,yky,zky;
+    //RealOpenMM xkz,ykz,zkz;
     RealOpenMM r,r2,rr1,rr3;
     RealOpenMM rr5,rr7,rr9,rr11;
-    RealOpenMM vxx,vyy,vzz;
-    RealOpenMM vyx,vzx,vzy;
+    //RealOpenMM vxx,vyy,vzz;
+    //RealOpenMM vyx,vzx,vzy;
     RealOpenMM qi[10];
-    RealOpenMM ck,qk[10];
+    RealOpenMM qk[10];
+/*
     RealOpenMM frcxi[4],frcxk[4];
     RealOpenMM frcyi[4],frcyk[4];
     RealOpenMM frczi[4],frczk[4];
+*/
     RealOpenMM fridmp[4],findmp[4];
     RealOpenMM ftm2[4],ftm2i[4];
     RealOpenMM ttm2[4],ttm3[4];
     RealOpenMM ttm2i[4],ttm3i[4];
-    RealOpenMM dixdk[4],fdir[4];
+    RealOpenMM dixdk[4];
     RealOpenMM dixuk[4],dkxui[4];
     RealOpenMM dixukp[4],dkxuip[4];
     RealOpenMM uixqkr[4],ukxqir[4];
@@ -1499,7 +1501,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
     return energy;
 }
 
-RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( int numParticles,
+RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( unsigned int numParticles,
                                                                            RealOpenMM** particlePositions, 
                                                                            const std::vector<RealOpenMM>& charges,
                                                                            const std::vector<RealOpenMM>& dipoles,
@@ -1613,7 +1615,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy( int numPartic
     setupScaleMaps( multipoleParticleCovalentInfo );
     if( getNonbondedMethod() == NoCutoff || 1 ){
 
-        return calculateNoCutoffForceAndEnergy( numParticles, particlePositions, charges, dipoles, quadrupoles, tholes, dampingFactors,
+        return calculateNoCutoffForceAndEnergy( static_cast<unsigned int>(numParticles), particlePositions, charges, dipoles, quadrupoles, tholes, dampingFactors,
                                                 polarity, axisTypes, multipoleAtomId1s, multipoleAtomId2s, forces );
 
 
