@@ -325,34 +325,50 @@ private:
     System& system;
 };
 
-// /**
-//  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
-// public:
-//     ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaMultipoleForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaMultipoleForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaMultipoleForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     int numMultipoles;
-//     System& system;
-// };
-// 
+/**
+ * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
+public:
+    ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaMultipoleForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaMultipoleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numMultipoles;
+    std::vector<RealOpenMM> charges;
+    std::vector<RealOpenMM> dipoles;
+    std::vector<RealOpenMM> quadrupoles;
+    std::vector<RealOpenMM> tholes;
+    std::vector<RealOpenMM> dampingFactors;
+    std::vector<RealOpenMM> polarity;
+    std::vector<int>   axisTypes;
+    std::vector<int>   multipoleAtomId1s;
+    std::vector<int>   multipoleAtomId2s;
+    std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo;
+
+    //int iterativeMethod;
+    int nonbondedMethod;
+    int mutualInducedMaxIterations;
+    RealOpenMM mutualInducedTargetEpsilon;
+
+    System& system;
+};
+
 // /**
 //  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
 //  */

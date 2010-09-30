@@ -76,6 +76,29 @@ RealOpenMM AmoebaReferenceForce::getNormSquared3( const std::vector<RealOpenMM>&
 
 /**---------------------------------------------------------------------------------------
 
+   Calculate norm squared of 3d vector
+
+   @param inputVector    vector whose norm squared is to be computed
+
+   @return norm squared
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM AmoebaReferenceForce::getNormSquared3( const RealOpenMM* inputVector ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName = "AmoebaReferenceForce::getNorm3";
+
+   // ---------------------------------------------------------------------------------------
+
+   // get 3 norm
+
+   return ( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+}
+
+/**---------------------------------------------------------------------------------------
+
    Calculate norm of 3d vector
 
    @param inputVector            vector whose norm is to be computed
@@ -95,6 +118,36 @@ RealOpenMM AmoebaReferenceForce::getNorm3( const std::vector<RealOpenMM>& inputV
    // get 3 norm
 
    return SQRT( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+}
+
+RealOpenMM AmoebaReferenceForce::getNorm3( const RealOpenMM* inputVector ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName = "AmoebaReferenceForce::getNorm3";
+
+   // ---------------------------------------------------------------------------------------
+
+   // get 3 norm
+
+   return SQRT( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+}
+
+void AmoebaReferenceForce::normalizeVector3( RealOpenMM* inputVector ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName = "AmoebaReferenceForce::normalizeVector3";
+
+   // ---------------------------------------------------------------------------------------
+
+    RealOpenMM norm   = SQRT( inputVector[0]*inputVector[0] + inputVector[1]*inputVector[1] + inputVector[2]*inputVector[2] );
+    if( norm > 0.0 ){
+        norm              = 1.0/norm;
+        inputVector[0]   *= norm;
+        inputVector[1]   *= norm;
+        inputVector[2]   *= norm;
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -123,6 +176,55 @@ RealOpenMM AmoebaReferenceForce::getDotProduct3( const std::vector<RealOpenMM>& 
 
 /**---------------------------------------------------------------------------------------
 
+   Calculate dot product of 3d vectors
+
+   @param xVector   first vector
+   @param yVector   second vector
+
+   @return dot product
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM AmoebaReferenceForce::getDotProduct3( const RealOpenMM* xVector, const RealOpenMM* yVector ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName = "AmoebaReferenceForce::getDotProduct3";
+
+   // ---------------------------------------------------------------------------------------
+
+   // get dot product
+
+   return xVector[0]*yVector[0] + xVector[1]*yVector[1] + xVector[2]*yVector[2];
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Calculate dot product of 3d vectors
+
+   @param vectorOffset offset into first first vector
+   @param xVector      first vector
+   @param yVector      second vector
+
+   @return dot product
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM AmoebaReferenceForce::getDotProduct3( unsigned int vectorOffset, const std::vector<RealOpenMM>& xVector, const RealOpenMM* yVector ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName = "AmoebaReferenceForce::getDotProduct3";
+
+   // ---------------------------------------------------------------------------------------
+
+   // get dot product
+
+   return xVector[vectorOffset+0]*yVector[0] + xVector[vectorOffset+1]*yVector[1] + xVector[vectorOffset+2]*yVector[2];
+}
+
+/**---------------------------------------------------------------------------------------
+
    Calculate z = x X y
 
    @param xVector      input vector
@@ -134,6 +236,33 @@ RealOpenMM AmoebaReferenceForce::getDotProduct3( const std::vector<RealOpenMM>& 
 void AmoebaReferenceForce::getCrossProduct( const std::vector<RealOpenMM>& xVector,
                                             const std::vector<RealOpenMM>& yVector,
                                             std::vector<RealOpenMM>& zVector ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName = "AmoebaReferenceForce::getCrossProduct";
+
+   // ---------------------------------------------------------------------------------------
+
+   zVector[0]  = xVector[1]*yVector[2] - xVector[2]*yVector[1];
+   zVector[1]  = xVector[2]*yVector[0] - xVector[0]*yVector[2];
+   zVector[2]  = xVector[0]*yVector[1] - xVector[1]*yVector[0];
+
+   return;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Calculate z = x X y
+
+   @param xVector      input vector
+   @param yVector      input vector
+   @param zVector      output vector: z = x X y
+
+   --------------------------------------------------------------------------------------- */
+
+void AmoebaReferenceForce::getCrossProduct( const RealOpenMM* xVector,
+                                            const RealOpenMM* yVector,
+                                            RealOpenMM* zVector ){
 
    // ---------------------------------------------------------------------------------------
 

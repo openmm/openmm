@@ -75,6 +75,7 @@ public:
        --------------------------------------------------------------------------------------- */
     
     static RealOpenMM getNormSquared3( const std::vector<RealOpenMM>& inputVector );
+    static RealOpenMM getNormSquared3( const RealOpenMM* inputVector );
     
     /**---------------------------------------------------------------------------------------
     
@@ -87,6 +88,17 @@ public:
        --------------------------------------------------------------------------------------- */
     
     static RealOpenMM getNorm3( const std::vector<RealOpenMM>& inputVector );
+    static RealOpenMM getNorm3( const RealOpenMM* inputVector );
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Normalize 3d vector
+    
+       @param inputVector            vector to normalize
+    
+       --------------------------------------------------------------------------------------- */
+    
+    static void normalizeVector3( RealOpenMM* inputVector );
     
     /**---------------------------------------------------------------------------------------
     
@@ -100,6 +112,8 @@ public:
        --------------------------------------------------------------------------------------- */
     
     static RealOpenMM getDotProduct3( const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector );
+    static RealOpenMM getDotProduct3( const RealOpenMM* xVector,              const RealOpenMM* yVector );
+    static RealOpenMM getDotProduct3( unsigned int vectorOffset, const std::vector<RealOpenMM>& xVector, const RealOpenMM* yVector );
     
     /**---------------------------------------------------------------------------------------
     
@@ -114,6 +128,9 @@ public:
     static void getCrossProduct( const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector,
                                  std::vector<RealOpenMM>& zVector );
     
+    static void getCrossProduct( const RealOpenMM* xVector, const RealOpenMM* yVector, RealOpenMM* zVector );
+
+
 };
 
 // ---------------------------------------------------------------------------------------

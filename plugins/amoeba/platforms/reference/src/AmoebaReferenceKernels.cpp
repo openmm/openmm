@@ -33,12 +33,14 @@
 #include "AmoebaReferenceStretchBendForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
+#include "AmoebaReferenceMultipoleForce.h"
 #include "AmoebaReferenceVdwForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
 #include "internal/AmoebaWcaDispersionForceImpl.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
-//#include "internal/AmoebaMultipoleForceImpl.h"
+#include "AmoebaMultipoleForce.h"
+#include "internal/AmoebaMultipoleForceImpl.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -399,178 +401,105 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
     return static_cast<double>(energy);
 }
 
-///* -------------------------------------------------------------------------- *
-// *                             AmoebaMultipole                                *
-// * -------------------------------------------------------------------------- */
-//
-//static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
-//
-//    amoebaGpuContext gpu = data.getAmoebaGpu();
-//    data.initializeGpu();
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "computeAmoebaMultipoleForce\n" );
-//        (void) fflush( data.getLog());
-//    }
-//
-//    // calculate Born radii
-//
-//    if( data.getHasAmoebaGeneralizedKirkwood() ){
-//        kCalculateObcGbsaBornSum(gpu->gpuContext);
-//        kReduceObcGbsaBornSum(gpu->gpuContext);
-//    }   
-//
-//    // multipoles
-//
-//    kCalculateAmoebaMultipoleForces(gpu, data.getHasAmoebaGeneralizedKirkwood() );
-//
-////kClearForces(gpu->gpuContext);
-////kClearEnergy(gpu->gpuContext);
-////(void) fprintf( data.getLog(), "computeAmoebaMultipoleForce clearing forces/energy after kCalculateAmoebaMultipoleForces()\n" );
-//
-//    // GK
-//
-//    if( data.getHasAmoebaGeneralizedKirkwood() ){
-//        kCalculateAmoebaKirkwood(gpu);
-//    }
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "completed computeAmoebaMultipoleForce\n" );
-//        (void) fflush( data.getLog());
-//    }
-//}
-//
-//CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
-//         CalcAmoebaMultipoleForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
-//
-//    numMultipoles   = force.getNumMultipoles();
-//
-//    data.setHasAmoebaMultipole( true );
-//
-//    std::vector<RealOpenMM> charges(numMultipoles);
-//    std::vector<RealOpenMM> dipoles(3*numMultipoles);
-//    std::vector<RealOpenMM> quadrupoles(9*numMultipoles);
-//    std::vector<RealOpenMM> tholes(numMultipoles);
-//    std::vector<RealOpenMM> dampingFactors(numMultipoles);
-//    std::vector<RealOpenMM> polarity(numMultipoles);
-//    std::vector<int>   axisTypes(numMultipoles);
-//    std::vector<int>   multipoleAtomId1s(numMultipoles);
-//    std::vector<int>   multipoleAtomId2s(numMultipoles);
-//    std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo(numMultipoles);
-//    std::vector<int> minCovalentIndices(numMultipoles);
-//    std::vector<int> minCovalentPolarizationIndices(numMultipoles);
-//
-//    RealOpenMM scalingDistanceCutoff = static_cast<RealOpenMM>(force.getScalingDistanceCutoff());
-//
-//    std::vector<AmoebaMultipoleForce::CovalentType> covalentList;
-//    covalentList.push_back( AmoebaMultipoleForce::Covalent12 );
-//    covalentList.push_back( AmoebaMultipoleForce::Covalent13 );
-//    covalentList.push_back( AmoebaMultipoleForce::Covalent14 );
-//    covalentList.push_back( AmoebaMultipoleForce::Covalent15 );
-//
-//    std::vector<AmoebaMultipoleForce::CovalentType> polarizationCovalentList;
-//    polarizationCovalentList.push_back( AmoebaMultipoleForce::PolarizationCovalent11 );
-//    polarizationCovalentList.push_back( AmoebaMultipoleForce::PolarizationCovalent12 );
-//    polarizationCovalentList.push_back( AmoebaMultipoleForce::PolarizationCovalent13 );
-//    polarizationCovalentList.push_back( AmoebaMultipoleForce::PolarizationCovalent14 );
-//
-//    std::vector<int> covalentDegree;
-//    AmoebaMultipoleForceImpl::getCovalentDegree( force, covalentDegree );
-//    int dipoleIndex      = 0;
-//    int quadrupoleIndex  = 0;
-//    int maxCovalentRange = 0;
-//    double totalCharge   = 0.0;
-//    for (int i = 0; i < numMultipoles; i++) {
-//
-//        // multipoles
-//
-//        int axisType, multipoleAtomId1, multipoleAtomId2;
-//        double charge, tholeD, dampingFactorD, polarityD;
-//        std::vector<double> dipolesD;
-//        std::vector<double> quadrupolesD;
-//        force.getMultipoleParameters(i, charge, dipolesD, quadrupolesD, axisType, multipoleAtomId1, multipoleAtomId2,
-//                                     tholeD, dampingFactorD, polarityD );
-//
-//        totalCharge                       += charge;
-//        axisTypes[i]                       = axisType;
-//        multipoleAtomId1s[i]               = multipoleAtomId1;
-//        multipoleAtomId2s[i]               = multipoleAtomId2;
-//
-//        charges[i]                         = static_cast<RealOpenMM>(charge);
-//        tholes[i]                          = static_cast<RealOpenMM>(tholeD);
-//        dampingFactors[i]                  = static_cast<RealOpenMM>(dampingFactorD);
-//        polarity[i]                        = static_cast<RealOpenMM>(polarityD);
-//
-//        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[0]);
-//        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[1]);
-//        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[2]);
-//        
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[0]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[1]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[2]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[3]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[4]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[5]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[6]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[7]);
-//        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[8]);
-//
-//        // covalent info
-//
-//        std::vector< std::vector<int> > covalentLists;
-//        force.getCovalentMaps(i, covalentLists );
-//        multipoleAtomCovalentInfo[i] = covalentLists;
-//
-//        int minCovalentIndex, maxCovalentIndex;
-//        AmoebaMultipoleForceImpl::getCovalentRange( force, i, covalentList, &minCovalentIndex, &maxCovalentIndex );
-//        minCovalentIndices[i] = minCovalentIndex;
-//        if( maxCovalentRange < (maxCovalentIndex - minCovalentIndex) ){
-//            maxCovalentRange = maxCovalentIndex - minCovalentIndex;
-//        }
-//
-//        AmoebaMultipoleForceImpl::getCovalentRange( force, i, polarizationCovalentList, &minCovalentIndex, &maxCovalentIndex );
-//        minCovalentPolarizationIndices[i] = minCovalentIndex;
-//        if( maxCovalentRange < (maxCovalentIndex - minCovalentIndex) ){
-//            maxCovalentRange = maxCovalentIndex - minCovalentIndex;
-//        }
-//    }
-//
-//    int iterativeMethod = static_cast<int>(force.getMutualInducedIterationMethod());
-//    if( iterativeMethod != 0 ){
-//         throw OpenMMException("Iterative method for mutual induced dipoles not recognized.\n");
-//    }
-//
-//    int nonbondedMethod = static_cast<int>(force.getNonbondedMethod());
-//    if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
-//         throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
-//    }
-//
-//    gpuSetAmoebaMultipoleParameters(data.getAmoebaGpu(), charges, dipoles, quadrupoles, axisTypes, multipoleAtomId1s, multipoleAtomId2s,
-//                                    tholes, scalingDistanceCutoff, dampingFactors, polarity,
-//                                    multipoleAtomCovalentInfo, covalentDegree, minCovalentIndices, minCovalentPolarizationIndices, (maxCovalentRange+2),
-//                                    static_cast<int>(force.getMutualInducedIterationMethod()),
-//                                    force.getMutualInducedMaxIterations(),
-//                                    static_cast<RealOpenMM>( force.getMutualInducedTargetEpsilon()),
-//                                    nonbondedMethod,
-//                                    static_cast<RealOpenMM>( force.getCutoffDistance()),
-//                                    static_cast<RealOpenMM>( force.getAEwald()),
-//                                    static_cast<RealOpenMM>( force.getElectricConstant()) );
-//
-//}
-//
-//double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    computeAmoebaMultipoleForce( data );
-//    return 0.0;
-//}
-//
+/* -------------------------------------------------------------------------- *
+ *                             AmoebaMultipole                                *
+ * -------------------------------------------------------------------------- */
+
+ReferenceCalcAmoebaMultipoleForceKernel::ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, System& system) : 
+         CalcAmoebaMultipoleForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaMultipoleForceKernel::~ReferenceCalcAmoebaMultipoleForceKernel() {
+}
+
+void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
+
+    numMultipoles   = force.getNumMultipoles();
+
+    charges.resize(numMultipoles);
+    dipoles.resize(3*numMultipoles);
+    quadrupoles.resize(9*numMultipoles);
+    tholes.resize(numMultipoles);
+    dampingFactors.resize(numMultipoles);
+    polarity.resize(numMultipoles);
+    axisTypes.resize(numMultipoles);
+    multipoleAtomId1s.resize(numMultipoles);
+    multipoleAtomId2s.resize(numMultipoles);
+    multipoleAtomCovalentInfo.resize(numMultipoles);
+
+    int dipoleIndex      = 0;
+    int quadrupoleIndex  = 0;
+    int maxCovalentRange = 0;
+    double totalCharge   = 0.0;
+    for( int ii = 0; ii < numMultipoles; ii++ ){
+
+        // multipoles
+
+        int axisType, multipoleAtomId1, multipoleAtomId2;
+        double charge, tholeD, dampingFactorD, polarityD;
+        std::vector<double> dipolesD;
+        std::vector<double> quadrupolesD;
+        force.getMultipoleParameters(ii, charge, dipolesD, quadrupolesD, axisType, multipoleAtomId1, multipoleAtomId2,
+                                     tholeD, dampingFactorD, polarityD );
+
+        totalCharge                       += charge;
+        axisTypes[ii]                      = axisType;
+        multipoleAtomId1s[ii]              = multipoleAtomId1;
+        multipoleAtomId2s[ii]              = multipoleAtomId2;
+
+        charges[ii]                        = static_cast<RealOpenMM>(charge);
+        tholes[ii]                         = static_cast<RealOpenMM>(tholeD);
+        dampingFactors[ii]                 = static_cast<RealOpenMM>(dampingFactorD);
+        polarity[ii]                       = static_cast<RealOpenMM>(polarityD);
+
+        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[0]);
+        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[1]);
+        dipoles[dipoleIndex++]             = static_cast<RealOpenMM>(dipolesD[2]);
+        
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[0]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[1]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[2]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[3]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[4]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[5]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[6]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[7]);
+        quadrupoles[quadrupoleIndex++]     = static_cast<RealOpenMM>(quadrupolesD[8]);
+
+        // covalent info
+
+        std::vector< std::vector<int> > covalentLists;
+        force.getCovalentMaps(ii, covalentLists );
+        multipoleAtomCovalentInfo[ii] = covalentLists;
+
+    }
+
+    mutualInducedMaxIterations = force.getMutualInducedMaxIterations();
+    mutualInducedTargetEpsilon = force.getMutualInducedTargetEpsilon();
+
+    nonbondedMethod = static_cast<int>(force.getNonbondedMethod());
+    if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
+         throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
+    }
+}
+
+double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+
+    AmoebaReferenceMultipoleForce amoebaReferenceMultipoleForce( AmoebaReferenceMultipoleForce::NoCutoff );
+    amoebaReferenceMultipoleForce.setMutualInducedDipoleTargetEpsilon( mutualInducedTargetEpsilon );
+    amoebaReferenceMultipoleForce.setMaximumMutualInducedDipoleIterations( mutualInducedMaxIterations );
+
+    RealOpenMM energy      = amoebaReferenceMultipoleForce.calculateForceAndEnergy( numMultipoles, posData, 
+                                                                                    charges, dipoles, quadrupoles, tholes,
+                                                                                    dampingFactors, polarity, axisTypes, 
+                                                                                    multipoleAtomId1s, multipoleAtomId2s,
+                                                                                    multipoleAtomCovalentInfo, forceData);
+
+    return static_cast<double>(energy);
+}
+
 ///* -------------------------------------------------------------------------- *
 // *                       AmoebaGeneralizedKirkwood                            *
 // * -------------------------------------------------------------------------- */

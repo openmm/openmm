@@ -4733,7 +4733,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
         }
     }
 
-    if( gkIsActive == false ){
+    if( 0 && gkIsActive == false ){
         isPresent = forceMap.find( AMOEBA_MULTIPOLE_FORCE );
         if( isPresent != forceMap.end() && isPresent->second != 0 ){
              //checkIntermediateMultipoleQuantities( context, supplementary, useOpenMMUnits, log );

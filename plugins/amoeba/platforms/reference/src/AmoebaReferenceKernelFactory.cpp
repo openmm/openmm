@@ -47,8 +47,8 @@ extern "C" void OPENMM_EXPORT registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
-/*
              platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
+/*
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
 */
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
@@ -87,11 +87,11 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     if (name == CalcAmoebaVdwForceKernel::Name())
         return new ReferenceCalcAmoebaVdwForceKernel(name, platform, context.getSystem());
-/*
 
     if (name == CalcAmoebaMultipoleForceKernel::Name())
         return new ReferenceCalcAmoebaMultipoleForceKernel(name, platform, context.getSystem());
 
+/*
     if (name == CalcAmoebaGeneralizedKirkwoodForceKernel::Name())
         return new ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, context.getSystem());
 */

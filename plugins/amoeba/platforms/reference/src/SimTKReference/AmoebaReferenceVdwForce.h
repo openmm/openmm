@@ -165,7 +165,6 @@ public:
        @param forces                  add forces to this vector
     
        @return energy
-       @return energy
     
        --------------------------------------------------------------------------------------- */
     
