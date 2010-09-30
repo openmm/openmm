@@ -1,6 +1,3 @@
-#ifndef OPENMM_XML_SERIALIZER_H_
-#define OPENMM_XML_SERIALIZER_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,57 +29,71 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/serialization/SerializationProxy.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/internal/windowsExport.h"
-#include <iosfwd>
+#include "../../../tests/AssertionUtilities.h"
+#include "openmm/CustomAngleForce.h"
+#include "openmm/serialization/XmlSerializer.h"
+#include <iostream>
+#include <sstream>
 
-class TiXmlElement;
+using namespace OpenMM;
+using namespace std;
 
-namespace OpenMM {
+void testSerialization() {
+    // Create a Force.
 
-/**
- * XmlSerializer is used for serializing objects as XML, and for reconstructing them again.
- */
+    CustomAngleForce force("5*sin(x)^2+y*z");
+    force.addGlobalParameter("x", 1.3);
+    force.addGlobalParameter("y", 2.221);
+    force.addPerAngleParameter("z");
+    vector<double> params(1);
+    params[0] = 1.0;
+    force.addAngle(1, 2, 3, params);
+    params[0] = -3.3;
+    force.addAngle(4, 0, 1, params);
+    params[0] = 2.1;
+    force.addAngle(3, 7, 6, params);
 
-class OPENMM_EXPORT XmlSerializer {
-public:
-    /**
-     * Serialize an object as XML.
-     *
-     * @param object    the object to serialize
-     * @param rootName  the name to use for the root node of the XML document
-     * @param stream    an output stream to write the XML to
-     */
-    template <class T>
-    static void serialize(const T* object, const std::string& rootName, std::ostream& stream) {
-        const SerializationProxy& proxy = SerializationProxy::getProxy(typeid(*object));
-        SerializationNode node;
-        node.setName(rootName);
-        proxy.serialize(object, node);
-        if (node.hasProperty("type"))
-            throw OpenMMException(proxy.getTypeName()+" created node with reserved property 'type'");
-        node.setStringProperty("type", proxy.getTypeName());
-        serialize(node, stream);
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<CustomAngleForce>(&force, "Force", buffer);
+    CustomAngleForce* copy = XmlSerializer::deserialize<CustomAngleForce>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    CustomAngleForce& force2 = *copy;
+    ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
+    ASSERT_EQUAL(force.getNumPerAngleParameters(), force2.getNumPerAngleParameters());
+    for (int i = 0; i < force.getNumPerAngleParameters(); i++)
+        ASSERT_EQUAL(force.getPerAngleParameterName(i), force2.getPerAngleParameterName(i));
+    ASSERT_EQUAL(force.getNumGlobalParameters(), force2.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
+        ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
     }
-    /**
-     * Reconstruct an object that has been serialized as XML.
-     *
-     * @param stream    an input stream to read the XML from
-     * @return a pointer to the newly created object.  The caller assumes ownership of the object.
-     */
-    template <class T>
-    static T* deserialize(std::istream& stream) {
-        return reinterpret_cast<T*>(deserializeStream(stream));
+    ASSERT_EQUAL(force.getNumAngles(), force2.getNumAngles());
+    for (int i = 0; i < force.getNumAngles(); i++) {
+        int a1, a2, b1, b2, c1, c2;
+        vector<double> params1, params2;
+        force.getAngleParameters(i, a1, b1, c1, params1);
+        force2.getAngleParameters(i, a2, b2, c2, params2);
+        ASSERT_EQUAL(a1, a2);
+        ASSERT_EQUAL(b2, b2);
+        ASSERT_EQUAL(c2, c2);
+        ASSERT_EQUAL(params1.size(), params2.size());
+        for (int j = 0; j < params1.size(); j++)
+            ASSERT_EQUAL(params1[j], params2[j]);
     }
-private:
-    static void serialize(const SerializationNode& node, std::ostream& stream);
-    static void* deserializeStream(std::istream& stream);
-    static TiXmlElement* encodeNode(const SerializationNode& node);
-    static SerializationNode* decodeNode(SerializationNode& node, const TiXmlElement& element);
-};
+}
 
-} // namespace OpenMM
-
-#endif /*OPENMM_XML_SERIALIZER_H_*/
+int main() {
+    try {
+        testSerialization();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}

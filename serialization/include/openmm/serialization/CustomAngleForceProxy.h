@@ -1,5 +1,5 @@
-#ifndef OPENMM_XML_SERIALIZER_H_
-#define OPENMM_XML_SERIALIZER_H_
+#ifndef OPENMM_CUSTOMANGLEFORCE_PROXY_H_
+#define OPENMM_CUSTOMANGLEFORCE_PROXY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,57 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/SerializationNode.h"
-#include "openmm/serialization/SerializationProxy.h"
-#include "openmm/OpenMMException.h"
 #include "openmm/internal/windowsExport.h"
-#include <iosfwd>
-
-class TiXmlElement;
+#include "openmm/serialization/SerializationProxy.h"
 
 namespace OpenMM {
 
 /**
- * XmlSerializer is used for serializing objects as XML, and for reconstructing them again.
+ * This is a proxy for serializing CustomAngleForce objects.
  */
 
-class OPENMM_EXPORT XmlSerializer {
+class OPENMM_EXPORT CustomAngleForceProxy : public SerializationProxy {
 public:
-    /**
-     * Serialize an object as XML.
-     *
-     * @param object    the object to serialize
-     * @param rootName  the name to use for the root node of the XML document
-     * @param stream    an output stream to write the XML to
-     */
-    template <class T>
-    static void serialize(const T* object, const std::string& rootName, std::ostream& stream) {
-        const SerializationProxy& proxy = SerializationProxy::getProxy(typeid(*object));
-        SerializationNode node;
-        node.setName(rootName);
-        proxy.serialize(object, node);
-        if (node.hasProperty("type"))
-            throw OpenMMException(proxy.getTypeName()+" created node with reserved property 'type'");
-        node.setStringProperty("type", proxy.getTypeName());
-        serialize(node, stream);
-    }
-    /**
-     * Reconstruct an object that has been serialized as XML.
-     *
-     * @param stream    an input stream to read the XML from
-     * @return a pointer to the newly created object.  The caller assumes ownership of the object.
-     */
-    template <class T>
-    static T* deserialize(std::istream& stream) {
-        return reinterpret_cast<T*>(deserializeStream(stream));
-    }
-private:
-    static void serialize(const SerializationNode& node, std::ostream& stream);
-    static void* deserializeStream(std::istream& stream);
-    static TiXmlElement* encodeNode(const SerializationNode& node);
-    static SerializationNode* decodeNode(SerializationNode& node, const TiXmlElement& element);
+    CustomAngleForceProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_XML_SERIALIZER_H_*/
+#endif /*OPENMM_CUSTOMANGLEFORCE_PROXY_H_*/

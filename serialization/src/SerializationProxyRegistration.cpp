@@ -32,6 +32,10 @@
 #include "openmm/AndersenThermostat.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
+#include "openmm/CustomAngleForce.h"
+#include "openmm/CustomBondForce.h"
+#include "openmm/CustomExternalForce.h"
+#include "openmm/CustomTorsionForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
@@ -45,6 +49,10 @@
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
 #include "openmm/serialization/CMMotionRemoverProxy.h"
+#include "openmm/serialization/CustomAngleForceProxy.h"
+#include "openmm/serialization/CustomBondForceProxy.h"
+#include "openmm/serialization/CustomExternalForceProxy.h"
+#include "openmm/serialization/CustomTorsionForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
 #include "openmm/serialization/GBVIForceProxy.h"
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
@@ -73,6 +81,10 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AndersenThermostat), new AndersenThermostatProxy());
     SerializationProxy::registerProxy(typeid(CMAPTorsionForce), new CMAPTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(CMMotionRemover), new CMMotionRemoverProxy());
+    SerializationProxy::registerProxy(typeid(CustomAngleForce), new CustomAngleForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomBondForce), new CustomBondForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomExternalForce), new CustomExternalForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomTorsionForce), new CustomTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
     SerializationProxy::registerProxy(typeid(GBVIForce), new GBVIForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
