@@ -831,11 +831,8 @@ fprintf( stderr, "MIb %3u eps=%15.7e %15.7e %15.7e\n", iteration, epsilonDirect,
 RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn( const MultipoleParticleData& particleI,
                                                                                  const MultipoleParticleData& particleK,
                                                                                  RealOpenMM* scalingFactors, RealOpenMM** forces,
-                                                                                 std::vector<Vec3>& torque ) const { 
+                                                                                 std::vector<Vec3>& torque ) const {
 
-/*
-off2
-*/
     // ---------------------------------------------------------------------------------------
 
     //static const std::string methodName = "AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic";
@@ -843,8 +840,6 @@ off2
     static const RealOpenMM  zero          = 0.0;
     static const RealOpenMM  one           = 1.0;
     static const RealOpenMM  two           = 2.0;
-
-    FILE* log                              = stderr;
 
     // ---------------------------------------------------------------------------------------
 
@@ -857,104 +852,35 @@ off2
     RealOpenMM temp3,temp5,temp7;
     RealOpenMM psc3,psc5,psc7;
     RealOpenMM dsc3,dsc5,dsc7;
-    RealOpenMM xr,yr,zr;
-    //RealOpenMM xix,yix,zix;
-    //RealOpenMM xiy,yiy,ziy;
-    //RealOpenMM xiz,yiz,ziz;
-    //RealOpenMM xkx,ykx,zkx;
-    //RealOpenMM xky,yky,zky;
-    //RealOpenMM xkz,ykz,zkz;
-    RealOpenMM r,r2,rr1,rr3;
+    RealOpenMM r,rr1,rr3;
     RealOpenMM rr5,rr7,rr9,rr11;
-    //RealOpenMM vxx,vyy,vzz;
-    //RealOpenMM vyx,vzx,vzy;
-    RealOpenMM qi[10];
-    RealOpenMM qk[10];
-/*
-    RealOpenMM frcxi[4],frcxk[4];
-    RealOpenMM frcyi[4],frcyk[4];
-    RealOpenMM frczi[4],frczk[4];
-*/
-    RealOpenMM fridmp[4],findmp[4];
-    RealOpenMM ftm2[4],ftm2i[4];
-    RealOpenMM ttm2[4],ttm3[4];
-    RealOpenMM ttm2i[4],ttm3i[4];
-    RealOpenMM dixdk[4];
-    RealOpenMM dixuk[4],dkxui[4];
-    RealOpenMM dixukp[4],dkxuip[4];
-    RealOpenMM uixqkr[4],ukxqir[4];
-    RealOpenMM uixqkrp[4],ukxqirp[4];
-    RealOpenMM qiuk[4],qkui[4];
-    RealOpenMM qiukp[4],qkuip[4];
-    RealOpenMM rxqiuk[4],rxqkui[4];
-    RealOpenMM rxqiukp[4],rxqkuip[4];
-    RealOpenMM qidk[4],qkdi[4];
-    RealOpenMM qir[4],qkr[4];
-    RealOpenMM qiqkr[4],qkqir[4];
-    RealOpenMM qixqk[4],rxqir[4];
-    RealOpenMM dixr[4],dkxr[4];
-    RealOpenMM dixqkr[4],dkxqir[4];
-    RealOpenMM rxqkr[4],qkrxqir[4];
-    RealOpenMM rxqikr[4],rxqkir[4];
-    RealOpenMM rxqidk[4],rxqkdi[4];
-    RealOpenMM ddsc3[4],ddsc5[4];
-    RealOpenMM ddsc7[4];
-    RealOpenMM gl[10],gli[8],glip[8];
-    RealOpenMM sc[11],sci[9],scip[9];
-    RealOpenMM gf[8],gfi[7],gti[7];
+    RealOpenMM fridmp[3],findmp[3];
+    RealOpenMM ftm2[3],ftm2i[3];
+    RealOpenMM ttm2[3],ttm3[3];
+    RealOpenMM ttm2i[3],ttm3i[3];
+    RealOpenMM qiuk[3],qkui[3];
+    RealOpenMM qiukp[3],qkuip[3];
+    RealOpenMM qidk[3],qkdi[3];
+    RealOpenMM ddsc3[3],ddsc5[3];
+    RealOpenMM ddsc7[3];
+    RealOpenMM gl[9],gli[7],glip[7];
+    RealOpenMM sc[10],sci[8],scip[8];
+    RealOpenMM gf[7],gfi[6],gti[6];
  
     RealOpenMM delta[3];
     getDelta( particleI, particleK, delta );
-    xr = delta[0];
-    yr = delta[1];
-    zr = delta[2];
-//  call image (xr,yr,zr);
-    r2 = AmoebaReferenceForce::getNormSquared3( delta );
-//    if( r2 > off2 )return zero;
+
+    RealOpenMM r2 = AmoebaReferenceForce::getNormSquared3( delta );
 
     // set conversion factor, cutoff and switching coefficients
 
     RealOpenMM f = _electric /_dielectric;
 
-    // call switch ('MPOLE');
-
     // set scale factors for permanent multipole and induced terms
 
     pdi   = particleI.dampingFactor;
     pti   = particleI.thole;
-    qi[0] = particleI.quadrupole[QXX];
-    qi[1] = particleI.quadrupole[QXY];
-    qi[2] = particleI.quadrupole[QXZ];
-    qi[3] = particleI.quadrupole[QXY];
-    qi[4] = particleI.quadrupole[QYY];
-    qi[5] = particleI.quadrupole[QYZ];
-    qi[6] = particleI.quadrupole[QXZ];
-    qi[7] = particleI.quadrupole[QYZ];
-    qi[8] = particleI.quadrupole[QZZ];
 
-    // set interaction scaling coefficients for connected atoms;
-
-/*
-            kz = zaxis(k);
-            kx = xaxis(k);
-
-            usek = (use(kk) .or. use(kz) .or. use(kx));
-            proceed = .true.;
-            if( use_group)  call groups (proceed,fgrp,ii,kk,0,0,0,0);
-            if( .not. use_intra)  proceed = .true.;
-            if( proceed)  proceed = (usei .or. usek);
-            if( .not. proceed)  goto 10;
-*/
-    qk[0] = particleK.quadrupole[QXX];
-    qk[1] = particleK.quadrupole[QXY];
-    qk[2] = particleK.quadrupole[QXZ];
-    qk[3] = particleK.quadrupole[QXY];
-    qk[4] = particleK.quadrupole[QYY];
-    qk[5] = particleK.quadrupole[QYZ];
-    qk[6] = particleK.quadrupole[QXZ];
-    qk[7] = particleK.quadrupole[QYZ];
-    qk[8] = particleK.quadrupole[QZZ];
- 
     // apply Thole polarization damping to scale factors
 
     r = sqrt(r2);
@@ -985,196 +911,196 @@ off2
             temp3 = -3.0 * damp * expdamp / r2;
             temp5 = -damp;
             temp7 = -0.2 - 0.6*damp;
-            ddsc3[0] = temp3 * xr;
-            ddsc3[1] = temp3 * yr;
-            ddsc3[2] = temp3 * zr;
+            ddsc3[0] = temp3 *delta[0];
+            ddsc3[1] = temp3 *delta[1];
+            ddsc3[2] = temp3 *delta[2];
             ddsc5[0] = temp5 * ddsc3[0];
             ddsc5[1] = temp5 * ddsc3[1];
             ddsc5[2] = temp5 * ddsc3[2];
             ddsc7[0] = temp7 * ddsc5[0];
             ddsc7[1] = temp7 * ddsc5[1];
             ddsc7[2] = temp7 * ddsc5[2];
-       }
-   }
-   scale3i = scale3 * scalingFactors[U_SCALE];
-   scale5i = scale5 * scalingFactors[U_SCALE];
-   scale7i = scale7 * scalingFactors[U_SCALE];
-
-   dsc3 = scale3 * scalingFactors[D_SCALE];
-   dsc5 = scale5 * scalingFactors[D_SCALE];
-   dsc7 = scale7 * scalingFactors[D_SCALE];
-
-   psc3 = scale3 * scalingFactors[P_SCALE];
-   psc5 = scale5 * scalingFactors[P_SCALE];
-   psc7 = scale7 * scalingFactors[P_SCALE];
-
+        }
+    }
+    scale3i = scale3 * scalingFactors[U_SCALE];
+    scale5i = scale5 * scalingFactors[U_SCALE];
+    scale7i = scale7 * scalingFactors[U_SCALE];
+ 
+    dsc3 = scale3 * scalingFactors[D_SCALE];
+    dsc5 = scale5 * scalingFactors[D_SCALE];
+    dsc7 = scale7 * scalingFactors[D_SCALE];
+ 
+    psc3 = scale3 * scalingFactors[P_SCALE];
+    psc5 = scale5 * scalingFactors[P_SCALE];
+    psc7 = scale7 * scalingFactors[P_SCALE];
+ 
     // construct necessary auxiliary vectors
 
-    dixdk[0] = particleI.dipole[1]*particleK.dipole[2] - particleI.dipole[2]*particleK.dipole[1];
-    dixdk[1] = particleI.dipole[2]*particleK.dipole[0] - particleI.dipole[0]*particleK.dipole[2];
-    dixdk[2] = particleI.dipole[0]*particleK.dipole[1] - particleI.dipole[1]*particleK.dipole[0];
+    RealOpenMM dixdk[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.dipole, particleK.dipole, dixdk );
 
-    dixuk[0] = particleI.dipole[1]*particleK.inducedDipole[2] - particleI.dipole[2]*particleK.inducedDipole[1];
-    dixuk[1] = particleI.dipole[2]*particleK.inducedDipole[0] - particleI.dipole[0]*particleK.inducedDipole[2];
-    dixuk[2] = particleI.dipole[0]*particleK.inducedDipole[1] - particleI.dipole[1]*particleK.inducedDipole[0];
+    RealOpenMM dixuk[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.dipole, particleK.inducedDipole, dixuk );
 
-    dkxui[0] = particleK.dipole[1]*particleI.inducedDipole[2] - particleK.dipole[2]*particleI.inducedDipole[1];
-    dkxui[1] = particleK.dipole[2]*particleI.inducedDipole[0] - particleK.dipole[0]*particleI.inducedDipole[2];
-    dkxui[2] = particleK.dipole[0]*particleI.inducedDipole[1] - particleK.dipole[1]*particleI.inducedDipole[0];
+    RealOpenMM dkxui[3];
+    AmoebaReferenceForce::getCrossProduct( particleK.dipole, particleI.inducedDipole, dkxui );
 
-    dixukp[0] = particleI.dipole[1]*particleK.inducedDipolePolar[2] - particleI.dipole[2]*particleK.inducedDipolePolar[1];
-    dixukp[1] = particleI.dipole[2]*particleK.inducedDipolePolar[0] - particleI.dipole[0]*particleK.inducedDipolePolar[2];
-    dixukp[2] = particleI.dipole[0]*particleK.inducedDipolePolar[1] - particleI.dipole[1]*particleK.inducedDipolePolar[0];
+    RealOpenMM dixukp[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.dipole, particleK.inducedDipolePolar, dixukp );
 
-    dkxuip[0] = particleK.dipole[1]*particleI.inducedDipolePolar[2] - particleK.dipole[2]*particleI.inducedDipolePolar[1];
-    dkxuip[1] = particleK.dipole[2]*particleI.inducedDipolePolar[0] - particleK.dipole[0]*particleI.inducedDipolePolar[2];
-    dkxuip[2] = particleK.dipole[0]*particleI.inducedDipolePolar[1] - particleK.dipole[1]*particleI.inducedDipolePolar[0];
 
-    dixr[0] = particleI.dipole[1]*zr -particleI.dipole[2]*yr;
-    dixr[1] = particleI.dipole[2]*xr -particleI.dipole[0]*zr;
-    dixr[2] = particleI.dipole[0]*yr -particleI.dipole[1]*xr;
+    RealOpenMM dkxuip[3];
+    AmoebaReferenceForce::getCrossProduct( particleK.dipole, particleI.inducedDipolePolar, dkxuip );
 
-    dkxr[0] = particleK.dipole[1]*zr - particleK.dipole[2]*yr;
-    dkxr[1] = particleK.dipole[2]*xr - particleK.dipole[0]*zr;
-    dkxr[2] = particleK.dipole[0]*yr - particleK.dipole[1]*xr;
+    RealOpenMM dixr[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.dipole, delta, dixr );
 
-    qir[0] = qi[0]*xr + qi[3]*yr + qi[6]*zr;
-    qir[1] = qi[1]*xr + qi[4]*yr + qi[7]*zr;
-    qir[2] = qi[2]*xr + qi[5]*yr + qi[8]*zr;
-    qkr[0] = qk[0]*xr + qk[3]*yr + qk[6]*zr;
-    qkr[1] = qk[1]*xr + qk[4]*yr + qk[7]*zr;
-    qkr[2] = qk[2]*xr + qk[5]*yr + qk[8]*zr;
+    RealOpenMM dkxr[3];
+    AmoebaReferenceForce::getCrossProduct( particleK.dipole, delta, dkxr );
 
-    qiqkr[0] = qi[0]*qkr[0] + qi[3]*qkr[1] + qi[6]*qkr[2];
-    qiqkr[1] = qi[1]*qkr[0] + qi[4]*qkr[1] + qi[7]*qkr[2];
-    qiqkr[2] = qi[2]*qkr[0] + qi[5]*qkr[1] + qi[8]*qkr[2];
+    RealOpenMM qir[3];
+    qir[0] = particleI.quadrupole[QXX]*delta[0] + particleI.quadrupole[QXY]*delta[1] + particleI.quadrupole[QXZ]*delta[2];
+    qir[1] = particleI.quadrupole[QXY]*delta[0] + particleI.quadrupole[QYY]*delta[1] + particleI.quadrupole[QYZ]*delta[2];
+    qir[2] = particleI.quadrupole[QXZ]*delta[0] + particleI.quadrupole[QYZ]*delta[1] + particleI.quadrupole[QZZ]*delta[2];
 
-    qkqir[0] = qk[0]*qir[0] + qk[3]*qir[1] + qk[6]*qir[2];
-    qkqir[1] = qk[1]*qir[0] + qk[4]*qir[1] + qk[7]*qir[2];
-    qkqir[2] = qk[2]*qir[0] + qk[5]*qir[1] + qk[8]*qir[2];
+    RealOpenMM qkr[3];
+    qkr[0] = particleK.quadrupole[QXX]*delta[0] + particleK.quadrupole[QXY]*delta[1] + particleK.quadrupole[QXZ]*delta[2];
+    qkr[1] = particleK.quadrupole[QXY]*delta[0] + particleK.quadrupole[QYY]*delta[1] + particleK.quadrupole[QYZ]*delta[2];
+    qkr[2] = particleK.quadrupole[QXZ]*delta[0] + particleK.quadrupole[QYZ]*delta[1] + particleK.quadrupole[QZZ]*delta[2];
 
-    qixqk[0] = qi[1]*qk[2] + qi[4]*qk[5] + qi[7]*qk[8] - qi[2]*qk[1] - qi[5]*qk[4] - qi[8]*qk[7];
-    qixqk[1] = qi[2]*qk[0] + qi[5]*qk[3] + qi[8]*qk[6] - qi[0]*qk[2] - qi[3]*qk[5] - qi[6]*qk[8];
-    qixqk[2] = qi[0]*qk[1] + qi[3]*qk[4] + qi[6]*qk[7] - qi[1]*qk[0] - qi[4]*qk[3] - qi[7]*qk[6];
+    RealOpenMM qiqkr[3];
+    qiqkr[0] = particleI.quadrupole[QXX]*qkr[0] + particleI.quadrupole[QXY]*qkr[1] + particleI.quadrupole[QXZ]*qkr[2];
+    qiqkr[1] = particleI.quadrupole[QXY]*qkr[0] + particleI.quadrupole[QYY]*qkr[1] + particleI.quadrupole[QYZ]*qkr[2];
+    qiqkr[2] = particleI.quadrupole[QXZ]*qkr[0] + particleI.quadrupole[QYZ]*qkr[1] + particleI.quadrupole[QZZ]*qkr[2];
 
-    rxqir[0] = yr*qir[2] - zr*qir[1];
-    rxqir[1] = zr*qir[0] - xr*qir[2];
-    rxqir[2] = xr*qir[1] - yr*qir[0];
+    RealOpenMM qkqir[3];
+    qkqir[0] = particleK.quadrupole[QXX]*qir[0] + particleK.quadrupole[QXY]*qir[1] + particleK.quadrupole[QXZ]*qir[2];
+    qkqir[1] = particleK.quadrupole[QXY]*qir[0] + particleK.quadrupole[QYY]*qir[1] + particleK.quadrupole[QYZ]*qir[2];
+    qkqir[2] = particleK.quadrupole[QXZ]*qir[0] + particleK.quadrupole[QYZ]*qir[1] + particleK.quadrupole[QZZ]*qir[2];
 
-    rxqkr[0] = yr*qkr[2] - zr*qkr[1];
-    rxqkr[1] = zr*qkr[0] - xr*qkr[2];
-    rxqkr[2] = xr*qkr[1] - yr*qkr[0];
+    RealOpenMM qixqk[3];
+    qixqk[0] = particleI.quadrupole[QXY]*particleK.quadrupole[QXZ] +
+               particleI.quadrupole[QYY]*particleK.quadrupole[QYZ] +
+               particleI.quadrupole[QYZ]*particleK.quadrupole[QZZ] -
+               particleI.quadrupole[QXZ]*particleK.quadrupole[QXY] -
+               particleI.quadrupole[QYZ]*particleK.quadrupole[QYY] -
+               particleI.quadrupole[QZZ]*particleK.quadrupole[QYZ];
 
-    rxqikr[0] = yr*qiqkr[2] - zr*qiqkr[1];
-    rxqikr[1] = zr*qiqkr[0] - xr*qiqkr[2];
-    rxqikr[2] = xr*qiqkr[1] - yr*qiqkr[0];
+    qixqk[1] = particleI.quadrupole[QXZ]*particleK.quadrupole[QXX] +
+               particleI.quadrupole[QYZ]*particleK.quadrupole[QXY] +
+               particleI.quadrupole[QZZ]*particleK.quadrupole[QXZ] -
+               particleI.quadrupole[QXX]*particleK.quadrupole[QXZ] -
+               particleI.quadrupole[QXY]*particleK.quadrupole[QYZ] -
+               particleI.quadrupole[QXZ]*particleK.quadrupole[QZZ];
 
-    rxqkir[0] = yr*qkqir[2] - zr*qkqir[1];
-    rxqkir[1] = zr*qkqir[0] - xr*qkqir[2];
-    rxqkir[2] = xr*qkqir[1] - yr*qkqir[0];
+    qixqk[2] = particleI.quadrupole[QXX]*particleK.quadrupole[QXY] +
+               particleI.quadrupole[QXY]*particleK.quadrupole[QYY] +
+               particleI.quadrupole[QXZ]*particleK.quadrupole[QYZ] -
+               particleI.quadrupole[QXY]*particleK.quadrupole[QXX] -
+               particleI.quadrupole[QYY]*particleK.quadrupole[QXY] -
+               particleI.quadrupole[QYZ]*particleK.quadrupole[QXZ];
 
-    qkrxqir[0] = qkr[1]*qir[2] - qkr[2]*qir[1];
-    qkrxqir[1] = qkr[2]*qir[0] - qkr[0]*qir[2];
-    qkrxqir[2] = qkr[0]*qir[1] - qkr[1]*qir[0];
+    RealOpenMM rxqir[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qir, rxqir );
 
-    qidk[0] = qi[0]*particleK.dipole[0] + qi[3]*particleK.dipole[1] + qi[6]*particleK.dipole[2];
-    qidk[1] = qi[1]*particleK.dipole[0] + qi[4]*particleK.dipole[1] + qi[7]*particleK.dipole[2];
-    qidk[2] = qi[2]*particleK.dipole[0] + qi[5]*particleK.dipole[1] + qi[8]*particleK.dipole[2];
+    RealOpenMM rxqkr[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qkr, rxqkr );
 
-    qkdi[0] = qk[0]*particleI.dipole[0] + qk[3]*particleI.dipole[1] + qk[6]*particleI.dipole[2];
-    qkdi[1] = qk[1]*particleI.dipole[0] + qk[4]*particleI.dipole[1] + qk[7]*particleI.dipole[2];
-    qkdi[2] = qk[2]*particleI.dipole[0] + qk[5]*particleI.dipole[1] + qk[8]*particleI.dipole[2];
+    RealOpenMM rxqikr[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qiqkr, rxqikr );
 
-    qiuk[0] = qi[0]*particleK.inducedDipole[0] + qi[3]*particleK.inducedDipole[1] + qi[6]*particleK.inducedDipole[2];
-    qiuk[1] = qi[1]*particleK.inducedDipole[0] + qi[4]*particleK.inducedDipole[1] + qi[7]*particleK.inducedDipole[2];
-    qiuk[2] = qi[2]*particleK.inducedDipole[0] + qi[5]*particleK.inducedDipole[1] + qi[8]*particleK.inducedDipole[2];
+    RealOpenMM rxqkir[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qkqir, rxqkir );
 
-    qkui[0] = qk[0]*particleI.inducedDipole[0] + qk[3]*particleI.inducedDipole[1] + qk[6]*particleI.inducedDipole[2];
-    qkui[1] = qk[1]*particleI.inducedDipole[0] + qk[4]*particleI.inducedDipole[1] + qk[7]*particleI.inducedDipole[2];
-    qkui[2] = qk[2]*particleI.inducedDipole[0] + qk[5]*particleI.inducedDipole[1] + qk[8]*particleI.inducedDipole[2];
+    RealOpenMM qkrxqir[3];
+    AmoebaReferenceForce::getCrossProduct( qkr, qir, qkrxqir );
 
-    qiukp[0] = qi[0]*particleK.inducedDipolePolar[0] + qi[3]*particleK.inducedDipolePolar[1] + qi[6]*particleK.inducedDipolePolar[2];
-    qiukp[1] = qi[1]*particleK.inducedDipolePolar[0] + qi[4]*particleK.inducedDipolePolar[1] + qi[7]*particleK.inducedDipolePolar[2];
-    qiukp[2] = qi[2]*particleK.inducedDipolePolar[0] + qi[5]*particleK.inducedDipolePolar[1] + qi[8]*particleK.inducedDipolePolar[2];
+    qidk[0] = particleI.quadrupole[QXX]*particleK.dipole[0] + particleI.quadrupole[QXY]*particleK.dipole[1] + particleI.quadrupole[QXZ]*particleK.dipole[2];
+    qidk[1] = particleI.quadrupole[QXY]*particleK.dipole[0] + particleI.quadrupole[QYY]*particleK.dipole[1] + particleI.quadrupole[QYZ]*particleK.dipole[2];
+    qidk[2] = particleI.quadrupole[QXZ]*particleK.dipole[0] + particleI.quadrupole[QYZ]*particleK.dipole[1] + particleI.quadrupole[QZZ]*particleK.dipole[2];
 
-    qkuip[0] = qk[0]*particleI.inducedDipolePolar[0] + qk[3]*particleI.inducedDipolePolar[1] + qk[6]*particleI.inducedDipolePolar[2];
-    qkuip[1] = qk[1]*particleI.inducedDipolePolar[0] + qk[4]*particleI.inducedDipolePolar[1] + qk[7]*particleI.inducedDipolePolar[2];
-    qkuip[2] = qk[2]*particleI.inducedDipolePolar[0] + qk[5]*particleI.inducedDipolePolar[1] + qk[8]*particleI.inducedDipolePolar[2];
+    qkdi[0] = particleK.quadrupole[QXX]*particleI.dipole[0] + particleK.quadrupole[QXY]*particleI.dipole[1] + particleK.quadrupole[QXZ]*particleI.dipole[2];
+    qkdi[1] = particleK.quadrupole[QXY]*particleI.dipole[0] + particleK.quadrupole[QYY]*particleI.dipole[1] + particleK.quadrupole[QYZ]*particleI.dipole[2];
+    qkdi[2] = particleK.quadrupole[QXZ]*particleI.dipole[0] + particleK.quadrupole[QYZ]*particleI.dipole[1] + particleK.quadrupole[QZZ]*particleI.dipole[2];
 
-    dixqkr[0] = particleI.dipole[1]*qkr[2] -particleI.dipole[2]*qkr[1];
-    dixqkr[1] = particleI.dipole[2]*qkr[0] -particleI.dipole[0]*qkr[2];
-    dixqkr[2] = particleI.dipole[0]*qkr[1] -particleI.dipole[1]*qkr[0];
+    qiuk[0] = particleI.quadrupole[QXX]*particleK.inducedDipole[0] + particleI.quadrupole[QXY]*particleK.inducedDipole[1] + particleI.quadrupole[QXZ]*particleK.inducedDipole[2];
+    qiuk[1] = particleI.quadrupole[QXY]*particleK.inducedDipole[0] + particleI.quadrupole[QYY]*particleK.inducedDipole[1] + particleI.quadrupole[QYZ]*particleK.inducedDipole[2];
+    qiuk[2] = particleI.quadrupole[QXZ]*particleK.inducedDipole[0] + particleI.quadrupole[QYZ]*particleK.inducedDipole[1] + particleI.quadrupole[QZZ]*particleK.inducedDipole[2];
 
-    dkxqir[0] = particleK.dipole[1]*qir[2] - particleK.dipole[2]*qir[1];
-    dkxqir[1] = particleK.dipole[2]*qir[0] - particleK.dipole[0]*qir[2];
-    dkxqir[2] = particleK.dipole[0]*qir[1] - particleK.dipole[1]*qir[0];
+    qkui[0] = particleK.quadrupole[QXX]*particleI.inducedDipole[0] + particleK.quadrupole[QXY]*particleI.inducedDipole[1] + particleK.quadrupole[QXZ]*particleI.inducedDipole[2];
+    qkui[1] = particleK.quadrupole[QXY]*particleI.inducedDipole[0] + particleK.quadrupole[QYY]*particleI.inducedDipole[1] + particleK.quadrupole[QYZ]*particleI.inducedDipole[2];
+    qkui[2] = particleK.quadrupole[QXZ]*particleI.inducedDipole[0] + particleK.quadrupole[QYZ]*particleI.inducedDipole[1] + particleK.quadrupole[QZZ]*particleI.inducedDipole[2];
 
-    uixqkr[0] = particleI.inducedDipole[1]*qkr[2] - particleI.inducedDipole[2]*qkr[1];
-    uixqkr[1] = particleI.inducedDipole[2]*qkr[0] - particleI.inducedDipole[0]*qkr[2];
-    uixqkr[2] = particleI.inducedDipole[0]*qkr[1] - particleI.inducedDipole[1]*qkr[0];
+    qiukp[0] = particleI.quadrupole[QXX]*particleK.inducedDipolePolar[0] + particleI.quadrupole[QXY]*particleK.inducedDipolePolar[1] + particleI.quadrupole[QXZ]*particleK.inducedDipolePolar[2];
+    qiukp[1] = particleI.quadrupole[QXY]*particleK.inducedDipolePolar[0] + particleI.quadrupole[QYY]*particleK.inducedDipolePolar[1] + particleI.quadrupole[QYZ]*particleK.inducedDipolePolar[2];
+    qiukp[2] = particleI.quadrupole[QXZ]*particleK.inducedDipolePolar[0] + particleI.quadrupole[QYZ]*particleK.inducedDipolePolar[1] + particleI.quadrupole[QZZ]*particleK.inducedDipolePolar[2];
 
-    ukxqir[0] = particleK.inducedDipole[1]*qir[2] - particleK.inducedDipole[2]*qir[1];
-    ukxqir[1] = particleK.inducedDipole[2]*qir[0] - particleK.inducedDipole[0]*qir[2];
-    ukxqir[2] = particleK.inducedDipole[0]*qir[1] - particleK.inducedDipole[1]*qir[0];
+    qkuip[0] = particleK.quadrupole[QXX]*particleI.inducedDipolePolar[0] + particleK.quadrupole[QXY]*particleI.inducedDipolePolar[1] + particleK.quadrupole[QXZ]*particleI.inducedDipolePolar[2];
+    qkuip[1] = particleK.quadrupole[QXY]*particleI.inducedDipolePolar[0] + particleK.quadrupole[QYY]*particleI.inducedDipolePolar[1] + particleK.quadrupole[QYZ]*particleI.inducedDipolePolar[2];
+    qkuip[2] = particleK.quadrupole[QXZ]*particleI.inducedDipolePolar[0] + particleK.quadrupole[QYZ]*particleI.inducedDipolePolar[1] + particleK.quadrupole[QZZ]*particleI.inducedDipolePolar[2];
 
-    uixqkrp[0] = particleI.inducedDipolePolar[1]*qkr[2] - particleI.inducedDipolePolar[2]*qkr[1];
-    uixqkrp[1] = particleI.inducedDipolePolar[2]*qkr[0] - particleI.inducedDipolePolar[0]*qkr[2];
-    uixqkrp[2] = particleI.inducedDipolePolar[0]*qkr[1] - particleI.inducedDipolePolar[1]*qkr[0];
+    RealOpenMM dixqkr[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.dipole, qkr, dixqkr );
 
-    ukxqirp[0] = particleK.inducedDipolePolar[1]*qir[2] - particleK.inducedDipolePolar[2]*qir[1];
-    ukxqirp[1] = particleK.inducedDipolePolar[2]*qir[0] - particleK.inducedDipolePolar[0]*qir[2];
-    ukxqirp[2] = particleK.inducedDipolePolar[0]*qir[1] - particleK.inducedDipolePolar[1]*qir[0];
+    RealOpenMM dkxqir[3];
+    AmoebaReferenceForce::getCrossProduct( particleK.dipole, qir, dkxqir );
 
-    rxqidk[0] = yr*qidk[2] - zr*qidk[1];
-    rxqidk[1] = zr*qidk[0] - xr*qidk[2];
-    rxqidk[2] = xr*qidk[1] - yr*qidk[0];
+    RealOpenMM uixqkr[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.inducedDipole, qkr, uixqkr );
 
-    rxqkdi[0] = yr*qkdi[2] - zr*qkdi[1];
-    rxqkdi[1] = zr*qkdi[0] - xr*qkdi[2];
-    rxqkdi[2] = xr*qkdi[1] - yr*qkdi[0];
+    RealOpenMM ukxqir[3];
+    AmoebaReferenceForce::getCrossProduct( particleK.inducedDipole, qir, ukxqir );
 
-    rxqiuk[0] = yr*qiuk[2] - zr*qiuk[1];
-    rxqiuk[1] = zr*qiuk[0] - xr*qiuk[2];
-    rxqiuk[2] = xr*qiuk[1] - yr*qiuk[0];
+    RealOpenMM uixqkrp[3];
+    AmoebaReferenceForce::getCrossProduct( particleI.inducedDipolePolar, qkr, uixqkrp );
 
-    rxqkui[0] = yr*qkui[2] - zr*qkui[1];
-    rxqkui[1] = zr*qkui[0] - xr*qkui[2];
-    rxqkui[2] = xr*qkui[1] - yr*qkui[0];
+    RealOpenMM ukxqirp[3];
+    AmoebaReferenceForce::getCrossProduct( particleK.inducedDipolePolar, qir, ukxqirp );
 
-    rxqiukp[0] = yr*qiukp[2] - zr*qiukp[1];
-    rxqiukp[1] = zr*qiukp[0] - xr*qiukp[2];
-    rxqiukp[2] = xr*qiukp[1] - yr*qiukp[0];
+    RealOpenMM rxqidk[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qidk, rxqidk );
 
-    rxqkuip[0] = yr*qkuip[2] - zr*qkuip[1];
-    rxqkuip[1] = zr*qkuip[0] - xr*qkuip[2];
-    rxqkuip[2] = xr*qkuip[1] - yr*qkuip[0];
+    RealOpenMM rxqkdi[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qkdi, rxqkdi );
+
+    RealOpenMM rxqiuk[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qiuk, rxqiuk );
+
+    RealOpenMM rxqkui[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qkui, rxqkui );
+
+    RealOpenMM rxqiukp[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qiukp, rxqiukp );
+
+    RealOpenMM rxqkuip[3];
+    AmoebaReferenceForce::getCrossProduct( delta, qkuip, rxqkuip );
 
     // calculate scalar products for permanent components
 
     sc[1] = particleI.dipole[0]*particleK.dipole[0] +particleI.dipole[1]*particleK.dipole[1] +particleI.dipole[2]*particleK.dipole[2];
-    sc[2] = particleI.dipole[0]*xr +particleI.dipole[1]*yr +particleI.dipole[2]*zr;
-    sc[3] = particleK.dipole[0]*xr + particleK.dipole[1]*yr + particleK.dipole[2]*zr;
-    sc[4] = qir[0]*xr + qir[1]*yr + qir[2]*zr;
-    sc[5] = qkr[0]*xr + qkr[1]*yr + qkr[2]*zr;
+    sc[2] = particleI.dipole[0]*delta[0] +particleI.dipole[1]*delta[1] +particleI.dipole[2]*delta[2];
+    sc[3] = particleK.dipole[0]*delta[0] + particleK.dipole[1]*delta[1] + particleK.dipole[2]*delta[2];
+    sc[4] = qir[0]*delta[0] + qir[1]*delta[1] + qir[2]*delta[2];
+    sc[5] = qkr[0]*delta[0] + qkr[1]*delta[1] + qkr[2]*delta[2];
     sc[6] = qir[0]*particleK.dipole[0] + qir[1]*particleK.dipole[1] + qir[2]*particleK.dipole[2];
     sc[7] = qkr[0]*particleI.dipole[0] + qkr[1]*particleI.dipole[1] + qkr[2]*particleI.dipole[2];
     sc[8] = qir[0]*qkr[0] + qir[1]*qkr[1] + qir[2]*qkr[2];
-    sc[9] = qi[0]*qk[0] + qi[1]*qk[1] + qi[2]*qk[2] +
-             qi[3]*qk[3] + qi[4]*qk[4] + qi[5]*qk[5] +
-             qi[6]*qk[6] + qi[7]*qk[7] + qi[8]*qk[8];
+    sc[9] = particleI.quadrupole[QXX]*particleK.quadrupole[QXX] + particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] +
+             particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QYY]*particleK.quadrupole[QYY] + particleI.quadrupole[QYZ]*particleK.quadrupole[QYZ] +
+             particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] + particleI.quadrupole[QYZ]*particleK.quadrupole[QYZ] + particleI.quadrupole[QZZ]*particleK.quadrupole[QZZ];
  
     // calculate scalar products for induced components
 
     sci[0] = particleI.inducedDipole[0]*particleK.dipole[0] + particleI.inducedDipole[1]*particleK.dipole[1] + particleI.inducedDipole[2]*particleK.dipole[2] +particleI.dipole[0]*particleK.inducedDipole[0] +particleI.dipole[1]*particleK.inducedDipole[1] +particleI.dipole[2]*particleK.inducedDipole[2];
     sci[1] = particleI.inducedDipole[0]*particleK.inducedDipole[0] + particleI.inducedDipole[1]*particleK.inducedDipole[1] + particleI.inducedDipole[2]*particleK.inducedDipole[2];
-    sci[2] = particleI.inducedDipole[0]*xr + particleI.inducedDipole[1]*yr + particleI.inducedDipole[2]*zr;
-    sci[3] = particleK.inducedDipole[0]*xr + particleK.inducedDipole[1]*yr + particleK.inducedDipole[2]*zr;
+    sci[2] = particleI.inducedDipole[0]*delta[0] + particleI.inducedDipole[1]*delta[1] + particleI.inducedDipole[2]*delta[2];
+    sci[3] = particleK.inducedDipole[0]*delta[0] + particleK.inducedDipole[1]*delta[1] + particleK.inducedDipole[2]*delta[2];
     sci[6] = qir[0]*particleK.inducedDipole[0] + qir[1]*particleK.inducedDipole[1] + qir[2]*particleK.inducedDipole[2];
     sci[7] = qkr[0]*particleI.inducedDipole[0] + qkr[1]*particleI.inducedDipole[1] + qkr[2]*particleI.inducedDipole[2];
     scip[0] = particleI.inducedDipolePolar[0]*particleK.dipole[0] + particleI.inducedDipolePolar[1]*particleK.dipole[1] + particleI.inducedDipolePolar[2]*particleK.dipole[2] +particleI.dipole[0]*particleK.inducedDipolePolar[0] +particleI.dipole[1]*particleK.inducedDipolePolar[1] +particleI.dipole[2]*particleK.inducedDipolePolar[2];
     scip[1] = particleI.inducedDipole[0]*particleK.inducedDipolePolar[0]+particleI.inducedDipole[1]*particleK.inducedDipolePolar[1] + particleI.inducedDipole[2]*particleK.inducedDipolePolar[2]+particleI.inducedDipolePolar[0]*particleK.inducedDipole[0] + particleI.inducedDipolePolar[1]*particleK.inducedDipole[1]+particleI.inducedDipolePolar[2]*particleK.inducedDipole[2];
-    scip[2] = particleI.inducedDipolePolar[0]*xr + particleI.inducedDipolePolar[1]*yr + particleI.inducedDipolePolar[2]*zr;
-    scip[3] = particleK.inducedDipolePolar[0]*xr + particleK.inducedDipolePolar[1]*yr + particleK.inducedDipolePolar[2]*zr;
+    scip[2] = particleI.inducedDipolePolar[0]*delta[0] + particleI.inducedDipolePolar[1]*delta[1] + particleI.inducedDipolePolar[2]*delta[2];
+    scip[3] = particleK.inducedDipolePolar[0]*delta[0] + particleK.inducedDipolePolar[1]*delta[1] + particleK.inducedDipolePolar[2]*delta[2];
     scip[6] = qir[0]*particleK.inducedDipolePolar[0] + qir[1]*particleK.inducedDipolePolar[1] + qir[2]*particleK.inducedDipolePolar[2];
     scip[7] = qkr[0]*particleI.inducedDipolePolar[0] + qkr[1]*particleI.inducedDipolePolar[1] + qkr[2]*particleI.inducedDipolePolar[2];
 
@@ -1235,20 +1161,20 @@ off2
 
     // get the permanent force components
 
-    ftm2[0] = gf[0]*xr + gf[1]*particleI.dipole[0] + gf[2]*particleK.dipole[0]
+    ftm2[0] = gf[0]*delta[0] + gf[1]*particleI.dipole[0] + gf[2]*particleK.dipole[0]
                  + gf[3]*(qkdi[0]-qidk[0]) + gf[4]*qir[0]
                  + gf[5]*qkr[0] + gf[6]*(qiqkr[0]+qkqir[0]);
-    ftm2[1] = gf[0]*yr + gf[1]*particleI.dipole[1] + gf[2]*particleK.dipole[1]
+    ftm2[1] = gf[0]*delta[1] + gf[1]*particleI.dipole[1] + gf[2]*particleK.dipole[1]
                  + gf[3]*(qkdi[1]-qidk[1]) + gf[4]*qir[1]
                  + gf[5]*qkr[1] + gf[6]*(qiqkr[1]+qkqir[1]);
-    ftm2[2] = gf[0]*zr + gf[1]*particleI.dipole[2] + gf[2]*particleK.dipole[2]
+    ftm2[2] = gf[0]*delta[2] + gf[1]*particleI.dipole[2] + gf[2]*particleK.dipole[2]
                  + gf[3]*(qkdi[2]-qidk[2]) + gf[4]*qir[2]
                  + gf[5]*qkr[2] + gf[6]*(qiqkr[2]+qkqir[2]);
 
 
     // get the induced force components
 
-    ftm2i[0] = gfi[0]*xr + 0.5*
+    ftm2i[0] = gfi[0]*delta[0] + 0.5*
       (- rr3*particleK.charge*(particleI.inducedDipole[0]*psc3+particleI.inducedDipolePolar[0]*dsc3)
        + rr5*sc[3]*(particleI.inducedDipole[0]*psc5+particleI.inducedDipolePolar[0]*dsc5)
        - rr7*sc[5]*(particleI.inducedDipole[0]*psc7+particleI.inducedDipolePolar[0]*dsc7))
@@ -1263,7 +1189,7 @@ off2
        + (qkuip[0]-qiukp[0])*dsc5)
        + gfi[4]*qir[0] + gfi[5]*qkr[0];
 
-    ftm2i[1] = gfi[0]*yr + 0.5*
+    ftm2i[1] = gfi[0]*delta[1] + 0.5*
       (- rr3*particleK.charge*(particleI.inducedDipole[1]*psc3+particleI.inducedDipolePolar[1]*dsc3)
        + rr5*sc[3]*(particleI.inducedDipole[1]*psc5+particleI.inducedDipolePolar[1]*dsc5)
        - rr7*sc[5]*(particleI.inducedDipole[1]*psc7+particleI.inducedDipolePolar[1]*dsc7))
@@ -1278,7 +1204,7 @@ off2
        + (qkuip[1]-qiukp[1])*dsc5)
        + gfi[4]*qir[1] + gfi[5]*qkr[1];
 
-    ftm2i[2] = gfi[0]*zr  + 0.5*
+    ftm2i[2] = gfi[0]*delta[2]  + 0.5*
       (- rr3*particleK.charge*(particleI.inducedDipole[2]*psc3+particleI.inducedDipolePolar[2]*dsc3)
        + rr5*sc[3]*(particleI.inducedDipole[2]*psc5+particleI.inducedDipolePolar[2]*dsc5)
        - rr7*sc[5]*(particleI.inducedDipole[2]*psc7+particleI.inducedDipolePolar[2]*dsc7))
@@ -1325,13 +1251,13 @@ off2
        gfd = 0.5 * (rr5*scip[1]*scale3i
              - rr7*(scip[2]*sci[3]+sci[2]*scip[3])*scale5i);
        temp5 = 0.5 * rr5 * scale5i;
-       fdir[0] = gfd*xr + temp5
+       fdir[0] = gfd*delta[0] + temp5
                     * (sci[3]*particleI.inducedDipolePolar[0]+scip[3]*particleI.inducedDipole[0]
                       +sci[2]*particleK.inducedDipolePolar[0]+scip[2]*particleK.inducedDipole[0]);
-       fdir[1] = gfd*yr + temp5
+       fdir[1] = gfd*delta[1] + temp5
                     * (sci[3]*particleI.inducedDipolePolar[1]+scip[3]*particleI.inducedDipole[1]
                       +sci[2]*particleK.inducedDipolePolar[1]+scip[2]*particleK.inducedDipole[1]);
-       fdir[2] = gfd*zr + temp5
+       fdir[2] = gfd*delta[2] + temp5
                     * (sci[3]*particleI.inducedDipolePolar[2]+scip[3]*particleI.inducedDipole[2]
                       +sci[2]*particleK.inducedDipolePolar[2]+scip[2]*particleK.inducedDipole[2]);
        ftm2i[0] = ftm2i[0] - fdir[0] + findmp[0];
@@ -1400,26 +1326,17 @@ off2
       + gti[2]*dkxr[2] - gti[3]*((uixqkr[2]+rxqkui[2])*psc5
       +(uixqkrp[2]+rxqkuip[2])*dsc5)*0.5 - gti[5]*rxqkr[2];
 
-    // handle the case where scaling is used
-
-    for( unsigned int jj = 0; jj < 3; jj++ ){
-       ftm2[jj]   = f * ftm2[jj] * scalingFactors[M_SCALE];
-       ftm2i[jj]  = f * ftm2i[jj];
-       ttm2[jj]   = f * ttm2[jj] * scalingFactors[M_SCALE];
-       ttm2i[jj]  = f * ttm2i[jj];
-       ttm3[jj]   = f * ttm3[jj] * scalingFactors[M_SCALE];
-       ttm3i[jj]  = f * ttm3i[jj];
-    }
-
-    // increment forces
+    // increment forces and torques
+    // remove factor of f from torques and add back in?
 
     for( unsigned int jj = 0; jj < 3; jj++ ){
 
-        forces[particleI.particleIndex][jj] -= ftm2[jj] + ftm2i[jj];
-        torque[particleI.particleIndex][jj] += ttm2[jj] + ttm2i[jj];
+        RealOpenMM force                     = f*( ftm2[jj]*scalingFactors[M_SCALE] + ftm2i[jj] );
+        forces[particleI.particleIndex][jj] -= force;
+        forces[particleK.particleIndex][jj] += force;
 
-        forces[particleK.particleIndex][jj] += ftm2[jj] + ftm2i[jj];
-        torque[particleK.particleIndex][jj] += ttm3[jj] + ttm3i[jj];
+        torque[particleI.particleIndex][jj] += f*( ttm2[jj]*scalingFactors[M_SCALE] + ttm2i[jj] );
+        torque[particleK.particleIndex][jj] += f*( ttm3[jj]*scalingFactors[M_SCALE] + ttm3i[jj] );
     }
 
     return energy;
@@ -1484,14 +1401,15 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
     }
 
     if( log ){
-        RealOpenMM conversion = 1.0/4.184;
+        RealOpenMM conversion        = 1.0/4.184;
+        RealOpenMM torqueConversion = conversion;
         (void) fprintf( log, "Force & torques energy=%15.7e\n", 10.0*energy*conversion );
         conversion *= -0.1;
-        unsigned int maxPrint = 10;
+        unsigned int maxPrint = 10000;
         for( unsigned int ii = 0; ii < particleData.size(); ii++ ){
             (void) fprintf( log, "%6u [%15.7e %15.7e %15.7e] [%15.7e %15.7e %15.7e]\n", ii,
                             conversion*forces[ii][0],   conversion*forces[ii][1],  conversion*forces[ii][2], 
-                            conversion*torques[ii][0], conversion*torques[ii][1], conversion*torques[ii][2] );
+                            torqueConversion*torques[ii][0], torqueConversion*torques[ii][1], torqueConversion*torques[ii][2] );
             if( ii == maxPrint && 2*maxPrint < particleData.size() ){
                 ii = particleData.size() - maxPrint;
             }
