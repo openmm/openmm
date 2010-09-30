@@ -500,7 +500,6 @@ private:
     class ComputationInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
-    std::string energyExpression;
     std::vector<PerParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<ParticleInfo> particles;
