@@ -213,8 +213,6 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_2, log );
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_3, log );
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_4, log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_5, log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_6, log );
 
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_1_1, log );
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_1_2, log );
@@ -2689,8 +2687,6 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
     delete gpu->psWorkArray_3_2; 
     delete gpu->psWorkArray_3_3; 
     delete gpu->psWorkArray_3_4; 
-    delete gpu->psWorkArray_3_5; 
-    delete gpu->psWorkArray_3_6; 
 
     delete gpu->psWorkArray_1_1; 
     delete gpu->psWorkArray_1_2; 
@@ -2824,8 +2820,6 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu )
     // used GK
     amoebaGpu->psWorkArray_3_3            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_3");
     amoebaGpu->psWorkArray_3_4            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_4");
-    amoebaGpu->psWorkArray_3_5            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_5");
-    amoebaGpu->psWorkArray_3_6            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_6");
 
     amoebaGpu->psWorkArray_1_1            = new CUDAStream<float>(  paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_1_1");
     amoebaGpu->amoebaSim.pWorkArray_1_1   = amoebaGpu->psWorkArray_1_1->_pDevStream[0];

@@ -100,16 +100,6 @@ void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear )
                                                                 amoebaGpu->psWorkArray_3_4->_pDevStream[0] );
         LAUNCHERROR("kClearFields_3_4");
     }
-    if( numberToClear > 4 ){
-        kClearFields_kernel<<<amoebaGpu->nonbondBlocks, 384>>>( amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->outputBuffers,
-                                                                amoebaGpu->psWorkArray_3_5->_pDevStream[0] );
-        LAUNCHERROR("kClearFields_3_5");
-
-        kClearFields_kernel<<<amoebaGpu->nonbondBlocks, 384>>>( amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->outputBuffers,
-                                                                amoebaGpu->psWorkArray_3_6->_pDevStream[0] );
-        LAUNCHERROR("kClearFields_3_6");
-    }
-
 }
 
 // clear psWorkArray_1_1 & psWorkArray_1_2
