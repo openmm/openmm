@@ -65,7 +65,7 @@ void testSerialization() {
     force.addExclusion(1, 2);
     vector<double> values(10);
     for (int i = 0; i < 10; i++)
-        values[i] = sin(i);
+        values[i] = sin((double) i);
     force.addFunction("f", values, 0.5, 1.5, true);
 
     // Serialize and then deserialize it.
