@@ -32,6 +32,10 @@
 #include <vector>
 #include "windowsExportCuda.h"
 
+namespace OpenMM {
+    class CudaForceInfo;
+}
+
 struct gpuAtomType {
     std::string name;
     char symbol;
@@ -75,6 +79,7 @@ struct _gpuContext {
     unsigned int sharedMemoryPerBlock;
     cudaGmxSimulation sim;
     unsigned int* pOutputBufferCounter;
+    std::vector<OpenMM::CudaForceInfo*> forces;
     std::vector<std::vector<int> > exclusions;
     unsigned char* pAtomSymbol;
     std::vector<gpuMoleculeGroup> moleculeGroups;

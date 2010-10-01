@@ -208,6 +208,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numBonds;
     CudaPlatform::PlatformData& data;
     System& system;
@@ -239,6 +240,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     void updateGlobalParams(ContextImpl& context);
     int numBonds;
     CudaPlatform::PlatformData& data;
@@ -272,6 +274,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numAngles;
     CudaPlatform::PlatformData& data;
     System& system;
@@ -303,6 +306,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     void updateGlobalParams(ContextImpl& context);
     int numAngles;
     CudaPlatform::PlatformData& data;
@@ -336,6 +340,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numTorsions;
     CudaPlatform::PlatformData& data;
     System& system;
@@ -366,6 +371,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numTorsions;
     CudaPlatform::PlatformData& data;
     System& system;
@@ -398,6 +404,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     CudaPlatform::PlatformData& data;
     System& system;
     int numTorsions;
@@ -433,6 +440,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     void updateGlobalParams(ContextImpl& context);
     int numTorsions;
     CudaPlatform::PlatformData& data;
@@ -466,6 +474,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     CudaPlatform::PlatformData& data;
     int numParticles;
     System& system;
@@ -496,6 +505,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     void updateGlobalParams(ContextImpl& context);
     CudaPlatform::PlatformData& data;
     int numParticles;
@@ -529,6 +539,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     CudaPlatform::PlatformData& data;
 };
 
@@ -558,6 +569,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     CudaPlatform::PlatformData& data;
 };
 
@@ -587,6 +599,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     void updateGlobalParams(ContextImpl& context);
     int numParticles;
     CudaPlatform::PlatformData& data;

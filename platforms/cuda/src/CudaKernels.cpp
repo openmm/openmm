@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaKernels.h"
+#include "CudaForceInfo.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
@@ -184,6 +185,32 @@ void CudaApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     kApplyConstraints(data.gpu);
 }
 
+class CudaCalcHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const HarmonicBondForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumBonds();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double length, k;
+        force.getBondParameters(index, particle1, particle2, length, k);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double length1, length2, k1, k2;
+        force.getBondParameters(group1, particle1, particle2, length1, k1);
+        force.getBondParameters(group2, particle1, particle2, length2, k2);
+        return (length1 == length2 && k1 == k2);
+    }
+private:
+    const HarmonicBondForce& force;
+};
+
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
 }
 
@@ -201,11 +228,41 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
         k[i] = (float) kValue;
     }
     gpuSetBondParameters(data.gpu, particle1, particle2, length, k);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
+
+class CudaCalcCustomBondForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const CustomBondForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumBonds();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        vector<double> parameters;
+        force.getBondParameters(index, particle1, particle2, parameters);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        vector<double> parameters1, parameters2;
+        force.getBondParameters(group1, particle1, particle2, parameters1);
+        force.getBondParameters(group2, particle1, particle2, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomBondForce& force;
+};
 
 CudaCalcCustomBondForceKernel::~CudaCalcCustomBondForceKernel() {
 }
@@ -229,6 +286,7 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
     gpuSetCustomBondParameters(data.gpu, particle1, particle2, params, force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
         SetCustomBondGlobalParams(globalParamValues);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -249,6 +307,33 @@ void CudaCalcCustomBondForceKernel::updateGlobalParams(ContextImpl& context) {
         SetCustomBondGlobalParams(globalParamValues);
 }
 
+class CudaCalcHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const HarmonicAngleForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(index, particle1, particle2, particle3, angle, k);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        double angle1, angle2, k1, k2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, angle1, k1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, angle2, k2);
+        return (angle1 == angle2 && k1 == k2);
+    }
+private:
+    const HarmonicAngleForce& force;
+};
+
 CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
 }
 
@@ -268,11 +353,42 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
         k[i] = (float) kValue;
     }
     gpuSetBondAngleParameters(data.gpu, particle1, particle2, particle3, angle, k);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
+
+class CudaCalcCustomAngleForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const CustomAngleForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3;
+        vector<double> parameters;
+        force.getAngleParameters(index, particle1, particle2, particle3, parameters);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        vector<double> parameters1, parameters2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, parameters1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomAngleForce& force;
+};
 
 CudaCalcCustomAngleForceKernel::~CudaCalcCustomAngleForceKernel() {
 }
@@ -297,6 +413,7 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
     gpuSetCustomAngleParameters(data.gpu, particle1, particle2, particle3, params, force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
         SetCustomAngleGlobalParams(globalParamValues);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -316,6 +433,34 @@ void CudaCalcCustomAngleForceKernel::updateGlobalParams(ContextImpl& context) {
     if (changed)
         SetCustomAngleGlobalParams(globalParamValues);
 }
+
+class CudaCalcPeriodicTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const PeriodicTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4, periodicity1, periodicity2;
+        double phase1, phase2, k1, k2;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity1, phase1, k1);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, periodicity2, phase2, k2);
+        return (periodicity1 == periodicity2 && phase1 == phase2 && k1 == k2);
+    }
+private:
+    const PeriodicTorsionForce& force;
+};
 
 CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
 }
@@ -338,11 +483,40 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
         phase[i] = (float) (phaseValue*RadiansToDegrees);
     }
     gpuSetDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, k, phase, periodicity);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
+
+class CudaCalcRBTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const RBTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        double c0a, c0b, c1a, c1b, c2a, c2b, c3a, c3b, c4a, c4b, c5a, c5b;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0a, c1a, c2a, c3a, c4a, c5a);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, c0b, c1b, c2b, c3b, c4b, c5b);
+        return (c0a == c0b && c1a == c1b && c2a == c2b && c3a == c3b && c4a == c4b && c5a == c5b);
+    }
+private:
+    const RBTorsionForce& force;
+};
 
 CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
 }
@@ -371,11 +545,42 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
         c5[i] = (float) c[5];
     }
     gpuSetRbDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
+
+class CudaCalcCMAPTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const CMAPTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int map, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(index, map, a1, a2, a3, a4, b1, b2, b3, b4);
+        particles.resize(8);
+        particles[0] = a1;
+        particles[1] = a2;
+        particles[2] = a3;
+        particles[3] = a4;
+        particles[4] = b1;
+        particles[5] = b2;
+        particles[6] = b3;
+        particles[7] = b4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int map1, map2, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(group1, map1, a1, a2, a3, a4, b1, b2, b3, b4);
+        force.getTorsionParameters(group2, map2, a1, a2, a3, a4, b1, b2, b3, b4);
+        return (map1 == map2);
+    }
+private:
+    const CMAPTorsionForce& force;
+};
 
 CudaCalcCMAPTorsionForceKernel::~CudaCalcCMAPTorsionForceKernel() {
     if (coefficients != NULL)
@@ -436,12 +641,44 @@ void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAP
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     if (maxBuffers > data.gpu->sim.outputBuffers)
         data.gpu->sim.outputBuffers = maxBuffers;
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
     return 0.0;
 }
+
+class CudaCalcCustomTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const CustomTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> parameters;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, parameters);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> parameters1, parameters2;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, parameters1);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomTorsionForce& force;
+};
 
 CudaCalcCustomTorsionForceKernel::~CudaCalcCustomTorsionForceKernel() {
 }
@@ -467,6 +704,7 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
     gpuSetCustomTorsionParameters(data.gpu, particle1, particle2, particle3, particle4, params, force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
         SetCustomTorsionGlobalParams(globalParamValues);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -486,6 +724,38 @@ void CudaCalcCustomTorsionForceKernel::updateGlobalParams(ContextImpl& context) 
     if (changed)
         SetCustomTorsionGlobalParams(globalParamValues);
 }
+
+class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const NonbondedForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2;
+        force.getParticleParameters(particle1, charge1, sigma1, epsilon1);
+        force.getParticleParameters(particle2, charge2, sigma2, epsilon2);
+        return (charge1 == charge2 && sigma1 == sigma2 && epsilon1 == epsilon2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(index, particle1, particle2, chargeProd, sigma, epsilon);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double chargeProd1, chargeProd2, sigma1, sigma2, epsilon1, epsilon2;
+        force.getExceptionParameters(group1, particle1, particle2, chargeProd1, sigma1, epsilon1);
+        force.getExceptionParameters(group2, particle1, particle2, chargeProd2, sigma2, epsilon2);
+        return (chargeProd1 == chargeProd2 && sigma1 == sigma2 && epsilon1 == epsilon2);
+    }
+private:
+    const NonbondedForce& force;
+};
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
 }
@@ -594,11 +864,43 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
         gpuSetLJ14Parameters(gpu, (float) ONE_4PI_EPS0, 1.0f, particle1, particle2, c6, c12, q1, q2);
     }
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
+
+class CudaCalcCustomNonbondedForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const CustomNonbondedForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        vector<double> params1;
+        vector<double> params2;
+        force.getParticleParameters(particle1, params1);
+        force.getParticleParameters(particle2, params2);
+        for (int i = 0; i < (int) params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+    int getNumParticleGroups() {
+        return force.getNumExclusions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        force.getExclusionParticles(index, particle1, particle2);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        return true;
+    }
+private:
+    const CustomNonbondedForce& force;
+};
 
 CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
 }
@@ -657,6 +959,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, method, (float) force.getCutoffDistance(), force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
         SetCustomNonbondedGlobalParams(globalParamValues);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -676,6 +979,20 @@ void CudaCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context
         SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
+class CudaCalcGBSAOBCForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const GBSAOBCForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+    }
+private:
+    const GBSAOBCForce& force;
+};
+
 CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
 }
 
@@ -694,11 +1011,26 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
         charge[i] = (float) particleCharge;
     }
     gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), radius, scale, charge);
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 	return 0.0;
 }
+
+class CudaCalcGBVIForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const GBVIForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, gamma1, gamma2;
+        force.getParticleParameters(particle1, charge1, radius1, gamma1);
+        force.getParticleParameters(particle2, charge2, radius2, gamma2);
+        return (charge1 == charge2 && radius1 == radius2 && gamma1 == gamma2);
+    }
+private:
+    const GBVIForce& force;
+};
 
 CudaCalcGBVIForceKernel::~CudaCalcGBVIForceKernel() {
 }
@@ -723,11 +1055,44 @@ void CudaCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& 
     }
     gpuSetGBVIParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), particle,
                          radius, gammas, scaledRadii );
+    data.gpu->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
+
+class CudaCalcCustomExternalForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const CustomExternalForce& force, int numParticles) : force(force), indices(numParticles, -1) {
+        vector<double> params;
+        for (int i = 0; i < force.getNumParticles(); i++) {
+            int particle;
+            force.getParticleParameters(i, particle, params);
+            indices[particle] = i;
+        }
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        particle1 = indices[particle1];
+        particle2 = indices[particle2];
+        if (particle1 == -1 && particle2 == -1)
+            return true;
+        if (particle1 == -1 || particle2 == -1)
+            return false;
+        int temp;
+        vector<double> params1;
+        vector<double> params2;
+        force.getParticleParameters(particle1, temp, params1);
+        force.getParticleParameters(particle2, temp, params2);
+        for (int i = 0; i < (int) params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomExternalForce& force;
+    vector<int> indices;
+};
 
 CudaCalcCustomExternalForceKernel::~CudaCalcCustomExternalForceKernel() {
 }
@@ -750,6 +1115,7 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
     gpuSetCustomExternalParameters(data.gpu, particle, params, force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
         SetCustomExternalGlobalParams(globalParamValues);
+    data.gpu->forces.push_back(new ForceInfo(force, system.getNumParticles()));
 }
 
 double CudaCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

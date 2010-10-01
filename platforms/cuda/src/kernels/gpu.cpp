@@ -53,6 +53,7 @@ using namespace std;
 #include "quern.h"
 #include "Lepton.h"
 #include "rng.h"
+#include "../CudaForceInfo.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -106,15 +107,8 @@ struct ConstraintOrderer : public binary_function<int, int, bool> {
 
 struct Molecule {
     vector<int> atoms;
-    vector<int> bonds;
-    vector<int> angles;
-    vector<int> periodicTorsions;
-    vector<int> rbTorsions;
     vector<int> constraints;
-    vector<int> lj14s;
-    vector<int> customBonds;
-    vector<int> customAngles;
-    vector<int> customTorsions;
+    vector<vector<int> > groups;
 };
 
 static const float dielectricOffset         =    0.009f;
@@ -2534,12 +2528,15 @@ static void findMoleculeGroups(gpuContext gpu)
 
     int numAtoms = gpu->natoms;
     vector<vector<int> > atomBonds(numAtoms);
-    for (int i = 0; i < (int)gpu->sim.bonds; i++)
-    {
-        int atom1 = (*gpu->psBondID)[i].x;
-        int atom2 = (*gpu->psBondID)[i].y;
-        atomBonds[atom1].push_back(atom2);
-        atomBonds[atom2].push_back(atom1);
+    for (int i = 0; i < (int) gpu->forces.size(); i++) {
+        for (int j = 0; j < gpu->forces[i]->getNumParticleGroups(); j++) {
+            vector<int> particles;
+            gpu->forces[i]->getParticlesInGroup(j, particles);
+            for (int k = 0; k < (int) particles.size(); k++)
+                for (int m = 0; m < (int) particles.size(); m++)
+                    if (k != m)
+                        atomBonds[particles[k]].push_back(particles[m]);
+        }
     }
     for (int i = 0; i < (int)constraints.size(); i++)
     {
@@ -2548,9 +2545,6 @@ static void findMoleculeGroups(gpuContext gpu)
         atomBonds[atom1].push_back(atom2);
         atomBonds[atom2].push_back(atom1);
     }
-    for (int i = 0; i < (int)gpu->exclusions.size(); i++)
-        for (int j = 0; j < (int)gpu->exclusions[i].size(); j++)
-            atomBonds[i].push_back(gpu->exclusions[i][j]);
 
     // Now tag atoms by which molecule they belong to.
 
@@ -2567,50 +2561,20 @@ static void findMoleculeGroups(gpuContext gpu)
 
     vector<Molecule> molecules(numMolecules);
     for (int i = 0; i < numMolecules; i++)
+    {
         molecules[i].atoms = atomIndices[i];
-    for (int i = 0; i < (int)gpu->sim.bonds; i++)
-    {
-        int atom1 = (*gpu->psBondID)[i].x;
-        molecules[atomMolecule[atom1]].bonds.push_back(i);
+        molecules[i].groups.resize(gpu->forces.size());
     }
-    for (int i = 0; i < (int)gpu->sim.bond_angles; i++)
-    {
-        int atom1 = (*gpu->psBondAngleID1)[i].x;
-        molecules[atomMolecule[atom1]].angles.push_back(i);
-    }
-    for (int i = 0; i < (int)gpu->sim.dihedrals; i++)
-    {
-        int atom1 = (*gpu->psDihedralID1)[i].x;
-        molecules[atomMolecule[atom1]].periodicTorsions.push_back(i);
-    }
-    for (int i = 0; i < (int)gpu->sim.rb_dihedrals; i++)
-    {
-        int atom1 = (*gpu->psRbDihedralID1)[i].x;
-        molecules[atomMolecule[atom1]].rbTorsions.push_back(i);
-    }
+    for (int i = 0; i < (int) gpu->forces.size(); i++)
+        for (int j = 0; j < gpu->forces[i]->getNumParticleGroups(); j++)
+        {
+            vector<int> particles;
+            gpu->forces[i]->getParticlesInGroup(j, particles);
+            molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
+        }
     for (int i = 0; i < (int)constraints.size(); i++)
     {
         molecules[atomMolecule[constraints[i].atom1]].constraints.push_back(i);
-    }
-    for (int i = 0; i < (int)gpu->sim.LJ14s; i++)
-    {
-        int atom1 = (*gpu->psLJ14ID)[i].x;
-        molecules[atomMolecule[atom1]].lj14s.push_back(i);
-    }
-    for (int i = 0; i < (int)gpu->sim.customBonds; i++)
-    {
-        int atom1 = (*gpu->psCustomBondID)[i].x;
-        molecules[atomMolecule[atom1]].customBonds.push_back(i);
-    }
-    for (int i = 0; i < (int)gpu->sim.customAngles; i++)
-    {
-        int atom1 = (*gpu->psCustomAngleID1)[i].x;
-        molecules[atomMolecule[atom1]].customAngles.push_back(i);
-    }
-    for (int i = 0; i < (int)gpu->sim.customTorsions; i++)
-    {
-        int atom1 = (*gpu->psCustomTorsionID1)[i].x;
-        molecules[atomMolecule[atom1]].customTorsions.push_back(i);
     }
 
     // Sort them into groups of identical molecules.
@@ -2627,112 +2591,36 @@ static void findMoleculeGroups(gpuContext gpu)
         for (int j = 0; j < (int)uniqueMolecules.size() && isNew; j++)
         {
             Molecule& mol2 = uniqueMolecules[j];
-            bool identical = true;
-            if (mol.atoms.size() != mol2.atoms.size() || mol.bonds.size() != mol2.bonds.size()
-                    || mol.angles.size() != mol2.angles.size() || mol.periodicTorsions.size() != mol2.periodicTorsions.size()
-                    || mol.rbTorsions.size() != mol2.rbTorsions.size() || mol.constraints.size() != mol2.constraints.size()
-                    || mol.lj14s.size() != mol2.lj14s.size() || mol.customBonds.size() != mol2.customBonds.size()
-                    || mol.customAngles.size() != mol2.customAngles.size() || mol.customTorsions.size() != mol2.customTorsions.size())
-                identical = false;
+            bool identical = (mol.atoms.size() == mol2.atoms.size() && mol.constraints.size() == mol2.constraints.size());
+
+            // See if the atoms are identical.
+
             int atomOffset = mol2.atoms[0]-mol.atoms[0];
-            float4* posq = gpu->psPosq4->_pSysData;
             float4* velm = gpu->psVelm4->_pSysData;
-            float2* sigeps = gpu->psSigEps2->_pSysData;
-            for (int i = 0; i < (int)mol.atoms.size() && identical; i++)
-                if (mol.atoms[i] != mol2.atoms[i]-atomOffset || posq[mol.atoms[i]].w != posq[mol2.atoms[i]].w ||
-                        velm[mol.atoms[i]].w != velm[mol2.atoms[i]].w || sigeps[mol.atoms[i]].x != sigeps[mol2.atoms[i]].x ||
-                        sigeps[mol.atoms[i]].y != sigeps[mol2.atoms[i]].y)
+            for (int i = 0; i < (int) mol.atoms.size() && identical; i++) {
+                if (mol.atoms[i] != mol2.atoms[i]-atomOffset || velm[mol.atoms[i]].w != velm[mol2.atoms[i]].w)
                     identical = false;
-            int4* bondID = gpu->psBondID->_pSysData;
-            float2* bondParam = gpu->psBondParameter->_pSysData;
-            for (int i = 0; i < (int)mol.bonds.size() && identical; i++)
-                if (bondID[mol.bonds[i]].x != bondID[mol2.bonds[i]].x-atomOffset || bondID[mol.bonds[i]].y != bondID[mol2.bonds[i]].y-atomOffset ||
-                        bondParam[mol.bonds[i]].x != bondParam[mol2.bonds[i]].x || bondParam[mol.bonds[i]].y != bondParam[mol2.bonds[i]].y)
-                    identical = false;
-            int4* angleID = gpu->psBondAngleID1->_pSysData;
-            float2* angleParam = gpu->psBondAngleParameter->_pSysData;
-            for (int i = 0; i < (int)mol.angles.size() && identical; i++)
-                if (angleID[mol.angles[i]].x != angleID[mol2.angles[i]].x-atomOffset ||
-                        angleID[mol.angles[i]].y != angleID[mol2.angles[i]].y-atomOffset ||
-                        angleID[mol.angles[i]].z != angleID[mol2.angles[i]].z-atomOffset ||
-                        angleParam[mol.angles[i]].x != angleParam[mol2.angles[i]].x ||
-                        angleParam[mol.angles[i]].y != angleParam[mol2.angles[i]].y)
-                    identical = false;
-            int4* periodicID = gpu->psDihedralID1->_pSysData;
-            float4* periodicParam = gpu->psDihedralParameter->_pSysData;
-            for (int i = 0; i < (int)mol.periodicTorsions.size() && identical; i++)
-                if (periodicID[mol.periodicTorsions[i]].x != periodicID[mol2.periodicTorsions[i]].x-atomOffset ||
-                        periodicID[mol.periodicTorsions[i]].y != periodicID[mol2.periodicTorsions[i]].y-atomOffset ||
-                        periodicID[mol.periodicTorsions[i]].z != periodicID[mol2.periodicTorsions[i]].z-atomOffset ||
-                        periodicID[mol.periodicTorsions[i]].w != periodicID[mol2.periodicTorsions[i]].w-atomOffset ||
-                        periodicParam[mol.periodicTorsions[i]].x != periodicParam[mol2.periodicTorsions[i]].x ||
-                        periodicParam[mol.periodicTorsions[i]].y != periodicParam[mol2.periodicTorsions[i]].y ||
-                        periodicParam[mol.periodicTorsions[i]].z != periodicParam[mol2.periodicTorsions[i]].z)
-                    identical = false;
-            int4* rbID = gpu->psRbDihedralID1->_pSysData;
-            float4* rbParam1 = gpu->psRbDihedralParameter1->_pSysData;
-            float2* rbParam2 = gpu->psRbDihedralParameter2->_pSysData;
-            for (int i = 0; i < (int)mol.rbTorsions.size() && identical; i++)
-                if (rbID[mol.rbTorsions[i]].x != rbID[mol2.rbTorsions[i]].x-atomOffset ||
-                        rbID[mol.rbTorsions[i]].y != rbID[mol2.rbTorsions[i]].y-atomOffset ||
-                        rbID[mol.rbTorsions[i]].z != rbID[mol2.rbTorsions[i]].z-atomOffset ||
-                        rbID[mol.rbTorsions[i]].w != rbID[mol2.rbTorsions[i]].w-atomOffset ||
-                        rbParam1[mol.rbTorsions[i]].x != rbParam1[mol2.rbTorsions[i]].x ||
-                        rbParam1[mol.rbTorsions[i]].y != rbParam1[mol2.rbTorsions[i]].y ||
-                        rbParam1[mol.rbTorsions[i]].z != rbParam1[mol2.rbTorsions[i]].z ||
-                        rbParam1[mol.rbTorsions[i]].w != rbParam1[mol2.rbTorsions[i]].w ||
-                        rbParam2[mol.rbTorsions[i]].x != rbParam2[mol2.rbTorsions[i]].x ||
-                        rbParam2[mol.rbTorsions[i]].y != rbParam2[mol2.rbTorsions[i]].y)
-                    identical = false;
-            for (int i = 0; i < (int)mol.constraints.size() && identical; i++)
+                for (int k = 0; k < (int) gpu->forces.size(); k++)
+                    if (!gpu->forces[k]->areParticlesIdentical(mol.atoms[i], mol2.atoms[i]))
+                        identical = false;
+            }
+
+            // See if the constraints are identical.
+
+            for (int i = 0; i < (int) mol.constraints.size() && identical; i++)
                 if (constraints[mol.constraints[i]].atom1 != constraints[mol2.constraints[i]].atom1-atomOffset ||
                         constraints[mol.constraints[i]].atom2 != constraints[mol2.constraints[i]].atom2-atomOffset ||
                         constraints[mol.constraints[i]].distance2 != constraints[mol2.constraints[i]].distance2)
                     identical = false;
-            int4* lj14ID = gpu->psLJ14ID->_pSysData;
-            float4* lj14Param = gpu->psLJ14Parameter->_pSysData;
-            for (int i = 0; i < (int)mol.lj14s.size() && identical; i++)
-                if (lj14ID[mol.lj14s[i]].x != lj14ID[mol2.lj14s[i]].x-atomOffset || lj14ID[mol.lj14s[i]].y != lj14ID[mol2.lj14s[i]].y-atomOffset ||
-                        lj14Param[mol.lj14s[i]].x != lj14Param[mol2.lj14s[i]].x || lj14Param[mol.lj14s[i]].y != lj14Param[mol2.lj14s[i]].y ||
-                        lj14Param[mol.lj14s[i]].z != lj14Param[mol2.lj14s[i]].z)
+
+            // See if the force groups are identical.
+
+            for (int i = 0; i < (int) gpu->forces.size() && identical; i++)
+            {
+                if (mol.groups[i].size() != mol2.groups[i].size())
                     identical = false;
-            if (mol.customBonds.size() > 0) {
-                int4* customBondID = gpu->psCustomBondID->_pSysData;
-                float4* customBondParam = gpu->psCustomBondParams->_pSysData;
-                for (int i = 0; i < (int)mol.customBonds.size() && identical; i++)
-                    if (customBondID[mol.customBonds[i]].x != customBondID[mol2.customBonds[i]].x-atomOffset ||
-                            customBondID[mol.customBonds[i]].y != customBondID[mol2.customBonds[i]].y-atomOffset ||
-                            (customBondParam[mol.customBonds[i]].x != customBondParam[mol2.customBonds[i]].x && gpu->sim.customBondParameters > 0) ||
-                            (customBondParam[mol.customBonds[i]].y != customBondParam[mol2.customBonds[i]].y && gpu->sim.customBondParameters > 1) ||
-                            (customBondParam[mol.customBonds[i]].z != customBondParam[mol2.customBonds[i]].z && gpu->sim.customBondParameters > 2) ||
-                            (customBondParam[mol.customBonds[i]].w != customBondParam[mol2.customBonds[i]].w && gpu->sim.customBondParameters > 3))
-                        identical = false;
-            }
-            if (mol.customAngles.size() > 0) {
-                int4* customAngleID = gpu->psCustomAngleID1->_pSysData;
-                float4* customAngleParam = gpu->psCustomAngleParams->_pSysData;
-                for (int i = 0; i < (int)mol.customAngles.size() && identical; i++)
-                    if (customAngleID[mol.customAngles[i]].x != customAngleID[mol2.customAngles[i]].x-atomOffset ||
-                            customAngleID[mol.customAngles[i]].y != customAngleID[mol2.customAngles[i]].y-atomOffset ||
-                            customAngleID[mol.customAngles[i]].z != customAngleID[mol2.customAngles[i]].z-atomOffset ||
-                            (customAngleParam[mol.customAngles[i]].x != customAngleParam[mol2.customAngles[i]].x && gpu->sim.customAngleParameters > 0) ||
-                            (customAngleParam[mol.customAngles[i]].y != customAngleParam[mol2.customAngles[i]].y && gpu->sim.customAngleParameters > 1) ||
-                            (customAngleParam[mol.customAngles[i]].z != customAngleParam[mol2.customAngles[i]].z && gpu->sim.customAngleParameters > 2) ||
-                            (customAngleParam[mol.customAngles[i]].w != customAngleParam[mol2.customAngles[i]].w && gpu->sim.customAngleParameters > 3))
-                        identical = false;
-            }
-            if (mol.customTorsions.size() > 0) {
-                int4* customTorsionID = gpu->psCustomTorsionID1->_pSysData;
-                float4* customTorsionParam = gpu->psCustomTorsionParams->_pSysData;
-                for (int i = 0; i < (int)mol.customTorsions.size() && identical; i++)
-                    if (customTorsionID[mol.customTorsions[i]].x != customTorsionID[mol2.customTorsions[i]].x-atomOffset ||
-                            customTorsionID[mol.customTorsions[i]].y != customTorsionID[mol2.customTorsions[i]].y-atomOffset ||
-                            customTorsionID[mol.customTorsions[i]].z != customTorsionID[mol2.customTorsions[i]].z-atomOffset ||
-                            customTorsionID[mol.customTorsions[i]].w != customTorsionID[mol2.customTorsions[i]].w-atomOffset ||
-                            (customTorsionParam[mol.customTorsions[i]].x != customTorsionParam[mol2.customTorsions[i]].x && gpu->sim.customTorsionParameters > 0) ||
-                            (customTorsionParam[mol.customTorsions[i]].y != customTorsionParam[mol2.customTorsions[i]].y && gpu->sim.customTorsionParameters > 1) ||
-                            (customTorsionParam[mol.customTorsions[i]].z != customTorsionParam[mol2.customTorsions[i]].z && gpu->sim.customTorsionParameters > 2) ||
-                            (customTorsionParam[mol.customTorsions[i]].w != customTorsionParam[mol2.customTorsions[i]].w && gpu->sim.customTorsionParameters > 3))
+                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++)
+                    if (!gpu->forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
             }
             if (identical)
