@@ -82,7 +82,7 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
         const SerializationNode& exceptions = node.getChildNode("Exceptions");
         for (int i = 0; i < (int) exceptions.getChildren().size(); i++) {
             const SerializationNode& exception = exceptions.getChildren()[i];
-            force->addException(exception.getDoubleProperty("p1"), exception.getDoubleProperty("p2"), exception.getDoubleProperty("q"), exception.getDoubleProperty("sig"), exception.getDoubleProperty("eps"));
+            force->addException(exception.getIntProperty("p1"), exception.getIntProperty("p2"), exception.getDoubleProperty("q"), exception.getDoubleProperty("sig"), exception.getDoubleProperty("eps"));
         }
     }
     catch (...) {

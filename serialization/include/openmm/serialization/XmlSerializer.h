@@ -80,7 +80,7 @@ private:
     static void serialize(const SerializationNode& node, std::ostream& stream);
     static void* deserializeStream(std::istream& stream);
     static TiXmlElement* encodeNode(const SerializationNode& node);
-    static SerializationNode* decodeNode(SerializationNode& node, const TiXmlElement& element);
+    static void decodeNode(SerializationNode& node, const TiXmlElement& element);
 };
 
 } // namespace OpenMM

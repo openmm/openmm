@@ -35,6 +35,9 @@
 #include "openmm/CustomAngleForce.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/CustomGBForce.h"
+#include "openmm/CustomHbondForce.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/GBSAOBCForce.h"
@@ -52,6 +55,9 @@
 #include "openmm/serialization/CustomAngleForceProxy.h"
 #include "openmm/serialization/CustomBondForceProxy.h"
 #include "openmm/serialization/CustomExternalForceProxy.h"
+#include "openmm/serialization/CustomGBForceProxy.h"
+#include "openmm/serialization/CustomHbondForceProxy.h"
+#include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
 #include "openmm/serialization/GBVIForceProxy.h"
@@ -84,6 +90,9 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(CustomAngleForce), new CustomAngleForceProxy());
     SerializationProxy::registerProxy(typeid(CustomBondForce), new CustomBondForceProxy());
     SerializationProxy::registerProxy(typeid(CustomExternalForce), new CustomExternalForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomGBForce), new CustomGBForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomHbondForce), new CustomHbondForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomNonbondedForce), new CustomNonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(CustomTorsionForce), new CustomTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(GBSAOBCForce), new GBSAOBCForceProxy());
     SerializationProxy::registerProxy(typeid(GBVIForce), new GBVIForceProxy());

@@ -1,3 +1,6 @@
+#ifndef OPENMM_CUSTOMGBFORCE_PROXY_H_
+#define OPENMM_CUSTOMGBFORCE_PROXY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,48 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/XmlSerializer.h"
-#include "tinyxml.h"
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-void XmlSerializer::serialize(const SerializationNode& node, std::ostream& stream) {
-    TiXmlDocument doc;
-    TiXmlDeclaration* decl = new TiXmlDeclaration( "1.0", "", "" );
-    doc.LinkEndChild(decl);
-    doc.LinkEndChild(encodeNode(node));
-    TiXmlPrinter printer;
-    printer.SetIndent("\t");
-    doc.Accept(&printer);
-    stream << printer.Str();
-}
+/**
+ * This is a proxy for serializing CustomGBForce objects.
+ */
 
-TiXmlElement* XmlSerializer::encodeNode(const SerializationNode& node) {
-    TiXmlElement* element = new TiXmlElement(node.getName());
-    const map<string, string>& properties = node.getProperties();
-    for (map<string, string>::const_iterator iter = properties.begin(); iter != properties.end(); ++iter)
-        element->SetAttribute(iter->first.c_str(), iter->second.c_str());
-    const vector<SerializationNode>& children = node.getChildren();
-    for (int i = 0; i < (int) children.size(); i++)
-        element->LinkEndChild(encodeNode(children[i]));
-    return element;
-}
+class OPENMM_EXPORT CustomGBForceProxy : public SerializationProxy {
+public:
+    CustomGBForceProxy();
+    void serialize(const void* object, SerializationNode& node) const;
+    void* deserialize(const SerializationNode& node) const;
+};
 
-void* XmlSerializer::deserializeStream(std::istream& stream) {
-    TiXmlDocument doc;
-    stream >> doc;
-    SerializationNode root;
-    decodeNode(root, *doc.FirstChildElement());
-    const SerializationProxy& proxy = SerializationProxy::getProxy(root.getStringProperty("type"));
-    return proxy.deserialize(root);
-}
+} // namespace OpenMM
 
-void XmlSerializer::decodeNode(SerializationNode& node, const TiXmlElement& element) {
-    for (const TiXmlAttribute* attribute = element.FirstAttribute(); attribute != NULL; attribute = attribute->Next())
-        node.setStringProperty(attribute->NameTStr(), attribute->ValueStr());
-    for (const TiXmlElement* child = element.FirstChildElement(); child != NULL; child = child->NextSiblingElement()) {
-        SerializationNode& childNode = node.createChildNode(child->ValueTStr());
-        decodeNode(childNode, *child);
-    }
-}
+#endif /*OPENMM_CUSTOMGBFORCE_PROXY_H_*/
