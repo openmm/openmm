@@ -180,7 +180,7 @@
  */
 
 #ifndef Long
-#define Long long
+#define Long int
 #endif
 #ifndef ULong
 typedef unsigned Long ULong;
