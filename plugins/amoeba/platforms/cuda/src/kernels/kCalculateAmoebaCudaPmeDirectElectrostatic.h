@@ -79,13 +79,13 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectElectrostatic, Forces_kernel)(
         PmeDirectElectrostaticParticle localParticle;
         loadPmeDirectElectrostaticShared(&localParticle, atomI );
 
-        localParticle.force[0]                   = 0.0f;
-        localParticle.force[1]                   = 0.0f;
-        localParticle.force[2]                   = 0.0f;
+        localParticle.force[0]        = 0.0f;
+        localParticle.force[1]        = 0.0f;
+        localParticle.force[2]        = 0.0f;
 
-        localParticle.torque[0]                  = 0.0f;
-        localParticle.torque[1]                  = 0.0f;
-        localParticle.torque[2]                  = 0.0f;
+        localParticle.torque[0]       = 0.0f;
+        localParticle.torque[1]       = 0.0f;
+        localParticle.torque[2]       = 0.0f;
 
         scalingFactors[PScaleIndex]   = 1.0f;
         scalingFactors[DScaleIndex]   = 1.0f;
@@ -236,9 +236,9 @@ if( atomI == targetAtom ){
 
             if( atomI < cAmoebaSim.numberOfAtoms ){
                 calculatePmeSelfTorqueElectrostaticPairIxn_kernel( localParticle );
-                //float energy;
-                //calculatePmeSelfEnergyElectrostaticPairIxn_kernel( localParticle, &energy );
-                //totalEnergy += energy;
+                float energy;
+                calculatePmeSelfEnergyElectrostaticPairIxn_kernel( localParticle, &energy );
+                totalEnergy += energy;
             }
 
             // Write results
@@ -282,10 +282,8 @@ if( atomI == targetAtom ){
 #endif
 
         }
-        else        // 100% utilization
+        else
         {
-            // Read fixed atom data into registers and GRF
-
             if (lasty != y)
             {
                 // load shared data

@@ -382,10 +382,11 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
    --------------------------------------------------------------------------------------- */
 
+#ifdef AMOEBA_DEBUG
 static int isNanOrInfinity( double number ){
     return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0; 
 }
-
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -398,13 +399,9 @@ static int isNanOrInfinity( double number ){
 static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 {
   
-   // ---------------------------------------------------------------------------------------
-   // ---------------------------------------------------------------------------------------
-
     gpuContext gpu    = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
-
     static const char* methodName = "computeCudaAmoebaPmeFixedEField";
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "\n%s\n", methodName ); (void) fflush( amoebaGpu->log );
@@ -414,14 +411,12 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     // N2 debug array
 
     CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    memset( debugArray->_pSysStream[0], 0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
 
     // print intermediate results for the targetAtom 
 
     unsigned int targetAtom  = 0;
-
-#endif
 
     int maxPrint             = 3002;
     amoebaGpu->psE_Field->Download();
@@ -448,6 +443,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     }
     (void) fflush( amoebaGpu->log );
     (void) fprintf( amoebaGpu->log, "Recip EFields End\n" );
+#endif
 
     kClearFields_3( amoebaGpu, 2 );
 

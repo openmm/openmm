@@ -725,8 +725,6 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
-#ifdef AMOEBA_DEBUG
-/*
     if( 0 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
@@ -736,8 +734,6 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeMI", fileId, outputVector );
      }
-*/
-#endif
 
    // ---------------------------------------------------------------------------------------
 }

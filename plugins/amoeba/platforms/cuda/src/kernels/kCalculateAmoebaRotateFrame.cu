@@ -389,17 +389,10 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
         cudaComputeAmoebaElectrostatic( amoebaGpu );
+        // map torques to forces
+        cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpu, amoebaGpu->psTorque, amoebaGpu->psForce, amoebaGpu->gpuContext->psForce4 );
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );
-    }
-
-    // map torques to forces
-
-    cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpu, amoebaGpu->psTorque, amoebaGpu->psForce, amoebaGpu->gpuContext->psForce4 );
-   
-    if( 0 && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Done mapping torques -> forces%s\n", methodName.c_str() ); fflush( NULL );
-        (void) fflush( NULL );
     }
 }
 

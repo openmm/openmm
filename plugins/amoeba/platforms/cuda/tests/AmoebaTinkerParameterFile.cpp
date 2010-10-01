@@ -3608,12 +3608,14 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                }
             } else if( field == "AmoebaRealPmeForce"                   || 
                        field == "AmoebaKSpacePmeForce"                 ||
+                       field == "AmoebaDirAndSForce"                   ||
                        field == "AmoebaSelfPmeForce"                   ){
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
                 readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, &lineCount, field, log );
                 supplementary[field] = vectorOfDoubleVectors;
             } else if( field == "AmoebaRealPmeEnergy"                  || 
                        field == "AmoebaKSpacePmeEnergy"                ||
+                       field == "AmoebaDirAndSEnergy"                  ||
                        field == "AmoebaSelfPmeEnergy"                  ){
                 double value = atof( tokens[1].c_str() );
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
