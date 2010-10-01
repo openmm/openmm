@@ -60,6 +60,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numBonds;
     AmoebaCudaData& data;
     System& system;
@@ -89,6 +90,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numAngles;
     AmoebaCudaData& data;
     System& system;
@@ -118,6 +120,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numAngles;
     AmoebaCudaData& data;
     System& system;
@@ -147,6 +150,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numTorsions;
     AmoebaCudaData& data;
     System& system;
@@ -176,6 +180,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numPiTorsions;
     AmoebaCudaData& data;
     System& system;
@@ -205,6 +210,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numStretchBends;
     AmoebaCudaData& data;
     System& system;
@@ -234,6 +240,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numOutOfPlaneBends;
     AmoebaCudaData& data;
     System& system;
@@ -263,6 +270,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numTorsionTorsions;
     int numTorsionTorsionGrids;
     AmoebaCudaData& data;
@@ -293,6 +301,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     int numMultipoles;
     AmoebaCudaData& data;
     System& system;
@@ -322,6 +331,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     AmoebaCudaData& data;
     System& system;
 };
@@ -350,6 +360,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     AmoebaCudaData& data;
     System& system;
 };
@@ -378,6 +389,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class ForceInfo;
     AmoebaCudaData& data;
     System& system;
 };

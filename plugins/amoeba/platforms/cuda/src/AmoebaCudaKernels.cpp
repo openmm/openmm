@@ -32,6 +32,7 @@
 #include "internal/AmoebaMultipoleForceImpl.h"
 #include "internal/AmoebaWcaDispersionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "CudaForceInfo.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -56,6 +57,32 @@ static void computeAmoebaLocalForces( AmoebaCudaData& data ) {
     kCalculateAmoebaLocalForces(gpu);
 
 }
+
+class CudaCalcAmoebaHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaHarmonicBondForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumBonds();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double length, k;
+        force.getBondParameters(index, particle1, particle2, length, k);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double length1, length2, k1, k2;
+        force.getBondParameters(group1, particle1, particle2, length1, k1);
+        force.getBondParameters(group2, particle1, particle2, length2, k2);
+        return (length1 == length2 && k1 == k2);
+    }
+private:
+    const AmoebaHarmonicBondForce& force;
+};
 
 CudaCalcAmoebaHarmonicBondForceKernel::CudaCalcAmoebaHarmonicBondForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
                 CalcAmoebaHarmonicBondForceKernel(name, platform), data(data), system(system) {
@@ -90,6 +117,7 @@ void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, con
     gpuSetAmoebaBondParameters( data.getAmoebaGpu(), particle1, particle2, length, quadratic, 
                                 static_cast<float>(force.getAmoebaGlobalHarmonicBondCubic()),
                                 static_cast<float>(force.getAmoebaGlobalHarmonicBondQuartic()) );
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -98,6 +126,33 @@ double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaHarmonicAngleForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(index, particle1, particle2, particle3, angle, k);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        double angle1, angle2, k1, k2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, angle1, k1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, angle2, k2);
+        return (angle1 == angle2 && k1 == k2);
+    }
+private:
+    const AmoebaHarmonicAngleForce& force;
+};
 
 CudaCalcAmoebaHarmonicAngleForceKernel::CudaCalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
             CalcAmoebaHarmonicAngleForceKernel(name, platform), data(data), system(system) {
@@ -130,7 +185,7 @@ void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, co
                                 static_cast<float>(force.getAmoebaGlobalHarmonicAngleQuartic()),
                                 static_cast<float>(force.getAmoebaGlobalHarmonicAnglePentic()),
                                 static_cast<float>(force.getAmoebaGlobalHarmonicAngleSextic()) );
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -139,6 +194,34 @@ double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, boo
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaHarmonicInPlaneAngleForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        double angle, k;
+        force.getAngleParameters(index, particle1, particle2, particle3, particle4, angle, k);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        double angle1, angle2, k1, k2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, particle4, angle1, k1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, particle4, angle2, k2);
+        return (angle1 == angle2 && k1 == k2);
+    }
+private:
+    const AmoebaHarmonicInPlaneAngleForce& force;
+};
 
 CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
           CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), data(data), system(system) {
@@ -174,7 +257,7 @@ void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& sys
                                        static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleQuartic()),
                                        static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAnglePentic()),
                                        static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleSextic() ) );
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -183,6 +266,44 @@ double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& conte
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> torsion1, torsion2, torsion3;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> torsion11, torsion21, torsion31;
+        vector<double> torsion12, torsion22, torsion32;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, torsion11, torsion21, torsion31);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, torsion12, torsion22, torsion32);
+        for (int i = 0; i < (int) torsion11.size(); ++i)
+            if (torsion11[i] != torsion12[i])
+                return false;
+        for (int i = 0; i < (int) torsion21.size(); ++i)
+            if (torsion21[i] != torsion22[i])
+                return false;
+        for (int i = 0; i < (int) torsion31.size(); ++i)
+            if (torsion31[i] != torsion32[i])
+                return false;
+        return true;
+    }
+private:
+    const AmoebaTorsionForce& force;
+};
 
 CudaCalcAmoebaTorsionForceKernel::CudaCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
              CalcAmoebaTorsionForceKernel(name, platform), data(data), system(system) {
@@ -227,7 +348,7 @@ void CudaCalcAmoebaTorsionForceKernel::initialize(const System& system, const Am
         torsionParameters3[i] = torsionParameters3F;
     }
     gpuSetAmoebaTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, torsionParameters1, torsionParameters2, torsionParameters3 );
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -236,6 +357,36 @@ double CudaCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool incl
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaPiTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaPiTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumPiTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4, particle5, particle6;
+        double k;
+        force.getPiTorsionParameters(index, particle1, particle2, particle3, particle4, particle5, particle6, k);
+        particles.resize(6);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+        particles[4] = particle5;
+        particles[5] = particle6;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4, particle5, particle6;
+        double k1, k2;
+        force.getPiTorsionParameters(group1, particle1, particle2, particle3, particle4, particle5, particle6, k1);
+        force.getPiTorsionParameters(group2, particle1, particle2, particle3, particle4, particle5, particle6, k2);
+        return (k1 == k2);
+    }
+private:
+    const AmoebaPiTorsionForce& force;
+};
 
 CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), data(data), system(system) {
@@ -268,6 +419,7 @@ void CudaCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const 
         torsionKParameters[i] = static_cast<float>(torsionKParameter);
     }
     gpuSetAmoebaPiTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, particle5, particle6, torsionKParameters);
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -276,6 +428,33 @@ double CudaCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool in
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaStretchBendForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaStretchBendForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumStretchBends();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3;
+        double lengthAB, lengthCB, angle, k;
+        force.getStretchBendParameters(index, particle1, particle2, particle3, lengthAB, lengthCB, angle, k);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        double lengthAB1, lengthAB2, lengthCB1, lengthCB2, angle1, angle2, k1, k2;
+        force.getStretchBendParameters(group1, particle1, particle2, particle3, lengthAB1, lengthCB1, angle1, k1);
+        force.getStretchBendParameters(group2, particle1, particle2, particle3, lengthAB2, lengthCB2, angle2, k2);
+        return (lengthAB1 == lengthAB2 && lengthCB1 == lengthCB2 && angle1 == angle2 && k1 == k2);
+    }
+private:
+    const AmoebaStretchBendForce& force;
+};
 
 CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), data(data), system(system) {
@@ -310,7 +489,7 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
         kParameters[i]        = static_cast<float>(k);
     }
     gpuSetAmoebaStretchBendParameters(data.getAmoebaGpu(), particle1, particle2, particle3, lengthABParameters, lengthCBParameters, angleParameters, kParameters);
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -319,6 +498,35 @@ double CudaCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool 
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaOutOfPlaneBendForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaOutOfPlaneBendForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumOutOfPlaneBends();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        double k;
+        force.getOutOfPlaneBendParameters(index, particle1, particle2, particle3, particle4, k);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        double k1, k2;
+        force.getOutOfPlaneBendParameters(group1, particle1, particle2, particle3, particle4, k1);
+        force.getOutOfPlaneBendParameters(group2, particle1, particle2, particle3, particle4, k2);
+        return (k1 == k2);
+    }
+private:
+    const AmoebaOutOfPlaneBendForce& force;
+};
+
 CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), data(data), system(system) {
     data.incrementKernelCount();
@@ -351,7 +559,7 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, c
                                          static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendQuartic()),
                                          static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendPentic()),
                                          static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendSextic() ) );
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -360,6 +568,34 @@ double CudaCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bo
     }
     return 0.0;
 }
+
+class CudaCalcAmoebaTorsionTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaTorsionTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsionTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4, particle5, chiralCheckAtomIndex, gridIndex;
+        force.getTorsionTorsionParameters(index, particle1, particle2, particle3, particle4, particle5, chiralCheckAtomIndex, gridIndex);
+        particles.resize(5);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+        particles[4] = particle5;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4, particle5;
+        int chiral1, chiral2, grid1, grid2;
+        force.getTorsionTorsionParameters(group1, particle1, particle2, particle3, particle4, particle5, chiral1, grid1);
+        force.getTorsionTorsionParameters(group2, particle1, particle2, particle3, particle4, particle5, chiral2, grid2);
+        return (grid1 == grid2);
+    }
+private:
+    const AmoebaTorsionTorsionForce& force;
+};
 
 CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), data(data), system(system) {
@@ -416,7 +652,7 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
         }
     }
     gpuSetAmoebaTorsionTorsionGrids(data.getAmoebaGpu(), floatGrids );
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -466,6 +702,30 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
         (void) fflush( data.getLog());
     }
 }
+
+class CudaCalcAmoebaMultipoleForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaMultipoleForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, thole1, thole2, damping1, damping2, polarity1, polarity2;
+        int axis1, axis2, multipole11, multipole12, multipole21, multipole22;
+        vector<double> dipole1, dipole2, quadrupole1, quadrupole2;
+        force.getMultipoleParameters(particle1, charge1, dipole1, quadrupole1, axis1, multipole11, multipole21, thole1, damping1, polarity1);
+        force.getMultipoleParameters(particle2, charge2, dipole2, quadrupole2, axis2, multipole12, multipole22, thole2, damping2, polarity2);
+        if (charge1 != charge2 || thole1 != thole2 || damping1 != damping2 || polarity1 != polarity2 || axis1 != axis2)
+            return false;
+        for (int i = 0; i < (int) dipole1.size(); ++i)
+            if (dipole1[i] != dipole2[i])
+                return false;
+        for (int i = 0; i < (int) quadrupole1.size(); ++i)
+            if (quadrupole1[i] != quadrupole2[i])
+                return false;
+        return true;
+    }
+private:
+    const AmoebaMultipoleForce& force;
+};
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
          CalcAmoebaMultipoleForceKernel(name, platform), data(data), system(system) {
@@ -608,7 +868,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
     }
-
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -619,6 +879,20 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
 /* -------------------------------------------------------------------------- *
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */
+
+class CudaCalcAmoebaGeneralizedKirkwoodForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaGeneralizedKirkwoodForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+    }
+private:
+    const AmoebaGeneralizedKirkwoodForce& force;
+};
 
 CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
            CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), data(data), system(system) {
@@ -652,6 +926,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
                                force.getIncludeCavityTerm(),
                                static_cast<float>( force.getProbeRadius() ), 
                                static_cast<float>( force.getSurfaceAreaFactor() ) ); 
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -668,6 +943,21 @@ static void computeAmoebaVdwForce( AmoebaCudaData& data ) {
 
     kCalculateAmoebaVdw14_7Forces(gpu);
 }
+
+class CudaCalcAmoebaVdwForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaVdwForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        int iv1, iv2, class1, class2;
+        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
+        force.getParticleParameters(particle1, iv1, class1, sigma1, epsilon1, reduction1);
+        force.getParticleParameters(particle2, iv2, class2, sigma2, epsilon2, reduction2);
+        return (iv1 == iv2 && class1 == class2 && sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
+    }
+private:
+    const AmoebaVdwForce& force;
+};
 
 CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
        CalcAmoebaVdwForceKernel(name, platform), data(data), system(system) {
@@ -712,6 +1002,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, indexClasses, sigmas, epsilons, reductions,
                                force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
                                allExclusions );
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -736,6 +1027,20 @@ static void computeAmoebaWcaDispersionForce( AmoebaCudaData& data ) {
         (void) fprintf( data.getLog(), " -- completed\n" ); (void) fflush( data.getLog() );
     }
 }
+
+class CudaCalcAmoebaWcaDispersionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaWcaDispersionForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double radius1, radius2, epsilon1, epsilon2;
+        force.getParticleParameters(particle1, radius1, epsilon1);
+        force.getParticleParameters(particle2, radius2, epsilon2);
+        return (radius1 == radius2 && epsilon1 == epsilon2);
+    }
+private:
+    const AmoebaWcaDispersionForce& force;
+};
 
 CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
            CalcAmoebaWcaDispersionForceKernel(name, platform), data(data), system(system) {
@@ -770,6 +1075,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
                                           static_cast<float>( force.getAwater( )),
                                           static_cast<float>( force.getShctd( )),
                                           static_cast<float>( force.getDispoff( ) ) );
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
 double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
