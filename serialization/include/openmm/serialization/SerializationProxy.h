@@ -103,7 +103,7 @@ public:
     static const SerializationProxy& getProxy(const std::type_info& type);
 private:
     std::string typeName;
-    static std::map<const std::type_info*, const SerializationProxy*> proxiesByType;
+    static std::map<const std::string, const SerializationProxy*> proxiesByType;
     static std::map<const std::string, const SerializationProxy*> proxiesByName;
 };
 

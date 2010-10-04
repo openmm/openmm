@@ -36,7 +36,7 @@
 using namespace OpenMM;
 using namespace std;
 
-map<const type_info*, const SerializationProxy*> SerializationProxy::proxiesByType;
+map<const string, const SerializationProxy*> SerializationProxy::proxiesByType;
 map<const string, const SerializationProxy*> SerializationProxy::proxiesByName;
 
 SerializationProxy::SerializationProxy(const string& typeName) : typeName(typeName) {
@@ -47,7 +47,7 @@ const string& SerializationProxy::getTypeName() const {
 }
 
 void SerializationProxy::registerProxy(const type_info& type, const SerializationProxy* proxy) {
-    proxiesByType[&type] = proxy;
+    proxiesByType[type.name()] = proxy;
     proxiesByName[proxy->getTypeName()] = proxy;
 }
 
@@ -59,7 +59,7 @@ const SerializationProxy& SerializationProxy::getProxy(const string& typeName) {
 }
 
 const SerializationProxy& SerializationProxy::getProxy(const type_info& type) {
-    map<const type_info*, const SerializationProxy*>::const_iterator iter = proxiesByType.find(&type);
+    map<const string, const SerializationProxy*>::const_iterator iter = proxiesByType.find(type.name());
     if (iter == proxiesByType.end())
         throw OpenMMException("There is no serialization proxy registered for type "+string(type.name()));
     return *iter->second;
