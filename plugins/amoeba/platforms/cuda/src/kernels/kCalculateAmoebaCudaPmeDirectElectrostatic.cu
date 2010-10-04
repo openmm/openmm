@@ -1315,6 +1315,6 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
 {
     cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpu );
-    kCalculateAmoebaPME( amoebaGpu );
+    kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
 } 
 

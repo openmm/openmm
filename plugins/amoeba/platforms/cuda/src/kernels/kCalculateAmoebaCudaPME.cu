@@ -960,9 +960,9 @@ void kRecordInducedDipoleField_kernel(float* output, float* outputPolar)
 extern void cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float4>* psOutputForce);
 
 /**
- * Compute the potential due to the reciprocal space PME calculation for fixed multipoles.
+ * Compute the potential and forces due to the reciprocal space PME calculation for fixed multipoles.
  */
-void kCalculateAmoebaPMEFixedMultipoleField(amoebaGpuContext amoebaGpu)
+void kCalculateAmoebaPMEFixedMultipoles(amoebaGpuContext amoebaGpu)
 {
     // Compute B-spline coefficients and sort the atoms.
 
@@ -987,6 +987,9 @@ void kCalculateAmoebaPMEFixedMultipoleField(amoebaGpuContext amoebaGpu)
     LAUNCHERROR("kComputeFixedPotentialFromGrid");
     kRecordFixedMultipoleField_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(amoebaGpu->psE_Field->_pDevData);
     LAUNCHERROR("kRecordFixedMultipoleField");
+    kComputeFixedMultipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kComputeFixedMultipoleForceAndEnergy");
+    cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
 }
 
 /**
@@ -1011,35 +1014,20 @@ void kCalculateAmoebaPMEInducedDipoleField(amoebaGpuContext amoebaGpu)
 }
 
 /**
- * Compute the forces due to the reciprocal space PME calculation.
+ * Compute the forces due to the reciprocal space PME calculation for induced dipoles.
  */
-void kCalculateAmoebaPME(amoebaGpuContext amoebaGpu)
+void kCalculateAmoebaPMEInducedDipoleForces(amoebaGpuContext amoebaGpu)
 {
-    // Perform PME for the fixed multipoles.
-
-    gpuContext gpu = amoebaGpu->gpuContext;
-    kGridSpreadFixedMultipoles_kernel<<<10*gpu->sim.blocks, 64>>>();
-    LAUNCHERROR("kGridSpreadFixedMultipoles");
-    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
-    kAmoebaReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
-    LAUNCHERROR("kAmoebaReciprocalConvolution");
-    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
-    int potentialThreads = (gpu->sm_version >= SM_20 ? 384 : (gpu->sm_version >= SM_12 ? 192 : 96));
-    kComputeFixedPotentialFromGrid_kernel<<<gpu->sim.blocks, potentialThreads>>>();
-    LAUNCHERROR("kComputeFixedPotentialFromGrid");
-    kComputeFixedMultipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-    LAUNCHERROR("kComputeFixedMultipoleForceAndEnergy");
-    cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
-
     // Perform PME for the induced dipoles.
 
+    gpuContext gpu = amoebaGpu->gpuContext;
     kGridSpreadInducedDipoles_kernel<<<10*gpu->sim.blocks, 64>>>();
     LAUNCHERROR("kGridSpreadInducedDipoles");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
     kAmoebaReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
     LAUNCHERROR("kAmoebaReciprocalConvolution");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
-    potentialThreads = (gpu->sm_version >= SM_20 ? 256 : (gpu->sm_version >= SM_12 ? 128 : 64));
+    int potentialThreads = (gpu->sm_version >= SM_20 ? 256 : (gpu->sm_version >= SM_12 ? 128 : 64));
     kComputeInducedPotentialFromGrid_kernel<<<gpu->sim.blocks, potentialThreads>>>();
     LAUNCHERROR("kComputeInducedPotentialFromGrid");
     kComputeInducedDipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
