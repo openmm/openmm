@@ -429,7 +429,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
 
     // print intermediate results for the targetAtom 
 
-    unsigned int targetAtom  = 354;
+    unsigned int targetAtom  = 1280;
 #endif
 
     kClearFields_3( amoebaGpu, 2 );
@@ -458,8 +458,6 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
                                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
 #endif
     } else {
-
-                                                                           //amoebaGpu->psWorkUnit->_pDevStream[0],
         kCalculateAmoebaPmeDirectFixedE_FieldN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
@@ -553,24 +551,14 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
         amoebaGpu->gpuContext->psPosq4->Download();
         for( int jj = 0; jj < gpu->natoms; jj++ ){
             int debugIndex = jj;
-if( fabs(debugArray->_pSysStream[0][jj+paddedNumberOfAtoms].x) > 0.0 ){
+if( fabs(debugArray->_pSysStream[0][jj+3*paddedNumberOfAtoms].x) > 0.0 ){
             (void) fprintf( amoebaGpu->log,"%5d PmeFixedEField\n", jj );
-            for( int kk = 0; kk < 6; kk++ ){
+            for( int kk = 0; kk < 7; kk++ ){
                 (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
                                 debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
                                 debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
                 debugIndex += paddedNumberOfAtoms;
             }
-            (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e ] [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] p\n",
-                            amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].x,
-                            amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].y,
-                            amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].z,
-                            amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].x - amoebaGpu->gpuContext->psPosq4->_pSysStream[0][0].x,
-                            amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].y - amoebaGpu->gpuContext->psPosq4->_pSysStream[0][0].y,
-                            amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].z - amoebaGpu->gpuContext->psPosq4->_pSysStream[0][0].z,
-                           (amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].x - amoebaGpu->gpuContext->psPosq4->_pSysStream[0][0].x)/5.50f,
-                           (amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].y - amoebaGpu->gpuContext->psPosq4->_pSysStream[0][0].y)/5.50f,
-                           (amoebaGpu->gpuContext->psPosq4->_pSysStream[0][jj].z - amoebaGpu->gpuContext->psPosq4->_pSysStream[0][0].z)/5.50f);
             (void) fprintf( amoebaGpu->log,"\n" );
 }
 
@@ -591,7 +579,7 @@ if( fabs(debugArray->_pSysStream[0][jj+paddedNumberOfAtoms].x) > 0.0 ){
     }
 #endif
 
-        if( 1 ){
+        if( 0 ){
             std::vector<int> fileId;
             fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;

@@ -759,13 +759,22 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
 
         }
 #endif
+
+(void) fprintf( amoebaGpu->log, "MI iteration=%3d eps %14.6e [%14.6e %14.6e] done=%d\n",
+                iteration, amoebaGpu->mutualInducedCurrentEpsilon,
+                amoebaGpu->psCurrentEpsilon->_pSysStream[0][1], 
+                amoebaGpu->psCurrentEpsilon->_pSysStream[0][2], done );
+fflush( amoebaGpu->log );
+if( amoebaGpu->mutualInducedCurrentEpsilon != amoebaGpu->mutualInducedCurrentEpsilon )exit(0);
+
+
         iteration++;
     }
 
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
-    if( 1 ){
+    if( 0 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;

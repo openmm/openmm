@@ -255,6 +255,14 @@ if( atomI == targetAtom ){
 
         } else {
 
+            if (lasty != y) {
+
+                // load shared data
+
+               loadPmeDirectElectrostaticShared( &(sA[threadIdx.x]), (y+tgx) );
+
+            }
+
             unsigned int flags           = cSim.pInteractionFlag[pos];
             if (flags == 0) {
                 // No interactions in this block.
@@ -346,40 +354,40 @@ if( atomI == targetAtom ){
 
                     } else {
 
-                        psA[threadIdx.x].tempForce[0]     = mask ? 0.0f : force[0];
-                        psA[threadIdx.x].tempForce[1]     = mask ? 0.0f : force[1];
-                        psA[threadIdx.x].tempForce[2]     = mask ? 0.0f : force[2];
+                        sA[threadIdx.x].tempForce[0]     = mask ? 0.0f : force[0];
+                        sA[threadIdx.x].tempForce[1]     = mask ? 0.0f : force[1];
+                        sA[threadIdx.x].tempForce[2]     = mask ? 0.0f : force[2];
    
-                        psA[threadIdx.x].tempTorque[0]    = mask ? 0.0f : torque[1][0];
-                        psA[threadIdx.x].tempTorque[1]    = mask ? 0.0f : torque[1][1];
-                        psA[threadIdx.x].tempTorque[2]    = mask ? 0.0f : torque[1][2];
+                        sA[threadIdx.x].tempTorque[0]    = mask ? 0.0f : torque[1][0];
+                        sA[threadIdx.x].tempTorque[1]    = mask ? 0.0f : torque[1][1];
+                        sA[threadIdx.x].tempTorque[2]    = mask ? 0.0f : torque[1][2];
 
                         if( tgx % 2 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+1] );  
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );  
                         }
                         if( tgx % 4 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+2] );  
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );  
                         }
                         if( tgx % 8 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+4] );  
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );  
                         }
                         if( tgx % 16 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+8] );  
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );  
                         }
 
                         if (tgx == 0)
                         {
-                            psA[jIdx].force[0]  -= psA[threadIdx.x].tempForce[0]  + psA[threadIdx.x+16].tempForce[0];
-                            psA[jIdx].force[1]  -= psA[threadIdx.x].tempForce[1]  + psA[threadIdx.x+16].tempForce[1];
-                            psA[jIdx].force[2]  -= psA[threadIdx.x].tempForce[2]  + psA[threadIdx.x+16].tempForce[2];
+                            psA[jIdx].force[0]  -= sA[threadIdx.x].tempForce[0]  + sA[threadIdx.x+16].tempForce[0];
+                            psA[jIdx].force[1]  -= sA[threadIdx.x].tempForce[1]  + sA[threadIdx.x+16].tempForce[1];
+                            psA[jIdx].force[2]  -= sA[threadIdx.x].tempForce[2]  + sA[threadIdx.x+16].tempForce[2];
 
-                            psA[jIdx].torque[0] += psA[threadIdx.x].tempTorque[0] + psA[threadIdx.x+16].tempTorque[0];
-                            psA[jIdx].torque[1] += psA[threadIdx.x].tempTorque[1] + psA[threadIdx.x+16].tempTorque[1];
-                            psA[jIdx].torque[2] += psA[threadIdx.x].tempTorque[2] + psA[threadIdx.x+16].tempTorque[2];
+                            psA[jIdx].torque[0] += sA[threadIdx.x].tempTorque[0] + sA[threadIdx.x+16].tempTorque[0];
+                            psA[jIdx].torque[1] += sA[threadIdx.x].tempTorque[1] + sA[threadIdx.x+16].tempTorque[1];
+                            psA[jIdx].torque[2] += sA[threadIdx.x].tempTorque[2] + sA[threadIdx.x+16].tempTorque[2];
                         }
                     }
  
-                    tj                              = (tj + 1) & (GRID - 1);
+                    tj = (tj + 1) & (GRID - 1);
 
                 } // end of j-loop
 

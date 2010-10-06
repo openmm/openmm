@@ -396,16 +396,20 @@ if( 0 ){
     amoebaGpu->psWorkUnit->Download();
     (void) fprintf( amoebaGpu->log, "Ixn count=%u\n", gpu->psInteractionCount->_pSysStream[0][0] );
     for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
+
         unsigned int x          = gpu->psInteractingWorkUnit->_pSysStream[0][ii];
         unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
+        //unsigned int y          = ((x >> 2) & 0x7fff);
         unsigned int exclusions = (x & 0x1);
                      x          = (x >> 17) << GRIDBITS;
-        (void) fprintf( amoebaGpu->log, "Cell %8u  %8u [%5u %5u %1u] ", ii, gpu->psInteractingWorkUnit->_pSysStream[0][ii], x,y,exclusions );
-        x          = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
-        y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-        exclusions = (x & 0x1);
-        x          = (x >> 17) << GRIDBITS;
-        (void) fprintf( amoebaGpu->log, "   %8u [%5u %5u %1u]   %10u\n", amoebaGpu->psWorkUnit->_pSysStream[0][ii], x,y,exclusions, gpu->psInteractionFlag->_pSysStream[0][ii] );
+        //             x          = (x >> 17);
+        (void) fprintf( amoebaGpu->log, "GpuCell %8u  %8u [%5u %5u %1u] %10u ", ii, gpu->psInteractingWorkUnit->_pSysStream[0][ii], x,y,exclusions, gpu->psInteractionFlag->_pSysStream[0][ii] );
+
+                     x          = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
+                     y          = ((x >> 2) & 0x7fff) << GRIDBITS;
+                     exclusions = (x & 0x1);
+                     x          = (x >> 17) << GRIDBITS;
+        (void) fprintf( amoebaGpu->log, "   AmGpu %8u [%5u %5u %1u]\n", amoebaGpu->psWorkUnit->_pSysStream[0][ii], x,y,exclusions );
     }    
 } else {
 }

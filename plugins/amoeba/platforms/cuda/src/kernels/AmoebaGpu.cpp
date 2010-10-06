@@ -4305,7 +4305,7 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
 
    --------------------------------------------------------------------------------------- */
 
-void gpuCopyInteractingWorkUnit( amoebaGpuContext amoebaGpu ){
+void gpuCopyWorkUnit( amoebaGpuContext amoebaGpu ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -4315,7 +4315,7 @@ void gpuCopyInteractingWorkUnit( amoebaGpuContext amoebaGpu ){
     amoebaGpu->psWorkUnit->Download();
     (void) fprintf( amoebaGpu->log, "gpuCopyInteractingWorkUnit called -- to be removed.\n" );
     for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
-        gpu->psInteractingWorkUnit->_pSysStream[0][ii] = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
+        //gpu->psInteractingWorkUnit->_pSysStream[0][ii] = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
         gpu->psWorkUnit->_pSysStream[0][ii]            = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
     }    
     gpu->psInteractingWorkUnit->Upload();

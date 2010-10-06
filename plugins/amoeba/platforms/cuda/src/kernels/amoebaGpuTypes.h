@@ -344,7 +344,7 @@ extern "C"
 void gpuSetAmoebaBondOffsets(amoebaGpuContext gpu);
 
 extern "C"
-void gpuCopyInteractingWorkUnit(amoebaGpuContext gpu);
+void gpuCopyWorkUnit(amoebaGpuContext gpu);
 
 /*
 extern "C"

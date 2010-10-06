@@ -167,9 +167,10 @@ public:
      */
     void setApplyCutoff( int applyCutoff ); 
 
+    CudaPlatform::PlatformData& cudaPlatformData;
+
 private:
 
-    CudaPlatform::PlatformData& cudaPlatformData;
     amoebaGpuContext amoebaGpu;
     bool hasAmoebaBonds, hasAmoebaGeneralizedKirkwood, hasAmoebaMultipole;
     int multipoleForceCount;

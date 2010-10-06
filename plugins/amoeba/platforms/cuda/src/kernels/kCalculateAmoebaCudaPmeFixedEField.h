@@ -140,18 +140,30 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
                 fieldPolarSum[2]       += match ? 0.0f : ijField[2][2];
 
 #ifdef AMOEBA_DEBUG
-if( atomI == targetAtom ){
+if( atomI == targetAtom || targetAtom == (y+j) ){
     unsigned int index                 = atomI == targetAtom ? (y + j) : atomI;
     unsigned int indexI                = 0;
     unsigned int indexJ                = indexI ? 0 : 2;
     unsigned int indices[4]            = { indexI, indexJ, indexI+1, indexJ+1 };
+    float flag                         = 7.0f;
 
     debugArray[index].x                = (float) atomI;
     debugArray[index].y                = (float) (y + j);
     debugArray[index].z                = dScaleValue;
     debugArray[index].w                = pScaleValue;
 
-    float flag                         = 7.0f;
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = (float) bExclusionFlag;
+    debugArray[index].y                = (float) (tgx);
+    debugArray[index].z                = (float) j;
+    debugArray[index].w                = flag;
+
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = (float) dScaleMask;
+    debugArray[index].y                = (float) pScaleMask.x;
+    debugArray[index].z                = (float) pScaleMask.y;
+    debugArray[index].w                = flag;
+
     for( int ii = 0; ii < 4; ii++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = match ? 0.0f : ijField[indices[ii]][0];
@@ -159,6 +171,7 @@ if( atomI == targetAtom ){
         debugArray[index].z                = match ? 0.0f : ijField[indices[ii]][2];
         debugArray[index].w                = flag;
     }
+
     for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullBack[pullIndex].x;
@@ -186,18 +199,18 @@ if( atomI == targetAtom ){
 
         } else {
 
+            if (lasty != y ) {
+    
+                // load coordinates, charge, ...
+    
+                loadFixedFieldShared( &(sA[threadIdx.x]), (y+tgx) );
+    
+            }
+
             unsigned int flags = cSim.pInteractionFlag[pos];
-//  flags = 0xFFFFFFFF;
             if (flags == 0) {
                 // No interactions in this block.
             } else {
-                if (lasty != y ) {
-    
-                    // load coordinates, charge, ...
-    
-                    loadFixedFieldShared( &(sA[threadIdx.x]), (y+tgx) );
-    
-                }
 
                 // zero shared fields
 
@@ -254,36 +267,36 @@ if( atomI == targetAtom ){
  
                     } else {
 
-                         psA[threadIdx.x].tempBuffer[0]  = outOfBounds ? 0.0f : ijField[1][0];
-                         psA[threadIdx.x].tempBuffer[1]  = outOfBounds ? 0.0f : ijField[1][1];
-                         psA[threadIdx.x].tempBuffer[2]  = outOfBounds ? 0.0f : ijField[1][2];
+                        sA[threadIdx.x].tempBuffer[0]  = outOfBounds ? 0.0f : ijField[1][0];
+                        sA[threadIdx.x].tempBuffer[1]  = outOfBounds ? 0.0f : ijField[1][1];
+                        sA[threadIdx.x].tempBuffer[2]  = outOfBounds ? 0.0f : ijField[1][2];
     
-                         psA[threadIdx.x].tempBufferP[0] = outOfBounds ? 0.0f : ijField[3][0];
-                         psA[threadIdx.x].tempBufferP[1] = outOfBounds ? 0.0f : ijField[3][1];
-                         psA[threadIdx.x].tempBufferP[2] = outOfBounds ? 0.0f : ijField[3][2];
+                        sA[threadIdx.x].tempBufferP[0] = outOfBounds ? 0.0f : ijField[3][0];
+                        sA[threadIdx.x].tempBufferP[1] = outOfBounds ? 0.0f : ijField[3][1];
+                        sA[threadIdx.x].tempBufferP[2] = outOfBounds ? 0.0f : ijField[3][2];
 
                         if( tgx % 2 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+1] ); 
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] ); 
                         } 
                         if( tgx % 4 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+2] ); 
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] ); 
                         } 
                         if( tgx % 8 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+4] ); 
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] ); 
                         } 
                         if( tgx % 16 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+8] ); 
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] ); 
                         } 
 
                         if (tgx == 0)
                         {
-                            psA[jIdx].eField[0]  += psA[threadIdx.x].tempBuffer[0]  + psA[threadIdx.x+16].tempBuffer[0];
-                            psA[jIdx].eField[1]  += psA[threadIdx.x].tempBuffer[1]  + psA[threadIdx.x+16].tempBuffer[1];
-                            psA[jIdx].eField[2]  += psA[threadIdx.x].tempBuffer[2]  + psA[threadIdx.x+16].tempBuffer[2];
+                            psA[jIdx].eField[0]  += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
+                            psA[jIdx].eField[1]  += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
+                            psA[jIdx].eField[2]  += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
 
-                            psA[jIdx].eFieldP[0] += psA[threadIdx.x].tempBufferP[0] + psA[threadIdx.x+16].tempBufferP[0];
-                            psA[jIdx].eFieldP[1] += psA[threadIdx.x].tempBufferP[1] + psA[threadIdx.x+16].tempBufferP[1];
-                            psA[jIdx].eFieldP[2] += psA[threadIdx.x].tempBufferP[2] + psA[threadIdx.x+16].tempBufferP[2];
+                            psA[jIdx].eFieldP[0] += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
+                            psA[jIdx].eFieldP[1] += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
+                            psA[jIdx].eFieldP[2] += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
                         }
                     }
 
@@ -300,6 +313,18 @@ if( (atomI == targetAtom || (y + jIdx) == targetAtom) ){
             debugArray[index].w                = pScaleValue;
 
             float flag                         = 9.0f;
+            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            debugArray[index].x                = (float) bExclusionFlag;
+            debugArray[index].y                = (float) (tgx);
+            debugArray[index].z                = (float) j;
+            debugArray[index].w                = jIdx;
+        
+            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            debugArray[index].x                = (float) dScaleMask;
+            debugArray[index].y                = (float) pScaleMask.x;
+            debugArray[index].z                = (float) pScaleMask.y;
+            debugArray[index].w                = (float) flags;
+        
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             debugArray[index].x                =  outOfBounds ? 0.0f : ijField[indexI][0];
             debugArray[index].y                =  outOfBounds ? 0.0f : ijField[indexI][1];

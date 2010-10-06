@@ -670,11 +670,11 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
 
     amoebaGpuContext gpu = data.getAmoebaGpu();
     if( data.getMultipoleForceCount() == 0 ){
-        gpuCopyInteractingWorkUnit( gpu );
+        gpuCopyWorkUnit( gpu );
     }
-    if( data.getApplyCutoff() && (data.getMultipoleForceCount() % 100) == 0 ){
-        gpuReorderAtoms(gpu->gpuContext);
-    }
+    //if( data.getApplyCutoff() && (data.getMultipoleForceCount() % 100) == 0 ){
+        //gpuReorderAtoms(gpu->gpuContext);
+    //}
     data.incrementMultipoleForceCount();
     data.initializeGpu();
 
@@ -875,10 +875,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
         data.setApplyCutoff( 1 );
-        amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
-        gpuContext gpu              = amoebaGpu->gpuContext;
-        gpu->sim.nonbondedCutoffSqr = force.getCutoffDistance()*force.getCutoffDistance();
-        gpu->sim.nonbondedMethod    = PARTICLE_MESH_EWALD;
+        data.cudaPlatformData.nonbondedMethod = PARTICLE_MESH_EWALD;
+        amoebaGpuContext amoebaGpu            = data.getAmoebaGpu();
+        gpuContext gpu                        = amoebaGpu->gpuContext;
+        gpu->sim.nonbondedCutoffSqr           = force.getCutoffDistance()*force.getCutoffDistance();
+        gpu->sim.nonbondedMethod              = PARTICLE_MESH_EWALD;
     }
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }

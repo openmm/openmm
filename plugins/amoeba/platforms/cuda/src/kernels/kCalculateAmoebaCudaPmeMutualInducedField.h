@@ -211,20 +211,20 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
         } else {
 
+            if (lasty != y)
+            {
+                unsigned int atomJ        = y + tgx;
+
+                // load coordinates, charge, ...
+
+                loadMutualInducedShared( &(sA[threadIdx.x]), atomJ );
+            }
+    
             unsigned int flags = cSim.pInteractionFlag[pos];
             if (flags == 0) {
                 // No interactions in this block.
             } else {
 
-                if (lasty != y)
-                {
-                    unsigned int atomJ        = y + tgx;
-    
-                    // load coordinates, charge, ...
-    
-                    loadMutualInducedShared( &(sA[threadIdx.x]), atomJ );
-                }
-    
                // zero shared fields
     
                 zeroMutualInducedParticleSharedField(  &(sA[threadIdx.x]) );
@@ -273,36 +273,36 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
                     } else {
 
-                        psA[threadIdx.x].tempBuffer[0]  = mask ? 0.0f : ijField[1][0];
-                        psA[threadIdx.x].tempBuffer[1]  = mask ? 0.0f : ijField[1][1];
-                        psA[threadIdx.x].tempBuffer[2]  = mask ? 0.0f : ijField[1][2];
+                        sA[threadIdx.x].tempBuffer[0]  = mask ? 0.0f : ijField[1][0];
+                        sA[threadIdx.x].tempBuffer[1]  = mask ? 0.0f : ijField[1][1];
+                        sA[threadIdx.x].tempBuffer[2]  = mask ? 0.0f : ijField[1][2];
 
-                        psA[threadIdx.x].tempBufferP[0] = mask ? 0.0f : ijField[3][0];
-                        psA[threadIdx.x].tempBufferP[1] = mask ? 0.0f : ijField[3][1];
-                        psA[threadIdx.x].tempBufferP[2] = mask ? 0.0f : ijField[3][2];
+                        sA[threadIdx.x].tempBufferP[0] = mask ? 0.0f : ijField[3][0];
+                        sA[threadIdx.x].tempBufferP[1] = mask ? 0.0f : ijField[3][1];
+                        sA[threadIdx.x].tempBufferP[2] = mask ? 0.0f : ijField[3][2];
 
                         if( tgx % 2 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+1] );
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
                         }
                         if( tgx % 4 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+2] );
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );
                         }
                         if( tgx % 8 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+4] );
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );
                         }
                         if( tgx % 16 == 0 ){
-                            sumTempBuffer( psA[threadIdx.x], psA[threadIdx.x+8] );
+                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );
                         }
 
                         if (tgx == 0)
                         {
-                            psA[jIdx].field[0]         += psA[threadIdx.x].tempBuffer[0]  + psA[threadIdx.x+16].tempBuffer[0];
-                            psA[jIdx].field[1]         += psA[threadIdx.x].tempBuffer[1]  + psA[threadIdx.x+16].tempBuffer[1];
-                            psA[jIdx].field[2]         += psA[threadIdx.x].tempBuffer[2]  + psA[threadIdx.x+16].tempBuffer[2];
+                            psA[jIdx].field[0]         += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
+                            psA[jIdx].field[1]         += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
+                            psA[jIdx].field[2]         += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
 
-                            psA[jIdx].fieldPolar[0]    += psA[threadIdx.x].tempBufferP[0] + psA[threadIdx.x+16].tempBufferP[0];
-                            psA[jIdx].fieldPolar[1]    += psA[threadIdx.x].tempBufferP[1] + psA[threadIdx.x+16].tempBufferP[1];
-                            psA[jIdx].fieldPolar[2]    += psA[threadIdx.x].tempBufferP[2] + psA[threadIdx.x+16].tempBufferP[2];
+                            psA[jIdx].fieldPolar[0]    += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
+                            psA[jIdx].fieldPolar[1]    += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
+                            psA[jIdx].fieldPolar[2]    += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
                         }
 
                     }

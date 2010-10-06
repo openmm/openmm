@@ -47,9 +47,7 @@ AmoebaCudaData::AmoebaCudaData( CudaPlatform::PlatformData& data ) : cudaPlatfor
 }   
 
 AmoebaCudaData::~AmoebaCudaData() {
-    (void) fprintf( stderr, "In AmoebaCudaData destructor\n" ); fflush( stderr );
     amoebaGpuShutDown( amoebaGpu );
-    (void) fprintf( stderr, "Done AmoebaCudaData destructor\n" ); fflush( stderr );
 }
 
 void AmoebaCudaData::decrementKernelCount( void ) {
