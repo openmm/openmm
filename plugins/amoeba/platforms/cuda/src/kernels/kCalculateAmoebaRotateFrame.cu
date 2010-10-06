@@ -353,6 +353,13 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
   
 }
 
+#undef USE_PERIODIC
+#define USE_PERIODIC
+#define METHOD_NAME(a, b) a##Periodic##b
+#include "kFindInteractingBlocks.h"
+#undef USE_PERIODIC
+#undef METHOD_NAME
+
 void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood ) 
 {
     std::string methodName = "kCalculateAmoebaMultipoleForces";
@@ -372,6 +379,37 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
             cudaComputeAmoebaFixedEField( amoebaGpu );
             cudaComputeAmoebaMutualInducedField( amoebaGpu );
         } else {
+            gpuContext gpu = amoebaGpu->gpuContext;
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
+
+if( 0 ){ 
+    gpu->psInteractionCount->Download();
+    gpu->psInteractingWorkUnit->Download();
+    gpu->psInteractionFlag->Download();
+    amoebaGpu->psWorkUnit->Download();
+    (void) fprintf( amoebaGpu->log, "Ixn count=%u\n", gpu->psInteractionCount->_pSysStream[0][0] );
+    for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
+        unsigned int x          = gpu->psInteractingWorkUnit->_pSysStream[0][ii];
+        unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
+        unsigned int exclusions = (x & 0x1);
+                     x          = (x >> 17) << GRIDBITS;
+        (void) fprintf( amoebaGpu->log, "Cell %8u  %8u [%5u %5u %1u] ", ii, gpu->psInteractingWorkUnit->_pSysStream[0][ii], x,y,exclusions );
+        x          = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
+        y          = ((x >> 2) & 0x7fff) << GRIDBITS;
+        exclusions = (x & 0x1);
+        x          = (x >> 17) << GRIDBITS;
+        (void) fprintf( amoebaGpu->log, "   %8u [%5u %5u %1u]   %10u\n", amoebaGpu->psWorkUnit->_pSysStream[0][ii], x,y,exclusions, gpu->psInteractionFlag->_pSysStream[0][ii] );
+    }    
+} else {
+}
+
             cudaComputeAmoebaPmeFixedEField( amoebaGpu );
             cudaComputeAmoebaPmeMutualInducedField( amoebaGpu );
         }

@@ -139,11 +139,41 @@ public:
      */
     void setContextImpl( void* contextImpl ); 
 
+    /**
+     * Get multipole force count 
+     * 
+     * @return multipole force count
+     */
+    int getMultipoleForceCount( void ) const; 
+
+    /**
+     * Get multipole force count 
+     * 
+     * @return multipole force count
+     */
+    void incrementMultipoleForceCount( void ); 
+
+    /**
+     * Get multipole force count 
+     * 
+     * @return multipole force count
+     */
+    int getApplyCutoff( ) const; 
+
+    /**
+     * Get multipole force count 
+     * 
+     * @return multipole force count
+     */
+    void setApplyCutoff( int applyCutoff ); 
+
 private:
 
     CudaPlatform::PlatformData& cudaPlatformData;
     amoebaGpuContext amoebaGpu;
     bool hasAmoebaBonds, hasAmoebaGeneralizedKirkwood, hasAmoebaMultipole;
+    int multipoleForceCount;
+    int applyCutoff;
     KernelImpl* localForceKernel;
     unsigned int kernelCount;
     void* contextImpl;

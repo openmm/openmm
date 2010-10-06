@@ -24,6 +24,11 @@ struct MutualInducedParticle {
     float fieldS[3];
     float fieldPolarS[3];
 #endif
+
+#ifdef INCLUDE_MI_FIELD_BUFFERS
+    float tempBuffer[3];
+    float tempBufferP[3];
+#endif
 };
 
 __device__ static void loadMutualInducedShared( MutualInducedParticle* sA, unsigned int atomI )

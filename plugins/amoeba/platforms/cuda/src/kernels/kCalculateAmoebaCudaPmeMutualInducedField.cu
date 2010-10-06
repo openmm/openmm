@@ -36,7 +36,21 @@ void GetCalculateAmoebaCudaPmeMutualInducedFieldSim(amoebaGpuContext amoebaGpu)
 //#define AMOEBA_DEBUG
 #undef AMOEBA_DEBUG
 
+#undef INCLUDE_MI_FIELD_BUFFERS
+#define INCLUDE_MI_FIELD_BUFFERS 
 #include "kCalculateAmoebaCudaMutualInducedParticle.h"
+#undef INCLUDE_MI_FIELD_BUFFERS
+
+__device__ void sumTempBuffer( MutualInducedParticle& atomI, MutualInducedParticle& atomJ ){
+
+    atomI.tempBuffer[0]  += atomJ.tempBuffer[0];
+    atomI.tempBuffer[1]  += atomJ.tempBuffer[1];
+    atomI.tempBuffer[2]  += atomJ.tempBuffer[2];
+
+    atomI.tempBufferP[0] += atomJ.tempBufferP[0];
+    atomI.tempBufferP[1] += atomJ.tempBufferP[1];
+    atomI.tempBufferP[2] += atomJ.tempBufferP[2];
+}
 
 // file includes FixedFieldParticle struct definition/load/unload struct and body kernel for fixed E-field
 
@@ -152,7 +166,7 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
 
     // increment the field at each site due to this interaction
 
-    if( r2 <= cAmoebaSim.cutoffDistance2 ){
+    if( r2 <= cSim.nonbondedCutoffSqr ){
 
         fields[0][0]       = fimd[0] - fid[0];
         fields[1][0]       = fkmd[0] - fkd[0];
@@ -370,7 +384,8 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
                                                                   CUDAStream<float>* outputArray, CUDAStream<float>* outputPolarArray )
 {
   
-  gpuContext gpu    = amoebaGpu->gpuContext;
+  static unsigned int threadsPerBlock  = 0;
+  gpuContext gpu                       = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
     int targetAtom    = 0;
@@ -389,9 +404,24 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
 
     kClearFields_3( amoebaGpu, 2 );
 
+    // on first pass, set threads/block
+
+    if( threadsPerBlock == 0 ){  
+        unsigned int maxThreads;
+        if (gpu->sm_version >= SM_20)
+            maxThreads = 384; 
+        else if (gpu->sm_version >= SM_12)
+            maxThreads = 128; 
+        else
+            maxThreads = 64; 
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(MutualInducedParticle)), maxThreads);
+    }    
+
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaPmeMutualInducedFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
-                                                                 amoebaGpu->psWorkUnit->_pDevStream[0],
+                                                                 //gpu->sim.pInteractingWorkUnit,
+                                                                 //amoebaGpu->psWorkUnit->_pDevStream[0],
+        kCalculateAmoebaPmeMutualInducedFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
+                                                                 gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                  amoebaGpu->psWorkArray_3_2->_pDevStream[0],
@@ -405,14 +435,13 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
 #ifdef AMOEBA_DEBUG
         (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
         (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock,
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
                         amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
-        kCalculateAmoebaPmeMutualInducedFieldN2_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock,
-                                                         sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
-                                                                 amoebaGpu->psWorkUnit->_pDevStream[0],
+        kCalculateAmoebaPmeMutualInducedFieldN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
+                                                                 gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                  amoebaGpu->psWorkArray_3_2->_pDevStream[0],
@@ -717,6 +746,17 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
                 }
             }   
             (void) fflush( amoebaGpu->log );
+
+    if( 1 ){
+        std::vector<int> fileId;
+        fileId.push_back( iteration );
+        VectorOfDoubleVectors outputVector;
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeMI", fileId, outputVector );
+     }
+
         }
 #endif
         iteration++;
@@ -725,7 +765,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
-    if( 0 ){
+    if( 1 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;

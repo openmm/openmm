@@ -669,6 +669,13 @@ double CudaCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bo
 static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
 
     amoebaGpuContext gpu = data.getAmoebaGpu();
+    if( data.getMultipoleForceCount() == 0 ){
+        gpuCopyInteractingWorkUnit( gpu );
+    }
+    if( data.getApplyCutoff() && (data.getMultipoleForceCount() % 100) == 0 ){
+        gpuReorderAtoms(gpu->gpuContext);
+    }
+    data.incrementMultipoleForceCount();
     data.initializeGpu();
 
     if( 0 && data.getLog() ){
@@ -867,6 +874,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             zsize = pmeGridDimension[2];
         }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
+        data.setApplyCutoff( 1 );
+        amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
+        gpuContext gpu              = amoebaGpu->gpuContext;
+        gpu->sim.nonbondedCutoffSqr = force.getCutoffDistance()*force.getCutoffDistance();
+        gpu->sim.nonbondedMethod    = PARTICLE_MESH_EWALD;
     }
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }

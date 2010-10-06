@@ -42,6 +42,8 @@ AmoebaCudaData::AmoebaCudaData( CudaPlatform::PlatformData& data ) : cudaPlatfor
     log                           = NULL;
     contextImpl                   = NULL;
     gpuInitialized                = false;
+    applyCutoff                   = 0;
+    multipoleForceCount           = 0;
 }   
 
 AmoebaCudaData::~AmoebaCudaData() {
@@ -120,6 +122,22 @@ void AmoebaCudaData::initializeGpu( void ) {
         }
     }
     return;
+}
+
+void AmoebaCudaData::incrementMultipoleForceCount( void ) {
+    multipoleForceCount++;
+}
+
+int AmoebaCudaData::getMultipoleForceCount( void ) const {
+    return multipoleForceCount;
+}
+
+void AmoebaCudaData::setApplyCutoff( int inputApplyCutoff ) {
+    applyCutoff = inputApplyCutoff;
+}
+
+int AmoebaCudaData::getApplyCutoff( void ) const {
+    return applyCutoff;
 }
 
 }

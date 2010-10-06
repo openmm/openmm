@@ -44,6 +44,11 @@ struct FixedFieldParticle {
     float gkField[3];
 
 #endif
+
+#ifdef INCLUDE_FIXED_FIELD_BUFFERS
+    float tempBuffer[3];
+    float tempBufferP[3];
+#endif
 };
 
 __device__ static void loadFixedFieldShared( struct FixedFieldParticle* sA, unsigned int atomI 

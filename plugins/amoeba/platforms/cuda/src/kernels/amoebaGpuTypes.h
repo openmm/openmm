@@ -343,6 +343,9 @@ void amoebaGpuSetConstants(amoebaGpuContext gpu);
 extern "C"
 void gpuSetAmoebaBondOffsets(amoebaGpuContext gpu);
 
+extern "C"
+void gpuCopyInteractingWorkUnit(amoebaGpuContext gpu);
+
 /*
 extern "C"
 void gpuSetDihedralParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3, const std::vector<int>& atom4,

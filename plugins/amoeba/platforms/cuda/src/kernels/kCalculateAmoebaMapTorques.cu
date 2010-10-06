@@ -653,7 +653,7 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext amoebaGpu,
         (void) fprintf( amoebaGpu->log, "%s: numBlocks=%d numThreads=%d %d\n", methodName, numBlocks, numThreads, amoebaGpu->maxMapTorqueDifferencePow2); (void) fflush( amoebaGpu->log );
         amoebaGpu->psForce->Download();
         psCudaForce4->Download();
- 
+        amoebaGpu->torqueMapForce->Download();
         amoebaGpu->psTorque->Download();
         int maxPrint        = 10;
         (void) fprintf( amoebaGpu->log,"Post torqueMap\n" );
@@ -670,6 +670,10 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext amoebaGpu,
                             amoebaGpu->psForce->_pSysStream[0][indexOffset],
                             amoebaGpu->psForce->_pSysStream[0][indexOffset+1],
                             amoebaGpu->psForce->_pSysStream[0][indexOffset+2] );
+            (void) fprintf( amoebaGpu->log,"fT[%16.9e %16.9e %16.9e] ",
+                            amoebaGpu->torqueMapForce->_pSysStream[0][indexOffset],
+                            amoebaGpu->torqueMapForce->_pSysStream[0][indexOffset+1],
+                            amoebaGpu->torqueMapForce->_pSysStream[0][indexOffset+2] );
             (void) fprintf( amoebaGpu->log,"T[%16.9e %16.9e %16.9e]\n",
                             amoebaGpu->psTorque->_pSysStream[0][indexOffset],
                             amoebaGpu->psTorque->_pSysStream[0][indexOffset+1],
@@ -741,7 +745,7 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext amoebaGpu,
             amoebaGpu->maxMapTorqueDifference,
             amoebaGpu->torqueMapForce->_pDevStream[0],
             psCudaForce4->_pDevStream[0] );
-    LAUNCHERROR("amoebaMapTorqueReduce_kernel2");
+    LAUNCHERROR("amoebaMapTorqueReduce_kernel3");
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){

@@ -4535,7 +4535,6 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     MapStringDouble tinkerEnergies;
     MapStringVectorOfVectors supplementary;
  
-
     MapStringIntI isPresent = forceMap.find( AMOEBA_GK_FORCE );
     bool gkIsActive;
     if( isPresent != forceMap.end() && isPresent->second != 0 ){

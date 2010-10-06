@@ -775,15 +775,15 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
         multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
         multipole[9] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
         float* phi = &cAmoebaSim.pPhi[20*i];
-        cAmoebaSim.pTorque[3*i] = -cAmoebaSim.electric*(multipole[3]*yscale*phi[2] - multipole[2]*zscale*phi[3]
+        cAmoebaSim.pTorque[3*i] = cAmoebaSim.electric*(multipole[3]*yscale*phi[2] - multipole[2]*zscale*phi[3]
                       + 2.0f*(multipole[6]-multipole[5])*zscale*zscale*phi[9]
                       + multipole[8]*yscale*yscale*phi[7] + multipole[9]*xscale*yscale*phi[5]
                       - multipole[7]*yscale*zscale*phi[8] - multipole[9]*xscale*zscale*phi[6]);
-        cAmoebaSim.pTorque[3*i+1] = -cAmoebaSim.electric*(multipole[1]*zscale*phi[3] - multipole[3]*xscale*phi[1]
+        cAmoebaSim.pTorque[3*i+1] = cAmoebaSim.electric*(multipole[1]*zscale*phi[3] - multipole[3]*xscale*phi[1]
                       + 2.0f*(multipole[4]-multipole[6])*zscale*zscale*phi[8]
                       + multipole[7]*zscale*zscale*phi[9] + multipole[8]*xscale*zscale*phi[6]
                       - multipole[8]*xscale*xscale*phi[4] - multipole[9]*yscale*yscale*phi[7]);
-        cAmoebaSim.pTorque[3*i+2] = -cAmoebaSim.electric*(multipole[2]*xscale*phi[1] - multipole[1]*yscale*phi[2]
+        cAmoebaSim.pTorque[3*i+2] = cAmoebaSim.electric*(multipole[2]*xscale*phi[1] - multipole[1]*yscale*phi[2]
                       + 2.0f*(multipole[5]-multipole[4])*yscale*yscale*phi[7]
                       + multipole[7]*xscale*xscale*phi[4] + multipole[9]*yscale*zscale*phi[8]
                       - multipole[7]*xscale*yscale*phi[5] - multipole[8]*zscale*zscale*phi[9]);
@@ -810,9 +810,9 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
         f.y *= cAmoebaSim.electric*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
         f.z *= cAmoebaSim.electric*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
         float4 force = cSim.pForce4[i];
-        force.x += f.x;
-        force.y += f.y;
-        force.z += f.z;
+        force.x -= f.x;
+        force.y -= f.y;
+        force.z -= f.z;
         cSim.pForce4[i] = force;
 
 
@@ -854,15 +854,15 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
         multipole[9] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
         float* phidp = &cAmoebaSim.pPhidp[20*i];
-        cAmoebaSim.pTorque[3*i] = -0.5f*cAmoebaSim.electric*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
+        cAmoebaSim.pTorque[3*i] = 0.5f*cAmoebaSim.electric*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
                       + 2.0f*(multipole[6]-multipole[5])*zscale*zscale*phidp[9]
                       + multipole[8]*yscale*yscale*phidp[7] + multipole[9]*xscale*yscale*phidp[5]
                       - multipole[7]*yscale*zscale*phidp[8] - multipole[9]*xscale*zscale*phidp[6]);
-        cAmoebaSim.pTorque[3*i+1] = -0.5f*cAmoebaSim.electric*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
+        cAmoebaSim.pTorque[3*i+1] = 0.5f*cAmoebaSim.electric*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
                       + 2.0f*(multipole[4]-multipole[6])*zscale*zscale*phidp[8]
                       + multipole[7]*zscale*zscale*phidp[9] + multipole[8]*xscale*zscale*phidp[6]
                       - multipole[8]*xscale*xscale*phidp[4] - multipole[9]*yscale*yscale*phidp[7]);
-        cAmoebaSim.pTorque[3*i+2] = -0.5f*cAmoebaSim.electric*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
+        cAmoebaSim.pTorque[3*i+2] = 0.5f*cAmoebaSim.electric*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
                       + 2.0f*(multipole[5]-multipole[4])*yscale*yscale*phidp[7]
                       + multipole[7]*xscale*xscale*phidp[4] + multipole[9]*yscale*zscale*phidp[8]
                       - multipole[7]*xscale*yscale*phidp[5] - multipole[8]*zscale*zscale*phidp[9]);
@@ -906,9 +906,9 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         f.y *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
         f.z *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
         float4 force = cSim.pForce4[i];
-        force.x += f.x;
-        force.y += f.y;
-        force.z += f.z;
+        force.x -= f.x;
+        force.y -= f.y;
+        force.z -= f.z;
         cSim.pForce4[i] = force;
     }
     cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*cAmoebaSim.electric*energy;

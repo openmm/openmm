@@ -350,7 +350,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     sqrtPi                             %15.7e\n",  amoebaGpu->amoebaSim.sqrtPi );
     (void) fprintf( log, "     alpha Ewald                        %15.7e\n",  gpu->sim.alphaEwald );
     (void) fprintf( log, "     PME grid dimensions                %6d %6d %6d\n",  gpu->sim.pmeGridSize.x, gpu->sim.pmeGridSize.y, gpu->sim.pmeGridSize.z);
-    (void) fprintf( log, "     cutoffDistance2                    %15.7e\n",  amoebaGpu->amoebaSim.cutoffDistance2 );
+    (void) fprintf( log, "     nonbondedCutoffSqr                 %15.7e\n",  gpu->sim.nonbondedCutoffSqr);
     (void) fprintf( log, "     electric                           %15.7e\n",  amoebaGpu->amoebaSim.electric );
     (void) fprintf( log, "     box                                %15.7e %15.7e %15.7e\n", gpu->sim.periodicBoxSizeX, gpu->sim.periodicBoxSizeY, gpu->sim.periodicBoxSizeZ);
     (void) fprintf( log, "     gkc                                %15.7e\n",  amoebaGpu->amoebaSim.gkc );
@@ -1554,7 +1554,6 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                         AMOEBA_NO_CUTOFF, AMOEBA_PARTICLE_MESH_EWALD );
         (void) fflush( amoebaGpu->log );
     }
-    amoebaGpu->amoebaSim.cutoffDistance2             = cutoffDistance*cutoffDistance;
     amoebaGpu->amoebaSim.sqrtPi                      = std::sqrt( 3.14159265358f );
     amoebaGpu->amoebaSim.electric                    = electricConstant;
     amoebaGpu->gpuContext->sim.alphaEwald            = alphaEwald;
@@ -4295,6 +4294,36 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
 */
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
     }
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Track iterations for MI dipoles
+
+   @param amoebaGpu            amoebaGpuContext reference
+   @param iteration            MI iteration
+
+   --------------------------------------------------------------------------------------- */
+
+void gpuCopyInteractingWorkUnit( amoebaGpuContext amoebaGpu ){
+
+// ---------------------------------------------------------------------------------------
+
+    gpuContext gpu = amoebaGpu->gpuContext;
+    gpu->psInteractingWorkUnit->Download();
+    gpu->psWorkUnit->Download();
+    amoebaGpu->psWorkUnit->Download();
+    (void) fprintf( amoebaGpu->log, "gpuCopyInteractingWorkUnit called -- to be removed.\n" );
+    for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
+        gpu->psInteractingWorkUnit->_pSysStream[0][ii] = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
+        gpu->psWorkUnit->_pSysStream[0][ii]            = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
+    }    
+    gpu->psInteractingWorkUnit->Upload();
+    gpu->psWorkUnit->Upload();
+
+
+// ---------------------------------------------------------------------------------------
+
 }
 
 #undef  AMOEBA_DEBUG
