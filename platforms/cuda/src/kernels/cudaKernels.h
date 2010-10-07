@@ -27,12 +27,12 @@
 #include "gputypes.h"
 
 // Initialization
-extern void kClearForces(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT kClearForces(gpuContext gpu);
 extern void kClearEnergy(gpuContext gpu);
 extern void kClearBornSumAndForces(gpuContext gpu);
 extern void kClearObcGbsaBornSum(gpuContext gpu);
-extern void kCalculateObcGbsaBornSum(gpuContext gpu);
-extern void kReduceObcGbsaBornSum(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT kCalculateObcGbsaBornSum(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT kReduceObcGbsaBornSum(gpuContext gpu);
 extern void kCalculateGBVIBornSum(gpuContext gpu);
 extern void kReduceGBVIBornSum(gpuContext gpu);
 extern void kClearGBVIBornSum( gpuContext gpu );
@@ -73,7 +73,7 @@ extern void kScaleAtomCoordinates(gpuContext gpu, float scale, CUDAStream<int>& 
 extern void kApplyConstraints(gpuContext gpu);
 
 // Extras
-extern void kReduceForces(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT kReduceForces(gpuContext gpu);
 extern double kReduceEnergy(gpuContext gpu);
 
 // Initializers
@@ -105,7 +105,7 @@ extern void SetCalculateAndersenThermostatSim(gpuContext gpu);
 extern void GetCalculateAndersenThermostatSim(gpuContext gpu);
 extern void SetCalculatePMESim(gpuContext gpu);
 extern void GetCalculatePMESim(gpuContext gpu);
-extern void SetForcesSim(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu);
 extern void GetForcesSim(gpuContext gpu);
 extern void SetShakeHSim(gpuContext gpu);
 extern void GetShakeHSim(gpuContext gpu);

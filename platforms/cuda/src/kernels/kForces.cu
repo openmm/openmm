@@ -39,7 +39,7 @@ using namespace std;
 
 static __constant__ cudaGmxSimulation cSim;
 
-void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu)
+void SetForcesSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
@@ -65,7 +65,7 @@ void kClearForces_kernel()
     }
 }
 
-void OPENMMCUDA_EXPORT kClearForces(gpuContext gpu)
+void kClearForces(gpuContext gpu)
 {
 //    printf("kClearForces\n");
     kClearForces_kernel<<<gpu->sim.blocks, 384>>>();
@@ -279,7 +279,7 @@ void kReduceForces_kernel()
     }   
 }
 
-void OPENMMCUDA_EXPORT kReduceForces(gpuContext gpu)
+void kReduceForces(gpuContext gpu)
 {
  //   printf("kReduceForces\n");
     kReduceForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
