@@ -75,92 +75,91 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
     zr               -= floor(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 
     float r2          = xr*xr + yr* yr + zr*zr;
-    float r           = sqrtf(r2);
-
-    // calculate the error function damping terms
-
-    float ralpha      = cSim.alphaEwald*r;
-
-    float bn0             = erfc(ralpha)/r;
-    float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
-    float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
-    float exp2a       = exp(-(ralpha*ralpha));
-    alsq2n           *= alsq2;
-    float bn1             = (bn0+alsq2n*exp2a)/r2;
-
-    alsq2n           *= alsq2;
-    float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
-
-    // compute the error function scaled and unscaled terms
-
-    float scale3      = 1.0f;
-    float scale5      = 1.0f;
-    float damp        = atomI.damp*atomJ.damp;
-    if( damp != 0.0f ){
-
-        float ratio  = (r/damp);
-              ratio  = ratio*ratio*ratio;
-        float pgamma = atomI.thole < atomJ.thole ? atomI.thole : atomJ.thole;
-              damp   = -pgamma*ratio;
-
-        if( damp > -50.0f) {
-            float expdamp = exp(damp);
-            scale3        = 1.0f - expdamp;
-            scale5        = 1.0f - expdamp*(1.0f-damp);
-        }
-    }
-    float dsc3        = uscale*scale3;
-    float dsc5        = uscale*scale5;
-
-    float r3          = (r*r2);
-    float r5          = (r3*r2);
-    float rr3         = (1.0f-dsc3)/r3;
-    float rr5         = 3.0f * (1.0f-dsc5)/r5;
-
-    float duir        = atomI.inducedDipole[0]*xr      + atomI.inducedDipole[1]*yr      + atomI.inducedDipole[2]*zr;
-    float dukr        = atomJ.inducedDipole[0]*xr      + atomJ.inducedDipole[1]*yr      + atomJ.inducedDipole[2]*zr;
-
-    float puir        = atomI.inducedDipolePolar[0]*xr + atomI.inducedDipolePolar[1]*yr + atomI.inducedDipolePolar[2]*zr;
-    float pukr        = atomJ.inducedDipolePolar[0]*xr + atomJ.inducedDipolePolar[1]*yr + atomJ.inducedDipolePolar[2]*zr;
-
-    bn1            *= -1.0f;
-
-    float fimd0           = bn1*atomJ.inducedDipole[0]      + bn2*dukr*xr;
-    float fimd1           = bn1*atomJ.inducedDipole[1]      + bn2*dukr*yr;
-    float fimd2           = bn1*atomJ.inducedDipole[2]      + bn2*dukr*zr;
-
-    float fkmd0           = bn1*atomI.inducedDipole[0]      + bn2*duir*xr;
-    float fkmd1           = bn1*atomI.inducedDipole[1]      + bn2*duir*yr;
-    float fkmd2           = bn1*atomI.inducedDipole[2]      + bn2*duir*zr;
-
-    float fimp0           = bn1*atomJ.inducedDipolePolar[0] + bn2*pukr*xr;
-    float fimp1           = bn1*atomJ.inducedDipolePolar[1] + bn2*pukr*yr;
-    float fimp2           = bn1*atomJ.inducedDipolePolar[2] + bn2*pukr*zr;
-
-    float fkmp0           = bn1*atomI.inducedDipolePolar[0] + bn2*puir*xr;
-    float fkmp1           = bn1*atomI.inducedDipolePolar[1] + bn2*puir*yr;
-    float fkmp2           = bn1*atomI.inducedDipolePolar[2] + bn2*puir*zr;
-
-    rr3              *= -1.0f;;
-    float fid0            = rr3*atomJ.inducedDipole[0]      + rr5*dukr*xr;
-    float fid1            = rr3*atomJ.inducedDipole[1]      + rr5*dukr*yr;
-    float fid2            = rr3*atomJ.inducedDipole[2]      + rr5*dukr*zr;
-
-    float fkd0            = rr3*atomI.inducedDipole[0]      + rr5*duir*xr;
-    float fkd1            = rr3*atomI.inducedDipole[1]      + rr5*duir*yr;
-    float fkd2            = rr3*atomI.inducedDipole[2]      + rr5*duir*zr;
-
-    float fip0            = rr3*atomJ.inducedDipolePolar[0] + rr5*pukr*xr;
-    float fip1            = rr3*atomJ.inducedDipolePolar[1] + rr5*pukr*yr;
-    float fip2            = rr3*atomJ.inducedDipolePolar[2] + rr5*pukr*zr;
-
-    float fkp0            = rr3*atomI.inducedDipolePolar[0] + rr5*puir*xr;
-    float fkp1            = rr3*atomI.inducedDipolePolar[1] + rr5*puir*yr;
-    float fkp2            = rr3*atomI.inducedDipolePolar[2] + rr5*puir*zr;
-
-    // increment the field at each site due to this interaction
-
     if( r2 <= cSim.nonbondedCutoffSqr ){
+        float r           = sqrtf(r2);
+
+        // calculate the error function damping terms
+
+        float ralpha      = cSim.alphaEwald*r;
+
+        float bn0             = erfc(ralpha)/r;
+        float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
+        float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
+        float exp2a       = exp(-(ralpha*ralpha));
+        alsq2n           *= alsq2;
+        float bn1             = (bn0+alsq2n*exp2a)/r2;
+
+        alsq2n           *= alsq2;
+        float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
+
+        // compute the error function scaled and unscaled terms
+
+        float scale3      = 1.0f;
+        float scale5      = 1.0f;
+        float damp        = atomI.damp*atomJ.damp;
+        if( damp != 0.0f ){
+
+            float ratio  = (r/damp);
+                  ratio  = ratio*ratio*ratio;
+            float pgamma = atomI.thole < atomJ.thole ? atomI.thole : atomJ.thole;
+                  damp   = -pgamma*ratio;
+
+            if( damp > -50.0f) {
+                float expdamp = exp(damp);
+                scale3        = 1.0f - expdamp;
+                scale5        = 1.0f - expdamp*(1.0f-damp);
+            }
+        }
+        float dsc3        = uscale*scale3;
+        float dsc5        = uscale*scale5;
+
+        float r3          = (r*r2);
+        float r5          = (r3*r2);
+        float rr3         = (1.0f-dsc3)/r3;
+        float rr5         = 3.0f * (1.0f-dsc5)/r5;
+
+        float duir        = atomI.inducedDipole[0]*xr      + atomI.inducedDipole[1]*yr      + atomI.inducedDipole[2]*zr;
+        float dukr        = atomJ.inducedDipole[0]*xr      + atomJ.inducedDipole[1]*yr      + atomJ.inducedDipole[2]*zr;
+
+        float puir        = atomI.inducedDipolePolar[0]*xr + atomI.inducedDipolePolar[1]*yr + atomI.inducedDipolePolar[2]*zr;
+        float pukr        = atomJ.inducedDipolePolar[0]*xr + atomJ.inducedDipolePolar[1]*yr + atomJ.inducedDipolePolar[2]*zr;
+
+        bn1            *= -1.0f;
+
+        float fimd0           = bn1*atomJ.inducedDipole[0]      + bn2*dukr*xr;
+        float fimd1           = bn1*atomJ.inducedDipole[1]      + bn2*dukr*yr;
+        float fimd2           = bn1*atomJ.inducedDipole[2]      + bn2*dukr*zr;
+
+        float fkmd0           = bn1*atomI.inducedDipole[0]      + bn2*duir*xr;
+        float fkmd1           = bn1*atomI.inducedDipole[1]      + bn2*duir*yr;
+        float fkmd2           = bn1*atomI.inducedDipole[2]      + bn2*duir*zr;
+
+        float fimp0           = bn1*atomJ.inducedDipolePolar[0] + bn2*pukr*xr;
+        float fimp1           = bn1*atomJ.inducedDipolePolar[1] + bn2*pukr*yr;
+        float fimp2           = bn1*atomJ.inducedDipolePolar[2] + bn2*pukr*zr;
+
+        float fkmp0           = bn1*atomI.inducedDipolePolar[0] + bn2*puir*xr;
+        float fkmp1           = bn1*atomI.inducedDipolePolar[1] + bn2*puir*yr;
+        float fkmp2           = bn1*atomI.inducedDipolePolar[2] + bn2*puir*zr;
+
+        rr3              *= -1.0f;;
+        float fid0            = rr3*atomJ.inducedDipole[0]      + rr5*dukr*xr;
+        float fid1            = rr3*atomJ.inducedDipole[1]      + rr5*dukr*yr;
+        float fid2            = rr3*atomJ.inducedDipole[2]      + rr5*dukr*zr;
+
+        float fkd0            = rr3*atomI.inducedDipole[0]      + rr5*duir*xr;
+        float fkd1            = rr3*atomI.inducedDipole[1]      + rr5*duir*yr;
+        float fkd2            = rr3*atomI.inducedDipole[2]      + rr5*duir*zr;
+
+        float fip0            = rr3*atomJ.inducedDipolePolar[0] + rr5*pukr*xr;
+        float fip1            = rr3*atomJ.inducedDipolePolar[1] + rr5*pukr*yr;
+        float fip2            = rr3*atomJ.inducedDipolePolar[2] + rr5*pukr*zr;
+
+        float fkp0            = rr3*atomI.inducedDipolePolar[0] + rr5*puir*xr;
+        float fkp1            = rr3*atomI.inducedDipolePolar[1] + rr5*puir*yr;
+        float fkp2            = rr3*atomI.inducedDipolePolar[2] + rr5*puir*zr;
+
+        // increment the field at each site due to this interaction
 
         fields[0].x       = fimd0 - fid0;
         fields[0].y       = fkmd0 - fkd0;

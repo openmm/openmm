@@ -187,137 +187,136 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
     zr               -= floor(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 
     float r2          = xr*xr + yr*yr + zr*zr;
-    float r           = sqrtf(r2);
-
-    // calculate the error function damping terms
-
-    float ralpha      = cSim.alphaEwald*r;
-
-    float bn0             = erfc(ralpha)/r;
-    float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
-    float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
-    float exp2a       = exp(-(ralpha*ralpha));
-    alsq2n           *= alsq2;
-    float bn1             = (bn0+alsq2n*exp2a)/r2;
-
-    alsq2n           *= alsq2;
-    float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
-
-    alsq2n           *= alsq2;
-    float bn3             = (5.0f*bn2+alsq2n*exp2a)/r2;
-
-    // compute the error function scaled and unscaled terms
-
-    float scale3      = 1.0f;
-    float scale5      = 1.0f;
-    float scale7      = 1.0f;
-    float damp        = atomI.damp*atomJ.damp;
-    if( damp != 0.0f ){
-
-        float ratio  = (r/damp);
-              ratio  = ratio*ratio*ratio;
-
-        float pgamma = atomI.thole < atomJ.thole ? atomI.thole : atomJ.thole;
-
-              damp   = -pgamma*ratio;
-
-        if( damp > -50.0f) {
-            float expdamp = exp(damp);
-            scale3        = 1.0f - expdamp;
-            scale5        = 1.0f - expdamp*(1.0f-damp);
-            scale7        = 1.0f - expdamp*(1.0f-damp+(0.6f*damp*damp));
-        }
-    }
-    float dsc3        = dscale*scale3;
-    float dsc5        = dscale*scale5;
-    float dsc7        = dscale*scale7;
-
-    float psc3        = pscale*scale3;
-    float psc5        = pscale*scale5;
-    float psc7        = pscale*scale7;
-
-    float r3          = (r*r2);
-    float r5          = (r3*r2);
-    float r7          = (r5*r2);
-    float drr3        = (1.0f-dsc3)/r3;
-    float drr5        = 3.0f * (1.0f-dsc5)/r5;
-    float drr7        = 15.0f * (1.0f-dsc7)/r7;
-
-    float prr3        = (1.0f-psc3) / r3;
-    float prr5        = 3.0f *(1.0f-psc5)/r5;
-    float prr7        = 15.0f*(1.0f-psc7)/r7;
-
-    float dir         = atomI.labFrameDipole_X*xr + atomI.labFrameDipole_Y*yr + atomI.labFrameDipole_Z*zr;
-
-    float qix         = atomI.labFrameQuadrupole_XX*xr + atomI.labFrameQuadrupole_XY*yr + atomI.labFrameQuadrupole_XZ*zr;
-    float qiy         = atomI.labFrameQuadrupole_XY*xr + atomI.labFrameQuadrupole_YY*yr + atomI.labFrameQuadrupole_YZ*zr;
-    float qiz         = atomI.labFrameQuadrupole_XZ*xr + atomI.labFrameQuadrupole_YZ*yr + atomI.labFrameQuadrupole_ZZ*zr;
-
-    float qir         = qix*xr + qiy*yr + qiz*zr;
-
-    float dkr         = atomJ.labFrameDipole_X*xr + atomJ.labFrameDipole_Y*yr + atomJ.labFrameDipole_Z*zr;
-    float qkx         = atomJ.labFrameQuadrupole_XX*xr + atomJ.labFrameQuadrupole_XY*yr + atomJ.labFrameQuadrupole_XZ*zr;
-    float qky         = atomJ.labFrameQuadrupole_XY*xr + atomJ.labFrameQuadrupole_YY*yr + atomJ.labFrameQuadrupole_YZ*zr;
-    float qkz         = atomJ.labFrameQuadrupole_XZ*xr + atomJ.labFrameQuadrupole_YZ*yr + atomJ.labFrameQuadrupole_ZZ*zr;
-    float qkr         = qkx*xr + qky*yr + qkz*zr;
-
-    float fim0            = -xr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
-                         - bn1*atomJ.labFrameDipole_X + 2.0f*bn2*qkx;
-
-    float fim1            = -yr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
-                         - bn1*atomJ.labFrameDipole_Y + 2.0f*bn2*qky;
-
-    float fim2            = -zr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
-                         - bn1*atomJ.labFrameDipole_Z + 2.0f*bn2*qkz;
-
-    float fkm0            = xr*(bn1*atomI.q+bn2*dir+bn3*qir)
-                         - bn1*atomI.labFrameDipole_X - 2.0f*bn2*qix;
-
-    float fkm1            = yr*(bn1*atomI.q+bn2*dir+bn3*qir)
-                         - bn1*atomI.labFrameDipole_Y - 2.0f*bn2*qiy;
-
-    float fkm2            = zr*(bn1*atomI.q+bn2*dir+bn3*qir)
-                         - bn1*atomI.labFrameDipole_Z - 2.0f*bn2*qiz;
-
-    float fid0            = -xr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
-                         - drr3*atomJ.labFrameDipole_X + 2.0f*drr5*qkx;
-
-    float fid1            = -yr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
-                         - drr3*atomJ.labFrameDipole_Y + 2.0f*drr5*qky;
-
-    float fid2            = -zr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
-                         - drr3*atomJ.labFrameDipole_Z + 2.0f*drr5*qkz;
-
-    float fkd0            = xr*(drr3*atomI.q+drr5*dir+drr7*qir)
-                         - drr3*atomI.labFrameDipole_X - 2.0f*drr5*qix;
-
-    float fkd1            = yr*(drr3*atomI.q+drr5*dir+drr7*qir)
-                         - drr3*atomI.labFrameDipole_Y - 2.0f*drr5*qiy;
-
-    float fkd2            = zr*(drr3*atomI.q+drr5*dir+drr7*qir)
-                         - drr3*atomI.labFrameDipole_Z - 2.0f*drr5*qiz;
-
-    float fip0            = -xr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
-                         - prr3*atomJ.labFrameDipole_X + 2.0f*prr5*qkx;
-
-    float fip1            = -yr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
-                         - prr3*atomJ.labFrameDipole_Y + 2.0f*prr5*qky;
-
-    float fip2            = -zr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
-                         - prr3*atomJ.labFrameDipole_Z + 2.0f*prr5*qkz;
-
-    float fkp0            = xr*(prr3*atomI.q+prr5*dir+prr7*qir)
-                         - prr3*atomI.labFrameDipole_X - 2.0f*prr5*qix;
-
-    float fkp1            = yr*(prr3*atomI.q+prr5*dir+prr7*qir)
-                         - prr3*atomI.labFrameDipole_Y - 2.0f*prr5*qiy;
-
-    float fkp2            = zr*(prr3*atomI.q+prr5*dir+prr7*qir)
-                         - prr3*atomI.labFrameDipole_Z - 2.0f*prr5*qiz;
-  
-    // increment the field at each site due to this interaction
-
     if( r2 <= cSim.nonbondedCutoffSqr ){
+        float r           = sqrtf(r2);
+
+        // calculate the error function damping terms
+
+        float ralpha      = cSim.alphaEwald*r;
+
+        float bn0             = erfc(ralpha)/r;
+        float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
+        float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
+        float exp2a       = exp(-(ralpha*ralpha));
+        alsq2n           *= alsq2;
+        float bn1             = (bn0+alsq2n*exp2a)/r2;
+
+        alsq2n           *= alsq2;
+        float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
+
+        alsq2n           *= alsq2;
+        float bn3             = (5.0f*bn2+alsq2n*exp2a)/r2;
+
+        // compute the error function scaled and unscaled terms
+
+        float scale3      = 1.0f;
+        float scale5      = 1.0f;
+        float scale7      = 1.0f;
+        float damp        = atomI.damp*atomJ.damp;
+        if( damp != 0.0f ){
+
+            float ratio  = (r/damp);
+                  ratio  = ratio*ratio*ratio;
+
+            float pgamma = atomI.thole < atomJ.thole ? atomI.thole : atomJ.thole;
+
+                  damp   = -pgamma*ratio;
+
+            if( damp > -50.0f) {
+                float expdamp = exp(damp);
+                scale3        = 1.0f - expdamp;
+                scale5        = 1.0f - expdamp*(1.0f-damp);
+                scale7        = 1.0f - expdamp*(1.0f-damp+(0.6f*damp*damp));
+            }
+        }
+        float dsc3        = dscale*scale3;
+        float dsc5        = dscale*scale5;
+        float dsc7        = dscale*scale7;
+
+        float psc3        = pscale*scale3;
+        float psc5        = pscale*scale5;
+        float psc7        = pscale*scale7;
+
+        float r3          = (r*r2);
+        float r5          = (r3*r2);
+        float r7          = (r5*r2);
+        float drr3        = (1.0f-dsc3)/r3;
+        float drr5        = 3.0f * (1.0f-dsc5)/r5;
+        float drr7        = 15.0f * (1.0f-dsc7)/r7;
+
+        float prr3        = (1.0f-psc3) / r3;
+        float prr5        = 3.0f *(1.0f-psc5)/r5;
+        float prr7        = 15.0f*(1.0f-psc7)/r7;
+
+        float dir         = atomI.labFrameDipole_X*xr + atomI.labFrameDipole_Y*yr + atomI.labFrameDipole_Z*zr;
+
+        float qix         = atomI.labFrameQuadrupole_XX*xr + atomI.labFrameQuadrupole_XY*yr + atomI.labFrameQuadrupole_XZ*zr;
+        float qiy         = atomI.labFrameQuadrupole_XY*xr + atomI.labFrameQuadrupole_YY*yr + atomI.labFrameQuadrupole_YZ*zr;
+        float qiz         = atomI.labFrameQuadrupole_XZ*xr + atomI.labFrameQuadrupole_YZ*yr + atomI.labFrameQuadrupole_ZZ*zr;
+
+        float qir         = qix*xr + qiy*yr + qiz*zr;
+
+        float dkr         = atomJ.labFrameDipole_X*xr + atomJ.labFrameDipole_Y*yr + atomJ.labFrameDipole_Z*zr;
+        float qkx         = atomJ.labFrameQuadrupole_XX*xr + atomJ.labFrameQuadrupole_XY*yr + atomJ.labFrameQuadrupole_XZ*zr;
+        float qky         = atomJ.labFrameQuadrupole_XY*xr + atomJ.labFrameQuadrupole_YY*yr + atomJ.labFrameQuadrupole_YZ*zr;
+        float qkz         = atomJ.labFrameQuadrupole_XZ*xr + atomJ.labFrameQuadrupole_YZ*yr + atomJ.labFrameQuadrupole_ZZ*zr;
+        float qkr         = qkx*xr + qky*yr + qkz*zr;
+
+        float fim0            = -xr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
+                             - bn1*atomJ.labFrameDipole_X + 2.0f*bn2*qkx;
+
+        float fim1            = -yr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
+                             - bn1*atomJ.labFrameDipole_Y + 2.0f*bn2*qky;
+
+        float fim2            = -zr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
+                             - bn1*atomJ.labFrameDipole_Z + 2.0f*bn2*qkz;
+
+        float fkm0            = xr*(bn1*atomI.q+bn2*dir+bn3*qir)
+                             - bn1*atomI.labFrameDipole_X - 2.0f*bn2*qix;
+
+        float fkm1            = yr*(bn1*atomI.q+bn2*dir+bn3*qir)
+                             - bn1*atomI.labFrameDipole_Y - 2.0f*bn2*qiy;
+
+        float fkm2            = zr*(bn1*atomI.q+bn2*dir+bn3*qir)
+                             - bn1*atomI.labFrameDipole_Z - 2.0f*bn2*qiz;
+
+        float fid0            = -xr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
+                             - drr3*atomJ.labFrameDipole_X + 2.0f*drr5*qkx;
+
+        float fid1            = -yr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
+                             - drr3*atomJ.labFrameDipole_Y + 2.0f*drr5*qky;
+
+        float fid2            = -zr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
+                             - drr3*atomJ.labFrameDipole_Z + 2.0f*drr5*qkz;
+
+        float fkd0            = xr*(drr3*atomI.q+drr5*dir+drr7*qir)
+                             - drr3*atomI.labFrameDipole_X - 2.0f*drr5*qix;
+
+        float fkd1            = yr*(drr3*atomI.q+drr5*dir+drr7*qir)
+                             - drr3*atomI.labFrameDipole_Y - 2.0f*drr5*qiy;
+
+        float fkd2            = zr*(drr3*atomI.q+drr5*dir+drr7*qir)
+                             - drr3*atomI.labFrameDipole_Z - 2.0f*drr5*qiz;
+
+        float fip0            = -xr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
+                             - prr3*atomJ.labFrameDipole_X + 2.0f*prr5*qkx;
+
+        float fip1            = -yr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
+                             - prr3*atomJ.labFrameDipole_Y + 2.0f*prr5*qky;
+
+        float fip2            = -zr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
+                             - prr3*atomJ.labFrameDipole_Z + 2.0f*prr5*qkz;
+
+        float fkp0            = xr*(prr3*atomI.q+prr5*dir+prr7*qir)
+                             - prr3*atomI.labFrameDipole_X - 2.0f*prr5*qix;
+
+        float fkp1            = yr*(prr3*atomI.q+prr5*dir+prr7*qir)
+                             - prr3*atomI.labFrameDipole_Y - 2.0f*prr5*qiy;
+
+        float fkp2            = zr*(prr3*atomI.q+prr5*dir+prr7*qir)
+                             - prr3*atomI.labFrameDipole_Z - 2.0f*prr5*qiz;
+
+        // increment the field at each site due to this interaction
 
         fields[0].x       = fim0 - fid0;
         fields[1].x       = fim1 - fid1;
