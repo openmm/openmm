@@ -55,7 +55,7 @@ __device__ void sumTempBuffer( MutualInducedParticle& atomI, MutualInducedPartic
 // file includes FixedFieldParticle struct definition/load/unload struct and body kernel for fixed E-field
 
 __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInducedParticle& atomI, MutualInducedParticle& atomJ,
-                                                                    float uscale, float fields[4][3]
+                                                                    float uscale, float4 fields[3]
 #ifdef AMOEBA_DEBUG
                                                             , float4* pullBack
 #endif
@@ -80,17 +80,16 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
     // calculate the error function damping terms
 
     float ralpha      = cSim.alphaEwald*r;
-    float bn[3];
 
-    bn[0]             = erfc(ralpha)/r;
+    float bn0             = erfc(ralpha)/r;
     float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
     float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
     float exp2a       = exp(-(ralpha*ralpha));
     alsq2n           *= alsq2;
-    bn[1]             = (bn[0]+alsq2n*exp2a)/r2;
+    float bn1             = (bn0+alsq2n*exp2a)/r2;
 
     alsq2n           *= alsq2;
-    bn[2]             = (3.0f*bn[1]+alsq2n*exp2a)/r2;
+    float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
 
     // compute the error function scaled and unscaled terms
 
@@ -124,81 +123,76 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
     float puir        = atomI.inducedDipolePolar[0]*xr + atomI.inducedDipolePolar[1]*yr + atomI.inducedDipolePolar[2]*zr;
     float pukr        = atomJ.inducedDipolePolar[0]*xr + atomJ.inducedDipolePolar[1]*yr + atomJ.inducedDipolePolar[2]*zr;
 
-    float fimd[3],fkmd[3];
-    float fimp[3],fkmp[3];
-    float fid[3],fkd[3];
-    float fip[3],fkp[3];
+    bn1            *= -1.0f;
 
-    bn[1]            *= -1.0f;
+    float fimd0           = bn1*atomJ.inducedDipole[0]      + bn2*dukr*xr;
+    float fimd1           = bn1*atomJ.inducedDipole[1]      + bn2*dukr*yr;
+    float fimd2           = bn1*atomJ.inducedDipole[2]      + bn2*dukr*zr;
 
-    fimd[0]           = bn[1]*atomJ.inducedDipole[0]      + bn[2]*dukr*xr;
-    fimd[1]           = bn[1]*atomJ.inducedDipole[1]      + bn[2]*dukr*yr;
-    fimd[2]           = bn[1]*atomJ.inducedDipole[2]      + bn[2]*dukr*zr;
+    float fkmd0           = bn1*atomI.inducedDipole[0]      + bn2*duir*xr;
+    float fkmd1           = bn1*atomI.inducedDipole[1]      + bn2*duir*yr;
+    float fkmd2           = bn1*atomI.inducedDipole[2]      + bn2*duir*zr;
 
-    fkmd[0]           = bn[1]*atomI.inducedDipole[0]      + bn[2]*duir*xr;
-    fkmd[1]           = bn[1]*atomI.inducedDipole[1]      + bn[2]*duir*yr;
-    fkmd[2]           = bn[1]*atomI.inducedDipole[2]      + bn[2]*duir*zr;
+    float fimp0           = bn1*atomJ.inducedDipolePolar[0] + bn2*pukr*xr;
+    float fimp1           = bn1*atomJ.inducedDipolePolar[1] + bn2*pukr*yr;
+    float fimp2           = bn1*atomJ.inducedDipolePolar[2] + bn2*pukr*zr;
 
-    fimp[0]           = bn[1]*atomJ.inducedDipolePolar[0] + bn[2]*pukr*xr;
-    fimp[1]           = bn[1]*atomJ.inducedDipolePolar[1] + bn[2]*pukr*yr;
-    fimp[2]           = bn[1]*atomJ.inducedDipolePolar[2] + bn[2]*pukr*zr;
-
-    fkmp[0]           = bn[1]*atomI.inducedDipolePolar[0] + bn[2]*puir*xr;
-    fkmp[1]           = bn[1]*atomI.inducedDipolePolar[1] + bn[2]*puir*yr;
-    fkmp[2]           = bn[1]*atomI.inducedDipolePolar[2] + bn[2]*puir*zr;
+    float fkmp0           = bn1*atomI.inducedDipolePolar[0] + bn2*puir*xr;
+    float fkmp1           = bn1*atomI.inducedDipolePolar[1] + bn2*puir*yr;
+    float fkmp2           = bn1*atomI.inducedDipolePolar[2] + bn2*puir*zr;
 
     rr3              *= -1.0f;;
-    fid[0]            = rr3*atomJ.inducedDipole[0]      + rr5*dukr*xr;
-    fid[1]            = rr3*atomJ.inducedDipole[1]      + rr5*dukr*yr;
-    fid[2]            = rr3*atomJ.inducedDipole[2]      + rr5*dukr*zr;
+    float fid0            = rr3*atomJ.inducedDipole[0]      + rr5*dukr*xr;
+    float fid1            = rr3*atomJ.inducedDipole[1]      + rr5*dukr*yr;
+    float fid2            = rr3*atomJ.inducedDipole[2]      + rr5*dukr*zr;
 
-    fkd[0]            = rr3*atomI.inducedDipole[0]      + rr5*duir*xr;
-    fkd[1]            = rr3*atomI.inducedDipole[1]      + rr5*duir*yr;
-    fkd[2]            = rr3*atomI.inducedDipole[2]      + rr5*duir*zr;
+    float fkd0            = rr3*atomI.inducedDipole[0]      + rr5*duir*xr;
+    float fkd1            = rr3*atomI.inducedDipole[1]      + rr5*duir*yr;
+    float fkd2            = rr3*atomI.inducedDipole[2]      + rr5*duir*zr;
 
-    fip[0]            = rr3*atomJ.inducedDipolePolar[0] + rr5*pukr*xr;
-    fip[1]            = rr3*atomJ.inducedDipolePolar[1] + rr5*pukr*yr;
-    fip[2]            = rr3*atomJ.inducedDipolePolar[2] + rr5*pukr*zr;
+    float fip0            = rr3*atomJ.inducedDipolePolar[0] + rr5*pukr*xr;
+    float fip1            = rr3*atomJ.inducedDipolePolar[1] + rr5*pukr*yr;
+    float fip2            = rr3*atomJ.inducedDipolePolar[2] + rr5*pukr*zr;
 
-    fkp[0]            = rr3*atomI.inducedDipolePolar[0] + rr5*puir*xr;
-    fkp[1]            = rr3*atomI.inducedDipolePolar[1] + rr5*puir*yr;
-    fkp[2]            = rr3*atomI.inducedDipolePolar[2] + rr5*puir*zr;
+    float fkp0            = rr3*atomI.inducedDipolePolar[0] + rr5*puir*xr;
+    float fkp1            = rr3*atomI.inducedDipolePolar[1] + rr5*puir*yr;
+    float fkp2            = rr3*atomI.inducedDipolePolar[2] + rr5*puir*zr;
 
     // increment the field at each site due to this interaction
 
     if( r2 <= cSim.nonbondedCutoffSqr ){
 
-        fields[0][0]       = fimd[0] - fid[0];
-        fields[1][0]       = fkmd[0] - fkd[0];
-        fields[2][0]       = fimp[0] - fip[0];
-        fields[3][0]       = fkmp[0] - fkp[0];
+        fields[0].x       = fimd0 - fid0;
+        fields[0].y       = fkmd0 - fkd0;
+        fields[0].z       = fimp0 - fip0;
+        fields[0].w       = fkmp0 - fkp0;
     
-        fields[0][1]       = fimd[1] - fid[1];
-        fields[1][1]       = fkmd[1] - fkd[1];
-        fields[2][1]       = fimp[1] - fip[1];
-        fields[3][1]       = fkmp[1] - fkp[1];
+        fields[1].x       = fimd1 - fid1;
+        fields[1].y       = fkmd1 - fkd1;
+        fields[1].z       = fimp1 - fip1;
+        fields[1].w       = fkmp1 - fkp1;
     
-        fields[0][2]       = fimd[2] - fid[2];
-        fields[1][2]       = fkmd[2] - fkd[2];
-        fields[2][2]       = fimp[2] - fip[2];
-        fields[3][2]       = fkmp[2] - fkp[2];
+        fields[2].x       = fimd2 - fid2;
+        fields[2].y       = fkmd2 - fkd2;
+        fields[2].z       = fimp2 - fip2;
+        fields[2].w       = fkmp2 - fkp2;
  
     } else {
 
-        fields[0][0]       = 0.0f;
-        fields[1][0]       = 0.0f;
-        fields[2][0]       = 0.0f;
-        fields[3][0]       = 0.0f;
+        fields[0].x       = 0.0f;
+        fields[0].y       = 0.0f;
+        fields[0].z       = 0.0f;
+        fields[0].w       = 0.0f;
     
-        fields[0][1]       = 0.0f;
-        fields[1][1]       = 0.0f;
-        fields[2][1]       = 0.0f;
-        fields[3][1]       = 0.0f;
+        fields[1].x       = 0.0f;
+        fields[1].y       = 0.0f;
+        fields[1].z       = 0.0f;
+        fields[1].w       = 0.0f;
     
-        fields[0][2]       = 0.0f;
-        fields[1][2]       = 0.0f;
-        fields[2][2]       = 0.0f;
-        fields[3][2]       = 0.0f;
+        fields[2].x       = 0.0f;
+        fields[2].y       = 0.0f;
+        fields[2].z       = 0.0f;
+        fields[2].w       = 0.0f;
     }
 #ifdef AMOEBA_DEBUG
     pullBack[0].x = xr;
@@ -207,8 +201,8 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
     pullBack[0].w = r2;
 
     pullBack[1].x = alsq2;
-    pullBack[1].y = bn[0];
-    pullBack[1].z = bn[2];
+    pullBack[1].y = bn0;
+    pullBack[1].z = bn2;
     pullBack[1].w = exp2a;
 
 /*

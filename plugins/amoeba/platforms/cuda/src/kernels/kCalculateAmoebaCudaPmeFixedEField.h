@@ -28,11 +28,11 @@
 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
-#elif (__CUDA_ARCH__ >= 130)
-__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+__launch_bounds__(384, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(192, 1)
 #else
-__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
+__launch_bounds__(64, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
                             unsigned int* workUnit,
@@ -117,7 +117,7 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
                     getMaskedPScaleFactor( j, pScaleMask, &pScaleValue );
                 }
 
-                float ijField[4][3];
+                float4 ijField[3];
                 calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[j], dScaleValue, pScaleValue, ijField
 #ifdef AMOEBA_DEBUG
                                             , pullBack
@@ -131,13 +131,13 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
 
                 // add to field at atomI the field due atomJ's charge/dipole/quadrupole
 
-                fieldSum[0]            += match ? 0.0f : ijField[0][0];
-                fieldSum[1]            += match ? 0.0f : ijField[0][1];
-                fieldSum[2]            += match ? 0.0f : ijField[0][2];
+                fieldSum[0]            += match ? 0.0f : ijField[0].x;
+                fieldSum[1]            += match ? 0.0f : ijField[1].x;
+                fieldSum[2]            += match ? 0.0f : ijField[2].x;
 
-                fieldPolarSum[0]       += match ? 0.0f : ijField[2][0];
-                fieldPolarSum[1]       += match ? 0.0f : ijField[2][1];
-                fieldPolarSum[2]       += match ? 0.0f : ijField[2][2];
+                fieldPolarSum[0]       += match ? 0.0f : ijField[0].z;
+                fieldPolarSum[1]       += match ? 0.0f : ijField[1].z;
+                fieldPolarSum[2]       += match ? 0.0f : ijField[2].z;
 
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || targetAtom == (y+j) ){
@@ -234,7 +234,7 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
                         getMaskedPScaleFactor( jIdx, pScaleMask, &pScaleValue );
                     }
 
-                    float ijField[4][3];
+                    float4 ijField[3];
                     calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[jIdx], dScaleValue, pScaleValue, ijField
 #ifdef AMOEBA_DEBUG
                                                 , pullBack
@@ -245,35 +245,35 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
 
                     // add to field at atomI the field due atomJ's charge/dipole/quadrupole
     
-                    fieldSum[0]                 += outOfBounds ? 0.0f : ijField[0][0];
-                    fieldSum[1]                 += outOfBounds ? 0.0f : ijField[0][1];
-                    fieldSum[2]                 += outOfBounds ? 0.0f : ijField[0][2];
+                    fieldSum[0]                 += outOfBounds ? 0.0f : ijField[0].x;
+                    fieldSum[1]                 += outOfBounds ? 0.0f : ijField[1].x;
+                    fieldSum[2]                 += outOfBounds ? 0.0f : ijField[2].x;
 
-                    fieldPolarSum[0]            += outOfBounds ? 0.0f : ijField[2][0];
-                    fieldPolarSum[1]            += outOfBounds ? 0.0f : ijField[2][1];
-                    fieldPolarSum[2]            += outOfBounds ? 0.0f : ijField[2][2];
+                    fieldPolarSum[0]            += outOfBounds ? 0.0f : ijField[0].z;
+                    fieldPolarSum[1]            += outOfBounds ? 0.0f : ijField[1].z;
+                    fieldPolarSum[2]            += outOfBounds ? 0.0f : ijField[2].z;
     
                     if( flags == 0xFFFFFFFF ){
 
                         // add to field at atomJ the field due atomI's charge/dipole/quadrupole
     
-                        psA[jIdx].eField[0]        += outOfBounds ? 0.0f : ijField[1][0];
-                        psA[jIdx].eField[1]        += outOfBounds ? 0.0f : ijField[1][1];
-                        psA[jIdx].eField[2]        += outOfBounds ? 0.0f : ijField[1][2];
+                        psA[jIdx].eField[0]        += outOfBounds ? 0.0f : ijField[0].y;
+                        psA[jIdx].eField[1]        += outOfBounds ? 0.0f : ijField[1].y;
+                        psA[jIdx].eField[2]        += outOfBounds ? 0.0f : ijField[2].y;
     
-                        psA[jIdx].eFieldP[0]       += outOfBounds ? 0.0f : ijField[3][0];
-                        psA[jIdx].eFieldP[1]       += outOfBounds ? 0.0f : ijField[3][1];
-                        psA[jIdx].eFieldP[2]       += outOfBounds ? 0.0f : ijField[3][2];
+                        psA[jIdx].eFieldP[0]       += outOfBounds ? 0.0f : ijField[0].w;
+                        psA[jIdx].eFieldP[1]       += outOfBounds ? 0.0f : ijField[1].w;
+                        psA[jIdx].eFieldP[2]       += outOfBounds ? 0.0f : ijField[2].w;
  
                     } else {
 
-                        sA[threadIdx.x].tempBuffer[0]  = outOfBounds ? 0.0f : ijField[1][0];
-                        sA[threadIdx.x].tempBuffer[1]  = outOfBounds ? 0.0f : ijField[1][1];
-                        sA[threadIdx.x].tempBuffer[2]  = outOfBounds ? 0.0f : ijField[1][2];
+                        sA[threadIdx.x].tempBuffer[0]  = outOfBounds ? 0.0f : ijField[0].y;
+                        sA[threadIdx.x].tempBuffer[1]  = outOfBounds ? 0.0f : ijField[1].y;
+                        sA[threadIdx.x].tempBuffer[2]  = outOfBounds ? 0.0f : ijField[2].y;
     
-                        sA[threadIdx.x].tempBufferP[0] = outOfBounds ? 0.0f : ijField[3][0];
-                        sA[threadIdx.x].tempBufferP[1] = outOfBounds ? 0.0f : ijField[3][1];
-                        sA[threadIdx.x].tempBufferP[2] = outOfBounds ? 0.0f : ijField[3][2];
+                        sA[threadIdx.x].tempBufferP[0] = outOfBounds ? 0.0f : ijField[0].w;
+                        sA[threadIdx.x].tempBufferP[1] = outOfBounds ? 0.0f : ijField[1].w;
+                        sA[threadIdx.x].tempBufferP[2] = outOfBounds ? 0.0f : ijField[2].w;
 
                         if( tgx % 2 == 0 ){
                             sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] ); 

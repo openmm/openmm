@@ -59,7 +59,8 @@ __device__ static void loadFixedFieldShared( struct FixedFieldParticle* sA, unsi
 {
     // coordinates & charge
 
-    sA->x                        = cSim.pPosq[atomI].x;
+    float4 posq                  = cSim.pPosq[atomI];
+    sA->x                        = posq.x;
     sA->y                        = cSim.pPosq[atomI].y;
     sA->z                        = cSim.pPosq[atomI].z;
     sA->q                        = cSim.pPosq[atomI].w;
@@ -79,8 +80,9 @@ __device__ static void loadFixedFieldShared( struct FixedFieldParticle* sA, unsi
     sA->labFrameQuadrupole_YZ    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+5];
     sA->labFrameQuadrupole_ZZ    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+8];
 
-    sA->damp                     = cAmoebaSim.pDampingFactorAndThole[atomI].x;
-    sA->thole                    = cAmoebaSim.pDampingFactorAndThole[atomI].y;
+    float2 dampingFactorAndThole = cAmoebaSim.pDampingFactorAndThole[atomI];
+    sA->damp                     = dampingFactorAndThole.x;
+    sA->thole                    = dampingFactorAndThole.y;
 #ifdef GK
     sA->bornR                    = bornR[atomI];
 #endif

@@ -23,6 +23,8 @@ struct MutualInducedParticle {
 
     float fieldS[3];
     float fieldPolarS[3];
+#else
+    float padding;
 #endif
 
 #ifdef INCLUDE_MI_FIELD_BUFFERS
@@ -35,10 +37,11 @@ __device__ static void loadMutualInducedShared( MutualInducedParticle* sA, unsig
 {
     // coordinates & charge
 
-    sA->x                        = cSim.pPosq[atomI].x;
-    sA->y                        = cSim.pPosq[atomI].y;
-    sA->z                        = cSim.pPosq[atomI].z;
-    sA->q                        = cSim.pPosq[atomI].w;
+    float4 posq                  = cSim.pPosq[atomI];
+    sA->x                        = posq.x;
+    sA->y                        = posq.y;
+    sA->z                        = posq.z;
+    sA->q                        = posq.w;
 
     // dipole
 
@@ -52,8 +55,9 @@ __device__ static void loadMutualInducedShared( MutualInducedParticle* sA, unsig
     sA->inducedDipolePolar[1]    = cAmoebaSim.pInducedDipolePolar[atomI*3+1];
     sA->inducedDipolePolar[2]    = cAmoebaSim.pInducedDipolePolar[atomI*3+2];
 
-    sA->damp                     = cAmoebaSim.pDampingFactorAndThole[atomI].x;
-    sA->thole                    = cAmoebaSim.pDampingFactorAndThole[atomI].y;
+    float2 dampingFactorAndThole = cAmoebaSim.pDampingFactorAndThole[atomI];
+    sA->damp                     = dampingFactorAndThole.x;
+    sA->thole                    = dampingFactorAndThole.y;
 
 #ifdef GK
 

@@ -167,7 +167,7 @@ __device__ void sumTempBuffer( FixedFieldParticle& atomI, FixedFieldParticle& at
 }
 
 __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& atomI, FixedFieldParticle& atomJ,
-                                                            float dscale, float pscale, float fields[4][3]
+                                                            float dscale, float pscale, float4 fields[3]
 #ifdef AMOEBA_DEBUG
                                                             , float4* pullBack
 #endif
@@ -192,20 +192,19 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
     // calculate the error function damping terms
 
     float ralpha      = cSim.alphaEwald*r;
-    float bn[4];
 
-    bn[0]             = erfc(ralpha)/r;
+    float bn0             = erfc(ralpha)/r;
     float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
     float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
     float exp2a       = exp(-(ralpha*ralpha));
     alsq2n           *= alsq2;
-    bn[1]             = (bn[0]+alsq2n*exp2a)/r2;
+    float bn1             = (bn0+alsq2n*exp2a)/r2;
 
     alsq2n           *= alsq2;
-    bn[2]             = (3.0f*bn[1]+alsq2n*exp2a)/r2;
+    float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
 
     alsq2n           *= alsq2;
-    bn[3]             = (5.0f*bn[2]+alsq2n*exp2a)/r2;
+    float bn3             = (5.0f*bn2+alsq2n*exp2a)/r2;
 
     // compute the error function scaled and unscaled terms
 
@@ -262,99 +261,96 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
     float qkz         = atomJ.labFrameQuadrupole_XZ*xr + atomJ.labFrameQuadrupole_YZ*yr + atomJ.labFrameQuadrupole_ZZ*zr;
     float qkr         = qkx*xr + qky*yr + qkz*zr;
 
-    float fim[3],fkm[3];
-    float fid[3],fkd[3];
-    float fip[3],fkp[3];
-    fim[0]            = -xr*(bn[1]*atomJ.q-bn[2]*dkr+bn[3]*qkr)
-                         - bn[1]*atomJ.labFrameDipole_X + 2.0f*bn[2]*qkx;
+    float fim0            = -xr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
+                         - bn1*atomJ.labFrameDipole_X + 2.0f*bn2*qkx;
 
-    fim[1]            = -yr*(bn[1]*atomJ.q-bn[2]*dkr+bn[3]*qkr)
-                         - bn[1]*atomJ.labFrameDipole_Y + 2.0f*bn[2]*qky;
+    float fim1            = -yr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
+                         - bn1*atomJ.labFrameDipole_Y + 2.0f*bn2*qky;
 
-    fim[2]            = -zr*(bn[1]*atomJ.q-bn[2]*dkr+bn[3]*qkr)
-                         - bn[1]*atomJ.labFrameDipole_Z + 2.0f*bn[2]*qkz;
+    float fim2            = -zr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
+                         - bn1*atomJ.labFrameDipole_Z + 2.0f*bn2*qkz;
 
-    fkm[0]            = xr*(bn[1]*atomI.q+bn[2]*dir+bn[3]*qir)
-                         - bn[1]*atomI.labFrameDipole_X - 2.0f*bn[2]*qix;
+    float fkm0            = xr*(bn1*atomI.q+bn2*dir+bn3*qir)
+                         - bn1*atomI.labFrameDipole_X - 2.0f*bn2*qix;
 
-    fkm[1]            = yr*(bn[1]*atomI.q+bn[2]*dir+bn[3]*qir)
-                         - bn[1]*atomI.labFrameDipole_Y - 2.0f*bn[2]*qiy;
+    float fkm1            = yr*(bn1*atomI.q+bn2*dir+bn3*qir)
+                         - bn1*atomI.labFrameDipole_Y - 2.0f*bn2*qiy;
 
-    fkm[2]            = zr*(bn[1]*atomI.q+bn[2]*dir+bn[3]*qir)
-                         - bn[1]*atomI.labFrameDipole_Z - 2.0f*bn[2]*qiz;
+    float fkm2            = zr*(bn1*atomI.q+bn2*dir+bn3*qir)
+                         - bn1*atomI.labFrameDipole_Z - 2.0f*bn2*qiz;
 
-    fid[0]            = -xr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
+    float fid0            = -xr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
                          - drr3*atomJ.labFrameDipole_X + 2.0f*drr5*qkx;
 
-    fid[1]            = -yr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
+    float fid1            = -yr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
                          - drr3*atomJ.labFrameDipole_Y + 2.0f*drr5*qky;
 
-    fid[2]            = -zr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
+    float fid2            = -zr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
                          - drr3*atomJ.labFrameDipole_Z + 2.0f*drr5*qkz;
 
-    fkd[0]            = xr*(drr3*atomI.q+drr5*dir+drr7*qir)
+    float fkd0            = xr*(drr3*atomI.q+drr5*dir+drr7*qir)
                          - drr3*atomI.labFrameDipole_X - 2.0f*drr5*qix;
 
-    fkd[1]            = yr*(drr3*atomI.q+drr5*dir+drr7*qir)
+    float fkd1            = yr*(drr3*atomI.q+drr5*dir+drr7*qir)
                          - drr3*atomI.labFrameDipole_Y - 2.0f*drr5*qiy;
 
-    fkd[2]            = zr*(drr3*atomI.q+drr5*dir+drr7*qir)
+    float fkd2            = zr*(drr3*atomI.q+drr5*dir+drr7*qir)
                          - drr3*atomI.labFrameDipole_Z - 2.0f*drr5*qiz;
 
-    fip[0]            = -xr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
+    float fip0            = -xr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
                          - prr3*atomJ.labFrameDipole_X + 2.0f*prr5*qkx;
 
-    fip[1]            = -yr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
+    float fip1            = -yr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
                          - prr3*atomJ.labFrameDipole_Y + 2.0f*prr5*qky;
 
-    fip[2]            = -zr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
+    float fip2            = -zr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
                          - prr3*atomJ.labFrameDipole_Z + 2.0f*prr5*qkz;
 
-    fkp[0]            = xr*(prr3*atomI.q+prr5*dir+prr7*qir)
+    float fkp0            = xr*(prr3*atomI.q+prr5*dir+prr7*qir)
                          - prr3*atomI.labFrameDipole_X - 2.0f*prr5*qix;
 
-    fkp[1]            = yr*(prr3*atomI.q+prr5*dir+prr7*qir)
+    float fkp1            = yr*(prr3*atomI.q+prr5*dir+prr7*qir)
                          - prr3*atomI.labFrameDipole_Y - 2.0f*prr5*qiy;
 
-    fkp[2]            = zr*(prr3*atomI.q+prr5*dir+prr7*qir)
+    float fkp2            = zr*(prr3*atomI.q+prr5*dir+prr7*qir)
                          - prr3*atomI.labFrameDipole_Z - 2.0f*prr5*qiz;
   
     // increment the field at each site due to this interaction
 
     if( r2 <= cSim.nonbondedCutoffSqr ){
 
-        fields[0][0]       = fim[0] - fid[0];
-        fields[0][1]       = fim[1] - fid[1];
-        fields[0][2]       = fim[2] - fid[2];
+        fields[0].x       = fim0 - fid0;
+        fields[1].x       = fim1 - fid1;
+        fields[2].x       = fim2 - fid2;
 
-        fields[1][0]       = fkm[0] - fkd[0];
-        fields[1][1]       = fkm[1] - fkd[1];
-        fields[1][2]       = fkm[2] - fkd[2];
+        fields[0].y       = fkm0 - fkd0;
+        fields[1].y       = fkm1 - fkd1;
+        fields[2].y       = fkm2 - fkd2;
 
-        fields[2][0]       = fim[0] - fip[0];
-        fields[2][1]       = fim[1] - fip[1];
-        fields[2][2]       = fim[2] - fip[2];
+        fields[0].z       = fim0 - fip0;
+        fields[1].z       = fim1 - fip1;
+        fields[2].z       = fim2 - fip2;
 
-        fields[3][0]       = fkm[0] - fkp[0];
-        fields[3][1]       = fkm[1] - fkp[1];
-        fields[3][2]       = fkm[2] - fkp[2];
+        fields[0].w       = fkm0 - fkp0;
+        fields[1].w       = fkm1 - fkp1;
+        fields[2].w       = fkm2 - fkp2;
  
     } else {
 
-        fields[0][0]       = 0.0f;
-        fields[1][0]       = 0.0f;
-        fields[2][0]       = 0.0f;
-        fields[3][0]       = 0.0f;
+        fields[0].x       = 0.0f;
+        fields[0].y       = 0.0f;
+        fields[0].z       = 0.0f;
+        fields[0].w       = 0.0f;
     
-        fields[0][1]       = 0.0f;
-        fields[1][1]       = 0.0f;
-        fields[2][1]       = 0.0f;
-        fields[3][1]       = 0.0f;
+        fields[1].x       = 0.0f;
+        fields[1].y       = 0.0f;
+        fields[1].z       = 0.0f;
+        fields[1].w       = 0.0f;
     
-        fields[0][2]       = 0.0f;
-        fields[1][2]       = 0.0f;
-        fields[2][2]       = 0.0f;
-        fields[3][2]       = 0.0f;
+        fields[2].x       = 0.0f;
+        fields[2].y       = 0.0f;
+        fields[2].z       = 0.0f;
+        fields[2].w       = 0.0f;
     }
 
 #ifdef AMOEBA_DEBUG
@@ -441,7 +437,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
         if (gpu->sm_version >= SM_20)
             maxThreads = 384; 
         else if (gpu->sm_version >= SM_12)
-            maxThreads = 128; 
+            maxThreads = 192;
         else
             maxThreads = 64;
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)), maxThreads);

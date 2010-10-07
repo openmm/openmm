@@ -161,42 +161,6 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
     float e,ei;
     float erl,erli;
-    float di[4],qi[10];
-    float dk[4],qk[10];
-    float fridmp[4],findmp[4];
-    float ftm2[4],ftm2i[4];
-    float ftm2r[4],ftm2ri[4];
-    float ttm2[4],ttm3[4];
-    float ttm2i[4],ttm3i[4];
-    float ttm2r[4],ttm3r[4];
-    float ttm2ri[4],ttm3ri[4];
-    float dixdk[4];
-    float dkxui[4],dixuk[4];
-    float dixukp[4],dkxuip[4];
-    float uixqkr[4],ukxqir[4];
-    float uixqkrp[4],ukxqirp[4];
-    float qiuk[4],qkui[4];
-    float qiukp[4],qkuip[4];
-    float rxqiuk[4],rxqkui[4];
-    float rxqiukp[4],rxqkuip[4];
-    float qidk[4],qkdi[4];
-    float qir[4],qkr[4];
-    float qiqkr[4],qkqir[4];
-    float qixqk[4],rxqir[4];
-    float dixr[4],dkxr[4];
-    float dixqkr[4],dkxqir[4];
-    float rxqkr[4],qkrxqir[4];
-    float rxqikr[4],rxqkir[4];
-    float rxqidk[4],rxqkdi[4];
-    float ddsc3[4],ddsc5[4];
-    float ddsc7[4];
-    float bn[6];
-    float sc[11],gl[9];
-    float sci[9],scip[9];
-    float gli[8],glip[8];
-    float gf[8],gfi[7];
-    float gfr[8],gfri[7];
-    float gti[7],gtri[7];
 
     float conversionFactor   = (-cAmoebaSim.electric/cAmoebaSim.dielec);
 
@@ -206,19 +170,19 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
     float pti   = atomI.thole;
     float ci    = atomI.q;
 
-    di[1]       = atomI.labFrameDipole[0];
-    di[2]       = atomI.labFrameDipole[1];
-    di[3]       = atomI.labFrameDipole[2];
+    float di1       = atomI.labFrameDipole[0];
+    float di2       = atomI.labFrameDipole[1];
+    float di3       = atomI.labFrameDipole[2];
 
-    qi[1]       = atomI.labFrameQuadrupole[0];
-    qi[2]       = atomI.labFrameQuadrupole[1];
-    qi[3]       = atomI.labFrameQuadrupole[2];
-    qi[4]       = atomI.labFrameQuadrupole[3];
-    qi[5]       = atomI.labFrameQuadrupole[4];
-    qi[6]       = atomI.labFrameQuadrupole[5];
-    qi[7]       = atomI.labFrameQuadrupole[6];
-    qi[8]       = atomI.labFrameQuadrupole[7];
-    qi[9]       = atomI.labFrameQuadrupole[8];
+    float qi1       = atomI.labFrameQuadrupole[0];
+    float qi2       = atomI.labFrameQuadrupole[1];
+    float qi3       = atomI.labFrameQuadrupole[2];
+    float qi4       = atomI.labFrameQuadrupole[3];
+    float qi5       = atomI.labFrameQuadrupole[4];
+    float qi6       = atomI.labFrameQuadrupole[5];
+    float qi7       = atomI.labFrameQuadrupole[6];
+    float qi8       = atomI.labFrameQuadrupole[7];
+    float qi9       = atomI.labFrameQuadrupole[8];
 
     float xr    = atomJ.x - atomI.x;
     float yr    = atomJ.y - atomI.y;
@@ -236,25 +200,25 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float r      = sqrt(r2);
         float ck     = atomJ.q;
       
-        dk[1]  = atomJ.labFrameDipole[0];
-        dk[2]  = atomJ.labFrameDipole[1];
-        dk[3]  = atomJ.labFrameDipole[2];
+        float dk1  = atomJ.labFrameDipole[0];
+        float dk2  = atomJ.labFrameDipole[1];
+        float dk3  = atomJ.labFrameDipole[2];
       
-        qk[1]  = atomJ.labFrameQuadrupole[0];
-        qk[2]  = atomJ.labFrameQuadrupole[1];
-        qk[3]  = atomJ.labFrameQuadrupole[2];
-        qk[4]  = atomJ.labFrameQuadrupole[3];
-        qk[5]  = atomJ.labFrameQuadrupole[4];
-        qk[6]  = atomJ.labFrameQuadrupole[5];
-        qk[7]  = atomJ.labFrameQuadrupole[6];
-        qk[8]  = atomJ.labFrameQuadrupole[7];
-        qk[9]  = atomJ.labFrameQuadrupole[8];
+        float qk1  = atomJ.labFrameQuadrupole[0];
+        float qk2  = atomJ.labFrameQuadrupole[1];
+        float qk3  = atomJ.labFrameQuadrupole[2];
+        float qk4  = atomJ.labFrameQuadrupole[3];
+        float qk5  = atomJ.labFrameQuadrupole[4];
+        float qk6  = atomJ.labFrameQuadrupole[5];
+        float qk7  = atomJ.labFrameQuadrupole[6];
+        float qk8  = atomJ.labFrameQuadrupole[7];
+        float qk9  = atomJ.labFrameQuadrupole[8];
       
         // calculate the real space error function terms;
 
         float ralpha = cSim.alphaEwald*r;
 
-               bn[0] = erfc(ralpha)/r;
+        float bn0 = erfc(ralpha)/r;
 
         float alsq2  = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n = 0.0f;
@@ -264,19 +228,19 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float exp2a  = exp(-(ralpha*ralpha));
 
         alsq2n      *= alsq2;
-        bn[1]        = (bn[0]+alsq2n*exp2a)/r2;
+        float bn1        = (bn0+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        bn[2]        = (3.0f*bn[1]+alsq2n*exp2a)/r2;
+        float bn2        = (3.0f*bn1+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        bn[3]        = (5.0f*bn[2]+alsq2n*exp2a)/r2;
+        float bn3        = (5.0f*bn2+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        bn[4]        = (7.0f*bn[3]+alsq2n*exp2a)/r2;
+        float bn4        = (7.0f*bn3+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        bn[5]        = (9.0f*bn[4]+alsq2n*exp2a)/r2;
+        float bn5        = (9.0f*bn4+alsq2n*exp2a)/r2;
 
         // apply Thole polarization damping to scale factors;
 
@@ -290,17 +254,17 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float scale5 = 1.0f;
         float scale7 = 1.0f;
 
-            ddsc3[1] = 0.0f;
-            ddsc3[2] = 0.0f;
-            ddsc3[3] = 0.0f;
+        float ddsc31 = 0.0f;
+        float ddsc32 = 0.0f;
+        float ddsc33 = 0.0f;
 
-            ddsc5[1] = 0.0f;
-            ddsc5[2] = 0.0f;
-            ddsc5[3] = 0.0f;
+        float ddsc51 = 0.0f;
+        float ddsc52 = 0.0f;
+        float ddsc53 = 0.0f;
 
-            ddsc7[1] = 0.0f;
-            ddsc7[2] = 0.0f;
-            ddsc7[3] = 0.0f;
+        float ddsc71 = 0.0f;
+        float ddsc72 = 0.0f;
+        float ddsc73 = 0.0f;
 
         float pdk    = atomJ.damp;
         float ptk    = atomJ.thole;
@@ -318,17 +282,17 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
                 float temp5    = -damp;
                 float temp7    = -0.2f - 0.6f*damp;
 
-                ddsc3[1]       = temp3 * xr;
-                ddsc3[2]       = temp3 * yr;
-                ddsc3[3]       = temp3 * zr;
+                ddsc31       = temp3 * xr;
+                ddsc32       = temp3 * yr;
+                ddsc33       = temp3 * zr;
 
-                ddsc5[1]       = temp5 * ddsc3[1];
-                ddsc5[2]       = temp5 * ddsc3[2];
-                ddsc5[3]       = temp5 * ddsc3[3];
+                ddsc51       = temp5 * ddsc31;
+                ddsc52       = temp5 * ddsc32;
+                ddsc53       = temp5 * ddsc33;
 
-                ddsc7[1]       = temp7 * ddsc5[1];
-                ddsc7[2]       = temp7 * ddsc5[2];
-                ddsc7[3]       = temp7 * ddsc5[3];
+                ddsc71       = temp7 * ddsc51;
+                ddsc72       = temp7 * ddsc52;
+                ddsc73       = temp7 * ddsc53;
             }
         }
 
@@ -345,210 +309,208 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
         // construct necessary auxiliary vectors
 
-        dixdk[1]       = di[2]*dk[3] - di[3]*dk[2];
-        dixdk[2]       = di[3]*dk[1] - di[1]*dk[3];
-        dixdk[3]       = di[1]*dk[2] - di[2]*dk[1];
+        float dixdk1       = di2*dk3 - di3*dk2;
+        float dixdk2       = di3*dk1 - di1*dk3;
+        float dixdk3       = di1*dk2 - di2*dk1;
 
-        dixuk[1]       = di[2]*atomJ.inducedDipole[2] - di[3]*atomJ.inducedDipole[1];
-        dixuk[2]       = di[3]*atomJ.inducedDipole[0] - di[1]*atomJ.inducedDipole[2];
-        dixuk[3]       = di[1]*atomJ.inducedDipole[1] - di[2]*atomJ.inducedDipole[0];
-        dkxui[1]       = dk[2]*atomI.inducedDipole[2] - dk[3]*atomI.inducedDipole[1];
-        dkxui[2]       = dk[3]*atomI.inducedDipole[0] - dk[1]*atomI.inducedDipole[2];
-        dkxui[3]       = dk[1]*atomI.inducedDipole[1] - dk[2]*atomI.inducedDipole[0];
-        dixukp[1]      = di[2]*atomJ.inducedDipoleP[2] - di[3]*atomJ.inducedDipoleP[1];
-        dixukp[2]      = di[3]*atomJ.inducedDipoleP[0] - di[1]*atomJ.inducedDipoleP[2];
-        dixukp[3]      = di[1]*atomJ.inducedDipoleP[1] - di[2]*atomJ.inducedDipoleP[0];
-        dkxuip[1]      = dk[2]*atomI.inducedDipoleP[2] - dk[3]*atomI.inducedDipoleP[1];
-        dkxuip[2]      = dk[3]*atomI.inducedDipoleP[0] - dk[1]*atomI.inducedDipoleP[2];
-        dkxuip[3]      = dk[1]*atomI.inducedDipoleP[1] - dk[2]*atomI.inducedDipoleP[0];
-        dixr[1]        = di[2]*zr - di[3]*yr;
-        dixr[2]        = di[3]*xr - di[1]*zr;
-        dixr[3]        = di[1]*yr - di[2]*xr;
-        dkxr[1]        = dk[2]*zr - dk[3]*yr;
-        dkxr[2]        = dk[3]*xr - dk[1]*zr;
-        dkxr[3]        = dk[1]*yr - dk[2]*xr;
-        qir[1]         = qi[1]*xr + qi[4]*yr + qi[7]*zr;
-        qir[2]         = qi[2]*xr + qi[5]*yr + qi[8]*zr;
-        qir[3]         = qi[3]*xr + qi[6]*yr + qi[9]*zr;
-        qkr[1]         = qk[1]*xr + qk[4]*yr + qk[7]*zr;
-        qkr[2]         = qk[2]*xr + qk[5]*yr + qk[8]*zr;
-        qkr[3]         = qk[3]*xr + qk[6]*yr + qk[9]*zr;
-        qiqkr[1]       = qi[1]*qkr[1] + qi[4]*qkr[2] + qi[7]*qkr[3];
-        qiqkr[2]       = qi[2]*qkr[1] + qi[5]*qkr[2] + qi[8]*qkr[3];
-        qiqkr[3]       = qi[3]*qkr[1] + qi[6]*qkr[2] + qi[9]*qkr[3];
-        qkqir[1]       = qk[1]*qir[1] + qk[4]*qir[2] + qk[7]*qir[3];
-        qkqir[2]       = qk[2]*qir[1] + qk[5]*qir[2] + qk[8]*qir[3];
-        qkqir[3]       = qk[3]*qir[1] + qk[6]*qir[2] + qk[9]*qir[3];
-        qixqk[1]       = qi[2]*qk[3] + qi[5]*qk[6] + qi[8]*qk[9]
-                       - qi[3]*qk[2] - qi[6]*qk[5] - qi[9]*qk[8];
-        qixqk[2]       = qi[3]*qk[1] + qi[6]*qk[4] + qi[9]*qk[7]
-                       - qi[1]*qk[3] - qi[4]*qk[6] - qi[7]*qk[9];
-        qixqk[3]       = qi[1]*qk[2] + qi[4]*qk[5] + qi[7]*qk[8]
-                       - qi[2]*qk[1] - qi[5]*qk[4] - qi[8]*qk[7];
-        rxqir[1]       = yr*qir[3] - zr*qir[2];
-        rxqir[2]       = zr*qir[1] - xr*qir[3];
-        rxqir[3]       = xr*qir[2] - yr*qir[1];
-        rxqkr[1]       = yr*qkr[3] - zr*qkr[2];
-        rxqkr[2]       = zr*qkr[1] - xr*qkr[3];
-        rxqkr[3]       = xr*qkr[2] - yr*qkr[1];
-        rxqikr[1]      = yr*qiqkr[3] - zr*qiqkr[2];
-        rxqikr[2]      = zr*qiqkr[1] - xr*qiqkr[3];
-        rxqikr[3]      = xr*qiqkr[2] - yr*qiqkr[1];
-        rxqkir[1]      = yr*qkqir[3] - zr*qkqir[2];
-        rxqkir[2]      = zr*qkqir[1] - xr*qkqir[3];
-        rxqkir[3]      = xr*qkqir[2] - yr*qkqir[1];
-        qkrxqir[1]     = qkr[2]*qir[3] - qkr[3]*qir[2];
-        qkrxqir[2]     = qkr[3]*qir[1] - qkr[1]*qir[3];
-        qkrxqir[3]     = qkr[1]*qir[2] - qkr[2]*qir[1];
-        qidk[1]        = qi[1]*dk[1] + qi[4]*dk[2] + qi[7]*dk[3];
-        qidk[2]        = qi[2]*dk[1] + qi[5]*dk[2] + qi[8]*dk[3];
-        qidk[3]        = qi[3]*dk[1] + qi[6]*dk[2] + qi[9]*dk[3];
-        qkdi[1]        = qk[1]*di[1] + qk[4]*di[2] + qk[7]*di[3];
-        qkdi[2]        = qk[2]*di[1] + qk[5]*di[2] + qk[8]*di[3];
-        qkdi[3]        = qk[3]*di[1] + qk[6]*di[2] + qk[9]*di[3];
-        qiuk[1]        = qi[1]*atomJ.inducedDipole[0] + qi[4]*atomJ.inducedDipole[1]
-                       + qi[7]*atomJ.inducedDipole[2];
-        qiuk[2]        = qi[2]*atomJ.inducedDipole[0] + qi[5]*atomJ.inducedDipole[1]
-                       + qi[8]*atomJ.inducedDipole[2];
-        qiuk[3]        = qi[3]*atomJ.inducedDipole[0] + qi[6]*atomJ.inducedDipole[1] 
-                       + qi[9]*atomJ.inducedDipole[2];
-        qkui[1]        = qk[1]*atomI.inducedDipole[0] + qk[4]*atomI.inducedDipole[1]
-                       + qk[7]*atomI.inducedDipole[2];
-        qkui[2]        = qk[2]*atomI.inducedDipole[0] + qk[5]*atomI.inducedDipole[1]
-                       + qk[8]*atomI.inducedDipole[2];
-        qkui[3]        = qk[3]*atomI.inducedDipole[0] + qk[6]*atomI.inducedDipole[1]
-                       + qk[9]*atomI.inducedDipole[2];
-        qiukp[1]       = qi[1]*atomJ.inducedDipoleP[0] + qi[4]*atomJ.inducedDipoleP[1]
-                        + qi[7]*atomJ.inducedDipoleP[2];
-        qiukp[2]       = qi[2]*atomJ.inducedDipoleP[0] + qi[5]*atomJ.inducedDipoleP[1]
-                        + qi[8]*atomJ.inducedDipoleP[2];
-        qiukp[3]       = qi[3]*atomJ.inducedDipoleP[0] + qi[6]*atomJ.inducedDipoleP[1]
-                        + qi[9]*atomJ.inducedDipoleP[2];
-        qkuip[1]       = qk[1]*atomI.inducedDipoleP[0] + qk[4]*atomI.inducedDipoleP[1]
-                        + qk[7]*atomI.inducedDipoleP[2];
-        qkuip[2]       = qk[2]*atomI.inducedDipoleP[0] + qk[5]*atomI.inducedDipoleP[1]
-                        + qk[8]*atomI.inducedDipoleP[2];
-        qkuip[3]       = qk[3]*atomI.inducedDipoleP[0] + qk[6]*atomI.inducedDipoleP[1]
-                        + qk[9]*atomI.inducedDipoleP[2];
-        dixqkr[1]      = di[2]*qkr[3] - di[3]*qkr[2];
-        dixqkr[2]      = di[3]*qkr[1] - di[1]*qkr[3];
-        dixqkr[3]      = di[1]*qkr[2] - di[2]*qkr[1];
-        dkxqir[1]      = dk[2]*qir[3] - dk[3]*qir[2];
-        dkxqir[2]      = dk[3]*qir[1] - dk[1]*qir[3];
-        dkxqir[3]      = dk[1]*qir[2] - dk[2]*qir[1];
-        uixqkr[1]      = atomI.inducedDipole[1]*qkr[3] - atomI.inducedDipole[2]*qkr[2];
-        uixqkr[2]      = atomI.inducedDipole[2]*qkr[1] - atomI.inducedDipole[0]*qkr[3];
-        uixqkr[3]      = atomI.inducedDipole[0]*qkr[2] - atomI.inducedDipole[1]*qkr[1];
-        ukxqir[1]      = atomJ.inducedDipole[1]*qir[3] - atomJ.inducedDipole[2]*qir[2];
-        ukxqir[2]      = atomJ.inducedDipole[2]*qir[1] - atomJ.inducedDipole[0]*qir[3];
-        ukxqir[3]      = atomJ.inducedDipole[0]*qir[2] - atomJ.inducedDipole[1]*qir[1];
-        uixqkrp[1]     = atomI.inducedDipoleP[1]*qkr[3] - atomI.inducedDipoleP[2]*qkr[2];
-        uixqkrp[2]     = atomI.inducedDipoleP[2]*qkr[1] - atomI.inducedDipoleP[0]*qkr[3];
-        uixqkrp[3]     = atomI.inducedDipoleP[0]*qkr[2] - atomI.inducedDipoleP[1]*qkr[1];
-        ukxqirp[1]     = atomJ.inducedDipoleP[1]*qir[3] - atomJ.inducedDipoleP[2]*qir[2];
-        ukxqirp[2]     = atomJ.inducedDipoleP[2]*qir[1] - atomJ.inducedDipoleP[0]*qir[3];
-        ukxqirp[3]     = atomJ.inducedDipoleP[0]*qir[2] - atomJ.inducedDipoleP[1]*qir[1];
-        rxqidk[1]      = yr*qidk[3] - zr*qidk[2];
-        rxqidk[2]      = zr*qidk[1] - xr*qidk[3];
-        rxqidk[3]      = xr*qidk[2] - yr*qidk[1];
-        rxqkdi[1]      = yr*qkdi[3] - zr*qkdi[2];
-        rxqkdi[2]      = zr*qkdi[1] - xr*qkdi[3];
-        rxqkdi[3]      = xr*qkdi[2] - yr*qkdi[1];
-        rxqiuk[1]      = yr*qiuk[3] - zr*qiuk[2];
-        rxqiuk[2]      = zr*qiuk[1] - xr*qiuk[3];
-        rxqiuk[3]      = xr*qiuk[2] - yr*qiuk[1];
-        rxqkui[1]      = yr*qkui[3] - zr*qkui[2];
-        rxqkui[2]      = zr*qkui[1] - xr*qkui[3];
-        rxqkui[3]      = xr*qkui[2] - yr*qkui[1];
-        rxqiukp[1]     = yr*qiukp[3] - zr*qiukp[2];
-        rxqiukp[2]     = zr*qiukp[1] - xr*qiukp[3];
-        rxqiukp[3]     = xr*qiukp[2] - yr*qiukp[1];
-        rxqkuip[1]     = yr*qkuip[3] - zr*qkuip[2];
-        rxqkuip[2]     = zr*qkuip[1] - xr*qkuip[3];
-        rxqkuip[3]     = xr*qkuip[2] - yr*qkuip[1];
+        float dixuk1       = di2*atomJ.inducedDipole[2] - di3*atomJ.inducedDipole[1];
+        float dixuk2       = di3*atomJ.inducedDipole[0] - di1*atomJ.inducedDipole[2];
+        float dixuk3       = di1*atomJ.inducedDipole[1] - di2*atomJ.inducedDipole[0];
+        float dkxui1       = dk2*atomI.inducedDipole[2] - dk3*atomI.inducedDipole[1];
+        float dkxui2       = dk3*atomI.inducedDipole[0] - dk1*atomI.inducedDipole[2];
+        float dkxui3       = dk1*atomI.inducedDipole[1] - dk2*atomI.inducedDipole[0];
+        float dixukp1      = di2*atomJ.inducedDipoleP[2] - di3*atomJ.inducedDipoleP[1];
+        float dixukp2      = di3*atomJ.inducedDipoleP[0] - di1*atomJ.inducedDipoleP[2];
+        float dixukp3      = di1*atomJ.inducedDipoleP[1] - di2*atomJ.inducedDipoleP[0];
+        float dkxuip1      = dk2*atomI.inducedDipoleP[2] - dk3*atomI.inducedDipoleP[1];
+        float dkxuip2      = dk3*atomI.inducedDipoleP[0] - dk1*atomI.inducedDipoleP[2];
+        float dkxuip3      = dk1*atomI.inducedDipoleP[1] - dk2*atomI.inducedDipoleP[0];
+        float dixr1        = di2*zr - di3*yr;
+        float dixr2        = di3*xr - di1*zr;
+        float dixr3        = di1*yr - di2*xr;
+        float dkxr1        = dk2*zr - dk3*yr;
+        float dkxr2        = dk3*xr - dk1*zr;
+        float dkxr3        = dk1*yr - dk2*xr;
+        float qir1         = qi1*xr + qi4*yr + qi7*zr;
+        float qir2         = qi2*xr + qi5*yr + qi8*zr;
+        float qir3         = qi3*xr + qi6*yr + qi9*zr;
+        float qkr1         = qk1*xr + qk4*yr + qk7*zr;
+        float qkr2         = qk2*xr + qk5*yr + qk8*zr;
+        float qkr3         = qk3*xr + qk6*yr + qk9*zr;
+        float qiqkr1       = qi1*qkr1 + qi4*qkr2 + qi7*qkr3;
+        float qiqkr2       = qi2*qkr1 + qi5*qkr2 + qi8*qkr3;
+        float qiqkr3       = qi3*qkr1 + qi6*qkr2 + qi9*qkr3;
+        float qkqir1       = qk1*qir1 + qk4*qir2 + qk7*qir3;
+        float qkqir2       = qk2*qir1 + qk5*qir2 + qk8*qir3;
+        float qkqir3       = qk3*qir1 + qk6*qir2 + qk9*qir3;
+        float qixqk1       = qi2*qk3 + qi5*qk6 + qi8*qk9
+                       - qi3*qk2 - qi6*qk5 - qi9*qk8;
+        float qixqk2       = qi3*qk1 + qi6*qk4 + qi9*qk7
+                       - qi1*qk3 - qi4*qk6 - qi7*qk9;
+        float qixqk3       = qi1*qk2 + qi4*qk5 + qi7*qk8
+                       - qi2*qk1 - qi5*qk4 - qi8*qk7;
+        float rxqir1       = yr*qir3 - zr*qir2;
+        float rxqir2       = zr*qir1 - xr*qir3;
+        float rxqir3       = xr*qir2 - yr*qir1;
+        float rxqkr1       = yr*qkr3 - zr*qkr2;
+        float rxqkr2       = zr*qkr1 - xr*qkr3;
+        float rxqkr3       = xr*qkr2 - yr*qkr1;
+        float rxqikr1      = yr*qiqkr3 - zr*qiqkr2;
+        float rxqikr2      = zr*qiqkr1 - xr*qiqkr3;
+        float rxqikr3      = xr*qiqkr2 - yr*qiqkr1;
+        float rxqkir1      = yr*qkqir3 - zr*qkqir2;
+        float rxqkir2      = zr*qkqir1 - xr*qkqir3;
+        float rxqkir3      = xr*qkqir2 - yr*qkqir1;
+        float qkrxqir1     = qkr2*qir3 - qkr3*qir2;
+        float qkrxqir2     = qkr3*qir1 - qkr1*qir3;
+        float qkrxqir3     = qkr1*qir2 - qkr2*qir1;
+        float qidk1        = qi1*dk1 + qi4*dk2 + qi7*dk3;
+        float qidk2        = qi2*dk1 + qi5*dk2 + qi8*dk3;
+        float qidk3        = qi3*dk1 + qi6*dk2 + qi9*dk3;
+        float qkdi1        = qk1*di1 + qk4*di2 + qk7*di3;
+        float qkdi2        = qk2*di1 + qk5*di2 + qk8*di3;
+        float qkdi3        = qk3*di1 + qk6*di2 + qk9*di3;
+        float qiuk1        = qi1*atomJ.inducedDipole[0] + qi4*atomJ.inducedDipole[1]
+                       + qi7*atomJ.inducedDipole[2];
+        float qiuk2        = qi2*atomJ.inducedDipole[0] + qi5*atomJ.inducedDipole[1]
+                       + qi8*atomJ.inducedDipole[2];
+        float qiuk3        = qi3*atomJ.inducedDipole[0] + qi6*atomJ.inducedDipole[1]
+                       + qi9*atomJ.inducedDipole[2];
+        float qkui1        = qk1*atomI.inducedDipole[0] + qk4*atomI.inducedDipole[1]
+                       + qk7*atomI.inducedDipole[2];
+        float qkui2        = qk2*atomI.inducedDipole[0] + qk5*atomI.inducedDipole[1]
+                       + qk8*atomI.inducedDipole[2];
+        float qkui3        = qk3*atomI.inducedDipole[0] + qk6*atomI.inducedDipole[1]
+                       + qk9*atomI.inducedDipole[2];
+        float qiukp1       = qi1*atomJ.inducedDipoleP[0] + qi4*atomJ.inducedDipoleP[1]
+                        + qi7*atomJ.inducedDipoleP[2];
+        float qiukp2       = qi2*atomJ.inducedDipoleP[0] + qi5*atomJ.inducedDipoleP[1]
+                        + qi8*atomJ.inducedDipoleP[2];
+        float qiukp3       = qi3*atomJ.inducedDipoleP[0] + qi6*atomJ.inducedDipoleP[1]
+                        + qi9*atomJ.inducedDipoleP[2];
+        float qkuip1       = qk1*atomI.inducedDipoleP[0] + qk4*atomI.inducedDipoleP[1]
+                        + qk7*atomI.inducedDipoleP[2];
+        float qkuip2       = qk2*atomI.inducedDipoleP[0] + qk5*atomI.inducedDipoleP[1]
+                        + qk8*atomI.inducedDipoleP[2];
+        float qkuip3       = qk3*atomI.inducedDipoleP[0] + qk6*atomI.inducedDipoleP[1]
+                        + qk9*atomI.inducedDipoleP[2];
+        float dixqkr1      = di2*qkr3 - di3*qkr2;
+        float dixqkr2      = di3*qkr1 - di1*qkr3;
+        float dixqkr3      = di1*qkr2 - di2*qkr1;
+        float dkxqir1      = dk2*qir3 - dk3*qir2;
+        float dkxqir2      = dk3*qir1 - dk1*qir3;
+        float dkxqir3      = dk1*qir2 - dk2*qir1;
+        float uixqkr1      = atomI.inducedDipole[1]*qkr3 - atomI.inducedDipole[2]*qkr2;
+        float uixqkr2      = atomI.inducedDipole[2]*qkr1 - atomI.inducedDipole[0]*qkr3;
+        float uixqkr3      = atomI.inducedDipole[0]*qkr2 - atomI.inducedDipole[1]*qkr1;
+        float ukxqir1      = atomJ.inducedDipole[1]*qir3 - atomJ.inducedDipole[2]*qir2;
+        float ukxqir2      = atomJ.inducedDipole[2]*qir1 - atomJ.inducedDipole[0]*qir3;
+        float ukxqir3      = atomJ.inducedDipole[0]*qir2 - atomJ.inducedDipole[1]*qir1;
+        float uixqkrp1     = atomI.inducedDipoleP[1]*qkr3 - atomI.inducedDipoleP[2]*qkr2;
+        float uixqkrp2     = atomI.inducedDipoleP[2]*qkr1 - atomI.inducedDipoleP[0]*qkr3;
+        float uixqkrp3     = atomI.inducedDipoleP[0]*qkr2 - atomI.inducedDipoleP[1]*qkr1;
+        float ukxqirp1     = atomJ.inducedDipoleP[1]*qir3 - atomJ.inducedDipoleP[2]*qir2;
+        float ukxqirp2     = atomJ.inducedDipoleP[2]*qir1 - atomJ.inducedDipoleP[0]*qir3;
+        float ukxqirp3     = atomJ.inducedDipoleP[0]*qir2 - atomJ.inducedDipoleP[1]*qir1;
+        float rxqidk1      = yr*qidk3 - zr*qidk2;
+        float rxqidk2      = zr*qidk1 - xr*qidk3;
+        float rxqidk3      = xr*qidk2 - yr*qidk1;
+        float rxqkdi1      = yr*qkdi3 - zr*qkdi2;
+        float rxqkdi2      = zr*qkdi1 - xr*qkdi3;
+        float rxqkdi3      = xr*qkdi2 - yr*qkdi1;
+        float rxqiuk1      = yr*qiuk3 - zr*qiuk2;
+        float rxqiuk2      = zr*qiuk1 - xr*qiuk3;
+        float rxqiuk3      = xr*qiuk2 - yr*qiuk1;
+        float rxqkui1      = yr*qkui3 - zr*qkui2;
+        float rxqkui2      = zr*qkui1 - xr*qkui3;
+        float rxqkui3      = xr*qkui2 - yr*qkui1;
+        float rxqiukp1     = yr*qiukp3 - zr*qiukp2;
+        float rxqiukp2     = zr*qiukp1 - xr*qiukp3;
+        float rxqiukp3     = xr*qiukp2 - yr*qiukp1;
+        float rxqkuip1     = yr*qkuip3 - zr*qkuip2;
+        float rxqkuip2     = zr*qkuip1 - xr*qkuip3;
+        float rxqkuip3     = xr*qkuip2 - yr*qkuip1;
 
         // calculate the scalar products for permanent components
 
-        sc[2]          = di[1]*dk[1] + di[2]*dk[2] + di[3]*dk[3];
-        sc[3]          = di[1]*xr + di[2]*yr + di[3]*zr;
-        sc[4]          = dk[1]*xr + dk[2]*yr + dk[3]*zr;
-        sc[5]          = qir[1]*xr + qir[2]*yr + qir[3]*zr;
-        sc[6]          = qkr[1]*xr + qkr[2]*yr + qkr[3]*zr;
-        sc[7]          = qir[1]*dk[1] + qir[2]*dk[2] + qir[3]*dk[3];
-        sc[8]          = qkr[1]*di[1] + qkr[2]*di[2] + qkr[3]*di[3];
-        sc[9]          = qir[1]*qkr[1] + qir[2]*qkr[2] + qir[3]*qkr[3];
-        sc[10]         = qi[1]*qk[1] + qi[2]*qk[2] + qi[3]*qk[3]
-                       + qi[4]*qk[4] + qi[5]*qk[5] + qi[6]*qk[6]
-                       + qi[7]*qk[7] + qi[8]*qk[8] + qi[9]*qk[9];
+        float sc2          = di1*dk1 + di2*dk2 + di3*dk3;
+        float sc3          = di1*xr + di2*yr + di3*zr;
+        float sc4          = dk1*xr + dk2*yr + dk3*zr;
+        float sc5          = qir1*xr + qir2*yr + qir3*zr;
+        float sc6          = qkr1*xr + qkr2*yr + qkr3*zr;
+        float sc7          = qir1*dk1 + qir2*dk2 + qir3*dk3;
+        float sc8          = qkr1*di1 + qkr2*di2 + qkr3*di3;
+        float sc9          = qir1*qkr1 + qir2*qkr2 + qir3*qkr3;
+        float sc10         = qi1*qk1 + qi2*qk2 + qi3*qk3
+                       + qi4*qk4 + qi5*qk5 + qi6*qk6
+                       + qi7*qk7 + qi8*qk8 + qi9*qk9;
 
         // calculate the scalar products for induced components
 
-        sci[1]          = atomI.inducedDipole[0]*dk[1] + atomI.inducedDipole[1]*dk[2]
-                      + atomI.inducedDipole[2]*dk[3] + di[1]*atomJ.inducedDipole[0]
-                      + di[2]*atomJ.inducedDipole[1] + di[3]*atomJ.inducedDipole[2];
+        float sci1          = atomI.inducedDipole[0]*dk1 + atomI.inducedDipole[1]*dk2
+                      + atomI.inducedDipole[2]*dk3 + di1*atomJ.inducedDipole[0]
+                      + di2*atomJ.inducedDipole[1] + di3*atomJ.inducedDipole[2];
 
-        sci[2]          = atomI.inducedDipole[0]*atomJ.inducedDipole[0] + atomI.inducedDipole[1]*atomJ.inducedDipole[1]
-                        + atomI.inducedDipole[2]*atomJ.inducedDipole[2];
-        sci[3]          = atomI.inducedDipole[0]*xr + atomI.inducedDipole[1]*yr + atomI.inducedDipole[2]*zr;
-        sci[4]          = atomJ.inducedDipole[0]*xr + atomJ.inducedDipole[1]*yr + atomJ.inducedDipole[2]*zr;
-        sci[7]          = qir[1]*atomJ.inducedDipole[0] + qir[2]*atomJ.inducedDipole[1]
-                        + qir[3]*atomJ.inducedDipole[2];
-        sci[8]          = qkr[1]*atomI.inducedDipole[0] + qkr[2]*atomI.inducedDipole[1]
-                        + qkr[3]*atomI.inducedDipole[2];
-        scip[1]         = atomI.inducedDipoleP[0]*dk[1] + atomI.inducedDipoleP[1]*dk[2]
-                        + atomI.inducedDipoleP[2]*dk[3] + di[1]*atomJ.inducedDipoleP[0]
-                        + di[2]*atomJ.inducedDipoleP[1] + di[3]*atomJ.inducedDipoleP[2];
-        scip[2]         = atomI.inducedDipole[0]*atomJ.inducedDipoleP[0]+atomI.inducedDipole[1]*atomJ.inducedDipoleP[1]
+        float sci3          = atomI.inducedDipole[0]*xr + atomI.inducedDipole[1]*yr + atomI.inducedDipole[2]*zr;
+        float sci4          = atomJ.inducedDipole[0]*xr + atomJ.inducedDipole[1]*yr + atomJ.inducedDipole[2]*zr;
+        float sci7          = qir1*atomJ.inducedDipole[0] + qir2*atomJ.inducedDipole[1]
+                        + qir3*atomJ.inducedDipole[2];
+        float sci8          = qkr1*atomI.inducedDipole[0] + qkr2*atomI.inducedDipole[1]
+                        + qkr3*atomI.inducedDipole[2];
+        float scip1         = atomI.inducedDipoleP[0]*dk1 + atomI.inducedDipoleP[1]*dk2
+                        + atomI.inducedDipoleP[2]*dk3 + di1*atomJ.inducedDipoleP[0]
+                        + di2*atomJ.inducedDipoleP[1] + di3*atomJ.inducedDipoleP[2];
+        float scip2         = atomI.inducedDipole[0]*atomJ.inducedDipoleP[0]+atomI.inducedDipole[1]*atomJ.inducedDipoleP[1]
                         + atomI.inducedDipole[2]*atomJ.inducedDipoleP[2]+atomI.inducedDipoleP[0]*atomJ.inducedDipole[0]
                         + atomI.inducedDipoleP[1]*atomJ.inducedDipole[1]+atomI.inducedDipoleP[2]*atomJ.inducedDipole[2];
-        scip[3]         = atomI.inducedDipoleP[0]*xr + atomI.inducedDipoleP[1]*yr + atomI.inducedDipoleP[2]*zr;
-        scip[4]         = atomJ.inducedDipoleP[0]*xr + atomJ.inducedDipoleP[1]*yr + atomJ.inducedDipoleP[2]*zr;
-        scip[7]         = qir[1]*atomJ.inducedDipoleP[0] + qir[2]*atomJ.inducedDipoleP[1]
-                        + qir[3]*atomJ.inducedDipoleP[2];
-        scip[8]         = qkr[1]*atomI.inducedDipoleP[0] + qkr[2]*atomI.inducedDipoleP[1]
-                        + qkr[3]*atomI.inducedDipoleP[2];
+        float scip3         = atomI.inducedDipoleP[0]*xr + atomI.inducedDipoleP[1]*yr + atomI.inducedDipoleP[2]*zr;
+        float scip4         = atomJ.inducedDipoleP[0]*xr + atomJ.inducedDipoleP[1]*yr + atomJ.inducedDipoleP[2]*zr;
+        float scip7         = qir1*atomJ.inducedDipoleP[0] + qir2*atomJ.inducedDipoleP[1]
+                        + qir3*atomJ.inducedDipoleP[2];
+        float scip8         = qkr1*atomI.inducedDipoleP[0] + qkr2*atomI.inducedDipoleP[1]
+                        + qkr3*atomI.inducedDipoleP[2];
 
         // calculate the gl functions for permanent components
 
-        gl[0]           = ci*ck;
-        gl[1]           = ck*sc[3] - ci*sc[4];
-        gl[2]           = ci*sc[6] + ck*sc[5] - sc[3]*sc[4];
-        gl[3]           = sc[3]*sc[6] - sc[4]*sc[5];
-        gl[4]           = sc[5]*sc[6];
-        gl[5]           = -4.0f * sc[9];
-        gl[6]           = sc[2];
-        gl[7]           = 2.0f * (sc[7]-sc[8]);
-        gl[8]           = 2.0f * sc[10];
+        float gl0           = ci*ck;
+        float gl1           = ck*sc3 - ci*sc4;
+        float gl2           = ci*sc6 + ck*sc5 - sc3*sc4;
+        float gl3           = sc3*sc6 - sc4*sc5;
+        float gl4           = sc5*sc6;
+        float gl5           = -4.0f * sc9;
+        float gl6           = sc2;
+        float gl7           = 2.0f * (sc7-sc8);
+        float gl8           = 2.0f * sc10;
 
         // calculate the gl functions for induced components
 
-        gli[1]          = ck*sci[3] - ci*sci[4];
-        gli[2]          = -sc[3]*sci[4] - sci[3]*sc[4];
-        gli[3]          = sci[3]*sc[6] - sci[4]*sc[5];
-        gli[6]          = sci[1];
-        gli[7]          = 2.0f * (sci[7]-sci[8]);
-        glip[1]         = ck*scip[3] - ci*scip[4];
-        glip[2]         = -sc[3]*scip[4] - scip[3]*sc[4];
-        glip[3]         = scip[3]*sc[6] - scip[4]*sc[5];
-        glip[6]         = scip[1];
-        glip[7]         = 2.0f * (scip[7]-scip[8]);
+        float gli1          = ck*sci3 - ci*sci4;
+        float gli2          = -sc3*sci4 - sci3*sc4;
+        float gli3          = sci3*sc6 - sci4*sc5;
+        float gli6          = sci1;
+        float gli7          = 2.0f * (sci7-sci8);
+        float glip1         = ck*scip3 - ci*scip4;
+        float glip2         = -sc3*scip4 - scip3*sc4;
+        float glip3         = scip3*sc6 - scip4*sc5;
+        float glip6         = scip1;
+        float glip7         = 2.0f * (scip7-scip8);
 
         // compute the energy contributions for this interaction
 
-        e    = bn[0]*gl[0] + bn[1]*(gl[1]+gl[6])
-                 + bn[2]*(gl[2]+gl[7]+gl[8])
-                 + bn[3]*(gl[3]+gl[5]) + bn[4]*gl[4];
-        ei    = 0.5f * (bn[1]*(gli[1]+gli[6])
-                       + bn[2]*(gli[2]+gli[7]) + bn[3]*gli[3]);
+        e    = bn0*gl0 + bn1*(gl1+gl6)
+                 + bn2*(gl2+gl7+gl8)
+                 + bn3*(gl3+gl5) + bn4*gl4;
+        ei    = 0.5f * (bn1*(gli1+gli6)
+                       + bn2*(gli2+gli7) + bn3*gli3);
 
         // get the real energy without any screening function
 
-        erl = rr1*gl[0] + rr3*(gl[1]+gl[6])
-                   + rr5*(gl[2]+gl[7]+gl[8])
-                   + rr7*(gl[3]+gl[5]) + rr9*gl[4];
-        erli = 0.5f*(rr3*(gli[1]+gli[6])*psc3
-                    + rr5*(gli[2]+gli[7])*psc5
-                    + rr7*gli[3]*psc7);
+        erl = rr1*gl0 + rr3*(gl1+gl6)
+                   + rr5*(gl2+gl7+gl8)
+                   + rr7*(gl3+gl5) + rr9*gl4;
+        erli = 0.5f*(rr3*(gli1+gli6)*psc3
+                    + rr5*(gli2+gli7)*psc5
+                    + rr7*gli3*psc7);
         e = e - (1.0f-scalingFactors[MScaleIndex])*erl;
         ei = ei - erli;
 
@@ -561,338 +523,348 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         if (molcule(ii) .eq. molcule(kk)) {
            eintra = eintra + mscale(kk)*erl*f;
            eintra = eintra + 0.5f*pscale(kk);
-&                        * (rr3*(gli[1]+gli[6])*scale3;
-&                              + rr5*(gli[2]+gli[7])*scale5;
-&                              + rr7*gli[3]*scale7);
+&                        * (rr3*(gli1+gli6)*scale3;
+&                              + rr5*(gli2+gli7)*scale5;
+&                              + rr7*gli3*scale7);
         }
 */
 
         // intermediate variables for permanent force terms
 
-        gf[1] = bn[1]*gl[0] + bn[2]*(gl[1]+gl[6])
-                     + bn[3]*(gl[2]+gl[7]+gl[8])
-                     + bn[4]*(gl[3]+gl[5]) + bn[5]*gl[4];
-        gf[2] = -ck*bn[1] + sc[4]*bn[2] - sc[6]*bn[3];
-        gf[3] = ci*bn[1] + sc[3]*bn[2] + sc[5]*bn[3];
-        gf[4] = 2.0f * bn[2];
-        gf[5] = 2.0f * (-ck*bn[2]+sc[4]*bn[3]-sc[6]*bn[4]);
-        gf[6] = 2.0f * (-ci*bn[2]-sc[3]*bn[3]-sc[5]*bn[4]);
-        gf[7] = 4.0f * bn[3];
-        gfr[1] = rr3*gl[0] + rr5*(gl[1]+gl[6])
-                      + rr7*(gl[2]+gl[7]+gl[8])
-                      + rr9*(gl[3]+gl[5]) + rr11*gl[4];
-        gfr[2] = -ck*rr3 + sc[4]*rr5 - sc[6]*rr7;
-        gfr[3] = ci*rr3 + sc[3]*rr5 + sc[5]*rr7;
-        gfr[4] = 2.0f * rr5;
-        gfr[5] = 2.0f * (-ck*rr5+sc[4]*rr7-sc[6]*rr9);
-        gfr[6] = 2.0f * (-ci*rr5-sc[3]*rr7-sc[5]*rr9);
-        gfr[7] = 4.0f * rr7;
+        float gf1 = bn1*gl0 + bn2*(gl1+gl6)
+                     + bn3*(gl2+gl7+gl8)
+                     + bn4*(gl3+gl5) + bn5*gl4;
+        float gf2 = -ck*bn1 + sc4*bn2 - sc6*bn3;
+        float gf3 = ci*bn1 + sc3*bn2 + sc5*bn3;
+        float gf4 = 2.0f * bn2;
+        float gf5 = 2.0f * (-ck*bn2+sc4*bn3-sc6*bn4);
+        float gf6 = 2.0f * (-ci*bn2-sc3*bn3-sc5*bn4);
+        float gf7 = 4.0f * bn3;
+        float gfr1 = rr3*gl0 + rr5*(gl1+gl6)
+                      + rr7*(gl2+gl7+gl8)
+                      + rr9*(gl3+gl5) + rr11*gl4;
+        float gfr2 = -ck*rr3 + sc4*rr5 - sc6*rr7;
+        float gfr3 = ci*rr3 + sc3*rr5 + sc5*rr7;
+        float gfr4 = 2.0f * rr5;
+        float gfr5 = 2.0f * (-ck*rr5+sc4*rr7-sc6*rr9);
+        float gfr6 = 2.0f * (-ci*rr5-sc3*rr7-sc5*rr9);
+        float gfr7 = 4.0f * rr7;
 
         // intermediate variables for induced force terms
 
-        gfi[1] = 0.5f*bn[2]*(gli[1]+glip[1]+gli[6]+glip[6])
-                      + 0.5f*bn[2]*scip[2]
-                      + 0.5f*bn[3]*(gli[2]+glip[2]+gli[7]+glip[7])
-                      - 0.5f*bn[3]*(sci[3]*scip[4]+scip[3]*sci[4])
-                      + 0.5f*bn[4]*(gli[3]+glip[3]);
-        gfi[2] = -ck*bn[1] + sc[4]*bn[2] - sc[6]*bn[3];
-        gfi[3] = ci*bn[1] + sc[3]*bn[2] + sc[5]*bn[3];
-        gfi[4] = 2.0f * bn[2];
-        gfi[5] = bn[3] * (sci[4]+scip[4]);
-        gfi[6] = -bn[3] * (sci[3]+scip[3]);
-        gfri[1] = 0.5f*rr5*((gli[1]+gli[6])*psc3
-                             + (glip[1]+glip[6])*dsc3
-                             + scip[2]*usc3)
-                  + 0.5f*rr7*((gli[7]+gli[2])*psc5
-                             + (glip[7]+glip[2])*dsc5
-                      - (sci[3]*scip[4]+scip[3]*sci[4])*usc5)
-                  + 0.5f*rr9*(gli[3]*psc7+glip[3]*dsc7);
-        gfri[2] = -rr3*ck + rr5*sc[4] - rr7*sc[6];
-        gfri[3] = rr3*ci + rr5*sc[3] + rr7*sc[5];
-        gfri[4] = 2.0f * rr5;
-        gfri[5] = rr7 * (sci[4]*psc7+scip[4]*dsc7);
-        gfri[6] = -rr7 * (sci[3]*psc7+scip[3]*dsc7);
+        float gfi1 = 0.5f*bn2*(gli1+glip1+gli6+glip6)
+                      + 0.5f*bn2*scip2
+                      + 0.5f*bn3*(gli2+glip2+gli7+glip7)
+                      - 0.5f*bn3*(sci3*scip4+scip3*sci4)
+                      + 0.5f*bn4*(gli3+glip3);
+        float gfi2 = -ck*bn1 + sc4*bn2 - sc6*bn3;
+        float gfi3 = ci*bn1 + sc3*bn2 + sc5*bn3;
+        float gfi4 = 2.0f * bn2;
+        float gfi5 = bn3 * (sci4+scip4);
+        float gfi6 = -bn3 * (sci3+scip3);
+        float gfri1 = 0.5f*rr5*((gli1+gli6)*psc3
+                             + (glip1+glip6)*dsc3
+                             + scip2*usc3)
+                  + 0.5f*rr7*((gli7+gli2)*psc5
+                             + (glip7+glip2)*dsc5
+                      - (sci3*scip4+scip3*sci4)*usc5)
+                  + 0.5f*rr9*(gli3*psc7+glip3*dsc7);
+        float gfri4 = 2.0f * rr5;
+        float gfri5 = rr7 * (sci4*psc7+scip4*dsc7);
+        float gfri6 = -rr7 * (sci3*psc7+scip3*dsc7);
 
         // get the permanent force with screening
 
-        ftm2[1] = gf[1]*xr + gf[2]*di[1] + gf[3]*dk[1]
-                       + gf[4]*(qkdi[1]-qidk[1]) + gf[5]*qir[1]
-                       + gf[6]*qkr[1] + gf[7]*(qiqkr[1]+qkqir[1]);
-        ftm2[2] = gf[1]*yr + gf[2]*di[2] + gf[3]*dk[2]
-                       + gf[4]*(qkdi[2]-qidk[2]) + gf[5]*qir[2]
-                       + gf[6]*qkr[2] + gf[7]*(qiqkr[2]+qkqir[2]);
-        ftm2[3] = gf[1]*zr + gf[2]*di[3] + gf[3]*dk[3]
-                       + gf[4]*(qkdi[3]-qidk[3]) + gf[5]*qir[3]
-                       + gf[6]*qkr[3] + gf[7]*(qiqkr[3]+qkqir[3]);
+        float ftm21 = gf1*xr + gf2*di1 + gf3*dk1
+                       + gf4*(qkdi1-qidk1) + gf5*qir1
+                       + gf6*qkr1 + gf7*(qiqkr1+qkqir1);
+        float ftm22 = gf1*yr + gf2*di2 + gf3*dk2
+                       + gf4*(qkdi2-qidk2) + gf5*qir2
+                       + gf6*qkr2 + gf7*(qiqkr2+qkqir2);
+        float ftm23 = gf1*zr + gf2*di3 + gf3*dk3
+                       + gf4*(qkdi3-qidk3) + gf5*qir3
+                       + gf6*qkr3 + gf7*(qiqkr3+qkqir3);
 
         // get the permanent force without screening
 
-        ftm2r[1] = gfr[1]*xr + gfr[2]*di[1] + gfr[3]*dk[1]
-                       + gfr[4]*(qkdi[1]-qidk[1]) + gfr[5]*qir[1]
-                       + gfr[6]*qkr[1] + gfr[7]*(qiqkr[1]+qkqir[1]);
-        ftm2r[2] = gfr[1]*yr + gfr[2]*di[2] + gfr[3]*dk[2]
-                       + gfr[4]*(qkdi[2]-qidk[2]) + gfr[5]*qir[2]
-                       + gfr[6]*qkr[2] + gfr[7]*(qiqkr[2]+qkqir[2]);
-        ftm2r[3] = gfr[1]*zr + gfr[2]*di[3] + gfr[3]*dk[3]
-                       + gfr[4]*(qkdi[3]-qidk[3]) + gfr[5]*qir[3]
-                       + gfr[6]*qkr[3] + gfr[7]*(qiqkr[3]+qkqir[3]);
+        float ftm2r1 = gfr1*xr + gfr2*di1 + gfr3*dk1
+                       + gfr4*(qkdi1-qidk1) + gfr5*qir1
+                       + gfr6*qkr1 + gfr7*(qiqkr1+qkqir1);
+        float ftm2r2 = gfr1*yr + gfr2*di2 + gfr3*dk2
+                       + gfr4*(qkdi2-qidk2) + gfr5*qir2
+                       + gfr6*qkr2 + gfr7*(qiqkr2+qkqir2);
+        float ftm2r3 = gfr1*zr + gfr2*di3 + gfr3*dk3
+                       + gfr4*(qkdi3-qidk3) + gfr5*qir3
+                       + gfr6*qkr3 + gfr7*(qiqkr3+qkqir3);
 
         // get the induced force with screening
 
-        ftm2i[1] = gfi[1]*xr + 0.5f*
-              (gfi[2]*(atomI.inducedDipole[0]+atomI.inducedDipoleP[0])
-             + bn[2]*(sci[4]*atomI.inducedDipoleP[0]+scip[4]*atomI.inducedDipole[0])
-             + gfi[3]*(atomJ.inducedDipole[0]+atomJ.inducedDipoleP[0])
-             + bn[2]*(sci[3]*atomJ.inducedDipoleP[0]+scip[3]*atomJ.inducedDipole[0])
-             + (sci[4]+scip[4])*bn[2]*di[1]
-             + (sci[3]+scip[3])*bn[2]*dk[1]
-             + gfi[4]*(qkui[1]+qkuip[1]-qiuk[1]-qiukp[1]))
-             + gfi[5]*qir[1] + gfi[6]*qkr[1];
-        ftm2i[2] = gfi[1]*yr + 0.5f*
-              (gfi[2]*(atomI.inducedDipole[1]+atomI.inducedDipoleP[1])
-             + bn[2]*(sci[4]*atomI.inducedDipoleP[1]+scip[4]*atomI.inducedDipole[1])
-             + gfi[3]*(atomJ.inducedDipole[1]+atomJ.inducedDipoleP[1])
-             + bn[2]*(sci[3]*atomJ.inducedDipoleP[1]+scip[3]*atomJ.inducedDipole[1])
-             + (sci[4]+scip[4])*bn[2]*di[2]
-             + (sci[3]+scip[3])*bn[2]*dk[2]
-             + gfi[4]*(qkui[2]+qkuip[2]-qiuk[2]-qiukp[2]))
-             + gfi[5]*qir[2] + gfi[6]*qkr[2];
-        ftm2i[3] = gfi[1]*zr + 0.5f*
-              (gfi[2]*(atomI.inducedDipole[2]+atomI.inducedDipoleP[2])
-             + bn[2]*(sci[4]*atomI.inducedDipoleP[2]+scip[4]*atomI.inducedDipole[2])
-             + gfi[3]*(atomJ.inducedDipole[2]+atomJ.inducedDipoleP[2])
-             + bn[2]*(sci[3]*atomJ.inducedDipoleP[2]+scip[3]*atomJ.inducedDipole[2])
-             + (sci[4]+scip[4])*bn[2]*di[3]
-             + (sci[3]+scip[3])*bn[2]*dk[3]
-             + gfi[4]*(qkui[3]+qkuip[3]-qiuk[3]-qiukp[3]))
-             + gfi[5]*qir[3] + gfi[6]*qkr[3];
+        float ftm2i1 = gfi1*xr + 0.5f*
+              (gfi2*(atomI.inducedDipole[0]+atomI.inducedDipoleP[0])
+             + bn2*(sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0])
+             + gfi3*(atomJ.inducedDipole[0]+atomJ.inducedDipoleP[0])
+             + bn2*(sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0])
+             + (sci4+scip4)*bn2*di1
+             + (sci3+scip3)*bn2*dk1
+             + gfi4*(qkui1+qkuip1-qiuk1-qiukp1))
+             + gfi5*qir1 + gfi6*qkr1;
+        float ftm2i2 = gfi1*yr + 0.5f*
+              (gfi2*(atomI.inducedDipole[1]+atomI.inducedDipoleP[1])
+             + bn2*(sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1])
+             + gfi3*(atomJ.inducedDipole[1]+atomJ.inducedDipoleP[1])
+             + bn2*(sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1])
+             + (sci4+scip4)*bn2*di2
+             + (sci3+scip3)*bn2*dk2
+             + gfi4*(qkui2+qkuip2-qiuk2-qiukp2))
+             + gfi5*qir2 + gfi6*qkr2;
+        float ftm2i3 = gfi1*zr + 0.5f*
+              (gfi2*(atomI.inducedDipole[2]+atomI.inducedDipoleP[2])
+             + bn2*(sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2])
+             + gfi3*(atomJ.inducedDipole[2]+atomJ.inducedDipoleP[2])
+             + bn2*(sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2])
+             + (sci4+scip4)*bn2*di3
+             + (sci3+scip3)*bn2*dk3
+             + gfi4*(qkui3+qkuip3-qiuk3-qiukp3))
+             + gfi5*qir3 + gfi6*qkr3;
 
         // get the induced force without screening
 
-        ftm2ri[1] = gfri[1]*xr + 0.5f*
+        float ftm2ri1 = gfri1*xr + 0.5f*
             (- rr3*ck*(atomI.inducedDipole[0]*psc3+atomI.inducedDipoleP[0]*dsc3)
-             + rr5*sc[4]*(atomI.inducedDipole[0]*psc5+atomI.inducedDipoleP[0]*dsc5)
-             - rr7*sc[6]*(atomI.inducedDipole[0]*psc7+atomI.inducedDipoleP[0]*dsc7))
+             + rr5*sc4*(atomI.inducedDipole[0]*psc5+atomI.inducedDipoleP[0]*dsc5)
+             - rr7*sc6*(atomI.inducedDipole[0]*psc7+atomI.inducedDipoleP[0]*dsc7))
              + (rr3*ci*(atomJ.inducedDipole[0]*psc3+atomJ.inducedDipoleP[0]*dsc3)
-             + rr5*sc[3]*(atomJ.inducedDipole[0]*psc5+atomJ.inducedDipoleP[0]*dsc5)
-             + rr7*sc[5]*(atomJ.inducedDipole[0]*psc7+atomJ.inducedDipoleP[0]*dsc7))*0.5f
-             + rr5*usc5*(sci[4]*atomI.inducedDipoleP[0]+scip[4]*atomI.inducedDipole[0]
-             + sci[3]*atomJ.inducedDipoleP[0]+scip[3]*atomJ.inducedDipole[0])*0.5f
-             + 0.5f*(sci[4]*psc5+scip[4]*dsc5)*rr5*di[1]
-             + 0.5f*(sci[3]*psc5+scip[3]*dsc5)*rr5*dk[1]
-             + 0.5f*gfri[4]*((qkui[1]-qiuk[1])*psc5
-             + (qkuip[1]-qiukp[1])*dsc5)
-             + gfri[5]*qir[1] + gfri[6]*qkr[1];
-        ftm2ri[2] = gfri[1]*yr + 0.5f*
+             + rr5*sc3*(atomJ.inducedDipole[0]*psc5+atomJ.inducedDipoleP[0]*dsc5)
+             + rr7*sc5*(atomJ.inducedDipole[0]*psc7+atomJ.inducedDipoleP[0]*dsc7))*0.5f
+             + rr5*usc5*(sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0]
+             + sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0])*0.5f
+             + 0.5f*(sci4*psc5+scip4*dsc5)*rr5*di1
+             + 0.5f*(sci3*psc5+scip3*dsc5)*rr5*dk1
+             + 0.5f*gfri4*((qkui1-qiuk1)*psc5
+             + (qkuip1-qiukp1)*dsc5)
+             + gfri5*qir1 + gfri6*qkr1;
+        float ftm2ri2 = gfri1*yr + 0.5f*
             (- rr3*ck*(atomI.inducedDipole[1]*psc3+atomI.inducedDipoleP[1]*dsc3)
-             + rr5*sc[4]*(atomI.inducedDipole[1]*psc5+atomI.inducedDipoleP[1]*dsc5)
-             - rr7*sc[6]*(atomI.inducedDipole[1]*psc7+atomI.inducedDipoleP[1]*dsc7))
+             + rr5*sc4*(atomI.inducedDipole[1]*psc5+atomI.inducedDipoleP[1]*dsc5)
+             - rr7*sc6*(atomI.inducedDipole[1]*psc7+atomI.inducedDipoleP[1]*dsc7))
              + (rr3*ci*(atomJ.inducedDipole[1]*psc3+atomJ.inducedDipoleP[1]*dsc3)
-             + rr5*sc[3]*(atomJ.inducedDipole[1]*psc5+atomJ.inducedDipoleP[1]*dsc5)
-             + rr7*sc[5]*(atomJ.inducedDipole[1]*psc7+atomJ.inducedDipoleP[1]*dsc7))*0.5f
-             + rr5*usc5*(sci[4]*atomI.inducedDipoleP[1]+scip[4]*atomI.inducedDipole[1]
-             + sci[3]*atomJ.inducedDipoleP[1]+scip[3]*atomJ.inducedDipole[1])*0.5f
-             + 0.5f*(sci[4]*psc5+scip[4]*dsc5)*rr5*di[2]
-             + 0.5f*(sci[3]*psc5+scip[3]*dsc5)*rr5*dk[2]
-             + 0.5f*gfri[4]*((qkui[2]-qiuk[2])*psc5
-             + (qkuip[2]-qiukp[2])*dsc5)
-             + gfri[5]*qir[2] + gfri[6]*qkr[2];
-        ftm2ri[3] = gfri[1]*zr + 0.5f*
+             + rr5*sc3*(atomJ.inducedDipole[1]*psc5+atomJ.inducedDipoleP[1]*dsc5)
+             + rr7*sc5*(atomJ.inducedDipole[1]*psc7+atomJ.inducedDipoleP[1]*dsc7))*0.5f
+             + rr5*usc5*(sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1]
+             + sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1])*0.5f
+             + 0.5f*(sci4*psc5+scip4*dsc5)*rr5*di2
+             + 0.5f*(sci3*psc5+scip3*dsc5)*rr5*dk2
+             + 0.5f*gfri4*((qkui2-qiuk2)*psc5
+             + (qkuip2-qiukp2)*dsc5)
+             + gfri5*qir2 + gfri6*qkr2;
+        float ftm2ri3 = gfri1*zr + 0.5f*
             (- rr3*ck*(atomI.inducedDipole[2]*psc3+atomI.inducedDipoleP[2]*dsc3)
-             + rr5*sc[4]*(atomI.inducedDipole[2]*psc5+atomI.inducedDipoleP[2]*dsc5)
-             - rr7*sc[6]*(atomI.inducedDipole[2]*psc7+atomI.inducedDipoleP[2]*dsc7))
+             + rr5*sc4*(atomI.inducedDipole[2]*psc5+atomI.inducedDipoleP[2]*dsc5)
+             - rr7*sc6*(atomI.inducedDipole[2]*psc7+atomI.inducedDipoleP[2]*dsc7))
              + (rr3*ci*(atomJ.inducedDipole[2]*psc3+atomJ.inducedDipoleP[2]*dsc3)
-             + rr5*sc[3]*(atomJ.inducedDipole[2]*psc5+atomJ.inducedDipoleP[2]*dsc5)
-             + rr7*sc[5]*(atomJ.inducedDipole[2]*psc7+atomJ.inducedDipoleP[2]*dsc7))*0.5f
-             + rr5*usc5*(sci[4]*atomI.inducedDipoleP[2]+scip[4]*atomI.inducedDipole[2]
-             + sci[3]*atomJ.inducedDipoleP[2]+scip[3]*atomJ.inducedDipole[2])*0.5f
-             + 0.5f*(sci[4]*psc5+scip[4]*dsc5)*rr5*di[3]
-             + 0.5f*(sci[3]*psc5+scip[3]*dsc5)*rr5*dk[3]
-             + 0.5f*gfri[4]*((qkui[3]-qiuk[3])*psc5
-             + (qkuip[3]-qiukp[3])*dsc5)
-             + gfri[5]*qir[3] + gfri[6]*qkr[3];
+             + rr5*sc3*(atomJ.inducedDipole[2]*psc5+atomJ.inducedDipoleP[2]*dsc5)
+             + rr7*sc5*(atomJ.inducedDipole[2]*psc7+atomJ.inducedDipoleP[2]*dsc7))*0.5f
+             + rr5*usc5*(sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2]
+             + sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2])*0.5f
+             + 0.5f*(sci4*psc5+scip4*dsc5)*rr5*di3
+             + 0.5f*(sci3*psc5+scip3*dsc5)*rr5*dk3
+             + 0.5f*gfri4*((qkui3-qiuk3)*psc5
+             + (qkuip3-qiukp3)*dsc5)
+             + gfri5*qir3 + gfri6*qkr3;
 
         // account for partially excluded induced interactions
 
-        float temp3 = 0.5f * rr3 * ((gli[1]+gli[6])*scalingFactors[PScaleIndex]
-                                   +(glip[1]+glip[6])*scalingFactors[DScaleIndex]);
-        float temp5 = 0.5f * rr5 * ((gli[2]+gli[7])*scalingFactors[PScaleIndex]
-                                   +(glip[2]+glip[7])*scalingFactors[DScaleIndex]);
-        float temp7 = 0.5f * rr7 * (gli[3]*scalingFactors[PScaleIndex]
-                                   +glip[3]*scalingFactors[DScaleIndex]);
-        fridmp[1] = temp3*ddsc3[1] + temp5*ddsc5[1] + temp7*ddsc7[1];
-        fridmp[2] = temp3*ddsc3[2] + temp5*ddsc5[2] + temp7*ddsc7[2];
-        fridmp[3] = temp3*ddsc3[3] + temp5*ddsc5[3] + temp7*ddsc7[3];
+        float temp3 = 0.5f * rr3 * ((gli1+gli6)*scalingFactors[PScaleIndex]
+                                   +(glip1+glip6)*scalingFactors[DScaleIndex]);
+        float temp5 = 0.5f * rr5 * ((gli2+gli7)*scalingFactors[PScaleIndex]
+                                   +(glip2+glip7)*scalingFactors[DScaleIndex]);
+        float temp7 = 0.5f * rr7 * (gli3*scalingFactors[PScaleIndex]
+                                   +glip3*scalingFactors[DScaleIndex]);
+        float fridmp1 = temp3*ddsc31 + temp5*ddsc51 + temp7*ddsc71;
+        float fridmp2 = temp3*ddsc32 + temp5*ddsc52 + temp7*ddsc72;
+        float fridmp3 = temp3*ddsc33 + temp5*ddsc53 + temp7*ddsc73;
 
         // find some scaling terms for induced-induced force
 
-        temp3 = 0.5f * rr3 * scalingFactors[UScaleIndex] * scip[2];
-        temp5 = -0.5f * rr5 * scalingFactors[UScaleIndex] * (sci[3]*scip[4]+scip[3]*sci[4]);
-        findmp[1] = temp3*ddsc3[1] + temp5*ddsc5[1];
-        findmp[2] = temp3*ddsc3[2] + temp5*ddsc5[2];
-        findmp[3] = temp3*ddsc3[3] + temp5*ddsc5[3];
+        temp3 = 0.5f * rr3 * scalingFactors[UScaleIndex] * scip2;
+        temp5 = -0.5f * rr5 * scalingFactors[UScaleIndex] * (sci3*scip4+scip3*sci4);
+        float findmp1 = temp3*ddsc31 + temp5*ddsc51;
+        float findmp2 = temp3*ddsc32 + temp5*ddsc52;
+        float findmp3 = temp3*ddsc33 + temp5*ddsc53;
 
         // modify the forces for partially excluded interactions
 
-        ftm2i[1] = ftm2i[1] - fridmp[1] - findmp[1];
-        ftm2i[2] = ftm2i[2] - fridmp[2] - findmp[2];
-        ftm2i[3] = ftm2i[3] - fridmp[3] - findmp[3];
+        ftm2i1 -= fridmp1 - findmp1;
+        ftm2i2 -= fridmp2 - findmp2;
+        ftm2i3 -= fridmp3 - findmp3;
 
         // correction to convert mutual to direct polarization force
 
 /*
         if (poltyp .eq. 'DIRECT') {
-           gfd = 0.5f * (bn[2]*scip[2];
-&                     - bn[3]*(scip[3]*sci[4]+sci[3]*scip[4]));
-           gfdr = 0.5f * (rr5*scip[2]*usc3;
-&                     - rr7*(scip[3]*sci[4];
-&                           +sci[3]*scip[4])*usc5);
-           ftm2i[1] = ftm2i[1] - gfd*xr - 0.5f*bn[2]*;
-&                          (sci[4]*atomI.inducedDipoleP[0]+scip[4]*atomI.inducedDipole[0];
-&                          +sci[3]*atomJ.inducedDipoleP[0]+scip[3]*atomJ.inducedDipole[0]);
-           ftm2i[2] = ftm2i[2] - gfd*yr - 0.5f*bn[2]*;
-&                          (sci[4]*atomI.inducedDipoleP[1]+scip[4]*atomI.inducedDipole[1];
-&                          +sci[3]*atomJ.inducedDipoleP[1]+scip[3]*atomJ.inducedDipole[1]);
-           ftm2i[3] = ftm2i[3] - gfd*zr - 0.5f*bn[2]*;
-&                          (sci[4]*atomI.inducedDipoleP[2]+scip[4]*atomI.inducedDipole[2];
-&                          +sci[3]*atomJ.inducedDipoleP[2]+scip[3]*atomJ.inducedDipole[2]);
-           fdir[1] = gfdr*xr + 0.5f*usc5*rr5*;
-&                         (sci[4]*atomI.inducedDipoleP[0]+scip[4]*atomI.inducedDipole[0];
-&                        + sci[3]*atomJ.inducedDipoleP[0]+scip[3]*atomJ.inducedDipole[0]);
-           fdir[2] = gfdr*yr + 0.5f*usc5*rr5*;
-&                         (sci[4]*atomI.inducedDipoleP[1]+scip[4]*atomI.inducedDipole[1];
-&                        + sci[3]*atomJ.inducedDipoleP[1]+scip[3]*atomJ.inducedDipole[1]);
-           fdir[3] = gfdr*zr + 0.5f*usc5*rr5*;
-&                         (sci[4]*atomI.inducedDipoleP[2]+scip[4]*atomI.inducedDipole[2];
-&                        + sci[3]*atomJ.inducedDipoleP[2]+scip[3]*atomJ.inducedDipole[2]);
-           ftm2i[1] = ftm2i[1] + fdir[1] + findmp[1];
-           ftm2i[2] = ftm2i[2] + fdir[2] + findmp[2];
-           ftm2i[3] = ftm2i[3] + fdir[3] + findmp[3];
+           gfd = 0.5f * (bn2*scip2;
+&                     - bn3*(scip3*sci4+sci3*scip4));
+           gfdr = 0.5f * (rr5*scip2*usc3;
+&                     - rr7*(scip3*sci4;
+&                           +sci3*scip4)*usc5);
+           ftm2i1 = ftm2i1 - gfd*xr - 0.5f*bn2*;
+&                          (sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0];
+&                          +sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
+           ftm2i2 = ftm2i2 - gfd*yr - 0.5f*bn2*;
+&                          (sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1];
+&                          +sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
+           ftm2i3 = ftm2i3 - gfd*zr - 0.5f*bn2*;
+&                          (sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2];
+&                          +sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
+           fdir1 = gfdr*xr + 0.5f*usc5*rr5*;
+&                         (sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0];
+&                        + sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
+           fdir2 = gfdr*yr + 0.5f*usc5*rr5*;
+&                         (sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1];
+&                        + sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
+           fdir3 = gfdr*zr + 0.5f*usc5*rr5*;
+&                         (sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2];
+&                        + sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
+           ftm2i1 = ftm2i1 + fdir1 + findmp1;
+           ftm2i2 = ftm2i2 + fdir2 + findmp2;
+           ftm2i3 = ftm2i3 + fdir3 + findmp3;
         }
 */
 
         // intermediate variables for induced torque terms
 
-        gti[2] = 0.5f * bn[2] * (sci[4]+scip[4]);
-        gti[3] = 0.5f * bn[2] * (sci[3]+scip[3]);
-        gti[4] = gfi[4];
-        gti[5] = gfi[5];
-        gti[6] = gfi[6];
-        gtri[2] = 0.5f * rr5 * (sci[4]*psc5+scip[4]*dsc5);
-        gtri[3] = 0.5f * rr5 * (sci[3]*psc5+scip[3]*dsc5);
-        gtri[4] = gfri[4];
-        gtri[5] = gfri[5];
-        gtri[6] = gfri[6];
+        float gti2 = 0.5f * bn2 * (sci4+scip4);
+        float gti3 = 0.5f * bn2 * (sci3+scip3);
+        float gti4 = gfi4;
+        float gti5 = gfi5;
+        float gti6 = gfi6;
+        float gtri2 = 0.5f * rr5 * (sci4*psc5+scip4*dsc5);
+        float gtri3 = 0.5f * rr5 * (sci3*psc5+scip3*dsc5);
+        float gtri4 = gfri4;
+        float gtri5 = gfri5;
+        float gtri6 = gfri6;
 
         // get the permanent torque with screening
 
-        ttm2[1] = -bn[1]*dixdk[1] + gf[2]*dixr[1]
-            + gf[4]*(dixqkr[1]+dkxqir[1]+rxqidk[1]-2.0f*qixqk[1])
-            - gf[5]*rxqir[1] - gf[7]*(rxqikr[1]+qkrxqir[1]);
-        ttm2[2] = -bn[1]*dixdk[2] + gf[2]*dixr[2]
-            + gf[4]*(dixqkr[2]+dkxqir[2]+rxqidk[2]-2.0f*qixqk[2])
-            - gf[5]*rxqir[2] - gf[7]*(rxqikr[2]+qkrxqir[2]);
-        ttm2[3] = -bn[1]*dixdk[3] + gf[2]*dixr[3]
-            + gf[4]*(dixqkr[3]+dkxqir[3]+rxqidk[3]-2.0f*qixqk[3])
-            - gf[5]*rxqir[3] - gf[7]*(rxqikr[3]+qkrxqir[3]);
-        ttm3[1] = bn[1]*dixdk[1] + gf[3]*dkxr[1]
-            - gf[4]*(dixqkr[1]+dkxqir[1]+rxqkdi[1]-2.0f*qixqk[1])
-            - gf[6]*rxqkr[1] - gf[7]*(rxqkir[1]-qkrxqir[1]);
-        ttm3[2] = bn[1]*dixdk[2] + gf[3]*dkxr[2]
-            - gf[4]*(dixqkr[2]+dkxqir[2]+rxqkdi[2]-2.0f*qixqk[2])
-            - gf[6]*rxqkr[2] - gf[7]*(rxqkir[2]-qkrxqir[2]);
-        ttm3[3] = bn[1]*dixdk[3] + gf[3]*dkxr[3]
-            - gf[4]*(dixqkr[3]+dkxqir[3]+rxqkdi[3]-2.0f*qixqk[3])
-            - gf[6]*rxqkr[3] - gf[7]*(rxqkir[3]-qkrxqir[3]);
+        float ttm21 = -bn1*dixdk1 + gf2*dixr1
+            + gf4*(dixqkr1+dkxqir1+rxqidk1-2.0f*qixqk1)
+            - gf5*rxqir1 - gf7*(rxqikr1+qkrxqir1);
+        float ttm22 = -bn1*dixdk2 + gf2*dixr2
+            + gf4*(dixqkr2+dkxqir2+rxqidk2-2.0f*qixqk2)
+            - gf5*rxqir2 - gf7*(rxqikr2+qkrxqir2);
+        float ttm23 = -bn1*dixdk3 + gf2*dixr3
+            + gf4*(dixqkr3+dkxqir3+rxqidk3-2.0f*qixqk3)
+            - gf5*rxqir3 - gf7*(rxqikr3+qkrxqir3);
+        float ttm31 = bn1*dixdk1 + gf3*dkxr1
+            - gf4*(dixqkr1+dkxqir1+rxqkdi1-2.0f*qixqk1)
+            - gf6*rxqkr1 - gf7*(rxqkir1-qkrxqir1);
+        float ttm32 = bn1*dixdk2 + gf3*dkxr2
+            - gf4*(dixqkr2+dkxqir2+rxqkdi2-2.0f*qixqk2)
+            - gf6*rxqkr2 - gf7*(rxqkir2-qkrxqir2);
+        float ttm33 = bn1*dixdk3 + gf3*dkxr3
+            - gf4*(dixqkr3+dkxqir3+rxqkdi3-2.0f*qixqk3)
+            - gf6*rxqkr3 - gf7*(rxqkir3-qkrxqir3);
 
         // get the permanent torque without screening
 
-        ttm2r[1] = -rr3*dixdk[1] + gfr[2]*dixr[1]-gfr[5]*rxqir[1]
-            + gfr[4]*(dixqkr[1]+dkxqir[1]+rxqidk[1]-2.0f*qixqk[1])
-            - gfr[7]*(rxqikr[1]+qkrxqir[1]);
-        ttm2r[2] = -rr3*dixdk[2] + gfr[2]*dixr[2]-gfr[5]*rxqir[2]
-            + gfr[4]*(dixqkr[2]+dkxqir[2]+rxqidk[2]-2.0f*qixqk[2])
-            - gfr[7]*(rxqikr[2]+qkrxqir[2]);
-        ttm2r[3] = -rr3*dixdk[3] + gfr[2]*dixr[3]-gfr[5]*rxqir[3]
-            + gfr[4]*(dixqkr[3]+dkxqir[3]+rxqidk[3]-2.0f*qixqk[3])
-            - gfr[7]*(rxqikr[3]+qkrxqir[3]);
-        ttm3r[1] = rr3*dixdk[1] + gfr[3]*dkxr[1] -gfr[6]*rxqkr[1]
-            - gfr[4]*(dixqkr[1]+dkxqir[1]+rxqkdi[1]-2.0f*qixqk[1])
-            - gfr[7]*(rxqkir[1]-qkrxqir[1]);
-        ttm3r[2] = rr3*dixdk[2] + gfr[3]*dkxr[2] -gfr[6]*rxqkr[2]
-            - gfr[4]*(dixqkr[2]+dkxqir[2]+rxqkdi[2]-2.0f*qixqk[2])
-            - gfr[7]*(rxqkir[2]-qkrxqir[2]);
-        ttm3r[3] = rr3*dixdk[3] + gfr[3]*dkxr[3] -gfr[6]*rxqkr[3]
-            - gfr[4]*(dixqkr[3]+dkxqir[3]+rxqkdi[3]-2.0f*qixqk[3])
-            - gfr[7]*(rxqkir[3]-qkrxqir[3]);
+        float ttm2r1 = -rr3*dixdk1 + gfr2*dixr1-gfr5*rxqir1
+            + gfr4*(dixqkr1+dkxqir1+rxqidk1-2.0f*qixqk1)
+            - gfr7*(rxqikr1+qkrxqir1);
+        float ttm2r2 = -rr3*dixdk2 + gfr2*dixr2-gfr5*rxqir2
+            + gfr4*(dixqkr2+dkxqir2+rxqidk2-2.0f*qixqk2)
+            - gfr7*(rxqikr2+qkrxqir2);
+        float ttm2r3 = -rr3*dixdk3 + gfr2*dixr3-gfr5*rxqir3
+            + gfr4*(dixqkr3+dkxqir3+rxqidk3-2.0f*qixqk3)
+            - gfr7*(rxqikr3+qkrxqir3);
+        float ttm3r1 = rr3*dixdk1 + gfr3*dkxr1 -gfr6*rxqkr1
+            - gfr4*(dixqkr1+dkxqir1+rxqkdi1-2.0f*qixqk1)
+            - gfr7*(rxqkir1-qkrxqir1);
+        float ttm3r2 = rr3*dixdk2 + gfr3*dkxr2 -gfr6*rxqkr2
+            - gfr4*(dixqkr2+dkxqir2+rxqkdi2-2.0f*qixqk2)
+            - gfr7*(rxqkir2-qkrxqir2);
+        float ttm3r3 = rr3*dixdk3 + gfr3*dkxr3 -gfr6*rxqkr3
+            - gfr4*(dixqkr3+dkxqir3+rxqkdi3-2.0f*qixqk3)
+            - gfr7*(rxqkir3-qkrxqir3);
 
         // get the induced torque with screening
 
-        ttm2i[1] = -bn[1]*(dixuk[1]+dixukp[1])*0.5f
-            + gti[2]*dixr[1] + gti[4]*(ukxqir[1]+rxqiuk[1]
-            + ukxqirp[1]+rxqiukp[1])*0.5f - gti[5]*rxqir[1];
-        ttm2i[2] = -bn[1]*(dixuk[2]+dixukp[2])*0.5f
-            + gti[2]*dixr[2] + gti[4]*(ukxqir[2]+rxqiuk[2]
-            + ukxqirp[2]+rxqiukp[2])*0.5f - gti[5]*rxqir[2];
-        ttm2i[3] = -bn[1]*(dixuk[3]+dixukp[3])*0.5f
-            + gti[2]*dixr[3] + gti[4]*(ukxqir[3]+rxqiuk[3]
-            + ukxqirp[3]+rxqiukp[3])*0.5f - gti[5]*rxqir[3];
-        ttm3i[1] = -bn[1]*(dkxui[1]+dkxuip[1])*0.5f
-            + gti[3]*dkxr[1] - gti[4]*(uixqkr[1]+rxqkui[1]
-            + uixqkrp[1]+rxqkuip[1])*0.5f - gti[6]*rxqkr[1];
-        ttm3i[2] = -bn[1]*(dkxui[2]+dkxuip[2])*0.5f
-            + gti[3]*dkxr[2] - gti[4]*(uixqkr[2]+rxqkui[2]
-            + uixqkrp[2]+rxqkuip[2])*0.5f - gti[6]*rxqkr[2];
-        ttm3i[3] = -bn[1]*(dkxui[3]+dkxuip[3])*0.5f
-            + gti[3]*dkxr[3] - gti[4]*(uixqkr[3]+rxqkui[3]
-            + uixqkrp[3]+rxqkuip[3])*0.5f - gti[6]*rxqkr[3];
+        float ttm2i1 = -bn1*(dixuk1+dixukp1)*0.5f
+            + gti2*dixr1 + gti4*(ukxqir1+rxqiuk1
+            + ukxqirp1+rxqiukp1)*0.5f - gti5*rxqir1;
+        float ttm2i2 = -bn1*(dixuk2+dixukp2)*0.5f
+            + gti2*dixr2 + gti4*(ukxqir2+rxqiuk2
+            + ukxqirp2+rxqiukp2)*0.5f - gti5*rxqir2;
+        float ttm2i3 = -bn1*(dixuk3+dixukp3)*0.5f
+            + gti2*dixr3 + gti4*(ukxqir3+rxqiuk3
+            + ukxqirp3+rxqiukp3)*0.5f - gti5*rxqir3;
+        float ttm3i1 = -bn1*(dkxui1+dkxuip1)*0.5f
+            + gti3*dkxr1 - gti4*(uixqkr1+rxqkui1
+            + uixqkrp1+rxqkuip1)*0.5f - gti6*rxqkr1;
+        float ttm3i2 = -bn1*(dkxui2+dkxuip2)*0.5f
+            + gti3*dkxr2 - gti4*(uixqkr2+rxqkui2
+            + uixqkrp2+rxqkuip2)*0.5f - gti6*rxqkr2;
+        float ttm3i3 = -bn1*(dkxui3+dkxuip3)*0.5f
+            + gti3*dkxr3 - gti4*(uixqkr3+rxqkui3
+            + uixqkrp3+rxqkuip3)*0.5f - gti6*rxqkr3;
 
         // get the induced torque without screening
 
-        ttm2ri[1] = -rr3*(dixuk[1]*psc3+dixukp[1]*dsc3)*0.5f
-            + gtri[2]*dixr[1] + gtri[4]*((ukxqir[1]+rxqiuk[1])*psc5
-            +(ukxqirp[1]+rxqiukp[1])*dsc5)*0.5f - gtri[5]*rxqir[1];
-        ttm2ri[2] = -rr3*(dixuk[2]*psc3+dixukp[2]*dsc3)*0.5f
-            + gtri[2]*dixr[2] + gtri[4]*((ukxqir[2]+rxqiuk[2])*psc5
-            +(ukxqirp[2]+rxqiukp[2])*dsc5)*0.5f - gtri[5]*rxqir[2];
-        ttm2ri[3] = -rr3*(dixuk[3]*psc3+dixukp[3]*dsc3)*0.5f
-            + gtri[2]*dixr[3] + gtri[4]*((ukxqir[3]+rxqiuk[3])*psc5
-            +(ukxqirp[3]+rxqiukp[3])*dsc5)*0.5f - gtri[5]*rxqir[3];
-        ttm3ri[1] = -rr3*(dkxui[1]*psc3+dkxuip[1]*dsc3)*0.5f
-            + gtri[3]*dkxr[1] - gtri[4]*((uixqkr[1]+rxqkui[1])*psc5
-            +(uixqkrp[1]+rxqkuip[1])*dsc5)*0.5f - gtri[6]*rxqkr[1];
-        ttm3ri[2] = -rr3*(dkxui[2]*psc3+dkxuip[2]*dsc3)*0.5f
-            + gtri[3]*dkxr[2] - gtri[4]*((uixqkr[2]+rxqkui[2])*psc5
-            +(uixqkrp[2]+rxqkuip[2])*dsc5)*0.5f - gtri[6]*rxqkr[2];
-        ttm3ri[3] = -rr3*(dkxui[3]*psc3+dkxuip[3]*dsc3)*0.5f
-            + gtri[3]*dkxr[3] - gtri[4]*((uixqkr[3]+rxqkui[3])*psc5
-            +(uixqkrp[3]+rxqkuip[3])*dsc5)*0.5f - gtri[6]*rxqkr[3];
+        float ttm2ri1 = -rr3*(dixuk1*psc3+dixukp1*dsc3)*0.5f
+            + gtri2*dixr1 + gtri4*((ukxqir1+rxqiuk1)*psc5
+            +(ukxqirp1+rxqiukp1)*dsc5)*0.5f - gtri5*rxqir1;
+        float ttm2ri2 = -rr3*(dixuk2*psc3+dixukp2*dsc3)*0.5f
+            + gtri2*dixr2 + gtri4*((ukxqir2+rxqiuk2)*psc5
+            +(ukxqirp2+rxqiukp2)*dsc5)*0.5f - gtri5*rxqir2;
+        float ttm2ri3 = -rr3*(dixuk3*psc3+dixukp3*dsc3)*0.5f
+            + gtri2*dixr3 + gtri4*((ukxqir3+rxqiuk3)*psc5
+            +(ukxqirp3+rxqiukp3)*dsc5)*0.5f - gtri5*rxqir3;
+        float ttm3ri1 = -rr3*(dkxui1*psc3+dkxuip1*dsc3)*0.5f
+            + gtri3*dkxr1 - gtri4*((uixqkr1+rxqkui1)*psc5
+            +(uixqkrp1+rxqkuip1)*dsc5)*0.5f - gtri6*rxqkr1;
+        float ttm3ri2 = -rr3*(dkxui2*psc3+dkxuip2*dsc3)*0.5f
+            + gtri3*dkxr2 - gtri4*((uixqkr2+rxqkui2)*psc5
+            +(uixqkrp2+rxqkuip2)*dsc5)*0.5f - gtri6*rxqkr2;
+        float ttm3ri3 = -rr3*(dkxui3*psc3+dkxuip3*dsc3)*0.5f
+            + gtri3*dkxr3 - gtri4*((uixqkr3+rxqkui3)*psc5
+            +(uixqkrp3+rxqkuip3)*dsc5)*0.5f - gtri6*rxqkr3;
 
         // handle the case where scaling is used
 
-        for( int j = 1; j <= 3; j++ ){
-           ftm2[j]  = (ftm2[j]-(1.0f-scalingFactors[MScaleIndex])*ftm2r[j]);
-           ftm2i[j] = (ftm2i[j]-ftm2ri[j]);
-           ttm2[j]  = (ttm2[j]-(1.0f-scalingFactors[MScaleIndex])*ttm2r[j]);
-           ttm2i[j] = (ttm2i[j]-ttm2ri[j]);
-           ttm3[j]  = (ttm3[j]-(1.0f-scalingFactors[MScaleIndex])*ttm3r[j]);
-           ttm3i[j] = (ttm3i[j]-ttm3ri[j]);
-        }
+        ftm21  = (ftm21-(1.0f-scalingFactors[MScaleIndex])*ftm2r1);
+        ftm2i1 = (ftm2i1-ftm2ri1);
+        ttm21  = (ttm21-(1.0f-scalingFactors[MScaleIndex])*ttm2r1);
+        ttm2i1 = (ttm2i1-ttm2ri1);
+        ttm31  = (ttm31-(1.0f-scalingFactors[MScaleIndex])*ttm3r1);
+        ttm3i1 = (ttm3i1-ttm3ri1);
+
+        ftm22  = (ftm22-(1.0f-scalingFactors[MScaleIndex])*ftm2r2);
+        ftm2i2 = (ftm2i2-ftm2ri2);
+        ttm22  = (ttm22-(1.0f-scalingFactors[MScaleIndex])*ttm2r2);
+        ttm2i2 = (ttm2i2-ttm2ri2);
+        ttm32  = (ttm32-(1.0f-scalingFactors[MScaleIndex])*ttm3r2);
+        ttm3i2 = (ttm3i2-ttm3ri2);
+
+        ftm23  = (ftm23-(1.0f-scalingFactors[MScaleIndex])*ftm2r3);
+        ftm2i3 = (ftm2i3-ftm2ri3);
+        ttm23  = (ttm23-(1.0f-scalingFactors[MScaleIndex])*ttm2r3);
+        ttm2i3 = (ttm2i3-ttm2ri3);
+        ttm33  = (ttm33-(1.0f-scalingFactors[MScaleIndex])*ttm3r3);
+        ttm3i3 = (ttm3i3-ttm3ri3);
 
         // increment gradient due to force and torque on first site;
 
-        outputForce[0]           = conversionFactor*(ftm2[1] + ftm2i[1]);
-        outputForce[1]           = conversionFactor*(ftm2[2] + ftm2i[2]);
-        outputForce[2]           = conversionFactor*(ftm2[3] + ftm2i[3]);
+        outputForce[0]           = conversionFactor*(ftm21 + ftm2i1);
+        outputForce[1]           = conversionFactor*(ftm22 + ftm2i2);
+        outputForce[2]           = conversionFactor*(ftm23 + ftm2i3);
         
         conversionFactor        *= -1.0;
-        outputTorque[0][0]       =  conversionFactor*(ttm2[1] + ttm2i[1]);
-        outputTorque[0][1]       =  conversionFactor*(ttm2[2] + ttm2i[2]);
-        outputTorque[0][2]       =  conversionFactor*(ttm2[3] + ttm2i[3]);
+        outputTorque[0][0]       =  conversionFactor*(ttm21 + ttm2i1);
+        outputTorque[0][1]       =  conversionFactor*(ttm22 + ttm2i2);
+        outputTorque[0][2]       =  conversionFactor*(ttm23 + ttm2i3);
     
-        outputTorque[1][0]       =  conversionFactor*(ttm3[1] + ttm3i[1]);
-        outputTorque[1][1]       =  conversionFactor*(ttm3[2] + ttm3i[2]);
-        outputTorque[1][2]       =  conversionFactor*(ttm3[3] + ttm3i[3]);
+        outputTorque[1][0]       =  conversionFactor*(ttm31 + ttm3i1);
+        outputTorque[1][1]       =  conversionFactor*(ttm32 + ttm3i2);
+        outputTorque[1][2]       =  conversionFactor*(ttm33 + ttm3i3);
 
 #ifdef AMOEBA_DEBUG
     int debugIndex               = 0;
@@ -940,9 +912,9 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
     debugIndex++;
     idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*ftm2[1];
-    debugArray[debugIndex].y = conversionFactor*ftm2[2];
-    debugArray[debugIndex].z = conversionFactor*ftm2[3];
+    debugArray[debugIndex].x = conversionFactor*ftm21;
+    debugArray[debugIndex].y = conversionFactor*ftm22;
+    debugArray[debugIndex].z = conversionFactor*ftm23;
     debugArray[debugIndex].w = idTracker;
     debugIndex++;
 */
@@ -956,28 +928,28 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
     idTracker               += 1.0;
     debugArray[debugIndex].x = r2;
     debugArray[debugIndex].y = cSim.alphaEwald;
-    debugArray[debugIndex].z = conversionFactor*fridmp[3];
+    debugArray[debugIndex].z = conversionFactor*fridmp3;
     debugArray[debugIndex].w = 115.0;
 
     debugIndex++;
     idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*findmp[1];
-    debugArray[debugIndex].y = conversionFactor*findmp[2];
-    debugArray[debugIndex].z = conversionFactor*findmp[3];
+    debugArray[debugIndex].x = conversionFactor*findmp1;
+    debugArray[debugIndex].y = conversionFactor*findmp2;
+    debugArray[debugIndex].z = conversionFactor*findmp3;
     debugArray[debugIndex].w = cSim.alphaEwald + 1.0f;
 
     debugIndex++;
     idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*ttm2[1];
-    debugArray[debugIndex].y = conversionFactor*ttm2[2];
-    debugArray[debugIndex].z = conversionFactor*ttm2[3];
+    debugArray[debugIndex].x = conversionFactor*ttm21;
+    debugArray[debugIndex].y = conversionFactor*ttm22;
+    debugArray[debugIndex].z = conversionFactor*ttm23;
     debugArray[debugIndex].w = idTracker;
 
     debugIndex++;
     idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*ttm2i[1];
-    debugArray[debugIndex].y = conversionFactor*ttm2i[2];
-    debugArray[debugIndex].z = conversionFactor*ttm2i[3];
+    debugArray[debugIndex].x = conversionFactor*ttm2i1;
+    debugArray[debugIndex].y = conversionFactor*ttm2i2;
+    debugArray[debugIndex].z = conversionFactor*ttm2i3;
     debugArray[debugIndex].w = idTracker;
 #endif
 
@@ -1015,10 +987,11 @@ for( int ii = 0; ii < 5; ii++ ){
 __device__ void loadPmeDirectElectrostaticShared( struct PmeDirectElectrostaticParticle* sA, unsigned int atomI )
 {
     // coordinates & charge
-    sA->x                        = cSim.pPosq[atomI].x;
-    sA->y                        = cSim.pPosq[atomI].y;
-    sA->z                        = cSim.pPosq[atomI].z;
-    sA->q                        = cSim.pPosq[atomI].w;
+    float4 posq                  = cSim.pPosq[atomI];
+    sA->x                        = posq.x;
+    sA->y                        = posq.y;
+    sA->z                        = posq.z;
+    sA->q                        = posq.w;
 
     // lab dipole
 
@@ -1051,8 +1024,9 @@ __device__ void loadPmeDirectElectrostaticShared( struct PmeDirectElectrostaticP
     sA->inducedDipoleP[1]        =  cAmoebaSim.pInducedDipolePolar[atomI*3+1];
     sA->inducedDipoleP[2]        =  cAmoebaSim.pInducedDipolePolar[atomI*3+2];
 
-    sA->damp                     = cAmoebaSim.pDampingFactorAndThole[atomI].x;
-    sA->thole                    = cAmoebaSim.pDampingFactorAndThole[atomI].y;
+    float2 dampingFactorAndThole = cAmoebaSim.pDampingFactorAndThole[atomI];
+    sA->damp                     = dampingFactorAndThole.x;
+    sA->thole                    = dampingFactorAndThole.y;
 
 }
 
