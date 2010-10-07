@@ -231,81 +231,82 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
     
                 for (unsigned int j = 0; j < GRID; j++)
                 {
-    
-                    unsigned int jIdx = (flags == 0xFFFFFFFF) ? tj : j;
-                    float4 ijField[3];
-    
-                    // load coords, charge, ...
-    
-                    calculatePmeDirectMutualInducedFieldPairIxn_kernel( localParticle, psA[jIdx], uscale, ijField
-#ifdef AMOEBA_DEBUG
-    , pullBack 
-#endif
-       );
-    
-                    unsigned int mask   =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+jIdx) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
-               
-                    // add to field at atomI the field due atomJ's dipole
-    
-                    fieldSum[0]              += mask ? ijField[0].x : 0.0f;
-                    fieldSum[1]              += mask ? ijField[1].x : 0.0f;
-                    fieldSum[2]              += mask ? ijField[2].x : 0.0f;
-        
-                    // add to polar field at atomI the field due atomJ's dipole
-    
-                    fieldPolarSum[0]         += mask ? ijField[0].z : 0.0f;
-                    fieldPolarSum[1]         += mask ? ijField[1].z : 0.0f;
-                    fieldPolarSum[2]         += mask ? ijField[2].z : 0.0f;
-    
-                    // add to field at atomJ the field due atomI's dipole
-    
-                    if( flags == 0xFFFFFFFF ){
+                    if ((flags&(1<<j)) != 0)
+                    {
+                        unsigned int jIdx = (flags == 0xFFFFFFFF) ? tj : j;
+                        float4 ijField[3];
 
-                        psA[jIdx].field[0]             += mask ? ijField[0].y : 0.0f;
-                        psA[jIdx].field[1]             += mask ? ijField[1].y : 0.0f;
-                        psA[jIdx].field[2]             += mask ? ijField[2].y : 0.0f;
-        
-                        // add to polar field at atomJ the field due atomI's dipole
-        
-                        psA[jIdx].fieldPolar[0]        += mask ? ijField[0].w : 0.0f;
-                        psA[jIdx].fieldPolar[1]        += mask ? ijField[1].w : 0.0f;
-                        psA[jIdx].fieldPolar[2]        += mask ? ijField[2].w : 0.0f;
+                        // load coords, charge, ...
 
-                    } else {
+                        calculatePmeDirectMutualInducedFieldPairIxn_kernel( localParticle, psA[jIdx], uscale, ijField
+    #ifdef AMOEBA_DEBUG
+        , pullBack
+    #endif
+           );
 
-                        sA[threadIdx.x].tempBuffer[0]  = mask ? 0.0f : ijField[0].y;
-                        sA[threadIdx.x].tempBuffer[1]  = mask ? 0.0f : ijField[1].y;
-                        sA[threadIdx.x].tempBuffer[2]  = mask ? 0.0f : ijField[2].y;
+                        unsigned int mask   =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+jIdx) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
 
-                        sA[threadIdx.x].tempBufferP[0] = mask ? 0.0f : ijField[0].w;
-                        sA[threadIdx.x].tempBufferP[1] = mask ? 0.0f : ijField[1].w;
-                        sA[threadIdx.x].tempBufferP[2] = mask ? 0.0f : ijField[2].w;
+                        // add to field at atomI the field due atomJ's dipole
 
-                        if( tgx % 2 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
+                        fieldSum[0]              += mask ? ijField[0].x : 0.0f;
+                        fieldSum[1]              += mask ? ijField[1].x : 0.0f;
+                        fieldSum[2]              += mask ? ijField[2].x : 0.0f;
+
+                        // add to polar field at atomI the field due atomJ's dipole
+
+                        fieldPolarSum[0]         += mask ? ijField[0].z : 0.0f;
+                        fieldPolarSum[1]         += mask ? ijField[1].z : 0.0f;
+                        fieldPolarSum[2]         += mask ? ijField[2].z : 0.0f;
+
+                        // add to field at atomJ the field due atomI's dipole
+
+                        if( flags == 0xFFFFFFFF ){
+
+                            psA[jIdx].field[0]             += mask ? ijField[0].y : 0.0f;
+                            psA[jIdx].field[1]             += mask ? ijField[1].y : 0.0f;
+                            psA[jIdx].field[2]             += mask ? ijField[2].y : 0.0f;
+
+                            // add to polar field at atomJ the field due atomI's dipole
+
+                            psA[jIdx].fieldPolar[0]        += mask ? ijField[0].w : 0.0f;
+                            psA[jIdx].fieldPolar[1]        += mask ? ijField[1].w : 0.0f;
+                            psA[jIdx].fieldPolar[2]        += mask ? ijField[2].w : 0.0f;
+
+                        } else {
+
+                            sA[threadIdx.x].tempBuffer[0]  = mask ? 0.0f : ijField[0].y;
+                            sA[threadIdx.x].tempBuffer[1]  = mask ? 0.0f : ijField[1].y;
+                            sA[threadIdx.x].tempBuffer[2]  = mask ? 0.0f : ijField[2].y;
+
+                            sA[threadIdx.x].tempBufferP[0] = mask ? 0.0f : ijField[0].w;
+                            sA[threadIdx.x].tempBufferP[1] = mask ? 0.0f : ijField[1].w;
+                            sA[threadIdx.x].tempBufferP[2] = mask ? 0.0f : ijField[2].w;
+
+                            if( tgx % 2 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
+                            }
+                            if( tgx % 4 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );
+                            }
+                            if( tgx % 8 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );
+                            }
+                            if( tgx % 16 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );
+                            }
+
+                            if (tgx == 0)
+                            {
+                                psA[jIdx].field[0]         += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
+                                psA[jIdx].field[1]         += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
+                                psA[jIdx].field[2]         += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
+
+                                psA[jIdx].fieldPolar[0]    += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
+                                psA[jIdx].fieldPolar[1]    += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
+                                psA[jIdx].fieldPolar[2]    += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
+                            }
+
                         }
-                        if( tgx % 4 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );
-                        }
-                        if( tgx % 8 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );
-                        }
-                        if( tgx % 16 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );
-                        }
-
-                        if (tgx == 0)
-                        {
-                            psA[jIdx].field[0]         += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
-                            psA[jIdx].field[1]         += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
-                            psA[jIdx].field[2]         += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
-
-                            psA[jIdx].fieldPolar[0]    += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
-                            psA[jIdx].fieldPolar[1]    += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
-                            psA[jIdx].fieldPolar[2]    += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
-                        }
-
-                    }
     
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || (y+jIdx) == targetAtom ){
@@ -359,6 +360,7 @@ if( atomI == targetAtom || (y+jIdx) == targetAtom ){
             debugArray[index].w                = flag;
 }
 #endif
+                    }
     
                     tj                  = (tj + 1) & (GRID - 1);
     

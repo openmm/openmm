@@ -228,77 +228,78 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
 
                 for (unsigned int j = 0; j < GRID; j++){
 
-                    unsigned int jIdx = (flags == 0xFFFFFFFF) ? tj : j;
-                    if( bExclusionFlag ){
-                        getMaskedDScaleFactor( jIdx, dScaleMask, &dScaleValue );
-                        getMaskedPScaleFactor( jIdx, pScaleMask, &pScaleValue );
-                    }
-
-                    float4 ijField[3];
-                    calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[jIdx], dScaleValue, pScaleValue, ijField
-#ifdef AMOEBA_DEBUG
-                                                , pullBack
-#endif
-                    );
-
-                    unsigned int outOfBounds     = ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+jIdx) >= cAmoebaSim.numberOfAtoms) ) ? 1 : 0;
-
-                    // add to field at atomI the field due atomJ's charge/dipole/quadrupole
-    
-                    fieldSum[0]                 += outOfBounds ? 0.0f : ijField[0].x;
-                    fieldSum[1]                 += outOfBounds ? 0.0f : ijField[1].x;
-                    fieldSum[2]                 += outOfBounds ? 0.0f : ijField[2].x;
-
-                    fieldPolarSum[0]            += outOfBounds ? 0.0f : ijField[0].z;
-                    fieldPolarSum[1]            += outOfBounds ? 0.0f : ijField[1].z;
-                    fieldPolarSum[2]            += outOfBounds ? 0.0f : ijField[2].z;
-    
-                    if( flags == 0xFFFFFFFF ){
-
-                        // add to field at atomJ the field due atomI's charge/dipole/quadrupole
-    
-                        psA[jIdx].eField[0]        += outOfBounds ? 0.0f : ijField[0].y;
-                        psA[jIdx].eField[1]        += outOfBounds ? 0.0f : ijField[1].y;
-                        psA[jIdx].eField[2]        += outOfBounds ? 0.0f : ijField[2].y;
-    
-                        psA[jIdx].eFieldP[0]       += outOfBounds ? 0.0f : ijField[0].w;
-                        psA[jIdx].eFieldP[1]       += outOfBounds ? 0.0f : ijField[1].w;
-                        psA[jIdx].eFieldP[2]       += outOfBounds ? 0.0f : ijField[2].w;
- 
-                    } else {
-
-                        sA[threadIdx.x].tempBuffer[0]  = outOfBounds ? 0.0f : ijField[0].y;
-                        sA[threadIdx.x].tempBuffer[1]  = outOfBounds ? 0.0f : ijField[1].y;
-                        sA[threadIdx.x].tempBuffer[2]  = outOfBounds ? 0.0f : ijField[2].y;
-    
-                        sA[threadIdx.x].tempBufferP[0] = outOfBounds ? 0.0f : ijField[0].w;
-                        sA[threadIdx.x].tempBufferP[1] = outOfBounds ? 0.0f : ijField[1].w;
-                        sA[threadIdx.x].tempBufferP[2] = outOfBounds ? 0.0f : ijField[2].w;
-
-                        if( tgx % 2 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] ); 
-                        } 
-                        if( tgx % 4 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] ); 
-                        } 
-                        if( tgx % 8 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] ); 
-                        } 
-                        if( tgx % 16 == 0 ){
-                            sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] ); 
-                        } 
-
-                        if (tgx == 0)
-                        {
-                            psA[jIdx].eField[0]  += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
-                            psA[jIdx].eField[1]  += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
-                            psA[jIdx].eField[2]  += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
-
-                            psA[jIdx].eFieldP[0] += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
-                            psA[jIdx].eFieldP[1] += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
-                            psA[jIdx].eFieldP[2] += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
+                    if ((flags&(1<<j)) != 0) {
+                        unsigned int jIdx = (flags == 0xFFFFFFFF) ? tj : j;
+                        if( bExclusionFlag ){
+                            getMaskedDScaleFactor( jIdx, dScaleMask, &dScaleValue );
+                            getMaskedPScaleFactor( jIdx, pScaleMask, &pScaleValue );
                         }
-                    }
+
+                        float4 ijField[3];
+                        calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[jIdx], dScaleValue, pScaleValue, ijField
+    #ifdef AMOEBA_DEBUG
+                                                    , pullBack
+    #endif
+                        );
+
+                        unsigned int outOfBounds     = ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+jIdx) >= cAmoebaSim.numberOfAtoms) ) ? 1 : 0;
+
+                        // add to field at atomI the field due atomJ's charge/dipole/quadrupole
+
+                        fieldSum[0]                 += outOfBounds ? 0.0f : ijField[0].x;
+                        fieldSum[1]                 += outOfBounds ? 0.0f : ijField[1].x;
+                        fieldSum[2]                 += outOfBounds ? 0.0f : ijField[2].x;
+
+                        fieldPolarSum[0]            += outOfBounds ? 0.0f : ijField[0].z;
+                        fieldPolarSum[1]            += outOfBounds ? 0.0f : ijField[1].z;
+                        fieldPolarSum[2]            += outOfBounds ? 0.0f : ijField[2].z;
+
+                        if( flags == 0xFFFFFFFF ){
+
+                            // add to field at atomJ the field due atomI's charge/dipole/quadrupole
+
+                            psA[jIdx].eField[0]        += outOfBounds ? 0.0f : ijField[0].y;
+                            psA[jIdx].eField[1]        += outOfBounds ? 0.0f : ijField[1].y;
+                            psA[jIdx].eField[2]        += outOfBounds ? 0.0f : ijField[2].y;
+
+                            psA[jIdx].eFieldP[0]       += outOfBounds ? 0.0f : ijField[0].w;
+                            psA[jIdx].eFieldP[1]       += outOfBounds ? 0.0f : ijField[1].w;
+                            psA[jIdx].eFieldP[2]       += outOfBounds ? 0.0f : ijField[2].w;
+
+                        } else {
+
+                            sA[threadIdx.x].tempBuffer[0]  = outOfBounds ? 0.0f : ijField[0].y;
+                            sA[threadIdx.x].tempBuffer[1]  = outOfBounds ? 0.0f : ijField[1].y;
+                            sA[threadIdx.x].tempBuffer[2]  = outOfBounds ? 0.0f : ijField[2].y;
+
+                            sA[threadIdx.x].tempBufferP[0] = outOfBounds ? 0.0f : ijField[0].w;
+                            sA[threadIdx.x].tempBufferP[1] = outOfBounds ? 0.0f : ijField[1].w;
+                            sA[threadIdx.x].tempBufferP[2] = outOfBounds ? 0.0f : ijField[2].w;
+
+                            if( tgx % 2 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
+                            }
+                            if( tgx % 4 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );
+                            }
+                            if( tgx % 8 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );
+                            }
+                            if( tgx % 16 == 0 ){
+                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );
+                            }
+
+                            if (tgx == 0)
+                            {
+                                psA[jIdx].eField[0]  += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
+                                psA[jIdx].eField[1]  += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
+                                psA[jIdx].eField[2]  += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
+
+                                psA[jIdx].eFieldP[0] += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
+                                psA[jIdx].eFieldP[1] += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
+                                psA[jIdx].eFieldP[2] += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
+                            }
+                        }
 
 #ifdef AMOEBA_DEBUG
 if( (atomI == targetAtom || (y + jIdx) == targetAtom) ){
@@ -358,6 +359,7 @@ if( (atomI == targetAtom || (y + jIdx) == targetAtom) ){
             }
 }        
 #endif
+                    }
                     tj                  = (tj + 1) & (GRID - 1);
 
                 } // j-loop block
