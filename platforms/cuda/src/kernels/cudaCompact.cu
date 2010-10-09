@@ -183,7 +183,7 @@ __global__ void moveValidElementsScattered(const T* dgData,T* dgCompact,const un
     }
 }
 
-void planCompaction(compactionPlan& d,bool stageOutput) {
+void OPENMMCUDA_EXPORT planCompaction(compactionPlan& d,bool stageOutput) {
     int device;
     cudaGetDevice(&device);
     cudaDeviceProp deviceProp;
@@ -195,11 +195,11 @@ void planCompaction(compactionPlan& d,bool stageOutput) {
     d.valid = true;
 }
 
-void destroyCompactionPlan(compactionPlan& d) {
+void OPENMMCUDA_EXPORT destroyCompactionPlan(compactionPlan& d) {
     if (d.valid) cudaFree(d.dgBlockCounts);
 }
 
-int compactStream(const compactionPlan& d,T* dOut,const T* dIn,const unsigned int* dValid,size_t len,size_t* dNumValid) {
+int OPENMMCUDA_EXPORT compactStream(const compactionPlan& d,T* dOut,const T* dIn,const unsigned int* dValid,size_t len,size_t* dNumValid) {
     if (!d.valid) {
         return -1;
     }

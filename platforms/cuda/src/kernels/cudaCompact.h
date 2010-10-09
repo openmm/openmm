@@ -25,6 +25,8 @@
   License:      Public Domain
 */
 
+#include "windowsExportCuda.h"
+
 struct compactionPlan {
     bool valid;
     unsigned int* dgBlockCounts;
@@ -33,12 +35,12 @@ struct compactionPlan {
 };
 
 extern "C"
-void planCompaction(compactionPlan& d,bool stageOutput=true);
+void OPENMMCUDA_EXPORT planCompaction(compactionPlan& d,bool stageOutput=true);
 
 extern "C"
-void destroyCompactionPlan(compactionPlan& d);
+void OPENMMCUDA_EXPORT destroyCompactionPlan(compactionPlan& d);
 
 extern "C"
-int compactStream(const compactionPlan& d,unsigned int* dOut,const unsigned int* dIn,const unsigned int* dValid,size_t len,size_t* dNumValid);
+int OPENMMCUDA_EXPORT compactStream(const compactionPlan& d,unsigned int* dOut,const unsigned int* dIn,const unsigned int* dValid,size_t len,size_t* dNumValid);
 
 #endif // __OPENMM_CUDACOMPACT_H__

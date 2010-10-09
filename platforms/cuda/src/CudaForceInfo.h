@@ -37,26 +37,28 @@ namespace OpenMM {
  * about the behavior and requirements of that force.
  */
 
-class OPENMM_EXPORT CudaForceInfo {
+class CudaForceInfo {
 public:
     CudaForceInfo() {
+    }
+    virtual ~CudaForceInfo() {
     }
     /**
      * Get whether or not two particles have identical force field parameters.
      */
-    virtual bool areParticlesIdentical(int particle1, int particle2);
+    virtual OPENMM_EXPORT bool areParticlesIdentical(int particle1, int particle2);
     /**
      * Get the number of particle groups defined by this force.
      */
-    virtual int getNumParticleGroups();
+    virtual OPENMM_EXPORT int getNumParticleGroups();
     /**
      * Get the list of particles in a particular group.
      */
-    virtual void getParticlesInGroup(int index, std::vector<int>& particles);
+    virtual OPENMM_EXPORT void getParticlesInGroup(int index, std::vector<int>& particles);
     /**
      * Get whether two particle groups are identical.
      */
-    virtual bool areGroupsIdentical(int group1, int group2);
+    virtual OPENMM_EXPORT bool areGroupsIdentical(int group1, int group2);
 };
 
 } // namespace OpenMM

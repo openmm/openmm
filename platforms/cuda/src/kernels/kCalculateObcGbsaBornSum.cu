@@ -133,7 +133,7 @@ void kReduceObcGbsaBornSum_kernel()
     }   
 }
 
-void kReduceObcGbsaBornSum(gpuContext gpu)
+void OPENMMCUDA_EXPORT kReduceObcGbsaBornSum(gpuContext gpu)
 {
 //    printf("kReduceObcGbsaBornSum\n");
     kReduceObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
@@ -141,7 +141,7 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
     LAUNCHERROR("kReduceObcGbsaBornSum");
 }
 
-void kCalculateObcGbsaBornSum(gpuContext gpu)
+void OPENMMCUDA_EXPORT kCalculateObcGbsaBornSum(gpuContext gpu)
 {
   //  printf("kCalculateObcgbsaBornSum\n");
     switch (gpu->sim.nonbondedMethod)
