@@ -766,11 +766,8 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d"
-                        " gamma=%.3e scalingDistanceCutoff=%.3f ZZZ\n",
-                        methodName, gpu->natoms,
-                        amoebaGpu->maxCovalentDegreeSz, amoebaGpu->pGamma,
-                        amoebaGpu->scalingDistanceCutoff );
+        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
+                        methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
     }   
    int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");

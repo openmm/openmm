@@ -373,11 +373,11 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
 // Include versions of the kernels for N^2 calculations.
 
-#define METHOD_NAME(a, b) a##N2##b
+#define METHOD_NAME(a, b) a##Cutoff##b
 #include "kCalculateAmoebaCudaPmeFixedEField.h"
 #define USE_OUTPUT_BUFFER_PER_WARP
 #undef METHOD_NAME
-#define METHOD_NAME(a, b) a##N2ByWarp##b
+#define METHOD_NAME(a, b) a##CutoffByWarp##b
 #include "kCalculateAmoebaCudaPmeFixedEField.h"
 
 /**---------------------------------------------------------------------------------------
@@ -443,7 +443,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     }    
 
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaPmeDirectFixedE_FieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaPmeDirectFixedE_FieldCutoffByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
@@ -453,7 +453,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
                                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
 #endif
     } else {
-        kCalculateAmoebaPmeDirectFixedE_FieldN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaPmeDirectFixedE_FieldCutoff_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
@@ -473,7 +473,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaPmeDirectFixedEField:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u shrd=%u\n", 
                         threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)+sizeof(float3)),
                         (sizeof(FixedFieldParticle)+sizeof(float3)), (sizeof(FixedFieldParticle)+sizeof(float3))*threadsPerBlock );
-        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u warp=%d\n",
+        (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u warp=%d\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->energyOutputBuffers, 
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->bOutputBufferPerWarp );

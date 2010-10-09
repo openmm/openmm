@@ -954,7 +954,7 @@ static void computeAmoebaVdwForce( AmoebaCudaData& data ) {
 
     // Vdw14_7F
 
-    kCalculateAmoebaVdw14_7Forces(gpu);
+    kCalculateAmoebaVdw14_7Forces(gpu, data.getApplyCutoff());
 }
 
 class CudaCalcAmoebaVdwForceKernel::ForceInfo : public CudaForceInfo {
@@ -1014,7 +1014,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
 
     gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, indexClasses, sigmas, epsilons, reductions,
                                force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
-                               allExclusions );
+                               allExclusions, force.getPBC(), static_cast<float>(force.getCutoff()) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 

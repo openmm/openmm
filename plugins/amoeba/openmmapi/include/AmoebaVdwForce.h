@@ -143,11 +143,41 @@ public:
      */
     void getParticleExclusions( int particleIndex, std::vector< int >& exclusions ) const;
 
+    /**
+     * Set cutoff
+     * 
+     * @param cutoff cutoff
+     */
+    void setCutoff( double cutoff );
+
+    /**
+     * Get cutoff
+     * 
+     * @return cutoff
+     */
+    double getCutoff( void ) const;
+
+    /**
+     * Set flag for employing periodic boundary conditions
+     * 
+     * @param pbcFlag if nonozero, use periodic boundary conditions
+     */
+    void setPBC( int pbcFlag );
+
+    /**
+     * Get periodic boundary conditions flag
+     * 
+     * @return periodic boundary conditions flag (nonzero -> use PBC)
+     */
+    int getPBC( void ) const;
+
 protected:
     ForceImpl* createImpl();
 private:
 
     class VdwInfo;
+    int usePBC;
+    double cutoff;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     std::vector< std::vector<int> > exclusions;
@@ -170,7 +200,7 @@ private:
 class AmoebaVdwForce::VdwInfo {
 public:
     int ivIndex, classIndex;
-    double reductionFactor, sigma, epsilon;
+    double reductionFactor, sigma, epsilon, cutoff;
     VdwInfo() {
         ivIndex = classIndex = -1;
         reductionFactor      = 0.0;

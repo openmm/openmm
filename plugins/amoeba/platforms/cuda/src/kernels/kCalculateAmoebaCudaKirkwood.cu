@@ -1861,10 +1861,8 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d"
-                        " gamma=%.3e scalingDistanceCutoff=%.3f ZZZ\n",
-                        methodName, gpu->natoms,
-                        amoebaGpu->maxCovalentDegreeSz, amoebaGpu->pGamma,
+        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
+                        methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
                         amoebaGpu->scalingDistanceCutoff );
     }
    int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;

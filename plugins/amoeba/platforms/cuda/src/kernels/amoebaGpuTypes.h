@@ -136,8 +136,6 @@ struct _amoebaGpuContext {
 
     // scaling-related parameters
 
-    float pGamma;
-    float scalingDistanceCutoff;
     CUDAStream<float2>*  psDampingFactorAndThole;
 
     // slated for removal -- no longer used
@@ -177,7 +175,6 @@ struct _amoebaGpuContext {
 
     CUDAStream<float>*  psForce; 
     CUDAStream<float>*  psTorque; 
-    CUDAStream<float>*  psEnergy; 
     CUDAStream<float>*  torqueMapForce; 
     int maxMapTorqueDifference; 
     int maxMapTorqueDifferencePow2;
@@ -198,9 +195,6 @@ struct _amoebaGpuContext {
 
     CUDAStream<float2>*  psVdwSigmaEpsilon;
 
-    unsigned int useVdwTable;
-    unsigned int vdwTableSize;
-    CUDAStream<float2>*  psVdwTable; 
     CUDAStream<int>*     psAmoebaVdwNonReductionID; 
     CUDAStream<int4>*    psAmoebaVdwReductionID; 
     CUDAStream<float>*   psAmoebaVdwReduction; 
@@ -322,7 +316,7 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<float>& reductions,
                                 const std::string& sigmaCombiningRule,
                                 const std::string& epsilonCombiningRule,
-                                const std::vector< std::vector<int> >& allExclusions );
+                                const std::vector< std::vector<int> >& allExclusions, int usePBC, float cutoff );
 extern "C"
 void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ);
 

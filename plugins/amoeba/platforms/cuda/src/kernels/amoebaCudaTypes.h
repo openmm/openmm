@@ -146,8 +146,11 @@ struct cudaAmoebaGmxSimulation {
     float* pWorkArray_1_1;
     float* pWorkArray_1_2;
 
+    int vdwUsePBC;
+    float vdwCutoff2;
     unsigned int amoebaVdwNonReductions;
     int* pAmoebaVdwNonReductionID;
+    unsigned int* pVdwWorkUnit;
 
     unsigned int amoebaVdwReductions;
     int4* pAmoebaVdwReductionID;

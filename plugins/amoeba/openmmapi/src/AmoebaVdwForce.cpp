@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaVdwForce::AmoebaVdwForce() {
+AmoebaVdwForce::AmoebaVdwForce() : usePBC(0), cutoff(1.0e+10) {
 }
 
 int AmoebaVdwForce::addParticle(int ivIndex, int classIndex, double sigma, double epsilon, double reductionFactor ) {
@@ -100,6 +100,22 @@ void AmoebaVdwForce::getParticleExclusions( int particleIndex, std::vector< int 
        }
    }
 
+}
+
+void AmoebaVdwForce::setCutoff( double inputCutoff ){
+    cutoff = inputCutoff;
+}
+
+double AmoebaVdwForce::getCutoff( void ) const {
+    return cutoff;
+}
+
+void AmoebaVdwForce::setPBC( int pbcFlag ){
+    usePBC = pbcFlag;
+}
+
+int AmoebaVdwForce::getPBC( void ) const {
+    return usePBC;
 }
 
 ForceImpl* AmoebaVdwForce::createImpl() {

@@ -218,11 +218,11 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
 
 // Include versions of the kernels for N^2 calculations.
 
-#define METHOD_NAME(a, b) a##N2##b
+#define METHOD_NAME(a, b) a##Cutoff##b
 #include "kCalculateAmoebaCudaPmeMutualInducedField.h"
 #define USE_OUTPUT_BUFFER_PER_WARP
 #undef METHOD_NAME
-#define METHOD_NAME(a, b) a##N2ByWarp##b
+#define METHOD_NAME(a, b) a##CutoffByWarp##b
 #include "kCalculateAmoebaCudaPmeMutualInducedField.h"
 
 __global__ 
@@ -413,7 +413,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
     if (gpu->bOutputBufferPerWarp){
                                                                  //gpu->sim.pInteractingWorkUnit,
                                                                  //amoebaGpu->psWorkUnit->_pDevStream[0],
-        kCalculateAmoebaPmeMutualInducedFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaPmeMutualInducedFieldCutoffByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
@@ -426,14 +426,14 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
     } else {
 
 #ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "Cutoff no warp\n" );
+        (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
                         amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
-        kCalculateAmoebaPmeMutualInducedFieldN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaPmeMutualInducedFieldCutoff_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG

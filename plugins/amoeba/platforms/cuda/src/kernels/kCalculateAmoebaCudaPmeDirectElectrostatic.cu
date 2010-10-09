@@ -1028,11 +1028,11 @@ __device__ void loadPmeDirectElectrostaticShared( struct PmeDirectElectrostaticP
 // Include versions of the kernels for N^2 calculations.
 
 #undef USE_OUTPUT_BUFFER_PER_WARP
-#define METHOD_NAME(a, b) a##N2##b
+#define METHOD_NAME(a, b) a##Cutoff##b
 #include "kCalculateAmoebaCudaPmeDirectElectrostatic.h"
 #define USE_OUTPUT_BUFFER_PER_WARP
 #undef METHOD_NAME
-#define METHOD_NAME(a, b) a##N2ByWarp##b
+#define METHOD_NAME(a, b) a##CutoffByWarp##b
 #include "kCalculateAmoebaCudaPmeDirectElectrostatic.h"
 
 // reduce psWorkArray_3_1 -> force
@@ -1088,11 +1088,8 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-      (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d"
-                      " gamma=%.3e scalingDistanceCutoff=%.3f ZZZ\n",
-                      methodName, gpu->natoms,
-                      amoebaGpu->maxCovalentDegreeSz, amoebaGpu->pGamma,
-                      amoebaGpu->scalingDistanceCutoff );
+      (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
+                      methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
     }
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
@@ -1142,26 +1139,26 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
             maxThreads = 128;
         else
             maxThreads = 64;
-        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)+sizeof(float3)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)), maxThreads);
     }
 
     kClearFields_3( amoebaGpu, 2 );
 
 #ifdef AMOEBA_DEBUG
-    (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticN2Forces:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u\n",
-                    threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)+sizeof(float3)),
-                    (sizeof(PmeDirectElectrostaticParticle)+sizeof(float3)) );
+    (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u\n", 
+                    threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)),
+                    sizeof(PmeDirectElectrostaticParticle) );
 
-      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Obuf=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
+      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Obuf=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
                       amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                      sizeof(PmeDirectElectrostaticParticle)+sizeof(float3), (sizeof(PmeDirectElectrostaticParticle)+sizeof(float3))*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits,
-                      gpu->sim.nonbond_threads_per_block );
+                      sizeof(PmeDirectElectrostaticParticle), (sizeof(PmeDirectElectrostaticParticle))*threadsPerBlock,
+                      amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sim.nonbond_threads_per_block );
       (void) fflush( amoebaGpu->log );
 #endif
 
     if (gpu->bOutputBufferPerWarp){
 
-      kCalculateAmoebaPmeDirectElectrostaticN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, (sizeof(PmeDirectElectrostaticParticle)+sizeof(float3))*threadsPerBlock>>>(
+      kCalculateAmoebaPmeDirectElectrostaticCutoffByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                          gpu->sim.pInteractingWorkUnit,
                                                                          amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
@@ -1176,7 +1173,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
 //                                                                         gpu->sim.pInteractingWorkUnit,
 //                                                                         amoebaGpu->psWorkUnit->_pDevStream[0],
-      kCalculateAmoebaPmeDirectElectrostaticN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, (sizeof(PmeDirectElectrostaticParticle)+sizeof(float3))*threadsPerBlock>>>(
+      kCalculateAmoebaPmeDirectElectrostaticCutoffForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                          gpu->sim.pInteractingWorkUnit,
                                                                          amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
@@ -1186,7 +1183,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                                                                          amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
 #endif
     }
-    LAUNCHERROR("kCalculateAmoebaPmeDirectElectrostaticN2Forces");
+    LAUNCHERROR("kCalculateAmoebaPmeDirectElectrostaticCutoffForces");
     kReduceForceTorque( amoebaGpu );
 
 #ifdef AMOEBA_DEBUG

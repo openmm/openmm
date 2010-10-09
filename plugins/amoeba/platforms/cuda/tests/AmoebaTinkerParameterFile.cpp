@@ -2460,7 +2460,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
 
     --------------------------------------------------------------------------------------- */
 
-static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& forceMap, const StringVector& tokens,
                                     System& system,  int useOpenMMUnits,
                                     MapStringVectorOfVectors& supplementary,
                                     MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
@@ -2542,6 +2542,21 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         }
     }
 
+    if( version > 1 ){
+        lineTokensT.resize(0);
+        isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+        if( lineTokensT[0] == "AmoebaVdw14_7Periodic" ){
+            int usePBC = atoi( lineTokensT[1].c_str() );
+            vdwForce->setPBC( usePBC );
+        }
+        lineTokensT.resize(0);
+        isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+        if( lineTokensT[0] == "AmoebaVdw14_7CutOff" ){
+            double cutoff = atof( lineTokensT[1].c_str() );
+            vdwForce->setCutoff( cutoff );
+        }
+    }
+
     lineTokensT.resize(0);
     isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
     if( lineTokensT[0] == "AmoebaVdw14_7Exclusion" ){
@@ -2620,6 +2635,8 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters using %s units; combining rules=[sig=%s eps=%s]\n",
                         methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
                         vdwForce->getSigmaCombiningRule().c_str(), vdwForce->getEpsilonCombiningRule().c_str() );
+  
+        (void) fprintf( log, "use periodic boundary conditions=%d cutoff=%15.7e\n", vdwForce->getPBC(), vdwForce->getCutoff() );
   
         for( int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
             int indexIV, indexClass;
@@ -3669,7 +3686,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
             // Amoeba Vdw
  
             } else if( field == "AmoebaVdw14_7SigEpsTable"  || field == "AmoebaVdw14_7Reduction" ){
-                readAmoebaVdwParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
+                readAmoebaVdwParameters( filePtr, version, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
             } else if( field == "AmoebaVdwForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_VDW_FORCE], &lineCount, field, log );
             } else if( field == "AmoebaVdwEnergy" ){
@@ -4560,7 +4577,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     StringVector forceList;
     std::string activeForceNames;
     for( MapStringInt::const_iterator ii = forceMap.begin(); ii != forceMap.end(); ii++ ){
-        if( ii->second ){
+        if( ii->second && tinkerForces.find( ii->first ) != tinkerForces.end() ){
             if( includeCavityTerm && ii->first == AMOEBA_GK_FORCE ){
                 forceList.push_back( AMOEBA_GK_CAVITY_FORCE );
                 activeForceNames += AMOEBA_GK_CAVITY_FORCE + ":";

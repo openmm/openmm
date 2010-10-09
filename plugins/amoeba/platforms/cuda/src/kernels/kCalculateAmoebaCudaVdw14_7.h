@@ -53,9 +53,8 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
 
-    float4 jCoord;
-    float jSigma;
-    float jEpsilon;
+    int exclusionIndex;
+    int exclusionMask;
     float totalEnergy            = 0.0f;
 
 #ifdef AMOEBA_DEBUG
@@ -76,12 +75,12 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
         unsigned int tbx                 = threadIdx.x - tgx;
         unsigned int tj                  = tgx;
 
-        Vdw14_7Particle*  psA            = &sA[tbx];
-        unsigned int atomI               = x + tgx;
-        float4 iCoord                    = atomCoord[atomI];
-        float iSigma                     = vdwParameters[atomI].x;
-        float iEpsilon                   = vdwParameters[atomI].y;
+        Vdw14_7Particle* psA             = &sA[tbx];
 
+        Vdw14_7Particle  localParticle;
+        unsigned int atomI               = x + tgx;
+        loadVdw14_7Shared( &localParticle, atomI, atomCoord, vdwParameters );
+ 
         float forceSum[3];
 
         // forceSum:      field at i due to j
@@ -94,10 +93,12 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
         if (x == y) 
         {
 
-            unsigned int xi              = x >> GRIDBITS;
-            unsigned int cell            = xi + xi*cAmoebaSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
-            int exclusionIndex           = cAmoebaSim.pVdwExclusionIndicesIndex[cell]+tgx;
-            int exclusionMask            = cAmoebaSim.pVdwExclusionIndices[exclusionIndex];
+            if( bExclusionFlag ){
+                unsigned int xi              = x >> GRIDBITS;
+                unsigned int cell            = xi + xi*cAmoebaSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                exclusionIndex               = cAmoebaSim.pVdwExclusionIndicesIndex[cell]+tgx;
+                exclusionMask                = cAmoebaSim.pVdwExclusionIndices[exclusionIndex];
+            }
 
             // load shared data
 
@@ -108,30 +109,38 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
 
                 float ijForce[3];
 
-                // load coords, charge, ...
-
-                loadVdw14_7Data( &(psA[j]), &jCoord, &jSigma, &jEpsilon ); 
-
                 // get combined sigma and epsilon
 
                 float combindedSigma;
                 float combindedEpsilon;
-                getVdw14_7CombindedSigmaEpsilon_kernel( sigmaCombiningRule,   iSigma,   jSigma,   &combindedSigma,
-                                                        epsilonCombiningRule, iEpsilon, jEpsilon, &combindedEpsilon );
+                getVdw14_7CombindedSigmaEpsilon_kernel( sigmaCombiningRule,   localParticle.sigma,   psA[j].sigma,   &combindedSigma,
+                                                        epsilonCombiningRule, localParticle.epsilon, psA[j].epsilon, &combindedEpsilon );
  
                 // calculate force
 
+                ijForce[0]    = psA[j].x - localParticle.x;
+                ijForce[1]    = psA[j].y - localParticle.y;
+                ijForce[2]    = psA[j].z - localParticle.z;
+                if( cAmoebaSim.vdwUsePBC )
+                {
+                    ijForce[0]   -= floor(ijForce[0]*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    ijForce[1]   -= floor(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    ijForce[2]   -= floor(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                }
+
                 float energy;
-                calculateVdw14_7PairIxn_kernel( iCoord, jCoord, combindedSigma, combindedEpsilon, ijForce, &energy
+                calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy
 #ifdef AMOEBA_DEBUG
 ,  pullDebug
 #endif
 );
-
                 // mask out excluded ixns
 
-                unsigned int maskIndex  = 1 << j;
-                unsigned int mask       =  ( (exclusionMask & maskIndex) || (atomI >= cAmoebaSim.numberOfAtoms) || ((y+j) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                unsigned int mask  =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+j) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                if( mask && bExclusionFlag ){
+                    unsigned int maskIndex  = 1 << j;
+                    mask = (exclusionMask & maskIndex) ? 0 : 1;
+                }
 
                 // add to field at atomI the field due atomJ's dipole
 
@@ -152,7 +161,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = (float) x;
         debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) cell+tgx;
+        debugArray[index].z                = (float) tgx;
         debugArray[index].w                = energy;
 
         index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -188,10 +197,8 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
             load3dArray( offset, forceSum, outputForce );
 #endif
 
-        }
-        else
-        {
-            // Read fixed atom data into registers and GRF
+        } else {
+
             if (lasty != y)
             {
                 // load coordinates, charge, ...
@@ -200,143 +207,77 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
             }
 
+#ifdef USE_CUTOFF
+            unsigned int flags = cSim.pInteractionFlag[pos];
+            if (flags == 0) {
+            } else {
+#endif
+
            // zero shared fields
 
-            zeroVdw14_7SharedForce(  &(sA[threadIdx.x]) );
+            zeroVdw14_7SharedForce( &(sA[threadIdx.x]) );
 
-            if( !bExclusionFlag )
-            {
-                for (unsigned int j = 0; j < GRID; j++)
-                {
-    
-                    float ijForce[3];
-    
-                    // load coords, charge, ...
-    
-                    loadVdw14_7Data( &(psA[tj]), &jCoord, &jSigma, &jEpsilon ); 
-    
-                    // get combined sigma and epsilon
-    
-                    float combindedSigma;
-                    float combindedEpsilon;
-                    getVdw14_7CombindedSigmaEpsilon_kernel( sigmaCombiningRule,   iSigma,   jSigma,   &combindedSigma,
-                                                            epsilonCombiningRule, iEpsilon, jEpsilon, &combindedEpsilon );
-    
-                    // calculate force
-    
-                    float energy;
-                    calculateVdw14_7PairIxn_kernel( iCoord, jCoord, combindedSigma, combindedEpsilon, ijForce, &energy
-#ifdef AMOEBA_DEBUG
-    ,  pullDebug
-#endif
-       );
-    
-                    if( (atomI < cAmoebaSim.numberOfAtoms) && ((y+tj) < cAmoebaSim.numberOfAtoms) ){
-               
-                        // add to field at atomI the field due atomJ's dipole
-        
-                        forceSum[0]              += ijForce[0];
-                        forceSum[1]              += ijForce[1];
-                        forceSum[2]              += ijForce[2];
-            
-                        // add to field at atomJ the field due atomI's dipole
-        
-                        psA[tj].force[0]         -= ijForce[0];
-                        psA[tj].force[1]         -= ijForce[1];
-                        psA[tj].force[2]         -= ijForce[2];
+            if( bExclusionFlag ){
 
-                        totalEnergy              += energy;
-        
-                    }
-    
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || (y+tj) == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + tj); 
-        debugArray[index].z                = -2.0f;
-        debugArray[index].w                = -1.0f;
-
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = -1.0f;
-        debugArray[index].w                = energy;
-
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = pullDebug[0].y;
-        debugArray[index].z                = pullDebug[0].z;
-        debugArray[index].w                = pullDebug[0].w;
-
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[1].x;
-        debugArray[index].y                = pullDebug[1].y;
-        debugArray[index].z                = pullDebug[1].z;
-        debugArray[index].w                = pullDebug[1].w;
-
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = ijForce[0];
-        debugArray[index].y                = ijForce[1];
-        debugArray[index].z                = ijForce[2];
-}
-#endif
-                    tj                  = (tj + 1) & (GRID - 1);
-    
-                }
-            }
-            else 
-            {
                 unsigned int xi              = x >> GRIDBITS;
                 unsigned int yi              = y >> GRIDBITS;
                 unsigned int cell            = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
 
-                int exclusionIndex           = cAmoebaSim.pVdwExclusionIndicesIndex[cell]+tgx;
-                int exclusionMask            = cAmoebaSim.pVdwExclusionIndices[exclusionIndex];
-                for (unsigned int j = 0; j < GRID; j++)
+                exclusionIndex               = cAmoebaSim.pVdwExclusionIndicesIndex[cell]+tgx;
+                exclusionMask                = cAmoebaSim.pVdwExclusionIndices[exclusionIndex];
+            }
+
+            for (unsigned int j = 0; j < GRID; j++)
+            {
+    
+                float ijForce[3];
+    
+                // get combined sigma and epsilon
+    
+                float combindedSigma;
+                float combindedEpsilon;
+                getVdw14_7CombindedSigmaEpsilon_kernel( sigmaCombiningRule,   localParticle.sigma,   psA[tj].sigma,   &combindedSigma,
+                                                        epsilonCombiningRule, localParticle.epsilon, psA[tj].epsilon, &combindedEpsilon );
+    
+                // calculate force
+    
+                float energy;
+                ijForce[0]    = psA[tj].x - localParticle.x;
+                ijForce[1]    = psA[tj].y - localParticle.y;
+                ijForce[2]    = psA[tj].z - localParticle.z;
+                if( cAmoebaSim.vdwUsePBC )
                 {
-    
-                    float ijForce[3];
-    
-                    // load coords, charge, ...
-    
-                    loadVdw14_7Data( &(psA[tj]), &jCoord, &jSigma, &jEpsilon ); 
-    
-                    // get combined sigma and epsilon
-    
-                    float combindedSigma;
-                    float combindedEpsilon;
-                    getVdw14_7CombindedSigmaEpsilon_kernel( sigmaCombiningRule,   iSigma,   jSigma,   &combindedSigma,
-                                                            epsilonCombiningRule, iEpsilon, jEpsilon, &combindedEpsilon );
-    
-                    // calculate force
-    
-                    float energy;
-                    calculateVdw14_7PairIxn_kernel( iCoord, jCoord, combindedSigma, combindedEpsilon, ijForce, &energy
+                    ijForce[0]   -= floor(ijForce[0]*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    ijForce[1]   -= floor(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    ijForce[2]   -= floor(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                }
+                calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy
 #ifdef AMOEBA_DEBUG
     ,  pullDebug
 #endif
        );
     
-                    // mask out excluded ixns
+                // mask out excluded ixns
 
+                unsigned int mask       =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+tj) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                if( mask && bExclusionFlag ){
                     unsigned int maskIndex  = 1 << tj;
-                    unsigned int mask       =  ( (exclusionMask & maskIndex) || (atomI >= cAmoebaSim.numberOfAtoms) || ((y+tj) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                    mask                    =  (exclusionMask & maskIndex) ? 0 : 1;
+                }
                
-                    // accumulate force for atomI
+                // accumulate force for atomI
         
-                    forceSum[0]        += mask ? ijForce[0] : 0.0f;
-                    forceSum[1]        += mask ? ijForce[1] : 0.0f;
-                    forceSum[2]        += mask ? ijForce[2] : 0.0f;
+                forceSum[0]        += mask ? ijForce[0] : 0.0f;
+                forceSum[1]        += mask ? ijForce[1] : 0.0f;
+                forceSum[2]        += mask ? ijForce[2] : 0.0f;
             
-                    // accumulate force for atomJ
+                // accumulate force for atomJ
         
-                    psA[tj].force[0]   -= mask ? ijForce[0] : 0.0f;
-                    psA[tj].force[1]   -= mask ? ijForce[1] : 0.0f;
-                    psA[tj].force[2]   -= mask ? ijForce[2] : 0.0f;
+                psA[tj].force[0]   -= mask ? ijForce[0] : 0.0f;
+                psA[tj].force[1]   -= mask ? ijForce[1] : 0.0f;
+                psA[tj].force[2]   -= mask ? ijForce[2] : 0.0f;
 
-                    totalEnergy        += mask ? energy     : 0.0f;
+                totalEnergy        += mask ? energy     : 0.0f;
         
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || (y+tj) == targetAtom ){
@@ -350,7 +291,7 @@ if( atomI == targetAtom || (y+tj) == targetAtom ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
         debugArray[index].x                = (float) x;
         debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) cell+tgx;
+        debugArray[index].z                = (float) tgx;
         debugArray[index].w                = energy;
 
         index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -371,10 +312,12 @@ if( atomI == targetAtom || (y+tj) == targetAtom ){
         debugArray[index].z                = mask ? ijForce[2] : 0.0f;
 }
 #endif
-                    tj                  = (tj + 1) & (GRID - 1);
+                tj                  = (tj + 1) & (GRID - 1);
     
-                } 
-            } 
+            } // end of j-loop 
+#ifdef USE_CUTOFF
+}
+#endif
 
             // Write results
 
@@ -385,7 +328,6 @@ if( atomI == targetAtom || (y+tj) == targetAtom ){
             offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
 
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].force,       outputForce );
-
 #else
             unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
             load3dArray( offset, forceSum,       outputForce );
@@ -395,7 +337,8 @@ if( atomI == targetAtom || (y+tj) == targetAtom ){
 
 #endif
             lasty = y;
-        }
+
+        } // x == y block
         pos++;
     }
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += totalEnergy;

@@ -57,7 +57,7 @@ extern void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool per
 
 extern void SetCalculateAmoebaCudaVdw14_7Sim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaVdw14_7Sim(amoebaGpuContext gpu);
-extern void kCalculateAmoebaVdw14_7Forces(amoebaGpuContext amoebaGpu );
+extern void kCalculateAmoebaVdw14_7Forces(amoebaGpuContext amoebaGpu, int applyCutoff );
 
 // wca dispersion
 

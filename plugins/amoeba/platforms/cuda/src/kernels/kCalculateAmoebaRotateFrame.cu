@@ -2,6 +2,7 @@
 
 //-----------------------------------------------------------------------------------------
 
+#include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 
 #include <stdio.h>
@@ -353,13 +354,6 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
   
 }
 
-#undef USE_PERIODIC
-#define USE_PERIODIC
-#define METHOD_NAME(a, b) a##Periodic##b
-#include "kFindInteractingBlocks.h"
-#undef USE_PERIODIC
-#undef METHOD_NAME
-
 void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood ) 
 {
     std::string methodName = "kCalculateAmoebaMultipoleForces";
@@ -384,7 +378,8 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
             LAUNCHERROR("kFindBlockBoundsPeriodic");
             kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
             LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
-            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            //compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, amoebaGpu->psWorkUnit->_pDevStream[0], gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
             kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
