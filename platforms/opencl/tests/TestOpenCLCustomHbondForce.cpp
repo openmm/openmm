@@ -195,7 +195,7 @@ void testCustomFunctions() {
     vector<double> function(2);
     function[0] = 0;
     function[1] = 1;
-    custom->addFunction("foo", function, 0, 10, true);
+    custom->addFunction("foo", function, 0, 10);
     system.addForce(custom);
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);

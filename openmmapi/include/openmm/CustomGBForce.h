@@ -134,7 +134,7 @@ namespace OpenMM {
  * an expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
  * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and an interpolating or approximating spline is created from them.  That function can then appear in expressions.
+ * values, and a natural spline is created from them.  That function can then appear in expressions.
  */
 
 class OPENMM_EXPORT CustomGBForce : public Force {
@@ -458,11 +458,9 @@ public:
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of the independent variable corresponding to the first element of values
      * @param max            the value of the independent variable corresponding to the last element of values
-     * @param interpolating  if true, an interpolating (Catmull-Rom) spline will be used to represent the function.
-     *                       If false, an approximating spline (B-spline) will be used.
      * @return the index of the function that was added
      */
-    int addFunction(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating);
+    int addFunction(const std::string& name, const std::vector<double>& values, double min, double max);
     /**
      * Get the parameters for a tabulated function that may appear in the energy expression.
      *
@@ -472,10 +470,8 @@ public:
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of the independent variable corresponding to the first element of values
      * @param max            the value of the independent variable corresponding to the last element of values
-     * @param interpolating  if true, an interpolating (Catmull-Rom) spline will be used to represent the function.
-     *                       If false, an approximating spline (B-spline) will be used.
      */
-    void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max, bool& interpolating) const;
+    void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
     /**
      * Set the parameters for a tabulated function that may appear in algebraic expressions.
      *
@@ -485,10 +481,8 @@ public:
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of the independent variable corresponding to the first element of values
      * @param max            the value of the independent variable corresponding to the last element of values
-     * @param interpolating  if true, an interpolating (Catmull-Rom) spline will be used to represent the function.
-     *                       If false, an approximating spline (B-spline) will be used.
      */
-    void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating);
+    void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
 protected:
     ForceImpl* createImpl();
 private:
@@ -573,11 +567,10 @@ public:
     std::string name;
     std::vector<double> values;
     double min, max;
-    bool interpolating;
     FunctionInfo() {
     }
-    FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) :
-        name(name), values(values), min(min), max(max), interpolating(interpolating) {
+    FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max) :
+        name(name), values(values), min(min), max(max) {
     }
 };
 

@@ -172,24 +172,23 @@ void CustomHbondForce::setExclusionParticles(int index, int donor, int acceptor)
     exclusions[index].acceptor = acceptor;
 }
 
-int CustomHbondForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) {
+int CustomHbondForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("CustomHbondForce: max <= min for a tabulated function.");
     if (values.size() < 2)
         throw OpenMMException("CustomHbondForce: a tabulated function must have at least two points");
-    functions.push_back(FunctionInfo(name, values, min, max, interpolating));
+    functions.push_back(FunctionInfo(name, values, min, max));
     return functions.size()-1;
 }
 
-void CustomHbondForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max, bool& interpolating) const {
+void CustomHbondForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
     name = functions[index].name;
     values = functions[index].values;
     min = functions[index].min;
     max = functions[index].max;
-    interpolating = functions[index].interpolating;
 }
 
-void CustomHbondForce::setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) {
+void CustomHbondForce::setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("CustomHbondForce: max <= min for a tabulated function.");
     if (values.size() < 2)
@@ -198,7 +197,6 @@ void CustomHbondForce::setFunctionParameters(int index, const std::string& name,
     functions[index].values = values;
     functions[index].min = min;
     functions[index].max = max;
-    functions[index].interpolating = interpolating;
 }
 
 ForceImpl* CustomHbondForce::createImpl() {

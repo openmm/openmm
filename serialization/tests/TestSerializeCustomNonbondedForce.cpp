@@ -59,7 +59,7 @@ void testSerialization() {
     vector<double> values(10);
     for (int i = 0; i < 10; i++)
         values[i] = sin((double) i);
-    force.addFunction("f", values, 0.5, 1.5, true);
+    force.addFunction("f", values, 0.5, 1.5);
 
     // Serialize and then deserialize it.
 
@@ -103,13 +103,11 @@ void testSerialization() {
         string name1, name2;
         double min1, min2, max1, max2;
         vector<double> val1, val2;
-        bool interp1, interp2;
-        force.getFunctionParameters(i, name1, val1, min1, max1, interp1);
-        force2.getFunctionParameters(i, name2, val2, min2, max2, interp2);
+        force.getFunctionParameters(i, name1, val1, min1, max1);
+        force2.getFunctionParameters(i, name2, val2, min2, max2);
         ASSERT_EQUAL(name1, name2);
         ASSERT_EQUAL(min1, min2);
         ASSERT_EQUAL(max1, max2);
-        ASSERT_EQUAL(interp1, interp2);
         ASSERT_EQUAL(val1.size(), val2.size());
         for (int j = 0; j < val1.size(); j++)
             ASSERT_EQUAL(val1[j], val2[j]);

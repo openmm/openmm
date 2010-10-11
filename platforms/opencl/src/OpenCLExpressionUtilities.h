@@ -60,10 +60,11 @@ public:
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
      * @param values         the tabulated values of the function
-     * @param interpolating  true if an interpolating spline should be used, false if an approximating spline should be used
+     * @param min            the value of the independent variable corresponding to the first element of values
+     * @param max            the value of the independent variable corresponding to the last element of values
      * @return the spline coefficients
      */
-    static std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, bool interpolating);
+    static std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, double min, double max);
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */

@@ -26,6 +26,7 @@
 
 #include "OpenCLExpressionUtilities.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/SplineFitter.h"
 #include "lepton/Operation.h"
 
 using namespace OpenMM;
@@ -120,14 +121,16 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << "float4 params = " << functionParams << "[" << i << "];\n";
             out << "float x = " << getTempName(node.getChildren()[0], temps) << ";\n";
             out << "if (x >= params.x && x <= params.y) {\n";
-            out << "int index = (int) (floor((x-params.x)*params.z));\n";
+            out << "x = (x-params.x)*params.z;\n";
+            out << "int index = (int) (floor(x));\n";
             out << "index = min(index, (int) params.w);\n";
             out << "float4 coeff = " << functions[i].second << "[index];\n";
-            out << "x = (x-params.x)*params.z-index;\n";
+            out << "float b = x-index;\n";
+            out << "float a = 1.0f-b;\n";
             if (valueNode != NULL)
-                out << valueName << " = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));\n";
+                out << valueName << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(params.z*params.z);\n";
             if (derivNode != NULL)
-                out << derivName << " = (coeff.y+x*(2.0f*coeff.z+x*3.0f*coeff.w))*params.z;\n";
+                out << derivName << " = (coeff.y-coeff.x)*params.z-((3.0f*a*a-1.0f)*coeff.z+(4.0f*b*b-1.0f)*coeff.w)/params.z;\n";
             out << "}\n";
             out << "}";
             break;
@@ -338,29 +341,16 @@ void OpenCLExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node
             findRelatedPowers(node, searchNode.getChildren()[i], powers);
 }
 
-vector<mm_float4> OpenCLExpressionUtilities::computeFunctionCoefficients(const vector<double>& values, bool interpolating) {
-    // First create a padded set of function values.
+vector<mm_float4> OpenCLExpressionUtilities::computeFunctionCoefficients(const vector<double>& values, double min, double max) {
+    // Compute the spline coefficients.
 
-    vector<double> padded(values.size()+2);
-    padded[0] = 2*values[0]-values[1];
-    for (int i = 0; i < (int) values.size(); i++)
-        padded[i+1] = values[i];
-    padded[padded.size()-1] = 2*values[values.size()-1]-values[values.size()-2];
-
-    // Now compute the spline coefficients.
-
-    vector<mm_float4> f(values.size()-1);
-    for (int i = 0; i < (int) values.size()-1; i++) {
-        if (interpolating)
-            f[i] = mm_float4((cl_float) padded[i+1],
-                                (cl_float) (0.5*(-padded[i]+padded[i+2])),
-                                (cl_float) (0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3])),
-                                (cl_float) (0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])));
-        else
-            f[i] = mm_float4((cl_float) ((padded[i]+4.0*padded[i+1]+padded[i+2])/6.0),
-                                (cl_float) ((-3.0*padded[i]+3.0*padded[i+2])/6.0),
-                                (cl_float) ((3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0),
-                                (cl_float) ((-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0));
-    }
+    int numValues = values.size();
+    vector<double> x(numValues), derivs;
+    for (int i = 0; i < numValues; i++)
+        x[i] = min+i*(max-min)/(numValues-1);
+    SplineFitter::createNaturalSpline(x, values, derivs);
+    vector<mm_float4> f(numValues-1);
+    for (int i = 0; i < (int) values.size()-1; i++)
+        f[i] = mm_float4((cl_float) values[i], (cl_float) values[i+1], (cl_float) (derivs[i]/6.0), (cl_float) (derivs[i+1]/6.0));
     return f;
 }

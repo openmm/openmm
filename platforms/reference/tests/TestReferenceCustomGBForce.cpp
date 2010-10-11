@@ -232,7 +232,7 @@ void testMembrane() {
     ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-2);
 }
 
-void testTabulatedFunction(bool interpolating) {
+void testTabulatedFunction() {
     ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
@@ -246,7 +246,7 @@ void testTabulatedFunction(bool interpolating) {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(std::sin(0.25*i));
-    force->addFunction("fn", table, 1.0, 6.0, interpolating);
+    force->addFunction("fn", table, 1.0, 6.0);
     system.addForce(force);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -865,8 +865,7 @@ int main() {
         testOBC(GBSAOBCForce::CutoffNonPeriodic, CustomGBForce::CutoffNonPeriodic);
         testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);
         testMembrane();
-        testTabulatedFunction(true);
-        testTabulatedFunction(false);
+        testTabulatedFunction();
         testMultipleChainRules();
         testPositionDependence();
         testExclusions();

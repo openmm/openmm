@@ -41,9 +41,15 @@ void SplineFitter::createNaturalSpline(const vector<double>& x, const vector<dou
     int n = x.size();
     if (y.size() != n)
         throw OpenMMException("createNaturalSpline: x and y vectors must have same length");
-    if (n < 3)
-        throw OpenMMException("createNaturalSpline: the length of the input array must be at least 3");
+    if (n < 2)
+        throw OpenMMException("createNaturalSpline: the length of the input array must be at least 2");
     deriv.resize(n);
+    if (n == 2) {
+        // This is just a straight line.
+
+        deriv[0] = 0;
+        deriv[1] = 0;
+    }
 
     // Create the system of equations to solve.
 

@@ -940,9 +940,8 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         string name;
         vector<double> values;
         double min, max;
-        bool interpolating;
-        force.getFunctionParameters(i, name, values, min, max, interpolating);
-        gpuSetTabulatedFunction(gpu, i, name, values, min, max, interpolating);
+        force.getFunctionParameters(i, name, values, min, max);
+        gpuSetTabulatedFunction(gpu, i, name, values, min, max);
     }
 
     // Record information for the expressions.

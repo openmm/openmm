@@ -63,6 +63,7 @@
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/SplineFitter.h"
 #include "openmm/Integrator.h"
 #include "openmm/OpenMMException.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
@@ -713,61 +714,34 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
 
 class ReferenceTabulatedFunction : public Lepton::CustomFunction {
 public:
-    ReferenceTabulatedFunction(double min, double max, const vector<double>& values, bool interpolating) :
-            min(min), max(max), values(values), interpolating(interpolating) {
+    ReferenceTabulatedFunction(double min, double max, const vector<double>& values) :
+            min(min), max(max), values(values) {
+        int numValues = values.size();
+        x.resize(numValues);
+        for (int i = 0; i < numValues; i++)
+            x[i] = min+i*(max-min)/(numValues-1);
+        SplineFitter::createNaturalSpline(x, values, derivs);
     }
     int getNumArguments() const {
         return 1;
     }
-    /**
-     * Given the function argument, find the local spline coefficients.
-     */
-    void findCoefficients(double& x, double* coeff) const {
-        int length = values.size();
-        double scale = (length-1)/(max-min);
-        int index = (int) std::floor((x-min)*scale);
-        double points[4];
-        points[0] = (index == 0 ? 2*values[0]-values[1] : values[index-1]);
-        points[1] = values[index];
-        points[2] = (index > length-2 ? values[length-1] : values[index+1]);
-        points[3] = (index > length-3 ? 2*values[length-1]-values[length-2] : values[index+2]);
-        if (interpolating) {
-            coeff[0] = points[1];
-            coeff[1] = 0.5*(-points[0]+points[2]);
-            coeff[2] = 0.5*(2.0*points[0]-5.0*points[1]+4.0*points[2]-points[3]);
-            coeff[3] = 0.5*(-points[0]+3.0*points[1]-3.0*points[2]+points[3]);
-        }
-        else {
-            coeff[0] = (points[0]+4.0*points[1]+points[2])/6.0;
-            coeff[1] = (-3.0*points[0]+3.0*points[2])/6.0;
-            coeff[2] = (3.0*points[0]-6.0*points[1]+3.0*points[2])/6.0;
-            coeff[3] = (-points[0]+3.0*points[1]-3.0*points[2]+points[3])/6.0;
-        }
-        x = (x-min)*scale-index;
-    }
     double evaluate(const double* arguments) const {
-        double x = arguments[0];
-        if (x < min || x > max)
+        double t = arguments[0];
+        if (t < min || t > max)
             return 0.0;
-        double coeff[4];
-        findCoefficients(x, coeff);
-        return coeff[0]+x*(coeff[1]+x*(coeff[2]+x*coeff[3]));
+        return SplineFitter::evaluateSpline(x, values, derivs, t);
     }
     double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-        double x = arguments[0];
-        if (x < min || x > max)
+        double t = arguments[0];
+        if (t < min || t > max)
             return 0.0;
-        double coeff[4];
-        findCoefficients(x, coeff);
-        double scale = (values.size()-1)/(max-min);
-        return scale*(coeff[1]+x*(2.0*coeff[2]+x*3.0*coeff[3])); // We assume a first derivative, because that's the only order ever used by CustomNonbondedForce.
+        return SplineFitter::evaluateSplineDerivative(x, values, derivs, t);
     }
     CustomFunction* clone() const {
-        return new ReferenceTabulatedFunction(min, max, values, interpolating);
+        return new ReferenceTabulatedFunction(min, max, values);
     }
     double min, max;
-    vector<double> values;
-    bool interpolating;
+    vector<double> x, values, derivs;
 };
 
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
@@ -822,9 +796,8 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
         string name;
         vector<double> values;
         double min, max;
-        bool interpolating;
-        force.getFunctionParameters(i, name, values, min, max, interpolating);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values, interpolating);
+        force.getFunctionParameters(i, name, values, min, max);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values);
     }
 
     // Parse the various expressions used to calculate the force.
@@ -1010,9 +983,8 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         string name;
         vector<double> values;
         double min, max;
-        bool interpolating;
-        force.getFunctionParameters(i, name, values, min, max, interpolating);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values, interpolating);
+        force.getFunctionParameters(i, name, values, min, max);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values);
     }
 
     // Parse the expressions for computed values.
@@ -1204,9 +1176,8 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
         string name;
         vector<double> values;
         double min, max;
-        bool interpolating;
-        force.getFunctionParameters(i, name, values, min, max, interpolating);
-        functions[name] = new ReferenceTabulatedFunction(min, max, values, interpolating);
+        force.getFunctionParameters(i, name, values, min, max);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values);
     }
 
     // Parse the expression and create the object used to calculate the interaction.

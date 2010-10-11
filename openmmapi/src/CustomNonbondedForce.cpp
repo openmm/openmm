@@ -134,24 +134,23 @@ void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int p
     exclusions[index].particle2 = particle2;
 }
 
-int CustomNonbondedForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) {
+int CustomNonbondedForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("CustomNonbondedForce: max <= min for a tabulated function.");
     if (values.size() < 2)
         throw OpenMMException("CustomNonbondedForce: a tabulated function must have at least two points");
-    functions.push_back(FunctionInfo(name, values, min, max, interpolating));
+    functions.push_back(FunctionInfo(name, values, min, max));
     return functions.size()-1;
 }
 
-void CustomNonbondedForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max, bool& interpolating) const {
+void CustomNonbondedForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
     name = functions[index].name;
     values = functions[index].values;
     min = functions[index].min;
     max = functions[index].max;
-    interpolating = functions[index].interpolating;
 }
 
-void CustomNonbondedForce::setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) {
+void CustomNonbondedForce::setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("CustomNonbondedForce: max <= min for a tabulated function.");
     if (values.size() < 2)
@@ -160,7 +159,6 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
     functions[index].values = values;
     functions[index].min = min;
     functions[index].max = max;
-    functions[index].interpolating = interpolating;
 }
 
 ForceImpl* CustomNonbondedForce::createImpl() {

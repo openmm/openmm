@@ -97,7 +97,9 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                         STACK(stackPointer) = 0.0f;
                     else
                     {
-                        int index = floor((x-params.x)*params.z);
+                        x = (x-params.x)*params.z;
+                        int index = floor(x);
+                        index = min(index, (int) params.w);
                         float4 coeff;
                         if (function == 0)
                             coeff = tex1Dfetch(texRef0, index);
@@ -107,11 +109,12 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                             coeff = tex1Dfetch(texRef2, index);
                         else
                             coeff = tex1Dfetch(texRef3, index);
-                        x = (x-params.x)*params.z-index;
+                        float b = x-index;
+                        float a = 1.0f-b;
                         if (op == CUSTOM)
-                            STACK(stackPointer) = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));
+                            STACK(stackPointer) = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(params.z*params.z);
                         else
-                            STACK(stackPointer) = (coeff.y+x*(2.0f*coeff.z+x*3.0f*coeff.w))*params.z;
+                            STACK(stackPointer) = (coeff.y-coeff.x)*params.z-((3.0f*a*a-1.0f)*coeff.z+(4.0f*b*b-1.0f)*coeff.w)/params.z;
                     }
                 }
             }

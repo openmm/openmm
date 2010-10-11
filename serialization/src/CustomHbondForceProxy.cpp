@@ -96,9 +96,8 @@ void CustomHbondForceProxy::serialize(const void* object, SerializationNode& nod
         string name;
         vector<double> values;
         double min, max;
-        bool interpolating;
-        force.getFunctionParameters(i, name, values, min, max, interpolating);
-        SerializationNode& node = functions.createChildNode("Function").setStringProperty("name", name).setDoubleProperty("min", min).setDoubleProperty("max", max).setIntProperty("interpolating", interpolating);
+        force.getFunctionParameters(i, name, values, min, max);
+        SerializationNode& node = functions.createChildNode("Function").setStringProperty("name", name).setDoubleProperty("min", min).setDoubleProperty("max", max);
         SerializationNode& valuesNode = node.createChildNode("Values");
         for (int j = 0; j < (int) values.size(); j++)
             valuesNode.createChildNode("Value").setDoubleProperty("v", values[j]);
@@ -164,7 +163,7 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
             vector<double> values;
             for (int j = 0; j < (int) valuesNode.getChildren().size(); j++)
                 values.push_back(valuesNode.getChildren()[j].getDoubleProperty("v"));
-            force->addFunction(function.getStringProperty("name"), values, function.getDoubleProperty("min"), function.getDoubleProperty("max"), (bool) function.getIntProperty("interpolating"));
+            force->addFunction(function.getStringProperty("name"), values, function.getDoubleProperty("min"), function.getDoubleProperty("max"));
         }
         return force;
     }

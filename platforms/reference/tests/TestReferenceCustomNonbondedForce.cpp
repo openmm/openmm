@@ -203,7 +203,7 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(1.9+1+0.9, state.getPotentialEnergy(), TOL);
 }
 
-void testTabulatedFunction(bool interpolating) {
+void testTabulatedFunction() {
     ReferencePlatform platform;
     System system;
     system.addParticle(1.0);
@@ -215,7 +215,7 @@ void testTabulatedFunction(bool interpolating) {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(std::sin(0.25*i));
-    forceField->addFunction("fn", table, 1.0, 6.0, interpolating);
+    forceField->addFunction("fn", table, 1.0, 6.0);
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -232,6 +232,14 @@ void testTabulatedFunction(bool interpolating) {
         ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], 0.1);
         ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], 0.1);
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.02);
+    }
+    for (int i = 1; i < 20; i++) {
+        double x = 0.25*i+1.0;
+        positions[1] = Vec3(x, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Energy);
+        double energy = (x < 1.0 || x > 6.0 ? 0.0 : std::sin(x-1.0))+1.0;
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
     }
 }
 
@@ -317,8 +325,7 @@ int main() {
         testExclusions();
         testCutoff();
         testPeriodic();
-        testTabulatedFunction(true);
-        testTabulatedFunction(false);
+        testTabulatedFunction();
         testCoulombLennardJones();
     }
     catch(const exception& e) {

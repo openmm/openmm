@@ -50,6 +50,7 @@ using namespace std;
 #include "cudaKernels.h"
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/SplineFitter.h"
 #include "quern.h"
 #include "Lepton.h"
 #include "rng.h"
@@ -614,7 +615,7 @@ void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDi
 }
 
 extern "C"
-void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, const vector<double>& values, double min, double max, bool interpolating)
+void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, const vector<double>& values, double min, double max)
 {
     if (index < 0 || index >= MAX_TABULATED_FUNCTIONS) {
         stringstream str;
@@ -631,32 +632,15 @@ void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, cons
     gpu->tabulatedFunctions[index].max = max;
     gpu->tabulatedFunctionsChanged = true;
 
-    // First create a padded set of function values.
+    // Compute the spline coefficients.
 
-    vector<double> padded(values.size()+2);
-    padded[0] = 2*values[0]-values[1];
-    for (int i = 0; i < (int) values.size(); i++)
-        padded[i+1] = values[i];
-    padded[padded.size()-1] = 2*values[values.size()-1]-values[values.size()-2];
-
-    // Now compute the spline coefficients.
-
-    for (int i = 0; i < (int) values.size()-1; i++) {
-        float4 c;
-        if (interpolating) {
-            c.x = (float) padded[i+1];
-            c.y = (float) (0.5*(-padded[i]+padded[i+2]));
-            c.z = (float) (0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3]));
-            c.w = (float) (0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3]));
-        }
-        else {
-            c.x = (float) ((padded[i]+4.0*padded[i+1]+padded[i+2])/6.0);
-            c.y = (float) ((-3.0*padded[i]+3.0*padded[i+2])/6.0);
-            c.z = (float) ((3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0);
-            c.w = (float) ((-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0);
-        }
-        (*coeff)[i] = c;
-    }
+    int numValues = values.size();
+    vector<double> x(numValues), derivs;
+    for (int i = 0; i < numValues; i++)
+        x[i] = min+i*(max-min)/(numValues-1);
+    OpenMM::SplineFitter::createNaturalSpline(x, values, derivs);
+    for (int i = 0; i < (int) values.size()-1; i++)
+        (*coeff)[i] = make_float4((float) values[i], (float) values[i+1], (float) (derivs[i]/6.0), (float) (derivs[i+1]/6.0));
     coeff->Upload();
 }
 
@@ -914,7 +898,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++) {
         gpuTabulatedFunction& func = gpu->tabulatedFunctions[i];
         if (func.coefficients != NULL) {
-            (*gpu->psTabulatedFunctionParams)[i] = make_float4((float) func.min, (float) func.max, (float) (func.coefficients->_length/(func.max-func.min)), 0.0f);
+            (*gpu->psTabulatedFunctionParams)[i] = make_float4((float) func.min, (float) func.max, (float) (func.coefficients->_length/(func.max-func.min)), (float) (func.coefficients->_length-1));
             functions[func.name] = fp;
         }
     }
