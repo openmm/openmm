@@ -13,6 +13,7 @@ struct Vdw14_7Particle {
     float epsilon;
 
     float force[3];
+    float tempForce[3];
 
 };
 

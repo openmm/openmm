@@ -250,6 +250,12 @@ void kCalculateAmoebaVdw14_7Reduction_kernel( float* inputForce, float4* outputF
     }
 }
 
+__device__ void sumTempBuffer( Vdw14_7Particle& atomI, Vdw14_7Particle& atomJ ){
+
+    atomI.tempForce[0]  += atomJ.tempForce[0];
+    atomI.tempForce[1]  += atomJ.tempForce[1];
+    atomI.tempForce[2]  += atomJ.tempForce[2];
+}
 
 static void kCalculateAmoebaVdw14_7Reduction(amoebaGpuContext amoebaGpu, CUDAStream<float>* vdwOutputArray, CUDAStream<float4>* forceOutputArray )
 {

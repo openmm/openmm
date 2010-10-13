@@ -268,14 +268,6 @@ if( atomI == targetAtom ){
                 // No interactions in this block.
             } else {
 
-                if (lasty != y) {
-    
-                    // load shared data
-    
-                   loadPmeDirectElectrostaticShared( &(sA[threadIdx.x]), (y+tgx) );
-    
-                }
-    
                 sA[threadIdx.x].force[0]     = 0.0f;
                 sA[threadIdx.x].force[1]     = 0.0f;
                 sA[threadIdx.x].force[2]     = 0.0f;
