@@ -136,8 +136,3 @@ extern void SetCustomExternalGlobalParams(const std::vector<float>& paramValues)
 extern void SetCustomNonbondedForceExpression(const Expression<256>& expression);
 extern void SetCustomNonbondedEnergyExpression(const Expression<256>& expression);
 extern void SetCustomNonbondedGlobalParams(const std::vector<float>& paramValues);
-
-extern __global__ void OPENMMCUDA_EXPORT kFindBlockBoundsPeriodic_kernel( void );
-extern __global__ void OPENMMCUDA_EXPORT kFindBlocksWithInteractionsPeriodic_kernel( void );
-extern __global__ void OPENMMCUDA_EXPORT kFindInteractionsWithinBlocksPeriodic_kernel( unsigned int* workUnit );
-
