@@ -168,5 +168,7 @@ extern void kCalculateAmoebaPMEFixedMultipoles(amoebaGpuContext amoebaGpu);
 extern void kCalculateAmoebaPMEInducedDipoleField(amoebaGpuContext amoebaGpu);
 extern void kCalculateAmoebaPMEInducedDipoleForces(amoebaGpuContext amoebaGpu);
 
+
+extern void SetCalculateAmoebaCudaUtilitiesSim( amoebaGpuContext amoebaGpu );
 #endif //__AMOEBA_GPU_TYPES_H__
 

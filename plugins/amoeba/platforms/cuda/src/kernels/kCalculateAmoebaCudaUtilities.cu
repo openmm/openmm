@@ -6,6 +6,36 @@
 #include "amoebaCudaKernels.h"
 //#define AMOEBA_DEBUG
 
+static __constant__ cudaGmxSimulation cSim;
+static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
+
+void SetCalculateAmoebaCudaUtilitiesSim(amoebaGpuContext amoebaGpu)
+{
+    cudaError_t status;
+    gpuContext gpu = amoebaGpu->gpuContext;
+    status         = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));    
+    RTERROR(status, "SetCalculateAmoebaCudaUtilitiesSim: cudaMemcpyToSymbol: SetSim copy to cSim failed");
+    status         = cudaMemcpyToSymbol(cAmoebaSim, &amoebaGpu->amoebaSim, sizeof(cudaAmoebaGmxSimulation));    
+    RTERROR(status, "SetCalculateAmoebaCudaUtilitiesSim: cudaMemcpyToSymbol: SetSim copy to cAmoebaSim failed");
+}
+
+void GetCalculateAmoebaCudaUtilitiesSim(amoebaGpuContext amoebaGpu)
+{
+    cudaError_t status;
+    gpuContext gpu = amoebaGpu->gpuContext;
+    status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));    
+    RTERROR(status, "GetCalculateAmoebaCudaUtilitiesSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
+    status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));    
+    RTERROR(status, "GetCalculateAmoebaCudaUtilitiesSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
+}
+
+#undef METHOD_NAME
+#define USE_PERIODIC
+#define METHOD_NAME(a, b) a##Periodic##b
+#include "kFindInteractingBlocks.h"
+#undef METHOD_NAME
+#undef USE_PERIODIC
+
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)

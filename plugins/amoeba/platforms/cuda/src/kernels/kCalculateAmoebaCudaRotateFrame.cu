@@ -4,6 +4,7 @@
 
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
+#include "kCalculateAmoebaCudaUtilities.h"
 
 #include <stdio.h>
 #include <cuda.h>
@@ -48,6 +49,8 @@ __device__ static float normVector3( float* vector )
 
     return returnNorm;
 }
+
+#undef AMOEBA_DEBUG
 
 __global__
 #if (__CUDA_ARCH__ >= 200)

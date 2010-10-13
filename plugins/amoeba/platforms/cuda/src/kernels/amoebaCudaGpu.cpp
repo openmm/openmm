@@ -2749,6 +2749,7 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu)
     SetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpu );
     SetCalculateAmoebaCudaMapTorquesSim( amoebaGpu );
     SetCalculateAmoebaKirkwoodSim( amoebaGpu );
+    SetCalculateAmoebaCudaUtilitiesSim( amoebaGpu );
     SetCalculateAmoebaKirkwoodEDiffSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEAndGKFieldsSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedAndGkFieldsSim( amoebaGpu );

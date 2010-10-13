@@ -64,7 +64,8 @@ CUDA_INCLUDE_DIRECTORIES(${OPENMM_BUILD_AMOEBA_PATH}/platforms/cuda/../src
                          ${OPENMM_DIR}/platforms/cuda/src
                          ${OPENMM_DIR}/platforms/cuda/include
                          ${OPENMM_DIR}/platforms/cuda/src/kernels
-                         ${OPENMM_DIR}/openmmapi/include ) 
+                         ${OPENMM_DIR}/openmmapi/include 
+                         ${OPENMM_DIR}/olla/include ) 
 
 CUDA_ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
 
