@@ -442,7 +442,28 @@ private:
                                                       const MultipoleParticleData& particleK,
                                                       RealOpenMM* scalingFactors, RealOpenMM** forces, std::vector<Vec3>& torque ) const;
 
-    RealOpenMM calculateNoCutoffElectrostatic( std::vector<MultipoleParticleData>& particleData, RealOpenMM** forces ) const;
+    /**---------------------------------------------------------------------------------------
+    
+       Map torque to forces
+    
+       @param particleI               particle whose torque is to be mapped
+       @param particleU               particle1 of lab frame for particleI 
+       @param particleV               particle2 of lab frame for particleI 
+       @param axisType                axis type (Bisector/Z-then-X, ...)
+       @param torque                  torque on particle I
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void mapTorqueToForce( const MultipoleParticleData& particleI,
+                           const MultipoleParticleData& particleU,
+                           const MultipoleParticleData& particleV,
+                           int axisType, const Vec3& torque, RealOpenMM** forces ) const;
+
+    RealOpenMM calculateNoCutoffElectrostatic( std::vector<MultipoleParticleData>& particleData, 
+                                               const std::vector<int>& axisTypes,
+                                               const std::vector<int>& multipoleAtomId1s,
+                                               const std::vector<int>& multipoleAtomId2s,
+                                               RealOpenMM** forces ) const;
 
     /**---------------------------------------------------------------------------------------
     

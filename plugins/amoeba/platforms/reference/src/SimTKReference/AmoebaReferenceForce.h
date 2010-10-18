@@ -26,6 +26,7 @@
 #define __AmoebaReferenceForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -95,10 +96,12 @@ public:
        Normalize 3d vector
     
        @param inputVector            vector to normalize
+
+       @return norm
     
        --------------------------------------------------------------------------------------- */
     
-    static void normalizeVector3( RealOpenMM* inputVector );
+    static RealOpenMM normalizeVector3( RealOpenMM* inputVector );
     
     /**---------------------------------------------------------------------------------------
     
@@ -113,6 +116,7 @@ public:
     
     static RealOpenMM getDotProduct3( const std::vector<RealOpenMM>& xVector, const std::vector<RealOpenMM>& yVector );
     static RealOpenMM getDotProduct3( const RealOpenMM* xVector,              const RealOpenMM* yVector );
+    static RealOpenMM getDotProduct3( const RealOpenMM* xVector,              const OpenMM::Vec3& yVector );
     static RealOpenMM getDotProduct3( unsigned int vectorOffset, const std::vector<RealOpenMM>& xVector, const RealOpenMM* yVector );
     
     /**---------------------------------------------------------------------------------------
