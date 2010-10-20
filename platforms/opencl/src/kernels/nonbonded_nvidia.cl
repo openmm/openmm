@@ -79,10 +79,11 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[get_local_id(0)].x = posq1.x;
-            localData[get_local_id(0)].y = posq1.y;
-            localData[get_local_id(0)].z = posq1.z;
-            localData[get_local_id(0)].q = posq1.w;
+            const unsigned int localAtomIndex = get_local_id(0);
+            localData[localAtomIndex].x = posq1.x;
+            localData[localAtomIndex].y = posq1.y;
+            localData[localAtomIndex].z = posq1.z;
+            localData[localAtomIndex].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
 #ifdef USE_EXCLUSIONS
             unsigned int excl = exclusions[exclusionIndex[localGroupIndex]+tgx];
@@ -132,18 +133,19 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
         else {
             // This is an off-diagonal tile.
 
+            const unsigned int localAtomIndex = get_local_id(0);
             if (lasty != y) {
                 unsigned int j = y*TILE_SIZE + tgx;
                 float4 tempPosq = posq[j];
-                localData[get_local_id(0)].x = tempPosq.x;
-                localData[get_local_id(0)].y = tempPosq.y;
-                localData[get_local_id(0)].z = tempPosq.z;
-                localData[get_local_id(0)].q = tempPosq.w;
+                localData[localAtomIndex].x = tempPosq.x;
+                localData[localAtomIndex].y = tempPosq.y;
+                localData[localAtomIndex].z = tempPosq.z;
+                localData[localAtomIndex].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            localData[get_local_id(0)].fx = 0.0f;
-            localData[get_local_id(0)].fy = 0.0f;
-            localData[get_local_id(0)].fz = 0.0f;
+            localData[localAtomIndex].fx = 0.0f;
+            localData[localAtomIndex].fy = 0.0f;
+            localData[localAtomIndex].fz = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
             if (!hasExclusions && flags != 0xFFFFFFFF) {
@@ -254,7 +256,9 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                     localData[tbx+tj].fy += dEdR2.y;
                     localData[tbx+tj].fz += dEdR2.z;
 #endif
+#ifdef USE_EXCLUSIONS
                     excl >>= 1;
+#
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }

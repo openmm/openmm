@@ -211,7 +211,7 @@ private:
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
-    bool useCutoff, usePeriodic, forceBufferPerAtomBlock;
+    bool useCutoff, usePeriodic, forceBufferPerAtomBlock, deviceIsCpu;
     int numForceBuffers;
 };
 

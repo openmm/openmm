@@ -158,7 +158,8 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
  * mark them as non-interacting.
  */
 __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
-        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles, __global float4* posq, unsigned int maxTiles) {
+        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
+        __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles) {
     __local ushort2 buffer[BUFFER_SIZE];
     __local int valid[BUFFER_SIZE];
     __local short sum[BUFFER_SIZE];
