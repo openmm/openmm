@@ -49,7 +49,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
         }
-        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
 
         // Locate the exclusion data for this tile.
 
@@ -92,15 +91,14 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
+                    if (!isExcluded) {
 #endif
                     float4 posq2 = (float4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-                    float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                    float r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
@@ -126,6 +124,9 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 #ifdef USE_CUTOFF
                     }
 #endif
+#ifdef USE_EXCLUSIONS
+                    }
+#endif
                     excl >>= 1;
                 }
 
@@ -144,62 +145,54 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 localData[tgx].fz = 0.0f;
             }
 #ifdef USE_CUTOFF
-            unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-            if (!hasExclusions && flags != 0xFFFFFFFF) {
-                if (flags == 0) {
-                    // No interactions in this tile.
-                }
-                else {
-                    // Compute only a subset of the interactions in this tile.
+            unsigned int flags1 = (numTiles <= maxTiles ? interactionFlags[2*pos] : 0xFFFFFFFF);
+            unsigned int flags2 = (numTiles <= maxTiles ? interactionFlags[2*pos+1] : 0xFFFFFFFF);
+            if (!hasExclusions && (flags1 != 0xFFFFFFFF || flags2 != 0xFFFFFFFF)) {
+                // Compute only a subset of the interactions in this tile.
 
-                    for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                    if ((flags2&(1<<tgx)) != 0) {
                         unsigned int atom1 = x*TILE_SIZE+tgx;
                         float4 force = 0.0f;
                         float4 posq1 = posq[atom1];
                         LOAD_ATOM1_PARAMETERS
                         for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                            if ((flags&(1<<j)) != 0) {
+                            if ((flags1&(1<<j)) != 0) {
                                 bool isExcluded = false;
                                 float4 posq2 = (float4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                                delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-                                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
+                                float r2 = dot(delta.xyz, delta.xyz);
                                 if (r2 < CUTOFF_SQUARED) {
-#endif
-                                float invR = RSQRT(r2);
-                                float r = RECIP(invR);
-                                unsigned int atom2 = j;
-                                LOAD_ATOM2_PARAMETERS
-                                atom2 = y*TILE_SIZE+j;
+                                    float invR = RSQRT(r2);
+                                    float r = RECIP(invR);
+                                    unsigned int atom2 = j;
+                                    LOAD_ATOM2_PARAMETERS
+                                    atom2 = y*TILE_SIZE+j;
 #ifdef USE_SYMMETRIC
-                                float dEdR = 0.0f;
+                                    float dEdR = 0.0f;
 #else
-                                float4 dEdR1 = (float4) 0.0f;
-                                float4 dEdR2 = (float4) 0.0f;
+                                    float4 dEdR1 = (float4) 0.0f;
+                                    float4 dEdR2 = (float4) 0.0f;
 #endif
-                                float tempEnergy = 0.0f;
-                                COMPUTE_INTERACTION
-                                energy += tempEnergy;
+                                    float tempEnergy = 0.0f;
+                                    COMPUTE_INTERACTION
+                                    energy += tempEnergy;
 #ifdef USE_SYMMETRIC
-                                delta.xyz *= dEdR;
-                                force.xyz -= delta.xyz;
-                                localData[j].fx += delta.x;
-                                localData[j].fy += delta.y;
-                                localData[j].fz += delta.z;
+                                    delta.xyz *= dEdR;
+                                    force.xyz -= delta.xyz;
+                                    localData[j].fx += delta.x;
+                                    localData[j].fy += delta.y;
+                                    localData[j].fz += delta.z;
 #else
-                                force.xyz -= dEdR1.xyz;
-                                localData[j].fx += dEdR2.x;
-                                localData[j].fy += dEdR2.y;
-                                localData[j].fz += dEdR2.z;
+                                    force.xyz -= dEdR1.xyz;
+                                    localData[j].fx += dEdR2.x;
+                                    localData[j].fy += dEdR2.y;
+                                    localData[j].fz += dEdR2.z;
 #endif
-#ifdef USE_CUTOFF
                                 }
-#endif
                             }
                         }
 
@@ -226,15 +219,14 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                         bool isExcluded = !(excl & 0x1);
+                        if (!isExcluded) {
 #endif
                         float4 posq2 = (float4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                         float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                        delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                        delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                        delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                        delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-                        float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                        float r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
                         if (r2 < CUTOFF_SQUARED) {
 #endif
@@ -268,6 +260,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                         }
 #endif
 #ifdef USE_EXCLUSIONS
+                        }
                         excl >>= 1;
 #endif
                     }

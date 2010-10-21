@@ -215,7 +215,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         if (maxInteractingTiles > numTiles)
             maxInteractingTiles = numTiles;
         interactingTiles = new OpenCLArray<mm_ushort2>(context, maxInteractingTiles, "interactingTiles");
-        interactionFlags = new OpenCLArray<cl_uint>(context, context.getSIMDWidth() == 32 || deviceIsCpu ? maxInteractingTiles : 1, "interactionFlags");
+        interactionFlags = new OpenCLArray<cl_uint>(context, context.getSIMDWidth() == 32 ? maxInteractingTiles : (deviceIsCpu ? 2*maxInteractingTiles : 1), "interactionFlags");
         interactionCount = new OpenCLArray<cl_uint>(context, 1, "interactionCount", true);
         blockCenter = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockCenter");
         blockBoundingBox = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockBoundingBox");
@@ -459,7 +459,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionIndices->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionRowIndices->getDeviceBuffer());
-    kernel.setArg(index++, OpenCLContext::ThreadBlockSize*localDataSize, NULL);
+    kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize*localDataSize : OpenCLContext::ThreadBlockSize*localDataSize), NULL);
     kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     if (useCutoff) {
         kernel.setArg<cl::Buffer>(index++, interactingTiles->getDeviceBuffer());

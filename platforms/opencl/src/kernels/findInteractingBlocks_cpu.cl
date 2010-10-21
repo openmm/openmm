@@ -45,12 +45,15 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPe
  * This is called by findBlocksWithInteractions().  It compacts the list of blocks and writes them
  * to global memory.
  */
-void storeInteractionData(__local ushort2* buffer, int numValid, __local unsigned int* flagsBuffer, __local float4* temp,
-            __global unsigned int* interactionCount, __global ushort2* interactingTiles, __global unsigned int* interactionFlags, float cutoffSquared, float4 periodicBoxSize,
-            float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox, unsigned int maxTiles) {
+void storeInteractionData(ushort2* buffer, int numValid, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
+            __global unsigned int* interactionFlags, float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize,
+            __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox, unsigned int maxTiles) {
     // Filter the list of tiles by comparing the distance from each atom to the other bounding box.
 
+    unsigned int flagsBuffer[2*BUFFER_SIZE];
+    float4 atomPositions[TILE_SIZE];
     int lasty = -1;
+    float4 centery, boxSizey;
     for (int tile = 0; tile < numValid; ) {
         int x = buffer[tile].x;
         int y = buffer[tile].y;
@@ -59,37 +62,46 @@ void storeInteractionData(__local ushort2* buffer, int numValid, __local unsigne
             continue;
         }
 
-        // Load the atom positions and the bounding box of the other block.
+        // Load the atom positions and bounding boxes.
 
-        float4 center = blockCenter[x];
-        float4 boxSize = blockBoundingBox[x];
-        if (y != lasty)
+        float4 centerx = blockCenter[x];
+        float4 boxSizex = blockBoundingBox[x];
+        if (y != lasty) {
             for (int atom = 0; atom < TILE_SIZE; atom++)
-                temp[atom] = posq[y*TILE_SIZE+atom];
-        lasty = y;
+                atomPositions[atom] = posq[y*TILE_SIZE+atom];
+            centery = blockCenter[y];
+            boxSizey = blockBoundingBox[y];
+            lasty = y;
+        }
 
         // Find the distance of each atom from the bounding box.
 
-        unsigned int flags = 0;
+        unsigned int flags1 = 0, flags2 = 0;
         for (int atom = 0; atom < TILE_SIZE; atom++) {
-            float4 delta = temp[atom]-center;
+            float4 delta = atomPositions[atom]-centerx;
 #ifdef USE_PERIODIC
-            delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+            delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-            delta = max((float4) 0.0f, fabs(delta)-boxSize);
-            if (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < cutoffSquared)
-                flags += 1 << atom;
+            delta = max((float4) 0.0f, fabs(delta)-boxSizex);
+            if (dot(delta.xyz, delta.xyz) < cutoffSquared)
+                flags1 += 1 << atom;
+            delta = posq[x*TILE_SIZE+atom]-centery;
+#ifdef USE_PERIODIC
+            delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+#endif
+            delta = max((float4) 0.0f, fabs(delta)-boxSizey);
+            if (dot(delta.xyz, delta.xyz) < cutoffSquared)
+                flags2 += 1 << atom;
         }
-        if (flags == 0) {
+        if (flags1 == 0 || flags2 == 0) {
             // This tile contains no interactions.
 
             numValid--;
             buffer[tile] = buffer[numValid];
         }
         else {
-            flagsBuffer[tile] = flags;
+            flagsBuffer[2*tile] = flags1;
+            flagsBuffer[2*tile+1] = flags2;
             tile++;
         }
     }
@@ -100,7 +112,8 @@ void storeInteractionData(__local ushort2* buffer, int numValid, __local unsigne
     if (baseIndex+numValid <= maxTiles)
         for (int i = 0; i < numValid; i++) {
             interactingTiles[baseIndex+i] = buffer[i];
-            interactionFlags[baseIndex+i] = flagsBuffer[i];
+            interactionFlags[2*(baseIndex+i)] = flagsBuffer[2*i];
+            interactionFlags[2*(baseIndex+i)+1] = flagsBuffer[2*i+1];
         }
 }
 
@@ -111,9 +124,7 @@ void storeInteractionData(__local ushort2* buffer, int numValid, __local unsigne
 __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
         __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
         __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles) {
-    __local ushort2 buffer[BUFFER_SIZE];
-    __local unsigned int flagsBuffer[BUFFER_SIZE];
-    __local float4 temp[TILE_SIZE];
+    ushort2 buffer[BUFFER_SIZE];
     int valuesInBuffer = 0;
     const int numTiles = (NUM_BLOCKS*(NUM_BLOCKS+1))/2;
     unsigned int start = get_group_id(0)*numTiles/get_num_groups(0);
@@ -146,10 +157,10 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
 
             buffer[valuesInBuffer++] = (ushort2) (x, y);
             if (valuesInBuffer == BUFFER_SIZE) {
-                storeInteractionData(buffer, valuesInBuffer, flagsBuffer, temp, interactionCount, interactingTiles, interactionFlags, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox, maxTiles);
+                storeInteractionData(buffer, valuesInBuffer, interactionCount, interactingTiles, interactionFlags, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox, maxTiles);
                 valuesInBuffer = 0;
             }
         }
     }
-    storeInteractionData(buffer, valuesInBuffer, flagsBuffer, temp, interactionCount, interactingTiles, interactionFlags, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox, maxTiles);
+    storeInteractionData(buffer, valuesInBuffer, interactionCount, interactingTiles, interactionFlags, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox, maxTiles);
 }
