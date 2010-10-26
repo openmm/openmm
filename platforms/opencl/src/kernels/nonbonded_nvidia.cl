@@ -258,7 +258,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
 #endif
 #ifdef USE_EXCLUSIONS
                     excl >>= 1;
-#
+#endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
