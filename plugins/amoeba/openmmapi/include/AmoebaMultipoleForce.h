@@ -162,8 +162,9 @@ public:
      * @param molecularDipole      the particle's molecular dipole (vector of size 3)
      * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
      * @param axisType             the particle's axis type ( ZThenX, Bisector )
-     * @param multipoleAtomId1     index of first atom used in constructing lab<->molecular frames
-     * @param multipoleAtomId2     index of second atom used in constructing lab<->molecular frames
+     * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
+     * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
+     * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
      * @param thole                Thole parameter
      * @param dampingFactor        dampingFactor parameter
      * @param polarity             polarity parameter
@@ -171,7 +172,7 @@ public:
      * @return the index of the particle that was added
      */
     int addParticle( double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, int axisType,
-                     int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity );
+                     int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity );
  
     /**
      * Get the multipole parameters for a particle.
@@ -181,14 +182,15 @@ public:
      * @param molecularDipole      the particle's molecular dipole (vector of size 3)
      * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
      * @param axisType             the particle's axis type ( ZThenX, Bisector )
-     * @param multipoleAtomId1     index of first atom used in constructing lab<->molecular frames
-     * @param multipoleAtomId2     index of second atom used in constructing lab<->molecular frames
+     * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
+     * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
+     * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
      * @param thole                Thole parameter
      * @param dampingFactor        dampingFactor parameter
      * @param polarity             polarity parameter
      */
     void getMultipoleParameters(int index, double& charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole,
-                                int& axisType, int& multipoleAtomId1, int& multipoleAtomId2, double& thole, double& dampingFactor, double& polarity ) const;
+                                int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity ) const;
 
     /**
      * Set the multipole parameters for a particle.
@@ -198,12 +200,13 @@ public:
      * @param molecularDipole      the particle's molecular dipole (vector of size 3)
      * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
      * @param axisType             the particle's axis type ( ZThenX, Bisector )
-     * @param multipoleAtomId1     index of first atom used in constructing lab<->molecular frames
-     * @param multipoleAtomId2     index of second atom used in constructing lab<->molecular frames
+     * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
+     * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
+     * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
      * @param polarity             polarity parameter
      */
     void setMultipoleParameters(int index, double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole,
-                                int axisType, int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity);
+                                int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity);
 
     /**
      * Set the CovalentMap for an atom
@@ -338,7 +341,7 @@ private:
 class AmoebaMultipoleForce::MultipoleInfo {
 public:
 
-    int axisType, multipoleAtomId1, multipoleAtomId2;
+    int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
     double charge, thole, dampingFactor, polarity;
 
     std::vector<double> molecularDipole;
@@ -346,7 +349,7 @@ public:
     std::vector< std::vector<int> > covalentInfo;
 
     MultipoleInfo() {
-        axisType = multipoleAtomId1 = multipoleAtomId2 = -1;
+        axisType = multipoleAtomZ = multipoleAtomX = multipoleAtomY = -1;
         charge   = thole            = dampingFactor    = 0.0;
 
         molecularDipole.resize( 3 );
@@ -355,8 +358,8 @@ public:
     }
 
     MultipoleInfo( double charge, std::vector<double>& inputMolecularDipole, std::vector<double>& inputMolecularQuadrupole,
-                   int axisType, int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity) :
-        charge(charge), axisType(axisType), multipoleAtomId1(multipoleAtomId1), multipoleAtomId2(multipoleAtomId2),
+                   int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) :
+        charge(charge), axisType(axisType), multipoleAtomZ(multipoleAtomZ), multipoleAtomX(multipoleAtomX), multipoleAtomY(multipoleAtomY),
         thole(thole), dampingFactor(dampingFactor), polarity(polarity) {
 
        covalentInfo.resize( CovalentEnd );

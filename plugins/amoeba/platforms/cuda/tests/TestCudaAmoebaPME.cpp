@@ -65,7 +65,7 @@ void testPMEWater() {
     quadrupole[8] = 3.622635596e-3;
     double damp = 9.707801995e-01*sqrt(0.1);
     double polarity = 0.837*0.001;
-    mp->addParticle(-0.51966, dipole, quadrupole, 1, 1, 2, 0.39, damp, polarity);
+    mp->addParticle(-0.51966, dipole, quadrupole, 1, 1, 2, -1, 0.39, damp, polarity);
     dipole[0] = -2.042094848e-2;
     dipole[2] = -3.078753000e-2;
     quadrupole[0] = -3.428482490e-3;
@@ -75,8 +75,8 @@ void testPMEWater() {
     quadrupole[8] = 1.345257001e-2;
     damp          = 8.897068742e-01*sqrt(0.1);
     polarity      = 0.496*0.001;
-    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 2, 0.39, damp, polarity);
-    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 1, 0.39, damp, polarity);
+    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 2, -1, 0.39, damp, polarity);
+    mp->addParticle(0.25983, dipole, quadrupole, 0, 0, 1, -1, 0.39, damp, polarity);
     mp->setCutoffDistance(1.0);
 
     std::vector<int> intVector;

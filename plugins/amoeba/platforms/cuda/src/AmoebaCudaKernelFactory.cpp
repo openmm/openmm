@@ -38,7 +38,9 @@ extern "C" void OPENMMCUDA_EXPORT registerKernelFactories() {
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
         if( platform.getName() == "Cuda" ){
+
              AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
+
              platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(), factory);

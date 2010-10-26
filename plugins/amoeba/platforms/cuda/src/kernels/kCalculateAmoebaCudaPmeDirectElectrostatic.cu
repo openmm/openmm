@@ -177,23 +177,21 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
         // set the permanent multipole and induced dipole values;
 
-        float pdi   = atomI.damp;
-        float pti   = atomI.thole;
         float ci    = atomI.q;
 
-        float di1       = atomI.labFrameDipole[0];
-        float di2       = atomI.labFrameDipole[1];
-        float di3       = atomI.labFrameDipole[2];
+        float di1   = atomI.labFrameDipole[0];
+        float di2   = atomI.labFrameDipole[1];
+        float di3   = atomI.labFrameDipole[2];
 
-        float qi1       = atomI.labFrameQuadrupole[0];
-        float qi2       = atomI.labFrameQuadrupole[1];
-        float qi3       = atomI.labFrameQuadrupole[2];
-        float qi4       = atomI.labFrameQuadrupole[3];
-        float qi5       = atomI.labFrameQuadrupole[4];
-        float qi6       = atomI.labFrameQuadrupole[5];
-        float qi7       = atomI.labFrameQuadrupole[6];
-        float qi8       = atomI.labFrameQuadrupole[7];
-        float qi9       = atomI.labFrameQuadrupole[8];
+        float qi1   = atomI.labFrameQuadrupole[0];
+        float qi2   = atomI.labFrameQuadrupole[1];
+        float qi3   = atomI.labFrameQuadrupole[2];
+        float qi4   = atomI.labFrameQuadrupole[3];
+        float qi5   = atomI.labFrameQuadrupole[4];
+        float qi6   = atomI.labFrameQuadrupole[5];
+        float qi7   = atomI.labFrameQuadrupole[6];
+        float qi8   = atomI.labFrameQuadrupole[7];
+        float qi9   = atomI.labFrameQuadrupole[8];
 
         float dk1  = atomJ.labFrameDipole[0];
         float dk2  = atomJ.labFrameDipole[1];
@@ -223,19 +221,19 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float exp2a  = exp(-(ralpha*ralpha));
 
         alsq2n      *= alsq2;
-        float bn1        = (bn0+alsq2n*exp2a)/r2;
+        float bn1    = (bn0+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        float bn2        = (3.0f*bn1+alsq2n*exp2a)/r2;
+        float bn2    = (3.0f*bn1+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        float bn3        = (5.0f*bn2+alsq2n*exp2a)/r2;
+        float bn3    = (5.0f*bn2+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        float bn4        = (7.0f*bn3+alsq2n*exp2a)/r2;
+        float bn4    = (7.0f*bn3+alsq2n*exp2a)/r2;
 
         alsq2n      *= alsq2;
-        float bn5        = (9.0f*bn4+alsq2n*exp2a)/r2;
+        float bn5    = (9.0f*bn4+alsq2n*exp2a)/r2;
 
         // apply Thole polarization damping to scale factors;
 
@@ -261,11 +259,9 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float ddsc72 = 0.0f;
         float ddsc73 = 0.0f;
 
-        float pdk    = atomJ.damp;
-        float ptk    = atomJ.thole;
-        float damp   = pdi*pdk;
+        float damp   = atomI.damp*atomJ.damp;
         if( damp != 0.0f ){
-            float pgamma = pti < ptk ? pti : ptk;
+            float pgamma = atomI.thole < atomJ.thole ? atomI.thole : atomJ.thole;
             float ratio  = r/damp;
                 damp     = -pgamma * ratio*ratio*ratio;
             if( damp > -50.0f ){
@@ -308,120 +304,136 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float dixdk2       = di3*dk1 - di1*dk3;
         float dixdk3       = di1*dk2 - di2*dk1;
 
-        float dixuk1       = di2*atomJ.inducedDipole[2] - di3*atomJ.inducedDipole[1];
-        float dixuk2       = di3*atomJ.inducedDipole[0] - di1*atomJ.inducedDipole[2];
-        float dixuk3       = di1*atomJ.inducedDipole[1] - di2*atomJ.inducedDipole[0];
-        float dkxui1       = dk2*atomI.inducedDipole[2] - dk3*atomI.inducedDipole[1];
-        float dkxui2       = dk3*atomI.inducedDipole[0] - dk1*atomI.inducedDipole[2];
-        float dkxui3       = dk1*atomI.inducedDipole[1] - dk2*atomI.inducedDipole[0];
+        float dixuk1       = di2*atomJ.inducedDipole[2]  - di3*atomJ.inducedDipole[1];
+        float dixuk2       = di3*atomJ.inducedDipole[0]  - di1*atomJ.inducedDipole[2];
+        float dixuk3       = di1*atomJ.inducedDipole[1]  - di2*atomJ.inducedDipole[0];
+        float dkxui1       = dk2*atomI.inducedDipole[2]  - dk3*atomI.inducedDipole[1];
+        float dkxui2       = dk3*atomI.inducedDipole[0]  - dk1*atomI.inducedDipole[2];
+        float dkxui3       = dk1*atomI.inducedDipole[1]  - dk2*atomI.inducedDipole[0];
+
         float dixukp1      = di2*atomJ.inducedDipoleP[2] - di3*atomJ.inducedDipoleP[1];
         float dixukp2      = di3*atomJ.inducedDipoleP[0] - di1*atomJ.inducedDipoleP[2];
         float dixukp3      = di1*atomJ.inducedDipoleP[1] - di2*atomJ.inducedDipoleP[0];
         float dkxuip1      = dk2*atomI.inducedDipoleP[2] - dk3*atomI.inducedDipoleP[1];
         float dkxuip2      = dk3*atomI.inducedDipoleP[0] - dk1*atomI.inducedDipoleP[2];
         float dkxuip3      = dk1*atomI.inducedDipoleP[1] - dk2*atomI.inducedDipoleP[0];
+
         float dixr1        = di2*zr - di3*yr;
         float dixr2        = di3*xr - di1*zr;
         float dixr3        = di1*yr - di2*xr;
+
         float dkxr1        = dk2*zr - dk3*yr;
         float dkxr2        = dk3*xr - dk1*zr;
         float dkxr3        = dk1*yr - dk2*xr;
+
         float qir1         = qi1*xr + qi4*yr + qi7*zr;
         float qir2         = qi2*xr + qi5*yr + qi8*zr;
         float qir3         = qi3*xr + qi6*yr + qi9*zr;
+
         float qkr1         = qk1*xr + qk4*yr + qk7*zr;
         float qkr2         = qk2*xr + qk5*yr + qk8*zr;
         float qkr3         = qk3*xr + qk6*yr + qk9*zr;
+
         float qiqkr1       = qi1*qkr1 + qi4*qkr2 + qi7*qkr3;
         float qiqkr2       = qi2*qkr1 + qi5*qkr2 + qi8*qkr3;
         float qiqkr3       = qi3*qkr1 + qi6*qkr2 + qi9*qkr3;
+
         float qkqir1       = qk1*qir1 + qk4*qir2 + qk7*qir3;
         float qkqir2       = qk2*qir1 + qk5*qir2 + qk8*qir3;
         float qkqir3       = qk3*qir1 + qk6*qir2 + qk9*qir3;
-        float qixqk1       = qi2*qk3 + qi5*qk6 + qi8*qk9
-                       - qi3*qk2 - qi6*qk5 - qi9*qk8;
-        float qixqk2       = qi3*qk1 + qi6*qk4 + qi9*qk7
-                       - qi1*qk3 - qi4*qk6 - qi7*qk9;
-        float qixqk3       = qi1*qk2 + qi4*qk5 + qi7*qk8
-                       - qi2*qk1 - qi5*qk4 - qi8*qk7;
+
+        float qixqk1       = qi2*qk3 + qi5*qk6 + qi8*qk9 - qi3*qk2 - qi6*qk5 - qi9*qk8;
+        float qixqk2       = qi3*qk1 + qi6*qk4 + qi9*qk7 - qi1*qk3 - qi4*qk6 - qi7*qk9;
+        float qixqk3       = qi1*qk2 + qi4*qk5 + qi7*qk8 - qi2*qk1 - qi5*qk4 - qi8*qk7;
+
         float rxqir1       = yr*qir3 - zr*qir2;
         float rxqir2       = zr*qir1 - xr*qir3;
         float rxqir3       = xr*qir2 - yr*qir1;
+
         float rxqkr1       = yr*qkr3 - zr*qkr2;
         float rxqkr2       = zr*qkr1 - xr*qkr3;
         float rxqkr3       = xr*qkr2 - yr*qkr1;
+
         float rxqikr1      = yr*qiqkr3 - zr*qiqkr2;
         float rxqikr2      = zr*qiqkr1 - xr*qiqkr3;
         float rxqikr3      = xr*qiqkr2 - yr*qiqkr1;
+
         float rxqkir1      = yr*qkqir3 - zr*qkqir2;
         float rxqkir2      = zr*qkqir1 - xr*qkqir3;
         float rxqkir3      = xr*qkqir2 - yr*qkqir1;
+
         float qkrxqir1     = qkr2*qir3 - qkr3*qir2;
         float qkrxqir2     = qkr3*qir1 - qkr1*qir3;
         float qkrxqir3     = qkr1*qir2 - qkr2*qir1;
+
         float qidk1        = qi1*dk1 + qi4*dk2 + qi7*dk3;
         float qidk2        = qi2*dk1 + qi5*dk2 + qi8*dk3;
         float qidk3        = qi3*dk1 + qi6*dk2 + qi9*dk3;
+
         float qkdi1        = qk1*di1 + qk4*di2 + qk7*di3;
         float qkdi2        = qk2*di1 + qk5*di2 + qk8*di3;
         float qkdi3        = qk3*di1 + qk6*di2 + qk9*di3;
-        float qiuk1        = qi1*atomJ.inducedDipole[0] + qi4*atomJ.inducedDipole[1]
-                       + qi7*atomJ.inducedDipole[2];
-        float qiuk2        = qi2*atomJ.inducedDipole[0] + qi5*atomJ.inducedDipole[1]
-                       + qi8*atomJ.inducedDipole[2];
-        float qiuk3        = qi3*atomJ.inducedDipole[0] + qi6*atomJ.inducedDipole[1]
-                       + qi9*atomJ.inducedDipole[2];
-        float qkui1        = qk1*atomI.inducedDipole[0] + qk4*atomI.inducedDipole[1]
-                       + qk7*atomI.inducedDipole[2];
-        float qkui2        = qk2*atomI.inducedDipole[0] + qk5*atomI.inducedDipole[1]
-                       + qk8*atomI.inducedDipole[2];
-        float qkui3        = qk3*atomI.inducedDipole[0] + qk6*atomI.inducedDipole[1]
-                       + qk9*atomI.inducedDipole[2];
-        float qiukp1       = qi1*atomJ.inducedDipoleP[0] + qi4*atomJ.inducedDipoleP[1]
-                        + qi7*atomJ.inducedDipoleP[2];
-        float qiukp2       = qi2*atomJ.inducedDipoleP[0] + qi5*atomJ.inducedDipoleP[1]
-                        + qi8*atomJ.inducedDipoleP[2];
-        float qiukp3       = qi3*atomJ.inducedDipoleP[0] + qi6*atomJ.inducedDipoleP[1]
-                        + qi9*atomJ.inducedDipoleP[2];
-        float qkuip1       = qk1*atomI.inducedDipoleP[0] + qk4*atomI.inducedDipoleP[1]
-                        + qk7*atomI.inducedDipoleP[2];
-        float qkuip2       = qk2*atomI.inducedDipoleP[0] + qk5*atomI.inducedDipoleP[1]
-                        + qk8*atomI.inducedDipoleP[2];
-        float qkuip3       = qk3*atomI.inducedDipoleP[0] + qk6*atomI.inducedDipoleP[1]
-                        + qk9*atomI.inducedDipoleP[2];
+
+        float qiuk1        = qi1*atomJ.inducedDipole[0]  + qi4*atomJ.inducedDipole[1]  + qi7*atomJ.inducedDipole[2];
+        float qiuk2        = qi2*atomJ.inducedDipole[0]  + qi5*atomJ.inducedDipole[1]  + qi8*atomJ.inducedDipole[2];
+        float qiuk3        = qi3*atomJ.inducedDipole[0]  + qi6*atomJ.inducedDipole[1]  + qi9*atomJ.inducedDipole[2];
+
+        float qkui1        = qk1*atomI.inducedDipole[0]  + qk4*atomI.inducedDipole[1]  + qk7*atomI.inducedDipole[2];
+        float qkui2        = qk2*atomI.inducedDipole[0]  + qk5*atomI.inducedDipole[1]  + qk8*atomI.inducedDipole[2];
+        float qkui3        = qk3*atomI.inducedDipole[0]  + qk6*atomI.inducedDipole[1]  + qk9*atomI.inducedDipole[2];
+
+        float qiukp1       = qi1*atomJ.inducedDipoleP[0] + qi4*atomJ.inducedDipoleP[1] + qi7*atomJ.inducedDipoleP[2];
+        float qiukp2       = qi2*atomJ.inducedDipoleP[0] + qi5*atomJ.inducedDipoleP[1] + qi8*atomJ.inducedDipoleP[2];
+        float qiukp3       = qi3*atomJ.inducedDipoleP[0] + qi6*atomJ.inducedDipoleP[1] + qi9*atomJ.inducedDipoleP[2];
+
+        float qkuip1       = qk1*atomI.inducedDipoleP[0] + qk4*atomI.inducedDipoleP[1] + qk7*atomI.inducedDipoleP[2];
+        float qkuip2       = qk2*atomI.inducedDipoleP[0] + qk5*atomI.inducedDipoleP[1] + qk8*atomI.inducedDipoleP[2];
+        float qkuip3       = qk3*atomI.inducedDipoleP[0] + qk6*atomI.inducedDipoleP[1] + qk9*atomI.inducedDipoleP[2];
+
         float dixqkr1      = di2*qkr3 - di3*qkr2;
         float dixqkr2      = di3*qkr1 - di1*qkr3;
         float dixqkr3      = di1*qkr2 - di2*qkr1;
+
         float dkxqir1      = dk2*qir3 - dk3*qir2;
         float dkxqir2      = dk3*qir1 - dk1*qir3;
         float dkxqir3      = dk1*qir2 - dk2*qir1;
+
         float uixqkr1      = atomI.inducedDipole[1]*qkr3 - atomI.inducedDipole[2]*qkr2;
         float uixqkr2      = atomI.inducedDipole[2]*qkr1 - atomI.inducedDipole[0]*qkr3;
         float uixqkr3      = atomI.inducedDipole[0]*qkr2 - atomI.inducedDipole[1]*qkr1;
+
         float ukxqir1      = atomJ.inducedDipole[1]*qir3 - atomJ.inducedDipole[2]*qir2;
         float ukxqir2      = atomJ.inducedDipole[2]*qir1 - atomJ.inducedDipole[0]*qir3;
         float ukxqir3      = atomJ.inducedDipole[0]*qir2 - atomJ.inducedDipole[1]*qir1;
+
         float uixqkrp1     = atomI.inducedDipoleP[1]*qkr3 - atomI.inducedDipoleP[2]*qkr2;
         float uixqkrp2     = atomI.inducedDipoleP[2]*qkr1 - atomI.inducedDipoleP[0]*qkr3;
         float uixqkrp3     = atomI.inducedDipoleP[0]*qkr2 - atomI.inducedDipoleP[1]*qkr1;
+
         float ukxqirp1     = atomJ.inducedDipoleP[1]*qir3 - atomJ.inducedDipoleP[2]*qir2;
         float ukxqirp2     = atomJ.inducedDipoleP[2]*qir1 - atomJ.inducedDipoleP[0]*qir3;
         float ukxqirp3     = atomJ.inducedDipoleP[0]*qir2 - atomJ.inducedDipoleP[1]*qir1;
+
         float rxqidk1      = yr*qidk3 - zr*qidk2;
         float rxqidk2      = zr*qidk1 - xr*qidk3;
         float rxqidk3      = xr*qidk2 - yr*qidk1;
+
         float rxqkdi1      = yr*qkdi3 - zr*qkdi2;
         float rxqkdi2      = zr*qkdi1 - xr*qkdi3;
         float rxqkdi3      = xr*qkdi2 - yr*qkdi1;
+
         float rxqiuk1      = yr*qiuk3 - zr*qiuk2;
         float rxqiuk2      = zr*qiuk1 - xr*qiuk3;
         float rxqiuk3      = xr*qiuk2 - yr*qiuk1;
+
         float rxqkui1      = yr*qkui3 - zr*qkui2;
         float rxqkui2      = zr*qkui1 - xr*qkui3;
         float rxqkui3      = xr*qkui2 - yr*qkui1;
+
         float rxqiukp1     = yr*qiukp3 - zr*qiukp2;
         float rxqiukp2     = zr*qiukp1 - xr*qiukp3;
         float rxqiukp3     = xr*qiukp2 - yr*qiukp1;
+
         float rxqkuip1     = yr*qkuip3 - zr*qkuip2;
         float rxqkuip2     = zr*qkuip1 - xr*qkuip3;
         float rxqkuip3     = xr*qkuip2 - yr*qkuip1;
@@ -437,33 +449,29 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float sc8          = qkr1*di1 + qkr2*di2 + qkr3*di3;
         float sc9          = qir1*qkr1 + qir2*qkr2 + qir3*qkr3;
         float sc10         = qi1*qk1 + qi2*qk2 + qi3*qk3
-                       + qi4*qk4 + qi5*qk5 + qi6*qk6
-                       + qi7*qk7 + qi8*qk8 + qi9*qk9;
+                             + qi4*qk4 + qi5*qk5 + qi6*qk6
+                             + qi7*qk7 + qi8*qk8 + qi9*qk9;
 
         // calculate the scalar products for induced components
 
-        float sci1          = atomI.inducedDipole[0]*dk1 + atomI.inducedDipole[1]*dk2
-                      + atomI.inducedDipole[2]*dk3 + di1*atomJ.inducedDipole[0]
-                      + di2*atomJ.inducedDipole[1] + di3*atomJ.inducedDipole[2];
+        float sci1         = atomI.inducedDipole[0]*dk1 + atomI.inducedDipole[1]*dk2
+                             + atomI.inducedDipole[2]*dk3 + di1*atomJ.inducedDipole[0]
+                             + di2*atomJ.inducedDipole[1] + di3*atomJ.inducedDipole[2];
 
-        float sci3          = atomI.inducedDipole[0]*xr + atomI.inducedDipole[1]*yr + atomI.inducedDipole[2]*zr;
-        float sci4          = atomJ.inducedDipole[0]*xr + atomJ.inducedDipole[1]*yr + atomJ.inducedDipole[2]*zr;
-        float sci7          = qir1*atomJ.inducedDipole[0] + qir2*atomJ.inducedDipole[1]
-                        + qir3*atomJ.inducedDipole[2];
-        float sci8          = qkr1*atomI.inducedDipole[0] + qkr2*atomI.inducedDipole[1]
-                        + qkr3*atomI.inducedDipole[2];
-        float scip1         = atomI.inducedDipoleP[0]*dk1 + atomI.inducedDipoleP[1]*dk2
-                        + atomI.inducedDipoleP[2]*dk3 + di1*atomJ.inducedDipoleP[0]
-                        + di2*atomJ.inducedDipoleP[1] + di3*atomJ.inducedDipoleP[2];
-        float scip2         = atomI.inducedDipole[0]*atomJ.inducedDipoleP[0]+atomI.inducedDipole[1]*atomJ.inducedDipoleP[1]
-                        + atomI.inducedDipole[2]*atomJ.inducedDipoleP[2]+atomI.inducedDipoleP[0]*atomJ.inducedDipole[0]
-                        + atomI.inducedDipoleP[1]*atomJ.inducedDipole[1]+atomI.inducedDipoleP[2]*atomJ.inducedDipole[2];
-        float scip3         = atomI.inducedDipoleP[0]*xr + atomI.inducedDipoleP[1]*yr + atomI.inducedDipoleP[2]*zr;
-        float scip4         = atomJ.inducedDipoleP[0]*xr + atomJ.inducedDipoleP[1]*yr + atomJ.inducedDipoleP[2]*zr;
-        float scip7         = qir1*atomJ.inducedDipoleP[0] + qir2*atomJ.inducedDipoleP[1]
-                        + qir3*atomJ.inducedDipoleP[2];
-        float scip8         = qkr1*atomI.inducedDipoleP[0] + qkr2*atomI.inducedDipoleP[1]
-                        + qkr3*atomI.inducedDipoleP[2];
+        float sci3         = atomI.inducedDipole[0]*xr + atomI.inducedDipole[1]*yr + atomI.inducedDipole[2]*zr;
+        float sci4         = atomJ.inducedDipole[0]*xr + atomJ.inducedDipole[1]*yr + atomJ.inducedDipole[2]*zr;
+        float sci7         = qir1*atomJ.inducedDipole[0] + qir2*atomJ.inducedDipole[1] + qir3*atomJ.inducedDipole[2];
+        float sci8         = qkr1*atomI.inducedDipole[0] + qkr2*atomI.inducedDipole[1] + qkr3*atomI.inducedDipole[2];
+        float scip1        = atomI.inducedDipoleP[0]*dk1 + atomI.inducedDipoleP[1]*dk2 + atomI.inducedDipoleP[2]*dk3 + di1*atomJ.inducedDipoleP[0] + di2*atomJ.inducedDipoleP[1] + di3*atomJ.inducedDipoleP[2];
+        float scip2        = atomI.inducedDipole[0]*atomJ.inducedDipoleP[0]+atomI.inducedDipole[1]*atomJ.inducedDipoleP[1]
+                              + atomI.inducedDipole[2]*atomJ.inducedDipoleP[2]+atomI.inducedDipoleP[0]*atomJ.inducedDipole[0]
+                              + atomI.inducedDipoleP[1]*atomJ.inducedDipole[1]+atomI.inducedDipoleP[2]*atomJ.inducedDipole[2];
+
+        float scip3        = atomI.inducedDipoleP[0]*xr + atomI.inducedDipoleP[1]*yr + atomI.inducedDipoleP[2]*zr;
+        float scip4        = atomJ.inducedDipoleP[0]*xr + atomJ.inducedDipoleP[1]*yr + atomJ.inducedDipoleP[2]*zr;
+
+        float scip7        = qir1*atomJ.inducedDipoleP[0] + qir2*atomJ.inducedDipoleP[1] + qir3*atomJ.inducedDipoleP[2];
+        float scip8        = qkr1*atomI.inducedDipoleP[0] + qkr2*atomI.inducedDipoleP[1] + qkr3*atomI.inducedDipoleP[2];
 
         // calculate the gl functions for permanent components
 
@@ -492,24 +500,17 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
         // compute the energy contributions for this interaction
 
-        float e    = bn0*gl0 + bn1*(gl1+gl6)
-                 + bn2*(gl2+gl7+gl8)
-                 + bn3*(gl3+gl5) + bn4*gl4;
-        float ei    = 0.5f * (bn1*(gli1+gli6)
-                       + bn2*(gli2+gli7) + bn3*gli3);
+        float e             = bn0*gl0 + bn1*(gl1+gl6) + bn2*(gl2+gl7+gl8) + bn3*(gl3+gl5) + bn4*gl4;
+        float ei            = 0.5f * (bn1*(gli1+gli6) + bn2*(gli2+gli7) + bn3*gli3); 
 
         // get the real energy without any screening function
 
-        float erl = rr1*gl0 + rr3*(gl1+gl6)
-                   + rr5*(gl2+gl7+gl8)
-                   + rr7*(gl3+gl5) + rr9*gl4;
-        float erli = 0.5f*(rr3*(gli1+gli6)*psc3
-                    + rr5*(gli2+gli7)*psc5
-                    + rr7*gli3*psc7);
-        e = e - (1.0f-scalingFactors[MScaleIndex])*erl;
-        ei = ei - erli;
+        float erl           = rr1*gl0 + rr3*(gl1+gl6) + rr5*(gl2+gl7+gl8) + rr7*(gl3+gl5) + rr9*gl4;
+        float erli          = 0.5f*(rr3*(gli1+gli6)*psc3 + rr5*(gli2+gli7)*psc5 + rr7*gli3*psc7);
+        e                   = e - (1.0f-scalingFactors[MScaleIndex])*erl;
+        ei                  = ei - erli;
 
-        *energy = -conversionFactor*(e + ei);
+        *energy             = -conversionFactor*(e + ei);
 
         // increment the total intramolecular energy; assumes;
         // intramolecular distances are less than half of cell;
@@ -638,6 +639,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
              + 0.5f*gfri4*((qkui1-qiuk1)*psc5
              + (qkuip1-qiukp1)*dsc5)
              + gfri5*qir1 + gfri6*qkr1;
+
         float ftm2ri2 = gfri1*yr + 0.5f*
             (- rr3*ck*(atomI.inducedDipole[1]*psc3+atomI.inducedDipoleP[1]*dsc3)
              + rr5*sc4*(atomI.inducedDipole[1]*psc5+atomI.inducedDipoleP[1]*dsc5)
@@ -652,6 +654,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
              + 0.5f*gfri4*((qkui2-qiuk2)*psc5
              + (qkuip2-qiukp2)*dsc5)
              + gfri5*qir2 + gfri6*qkr2;
+
         float ftm2ri3 = gfri1*zr + 0.5f*
             (- rr3*ck*(atomI.inducedDipole[2]*psc3+atomI.inducedDipoleP[2]*dsc3)
              + rr5*sc4*(atomI.inducedDipole[2]*psc5+atomI.inducedDipoleP[2]*dsc5)
@@ -950,9 +953,9 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
     } else {
 
-        outputForce[0]           = 0.0f;
-        outputForce[1]           = 0.0f;
-        outputForce[2]           = 0.0f;
+        outputForce[0]          = 0.0f;
+        outputForce[1]          = 0.0f;
+        outputForce[2]          = 0.0f;
 
         outputTorque[0].x       = 0.0f;
         outputTorque[0].y       = 0.0f;
@@ -962,7 +965,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         outputTorque[1].y       = 0.0f;
         outputTorque[1].z       = 0.0f;
 
-        *energy                  = 0.0f;
+        *energy                 = 0.0f;
 
 #ifdef AMOEBA_DEBUG
 for( int ii = 0; ii < 5; ii++ ){

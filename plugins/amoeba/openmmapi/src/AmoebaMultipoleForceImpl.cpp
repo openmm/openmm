@@ -54,12 +54,12 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
     for( int ii = 0; ii < system.getNumParticles(); ii++ ){
 
-        int index, axisType, multipoleAtomId1, multipoleAtomId2;
+        int index, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, thole, dampingFactor, polarity ;
         std::vector<double> molecularDipole;
         std::vector<double> molecularQuadrupole;
 
-        owner.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomId1, multipoleAtomId2,
+        owner.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
                                       thole, dampingFactor, polarity );
 
        // only 'Z-then-X' or 'Bisector' currently handled

@@ -423,8 +423,9 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     dampingFactors.resize(numMultipoles);
     polarity.resize(numMultipoles);
     axisTypes.resize(numMultipoles);
-    multipoleAtomId1s.resize(numMultipoles);
-    multipoleAtomId2s.resize(numMultipoles);
+    multipoleAtomZs.resize(numMultipoles);
+    multipoleAtomXs.resize(numMultipoles);
+    multipoleAtomYs.resize(numMultipoles);
     multipoleAtomCovalentInfo.resize(numMultipoles);
 
     int dipoleIndex      = 0;
@@ -435,17 +436,18 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
 
         // multipoles
 
-        int axisType, multipoleAtomId1, multipoleAtomId2;
+        int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, tholeD, dampingFactorD, polarityD;
         std::vector<double> dipolesD;
         std::vector<double> quadrupolesD;
-        force.getMultipoleParameters(ii, charge, dipolesD, quadrupolesD, axisType, multipoleAtomId1, multipoleAtomId2,
+        force.getMultipoleParameters(ii, charge, dipolesD, quadrupolesD, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
                                      tholeD, dampingFactorD, polarityD );
 
         totalCharge                       += charge;
         axisTypes[ii]                      = axisType;
-        multipoleAtomId1s[ii]              = multipoleAtomId1;
-        multipoleAtomId2s[ii]              = multipoleAtomId2;
+        multipoleAtomZs[ii]              = multipoleAtomZ;
+        multipoleAtomXs[ii]              = multipoleAtomX;
+        multipoleAtomYs[ii]              = multipoleAtomY;
 
         charges[ii]                        = static_cast<RealOpenMM>(charge);
         tholes[ii]                         = static_cast<RealOpenMM>(tholeD);
@@ -494,7 +496,7 @@ double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bo
     RealOpenMM energy      = amoebaReferenceMultipoleForce.calculateForceAndEnergy( numMultipoles, posData, 
                                                                                     charges, dipoles, quadrupoles, tholes,
                                                                                     dampingFactors, polarity, axisTypes, 
-                                                                                    multipoleAtomId1s, multipoleAtomId2s,
+                                                                                    multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
                                                                                     multipoleAtomCovalentInfo, forceData);
 
     return static_cast<double>(energy);

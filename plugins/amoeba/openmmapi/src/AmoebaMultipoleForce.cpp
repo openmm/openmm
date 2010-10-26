@@ -35,6 +35,8 @@
 #include "internal/AmoebaMultipoleForceImpl.h"
 
 using namespace OpenMM;
+using std::string;
+using std::vector;
 
 AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(5e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
                                                mutualInducedTargetEpsilon(1.0e-05), scalingDistanceCutoff(100.0), electricConstant(138.9354558456) {
@@ -143,13 +145,13 @@ void AmoebaMultipoleForce::setEwaldErrorTolerance(double tol) {
 }
 
 int AmoebaMultipoleForce::addParticle( double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, int axisType, 
-                                        int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity) {
-    multipoles.push_back(MultipoleInfo( charge, molecularDipole, molecularQuadrupole,  axisType, multipoleAtomId1,  multipoleAtomId2, thole, dampingFactor, polarity));
+                                       int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) {
+    multipoles.push_back(MultipoleInfo( charge, molecularDipole, molecularQuadrupole,  axisType, multipoleAtomZ,  multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity));
     return multipoles.size()-1;
 }
 
 void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, 
-                                                  int& axisType, int& multipoleAtomId1, int& multipoleAtomId2, double& thole, double& dampingFactor, double& polarity ) const {
+                                                  int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity ) const {
     charge                      = multipoles[index].charge;
 
     molecularDipole.resize( 3 );
@@ -169,8 +171,9 @@ void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std
     molecularQuadrupole[8]      = multipoles[index].molecularQuadrupole[8];
 
     axisType                    = multipoles[index].axisType;
-    multipoleAtomId1            = multipoles[index].multipoleAtomId1;
-    multipoleAtomId2            = multipoles[index].multipoleAtomId2;
+    multipoleAtomZ              = multipoles[index].multipoleAtomZ;
+    multipoleAtomX              = multipoles[index].multipoleAtomX;
+    multipoleAtomY              = multipoles[index].multipoleAtomY;
 
     thole                       = multipoles[index].thole;
     dampingFactor               = multipoles[index].dampingFactor;
@@ -178,7 +181,7 @@ void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std
 }
 
 void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, 
-                                                  int axisType, int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity ) {
+                                                  int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity ) {
 
     multipoles[index].charge                      = charge;
 
@@ -197,8 +200,9 @@ void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, std:
     multipoles[index].molecularQuadrupole[8]      = molecularQuadrupole[8];
 
     multipoles[index].axisType                    = axisType;
-    multipoles[index].multipoleAtomId1            = multipoleAtomId1;
-    multipoles[index].multipoleAtomId2            = multipoleAtomId2;
+    multipoles[index].multipoleAtomZ              = multipoleAtomZ;
+    multipoles[index].multipoleAtomX              = multipoleAtomX;
+    multipoles[index].multipoleAtomY              = multipoleAtomY;
     multipoles[index].thole                       = thole;
     multipoles[index].dampingFactor               = dampingFactor;
     multipoles[index].polarity                    = polarity;

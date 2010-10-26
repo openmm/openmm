@@ -35,6 +35,8 @@
 #include "internal/AmoebaVdwForceImpl.h"
 
 using namespace OpenMM;
+using std::string;
+using std::vector;
 
 AmoebaVdwForce::AmoebaVdwForce() : usePBC(0), cutoff(1.0e+10) {
 }
@@ -62,19 +64,19 @@ void AmoebaVdwForce::setParticleParameters(int particleIndex, int ivIndex, int c
     parameters[particleIndex].reductionFactor = reductionFactor;
 }
 
-void AmoebaVdwForce::setSigmaCombiningRule(std::string& inputSigmaCombiningRule ) {
+void AmoebaVdwForce::setSigmaCombiningRule( const std::string& inputSigmaCombiningRule ) {
     sigmaCombiningRule = inputSigmaCombiningRule;
 }
 
-std::string AmoebaVdwForce::getSigmaCombiningRule( void ) const {
+const std::string& AmoebaVdwForce::getSigmaCombiningRule( void ) const {
     return sigmaCombiningRule;
 }
 
-void AmoebaVdwForce::setEpsilonCombiningRule(std::string& inputEpsilonCombiningRule ) {
+void AmoebaVdwForce::setEpsilonCombiningRule( const std::string& inputEpsilonCombiningRule ) {
     epsilonCombiningRule = inputEpsilonCombiningRule;
 }
 
-std::string AmoebaVdwForce::getEpsilonCombiningRule( void ) const {
+const std::string& AmoebaVdwForce::getEpsilonCombiningRule( void ) const {
     return epsilonCombiningRule;
 }
 

@@ -294,7 +294,7 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext gpu, const std::vector< st
 
 extern "C"  
 void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vector<float>& charges, const std::vector<float>& dipoles, const std::vector<float>& quadrupoles,
-                                     const std::vector<int>& axisType, const std::vector<int>& multipoleAtomId1, const std::vector<int>& multipoleAtomId2,
+                                     const std::vector<int>& axisType, const std::vector<int>& multipoleAtomZ, const std::vector<int>& multipoleAtomX,  const std::vector<int>& multipoleAtomY,
                                      const std::vector<float>& tholes, float scalingDistanceCutoff,const std::vector<float>& dampingFactors, const std::vector<float>& polarity,
                                      const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange,

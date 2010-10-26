@@ -357,8 +357,9 @@ private:
     std::vector<RealOpenMM> dampingFactors;
     std::vector<RealOpenMM> polarity;
     std::vector<int>   axisTypes;
-    std::vector<int>   multipoleAtomId1s;
-    std::vector<int>   multipoleAtomId2s;
+    std::vector<int>   multipoleAtomZs;
+    std::vector<int>   multipoleAtomXs;
+    std::vector<int>   multipoleAtomYs;
     std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo;
 
     //int iterativeMethod;

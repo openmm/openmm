@@ -1600,7 +1600,6 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
             int particle1, particle2, particle3, particle4;
             double k;
             outOfPlaneBendForce->getOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
-            //k *= CalToJoule/(AngstromToNm*AngstromToNm);
             k *= CalToJoule;
             outOfPlaneBendForce->setOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
         }
@@ -2053,6 +2052,12 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
             int axisType         = atoi( lineTokens[tokenIndex++].c_str() );
             int zAxis            = atoi( lineTokens[tokenIndex++].c_str() );
             int xAxis            = atoi( lineTokens[tokenIndex++].c_str() );
+            int yAxis;
+            if( version > 2 ){
+                yAxis            = atoi( lineTokens[tokenIndex++].c_str() );
+            } else {
+                yAxis            = -1;
+            }
             double pdamp         = atof( lineTokens[tokenIndex++].c_str() );
             double tholeDamp     = atof( lineTokens[tokenIndex++].c_str() );
             double polarity      = atof( lineTokens[tokenIndex++].c_str() );
@@ -2069,7 +2074,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
             quadrupole[6]        = atof( lineTokens[tokenIndex++].c_str() );
             quadrupole[7]        = atof( lineTokens[tokenIndex++].c_str() );
             quadrupole[8]        = atof( lineTokens[tokenIndex++].c_str() );
-            multipoleForce->addParticle( charge, dipole, quadrupole, axisType, zAxis, xAxis, tholeDamp, pdamp, polarity );
+            multipoleForce->addParticle( charge, dipole, quadrupole, axisType, zAxis, xAxis, yAxis, tholeDamp, pdamp, polarity );
         } else {
             (void) fprintf( log, "%s AmoebaMultipoleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
             (void) fflush( log );
@@ -2160,11 +2165,11 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
 
         for( int ii = 0; ii < multipoleForce->getNumMultipoles();  ii++ ){
 
-            int axisType, zAxis, xAxis;
+            int axisType, zAxis, xAxis, yAxis;
             std::vector<double> dipole;
             std::vector<double> quadrupole;
             double charge, thole, dampingFactor, polarity;
-            multipoleForce->getMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, thole, dampingFactor, polarity );
+            multipoleForce->getMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, yAxis, thole, dampingFactor, polarity );
 
             for( unsigned int jj = 0; jj < dipole.size(); jj++ ){
                 dipole[jj] *= dipoleConversion;
@@ -2175,7 +2180,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
             polarity          *= polarityConversion;
             dampingFactor     *= dampingFactorConversion;
 
-            multipoleForce->setMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, thole, dampingFactor, polarity );
+            multipoleForce->setMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, yAxis, thole, dampingFactor, polarity );
 
         }
     } else {
@@ -2227,11 +2232,11 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
         (void) fflush( log );
  
         for( unsigned int ii = 0; ii < arraySize;  ii++ ){
-            int axisType, zAxis, xAxis;
+            int axisType, zAxis, xAxis, yAxis;
             std::vector<double> dipole;
             std::vector<double> quadrupole;
             double charge, thole, dampingFactor, polarity;
-            multipoleForce->getMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, thole, dampingFactor, polarity );
+            multipoleForce->getMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, yAxis, thole, dampingFactor, polarity );
             (void) fprintf( log, "%8d %8d %8d %8d q %10.4f thl %10.4f pgm %10.4f pol %10.4f d[%10.4f %10.4f %10.4f]\n",
                             ii, axisType, zAxis, xAxis, charge, thole, dampingFactor, polarity, dipole[0], dipole[1], dipole[2] );
             (void) fprintf( log, "   q[%10.4f %10.4f %10.4f] [%10.4f %10.4f %10.4f] [%10.4f %10.4f %10.4f]\n",
@@ -2361,7 +2366,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
        }
     }
 
-    // get supplementart fields
+    // get supplementary fields
 
     isNotEof                       = 1;
     int totalFields                = 2;
@@ -2850,7 +2855,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
         //static const unsigned int maxPrint   = MAX_PRINT;
         static const unsigned int maxPrint   = 15;
         unsigned int arraySize               = static_cast<unsigned int>(wcaDispersionForce->getNumParticles());
-        (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters in %s units.\n",
+        (void) fprintf( log, "%s: %u sample of AmoebaWcaForce parameters in %s units.\n",
                         methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba") );
 
         (void) fprintf( log, "Eps[%14.7f %14.7f] Rmin[%14.7f %14.7f]\nAwater %14.7f Shctd %14.7f Dispoff %14.7f Slevy %14.7f\n",

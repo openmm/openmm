@@ -117,7 +117,8 @@ public:
      * @param gridIndex     the grid index
      * @return grid         return grid reference
      */
-    const TorsionTorsionGrid& getTorsionTorsionGrid( int index ) const;
+    //const TorsionTorsionGrid& getTorsionTorsionGrid( int index ) const;
+    const std::vector< std::vector< std::vector<double> > >& getTorsionTorsionGrid( int index ) const;
 
     /**
      * Set the torsion-torsion grid at the specified index
@@ -131,7 +132,8 @@ public:
      *                         grid[x][y][4] = dfdy value 
      *                         grid[x][y][5] = dfd(xy) value 
      */
-    void setTorsionTorsionGrid(int index, TorsionTorsionGrid& grid );
+    //void setTorsionTorsionGrid(int index, TorsionTorsionGrid& grid );
+    void setTorsionTorsionGrid(int index, std::vector< std::vector< std::vector<double> > >& grid );
 
 protected:
     ForceImpl* createImpl();

@@ -16,24 +16,6 @@
 
 #INCLUDE(Dart)
 
-SET(LOG FALSE)
-# ----------------------------------------------------------------------------
-IF(LOG)
-   SET(LOG_FILE "CMakeLog.txt" )
-   FILE( WRITE ${LOG_FILE} "In OpenMM Cmake\n")
-ENDIF(LOG)
-
-IF(LOG)
-   MACRO(LOG_DIR LOG_FILE DIR_LIST )
-    
-      FILE( APPEND ${LOG_FILE} "\n${DIR_LIST}\n")
-      FOREACH(currentFile ${ARGN})
-         FILE( APPEND ${LOG_FILE} "   ${currentFile}\n" )
-      ENDFOREACH(currentFile)
-    
-    ENDMACRO(LOG_DIR) 
-ENDIF(LOG)
-
 # ----------------------------------------------------------------------------
 
 # The source is organized into subdirectories, but we handle them all from
@@ -108,22 +90,14 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src/SimTKReference)
 
 # ----------------------------------------------------------------------------
-IF(LOG)
-    FILE( APPEND ${LOG_FILE} "SOURCE_AMOEBA_FILES=" ${SOURCE_AMOEBA_FILES} "\n" )
-    FILE( APPEND ${LOG_FILE} "SOURCE_AMOEBA_INCLUDE_FILES=" ${SOURCE_AMOEBA_INCLUDE_FILES} "\n" )
-    FILE( APPEND ${LOG_FILE} "OPENMM_PATH="            ${OPENMM_PATH} "\n" )
-    FILE( APPEND ${LOG_FILE} "CUDA_PATH="              ${CUDA_PATH} "\n" )
-ENDIF(LOG)
-
-# ----------------------------------------------------------------------------
 
 # If API_AMOEBA wrappers are being generated, and add them to the build.
 #SET(OPENMM_BUILD_API_AMOEBA_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
-#IF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
-#    ADD_SUBDIRECTORY(wrappers)
-#    SET(SOURCE_AMOEBA_FILES ${SOURCE_AMOEBA_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
-#    SET_SOURCE_AMOEBA_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
-#ENDIF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
+IF(OPENMM_BUILD_API_WRAPPERS)
+    ADD_SUBDIRECTORY(wrappers)
+    SET(SOURCE_AMOEBA_FILES ${SOURCE_AMOEBA_FILES} wrappers/AmoebaOpenMMCWrapper.cpp  wrappers/AmoebaOpenMMFortranWrapper.cpp)
+    SET_SOURCE_FILES_PROPERTIES(wrappers/AmoebaOpenMMCWrapper.cpp wrappers/AmoebaOpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
+ENDIF(OPENMM_BUILD_API_WRAPPERS)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -135,10 +109,14 @@ IF(OPENMM_BUILD_STATIC_LIB)
   SET_TARGET_PROPERTIES(${STATIC_AMOEBA_TARGET} PROPERTIES COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_USE_STATIC_LIBRARIES -DLEPTON_BUILDING_STATIC_LIBRARY")
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
-#IF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
-#    ADD_DEPENDENCIES(${SHARED_AMOEBA_TARGET} ApiWrappers)
-#    ADD_DEPENDENCIES(${STATIC_AMOEBA_TARGET} ApiWrappers)
-#ENDIF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
+IF(OPENMM_BUILD_API_WRAPPERS)
+    ADD_DEPENDENCIES(${SHARED_AMOEBA_TARGET} AmoebaApiWrappers)
+    IF(OPENMM_BUILD_STATIC_LIB)
+        ADD_DEPENDENCIES(${STATIC_AMOEBA_TARGET} AmoebaApiWrappers)
+    ENDIF(OPENMM_BUILD_STATIC_LIB)
+ENDIF(OPENMM_BUILD_API_WRAPPERS)
+
+# ----------------------------------------------------------------------------
 
 # On Linux need to link to libdl
 FIND_LIBRARY(DL_LIBRARY dl)
@@ -177,11 +155,6 @@ IF(OPENMM_BUILD_AMOEBA_CUDA_LIB)
     SET(OPENMM_AMOEBA_CUDA_SOURCE_SUBDIRS . openmmapi olla platforms/cuda)
 ENDIF(OPENMM_BUILD_AMOEBA_CUDA_LIB)
 
-#SET(OPENMM_BUILD_BROOK_LIB OFF CACHE BOOL "Build OpenMMBrook library for ATI GPUs")
-#IF(OPENMM_BUILD_BROOK_LIB)
-#    ADD_SUBDIRECTORY(platforms/brook)
-#ENDIF(OPENMM_BUILD_BROOK_LIB)
-#
 #SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
 #IF(OPENMM_BUILD_OPENCL_LIB)
 #    ADD_SUBDIRECTORY(platforms/opencl)
@@ -209,7 +182,6 @@ INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 #    LINK_LIBRARIES(gcov)
 #  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
 #ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
-
 
 #
 # Testing

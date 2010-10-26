@@ -75,7 +75,7 @@ public:
      * @return the index of the torsion that was added
      */
     int addTorsion(int particle1, int particle2, int particle3, int particle4,
-                   std::vector<double> torsion1, std::vector<double> torsion2, std::vector<double> torsion3 );
+                   std::vector<double>& torsion1, std::vector<double>& torsion2, std::vector<double>& torsion3 );
 
     /**
      * Get the force field parameters for a torsion term.
@@ -105,7 +105,7 @@ public:
      * @param torsion3      the vector of torsion params for third index (amplitude, phase, fold)
      */
     void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, 
-                              std::vector<double> torsion1, std::vector<double> torsion2, std::vector<double> torsion3 );
+                              std::vector<double>& torsion1, std::vector<double>& torsion2, std::vector<double>& torsion3 );
 
 protected:
     ForceImpl* createImpl();

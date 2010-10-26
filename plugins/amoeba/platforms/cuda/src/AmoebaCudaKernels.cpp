@@ -44,7 +44,9 @@ extern "C" int gpuSetConstants( gpuContext gpu );
 using namespace OpenMM;
 using namespace std;
 
-// ***************************************************************************
+/* -------------------------------------------------------------------------- *
+ *                           Calculates bonded forces                         *
+ * -------------------------------------------------------------------------- */
 
 static void computeAmoebaLocalForces( AmoebaCudaData& data ) {
     amoebaGpuContext gpu = data.getAmoebaGpu();
@@ -57,6 +59,10 @@ static void computeAmoebaLocalForces( AmoebaCudaData& data ) {
     kCalculateAmoebaLocalForces(gpu);
 
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaHarmonicBond                               *
+ * -------------------------------------------------------------------------- */
 
 class CudaCalcAmoebaHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
@@ -127,6 +133,10 @@ double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool
     return 0.0;
 }
 
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaHarmonicAngle                              *
+ * -------------------------------------------------------------------------- */
+
 class CudaCalcAmoebaHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const AmoebaHarmonicAngleForce& force) : force(force) {
@@ -194,6 +204,10 @@ double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, boo
     }
     return 0.0;
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaHarmonicInPlaneAngle                       *
+ * -------------------------------------------------------------------------- */
 
 class CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
@@ -266,6 +280,10 @@ double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& conte
     }
     return 0.0;
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaHarmonicTorsion                            *
+ * -------------------------------------------------------------------------- */
 
 class CudaCalcAmoebaTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
@@ -358,6 +376,10 @@ double CudaCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool incl
     return 0.0;
 }
 
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaHarmonicPiTorsion                          *
+ * -------------------------------------------------------------------------- */
+
 class CudaCalcAmoebaPiTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const AmoebaPiTorsionForce& force) : force(force) {
@@ -429,6 +451,10 @@ double CudaCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool in
     return 0.0;
 }
 
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaStretchBend                                *
+ * -------------------------------------------------------------------------- */
+
 class CudaCalcAmoebaStretchBendForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const AmoebaStretchBendForce& force) : force(force) {
@@ -499,6 +525,10 @@ double CudaCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaOutOfPlaneBend                             *
+ * -------------------------------------------------------------------------- */
+
 class CudaCalcAmoebaOutOfPlaneBendForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const AmoebaOutOfPlaneBendForce& force) : force(force) {
@@ -568,6 +598,10 @@ double CudaCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bo
     }
     return 0.0;
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaTorsionTorsion                             *
+ * -------------------------------------------------------------------------- */
 
 class CudaCalcAmoebaTorsionTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
@@ -716,10 +750,10 @@ public:
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         double charge1, charge2, thole1, thole2, damping1, damping2, polarity1, polarity2;
-        int axis1, axis2, multipole11, multipole12, multipole21, multipole22;
+        int axis1, axis2, multipole11, multipole12, multipole21, multipole22, multipole31, multipole32;
         vector<double> dipole1, dipole2, quadrupole1, quadrupole2;
-        force.getMultipoleParameters(particle1, charge1, dipole1, quadrupole1, axis1, multipole11, multipole21, thole1, damping1, polarity1);
-        force.getMultipoleParameters(particle2, charge2, dipole2, quadrupole2, axis2, multipole12, multipole22, thole2, damping2, polarity2);
+        force.getMultipoleParameters(particle1, charge1, dipole1, quadrupole1, axis1, multipole11, multipole21, multipole31, thole1, damping1, polarity1);
+        force.getMultipoleParameters(particle2, charge2, dipole2, quadrupole2, axis2, multipole12, multipole22, multipole32, thole2, damping2, polarity2);
         if (charge1 != charge2 || thole1 != thole2 || damping1 != damping2 || polarity1 != polarity2 || axis1 != axis2)
             return false;
         for (int i = 0; i < (int) dipole1.size(); ++i)
@@ -756,8 +790,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     std::vector<float> dampingFactors(numMultipoles);
     std::vector<float> polarity(numMultipoles);
     std::vector<int>   axisTypes(numMultipoles);
-    std::vector<int>   multipoleAtomId1s(numMultipoles);
-    std::vector<int>   multipoleAtomId2s(numMultipoles);
+    std::vector<int>   multipoleAtomZs(numMultipoles);
+    std::vector<int>   multipoleAtomXs(numMultipoles);
+    std::vector<int>   multipoleAtomYs(numMultipoles);
     std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo(numMultipoles);
     std::vector<int> minCovalentIndices(numMultipoles);
     std::vector<int> minCovalentPolarizationIndices(numMultipoles);
@@ -786,17 +821,18 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
 
         // multipoles
 
-        int axisType, multipoleAtomId1, multipoleAtomId2;
+        int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, tholeD, dampingFactorD, polarityD;
         std::vector<double> dipolesD;
         std::vector<double> quadrupolesD;
-        force.getMultipoleParameters(i, charge, dipolesD, quadrupolesD, axisType, multipoleAtomId1, multipoleAtomId2,
+        force.getMultipoleParameters(i, charge, dipolesD, quadrupolesD, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
                                      tholeD, dampingFactorD, polarityD );
 
         totalCharge                       += charge;
         axisTypes[i]                       = axisType;
-        multipoleAtomId1s[i]               = multipoleAtomId1;
-        multipoleAtomId2s[i]               = multipoleAtomId2;
+        multipoleAtomZs[i]                 = multipoleAtomZ;
+        multipoleAtomXs[i]                 = multipoleAtomX;
+        multipoleAtomYs[i]                 = multipoleAtomY;
 
         charges[i]                         = static_cast<float>(charge);
         tholes[i]                          = static_cast<float>(tholeD);
@@ -847,7 +883,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
          throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
     }
 
-    gpuSetAmoebaMultipoleParameters(data.getAmoebaGpu(), charges, dipoles, quadrupoles, axisTypes, multipoleAtomId1s, multipoleAtomId2s,
+    gpuSetAmoebaMultipoleParameters(data.getAmoebaGpu(), charges, dipoles, quadrupoles, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
                                     tholes, scalingDistanceCutoff, dampingFactors, polarity,
                                     multipoleAtomCovalentInfo, covalentDegree, minCovalentIndices, minCovalentPolarizationIndices, (maxCovalentRange+2),
                                     static_cast<int>(force.getMutualInducedIterationMethod()),
@@ -956,6 +992,10 @@ static void computeAmoebaVdwForce( AmoebaCudaData& data ) {
 
     kCalculateAmoebaVdw14_7Forces(gpu, data.getApplyCutoff());
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaVdw                                        *
+ * -------------------------------------------------------------------------- */
 
 class CudaCalcAmoebaVdwForceKernel::ForceInfo : public CudaForceInfo {
 public:

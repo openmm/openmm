@@ -211,8 +211,9 @@ public:
                                         const std::vector<RealOpenMM>& dampingFactors,
                                         const std::vector<RealOpenMM>& polarity,
                                         const std::vector<int>& axisTypes,
-                                        const std::vector<int>& multipoleAtomId1s,
-                                        const std::vector<int>& multipoleAtomId2s,
+                                        const std::vector<int>& multipoleAtomZs,
+                                        const std::vector<int>& multipoleAtomXs,
+                                        const std::vector<int>& multipoleAtomYs,
                                         const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                         RealOpenMM** forces );
 
@@ -461,8 +462,9 @@ private:
 
     RealOpenMM calculateNoCutoffElectrostatic( std::vector<MultipoleParticleData>& particleData, 
                                                const std::vector<int>& axisTypes,
-                                               const std::vector<int>& multipoleAtomId1s,
-                                               const std::vector<int>& multipoleAtomId2s,
+                                               const std::vector<int>& multipoleAtomZs,
+                                               const std::vector<int>& multipoleAtomXs,
+                                               const std::vector<int>& multipoleAtomYs,
                                                RealOpenMM** forces ) const;
 
     /**---------------------------------------------------------------------------------------
@@ -491,8 +493,9 @@ private:
                                                 const std::vector<RealOpenMM>& dampingFactors,
                                                 const std::vector<RealOpenMM>& polarity,
                                                 const std::vector<int>& axisTypes,
-                                                const std::vector<int>& multipoleAtomId1s,
-                                                const std::vector<int>& multipoleAtomId2s,
+                                                const std::vector<int>& multipoleAtomZs,
+                                                const std::vector<int>& multipoleAtomXs,
+                                                const std::vector<int>& multipoleAtomYs,
                                                 RealOpenMM** forces );
 
 };

@@ -104,28 +104,28 @@ public:
      * 
      * @param sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
-    void setSigmaCombiningRule( std::string& sigmaCombiningRule );
+    void setSigmaCombiningRule( const std::string& sigmaCombiningRule );
 
     /**
      * Get sigma combining rule
      * 
      * @return sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
-    std::string getSigmaCombiningRule( void ) const;
+    const std::string& getSigmaCombiningRule( void ) const;
 
     /**
      * Set epsilon combining rule
      * 
      * @param epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
-    void setEpsilonCombiningRule( std::string& epsilonCombiningRule );
+    void setEpsilonCombiningRule( const std::string& epsilonCombiningRule );
 
     /**
      * Get epsilon combining rule
      * 
      * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
-    std::string getEpsilonCombiningRule( void ) const;
+    const std::string& getEpsilonCombiningRule( void ) const;
 
     /**
      * Set exclusions for specified particle
