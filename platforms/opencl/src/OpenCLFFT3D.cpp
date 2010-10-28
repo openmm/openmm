@@ -43,6 +43,8 @@ OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize
 
 void OpenCLFFT3D::execFFT(OpenCLArray<mm_float2>& data, bool forward) {
     int maxSize = xkernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice());
+    if (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU)
+        maxSize = 1;
     xkernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
     xkernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
     context.executeKernel(xkernel, xsize*ysize*zsize, min(xsize, (int) maxSize));

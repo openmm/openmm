@@ -1361,6 +1361,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 }
 
 double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         if (exceptionIndices != NULL) {
@@ -1379,7 +1380,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
         }
         if (pmeGrid != NULL) {
-            cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
+            string file = (deviceIsCpu ? OpenCLKernelSources::pme_cpu : OpenCLKernelSources::pme);
+            cl::Program program = cl.createProgram(file, pmeDefines);
             pmeUpdateBsplinesKernel = cl::Kernel(program, "updateBsplines");
             pmeAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
             pmeSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
@@ -1429,11 +1431,18 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         pmeUpdateBsplinesKernel.setArg<mm_float4>(5, boxSize);
         pmeUpdateBsplinesKernel.setArg<mm_float4>(6, invBoxSize);
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
-        sort->sort(*pmeAtomGridIndex);
-        pmeAtomRangeKernel.setArg<mm_float4>(3, boxSize);
-        pmeAtomRangeKernel.setArg<mm_float4>(4, invBoxSize);
-        cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
-        cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
+        if (deviceIsCpu) {
+            pmeSpreadChargeKernel.setArg<mm_float4>(5, boxSize);
+            pmeSpreadChargeKernel.setArg<mm_float4>(6, invBoxSize);
+            cl.executeKernel(pmeSpreadChargeKernel, 2*cl.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(), 1);
+        }
+        else {
+            sort->sort(*pmeAtomGridIndex);
+            pmeAtomRangeKernel.setArg<mm_float4>(3, boxSize);
+            pmeAtomRangeKernel.setArg<mm_float4>(4, invBoxSize);
+            cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
+            cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
+        }
         fft->execFFT(*pmeGrid, true);
         pmeConvolutionKernel.setArg<mm_float4>(5, invBoxSize);
         pmeConvolutionKernel.setArg<cl_float>(6, (float) (1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z)));

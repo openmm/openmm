@@ -91,7 +91,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
-                    if (!isExcluded) {
 #endif
                     float4 posq2 = (float4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
@@ -122,9 +121,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     force.xyz -= dEdR1.xyz;
 #endif
 #ifdef USE_CUTOFF
-                    }
-#endif
-#ifdef USE_EXCLUSIONS
                     }
 #endif
                     excl >>= 1;
@@ -219,7 +215,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                         bool isExcluded = !(excl & 0x1);
-                        if (!isExcluded) {
 #endif
                         float4 posq2 = (float4) (localData[j].x, localData[j].y, localData[j].z, localData[j].q);
                         float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
@@ -260,7 +255,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                         }
 #endif
 #ifdef USE_EXCLUSIONS
-                        }
                         excl >>= 1;
 #endif
                     }
