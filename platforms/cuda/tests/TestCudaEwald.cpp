@@ -118,7 +118,7 @@ void testEwaldPME(bool includeExceptions) {
     }
 
     norm = std::sqrt(norm);
-    const double delta = 1e-3;
+    const double delta = 5e-3;
     double step = delta/norm;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
@@ -128,7 +128,7 @@ void testEwaldPME(bool includeExceptions) {
     cudaContext.reinitialize();
     cudaContext.setPositions(positions);
     
-    tol = 1e-3;
+    tol = 1e-2;
     State cudaState2 = cudaContext.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (cudaState2.getPotentialEnergy()-cudaState.getPotentialEnergy())/delta, tol)
 
@@ -166,7 +166,7 @@ void testEwaldPME(bool includeExceptions) {
     cudaContext.reinitialize();
     cudaContext.setPositions(positions);
      
-    tol = 1e-3;
+    tol = 1e-2;
     State cudaState3 = cudaContext.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (cudaState3.getPotentialEnergy()-cudaState.getPotentialEnergy())/delta, tol)
 }

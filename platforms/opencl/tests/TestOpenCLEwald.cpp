@@ -117,7 +117,7 @@ void testEwaldPME(bool includeExceptions) {
     }
 
     norm = std::sqrt(norm);
-    const double delta = 1e-3;
+    const double delta = 5e-3;
     double step = delta/norm;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
@@ -127,7 +127,7 @@ void testEwaldPME(bool includeExceptions) {
     Context clContext2(system, integrator, cl);
     clContext2.setPositions(positions);
 
-    tol = 1e-3;
+    tol = 1e-2;
     State clState2 = clContext2.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (clState2.getPotentialEnergy()-clState.getPotentialEnergy())/delta, tol)
 
@@ -165,7 +165,7 @@ void testEwaldPME(bool includeExceptions) {
     Context clContext3(system, integrator, cl);
     clContext3.setPositions(positions);
 
-    tol = 1e-3;
+    tol = 1e-2;
     State clState3 = clContext3.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (clState3.getPotentialEnergy()-clState.getPotentialEnergy())/delta, tol)
 }
