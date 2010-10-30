@@ -31,7 +31,6 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
 #endif
-    float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
 
     while (pos < end) {

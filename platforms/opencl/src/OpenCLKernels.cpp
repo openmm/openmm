@@ -1683,6 +1683,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
 
 double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
+    bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (!hasCreatedKernels) {
         // These Kernels cannot be created in initialize(), because the OpenCLNonbondedUtilities has not been initialized yet then.
 
@@ -1700,21 +1701,27 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
-        string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::gbsaObc_nvidia : OpenCLKernelSources::gbsaObc_default);
+        string file;
+        if (deviceIsCpu)
+            file = OpenCLKernelSources::gbsaObc_cpu;
+        else if (cl.getSIMDWidth() == 32)
+            file = OpenCLKernelSources::gbsaObc_nvidia;
+        else
+            file = OpenCLKernelSources::gbsaObc_default;
         cl::Program program = cl.createProgram(file, defines);
         int index = 0;
         computeBornSumKernel = cl::Kernel(program, "computeBornSum");
         computeBornSumKernel.setArg<cl::Buffer>(index++, bornSum->getDeviceBuffer());
         computeBornSumKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         computeBornSumKernel.setArg<cl::Buffer>(index++, params->getDeviceBuffer());
-        computeBornSumKernel.setArg(index++, OpenCLContext::ThreadBlockSize*13*sizeof(cl_float), NULL);
+        computeBornSumKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*13*sizeof(cl_float), NULL);
         computeBornSumKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // The periodic box size arguments are set when the kernel is executed.
             computeBornSumKernel.setArg<cl_uint>(index++, maxTiles);
-            if (cl.getSIMDWidth() == 32)
+            if (cl.getSIMDWidth() == 32 || deviceIsCpu)
                 computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
@@ -1726,14 +1733,14 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornForce->getDeviceBuffer());
-        force1Kernel.setArg(index++, OpenCLContext::ThreadBlockSize*13*sizeof(cl_float), NULL);
+        force1Kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*13*sizeof(cl_float), NULL);
         force1Kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // The periodic box size arguments are set when the kernel is executed.
             force1Kernel.setArg<cl_uint>(index++, maxTiles);
-            if (cl.getSIMDWidth() == 32)
+            if (cl.getSIMDWidth() == 32 || deviceIsCpu)
                 force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
@@ -1770,9 +1777,9 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         }
     }
     int numTiles = cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2;
-    cl.executeKernel(computeBornSumKernel, numTiles*OpenCLContext::TileSize);
+    cl.executeKernel(computeBornSumKernel, numTiles*OpenCLContext::TileSize, deviceIsCpu ? 1 : -1);
     cl.executeKernel(reduceBornSumKernel, cl.getPaddedNumAtoms());
-    cl.executeKernel(force1Kernel, numTiles*OpenCLContext::TileSize);
+    cl.executeKernel(force1Kernel, numTiles*OpenCLContext::TileSize, deviceIsCpu ? 1 : -1);
     cl.executeKernel(reduceBornForceKernel, cl.getPaddedNumAtoms());
     return 0.0;
 }

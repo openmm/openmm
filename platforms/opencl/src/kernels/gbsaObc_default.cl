@@ -29,7 +29,6 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
     unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
-    float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
 
     while (pos < end) {
