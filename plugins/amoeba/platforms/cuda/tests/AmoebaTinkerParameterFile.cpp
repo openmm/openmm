@@ -1894,6 +1894,151 @@ static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forc
 
 /**---------------------------------------------------------------------------------------
 
+    Read Amoeba Urey-Bradley parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of bonds
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaUreyBradleyParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                            System& system, int useOpenMMUnits,
+                                            MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaUreyBradleyParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no UB parameter number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    AmoebaUreyBradleyForce* ubForce  = new AmoebaUreyBradleyForce();
+    MapStringIntI forceActive          = forceMap.find( AMOEBA_UREY_BRADLEY_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( ubForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba Urey-Bradley force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba Urey-Bradley force is not being included.\n" );
+    }
+    if( log )(void) fflush( log );
+
+    int numberOfInteractions            = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of UreyBradleyForce terms=%d\n", methodName.c_str(), numberOfInteractions );
+    }
+    for( int ii = 0; ii < numberOfInteractions; ii++ ){
+       StringVector lineTokens;
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 4 ){
+          int tokenIndex       = 0;
+          int index            = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+          double length        = atof( lineTokens[tokenIndex++].c_str() );
+          double k             = atof( lineTokens[tokenIndex++].c_str() );
+          ubForce->addUreyBradley( particle1, particle2, length, k );
+(void) fprintf( log, "%s AmoebaUreyBradleyForce %9d %8d [%8d %8d] %12.4f %12.4f\n", methodName.c_str(), *lineCount, index, particle1, particle2, length, k);
+(void) fflush( log );
+       } else {
+          (void) fprintf( log, "%s AmoebaUreyBradleyForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          exit(-1);
+       }
+    }
+
+    // get cubic and quartic factors
+
+    int isNotEof                   = 1;
+    int hits                       = 0;
+    while( hits < 2 ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+ 
+            std::string field       = tokens[0];
+            if( field == "#" ){
+  
+               // skip
+               if( log ){
+                     (void) fprintf( log, "skip <%s>\n", field.c_str());
+               }
+  
+           } else if( field == "AmoebaUreyBradleyCubic" ){
+               double cubicParameter = atof( tokens[1].c_str() );
+               ubForce->setAmoebaGlobalUreyBradleyCubic( cubicParameter );
+               hits++;
+           } else if( field == "AmoebaUreyBradleyQuartic" ){
+               double quarticParameter = atof( tokens[1].c_str() );
+               ubForce->setAmoebaGlobalUreyBradleyQuartic( quarticParameter );
+               hits++;
+           }
+        }
+    }
+
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+
+        double cubic         = ubForce->getAmoebaGlobalUreyBradleyCubic()/AngstromToNm;
+        double quartic       = ubForce->getAmoebaGlobalUreyBradleyQuartic()/(AngstromToNm*AngstromToNm);
+
+        ubForce->setAmoebaGlobalUreyBradleyCubic( cubic );
+        ubForce->setAmoebaGlobalUreyBradleyQuartic( quartic );
+
+        // scale equilibrium lengths/force prefactor k
+
+        for( int ii = 0; ii < ubForce->getNumInteractions(); ii++ ){
+            int particle1, particle2;
+            double length, k;
+            ubForce->getUreyBradleyParameters( ii, particle1, particle2, length, k );
+            length           *= AngstromToNm;
+            k                *= CalToJoule/(AngstromToNm*AngstromToNm);
+            ubForce->setUreyBradleyParameters( ii, particle1, particle2, length, k ); 
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(ubForce->getNumInteractions());
+        (void) fprintf( log, "%s: %u sample of AmoebaUreyBradleyForce parameters in %s units; cubic=%15.7e quartic=%15.7e\n",
+                        methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
+                        ubForce->getAmoebaGlobalUreyBradleyCubic(), ubForce->getAmoebaGlobalUreyBradleyQuartic() );
+        for( unsigned int ii = 0; ii < arraySize; ii++ ){
+            int particle1, particle2;
+            double length, k;
+            ubForce->getUreyBradleyParameters( ii, particle1, particle2, length, k );
+            (void) fprintf( log, "%8d %8d %8d %15.7e %15.7e\n", ii, particle1, particle2, length, k );
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+               ii = arraySize - maxPrint - 1;
+            } 
+        }
+    }
+
+    return ubForce->getNumInteractions();
+}
+
+/**---------------------------------------------------------------------------------------
+
     Read Amoeba multipole parameters
 
     @param filePtr              file pointer to parameter file
@@ -3266,6 +3411,16 @@ static void getStringForceMap( System& system, MapStringForce& forceMap, FILE* l
             }
         }
     
+        if( !hit ){
+
+            try {
+               AmoebaUreyBradleyForce& ubForce                     = dynamic_cast<AmoebaUreyBradleyForce&>(force);
+               forceMap[AMOEBA_UREY_BRADLEY_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
         // multipole
 
         if( !hit ){
@@ -3539,6 +3694,17 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
             } else if( field == "AmoebaHarmonicBondEnergy" ){
                 if( tokens.size() > 1 ){
                    potentialEnergy[AMOEBA_HARMONIC_BOND_FORCE] = atof( tokens[1].c_str() ); 
+                }
+   
+            // AmoebaUreyBradley
+  
+            } else if( field == "AmoebaUreyBradleyParameters" ){
+                readAmoebaUreyBradleyParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap,&lineCount, log );
+            } else if( field == "AmoebaUreyBradleyForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_UREY_BRADLEY_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaUreyBradleyEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_UREY_BRADLEY_FORCE] = atof( tokens[1].c_str() ); 
                 }
    
             // AmoebaHarmonicAngle
@@ -5950,6 +6116,7 @@ Double "simulationTimeBetweenReportsRatio"       simulationTimeBetweenReportsRat
                    key == AMOEBA_TORSION_FORCE                    ||
                    key == AMOEBA_PI_TORSION_FORCE                 ||
                    key == AMOEBA_STRETCH_BEND_FORCE               ||
+                   key == AMOEBA_UREY_BRADLEY_FORCE               ||
                    key == AMOEBA_OUT_OF_PLANE_BEND_FORCE          ||
                    key == AMOEBA_TORSION_TORSION_FORCE            ||
                    key == AMOEBA_MULTIPOLE_FORCE                  ||

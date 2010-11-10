@@ -47,6 +47,7 @@
 #include "AmoebaGeneralizedKirkwoodForce.h"
 #include "AmoebaVdwForce.h"
 #include "AmoebaWcaDispersionForce.h"
+#include "AmoebaUreyBradleyForce.h"
 #include "internal/windowsExport.h"
 #include "internal/AmoebaWcaDispersionForceImpl.h"
 
@@ -77,6 +78,7 @@ static std::string AMOEBA_GK_FORCE                                    = "AmoebaG
 static std::string AMOEBA_GK_CAVITY_FORCE                             = "AmoebaGkAndCavity";
 static std::string AMOEBA_VDW_FORCE                                   = "AmoebaVdw";
 static std::string AMOEBA_WCA_DISPERSION_FORCE                        = "AmoebaWcaDispersion";
+static std::string AMOEBA_UREY_BRADLEY_FORCE                          = "AmoebaUreyBradley";
 static std::string ALL_FORCES                                         = "AllForces";
 
 static std::string AMOEBA_MULTIPOLE_ROTATION_MATRICES                 = "AmoebaMultipoleRotationMatrices";
@@ -103,7 +105,8 @@ static std::string MUTUAL_INDUCED_TARGET_EPSILON                      = "mutualI
 #define AmoebaWcaDispersionIndex                          10
 #define AmoebaObcIndex                                    11
 #define SumIndex                                          12
-#define AmoebaLastIndex                                   13
+#define UreyBradleyIndex                                  13
+#define AmoebaLastIndex                                   14
 
 #define AngstromToNm 0.1
 #define CalToJoule   4.184
