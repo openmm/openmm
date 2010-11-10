@@ -328,6 +328,16 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
 
     (void) fprintf( log, "     pOutputBufferCounter               %p\n",      amoebaGpu->gpuContext->pOutputBufferCounter );
 
+    if( amoebaGpu->psAmoebaUreyBradleyParameter)(void) fprintf( log, "\n" );
+    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaUreyBradleyID, log );
+    gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaUreyBradleyParameter, log );
+    (void) fprintf( log, "     amoebaUreyBradleys                 %u\n",      amoebaGpu->amoebaSim.amoebaUreyBradleys );
+    (void) fprintf( log, "     amoebaUreyBradley_offset           %u\n",      amoebaGpu->amoebaSim.amoebaUreyBradley_offset );
+    (void) fprintf( log, "     cubic                              %15.7e\n",  amoebaGpu->amoebaSim.amoebaUreyBradleyCubicParameter);
+    (void) fprintf( log, "     quartic                            %15.7e\n",  amoebaGpu->amoebaSim.amoebaUreyBradleyQuarticicParameter);
+    (void) fprintf( log, "     pAmoebaUreyBradleyID               %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyID );
+    (void) fprintf( log, "     pAmoebaUreyBradleyParameter        %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter );
+    
     if( amoebaGpu->psRotationMatrix)(void) fprintf( log, "\n" );
     gpuPrintCudaStreamFloat( amoebaGpu->psRotationMatrix, log );
     gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesIdsAndAxisType, log );
@@ -481,6 +491,50 @@ if( amoebaGpu->log && (i < DUMP_PARAMETERS || i > bonds - (DUMP_PARAMETERS + 1) 
 }
 
 extern "C"
+void gpuSetAmoebaUreyBradleyParameters(amoebaGpuContext amoebaGpu, const std::vector<int>& particles1, const std::vector<int>& particles2, 
+                                       const std::vector<float>& length, const std::vector<float>& k, float cubic, float quartic)
+{
+    _gpuContext* gpu                                         = amoebaGpu->gpuContext;
+    int bonds                                                = particles1.size();
+    amoebaGpu->amoebaSim.amoebaUreyBradleys                  = bonds;
+
+    CUDAStream<int4>* psUreyBradleyID                        = new CUDAStream<int4>(bonds, 1, "AmoebaUreyBradleyID");
+    amoebaGpu->psAmoebaUreyBradleyID                         = psUreyBradleyID;
+    amoebaGpu->amoebaSim.pAmoebaUreyBradleyID                = psUreyBradleyID->_pDevStream[0];
+
+    CUDAStream<float2>* psUreyBradleyParameter               = new CUDAStream<float2>(bonds, 1, "AmoebaUreyBradleyParameter");
+    amoebaGpu->psAmoebaUreyBradleyParameter                  = psUreyBradleyParameter;
+    amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter         = psUreyBradleyParameter->_pDevStream[0];
+
+    amoebaGpu->amoebaSim.amoebaUreyBradleyCubicParameter     = cubic;
+    amoebaGpu->amoebaSim.amoebaUreyBradleyQuarticicParameter = quartic;
+    for (int i = 0; i < bonds; i++)
+    {
+        (*psUreyBradleyID)[i].x         = particles1[i];
+        (*psUreyBradleyID)[i].y         = particles2[i];
+        (*psUreyBradleyID)[i].z         = gpu->pOutputBufferCounter[(*psUreyBradleyID)[i].x]++;
+        (*psUreyBradleyID)[i].w         = gpu->pOutputBufferCounter[(*psUreyBradleyID)[i].y]++;
+        (*psUreyBradleyParameter)[i].x  = length[i];
+        (*psUreyBradleyParameter)[i].y  = k[i];
+
+#undef DUMP_PARAMETERS
+#define DUMP_PARAMETERS 5
+#if (DUMP_PARAMETERS > 0 )                
+if( amoebaGpu->log && (i < DUMP_PARAMETERS || i > bonds - (DUMP_PARAMETERS + 1)  ) )
+        fprintf( amoebaGpu->log, "UreyBradleys: %5d [%5d %5d %5d %5d] L=%15.7e k[%15.7e %15.7e %15.7e] [%5d %5d]\n",
+            i, (*psUreyBradleyID)[i].x, (*psUreyBradleyID)[i].y, (*psUreyBradleyID)[i].z, (*psUreyBradleyID)[i].w, 
+            (*psUreyBradleyParameter)[i].x, (*psUreyBradleyParameter)[i].y, cubic, quartic, 
+            gpu->pOutputBufferCounter[(*psUreyBradleyID)[i].x],
+            gpu->pOutputBufferCounter[(*psUreyBradleyID)[i].y] );
+#endif
+#undef DUMP_PARAMETERS
+
+    }
+    psUreyBradleyID->Upload();
+    psUreyBradleyParameter->Upload();
+}
+
+extern "C"
 void gpuSetAmoebaAngleParameters(amoebaGpuContext amoebaGpu, const std::vector<int>& particles1, const std::vector<int>& particles2, const std::vector<int>& particles3,
                                  const std::vector<float>& angle, const std::vector<float>& k,
                                  float cubicK, float quarticK, float penticK, float sexticK)
@@ -579,7 +633,7 @@ void gpuSetAmoebaInPlaneAngleParameters(amoebaGpuContext amoebaGpu, const std::v
         psAngleID2->_pSysData[i].w = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].w]++;
 
 #undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 50000
+#define DUMP_PARAMETERS 10
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
          fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d %5d]\n", i, 
@@ -822,7 +876,7 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
     amoebaGpu->amoebaSim.amoebaOutOfPlaneBendSexticK     = sexticK;
 
 #undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 50000
+#define DUMP_PARAMETERS 10
 #if (DUMP_PARAMETERS > 0 )
     if( amoebaGpu->log )
         fprintf( amoebaGpu->log, "OutOfPlaneBends: global ks[%15.7e %15.7e %15.7e %15.7e]\n", cubicK, quarticK, penticK, sexticK );
@@ -1065,7 +1119,6 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
     flipped = 1;
     _gpuContext* gpu                                           = amoebaGpu->gpuContext;
 
-
     amoebaGpu->amoebaSim.amoebaBond_offset                     = amoebaGpu->psAmoebaBondParameter ? amoebaGpu->psAmoebaBondParameter->_stride : 0;
 
     amoebaGpu->amoebaSim.amoebaAngle_offset                    = amoebaGpu->amoebaSim.amoebaBond_offset            + 
@@ -1089,7 +1142,12 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
     amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset           = amoebaGpu->amoebaSim.amoebaOutOfPlaneBend_offset  +
                                                                  (amoebaGpu->psAmoebaTorsionTorsionID1 ?  amoebaGpu->psAmoebaTorsionTorsionID1->_stride : 0);
 
+    amoebaGpu->amoebaSim.amoebaUreyBradley_offset              = amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset +
+                                                                 (amoebaGpu->psAmoebaUreyBradleyParameter ?  amoebaGpu->psAmoebaUreyBradleyParameter->_stride : 0);
+
     //gpu->sim.localForces_threads_per_block  = (std::max(amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset, gpu->sim.customBonds) / gpu->sim.blocks + 15) & 0xfffffff0;
+    //fprintf( amoebaGpu->log, "Final (UreyBradley) offset : %5d \n", amoebaGpu->amoebaSim.amoebaUreyBradley_offset );
+
     unsigned int maxI                                         = (amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset > gpu->sim.customBonds) ? amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset : gpu->sim.customBonds;
     gpu->sim.localForces_threads_per_block                    = (maxI/gpu->sim.blocks + 15) & 0xfffffff0;
     if (gpu->sim.localForces_threads_per_block > gpu->sim.max_localForces_threads_per_block)
@@ -1189,7 +1247,14 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
             amoebaGpu->psAmoebaTorsionTorsionID2->Upload();
             amoebaGpu->psAmoebaTorsionTorsionID3->Upload();
         }
-
+        for (unsigned int i = 0; i < amoebaGpu->amoebaSim.amoebaUreyBradleys; i++) 
+        {    
+            (*amoebaGpu->psAmoebaUreyBradleyID)[i].z = flip - (*amoebaGpu->psAmoebaUreyBradleyID)[i].z;
+            (*amoebaGpu->psAmoebaUreyBradleyID)[i].w = flip - (*amoebaGpu->psAmoebaUreyBradleyID)[i].w;
+        }    
+        if( amoebaGpu->psAmoebaUreyBradleyID ){
+            amoebaGpu->psAmoebaUreyBradleyID->Upload();
+        }
     }    
     
 
@@ -2605,6 +2670,9 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
 
     delete gpu->psAmoebaBondID;
     delete gpu->psAmoebaBondParameter;
+
+    delete gpu->psAmoebaUreyBradleyID;
+    delete gpu->psAmoebaUreyBradleyParameter;
 
     delete gpu->psAmoebaAngleID1;
     delete gpu->psAmoebaAngleID2;

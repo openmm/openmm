@@ -42,6 +42,7 @@ extern "C" void OPENMMCUDA_EXPORT registerKernelFactories() {
              AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
 
              platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaUreyBradleyForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(), factory);
@@ -130,6 +131,9 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new CudaCalcAmoebaWcaDispersionForceKernel(name, platform, *amoebaCudaData, context.getSystem());
+
+    if (name == CalcAmoebaUreyBradleyForceKernel::Name())
+        return new CudaCalcAmoebaUreyBradleyForceKernel(name, platform, *amoebaCudaData, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

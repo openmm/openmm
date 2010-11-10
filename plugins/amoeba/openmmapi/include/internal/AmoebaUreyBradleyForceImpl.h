@@ -1,15 +1,15 @@
-#ifndef AMOEBA_OPENMM_H_
-#define AMOEBA_OPENMM_H_
+#ifndef OPENMM_AMOEBA_UREY_BRADLEY_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_UREY_BRADLEY_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
- *                               AmoebaOpenMM                                 *
+ *                                AmoebaOpenMM                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,18 +32,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AmoebaHarmonicBondForce.h"
+#include "openmm/internal/ForceImpl.h"
 #include "AmoebaUreyBradleyForce.h"
-#include "AmoebaHarmonicAngleForce.h"
-#include "AmoebaHarmonicInPlaneAngleForce.h"
-#include "AmoebaTorsionForce.h"
-#include "AmoebaPiTorsionForce.h"
-#include "AmoebaStretchBendForce.h"
-#include "AmoebaOutOfPlaneBendForce.h"
-#include "AmoebaTorsionTorsionForce.h"
-#include "AmoebaMultipoleForce.h"
-#include "AmoebaGeneralizedKirkwoodForce.h"
-#include "AmoebaVdwForce.h"
-#include "AmoebaWcaDispersionForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <set>
+#include <string>
 
-#endif /*AMOEBA_OPENMM_H_*/
+namespace OpenMM {
+
+/**
+ * This is the internal implementation of AmoebaUreyBradleyForce.
+ */
+
+class AmoebaUreyBradleyForceImpl : public ForceImpl {
+public:
+    AmoebaUreyBradleyForceImpl(AmoebaUreyBradleyForce& owner);
+    ~AmoebaUreyBradleyForceImpl();
+    void initialize(ContextImpl& context);
+    AmoebaUreyBradleyForce& getOwner() {
+        return owner;
+    }
+    void updateContextState(ContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    AmoebaUreyBradleyForce& owner;
+    Kernel kernel;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_AMOEBA_UREY_BRADLEY_FORCE_IMPL_H_*/

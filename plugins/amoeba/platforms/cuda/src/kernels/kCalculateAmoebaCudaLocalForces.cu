@@ -1571,6 +1571,49 @@ void kCalculateAmoebaLocalForces_kernel()
         }
         pos += blockDim.x * gridDim.x;
     }
+
+    while (pos < cAmoebaSim.amoebaUreyBradley_offset)
+    {
+        unsigned int pos1   = pos - cAmoebaSim.amoebaTorsionTorsion_offset;
+        if (pos1 < cAmoebaSim.amoebaUreyBradleys)
+        {
+            int4   atom         = cAmoebaSim.pAmoebaUreyBradleyID[pos1];
+            float4 atomA        = cSim.pPosq[atom.x];
+            float4 atomB        = cSim.pPosq[atom.y];
+            float2 bond         = cAmoebaSim.pAmoebaUreyBradleyParameter[pos];
+            float dx            = atomB.x - atomA.x;
+            float dy            = atomB.y - atomA.y;
+            float dz            = atomB.z - atomA.z;
+            float r2            = dx * dx + dy * dy + dz * dz;
+            float r             = sqrt(r2);
+            float deltaIdeal    = r - bond.x;
+            float deltaIdeal2   = deltaIdeal*deltaIdeal;
+            energy             += bond.y * deltaIdeal2*( 1.0f + cAmoebaSim.amoebaUreyBradleyCubicParameter*deltaIdeal +
+                                                                cAmoebaSim.amoebaUreyBradleyQuarticicParameter*deltaIdeal2 );
+
+            float dEdR          = 2.0f*bond.y * deltaIdeal*( 1.0f + 1.5f*cAmoebaSim.amoebaUreyBradleyCubicParameter*deltaIdeal +
+                                                                    2.0f*cAmoebaSim.amoebaUreyBradleyQuarticicParameter*deltaIdeal2 );
+
+            dEdR                = (r > 0.0f) ? (dEdR / r) : 0.0f;
+
+            dx                 *= dEdR;
+            dy                 *= dEdR;
+            dz                 *= dEdR;
+            unsigned int offsetA                = atom.x + atom.z * cSim.stride;
+            unsigned int offsetB                = atom.y + atom.w * cSim.stride;
+            float4 forceA                       = cSim.pForce4[offsetA];
+            float4 forceB                       = cSim.pForce4[offsetB];
+            forceA.x                           += dx;
+            forceA.y                           += dy;
+            forceA.z                           += dz;
+            forceB.x                           -= dx;
+            forceB.y                           -= dy;
+            forceB.z                           -= dz;
+            cSim.pForce4[offsetA]               = forceA;
+            cSim.pForce4[offsetB]               = forceB;    
+        }
+        pos += blockDim.x * gridDim.x;
+    }
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy;
 }
 
@@ -1579,7 +1622,7 @@ void kCalculateAmoebaLocalForces(amoebaGpuContext gpu)
 {
    
     if( gpu->log ){
-        static int call = 0;
+        static int call = 1;
         if( call == 0 ){
             (void) fprintf( gpu->log,"kCalculateAmoebaLocalForces: blks=%u thrds/blk=%u\n",
                             gpu->gpuContext->sim.blocks, gpu->gpuContext->sim.localForces_threads_per_block); fflush( gpu->log );
@@ -1588,17 +1631,8 @@ void kCalculateAmoebaLocalForces(amoebaGpuContext gpu)
     }
 
     kCalculateAmoebaLocalForces_kernel<<<gpu->gpuContext->sim.blocks, gpu->gpuContext->sim.localForces_threads_per_block>>>();
+
     LAUNCHERROR("kCalculateAmoebaLocalForces");
 
-/*    
-    fprintf( stderr, "Done kCalculateAmoebaLocalForces %p \n", gpu->gpuContext->psForce4); fflush( stderr );
-    gpu->gpuContext->psForce4->Print( stderr ); fflush( stderr );
-    gpu->gpuContext->psEnergy->Print( stderr ); fflush( stderr );
-    GetCalculateAmoebaLocalForcesSim( gpu );
-    gpu->gpuContext->psForce4->Print( stderr ); fflush( stderr );
-    gpu->gpuContext->psEnergy->Print( stderr ); fflush( stderr );
-    fprintf( stderr, "Ez %p\n", (float* ) gpu->gpuContext->sim.pEnergy );
-*/
-    
 }
 

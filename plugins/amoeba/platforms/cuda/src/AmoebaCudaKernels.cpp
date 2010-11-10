@@ -134,6 +134,79 @@ double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool
 }
 
 /* -------------------------------------------------------------------------- *
+ *                           AmoebaUreyBradley                               *
+ * -------------------------------------------------------------------------- */
+
+class CudaCalcAmoebaUreyBradleyForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaUreyBradleyForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumInteractions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double length, k;
+        force.getUreyBradleyParameters(index, particle1, particle2, length, k);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double length1, length2, k1, k2;
+        force.getUreyBradleyParameters(group1, particle1, particle2, length1, k1);
+        force.getUreyBradleyParameters(group2, particle1, particle2, length2, k2);
+        return (length1 == length2 && k1 == k2);
+    }
+private:
+    const AmoebaUreyBradleyForce& force;
+};
+
+CudaCalcAmoebaUreyBradleyForceKernel::CudaCalcAmoebaUreyBradleyForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
+                CalcAmoebaUreyBradleyForceKernel(name, platform), data(data), system(system) {
+    data.incrementKernelCount();
+}
+
+CudaCalcAmoebaUreyBradleyForceKernel::~CudaCalcAmoebaUreyBradleyForceKernel() {
+    data.decrementKernelCount();
+}
+
+void CudaCalcAmoebaUreyBradleyForceKernel::initialize(const System& system, const AmoebaUreyBradleyForce& force) {
+
+    data.setAmoebaLocalForcesKernel( this );
+
+    numInteractions = force.getNumInteractions();
+    std::vector<int>   particle1(numInteractions);
+    std::vector<int>   particle2(numInteractions);
+    std::vector<float> length(numInteractions);
+    std::vector<float> quadratic(numInteractions);
+
+    for (int i = 0; i < numInteractions; i++) {
+
+        int particle1Index, particle2Index;
+        double lengthValue, kValue;
+        force.getUreyBradleyParameters(i, particle1Index, particle2Index, lengthValue, kValue );
+
+        particle1[i]     = particle1Index; 
+        particle2[i]     = particle2Index; 
+        length[i]        = static_cast<float>( lengthValue );
+        quadratic[i]     = static_cast<float>( kValue );
+    } 
+    gpuSetAmoebaUreyBradleyParameters( data.getAmoebaGpu(), particle1, particle2, length, quadratic, 
+                                       static_cast<float>(force.getAmoebaGlobalUreyBradleyCubic()),
+                                       static_cast<float>(force.getAmoebaGlobalUreyBradleyQuartic()) );
+    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
+}
+
+double CudaCalcAmoebaUreyBradleyForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if( data.getAmoebaLocalForcesKernel() == this ){
+        computeAmoebaLocalForces( data );
+    }
+    return 0.0;
+}
+
+/* -------------------------------------------------------------------------- *
  *                           AmoebaHarmonicAngle                              *
  * -------------------------------------------------------------------------- */
 

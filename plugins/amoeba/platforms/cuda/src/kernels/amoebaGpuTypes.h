@@ -86,6 +86,9 @@ struct _amoebaGpuContext {
     CUDAStream<int4>*   psAmoebaBondID;
     CUDAStream<float2>* psAmoebaBondParameter;
 
+    CUDAStream<int4>*   psAmoebaUreyBradleyID;
+    CUDAStream<float2>* psAmoebaUreyBradleyParameter;
+
     CUDAStream<int4>*   psAmoebaAngleID1;
     CUDAStream<int2>*   psAmoebaAngleID2;
     CUDAStream<float2>* psAmoebaAngleParameter;
@@ -248,6 +251,10 @@ void amoebaGpuBuildScalingList( amoebaGpuContext gpu );
 extern "C"
 void gpuSetAmoebaBondParameters(amoebaGpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, 
                                 const std::vector<float>& length, const std::vector<float>& k, float cubic, float quartic);
+
+extern "C"
+void gpuSetAmoebaUreyBradleyParameters(amoebaGpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, 
+                                       const std::vector<float>& length, const std::vector<float>& k, float cubic, float quartic);
 
 extern "C"
 void gpuSetAmoebaAngleParameters(amoebaGpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3,

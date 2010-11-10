@@ -59,6 +59,7 @@ struct cudaAmoebaGmxSimulation {
     float           amoebaBondQuarticicParameter;   // quartic bond parameters
     unsigned int    amoebaBond_offset;              // Offset to end of bonds
 
+
     unsigned int    amoebaAngles;                   // Number of bond angles
     int4*           pAmoebaAngleID1;                // Bond angle atom and first output buffer IDs
     int2*           pAmoebaAngleID2;                // Bond angle output buffer IDs
@@ -123,6 +124,13 @@ struct cudaAmoebaGmxSimulation {
     float amoebaTorTorGridBegin[4];                 // -180.0
     float amoebaTorTorGridDelta[4];                 // 15.0
     float4*          pAmoebaTorsionTorsionGrids;    // torsion torsion grids
+
+    unsigned int    amoebaUreyBradleys;             // Number of UB ixns
+    int4*           pAmoebaUreyBradleyID;           // UreyBradley atom and output buffer IDs
+    float2*         pAmoebaUreyBradleyParameter;    // UreyBradley parameters
+    float           amoebaUreyBradleyCubicParameter;// cubic parameter
+    float           amoebaUreyBradleyQuarticicParameter; // quartic parameter
+    unsigned int    amoebaUreyBradley_offset;       // Offset to end of bonds
 
     unsigned int numberOfAtoms;                     // number of atoms
     unsigned int paddedNumberOfAtoms;               // padded number of atoms

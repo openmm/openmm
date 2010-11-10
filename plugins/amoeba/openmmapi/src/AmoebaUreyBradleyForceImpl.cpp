@@ -1,15 +1,12 @@
-#ifndef AMOEBA_OPENMM_H_
-#define AMOEBA_OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
- *                               AmoebaOpenMM                                 *
+ *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,18 +29,34 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AmoebaHarmonicBondForce.h"
-#include "AmoebaUreyBradleyForce.h"
-#include "AmoebaHarmonicAngleForce.h"
-#include "AmoebaHarmonicInPlaneAngleForce.h"
-#include "AmoebaTorsionForce.h"
-#include "AmoebaPiTorsionForce.h"
-#include "AmoebaStretchBendForce.h"
-#include "AmoebaOutOfPlaneBendForce.h"
-#include "AmoebaTorsionTorsionForce.h"
-#include "AmoebaMultipoleForce.h"
-#include "AmoebaGeneralizedKirkwoodForce.h"
-#include "AmoebaVdwForce.h"
-#include "AmoebaWcaDispersionForce.h"
+#include "openmm/internal/ContextImpl.h"
+#include "internal/AmoebaUreyBradleyForceImpl.h"
+#include "amoebaKernels.h"
+#include "openmm/Platform.h"
 
-#endif /*AMOEBA_OPENMM_H_*/
+using namespace OpenMM;
+
+using std::pair;
+using std::vector;
+using std::set;
+
+AmoebaUreyBradleyForceImpl::AmoebaUreyBradleyForceImpl(AmoebaUreyBradleyForce& owner) : owner(owner) {
+}
+
+AmoebaUreyBradleyForceImpl::~AmoebaUreyBradleyForceImpl() {
+}
+
+void AmoebaUreyBradleyForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcAmoebaUreyBradleyForceKernel::Name(), context);
+    dynamic_cast<CalcAmoebaUreyBradleyForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+}
+
+double AmoebaUreyBradleyForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaUreyBradleyForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+}
+
+std::vector<std::string> AmoebaUreyBradleyForceImpl::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(CalcAmoebaUreyBradleyForceKernel::Name());
+    return names;
+}

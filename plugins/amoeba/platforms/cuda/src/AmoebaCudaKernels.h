@@ -67,6 +67,39 @@ private:
 };
 
 /**
+ * This kernel is invoked by AmoebaUreyBradleyForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcAmoebaUreyBradleyForceKernel : public CalcAmoebaUreyBradleyForceKernel {
+public:
+    CudaCalcAmoebaUreyBradleyForceKernel(std::string name, 
+                                          const Platform& platform,
+                                          AmoebaCudaData& data,
+                                          System& system);
+    ~CudaCalcAmoebaUreyBradleyForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaUreyBradleyForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaUreyBradleyForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    class ForceInfo;
+    int numInteractions;
+    AmoebaCudaData& data;
+    System& system;
+};
+
+/**
  * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcAmoebaHarmonicAngleForceKernel : public CalcAmoebaHarmonicAngleForceKernel {
