@@ -37,6 +37,7 @@
 #include "AmoebaReferenceVdwForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
 #include "internal/AmoebaWcaDispersionForceImpl.h"
+#include "AmoebaReferenceUreyBradleyForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "AmoebaMultipoleForce.h"
@@ -104,6 +105,43 @@ double ReferenceCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context,
     RealOpenMM energy      = amoebaReferenceHarmonicBondForce.calculateForceAndEnergy( numBonds, posData, particle1, particle2, length, kQuadratic,
                                                                                        globalHarmonicBondCubic, globalHarmonicBondQuartic,
                                                                                        forceData );
+    return static_cast<double>(energy);
+}
+
+// ***************************************************************************
+
+ReferenceCalcAmoebaUreyBradleyForceKernel::ReferenceCalcAmoebaUreyBradleyForceKernel(std::string name, const Platform& platform, System& system) : 
+                CalcAmoebaUreyBradleyForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaUreyBradleyForceKernel::~ReferenceCalcAmoebaUreyBradleyForceKernel() {
+}
+
+void ReferenceCalcAmoebaUreyBradleyForceKernel::initialize(const System& system, const AmoebaUreyBradleyForce& force) {
+
+    numIxns = force.getNumInteractions();
+    for( int ii = 0; ii < numIxns; ii++) {
+
+        int particle1Index, particle2Index;
+        double lengthValue, kValue;
+        force.getUreyBradleyParameters(ii, particle1Index, particle2Index, lengthValue, kValue );
+
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        length.push_back(    static_cast<RealOpenMM>( lengthValue ) );
+        kQuadratic.push_back( static_cast<RealOpenMM>( kValue ) );
+    } 
+    globalUreyBradleyCubic   = static_cast<RealOpenMM>(force.getAmoebaGlobalUreyBradleyCubic());
+    globalUreyBradleyQuartic = static_cast<RealOpenMM>(force.getAmoebaGlobalUreyBradleyQuartic());
+}
+
+double ReferenceCalcAmoebaUreyBradleyForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    AmoebaReferenceUreyBradleyForce amoebaReferenceUreyBradleyForce;
+    RealOpenMM energy      = amoebaReferenceUreyBradleyForce.calculateForceAndEnergy( numIxns, posData, particle1, particle2, length, kQuadratic,
+                                                                                      globalUreyBradleyCubic, globalUreyBradleyQuartic,
+                                                                                      forceData );
     return static_cast<double>(energy);
 }
 
