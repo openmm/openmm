@@ -75,7 +75,8 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
         if (x == y) {
             // This tile is on the diagonal.
 
-            local_posq[get_local_id(0)] = posq1;
+            const unsigned int localAtomIndex = get_local_id(0);
+            local_posq[localAtomIndex] = posq1;
             LOAD_LOCAL_PARAMETERS_FROM_1
 #ifdef USE_EXCLUSIONS
             unsigned int excl = exclusions[exclusionIndex[localGroupIndex]+tgx];
@@ -128,12 +129,13 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
         else {
             // This is an off-diagonal tile.
 
+            const unsigned int localAtomIndex = get_local_id(0);
             if (lasty != y) {
                 unsigned int j = y*TILE_SIZE + tgx;
-                local_posq[get_local_id(0)] = posq[j];
+                local_posq[localAtomIndex] = posq[j];
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            local_force[get_local_id(0)] = 0.0f;
+            local_force[localAtomIndex] = 0.0f;
             CLEAR_LOCAL_DERIVATIVES
 #ifdef USE_CUTOFF
             unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);

@@ -14,8 +14,7 @@ typedef struct {
  * Compute the Born sum.
  */
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
+__kernel void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
 #else
@@ -171,15 +170,15 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                // Write results for atom1.
 
                 unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                global_bornSum[offset] += bornSum;
+            }
+
+            // Write results
+
+            for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += localData[tgx].bornSum;
             }
-        }
-
-        // Write results
-
-        for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
-            unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-            global_bornSum[offset] += localData[tgx].bornSum;
         }
         lasty = y;
         pos++;
@@ -190,8 +189,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
  * First part of computing the GBSA interaction.
  */
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
+__kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __global float* global_bornRadii,
         __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
@@ -344,19 +342,20 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
 
                 unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                 forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
+                global_bornForce[offset] += force.w;
             }
-        }
 
-        // Write results
+            // Write results
 
-        for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
-            unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-            float4 f = forceBuffers[offset];
-            f.x += localData[tgx].fx;
-            f.y += localData[tgx].fy;
-            f.z += localData[tgx].fz;
-            forceBuffers[offset] = f;
-            global_bornForce[offset] += localData[tgx].fw;
+            for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                float4 f = forceBuffers[offset];
+                f.x += localData[tgx].fx;
+                f.y += localData[tgx].fy;
+                f.z += localData[tgx].fz;
+                forceBuffers[offset] = f;
+                global_bornForce[offset] += localData[tgx].fw;
+            }
         }
         lasty = y;
         pos++;

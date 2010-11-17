@@ -1715,7 +1715,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         computeBornSumKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         computeBornSumKernel.setArg<cl::Buffer>(index++, params->getDeviceBuffer());
         computeBornSumKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*13*sizeof(cl_float), NULL);
-        computeBornSumKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+        computeBornSumKernel.setArg(index++, (deviceIsCpu ? 1 : OpenCLContext::ThreadBlockSize)*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -1734,7 +1734,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornForce->getDeviceBuffer());
         force1Kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*13*sizeof(cl_float), NULL);
-        force1Kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        force1Kernel.setArg(index++, (deviceIsCpu ? 1 : OpenCLContext::ThreadBlockSize)*sizeof(mm_float4), NULL);
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -1954,6 +1954,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
     bool useCutoff = (force.getNonbondedMethod() != CustomGBForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != CustomGBForce::NoCutoff && force.getNonbondedMethod() != CustomGBForce::CutoffNonPeriodic);
+    bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     {
         // Create the N2 value kernel.
 
@@ -1987,8 +1988,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* global_" << paramName << ", __local " << buffer.getType() << "* local_" << paramName;
-            loadLocal1 << "local_" << paramName << "[get_local_id(0)] = " << paramName << "1;\n";
-            loadLocal2 << "local_" << paramName << "[get_local_id(0)] = global_" << paramName << "[j];\n";
+            loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
+            loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
             load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
             load2 << buffer.getType() << " " << paramName << "2 = local_" << paramName << "[atom2];\n";
         }
@@ -2010,7 +2011,13 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
-        string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::customGBValueN2_nvidia : OpenCLKernelSources::customGBValueN2_default);
+        string file;
+        if (deviceIsCpu)
+            file = OpenCLKernelSources::customGBValueN2_cpu;
+        else if (cl.getSIMDWidth() == 32)
+            file = OpenCLKernelSources::customGBValueN2_nvidia;
+        else
+            OpenCLKernelSources::customGBValueN2_default;
         cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairValueKernel = cl::Kernel(program, "computeN2Value");
     }
@@ -2106,8 +2113,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* global_" << paramName << ", __local " << buffer.getType() << "* local_" << paramName;
-            loadLocal1 << "local_" << paramName << "[get_local_id(0)] = " << paramName << "1;\n";
-            loadLocal2 << "local_" << paramName << "[get_local_id(0)] = global_" << paramName << "[j];\n";
+            loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
+            loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
             load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
             load2 << buffer.getType() << " " << paramName << "2 = local_" << paramName << "[atom2];\n";
         }
@@ -2115,8 +2122,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string valueName = "values"+intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* global_" << valueName << ", __local " << buffer.getType() << "* local_" << valueName;
-            loadLocal1 << "local_" << valueName << "[get_local_id(0)] = " << valueName << "1;\n";
-            loadLocal2 << "local_" << valueName << "[get_local_id(0)] = global_" << valueName << "[j];\n";
+            loadLocal1 << "local_" << valueName << "[localAtomIndex] = " << valueName << "1;\n";
+            loadLocal2 << "local_" << valueName << "[localAtomIndex] = global_" << valueName << "[j];\n";
             load1 << buffer.getType() << " " << valueName << "1 = global_" << valueName << "[atom1];\n";
             load2 << buffer.getType() << " " << valueName << "2 = local_" << valueName << "[atom2];\n";
         }
@@ -2124,7 +2131,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
             string index = intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index << ", __local " << buffer.getType() << "* local_deriv" << index;
-            clearLocal << "local_deriv" << index << "[get_local_id(0)] = 0.0f;\n";
+            clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
             load1 << buffer.getType() << " deriv" << index << "_1 = 0.0f;\n";
             load2 << buffer.getType() << " deriv" << index << "_2 = 0.0f;\n";
             recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
@@ -2157,7 +2164,13 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
-        string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::customGBEnergyN2_nvidia : OpenCLKernelSources::customGBEnergyN2_default);
+        string file;
+        if (deviceIsCpu)
+            file = OpenCLKernelSources::customGBEnergyN2_cpu;
+        else if (cl.getSIMDWidth() == 32)
+            file = OpenCLKernelSources::customGBEnergyN2_nvidia;
+        else
+            file = OpenCLKernelSources::customGBEnergyN2_default;
         cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairEnergyKernel = cl::Kernel(program, "computeN2Energy");
     }
@@ -2408,6 +2421,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 }
 
 double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -2422,14 +2436,14 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionIndices().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, valueBuffers->getDeviceBuffer());
-        pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
-        pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+        pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*sizeof(cl_float), NULL);
+        pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // Periodic box size arguments are set when the kernel is executed.
             pairValueKernel.setArg<cl_uint>(index++, maxTiles);
-            if (cl.getSIMDWidth() == 32)
+            if (cl.getSIMDWidth() == 32 || deviceIsCpu)
                 pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
@@ -2465,19 +2479,19 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         index = 0;
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
-        pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*sizeof(cl_float4), NULL);
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
-        pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*sizeof(cl_float4), NULL);
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusions().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionIndices().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
-        pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*sizeof(cl_float4), NULL);
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // Periodic box size arguments are set when the kernel is executed.
             pairEnergyKernel.setArg<cl_uint>(index++, maxTiles);
-            if (cl.getSIMDWidth() == 32)
+            if (cl.getSIMDWidth() == 32 || deviceIsCpu)
                 pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
@@ -2487,17 +2501,17 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*buffer.getSize(), NULL);
+            pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*buffer.getSize(), NULL);
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*buffer.getSize(), NULL);
+            pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*buffer.getSize(), NULL);
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
             pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*buffer.getSize(), NULL);
+            pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : OpenCLContext::ThreadBlockSize)*buffer.getSize(), NULL);
         }
         if (tabulatedFunctionParams != NULL) {
             for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -2560,9 +2574,9 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
     }
     int numTiles = cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2;
-    cl.executeKernel(pairValueKernel, numTiles*OpenCLContext::TileSize);
+    cl.executeKernel(pairValueKernel, numTiles*OpenCLContext::TileSize, deviceIsCpu ? 1 : -1);
     cl.executeKernel(perParticleValueKernel, cl.getPaddedNumAtoms());
-    cl.executeKernel(pairEnergyKernel, numTiles*OpenCLContext::TileSize);
+    cl.executeKernel(pairEnergyKernel, numTiles*OpenCLContext::TileSize, deviceIsCpu ? 1 : -1);
     cl.executeKernel(perParticleEnergyKernel, cl.getPaddedNumAtoms());
     if (needParameterGradient)
         cl.executeKernel(gradientChainRuleKernel, cl.getPaddedNumAtoms());
