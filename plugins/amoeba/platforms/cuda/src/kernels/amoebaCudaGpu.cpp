@@ -338,11 +338,20 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaUreyBradleyID               %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyID );
     (void) fprintf( log, "     pAmoebaUreyBradleyParameter        %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter );
     
-    if( amoebaGpu->psRotationMatrix)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamFloat( amoebaGpu->psRotationMatrix, log );
+//    if( amoebaGpu->psRotationMatrix)(void) fprintf( log, "\n" );
+//    gpuPrintCudaStreamFloat( amoebaGpu->psRotationMatrix, log );
+//    (void) fprintf( log, "     pRotationMatrix                    %p\n",      amoebaGpu->amoebaSim.pRotationMatrix);
+
     gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesIdsAndAxisType, log );
+    (void) fprintf( log, "     pMultipoleParticlesIdsAndAxisType  %p\n",      amoebaGpu->amoebaSim.pMultipoleParticlesIdsAndAxisType);
+
+    gpuPrintCudaStreamInt( amoebaGpu->psMultipoleAxisOffset, log );
+    (void) fprintf( log, "     pMultipoleAxisOffset               %p\n",      amoebaGpu->amoebaSim.pMultipoleAxisOffset);
+
     gpuPrintCudaStreamFloat( amoebaGpu->psMolecularDipole, log );
+    (void) fprintf( log, "     pMolecularDipole                   %p\n",      amoebaGpu->amoebaSim.pMolecularDipole);
     gpuPrintCudaStreamFloat( amoebaGpu->psMolecularQuadrupole, log );
+    (void) fprintf( log, "     pMolecularQuadrupole               %p\n",      amoebaGpu->amoebaSim.pMolecularQuadrupole );
     
     gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameDipole, log );
     gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameQuadrupole, log );
@@ -1276,7 +1285,7 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
 
     // ---------------------------------------------------------------------------------------
 
-    if( amoebaGpu->psRotationMatrix != NULL ){
+    if( amoebaGpu->psMultipoleParticlesIdsAndAxisType != NULL ){
         return;
     }
    
@@ -1289,23 +1298,33 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
 
     // work space
  
-    amoebaGpu->psRotationMatrix                      = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "RotationMatrix");
+//    amoebaGpu->psRotationMatrix                            = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "RotationMatrix");
+//    amoebaGpu->amoebaSim.pRotationMatrix                   = amoebaGpu->psRotationMatrix->_pDevStream[0];
  
     // parameters
  
-    amoebaGpu->psMultipoleParticlesIdsAndAxisType    = new CUDAStream<int4>(amoebaGpu->paddedNumberOfAtoms,    1, "MultipoleParticlesIdsAndAxisType");
-    amoebaGpu->psMolecularDipole                     = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "MolecularDipole");
-    amoebaGpu->psMolecularQuadrupole                 = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "MolecularQuadrupole");
+    amoebaGpu->psMultipoleParticlesIdsAndAxisType          = new CUDAStream<int4>(amoebaGpu->paddedNumberOfAtoms,    1, "MultipoleParticlesIdsAndAxisType");
+    amoebaGpu->amoebaSim.pMultipoleParticlesIdsAndAxisType = amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pDevStream[0];
+
+    amoebaGpu->psMultipoleAxisOffset                       = new CUDAStream<int>(amoebaGpu->paddedNumberOfAtoms,    1, "psMultipoleAxisOffset");
+    amoebaGpu->amoebaSim.pMultipoleAxisOffset              = amoebaGpu->psMultipoleAxisOffset->_pDevStream[0];
+
+    amoebaGpu->psMolecularDipole                           = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "MolecularDipole");
+    amoebaGpu->amoebaSim.pMolecularDipole                  = amoebaGpu->psMolecularDipole->_pDevStream[0];
+
+    amoebaGpu->psMolecularQuadrupole                       = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "MolecularQuadrupole");
+    amoebaGpu->amoebaSim.pMolecularQuadrupole              = amoebaGpu->psMolecularQuadrupole->_pDevStream[0];
  
     // output
  
-    amoebaGpu->psLabFrameDipole                      = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameDipole");
-    amoebaGpu->amoebaSim.pLabFrameDipole             = amoebaGpu->psLabFrameDipole->_pDevStream[0];
+    amoebaGpu->psLabFrameDipole                            = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameDipole");
+    amoebaGpu->amoebaSim.pLabFrameDipole                   = amoebaGpu->psLabFrameDipole->_pDevStream[0];
 
-    amoebaGpu->psLabFrameQuadrupole                  = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameQuadrupole");
-    amoebaGpu->amoebaSim.pLabFrameQuadrupole         = amoebaGpu->psLabFrameQuadrupole->_pDevStream[0];
+    amoebaGpu->psLabFrameQuadrupole                        = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameQuadrupole");
+    amoebaGpu->amoebaSim.pLabFrameQuadrupole               = amoebaGpu->psLabFrameQuadrupole->_pDevStream[0];
 
     memset( amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0], 0, sizeof(int)*4*amoebaGpu->paddedNumberOfAtoms );
+    memset( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0],              0, sizeof(int)*amoebaGpu->paddedNumberOfAtoms );
 }
 
 static void gpuFixedEFieldAllocate( amoebaGpuContext amoebaGpu )
@@ -1597,7 +1616,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     std::vector<int> maxIndices;
     for( unsigned int ii = 0; ii < charges.size(); ii++ ){
         maxIndices.push_back(ii);
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z   = ii;
+        amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][ii]   = ii;
     }
 
     if( nonbondedMethod == 0 ){
@@ -1623,37 +1642,64 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         amoebaGpu->amoebaSim.dielec               = 1.0f;
     }
 
+    static const int maxAxisType = 5;
+    int axisTypeCount[maxAxisType+1] = { 0, 0, 0, 0, 0, 0 };
     for( int ii = 0; ii < static_cast<int>(charges.size()); ii++ ){
 
         // axis type & multipole particles ids
  
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x       = multipoleParticleZ[ii];
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y       = multipoleParticleX[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x       = multipoleParticleX[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y       = multipoleParticleY[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z       = multipoleParticleZ[ii];
         amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w       = axisType[ii];
+        if( axisType[ii] < (maxAxisType) && axisType[ii] > -1 ){
+            axisTypeCount[axisType[ii]]++;
+        } else {
+            axisTypeCount[maxAxisType]++;
+        }
+
+        // for z-only need to add access to random numbers
+        // and need test system
+
+        if( axisType[ii] == 4 ){
+            //fprintf( stderr, "Axis type z-only (atom=%d) not fully implemented -- aborting.\n", ii );
+            fprintf( stderr, "Warning: Axis type z-only (atom=%d) not fully implemented.\n", ii );
+//            exit(0);
+        }
         int axisParticleIndex                                                     = multipoleParticleZ[ii];
         if( maxIndices[axisParticleIndex] < ii ){
             maxIndices[axisParticleIndex] = ii;
         }
-        if( amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][axisParticleIndex].z > ii ){
-            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][axisParticleIndex].z = ii;
+        if( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] > ii ){
+            amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] = ii;
         }
 
         axisParticleIndex                                                         = multipoleParticleX[ii];
         if( maxIndices[axisParticleIndex] < ii ){
             maxIndices[axisParticleIndex] = ii;
         }
-        if( amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][axisParticleIndex].z > ii ){
-            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][axisParticleIndex].z = ii;
+        if( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] > ii ){
+            amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] = ii;
+        }
+
+        axisParticleIndex                                                         = multipoleParticleY[ii];
+        if( axisParticleIndex > -1 ){
+            if( maxIndices[axisParticleIndex] < ii ){
+                maxIndices[axisParticleIndex] = ii;
+            }
+            if( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] > ii ){
+                amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] = ii;
+            }
         }
 
         if( 0 && amoebaGpu->log )
             fprintf( amoebaGpu->log, "Z1 %4d [%4d %4d] %4d %4d %4d %4d   %d %d\n", ii,
-                     multipoleParticleZ[ii], multipoleParticleX[ii],
-                     amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][multipoleParticleZ[ii]].z,
+                     multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii],
+                     amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][multipoleParticleZ[ii]],
                      maxIndices[multipoleParticleZ[ii]],
-                     amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][multipoleParticleX[ii]].z,
+                     amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][multipoleParticleX[ii]],
                      maxIndices[multipoleParticleX[ii]],
-                     amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][0].z, maxIndices[0] );
+                     amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][0], maxIndices[0] );
 
         // charges
 
@@ -1733,17 +1779,16 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         }
 
 #ifdef AMOEBA_DEBUG
-        //if( amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (charges.size() - maxPrint) ) ) || ( ii == targetAtoms[0] || ii == targetAtoms[1]) ) ){
         if( (amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (charges.size() - maxPrint) )) ) ) ){
 
             // axis particles
 
-            (void) fprintf( amoebaGpu->log,"%u axis particles [%6d %6d %6d diff=%d %d] ", ii,
+            (void) fprintf( amoebaGpu->log,"%u axis particles [%6d %6d %6d] axis=%d max=%d diff=%d ", ii,
                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x,
                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y,
                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z,
-                            maxIndices[ii], maxIndices[ii] - amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z,
-                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w );
+                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w,
+                            maxIndices[ii], maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][ii] );
 
             // dipole
 
@@ -1886,6 +1931,13 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
     }
 
+    if( amoebaGpu->log ){
+        std::string axisLabel[maxAxisType+1] = {  "ZThenX", "Bisector", "ZBisect", "ThreeFold", "ZOnly", "Unknown"};
+        for( unsigned int kk = 0; kk < (maxAxisType+1); kk++ ){
+            (void) fprintf( amoebaGpu->log, "%2u %10s atom count=%d\n", kk, axisLabel[kk].c_str(), axisTypeCount[kk] );
+        }
+    }
+
 #if 0
     if( amoebaGpu->log ){
         FILE* filePtr = fopen( "oldScale.txt", "w" );
@@ -1916,7 +1968,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
         // axis type & multipole particles ids
 
-        int diff = maxIndices[ii] - amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z;
+        int diff = maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][ii];
         if( diff > amoebaGpu->maxMapTorqueDifference ){
             amoebaGpu->maxMapTorqueDifference = diff;
         }
@@ -1944,6 +1996,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     amoebaGpu->amoebaSim.paddedNumberOfAtoms   = amoebaGpu->paddedNumberOfAtoms;
 
     amoebaGpu->psMultipoleParticlesIdsAndAxisType->Upload();
+    amoebaGpu->psMultipoleAxisOffset->Upload();
     amoebaGpu->psMolecularDipole->Upload();
     amoebaGpu->psMolecularQuadrupole->Upload();
     amoebaGpu->psCovalentDegree->Upload();
@@ -2707,8 +2760,9 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
 
     // molecular frame multipoles
 
-    delete gpu->psRotationMatrix;
+    //delete gpu->psRotationMatrix;
     delete gpu->psMultipoleParticlesIdsAndAxisType;
+    delete gpu->psMultipoleAxisOffset;
     delete gpu->psMolecularDipole;
     delete gpu->psMolecularQuadrupole;
     delete gpu->psLabFrameDipole;

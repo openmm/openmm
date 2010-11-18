@@ -129,6 +129,7 @@ struct _amoebaGpuContext {
     // multipole parameters
 
     CUDAStream<int4>* psMultipoleParticlesIdsAndAxisType;
+    CUDAStream<int>* psMultipoleAxisOffset;
     CUDAStream<float>* psMolecularDipole;
     CUDAStream<float>* psMolecularQuadrupole;
 

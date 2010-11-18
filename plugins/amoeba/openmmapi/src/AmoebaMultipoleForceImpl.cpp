@@ -62,12 +62,17 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
         owner.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
                                       thole, dampingFactor, polarity );
 
-       // only 'Z-then-X' or 'Bisector' currently handled
+       // only 'Z-then-X', 'Bisector', Z-Bisect, ThreeFold  currently handled
 
-        if( axisType != AmoebaMultipoleForce::ZThenX && axisType != AmoebaMultipoleForce::Bisector ){
+        if( axisType != AmoebaMultipoleForce::ZThenX  && axisType != AmoebaMultipoleForce::Bisector &&
+            axisType != AmoebaMultipoleForce::ZBisect && axisType != AmoebaMultipoleForce::ThreeFold &&
+            axisType != AmoebaMultipoleForce::ZOnly ) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: axis type=" << axisType;
-             buffer << " not currently handled - only axisTypes[ " << AmoebaMultipoleForce::ZThenX << ", " << AmoebaMultipoleForce::Bisector << "] (ZThenX, Bisector) currently handled .";
+             buffer << " not currently handled - only axisTypes[ ";
+             buffer << AmoebaMultipoleForce::ZThenX   << ", " << AmoebaMultipoleForce::Bisector << ", ";
+             buffer << AmoebaMultipoleForce::ZBisect  << ", " << AmoebaMultipoleForce::ThreeFold;
+             buffer << "] (ZThenX, Bisector, Z-Bisect, ThreeFold) currently handled .";
              throw OpenMMException(buffer.str());
         }
     }

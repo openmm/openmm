@@ -483,9 +483,9 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
 
         totalCharge                       += charge;
         axisTypes[ii]                      = axisType;
-        multipoleAtomZs[ii]              = multipoleAtomZ;
-        multipoleAtomXs[ii]              = multipoleAtomX;
-        multipoleAtomYs[ii]              = multipoleAtomY;
+        multipoleAtomZs[ii]                = multipoleAtomZ;
+        multipoleAtomXs[ii]                = multipoleAtomX;
+        multipoleAtomYs[ii]                = multipoleAtomY;
 
         charges[ii]                        = static_cast<RealOpenMM>(charge);
         tholes[ii]                         = static_cast<RealOpenMM>(tholeD);

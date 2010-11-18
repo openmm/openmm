@@ -139,6 +139,11 @@ struct cudaAmoebaGmxSimulation {
     float scalingDistanceCutoff;                    // scaling cutoff
     float2*         pDampingFactorAndThole;         // Thole & damping factors
 
+    float* pRotationMatrix; 
+    int4*  pMultipoleParticlesIdsAndAxisType; 
+    int*   pMultipoleAxisOffset; 
+    float* pMolecularDipole; 
+    float* pMolecularQuadrupole; 
     float* pLabFrameDipole;
     float* pLabFrameQuadrupole;
     float* pInducedDipole;

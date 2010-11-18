@@ -409,6 +409,24 @@ private:
 
     /**---------------------------------------------------------------------------------------
     
+       Check multipoles at chiral sites
+
+       inverts atomic multipole moments as necessary
+       at sites with chiral local reference frame definitions
+
+       @param  particleI            particleI data 
+       @param  axisType             axis type
+       @param  particleZ            z-axis particle to particleI
+       @param  particleX            x-axis particle to particleI
+       @param  particleY            y-axis particle to particleI
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void checkChiral( MultipoleParticleData& particleI, int axisType, MultipoleParticleData& particleZ,
+                      MultipoleParticleData& particleX, MultipoleParticleData& particleY ) const;
+
+    /**---------------------------------------------------------------------------------------
+    
        Apply roatation matrix to molecular dipole/quadrupoles to get corresponding lab frame values
        for particle I
     

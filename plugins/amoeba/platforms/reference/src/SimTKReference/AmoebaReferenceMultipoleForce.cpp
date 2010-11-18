@@ -382,6 +382,46 @@ void AmoebaReferenceMultipoleForce::loadParticleData( RealOpenMM** particlePosit
     }
 }
 
+void AmoebaReferenceMultipoleForce::checkChiral( MultipoleParticleData& particleI, int axisType,
+                                                 MultipoleParticleData& particleZ, MultipoleParticleData& particleX, 
+                                                 MultipoleParticleData& particleY ) const {
+
+    // ---------------------------------------------------------------------------------------
+ 
+    static const RealOpenMM one         = 1.0;
+
+    static const std::string methodName = "AmoebaReferenceMultipoleForce::checkChiral";
+    static const int AD                 = 0;
+    static const int BD                 = 1;
+    static const int CD                 = 2;
+    static const int C                  = 3;
+    double delta[4][3];
+ 
+    // ---------------------------------------------------------------------------------------
+
+    if( axisType == AmoebaMultipoleForce::ZThenX ){
+        return;
+    }
+        
+    getDelta( particleY, particleI, delta[AD] );
+    getDelta( particleY, particleZ, delta[BD] );
+    getDelta( particleY, particleX, delta[CD] );
+
+    delta[C][0]       = delta[BD][1]*delta[CD][2] - delta[BD][2]*delta[CD][1];
+    delta[C][1]       = delta[CD][1]*delta[AD][2] - delta[CD][2]*delta[AD][1];
+    delta[C][2]       = delta[AD][1]*delta[BD][2] - delta[AD][2]*delta[BD][1];
+
+    RealOpenMM volume = delta[C][0]*delta[AD][0] + delta[C][1]*delta[BD][0] + delta[C][2]*delta[CD][0];
+
+    if( volume < 0.0 ){
+        particleI.dipole[1]         *= -one; // pole(3,i)
+        particleI.quadrupole[QXY]   *= -one; // pole(6,i)  && pole(8,i)
+        particleI.quadrupole[QYZ]   *= -one; // pole(10,i) && pole(12,i)
+    }
+    return;
+
+}
+
 void AmoebaReferenceMultipoleForce::applyRotationMatrix(       MultipoleParticleData& particleI,
                                                          const MultipoleParticleData& particleZ,
                                                          const MultipoleParticleData& particleX, int axisType ) const {
@@ -1460,7 +1500,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
 
     // ---------------------------------------------------------------------------------------
 
-    // initialize forces/energy and scaleing factors
+    // initialize forces/energy and scaling factors
 
     std::vector<Vec3> torques( particleData.size() );
     for( unsigned int ii = 0; ii <  particleData.size(); ii++ ){
@@ -1579,6 +1619,16 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( unsig
     std::vector<MultipoleParticleData> particleData( numParticles );
     loadParticleData( particlePositions, charges, dipoles, quadrupoles,
                       tholes, dampingFactors, polarity, particleData );
+
+    // check for chiral centers that need multipoles inverted
+
+    for( unsigned int ii = 0; ii < numParticles; ii++ ){
+        if( multipoleAtomYs[ii] ){
+            checkChiral( particleData[ii], axisTypes[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]], particleData[multipoleAtomYs[ii]] );
+        }
+    }
+
+    // apply rotation matrix
 
     for( unsigned int ii = 0; ii < numParticles; ii++ ){
         if( multipoleAtomZs[ii] >= 0 && multipoleAtomXs[ii] >= 0 ){

@@ -63,7 +63,7 @@ public:
         PME = 1 
     };  
 
-    enum MultipoleAxisTypes { ZThenX, Bisector };
+    enum MultipoleAxisTypes { ZThenX, Bisector, ZBisect, ThreeFold, ZOnly, LastAxisTypeIndex };
 
     // Algorithm used to converge mutual induced dipoles:
     //     SOR: successive-over-relaxation
