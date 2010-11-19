@@ -154,18 +154,32 @@ public:
     void incrementMultipoleForceCount( void ); 
 
     /**
-     * Get multipole force count 
+     * Get multipole cutoff
      * 
-     * @return multipole force count
+     * @return multipole cutoff
      */
-    int getApplyCutoff( ) const; 
+    int getApplyMultipoleCutoff( ) const; 
 
     /**
-     * Get multipole force count 
+     * Set multipole cutoff
      * 
-     * @return multipole force count
+     * @return multipole cutoff
      */
-    void setApplyCutoff( int applyCutoff ); 
+    void setApplyMultipoleCutoff( int applyMultipoleCutoff ); 
+
+    /**
+     * Get vdw cutoff
+     * 
+     * @return vdw cutoff
+     */
+    int getUseVdwNeighborList( ) const; 
+
+    /**
+     * Set vdw cutoff
+     * 
+     * @return vdw cutoff
+     */
+    void setUseVdwNeighborList( int useVdwNeighborList ); 
 
     CudaPlatform::PlatformData& cudaPlatformData;
 
@@ -174,7 +188,8 @@ private:
     amoebaGpuContext amoebaGpu;
     bool hasAmoebaBonds, hasAmoebaGeneralizedKirkwood, hasAmoebaMultipole;
     int multipoleForceCount;
-    int applyCutoff;
+    int applyMultipoleCutoff;
+    int useVdwNeighborList;
     KernelImpl* localForceKernel;
     unsigned int kernelCount;
     void* contextImpl;

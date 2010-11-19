@@ -36,8 +36,8 @@ void GetCalculateAmoebaCudaVdw14_7Sim(amoebaGpuContext amoebaGpu)
     RTERROR(status, "GetCalculateAmoebaCudaVdw14_7Sim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
+#define AMOEBA_DEBUG
+//#undef AMOEBA_DEBUG
 
 __device__ void zeroVdw14_7SharedForce( struct Vdw14_7Particle* sA ) 
 {
@@ -533,15 +533,15 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
     if( applyCutoff ){
 
         kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
-        LAUNCHERROR("kFindBlockBoundsPeriodic");
-        kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
-        LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+        LAUNCHERROR("kFindBlockBoundsVdwPeriodic");
+        kFindBlocksWithInteractionsVdwPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+        LAUNCHERROR("kFindBlocksWithInteractionsVdwPeriodic");
         compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, amoebaGpu->amoebaSim.pVdwWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-        kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+        kFindInteractionsWithinBlocksVdwPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-        LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
+        LAUNCHERROR("kFindInteractionsWithinBlocksVdwPeriodic");
 
-if( 0 ){  
+if( 1 ){  
     gpu->psInteractionCount->Download();
     gpu->psInteractingWorkUnit->Download();
     gpu->psInteractionFlag->Download();

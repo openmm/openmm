@@ -12,4 +12,8 @@ extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
 extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
 
 
+extern __global__ void kFindBlocksWithInteractionsVdwPeriodic_kernel();
+extern __global__ void kFindInteractionsWithinBlocksVdwPeriodic_kernel(unsigned int*);
+
+
 #endif

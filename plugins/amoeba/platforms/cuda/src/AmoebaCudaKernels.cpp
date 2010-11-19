@@ -983,7 +983,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             zsize = pmeGridDimension[2];
         }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
-        data.setApplyCutoff( 1 );
+        data.setApplyMultipoleCutoff( 1 );
         data.cudaPlatformData.nonbondedMethod = PARTICLE_MESH_EWALD;
         amoebaGpuContext amoebaGpu            = data.getAmoebaGpu();
         gpuContext gpu                        = amoebaGpu->gpuContext;
@@ -1063,7 +1063,7 @@ static void computeAmoebaVdwForce( AmoebaCudaData& data ) {
 
     // Vdw14_7F
 
-    kCalculateAmoebaVdw14_7Forces(gpu, data.getApplyCutoff());
+    kCalculateAmoebaVdw14_7Forces(gpu, data.getUseVdwNeighborList());
 }
 
 /* -------------------------------------------------------------------------- *
@@ -1129,6 +1129,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
                                force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
                                allExclusions, force.getPBC(), static_cast<float>(force.getCutoff()) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
+    data.setUseVdwNeighborList( force.getUseNeighborList() );
 }
 
 double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

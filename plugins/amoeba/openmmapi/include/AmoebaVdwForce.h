@@ -158,6 +158,20 @@ public:
     double getCutoff( void ) const;
 
     /**
+     * Set flag for using neighbor list for vdw ixn
+     * 
+     * @param neighboristFlag neighbor list flag
+     */
+    void setUseNeighborList( int neighborListFlag );
+
+    /**
+     * Get neighbor list flag for vdw ixn
+     * 
+     * @return neighbor list flag
+     */
+    int getUseNeighborList( void ) const;
+
+    /**
      * Set flag for employing periodic boundary conditions
      * 
      * @param pbcFlag if nonozero, use periodic boundary conditions
@@ -177,7 +191,7 @@ private:
 
     class VdwInfo;
     int usePBC;
-    double cutoff;
+    int useNeighborList; double cutoff;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     std::vector< std::vector<int> > exclusions;

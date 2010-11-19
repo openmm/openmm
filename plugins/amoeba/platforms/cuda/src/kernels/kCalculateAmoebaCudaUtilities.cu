@@ -36,6 +36,13 @@ void GetCalculateAmoebaCudaUtilitiesSim(amoebaGpuContext amoebaGpu)
 #undef METHOD_NAME
 #undef USE_PERIODIC
 
+#undef METHOD_NAME
+#define USE_PERIODIC
+#define METHOD_NAME(a, b) a##Periodic##b
+#include "kFindInteractingBlocksVdw.h"
+#undef METHOD_NAME
+#undef USE_PERIODIC
+
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)

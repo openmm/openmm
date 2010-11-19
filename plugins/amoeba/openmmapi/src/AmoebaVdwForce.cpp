@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : usePBC(0), cutoff(1.0e+10) {
+AmoebaVdwForce::AmoebaVdwForce() : usePBC(0), cutoff(1.0e+10), useNeighborList(0) {
 }
 
 int AmoebaVdwForce::addParticle(int ivIndex, int classIndex, double sigma, double epsilon, double reductionFactor ) {
@@ -110,6 +110,14 @@ void AmoebaVdwForce::setCutoff( double inputCutoff ){
 
 double AmoebaVdwForce::getCutoff( void ) const {
     return cutoff;
+}
+
+void AmoebaVdwForce::setUseNeighborList( int useNeighborListFlag ){
+    useNeighborList = useNeighborListFlag;
+}
+
+int AmoebaVdwForce::getUseNeighborList( void ) const {
+    return useNeighborList;
 }
 
 void AmoebaVdwForce::setPBC( int pbcFlag ){

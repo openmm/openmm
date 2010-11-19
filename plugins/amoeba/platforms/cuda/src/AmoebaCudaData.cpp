@@ -42,7 +42,8 @@ AmoebaCudaData::AmoebaCudaData( CudaPlatform::PlatformData& data ) : cudaPlatfor
     log                           = NULL;
     contextImpl                   = NULL;
     gpuInitialized                = false;
-    applyCutoff                   = 0;
+    applyMultipoleCutoff          = 0;
+    useVdwNeighborList            = 0;
     multipoleForceCount           = 0;
 }   
 
@@ -130,12 +131,20 @@ int AmoebaCudaData::getMultipoleForceCount( void ) const {
     return multipoleForceCount;
 }
 
-void AmoebaCudaData::setApplyCutoff( int inputApplyCutoff ) {
-    applyCutoff = inputApplyCutoff;
+void AmoebaCudaData::setApplyMultipoleCutoff( int inputApplyMultipoleCutoff ) {
+    applyMultipoleCutoff = inputApplyMultipoleCutoff;
 }
 
-int AmoebaCudaData::getApplyCutoff( void ) const {
-    return applyCutoff;
+int AmoebaCudaData::getApplyMultipoleCutoff( void ) const {
+    return applyMultipoleCutoff;
+}
+
+void AmoebaCudaData::setUseVdwNeighborList( int inputUseVdwNeighborList ) {
+    useVdwNeighborList = inputUseVdwNeighborList;
+}
+
+int AmoebaCudaData::getUseVdwNeighborList( void ) const {
+    return useVdwNeighborList;
 }
 
 }
