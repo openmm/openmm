@@ -438,7 +438,12 @@ private:
     
     void applyRotationMatrix(       MultipoleParticleData& particleI,
                               const MultipoleParticleData& particleZ,
-                              const MultipoleParticleData& particleX, int axisType ) const;
+                              const MultipoleParticleData& particleX,
+                                    MultipoleParticleData* particleY, int axisType ) const;
+
+    void applyRotationMatrixOld(       MultipoleParticleData& particleI,
+                                 const MultipoleParticleData& particleZ,
+                                 const MultipoleParticleData& particleX, int axisType ) const;
 
     void calculateFixedEFieldPairIxn( MultipoleParticleData& particleI, MultipoleParticleData& particleJ,
                                       RealOpenMM dScale, RealOpenMM pScale ) const;
@@ -468,6 +473,7 @@ private:
        @param particleI               particle whose torque is to be mapped
        @param particleU               particle1 of lab frame for particleI 
        @param particleV               particle2 of lab frame for particleI 
+       @param particleW               particle3 of lab frame for particleI 
        @param axisType                axis type (Bisector/Z-then-X, ...)
        @param torque                  torque on particle I
     
@@ -476,7 +482,13 @@ private:
     void mapTorqueToForce( const MultipoleParticleData& particleI,
                            const MultipoleParticleData& particleU,
                            const MultipoleParticleData& particleV,
+                                 MultipoleParticleData* particleW,
                            int axisType, const Vec3& torque, RealOpenMM** forces ) const;
+
+    void mapTorqueToForceOld( const MultipoleParticleData& particleI,
+                              const MultipoleParticleData& particleU,
+                              const MultipoleParticleData& particleV,
+                              int axisType, const Vec3& torque, RealOpenMM** forces ) const;
 
     RealOpenMM calculateNoCutoffElectrostatic( std::vector<MultipoleParticleData>& particleData, 
                                                const std::vector<int>& axisTypes,
