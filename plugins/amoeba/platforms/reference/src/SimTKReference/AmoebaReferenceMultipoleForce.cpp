@@ -1278,7 +1278,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn(
     sc[6] = qir[0]*particleK.dipole[0] + qir[1]*particleK.dipole[1] + qir[2]*particleK.dipole[2];
     sc[7] = qkr[0]*particleI.dipole[0] + qkr[1]*particleI.dipole[1] + qkr[2]*particleI.dipole[2];
     sc[8] = qir[0]*qkr[0] + qir[1]*qkr[1] + qir[2]*qkr[2];
-    sc[9] = particleI.quadrupole[QXX]*particleK.quadrupole[QXX] + particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] +
+    sc[9] = particleI.quadrupole[QXX]*particleK.quadrupole[QXX]  + particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] +
              particleI.quadrupole[QXY]*particleK.quadrupole[QXY] + particleI.quadrupole[QYY]*particleK.quadrupole[QYY] + particleI.quadrupole[QYZ]*particleK.quadrupole[QYZ] +
              particleI.quadrupole[QXZ]*particleK.quadrupole[QXZ] + particleI.quadrupole[QYZ]*particleK.quadrupole[QYZ] + particleI.quadrupole[QZZ]*particleK.quadrupole[QZZ];
  
@@ -1541,8 +1541,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn(
 
    --------------------------------------------------------------------------------------- */
 
-/*    
-void AmoebaReferenceMultipoleForce::mapTorqueToForceOld( const MultipoleParticleData& particleI,
+void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleData& particleI,
                                                       const MultipoleParticleData& particleU,
                                                       const MultipoleParticleData& particleV,
                                                             MultipoleParticleData* particleW,
@@ -1601,55 +1600,178 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceOld( const MultipoleParticle
     AmoebaReferenceForce::getCrossProduct( vector[W], vector[U], vector[UW] );
     AmoebaReferenceForce::getCrossProduct( vector[W], vector[V], vector[VW] );
     
-    norms[UV]                     = normVector3( vector[UV] );
-    norms[UW]                     = normVector3( vector[UW] );
-    norms[VW]                     = normVector3( vector[VW] );
-    angles[UV][0]                 = DOT3( vector[U], vector[V] );
+    norms[UV]                     = AmoebaReferenceForce::normalizeVector3( vector[UV] );
+    norms[UW]                     = AmoebaReferenceForce::normalizeVector3( vector[UW] );
+    norms[VW]                     = AmoebaReferenceForce::normalizeVector3( vector[VW] );
+
+    angles[UV][0]                 = AmoebaReferenceForce::getDotProduct3( vector[U], vector[V] );
     angles[UV][1]                 = sqrtf( 1.0f - angles[UV][0]*angles[UV][0]);
     
-    angles[UW][0]                 = DOT3( vector[U], vector[W] );
+    angles[UW][0]                 = AmoebaReferenceForce::getDotProduct3( vector[U], vector[W] );
     angles[UW][1]                 = sqrtf( 1.0f - angles[UW][0]*angles[UW][0]);
 
-    angles[VW][0]                 = DOT3( vector[V], vector[W] );
+    angles[VW][0]                 = AmoebaReferenceForce::getDotProduct3( vector[V], vector[W] );
     angles[VW][1]                 = sqrtf( 1.0f - angles[VW][0]*angles[VW][0]);
 
     float dphi[3];
-    dphi[U]                       = DOT3( vector[U], (torque + threadId*3) );
-    dphi[V]                       = DOT3( vector[V], (torque + threadId*3) );
-    dphi[W]                       = DOT3( vector[W], (torque + threadId*3) );
+    dphi[U]                       = AmoebaReferenceForce::getDotProduct3( vector[U], torque );
+    dphi[V]                       = AmoebaReferenceForce::getDotProduct3( vector[V], torque );
+    dphi[W]                       = AmoebaReferenceForce::getDotProduct3( vector[W], torque );
 
     dphi[U]                      *= -1.0f;
     dphi[V]                      *= -1.0f;
     dphi[W]                      *= -1.0f;
+
     // branch based on axis type
  
-    if( axisType == AmoebaMultipoleForce::Bisector ){
+    if( axisType == AmoebaMultipoleForce::ZThenX || axisType == AmoebaMultipoleForce::Bisector ){
  
-       // bisector
+        float factor1;
+        float factor2;
+        float factor3;
+        float factor4;
+    
+        factor1                 =  dphi[V]/(norms[U]*angles[UV][1]);
+        factor2                 =  dphi[W]/(norms[U]);
+        factor3                 = -dphi[U]/(norms[V]*angles[UV][1]);
+    
+        if( axisType == AmoebaMultipoleForce::Bisector ){ 
+            factor2    *= 0.5f;
+            factor4     = 0.5f*dphi[W]/(norms[V]);
+        } else {
+            factor4     = 0.0f;
+        }
  
-       for( int ii = 0; ii < 3; ii++ ){
-          RealOpenMM du                          = -vector[W][ii]*dphi[V]/uvdis + up[ii]*dphi[W]/(two*norms[U]);
-          RealOpenMM dv                          =  vector[W][ii]*dphi[U]/vudis + vp[ii]*dphi[W]/(two*norms[V]);
-          forces[particleU.particleIndex][ii]   += du;
-          forces[particleV.particleIndex][ii]   += dv;
-          forces[particleI.particleIndex][ii]   -= (dv + du);
-       }
+        for( int ii = 0; ii < 3; ii++ ){
+            forces[particleU.particleIndex][ii]                  =  vector[UV][ii]*factor1 + factor2*vector[UW][ii];
+            forces[particleV.particleIndex][ii]                  =  vector[UV][ii]*factor3 + factor4*vector[VW][ii];
+            forces[particleI.particleIndex][ii]                  = -(forces[particleU.particleIndex][ii] + forces[particleV.particleIndex][ii]);
+            if( particleW )forces[particleW->particleIndex][ii]  = 0.0f;
+        }
+
+    } else if( axisType == AmoebaMultipoleForce::ZBisect ){
+
+        vector[R][0]       = vector[V][0] + vector[W][0]; 
+        vector[R][1]       = vector[V][1] + vector[W][1]; 
+        vector[R][2]       = vector[V][2] + vector[W][2]; 
+
+        AmoebaReferenceForce::getCrossProduct( vector[U], vector[R], vector[S] );
+
+        norms[R]           = AmoebaReferenceForce::normalizeVector3( vector[R] );
+        norms[S]           = AmoebaReferenceForce::normalizeVector3( vector[S] );
+
+        AmoebaReferenceForce::getCrossProduct( vector[R], vector[U], vector[UR] );
+        AmoebaReferenceForce::getCrossProduct( vector[S], vector[U], vector[US] );
+        AmoebaReferenceForce::getCrossProduct( vector[S], vector[V], vector[VS] );
+        AmoebaReferenceForce::getCrossProduct( vector[S], vector[W], vector[WS] );
+
+        norms[UR]          = AmoebaReferenceForce::normalizeVector3( vector[UR] );
+        norms[US]          = AmoebaReferenceForce::normalizeVector3( vector[US] );
+        norms[VS]          = AmoebaReferenceForce::normalizeVector3( vector[VS] );
+        norms[WS]          = AmoebaReferenceForce::normalizeVector3( vector[WS] );
+
+        angles[UR][0]      = AmoebaReferenceForce::getDotProduct3( vector[U], vector[R] );
+        angles[UR][1]      = sqrtf( 1.0f - angles[UR][0]*angles[UR][0]);
+
+        angles[US][0]      = AmoebaReferenceForce::getDotProduct3( vector[U], vector[S] );
+        angles[US][1]      = sqrtf( 1.0f - angles[US][0]*angles[US][0]);
+
+        angles[VS][0]      = AmoebaReferenceForce::getDotProduct3( vector[V], vector[S] );
+        angles[VS][1]      = sqrtf( 1.0f - angles[VS][0]*angles[VS][0]);
+
+        angles[WS][0]      = AmoebaReferenceForce::getDotProduct3( vector[W], vector[S] );
+        angles[WS][1]      = sqrtf( 1.0f - angles[WS][0]*angles[WS][0]);
  
-    } else if( axisType == AmoebaMultipoleForce::ZThenX ){
- 
-       for( int ii = 0; ii < 3; ii++ ){
-          RealOpenMM du                          = -vector[W][ii]*dphi[V]/uvdis + up[ii]*dphi[W]/norms[U];
-          RealOpenMM dv                          =  vector[W][ii]*dphi[U]/vudis;
-          forces[particleU.particleIndex][ii]   += du;
-          forces[particleV.particleIndex][ii]   += dv;
-          forces[particleI.particleIndex][ii]   -= (dv + du);
-       }
+        RealOpenMM t1[3];
+        RealOpenMM t2[3];
+        t1[0]                     = vector[V][0] - vector[S][0]*angles[VS][0];
+        t1[1]                     = vector[V][1] - vector[S][1]*angles[VS][0];
+        t1[2]                     = vector[V][2] - vector[S][2]*angles[VS][0];
+
+        t2[0]                     = vector[W][0] - vector[S][0]*angles[WS][0];
+        t2[1]                     = vector[W][1] - vector[S][1]*angles[WS][0];
+        t2[2]                     = vector[W][2] - vector[S][2]*angles[WS][0];
+        RealOpenMM notUsed        = AmoebaReferenceForce::normalizeVector3( t1 );
+              notUsed             = AmoebaReferenceForce::normalizeVector3( t2 );
+        RealOpenMM ut1cos         = AmoebaReferenceForce::getDotProduct3( vector[U], t1 );
+        RealOpenMM ut1sin         = sqrtf( 1.0f - ut1cos*ut1cos);
+        RealOpenMM ut2cos         = AmoebaReferenceForce::getDotProduct3( vector[U], t2 );
+        RealOpenMM ut2sin         = sqrtf( 1.0f - ut2cos*ut2cos);
+
+        RealOpenMM dphiR          = -1.0f*AmoebaReferenceForce::getDotProduct3( vector[R], torque );
+        RealOpenMM dphiS          = -1.0f*AmoebaReferenceForce::getDotProduct3( vector[S], torque );
+
+        RealOpenMM factor1        = dphiR/(norms[U]*angles[UR][1]);
+        RealOpenMM factor2        = dphiS/(norms[U]);
+        RealOpenMM factor3        = dphi[U]/(norms[V]*(ut1sin+ut2sin));
+        RealOpenMM factor4        = dphi[U]/(norms[W]*(ut1sin+ut2sin));
+
+        for( int ii = 0; ii < 3; ii++ ){
+            forces[particleU.particleIndex][ii]         =  vector[UR][ii]*factor1 + factor2*vector[US][ii];
+            forces[particleV.particleIndex][ii]         = (angles[VS][1]*vector[S][ii] - angles[VS][0]*t1[ii])*factor3;
+            forces[particleW->particleIndex][ii]        = (angles[WS][1]*vector[S][ii] - angles[WS][0]*t2[ii])*factor4;
+            forces[particleI.particleIndex][ii]         = -(forces[particleU.particleIndex][ii] + forces[particleV.particleIndex][ii] + forces[particleW->particleIndex][ii]);
+        }
+
+    } else if( axisType == AmoebaMultipoleForce::ThreeFold ){
+
+        // 3-fold
+
+        for( int ii = 0; ii < 3; ii++ ){
+
+            RealOpenMM du =  vector[UW][ii]*dphi[W]/(norms[U]*angles[UW][1]) +
+                        vector[UV][ii]*dphi[V]/(norms[U]*angles[UV][1]) -
+                        vector[UW][ii]*dphi[U]/(norms[U]*angles[UW][1]) -
+                        vector[UV][ii]*dphi[U]/(norms[U]*angles[UV][1]);
+
+            RealOpenMM dv =  vector[VW][ii]*dphi[W]/(norms[V]*angles[VW][1]) -
+                        vector[UV][ii]*dphi[U]/(norms[V]*angles[UV][1]) -
+                        vector[VW][ii]*dphi[V]/(norms[V]*angles[VW][1]) +
+                        vector[UV][ii]*dphi[V]/(norms[V]*angles[UV][1]);
+
+            RealOpenMM dw = -vector[UW][ii]*dphi[U]/(norms[W]*angles[UW][1]) -
+                        vector[VW][ii]*dphi[V]/(norms[W]*angles[VW][1]) +
+                        vector[UW][ii]*dphi[W]/(norms[W]*angles[UW][1]) +
+                        vector[VW][ii]*dphi[W]/(norms[W]*angles[VW][1]);
+
+            du      /= 3.0f;
+            dv      /= 3.0f;
+            dw      /= 3.0f;
+
+            forces[particleU.particleIndex][ii]  = du;
+            forces[particleV.particleIndex][ii]  = dv;
+            if( particleW )
+                forces[particleW->particleIndex][ii] = dw;
+            forces[particleI.particleIndex][ii]  = -(du + dv + dw);
+        }
+
+    } else if( axisType == AmoebaMultipoleForce::ZOnly ){
+
+        // z-only
+
+        for( int ii = 0; ii < 3; ii++ ){
+            RealOpenMM du                               = vector[UV][ii]*dphi[V]/(norms[U]*angles[UV][1]);
+            forces[particleU.particleIndex][ii]         = du;
+            forces[particleV.particleIndex][ii]         = 0.0f;
+            if( particleW )
+                 forces[particleW->particleIndex][ii]   = 0.0f;
+            forces[particleI.particleIndex][ii]         = -du;
+        }
+    } else {
+
+        for( int ii = 0; ii < 3; ii++ ){
+            forces[particleU.particleIndex][ii]         = 0.0f;
+            forces[particleV.particleIndex][ii]         = 0.0f;
+            if( particleW )
+                forces[particleW->particleIndex][ii]    = 0.0f;
+            forces[particleI.particleIndex][ii]         = 0.0f;
+        }
+
     }
  
     return;
  
 }
-*/
 
 /**---------------------------------------------------------------------------------------
 
@@ -1833,10 +1955,10 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
     // map torques to forces
 
     for( unsigned int ii = 0; ii < particleData.size(); ii++ ){
-//        mapTorqueToForce( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
-//                          multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii], torques[ii], forces ); 
-        mapTorqueToForceOld( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
-                          axisTypes[ii], torques[ii], forces ); 
+        mapTorqueToForce( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+                          multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii], torques[ii], forces ); 
+//        mapTorqueToForceOld( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+//                          axisTypes[ii], torques[ii], forces ); 
     }
 
     // diagnostics
