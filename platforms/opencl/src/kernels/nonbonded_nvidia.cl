@@ -13,7 +13,7 @@ typedef struct {
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float4* tempBuffer,
+        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
@@ -180,29 +180,46 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                             float tempEnergy = 0.0f;
                             COMPUTE_INTERACTION
 			    energy += tempEnergy;
+                            int bufferIndex = 3*get_local_id(0);
 #ifdef USE_SYMMETRIC
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
-                            tempBuffer[get_local_id(0)] = delta;
+                            tempBuffer[bufferIndex] = delta.x;
+                            tempBuffer[bufferIndex+1] = delta.y;
+                            tempBuffer[bufferIndex+2] = delta.z;
 #else
                             force.xyz -= dEdR1.xyz;
-                            tempBuffer[get_local_id(0)] = dEdR2;
+                            tempBuffer[bufferIndex] = dEdR2.x;
+                            tempBuffer[bufferIndex+1] = dEdR2.y;
+                            tempBuffer[bufferIndex+2] = dEdR2.z;
 #endif
 
                             // Sum the forces on atom2.
 
-                            if (tgx % 2 == 0)
-                                tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+1].xyz;
-                            if (tgx % 4 == 0)
-                                tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+2].xyz;
-                            if (tgx % 8 == 0)
-                                tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+4].xyz;
-                            if (tgx % 16 == 0)
-                                tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+8].xyz;
+                            if (tgx % 2 == 0) {
+                                tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3];
+                                tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4];
+                                tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5];
+                            }
+                            if (tgx % 4 == 0) {
+                                tempBuffer[bufferIndex] += tempBuffer[bufferIndex+6];
+                                tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+7];
+                                tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+8];
+                            }
+                            if (tgx % 8 == 0) {
+                                tempBuffer[bufferIndex] += tempBuffer[bufferIndex+12];
+                                tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+13];
+                                tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+14];
+                            }
+                            if (tgx % 16 == 0) {
+                                tempBuffer[bufferIndex] += tempBuffer[bufferIndex+24];
+                                tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+25];
+                                tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+26];
+                            }
                             if (tgx == 0) {
-                                localData[tbx+j].fx += tempBuffer[get_local_id(0)].x + tempBuffer[get_local_id(0)+16].x;
-                                localData[tbx+j].fy += tempBuffer[get_local_id(0)].y + tempBuffer[get_local_id(0)+16].y;
-                                localData[tbx+j].fz += tempBuffer[get_local_id(0)].z + tempBuffer[get_local_id(0)+16].z;
+                                localData[tbx+j].fx += tempBuffer[bufferIndex] + tempBuffer[bufferIndex+48];
+                                localData[tbx+j].fy += tempBuffer[bufferIndex+1] + tempBuffer[bufferIndex+49];
+                                localData[tbx+j].fz += tempBuffer[bufferIndex+2] + tempBuffer[bufferIndex+50];
                             }
                         }
                     }
