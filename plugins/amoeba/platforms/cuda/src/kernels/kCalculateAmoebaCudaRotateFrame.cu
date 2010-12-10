@@ -599,7 +599,6 @@ if( 0 ){
                      x          = (x >> 17) << GRIDBITS;
         (void) fprintf( amoebaGpu->log, "   AmGpu %8u [%5u %5u %1u]\n", amoebaGpu->psWorkUnit->_pSysStream[0][ii], x,y,exclusions );
     }    
-} else {
 }
 
             cudaComputeAmoebaPmeFixedEField( amoebaGpu );

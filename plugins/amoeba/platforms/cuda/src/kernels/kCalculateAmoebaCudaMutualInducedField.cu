@@ -247,8 +247,7 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
     static const char* methodName = "cudaComputeAmoebaMutualInducedFieldMatrixMultiply";
     static int iteration = 1;
     if( 1 && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s: scalingDistanceCutoff=%.5f\n",
-                        methodName, amoebaGpu->scalingDistanceCutoff );
+        (void) fprintf( amoebaGpu->log, "%s\n", methodName );
         (void) fflush( amoebaGpu->log );
     }
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
@@ -594,17 +593,16 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
 #ifdef AMOEBA_DEBUG
-/*
     if( 0 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
+//        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
      }
-*/
+
 #endif
 
    // ---------------------------------------------------------------------------------------

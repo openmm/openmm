@@ -306,7 +306,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
+            //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector);
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );

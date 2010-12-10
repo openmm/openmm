@@ -144,10 +144,10 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
 
                 // add to field at atomI the field due atomJ's dipole
 
-                forceSum[0]            += mask ? ijForce[0] : 0.0f;
-                forceSum[1]            += mask ? ijForce[1] : 0.0f;
-                forceSum[2]            += mask ? ijForce[2] : 0.0f;
-                totalEnergy            += mask ? 0.5*energy : 0.0f;
+                forceSum[0]            += mask ? ijForce[0]  : 0.0f;
+                forceSum[1]            += mask ? ijForce[1]  : 0.0f;
+                forceSum[2]            += mask ? ijForce[2]  : 0.0f;
+                totalEnergy            += mask ? 0.5f*energy : 0.0f;
 
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || (y+j) == targetAtom ){
@@ -193,7 +193,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
             load3dArrayBufferPerWarp( offset, forceSum, outputForce );
 
 #else
-            unsigned int offset                   = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
             load3dArray( offset, forceSum, outputForce );
 #endif
 

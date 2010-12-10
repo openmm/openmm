@@ -1129,6 +1129,10 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
                                force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
                                allExclusions, force.getPBC(), static_cast<float>(force.getCutoff()) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
+    if( data.getLog() ){
+        (void) fprintf( data.getLog(), "CudaCalcAmoebaVdwForceKernel PBC=%d getUseNeighborList=%d\n",
+                        force.getPBC(), force.getUseNeighborList() );
+    }
     data.setUseVdwNeighborList( force.getUseNeighborList() );
 }
 
