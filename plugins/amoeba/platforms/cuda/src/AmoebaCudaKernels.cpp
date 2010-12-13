@@ -976,14 +976,26 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         force.getPmeGridDimensions( pmeGridDimension );
         if( 1 || pmeGridDimension[0] == 0 ){
             NonbondedForceImpl::calcPMEParameters(system, nb, alpha, xsize, ysize, zsize);
+/*
+alpha = 5.446;
+xsize = 60;
+ysize = 48;
+zsize = 48;
+*/
         } else {
             alpha = force.getAEwald();
             xsize = pmeGridDimension[0];
             ysize = pmeGridDimension[1];
             zsize = pmeGridDimension[2];
         }
+        if( data.getLog() ){
+            (void) fprintf( data.getLog(), "AmoebaMultipoleForce: PME parameters tol=%12.3e cutoff=%12.3f alpha=%12.3f [%d %d %d]\n",
+                            force.getEwaldErrorTolerance(), force.getCutoffDistance(),  alpha, xsize, ysize, zsize );
+            (void) fflush( data.getLog() );
+        }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
         data.setApplyMultipoleCutoff( 1 );
+
         data.cudaPlatformData.nonbondedMethod = PARTICLE_MESH_EWALD;
         amoebaGpuContext amoebaGpu            = data.getAmoebaGpu();
         gpuContext gpu                        = amoebaGpu->gpuContext;

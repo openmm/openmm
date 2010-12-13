@@ -175,7 +175,7 @@ void kReduceMutualInducedFieldDelta_kernel(int numberOfEntries, float* arrayOfDe
     if (threadIdx.x == 0)
     {   
         epsilon[0]  = delta[0].x > delta[0].y ? delta[0].x : delta[0].y;
-        epsilon[0]  = 4.8033324f*sqrtf( epsilon[0]/( (float) (numberOfEntries/3)) );
+        epsilon[0]  = 48.033324f*sqrtf( epsilon[0]/( (float) (numberOfEntries/3)) );
     }   
 }
 
@@ -550,7 +550,7 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
             trackMutualInducedIterations( amoebaGpu, iteration);
         }
 
-        // Debye=4.8033324f
+        // Debye=48.033324f
         amoebaGpu->psCurrentEpsilon->Download();
         float currentEpsilon          = amoebaGpu->psCurrentEpsilon->_pSysStream[0][0];
         amoebaGpu->mutualInducedCurrentEpsilon   = currentEpsilon;

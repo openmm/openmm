@@ -324,12 +324,12 @@ void kReduceMutualInducedAndGkFieldDelta_kernel( float* arrayOfDeltas1, float* a
         epsilon[0]  = epsilon[0] < delta[0].y ? delta[0].y : epsilon[0];
         epsilon[0]  = epsilon[0] < delta[0].z ? delta[0].z : epsilon[0];
         epsilon[0]  = epsilon[0] < delta[0].w ? delta[0].w : epsilon[0];
-        epsilon[0]  = 4.8033324f*sqrtf( epsilon[0]/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[0]  = 48.033324f*sqrtf( epsilon[0]/( (float) cAmoebaSim.numberOfAtoms ) );
 #ifdef AMOEBA_DEBUG
-        epsilon[1]  = 4.8033324f*sqrtf( delta[0].x/( (float) cAmoebaSim.numberOfAtoms ) );
-        epsilon[2]  = 4.8033324f*sqrtf( delta[0].y/( (float) cAmoebaSim.numberOfAtoms ) );
-        epsilon[3]  = 4.8033324f*sqrtf( delta[0].z/( (float) cAmoebaSim.numberOfAtoms ) );
-        epsilon[4]  = 4.8033324f*sqrtf( delta[0].w/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[1]  = 48.033324f*sqrtf( delta[0].x/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[2]  = 48.033324f*sqrtf( delta[0].y/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[3]  = 48.033324f*sqrtf( delta[0].z/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[4]  = 48.033324f*sqrtf( delta[0].w/( (float) cAmoebaSim.numberOfAtoms ) );
 #endif
     }   
 }
@@ -831,7 +831,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         float currentEpsilon = -1.0e30;
         for( int ii = 0; ii < 4; ii++ ){
             sum[ii]                  = cudaGetSum( 3*gpu->natoms, amoebaGpu->psWorkVector[ii]);
-            sum[ii]                  = 4.8033324f*sqrtf( sum[ii]/( (float) gpu->natoms) );
+            sum[ii]                  = 48.033324f*sqrtf( sum[ii]/( (float) gpu->natoms) );
             if( sum[ii] > currentEpsilon ){
                 currentEpsilon = sum[ii];
             }
@@ -845,7 +845,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
 }
 #endif
 
-        // Debye=4.8033324f
+        // Debye=48.033324f
 
         amoebaGpu->psCurrentEpsilon->Download();
         float currentEpsilon                     = amoebaGpu->psCurrentEpsilon->_pSysStream[0][0];

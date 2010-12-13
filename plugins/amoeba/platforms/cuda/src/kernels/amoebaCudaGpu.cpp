@@ -1155,10 +1155,9 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
                                                                  (amoebaGpu->psAmoebaUreyBradleyParameter ?  amoebaGpu->psAmoebaUreyBradleyParameter->_stride : 0);
 
     //gpu->sim.localForces_threads_per_block  = (std::max(amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset, gpu->sim.customBonds) / gpu->sim.blocks + 15) & 0xfffffff0;
-    //fprintf( amoebaGpu->log, "Final (UreyBradley) offset : %5d \n", amoebaGpu->amoebaSim.amoebaUreyBradley_offset );
 
-    unsigned int maxI                                         = (amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset > gpu->sim.customBonds) ? amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset : gpu->sim.customBonds;
-    gpu->sim.localForces_threads_per_block                    = (maxI/gpu->sim.blocks + 15) & 0xfffffff0;
+    unsigned int maxI                                          = (amoebaGpu->amoebaSim.amoebaUreyBradley_offset > gpu->sim.customBonds) ? amoebaGpu->amoebaSim.amoebaUreyBradley_offset : gpu->sim.customBonds;
+    gpu->sim.localForces_threads_per_block                     = (maxI/gpu->sim.blocks + 15) & 0xfffffff0;
     if (gpu->sim.localForces_threads_per_block > gpu->sim.max_localForces_threads_per_block)
         gpu->sim.localForces_threads_per_block = gpu->sim.max_localForces_threads_per_block;
     if (gpu->sim.localForces_threads_per_block < 1) 
@@ -1264,8 +1263,8 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
         if( amoebaGpu->psAmoebaUreyBradleyID ){
             amoebaGpu->psAmoebaUreyBradleyID->Upload();
         }
-    }    
-    
+
+    }
 
 }
 
@@ -1511,7 +1510,7 @@ void gpuKirkwoodAllocate( amoebaGpuContext amoebaGpu )
     amoebaGpu->psKirkwoodForce                   = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodForce");
     amoebaGpu->psKirkwoodEDiffForce              = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodEDiffForce");
 
-    unsigned int offset                    = paddedNumberOfAtoms*sizeof( float );
+    unsigned int offset                          = paddedNumberOfAtoms*sizeof( float );
     memset( amoebaGpu->psBorn->_pSysStream[0],               0, offset );
     memset( amoebaGpu->psBornPolar->_pSysStream[0],          0, offset );
 

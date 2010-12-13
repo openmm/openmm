@@ -441,6 +441,7 @@ void kCalculateAmoebaLocalForces_kernel()
             force.y                += c23.y;
             force.z                += c23.z;
             cSim.pForce4[offset]    = force;
+
         }
         pos += blockDim.x * gridDim.x;
     }
@@ -1580,10 +1581,12 @@ void kCalculateAmoebaLocalForces_kernel()
             int4   atom         = cAmoebaSim.pAmoebaUreyBradleyID[pos1];
             float4 atomA        = cSim.pPosq[atom.x];
             float4 atomB        = cSim.pPosq[atom.y];
-            float2 bond         = cAmoebaSim.pAmoebaUreyBradleyParameter[pos];
+            float2 bond         = cAmoebaSim.pAmoebaUreyBradleyParameter[pos1];
+
             float dx            = atomB.x - atomA.x;
             float dy            = atomB.y - atomA.y;
             float dz            = atomB.z - atomA.z;
+
             float r2            = dx * dx + dy * dy + dz * dz;
             float r             = sqrt(r2);
             float deltaIdeal    = r - bond.x;
@@ -1599,16 +1602,20 @@ void kCalculateAmoebaLocalForces_kernel()
             dx                 *= dEdR;
             dy                 *= dEdR;
             dz                 *= dEdR;
+
             unsigned int offsetA                = atom.x + atom.z * cSim.stride;
             unsigned int offsetB                = atom.y + atom.w * cSim.stride;
             float4 forceA                       = cSim.pForce4[offsetA];
             float4 forceB                       = cSim.pForce4[offsetB];
+
             forceA.x                           += dx;
             forceA.y                           += dy;
             forceA.z                           += dz;
+
             forceB.x                           -= dx;
             forceB.y                           -= dy;
             forceB.z                           -= dz;
+
             cSim.pForce4[offsetA]               = forceA;
             cSim.pForce4[offsetB]               = forceB;    
         }
@@ -1629,7 +1636,6 @@ void kCalculateAmoebaLocalForces(amoebaGpuContext gpu)
             call++;
         }
     }
-
     kCalculateAmoebaLocalForces_kernel<<<gpu->gpuContext->sim.blocks, gpu->gpuContext->sim.localForces_threads_per_block>>>();
 
     LAUNCHERROR("kCalculateAmoebaLocalForces");
