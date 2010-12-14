@@ -1070,28 +1070,22 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     }   
 
     if (gpu->bOutputBufferPerWarp){
-#if 0
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-        kCalculateAmoebaCudaKirkwoodEDiffN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock,
-                                                            sizeof(KirkwoodEDiffParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock>>>(
 
-                                                         amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                         gpu->psPosq4->_pDevStream[0],
-                                                         amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                         amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
-                                                         amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                         amoebaGpu->psInducedDipolePolar->_pDevStream[0],
-                                                         amoebaGpu->psWorkArray_3_1->_pDevStream[0],
-                                                         amoebaGpu->psWorkArray_3_2->_pDevStream[0],
+        kCalculateAmoebaCudaKirkwoodEDiffN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
+                                                                           amoebaGpu->psWorkUnit->_pDevStream[0],
+                                                                           gpu->psPosq4->_pDevStream[0],
+                                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],
+                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
+                                                                           amoebaGpu->psInducedDipole->_pDevStream[0],
+                                                                           amoebaGpu->psInducedDipolePolar->_pDevStream[0],
+                                                                           amoebaGpu->psInducedDipoleS->_pDevStream[0],
+                                                                           amoebaGpu->psInducedDipolePolarS->_pDevStream[0],
+                                                                           amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0],
                                                                            debugArray->_pDevStream[0], targetAtom );
 #else
                                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
-#endif
 #endif
 
     } else {

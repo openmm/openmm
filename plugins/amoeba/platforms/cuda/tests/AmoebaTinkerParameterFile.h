@@ -91,6 +91,8 @@ static std::string AMOEBA_INDUCDED_DIPOLES_GK                         = "AmoebaI
 static std::string INCLUDE_OBC_CAVITY_TERM                            = "includeObcCavityTerm";
 static std::string MUTUAL_INDUCED_MAX_ITERATIONS                      = "mutualInducedMaxIterations";
 static std::string MUTUAL_INDUCED_TARGET_EPSILON                      = "mutualInducedTargetEpsilon";
+static std::string APPLY_N2                                           = "applyN2";
+static std::string ZERO_HARMONIC_BOND_IXN                             = "zeroHarmonicBondIxn";
 
 #define AmoebaHarmonicBondIndex                            0
 #define AmoebaHarmonicAngleIndex                           1

@@ -803,7 +803,36 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
         }
     }
 
-    // convert units to kJ-nm from kCal-Angstrom?
+    // check if ZERO_HARMONIC_BOND_IXN is set; used to allow ixn in for 
+    MapStringStringI zeroIxnI = inputArgumentMap.find( ZERO_HARMONIC_BOND_IXN );
+    int zeroIxn;
+    if( zeroIxnI != inputArgumentMap.end() ){
+         zeroIxn = atoi( zeroIxnI->second.c_str() );
+    } else {
+         zeroIxn = 0;
+    }
+    if( log ){
+        (void) fprintf( log, "zero harmonic bond ixn=%d.\n", zeroIxn );  (void) fflush( log );
+    }    
+
+    // zero ixn
+
+    if( zeroIxn ){
+
+        double cubic         = 0.0;
+        double quartic       = 0.0;
+
+        bondForce->setAmoebaGlobalHarmonicBondCubic( cubic );
+        bondForce->setAmoebaGlobalHarmonicBondQuartic( quartic );
+
+        for( int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
+            int particle1, particle2;
+            double length, k;
+            bondForce->getBondParameters( ii, particle1, particle2, length, k );
+            k                 = 0.0;
+            bondForce->setBondParameters( ii, particle1, particle2, length, k ); 
+        }
+    }
 
     if( useOpenMMUnits ){
 
@@ -2152,6 +2181,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
     // usePme, aewald, cutoffDistance added w/ Version 1
 
     if( version > 0 ){
+
         usePme                        = atoi( tokens[tokenIndex++].c_str() );
         aewald                        = atof( tokens[tokenIndex++].c_str() );
         cutoffDistance                = atof( tokens[tokenIndex++].c_str() );
@@ -2169,21 +2199,34 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
         grid[2]                       = atoi( tokens[tokenIndex++].c_str() );
     }
   
-    if( usePme ){
+    MapStringStringI applyN2I = inputArgumentMap.find( APPLY_N2 );
+    int applyN2;
+    if( applyN2I != inputArgumentMap.end() ){
+         applyN2 = atoi( applyN2I->second.c_str() );
+    } else {
+         applyN2 = 0;
+    }
+    if( log ){
+        (void) fprintf( log, "applyN2=%d.\n", applyN2 );  (void) fflush( log );
+    }    
+
+    if( usePme && !applyN2 ){
         multipoleForce->setNonbondedMethod( AmoebaMultipoleForce::PME );
+        multipoleForce->setCutoffDistance( cutoffDistance );
+        multipoleForce->setAEwald( aewald );
+        multipoleForce->setPmeBSplineOrder( bsOrder );
+        multipoleForce->setPmeGridDimensions( grid );
+        system.setDefaultPeriodicBoxVectors( Vec3(box[0], 0.0, 0.0), Vec3(0.0, box[1], 0.0), Vec3(0.0, 0.0, box[2]) );
     } else {
         multipoleForce->setNonbondedMethod( AmoebaMultipoleForce::NoCutoff );
     }
-    multipoleForce->setCutoffDistance( cutoffDistance );
-    multipoleForce->setAEwald( aewald );
-    multipoleForce->setPmeBSplineOrder( bsOrder );
-    multipoleForce->setPmeGridDimensions( grid );
-    system.setDefaultPeriodicBoxVectors( Vec3(box[0], 0.0, 0.0), Vec3(0.0, box[1], 0.0), Vec3(0.0, 0.0, box[2]) );
+
     if( log ){
         (void) fprintf( log, "%s number of MultipoleParameter terms=%d usePme=%d aewald=%15.7e cutoffDistance=%12.4f\n",
                         methodName.c_str(), numberOfMultipoles, usePme, aewald, cutoffDistance );
         (void) fflush( log );
     }
+
     for( int ii = 0; ii < numberOfMultipoles; ii++ ){
         StringVector lineTokens;
         int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
@@ -2342,8 +2385,8 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
                         (useOpenMMUnits ? "OpenMM" : "Amoeba") );
 
         std::string nonbondedMethod = multipoleForce->getNonbondedMethod( ) == AmoebaMultipoleForce::PME ? "PME" : "NoCutoff";
-        (void) fprintf( log, "NonbondedMethod=%s aEwald=%15.7e cutoff=%15.7e.\n", nonbondedMethod.c_str(),
-                        multipoleForce->getAEwald(), multipoleForce->getCutoffDistance() );
+        (void) fprintf( log, "NonbondedMethod=%s aEwald=%15.7e cutoff=%15.7e tol=%15.7e.\n", nonbondedMethod.c_str(),
+                        multipoleForce->getAEwald(), multipoleForce->getCutoffDistance(), multipoleForce->getEwaldErrorTolerance() );
 
         Vec3 a,b,c;
         system.getDefaultPeriodicBoxVectors( a, b, c );
@@ -4743,6 +4786,18 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     std::vector<Vec3> coordinates          = state.getPositions();
     std::vector<Vec3> forces               = state.getForces();
 
+    // check if ZERO_HARMONIC_BOND_IXN is set; used to allow ixn in for 
+    MapStringStringI zeroIxnI = inputArgumentMap.find( ZERO_HARMONIC_BOND_IXN );
+    int zeroIxn;
+    if( zeroIxnI != inputArgumentMap.end() ){
+         zeroIxn = atoi( zeroIxnI->second.c_str() );
+    } else {
+         zeroIxn = 0;
+    }
+    if( log ){
+        (void) fprintf( log, "zero harmonic bond ixn=%d.\n", zeroIxn );  (void) fflush( log );
+    }    
+
     // get list of forces and then accumulate expected energies/forces
 
     StringVector forceList;
@@ -4753,8 +4808,10 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                 forceList.push_back( AMOEBA_GK_CAVITY_FORCE );
                 activeForceNames += AMOEBA_GK_CAVITY_FORCE + ":";
             } else {
-                forceList.push_back( ii->first );
-                activeForceNames += ii->first + ":";
+                if( !zeroIxn || ii->first != AMOEBA_HARMONIC_BOND_FORCE ){
+                    forceList.push_back( ii->first );
+                    activeForceNames += ii->first + ":";
+                }
             }
         }
     }
@@ -4826,7 +4883,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                 bool badMatch          = (cutoffDelta < relativeDelta) && (sumNorms > 0.1) ? true : false;
                      badMatch          = badMatch || (normF1 == 0.0 && normF2 > 0.0) || (normF2 == 0.0 && normF1 > 0.0);
                 if( badMatch || showAll ){
-                    (void) fprintf( filePtr, "%6u %10.3e %10.3e [%15.7e %15.7e %15.7e]   [%15.7e %15.7e %15.7e]  %s\n", ii, relativeDelta, delta,
+                    (void) fprintf( filePtr, "%6u %10.3e %10.3e [%15.7e %15.7e %15.7e]   [%15.7e %15.7e %15.7e] %s\n", ii, relativeDelta, delta,
                                     expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2],
                                     forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2],
                                     ( (showAll && badMatch) ? " XXX" : "") );

@@ -419,6 +419,17 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
     }
 
     if (gpu->bOutputBufferPerWarp){
+        kCalculateAmoebaWcaDispersionN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
+                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
+                                                            gpu->psPosq4->_pDevStream[0],
+                                                            amoebaGpu->psWcaDispersionRadiusEpsilon->_pDevStream[0],
+#ifdef AMOEBA_DEBUG
+                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                            debugArray->_pDevStream[0], targetAtom );
+#else
+                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0] );
+#endif
+
     } else {
 
 #ifdef AMOEBA_DEBUG

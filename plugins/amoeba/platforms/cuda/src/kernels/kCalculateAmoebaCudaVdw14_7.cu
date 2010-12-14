@@ -654,7 +654,6 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         LAUNCHERROR("kCalculateAmoebaVdw14_7N2");  
     }
 
-
 #ifdef AMOEBA_DEBUG_PRINT
     if( amoebaGpu->log ){
 
