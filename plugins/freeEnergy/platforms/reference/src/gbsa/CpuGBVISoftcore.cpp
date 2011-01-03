@@ -32,6 +32,9 @@
 #include "../SimTKReference/ReferenceForce.h"
 #include <math.h>
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    CpuGBVISoftcore constructor
@@ -319,7 +322,7 @@ int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius
 
 #define GBVISoftcoreDebug 0
 
-int CpuGBVISoftcore::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* switchDeriviative ){
+int CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* switchDeriviative ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -604,7 +607,7 @@ RealOpenMM CpuGBVISoftcore::Sgb( RealOpenMM t ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuGBVISoftcore::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
+RealOpenMM CpuGBVISoftcore::computeBornEnergy( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
                                                const RealOpenMM* partialCharges ){
 
    // ---------------------------------------------------------------------------------------
@@ -720,8 +723,8 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
    --------------------------------------------------------------------------------------- */
 
 
-int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                        const RealOpenMM* partialCharges, RealOpenMM** inputForces ){
+int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+                                        const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
 

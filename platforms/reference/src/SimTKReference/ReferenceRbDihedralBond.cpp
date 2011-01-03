@@ -31,6 +31,9 @@
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceRbDihedralBond constructor
@@ -76,9 +79,9 @@ ReferenceRbDihedralBond::~ReferenceRbDihedralBond( ){
    --------------------------------------------------------------------------------------- */
 
 void ReferenceRbDihedralBond::calculateBondIxn( int* atomIndices,
-                                               RealOpenMM** atomCoordinates,
+                                               vector<RealVec>& atomCoordinates,
                                                RealOpenMM* parameters,
-                                               RealOpenMM** forces,
+                                               vector<RealVec>& forces,
                                                RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceRbDihedralBond::calculateBondIxn";

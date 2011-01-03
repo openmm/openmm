@@ -356,9 +356,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeImplicitSolventForces( RealOpenMM** atomCoordinates,
+      int computeImplicitSolventForces( std::vector<OpenMM::RealVec>& atomCoordinates,
                                                const RealOpenMM* partialCharges,
-                                               RealOpenMM** forces, int updateBornRadii = 0 );
+                                               std::vector<OpenMM::RealVec>& forces, int updateBornRadii = 0 );
       
       /**---------------------------------------------------------------------------------------
       
@@ -372,7 +372,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii,
+      virtual int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
                                     RealOpenMM* obcChain = NULL );
       
       /**---------------------------------------------------------------------------------------
@@ -388,8 +388,8 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                           const RealOpenMM* partialCharges, RealOpenMM** forces );
+      virtual int computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                                           const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------
       
@@ -407,23 +407,6 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       int computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
                                    const RealOpenMM* bornRadii, RealOpenMM* energy, 
                                    RealOpenMM* forces ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write Born energy and forces (Simbios)
-      
-         @param atomCoordinates   atomic coordinates
-         @param partialCharges    partial atom charges
-         @param forces            force array
-         @param resultsFileName   output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn if file opened; else return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      virtual int writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                         const RealOpenMM* partialCharges, RealOpenMM** forces,
-                                         const std::string& resultsFileName ) const;
 
       /**---------------------------------------------------------------------------------------
             
@@ -537,7 +520,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
          --------------------------------------------------------------------------------------- */
       
       /*
-      static int writeXyzFile( int numberOfAtoms, const RealOpenMM** atomCoordinates, 
+      static int writeXyzFile( int numberOfAtoms, const std::vector<OpenMM::RealVec>& atomCoordinates, 
                                const char** atomNames,
                                const std::string& header, const std::string& xyzFileName,
                                const implicitSolventBonds** bondsArray ); */

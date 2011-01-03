@@ -29,6 +29,9 @@
 #include "ObcParameters.h"
 #include "CpuObc.h"
 
+using namespace OpenMM;
+using namespace std;
+
 /**---------------------------------------------------------------------------------------
 
 	Setup for Obc calculations from Gromacs
@@ -149,9 +152,9 @@ cpuSetObcParameters( int numberOfAtoms, RealOpenMM* atomicRadii, RealOpenMM* obc
    --------------------------------------------------------------------------------------- */
 
 extern "C" int
-cpuCalculateImplicitSolventForces( RealOpenMM** atomCoordinates,
+cpuCalculateImplicitSolventForces( vector<RealVec>& atomCoordinates,
                                    const RealOpenMM* partialCharges,
-                                   RealOpenMM** forces, RealOpenMM* energy,
+                                   vector<RealVec>& forces, RealOpenMM* energy,
                                    int updateBornRadii ){
 
    // ---------------------------------------------------------------------------------------

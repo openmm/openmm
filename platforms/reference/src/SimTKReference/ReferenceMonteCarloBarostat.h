@@ -66,7 +66,7 @@ class ReferenceMonteCarloBarostat {
 
          --------------------------------------------------------------------------------------- */
 
-      void applyBarostat(RealOpenMM** atomPositions, RealOpenMM* boxSize, RealOpenMM scale);
+      void applyBarostat(std::vector<OpenMM::RealVec>& atomPositions, RealOpenMM* boxSize, RealOpenMM scale);
 
       /**---------------------------------------------------------------------------------------
 
@@ -76,7 +76,7 @@ class ReferenceMonteCarloBarostat {
 
          --------------------------------------------------------------------------------------- */
 
-      void restorePositions(RealOpenMM** atomPositions);
+      void restorePositions(std::vector<OpenMM::RealVec>& atomPositions);
 
 };
 

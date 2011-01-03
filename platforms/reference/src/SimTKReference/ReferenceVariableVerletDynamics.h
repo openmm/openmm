@@ -33,8 +33,8 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
    private:
 
-      enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
-      enum OneDArrayIndicies { InverseMasses, Max1DArrays };
+      std::vector<OpenMM::RealVec> xPrime;
+      std::vector<RealOpenMM> inverseMasses;
       RealOpenMM _accuracy;
 
    public:
@@ -91,8 +91,8 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      int update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                  RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses, RealOpenMM maxStepSize );
+      int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize );
 
 };
 

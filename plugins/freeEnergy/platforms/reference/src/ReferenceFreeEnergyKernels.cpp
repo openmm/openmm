@@ -41,6 +41,7 @@
 #include <cmath>
 #include <limits>
 
+using namespace std;
 using namespace OpenMM;
 
 static int** allocateIntArray(int length, int width) {
@@ -54,26 +55,6 @@ static RealOpenMM** allocateRealArray(int length, int width) {
     RealOpenMM** array = new RealOpenMM*[length];
     for (int i = 0; i < length; ++i)
         array[i] = new RealOpenMM[width];
-    return array;
-}
-
-static int** copyToArray(const std::vector<std::vector<int> > vec) {
-    if (vec.size() == 0)
-        return new int*[0];
-    int** array = allocateIntArray(vec.size(), vec[0].size());
-    for (size_t i = 0; i < vec.size(); ++i)
-        for (size_t j = 0; j < vec[i].size(); ++j)
-            array[i][j] = vec[i][j];
-    return array;
-}
-
-static RealOpenMM** copyToArray(const std::vector<std::vector<double> > vec) {
-    if (vec.size() == 0)
-        return new RealOpenMM*[0];
-    RealOpenMM** array = allocateRealArray(vec.size(), vec[0].size());
-    for (size_t i = 0; i < vec.size(); ++i)
-        for (size_t j = 0; j < vec[i].size(); ++j)
-            array[i][j] = static_cast<RealOpenMM>(vec[i][j]);
     return array;
 }
 
@@ -93,19 +74,19 @@ static void disposeRealArray(RealOpenMM** array, int size) {
     }
 }
 
-static RealOpenMM** extractPositions(ContextImpl& context) {
+static vector<RealVec>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM**) data->positions;
+    return *((vector<RealVec>*) data->positions);
 }
 
-static RealOpenMM** extractVelocities(ContextImpl& context) {
+static vector<RealVec>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM**) data->velocities;
+    return *((vector<RealVec>*) data->velocities);
 }
 
-static RealOpenMM** extractForces(ContextImpl& context) {
+static vector<RealVec>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM**) data->forces;
+    return *((vector<RealVec>*) data->forces);
 }
 
 ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::~ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel() {
@@ -228,8 +209,8 @@ void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const Syste
 
 double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
 
     RealOpenMM energy = 0;
     ReferenceFreeEnergyLJCoulombSoftcoreIxn clj;
@@ -325,8 +306,8 @@ void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System&
 }
 
 double ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
     return obc->getEnergy();
 }
@@ -391,12 +372,12 @@ void ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& sy
 }
 
 double ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData = extractPositions(context);
+    vector<RealVec>& posData = extractPositions(context);
 
     RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
     gbviSoftcore->computeBornRadii(posData, bornRadii, NULL );
     if (includeForces) {
-        RealOpenMM** forceData = extractForces(context);
+        vector<RealVec>& forceData = extractForces(context);
         gbviSoftcore->computeBornForces(bornRadii, posData, &charges[0], forceData);
     }
     RealOpenMM energy = 0.0;

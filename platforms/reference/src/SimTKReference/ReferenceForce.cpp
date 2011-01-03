@@ -32,6 +32,8 @@
 
 #include <cstdio>
 
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceForce constructor
@@ -91,7 +93,7 @@ RealOpenMM ReferenceForce::periodicDifference(RealOpenMM val1, RealOpenMM val2, 
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceForce::getDeltaR( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+int ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
                                RealOpenMM* deltaR ){
 
    // ---------------------------------------------------------------------------------------
@@ -124,7 +126,7 @@ int ReferenceForce::getDeltaR( const RealOpenMM* atomCoordinatesI, const RealOpe
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceForce::getDeltaRPeriodic( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+int ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
                                const RealOpenMM* boxSize, RealOpenMM* deltaR ){
 
    // ---------------------------------------------------------------------------------------

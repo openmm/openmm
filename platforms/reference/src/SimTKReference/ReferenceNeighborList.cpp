@@ -18,7 +18,7 @@ static double periodicDifference(double val1, double val2, double period) {
 }
 
 // squared distance between two points
-static double compPairDistanceSquared(const RealOpenMM* pos1, const RealOpenMM* pos2, const RealOpenMM* periodicBoxSize) {
+static double compPairDistanceSquared(const RealVec& pos1, const RealVec& pos2, const RealOpenMM* periodicBoxSize) {
     double dx, dy, dz;
     if (periodicBoxSize == NULL) {
         dx = pos2[0] - pos1[0];
@@ -89,7 +89,7 @@ public:
 };
 
 
-typedef std::pair<const RealOpenMM*, AtomIndex> VoxelItem;
+typedef std::pair<const RealVec*, AtomIndex> VoxelItem;
 typedef std::vector< VoxelItem > Voxel;
 
 class VoxelHash
@@ -104,16 +104,16 @@ public:
         }
     }
 
-    void insert(const AtomIndex& item, const RealOpenMM* location)
+    void insert(const AtomIndex& item, const RealVec& location)
     {
         VoxelIndex voxelIndex = getVoxelIndex(location);
         if ( voxelMap.find(voxelIndex) == voxelMap.end() ) voxelMap[voxelIndex] = Voxel(); 
         Voxel& voxel = voxelMap.find(voxelIndex)->second;
-        voxel.push_back( VoxelItem(location, item) );
+        voxel.push_back( VoxelItem(&location, item) );
     }
 
 
-    VoxelIndex getVoxelIndex(const RealOpenMM* location) const {
+    VoxelIndex getVoxelIndex(const RealVec& location) const {
         double xperiodic, yperiodic, zperiodic;
         if (periodicBoxSize == NULL) {
             xperiodic = location[0];
@@ -150,7 +150,7 @@ public:
         assert(voxelSizeZ > 0);
 
         const AtomIndex atomI = referencePoint.second;
-        const RealOpenMM* locationI = referencePoint.first;
+        const RealVec& locationI = *referencePoint.first;
         
         double maxDistanceSquared = maxDistance * maxDistance;
         double minDistanceSquared = minDistance * minDistance;
@@ -184,7 +184,7 @@ public:
                     for (Voxel::const_iterator itemIter = voxel.begin(); itemIter != voxel.end(); ++itemIter)
                     {
                         const AtomIndex atomJ = itemIter->second;
-                        const RealOpenMM* locationJ = itemIter->first;
+                        const RealVec& locationJ = *itemIter->first;
                         
                         // Ignore self hits
                         if (atomI == atomJ) continue;
@@ -239,10 +239,10 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
     for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs
     {
         // 1) Find other atoms that are close to this one
-        const RealOpenMM* location = atomLocations[atomJ];
+        const RealVec& location = atomLocations[atomJ];
         voxelHash.getNeighbors( 
             neighborList, 
-            VoxelItem(location, atomJ),
+            VoxelItem(&location, atomJ),
             exclusions,
             reportSymmetricPairs, 
             maxDistance, 

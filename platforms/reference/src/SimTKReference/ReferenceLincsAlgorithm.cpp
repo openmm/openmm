@@ -31,7 +31,7 @@
 #include "ReferenceDynamics.h"
 
 using std::vector;
-using OpenMM::Vec3;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -126,7 +126,7 @@ void ReferenceLincsAlgorithm::setNumTerms( int terms ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::initialize(int numberOfAtoms, RealOpenMM* inverseMasses) {
+void ReferenceLincsAlgorithm::initialize(int numberOfAtoms, vector<RealOpenMM>& inverseMasses) {
     static const RealOpenMM one = 1.0;
     _hasInitialized = true;
     vector<vector<int> > atomConstraints(numberOfAtoms);
@@ -188,9 +188,9 @@ void ReferenceLincsAlgorithm::solveMatrix() {
 
  --------------------------------------------------------------------------------------- */
 
-void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM* inverseMasses) {
+void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, vector<RealVec>& atomCoordinates, vector<RealOpenMM>& inverseMasses) {
     for (int i = 0; i < _numberOfConstraints; i++) {
-        Vec3 delta(_sMatrix[i]*_solution[i]*_constraintDir[i][0],
+        RealVec delta(_sMatrix[i]*_solution[i]*_constraintDir[i][0],
                    _sMatrix[i]*_solution[i]*_constraintDir[i][1],
                    _sMatrix[i]*_solution[i]*_constraintDir[i][2]);
         int atom1 = _atomIndices[i][0];
@@ -218,9 +218,9 @@ void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, RealOpenMM*
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLincsAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                         RealOpenMM** atomCoordinatesP,
-                                         RealOpenMM* inverseMasses ){
+int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                         vector<RealVec>& atomCoordinatesP,
+                                         vector<RealOpenMM>& inverseMasses ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -243,7 +243,7 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordina
    for (int i = 0; i < _numberOfConstraints; i++) {
        int atom1 = _atomIndices[i][0];
        int atom2 = _atomIndices[i][1];
-       _constraintDir[i] = Vec3(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
+       _constraintDir[i] = RealVec(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
                                 atomCoordinatesP[atom1][1]-atomCoordinatesP[atom2][1],
                                 atomCoordinatesP[atom1][2]-atomCoordinatesP[atom2][2]);
        RealOpenMM invLength = (RealOpenMM)(1/SQRT((RealOpenMM)_constraintDir[i].dot(_constraintDir[i])));
@@ -256,10 +256,10 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordina
    // Build the coupling matrix.
 
    for (int c1 = 0; c1 < (int)_couplingMatrix.size(); c1++) {
-       Vec3& dir1 = _constraintDir[c1];
+       RealVec& dir1 = _constraintDir[c1];
        for (int j = 0; j < (int)_couplingMatrix[c1].size(); j++) {
            int c2 = _linkedConstraints[c1][j];
-           Vec3& dir2 = _constraintDir[c2];
+           RealVec& dir2 = _constraintDir[c2];
            if (_atomIndices[c1][0] == _atomIndices[c2][0] || _atomIndices[c1][1] == _atomIndices[c2][1])
                _couplingMatrix[c1][j] = (RealOpenMM)(-inverseMasses[_atomIndices[c1][0]]*_sMatrix[c1]*dir1.dot(dir2)*_sMatrix[c2]);
            else
@@ -277,7 +277,7 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordina
    for (int i = 0; i < _numberOfConstraints; i++) {
        int atom1 = _atomIndices[i][0];
        int atom2 = _atomIndices[i][1];
-       Vec3 delta(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
+       RealVec delta(atomCoordinatesP[atom1][0]-atomCoordinatesP[atom2][0],
                   atomCoordinatesP[atom1][1]-atomCoordinatesP[atom2][1],
                   atomCoordinatesP[atom1][2]-atomCoordinatesP[atom2][2]);
        RealOpenMM p2 = (RealOpenMM)(two*_distance[i]*_distance[i]-delta.dot(delta));

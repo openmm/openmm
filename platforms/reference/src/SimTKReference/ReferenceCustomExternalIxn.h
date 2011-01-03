@@ -72,8 +72,8 @@ class ReferenceCustomExternalIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateForce( int atomIndex, RealOpenMM** atomCoordinates,
-                            RealOpenMM* parameters, RealOpenMM** forces, RealOpenMM* energy ) const;
+      void calculateForce( int atomIndex, std::vector<OpenMM::RealVec>& atomCoordinates,
+                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* energy ) const;
 
 
 };

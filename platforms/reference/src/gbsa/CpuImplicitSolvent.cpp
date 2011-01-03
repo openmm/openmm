@@ -29,6 +29,9 @@
 
 #include <cstdio>
 
+using namespace OpenMM;
+using namespace std;
+
 //#define UseGromacsMalloc 1
 
 // Replacement new/delete w/ Gromac's smalloc() and sfree()
@@ -581,7 +584,7 @@ RealOpenMM* CpuImplicitSolvent::getBornRadiiTemp( void ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii,
+int CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii,
                                           RealOpenMM* obcChain ){
 
    // ---------------------------------------------------------------------------------------
@@ -613,13 +616,12 @@ int CpuImplicitSolvent::computeBornRadii( RealOpenMM** atomCoordinates, RealOpen
 
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeImplicitSolventForces( RealOpenMM** atomCoordinates,
+int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoordinates,
                                                       const RealOpenMM* partialCharges,
-                                                      RealOpenMM** forces, int updateBornRadii ){
+                                                      vector<RealVec>& forces, int updateBornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
-   int printSampleOutput         = 0;
    static const char* methodName = "\nCpuImplicitSolvent::computeImplicitSolventForces";
 
    // ---------------------------------------------------------------------------------------
@@ -647,81 +649,12 @@ int CpuImplicitSolvent::computeImplicitSolventForces( RealOpenMM** atomCoordinat
 
    RealOpenMM* bornRadii = getBornRadii();
    if( updateBornRadii || bornRadii[0] < (RealOpenMM) 0.0001 || callId == 1 ){
-
       computeBornRadii( atomCoordinates, bornRadii );
-
-      // diagnostics
-
-      if( printSampleOutput ){
-
-         RealOpenMM* atomicRadii = implicitSolventParameters->getAtomicRadii();
-         std::stringstream message;
-         message.precision( 6 );
-         message.width( 12 );
-         message << methodName;
-         int numberOfAtoms = implicitSolventParameters->getNumberOfAtoms();
-         message << " initialize Born radii for " << numberOfAtoms << " atoms on call=" << callId; 
-
-         for( int ii = 0; ii < printSampleOutput && ii < numberOfAtoms; ii++ ){
-		      message << "\n   " << ii << " rad=" << atomicRadii[ii] << " q=" << partialCharges[ii] << " bR=" << bornRadii[ii] << " X[";
-            SimTKOpenMMUtilities::formatRealStringStream( message, atomCoordinates[ii] );
-		      message << "]";
-         }
-
-		   message << "\n";
-
-         int startIndex = implicitSolventParameters->getNumberOfAtoms() - printSampleOutput > 0 ?
-                          implicitSolventParameters->getNumberOfAtoms() - printSampleOutput : numberOfAtoms;
-         for( int ii = startIndex; ii < numberOfAtoms; ii++ ){
-		      message << "\n   " << ii << " " << atomicRadii[ii] << " " << bornRadii[ii] << " X[";
-            SimTKOpenMMUtilities::formatRealStringStream( message, atomCoordinates[ii] );
-		      message << "]";
-         }
-         SimTKOpenMMLog::printMessage( message );
-      }
    }
 
    // compute forces
 
    computeBornEnergyForces( getBornRadii(), atomCoordinates, partialCharges, forces );
-
-   // diagnostics
-
-   if( printSampleOutput && callId == 1 ){
-
-      static int internalId = 0;
-      int processId         = internalId++ + callId;
-
-      std::stringstream message;
-      message.precision( 6 );
-      message.width( 12 );
-      int numberOfAtoms = implicitSolventParameters->getNumberOfAtoms();
-
-      message << methodName;
-      message << " call=" << callId << " E=" << getEnergy() << " " << numberOfAtoms << " atoms.";
-
-      for( int ii = 0; ii < printSampleOutput && ii < numberOfAtoms; ii++ ){
-         message << "\n   " << ii << " [ ";
-         SimTKOpenMMUtilities::formatRealStringStream( message, forces[ii] );
-         message << "] bRad=" << bornRadii[ii]; 
-      }
-		message << "\n";
-      int startIndex = implicitSolventParameters->getNumberOfAtoms() - printSampleOutput > 0 ?
-                       implicitSolventParameters->getNumberOfAtoms() - printSampleOutput : numberOfAtoms;
-      for( int ii = startIndex; ii < numberOfAtoms; ii++ ){
-         message << "\n   " << ii << " [ ";
-         SimTKOpenMMUtilities::formatRealStringStream( message, forces[ii] );
-         message << "] bRad=" << bornRadii[ii]; 
-      }
-      SimTKOpenMMLog::printMessage( message );
-
-      // write Born forces
-
-      std::stringstream resultsFileName;
-      resultsFileName << getBaseFileName() << "." << processId << ".gbsa0";
-      writeBornEnergyForces( atomCoordinates, partialCharges, forces, resultsFileName.str() );
-
-   }
 
    return SimTKOpenMMCommon::DefaultReturn; 
 }
@@ -742,9 +675,9 @@ int CpuImplicitSolvent::computeImplicitSolventForces( RealOpenMM** atomCoordinat
    --------------------------------------------------------------------------------------- */
 
 int CpuImplicitSolvent::computeBornEnergyForces( RealOpenMM* bornRadii,
-                                                 RealOpenMM** atomCoordinates,
+                                                 vector<RealVec>& atomCoordinates,
                                                  const RealOpenMM* partialCharges,
-                                                 RealOpenMM** forces ){
+                                                 vector<RealVec>& forces ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -821,94 +754,6 @@ int CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters
    }
 
    return SimTKOpenMMCommon::DefaultReturn; 
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write Born energy and forces (Simbios)
-
-   @param atomCoordinates     atomic coordinates
-   @param forces              forces
-   @param resultsFileName     output file name
-
-   @return SimTKOpenMMCommon::DefaultReturn unless
-           file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuImplicitSolvent::writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                               const RealOpenMM* partialCharges,
-                                               RealOpenMM** forces,
-                                               const std::string& resultsFileName ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nCpuImplicitSolvent::writeBornEnergyForces";
-
-   // ---------------------------------------------------------------------------------------
-
-   ImplicitSolventParameters* implicitSolventParameters = getImplicitSolventParameters();
-
-   int numberOfAtoms              = implicitSolventParameters->getNumberOfAtoms();
-   const RealOpenMM* atomicRadii  = implicitSolventParameters->getAtomicRadii();
-   const RealOpenMM* bornRadii    = getBornRadiiConst();
-
-   // ---------------------------------------------------------------------------------------
-
-   // open file -- return if unsuccessful
-
-   FILE* implicitSolventResultsFile = NULL;
-#ifdef _MSC_VER
-   fopen_s( &implicitSolventResultsFile, resultsFileName.c_str(), "w" );
-#else
-   implicitSolventResultsFile = fopen( resultsFileName.c_str(), "w" );
-#endif
-
-   // diganostics
-
-   std::stringstream message;
-   message << methodName;
-   if( implicitSolventResultsFile != NULL ){
-      std::stringstream message;
-      message << methodName;
-      message << " Opened file=<" << resultsFileName << ">.";
-      SimTKOpenMMLog::printMessage( message );
-   } else {
-      std::stringstream message;
-      message << methodName;
-      message << "  could not open file=<" << resultsFileName << "> -- abort output.";
-      SimTKOpenMMLog::printMessage( message );
-      return SimTKOpenMMCommon::ErrorReturn;
-   }
-
-   // header
-
-   (void) fprintf( implicitSolventResultsFile, "# %d atoms format: coords bornRadii q atomicRadii forces\n", numberOfAtoms );
-
-   RealOpenMM forceConversion  = 1.0;
-   RealOpenMM lengthConversion = 1.0;
-
-   // output
-
-   if( forces != NULL && atomCoordinates != NULL && partialCharges != NULL && atomicRadii != NULL ){
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-            (void) fprintf( implicitSolventResultsFile, "%.7e %.7e %.7e %.7e %.5f %.5f %.7e %.7e %.7e\n",
-                            lengthConversion*atomCoordinates[ii][0],
-                            lengthConversion*atomCoordinates[ii][1], 
-                            lengthConversion*atomCoordinates[ii][2],
-                           (bornRadii != NULL ? lengthConversion*bornRadii[ii] : 0.0),
-                            partialCharges[ii], lengthConversion*atomicRadii[ii],
-                            forceConversion*forces[ii][0],
-                            forceConversion*forces[ii][1],
-                            forceConversion*forces[ii][2]
-                          );
-      }
-   }
-   (void) fclose( implicitSolventResultsFile );
-
-   return SimTKOpenMMCommon::DefaultReturn;
 
 }
 

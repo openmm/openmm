@@ -25,8 +25,10 @@
 #ifndef __CpuGBVI_H__
 #define __CpuGBVI_H__
 
+#include "../SimTKUtilities/RealVec.h"
 #include "GBVIParameters.h"
 #include "CpuImplicitSolvent.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -99,7 +101,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii,
+      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
                             RealOpenMM* gbviChain = NULL );
       
       /**---------------------------------------------------------------------------------------
@@ -115,11 +117,11 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                   const RealOpenMM* partialCharges, RealOpenMM** forces );
+      int computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                                   const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
-      int computeBornEnergyForcesPrint( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                        const RealOpenMM* partialCharges, RealOpenMM** forces );
+      int computeBornEnergyForcesPrint( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                                        const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------
       
@@ -146,47 +148,9 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
           
-      int writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                 const RealOpenMM* partialCharges, RealOpenMM** forces,
+      int writeBornEnergyForces( std::vector<OpenMM::RealVec>& atomCoordinates,
+                                 const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces,
                                  const std::string& resultsFileName ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Write  results from first loop
-      
-         @param atomCoordinates     atomic coordinates
-         @param RealOpenMM forces         forces
-         @param outputFileName      output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn unless
-                 file cannot be opened
-                 in which case return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int writeForceLoop1( int numberOfAtoms, RealOpenMM** forces, const RealOpenMM* bornForce,
-                                  const std::string& outputFileName );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write results
-      
-         @param numberOfAtoms       number of atoms
-         @param chunkSizes          vector of chunk sizes for realRealOpenMMVector
-         @param realRealOpenMMVector      vector of RealOpenMM**
-         @param realVector          vector of RealOpenMM*
-         @param outputFileName      output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn unless
-                 file cannot be opened
-                 in which case return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
-                                 const RealOpenMMPtrPtrVector& realRealOpenMMVector, 
-                                 const RealOpenMMPtrVector& realVector,
-                                 const std::string& outputFileName );
       
       /**---------------------------------------------------------------------------------------
       
@@ -268,7 +232,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
+      RealOpenMM computeBornEnergy( const RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                     const RealOpenMM* partialCharges );
       
       /**---------------------------------------------------------------------------------------
@@ -284,8 +248,8 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                             const RealOpenMM* partialCharges, RealOpenMM** inputForces );
+      int computeBornForces( const RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                             const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------
       

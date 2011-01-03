@@ -31,8 +31,9 @@
 #define externC extern
 #endif
 
-#include "../SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../SimTKUtilities/RealVec.h"
 #include <stdio.h>
+#include <vector>
 
 /**---------------------------------------------------------------------------------------
 
@@ -107,9 +108,9 @@ int cpuSetObcParameters( int numberOfAtoms, RealOpenMM* atomicRadii, RealOpenMM*
 
    --------------------------------------------------------------------------------------- */
 
-externC int cpuCalculateImplicitSolventForces( RealOpenMM** atomCoordinates,
+externC int cpuCalculateImplicitSolventForces( std::vector<OpenMM::RealVec>& atomCoordinates,
                                                const RealOpenMM* partialChargesIn,
-                                               RealOpenMM** forces, RealOpenMM* energy,
+                                               std::vector<OpenMM::RealVec>& forces, RealOpenMM* energy,
                                                int updateBornRadii );
 
 /**---------------------------------------------------------------------------------------

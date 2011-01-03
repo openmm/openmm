@@ -31,6 +31,9 @@
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceHarmonicBondIxn constructor
@@ -77,9 +80,9 @@ ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn( ){
    --------------------------------------------------------------------------------------- */
 
 void ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
-                                                RealOpenMM** atomCoordinates,
+                                                vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
-                                                RealOpenMM** forces,
+                                                vector<RealVec>& forces,
                                                 RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";

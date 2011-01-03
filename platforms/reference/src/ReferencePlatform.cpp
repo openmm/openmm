@@ -34,6 +34,8 @@
 #include "ReferenceKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
+#include <vector>
 
 using namespace OpenMM;
 using namespace std;
@@ -83,32 +85,16 @@ void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 ReferencePlatform::PlatformData::PlatformData(int numParticles) : time(0.0), stepCount(0), numParticles(numParticles) {
-    RealOpenMM** positions = new RealOpenMM*[numParticles];
-    RealOpenMM** velocities = new RealOpenMM*[numParticles];
-    RealOpenMM** forces = new RealOpenMM*[numParticles];
-    for (int i = 0; i < numParticles; ++i) {
-        positions[i] = new RealOpenMM[3];
-        velocities[i] = new RealOpenMM[3];
-        forces[i] = new RealOpenMM[3];
-    }
-    this->positions = positions;
-    this->velocities = velocities;
-    this->forces = forces;
+    positions = new vector<RealVec>(numParticles);
+    velocities = new vector<RealVec>(numParticles);
+    forces = new vector<RealVec>(numParticles);
     periodicBoxSize = new RealOpenMM[3];
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
-    RealOpenMM** positions = (RealOpenMM**) this->positions;
-    RealOpenMM** velocities = (RealOpenMM**) this->velocities;
-    RealOpenMM** forces = (RealOpenMM**) this->forces;
+    delete (vector<RealVec>*) positions;
+    delete (vector<RealVec>*) velocities;
+    delete (vector<RealVec>*) forces;
     RealOpenMM* periodicBoxSize = (RealOpenMM*) this->periodicBoxSize;
-    for (int i = 0; i < numParticles; ++i) {
-        delete[] positions[i];
-        delete[] velocities[i];
-        delete[] forces[i];
-    }
-    delete[] positions;
-    delete[] velocities;
-    delete[] forces;
     delete[] periodicBoxSize;
 }

@@ -31,6 +31,9 @@
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceAngleBondIxn constructor
@@ -122,9 +125,9 @@ int ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, Rea
    --------------------------------------------------------------------------------------- */
 
 void ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
-                                             RealOpenMM** atomCoordinates,
+                                             vector<RealVec>& atomCoordinates,
                                              RealOpenMM* parameters,
-                                             RealOpenMM** forces,
+                                             vector<RealVec>& forces,
                                              RealOpenMM* totalEnergy ) const {
 
    // constants -- reduce Visual Studio warnings regarding conversions between float & double

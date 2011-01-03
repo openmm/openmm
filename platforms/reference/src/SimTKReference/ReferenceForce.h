@@ -84,7 +84,7 @@ class OPENMM_EXPORT  ReferenceForce {
       
          --------------------------------------------------------------------------------------- */
       
-      static int getDeltaR( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+      static int getDeltaR( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
                             RealOpenMM* deltaR );
       
       /**---------------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ class OPENMM_EXPORT  ReferenceForce {
 
          --------------------------------------------------------------------------------------- */
 
-      static int getDeltaRPeriodic( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+      static int getDeltaRPeriodic( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
                                              const RealOpenMM* boxSize, RealOpenMM* deltaR );
 
     /**---------------------------------------------------------------------------------------

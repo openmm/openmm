@@ -26,6 +26,7 @@
 
 #include "SimTKReference/ReferencePairIxn.h"
 #include "SimTKReference/ReferenceNeighborList.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -68,8 +69,8 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      int calculateOneIxn( int atom1, int atom2, RealOpenMM** atomCoordinates,
-                            RealOpenMM** atomParameters, RealOpenMM** forces,
+      int calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
+                            RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 
@@ -194,9 +195,9 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      int calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+      int calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, RealOpenMM** forces,
+                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 private:
@@ -220,9 +221,9 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      int calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+      int calculateEwaldIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, RealOpenMM** forces,
+                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
       
       /**---------------------------------------------------------------------------------------
@@ -245,9 +246,9 @@ private:
             
          --------------------------------------------------------------------------------------- */
           
-      int calculatePMEIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+      int calculatePMEIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, RealOpenMM** forces,
+                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
         /**---------------------------------------------------------------------------------------

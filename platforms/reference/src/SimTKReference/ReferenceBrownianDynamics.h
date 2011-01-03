@@ -33,9 +33,8 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
 
    private:
 
-      enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
-      enum OneDArrayIndicies { InverseMasses, Max1DArrays };
-
+      std::vector<OpenMM::RealVec> xPrime;
+      std::vector<RealOpenMM> inverseMasses;
       RealOpenMM friction;
       
    public:
@@ -85,8 +84,8 @@ class ReferenceBrownianDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
      
-      int update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                  RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses );
+      int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
       
 };
 

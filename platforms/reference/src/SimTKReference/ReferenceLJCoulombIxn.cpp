@@ -38,6 +38,7 @@
 #include "openmm/internal/MSVC_erfc.h"
 
 using std::vector;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -176,9 +177,9 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
-                                             RealOpenMM* fixedParameters, RealOpenMM** forces,
+                                             RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
     typedef std::complex<RealOpenMM> d_complex;
 
@@ -472,9 +473,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
-                                             RealOpenMM* fixedParameters, RealOpenMM** forces,
+                                             RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
    if (ewald || pme)
@@ -533,8 +534,8 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** ato
 
      --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoordinates,
-                        RealOpenMM** atomParameters, RealOpenMM** forces,
+int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
+                        RealOpenMM** atomParameters, vector<RealVec>& forces,
                         RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
     // ---------------------------------------------------------------------------------------

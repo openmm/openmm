@@ -32,6 +32,9 @@
 
 #include <cstdio>
 
+using std::vector;
+using OpenMM::RealVec;
+
 const int ReferenceDynamics::DefaultReturn      = 0;
 const int ReferenceDynamics::ErrorReturn        = -1;
 
@@ -59,12 +62,6 @@ ReferenceDynamics::ReferenceDynamics( int numberOfAtoms,  RealOpenMM deltaT, Rea
 
    _timeStep             = 0;
 
-   _twoDTempArrays       = 0;
-   _twoDTempArrays       = NULL;
-
-   _oneDTempArrays       = 0;
-   _oneDTempArrays       = NULL;
-
    _ownReferenceConstraint = false;
    _referenceConstraint    = NULL;
 }
@@ -83,209 +80,9 @@ ReferenceDynamics::~ReferenceDynamics( ){
 
    // ---------------------------------------------------------------------------------------
 
-   _freeTwoDArrays();
-   _freeOneDArrays();
-
    if( _ownReferenceConstraint ){
       delete _referenceConstraint;
    }
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Free memory associated w/ 2D arrays
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::_freeTwoDArrays( void ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceDynamics::_freeTwoDArrays";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _twoDTempArrays ){
-      delete[] _twoDTempArrays[0][0];
-      delete[] _twoDTempArrays[0];
-      delete[] _twoDTempArrays;
-   }
-
-   _twoDTempArrays        = NULL;
-   _numberOf2DTempArrays  = 0;
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Free memory associated w/ 1D arrays
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::_freeOneDArrays( void ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceDynamics::_freeOneDArrays";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _oneDTempArrays ){
-      delete[] _oneDTempArrays[0];
-      delete[] _oneDTempArrays;
-   }
-
-   _oneDTempArrays        = NULL;
-   _numberOf1DTempArrays  = 0;
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Allocate memory associated w/ 2D arrays
-
-   @param dimension1        first dimension
-   @param dimension2        second dimension
-   @param numberOfArrays    number of arrays to allocate
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::allocate2DArrays( int dimension1, int dimension2, int numberOfArrays ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceDynamics::allocate2DArrays";
-
-   // ---------------------------------------------------------------------------------------
-
-   _freeTwoDArrays();
-
-   _numberOf2DTempArrays   = numberOfArrays;
-   _twoDTempArrays         = new RealOpenMM**[_numberOf2DTempArrays];
-
-   RealOpenMM** totalArray = new RealOpenMM*[dimension1*numberOfArrays];
-
-   RealOpenMM*  totalBlock = new RealOpenMM[dimension1*dimension2*numberOfArrays];
-   memset( totalBlock, 0, sizeof( RealOpenMM )*dimension1*dimension2*numberOfArrays );
-
-   for( int ii = 0; ii < _numberOf2DTempArrays; ii++ ){
-      _twoDTempArrays[ii]    = totalArray;
-      totalArray            += dimension1; 
-
-      for( int jj = 0; jj < dimension1; jj++ ){
-         _twoDTempArrays[ii][jj]   = totalBlock;
-         totalBlock               += dimension2;
-      }
-   }
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Get array at specified index
-
-   @param index             array index
-
-   @return array or NULL if index invalid or arrays not allocated
-
-   --------------------------------------------------------------------------------------- */
-
-RealOpenMM** ReferenceDynamics::get2DArrayAtIndex( int index ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nReferenceDynamics::get2DArrayAtIndex";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( index < 0 || index >= _numberOf2DTempArrays ){
-      std::stringstream message;
-      message << methodName;
-      message << " requested 2d array at index=" << index << " is unavailable.";
-      SimTKOpenMMLog::printError( message );
-      return NULL;
-   }
-
-   return _twoDTempArrays[index];
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Allocate memory associated w/ 1D arrays
-
-   @param dimension1        dimension
-   @param numberOfArrays    number of arrays to allocate
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::allocate1DArrays( int dimension, int numberOfArrays ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceDynamics::allocate1DArrays";
-
-   // ---------------------------------------------------------------------------------------
-
-   _freeOneDArrays();
-
-   _numberOf1DTempArrays   = numberOfArrays;
-   _oneDTempArrays         = new RealOpenMM*[_numberOf1DTempArrays];
-
-   RealOpenMM* totalArray  = new RealOpenMM[dimension*numberOfArrays];
-   memset( totalArray, 0, sizeof( RealOpenMM )*dimension*numberOfArrays );
-
-   for( int ii = 0; ii < _numberOf1DTempArrays; ii++ ){
-      _oneDTempArrays[ii]    = totalArray;
-      totalArray            += dimension; 
-   }
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Get array at specified index
-
-   @param index             array index
-
-   @return array or NULL if index invalid or arrays not allocated
-
-   --------------------------------------------------------------------------------------- */
-
-RealOpenMM* ReferenceDynamics::get1DArrayAtIndex( int index ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nReferenceDynamics::get1DArrayAtIndex";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( index < 0 || index >= _numberOf1DTempArrays ){
-      std::stringstream message;
-      message << methodName;
-      message << " requested 1d array at index=" << index << " is unavailable.";
-      SimTKOpenMMLog::printError( message );
-      return NULL;
-   }
-
-   return _oneDTempArrays[index];
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -464,8 +261,8 @@ int ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgor
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                               RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses ){
+int ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                               vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -492,7 +289,7 @@ int ReferenceDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
    --------------------------------------------------------------------------------------- */
 
 int ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses,
-                                                  RealOpenMM** velocities ) const {
+                                                  vector<RealVec>& velocities ) const {
 
    // ---------------------------------------------------------------------------------------
 

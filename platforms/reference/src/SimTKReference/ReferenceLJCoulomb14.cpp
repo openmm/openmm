@@ -31,6 +31,9 @@
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceLJCoulomb14 constructor
@@ -78,8 +81,8 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
-                                     RealOpenMM* parameters, RealOpenMM** forces,
+void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, vector<RealVec>& atomCoordinates,
+                                     RealOpenMM* parameters, vector<RealVec>& forces,
                                      RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceLJCoulomb14::calculateBondIxn";

@@ -33,6 +33,9 @@
 #include <cmath>
 #include <cstdio>
 
+using namespace OpenMM;
+using namespace std;
+
 /**---------------------------------------------------------------------------------------
 
    CpuObc constructor
@@ -216,7 +219,7 @@ RealOpenMM* CpuObc::getObcChainTemp( void ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* obcChain ){
+int CpuObc::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* obcChain ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -358,8 +361,8 @@ if( logFile ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                     const RealOpenMM* partialCharges, RealOpenMM** inputForces ){
+int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+                                     const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
 

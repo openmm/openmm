@@ -29,6 +29,7 @@
 #include "ReferenceMonteCarloBarostat.h"
 
 using namespace std;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -61,7 +62,7 @@ ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(RealOpenMM** atomPositions, RealOpenMM* boxSize, RealOpenMM scale) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, RealOpenMM* boxSize, RealOpenMM scale) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)
@@ -74,7 +75,7 @@ void ReferenceMonteCarloBarostat::applyBarostat(RealOpenMM** atomPositions, Real
 
         RealOpenMM pos[3] = {0, 0, 0};
         for (int j = 0; j < (int) molecules[i].size(); j++) {
-            RealOpenMM* atomPos = atomPositions[molecules[i][j]];
+            RealVec& atomPos = atomPositions[molecules[i][j]];
             pos[0] += atomPos[0];
             pos[1] += atomPos[1];
             pos[2] += atomPos[2];
@@ -101,7 +102,7 @@ void ReferenceMonteCarloBarostat::applyBarostat(RealOpenMM** atomPositions, Real
         dy = pos[1]*(scale-1)-dy;
         dz = pos[2]*(scale-1)-dz;
         for (int j = 0; j < (int) molecules[i].size(); j++) {
-            RealOpenMM* atomPos = atomPositions[molecules[i][j]];
+            RealVec& atomPos = atomPositions[molecules[i][j]];
             atomPos[0] += dx;
             atomPos[1] += dy;
             atomPos[2] += dz;
@@ -117,7 +118,7 @@ void ReferenceMonteCarloBarostat::applyBarostat(RealOpenMM** atomPositions, Real
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::restorePositions(RealOpenMM** atomPositions) {
+void ReferenceMonteCarloBarostat::restorePositions(vector<RealVec>& atomPositions) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)

@@ -31,6 +31,9 @@
 #include "ReferenceFreeEnergyLJCoulomb14Softcore.h"
 #include "ReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceFreeEnergyLJCoulomb14Softcore constructor
@@ -144,8 +147,8 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters( RealOpenMM c6,
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
-                                                               RealOpenMM* parameters, RealOpenMM** forces,
+void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, vector<RealVec>& atomCoordinates,
+                                                               RealOpenMM* parameters, vector<RealVec>& forces,
                                                                RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn";
@@ -221,59 +224,6 @@ void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices,
 
    if (totalEnergy != NULL)
        *totalEnergy += energy;
-
-   // debug 
-
-   if( debug ){
-      static bool printHeader = false;
-      std::stringstream message;
-      message << methodName;
-      message << std::endl;
-      if( !printHeader  ){  
-         printHeader = true;
-         message << std::endl;
-         message << methodName.c_str() << " a0 k [c q p s] r1 r2  angle dt rp p[] dot cosine angle dEdR*r F[]" << std::endl;
-      }   
-
-      message << std::endl;
-      for( int ii = 0; ii < LastAtomIndex; ii++ ){
-         message << " Atm " << atomIndices[ii] << " [" << atomCoordinates[atomIndices[ii]][0] << " " << atomCoordinates[atomIndices[ii]][1] << "] ";
-      }
-      message << std::endl << " Delta:";
-      for( int ii = 0; ii < (LastAtomIndex - 1); ii++ ){
-         message << " [";
-         for( int jj = 0; jj < ReferenceForce::LastDeltaRIndex; jj++ ){
-            message << deltaR[ii][jj] << " ";
-         }
-         message << "]";
-      }
-      message << std::endl;
-
-      message << " p1="     << parameters[0];
-      message << " p2="     << parameters[1];
-      message << " p3="     << parameters[2];
-      message << std::endl << "  ";
-
-      message << " dEdR=" << dEdR;
-      message << " E=" << energy << " force factors: ";
-      message << "F=compute force; f=cumulative force";
-
-      message << std::endl << "  ";
-      for( int ii = 0; ii < LastAtomIndex; ii++ ){
-         message << " F" << (ii+1) << "[";
-         SimTKOpenMMUtilities::formatRealStringStream( message, deltaR[0], threeI, dEdR );
-         message << "]";
-      }   
-      message << std::endl << "  ";
-
-      for( int ii = 0; ii < LastAtomIndex; ii++ ){
-         message << " f" << (ii+1) << "[";
-         SimTKOpenMMUtilities::formatRealStringStream( message, forces[atomIndices[ii]], threeI );
-         message << "]";
-      }
-
-      //SimTKOpenMMLog::printMessage( message );
-   }   
 }
 
   /**---------------------------------------------------------------------------------------

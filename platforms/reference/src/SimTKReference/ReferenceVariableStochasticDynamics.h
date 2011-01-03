@@ -33,9 +33,8 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
    private:
 
-      enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
-      enum OneDArrayIndicies { InverseMasses, Max1DArrays };
-
+      std::vector<OpenMM::RealVec> xPrime;
+      std::vector<RealOpenMM> inverseMasses;
       RealOpenMM _tau, _accuracy;
 
    public:
@@ -104,8 +103,8 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      int update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                  RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses, RealOpenMM maxStepSize );
+      int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                  std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -124,9 +123,9 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      int updatePart1( int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** velocities,
-                       RealOpenMM** forces, RealOpenMM* masses, RealOpenMM* inverseMasses,
-                       RealOpenMM** xPrime, RealOpenMM maxStepSize );
+      int updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+                       std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, std::vector<RealOpenMM>& inverseMasses,
+                       std::vector<OpenMM::RealVec>& xPrime, RealOpenMM maxStepSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -142,9 +141,9 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      int updatePart2( int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** velocities,
-                       RealOpenMM** forces, RealOpenMM* inverseMasses,
-                       RealOpenMM** xPrime );
+      int updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+                       std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses,
+                       std::vector<OpenMM::RealVec>& xPrime );
       
 };
 

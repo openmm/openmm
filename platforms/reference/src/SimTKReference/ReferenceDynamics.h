@@ -28,6 +28,7 @@
 #include "ReferenceConstraintAlgorithm.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include <cstddef>
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -62,87 +63,8 @@ class OPENMM_EXPORT ReferenceDynamics {
       RealOpenMM _deltaT;
       RealOpenMM _temperature;
 
-      int _numberOf2DTempArrays;
-      RealOpenMM*** _twoDTempArrays;
-
-      int _numberOf1DTempArrays;
-      RealOpenMM** _oneDTempArrays;
-
       int _ownReferenceConstraint;
       ReferenceConstraintAlgorithm* _referenceConstraint;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Free memory associated w/ 2D arrays
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int _freeTwoDArrays( void );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Free memory associated w/ 1D arrays
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int _freeOneDArrays( void );
-      
-   protected:
-
-      /**---------------------------------------------------------------------------------------
-      
-         Allocate memory associated w/ 2D arrays
-      
-         @param dimension1        first dimension
-         @param dimension2        second dimension
-         @param numberOfArrays    number of arrays to allocate
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int allocate2DArrays( int dimension1, int dimension2, int numberOfArrays );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get array at specified index
-      
-         @param index             array index
-      
-         @return array or NULL if index invalid or arrays not allocated
-      
-         --------------------------------------------------------------------------------------- */
-      
-      RealOpenMM** get2DArrayAtIndex( int index ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Allocate memory associated w/ 1D arrays
-      
-         @param dimension1        dimension
-         @param numberOfArrays    number of arrays to allocate
-      
-         @return DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int allocate1DArrays( int dimension, int numberOfArrays );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get array at specified index
-      
-         @param index             array index
-      
-         @return array or NULL if index invalid or arrays not allocated
-      
-         --------------------------------------------------------------------------------------- */
-      
-      RealOpenMM* get1DArrayAtIndex( int index ) const;
       
    public:
 
@@ -236,7 +158,7 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      int removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses, RealOpenMM** velocities ) const;
+      int removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses, std::vector<OpenMM::RealVec>& velocities ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -252,8 +174,8 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                          RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses );
+      virtual int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                          std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
 
       /**---------------------------------------------------------------------------------------
       

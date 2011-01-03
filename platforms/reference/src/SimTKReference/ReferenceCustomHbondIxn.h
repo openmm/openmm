@@ -64,11 +64,11 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn(int donor, int acceptor, RealOpenMM** atomCoordinates,
-                           std::map<std::string, double>& variables, RealOpenMM** forces,
+      void calculateOneIxn(int donor, int acceptor, std::vector<OpenMM::RealVec>& atomCoordinates,
+                           std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
                            RealOpenMM* totalEnergy) const;
 
-      void computeDelta(int atom1, int atom2, RealOpenMM* delta, RealOpenMM** atomCoordinates) const;
+      void computeDelta(int atom1, int atom2, RealOpenMM* delta, std::vector<OpenMM::RealVec>& atomCoordinates) const;
 
       static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2);
 
@@ -133,9 +133,9 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculatePairIxn(RealOpenMM** atomCoordinates, RealOpenMM** donorParameters, RealOpenMM** acceptorParameters,
+      void calculatePairIxn(std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** donorParameters, RealOpenMM** acceptorParameters,
                             int** exclusions, const std::map<std::string, double>& globalParameters,
-                            RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------
 

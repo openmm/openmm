@@ -36,6 +36,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 using std::vector;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -134,8 +135,8 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn( ){
     periodicBoxSize[2] = boxSize[2];
   }
 
-void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
-                                           const vector<set<int> >& exclusions, map<string, double>& globalParameters, RealOpenMM** forces,
+void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+                                           const vector<set<int> >& exclusions, map<string, double>& globalParameters, vector<RealVec>& forces,
                                            RealOpenMM* totalEnergy) const {
     // First calculate the computed values.
 
@@ -167,7 +168,7 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, RealOpenMM** atomCoor
     calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, forces, dEdV);
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, RealOpenMM** atomCoordinates, vector<vector<RealOpenMM> >& values,
+void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, vector<vector<RealOpenMM> >& values,
         const map<string, double>& globalParameters, RealOpenMM** atomParameters) const {
     values[index].resize(numAtoms);
     map<string, double> variables = globalParameters;
@@ -183,7 +184,7 @@ void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms,
     }
 }
 
-void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
         vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters, const vector<set<int> >& exclusions, bool useExclusions) const {
     values[index].resize(numAtoms);
     for (int i = 0; i < numAtoms; i++)
@@ -213,7 +214,7 @@ void ReferenceCustomGBIxn::calculateParticlePairValue(int index, int numAtoms, R
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
         const map<string, double>& globalParameters, vector<vector<RealOpenMM> >& values) const {
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
     if (periodic)
@@ -236,8 +237,8 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
     values[index][atom1] += (RealOpenMM) valueExpressions[index].evaluate(variables);
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, const vector<vector<RealOpenMM> >& values,
-        const map<string, double>& globalParameters, RealOpenMM** atomParameters, RealOpenMM** forces, RealOpenMM* totalEnergy,
+void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, vector<RealVec>& atomCoordinates, const vector<vector<RealOpenMM> >& values,
+        const map<string, double>& globalParameters, RealOpenMM** atomParameters, vector<RealVec>& forces, RealOpenMM* totalEnergy,
         vector<vector<RealOpenMM> >& dEdV) const {
     map<string, double> variables = globalParameters;
     for (int i = 0; i < numAtoms; i++) {
@@ -258,9 +259,9 @@ void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numA
     }
 }
 
-void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
         const vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters, const vector<set<int> >& exclusions, bool useExclusions,
-        RealOpenMM** forces, RealOpenMM* totalEnergy, vector<vector<RealOpenMM> >& dEdV) const {
+        vector<RealVec>& forces, RealOpenMM* totalEnergy, vector<vector<RealOpenMM> >& dEdV) const {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
@@ -284,8 +285,8 @@ void ReferenceCustomGBIxn::calculateParticlePairEnergyTerm(int index, int numAto
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
-        const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, RealOpenMM** forces, RealOpenMM* totalEnergy,
+void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+        const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, vector<RealVec>& forces, RealOpenMM* totalEnergy,
         vector<vector<RealOpenMM> >& dEdV) const {
     // Compute the displacement.
 
@@ -327,9 +328,9 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
     }
 }
 
-void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
         const vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters,
-        const vector<set<int> >& exclusions, RealOpenMM** forces, vector<vector<RealOpenMM> >& dEdV) const {
+        const vector<set<int> >& exclusions, vector<RealVec>& forces, vector<vector<RealOpenMM> >& dEdV) const {
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
@@ -382,8 +383,8 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** a
     }
 }
 
-void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
-        const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, RealOpenMM** forces,
+void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, vector<RealVec>& atomCoordinates, RealOpenMM** atomParameters,
+        const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, vector<RealVec>& forces,
         vector<vector<RealOpenMM> >& dEdV, bool isExcluded) const {
     // Compute the displacement.
 

@@ -416,7 +416,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
       static int formatRealStringStream( std::stringstream& message, const RealOpenMM* realArray, 
                                          int numberOfFields = 3, RealOpenMM factor = (RealOpenMM) 1.0f );
-      
+
       /**---------------------------------------------------------------------------------------
       
          Tokenize a string (static method) (Simbios)

@@ -69,8 +69,8 @@ class ReferenceCustomBondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
-                            RealOpenMM* parameters, RealOpenMM** forces,
+      void calculateBondIxn( int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+                            RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* totalEnergy ) const;
 
 

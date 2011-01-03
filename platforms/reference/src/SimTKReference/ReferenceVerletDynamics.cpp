@@ -32,6 +32,9 @@
 
 #include <cstdio>
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceVerletDynamics constructor
@@ -56,9 +59,8 @@ ReferenceVerletDynamics::ReferenceVerletDynamics( int numberOfAtoms,
 
    // ---------------------------------------------------------------------------------------
 
-   allocate2DArrays( numberOfAtoms, 3, Max2DArrays );
-   allocate1DArrays( numberOfAtoms, Max1DArrays );
-   
+   xPrime.resize(numberOfAtoms);
+   inverseMasses.resize(numberOfAtoms);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -92,9 +94,9 @@ ReferenceVerletDynamics::~ReferenceVerletDynamics( ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                          RealOpenMM** velocities,
-                                          RealOpenMM** forces, RealOpenMM* masses ){
+int ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                          vector<RealVec>& velocities,
+                                          vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -104,11 +106,6 @@ int ReferenceVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordin
    static const RealOpenMM one        =  1.0;
 
    // ---------------------------------------------------------------------------------------
-
-   // get work arrays
-
-   RealOpenMM** xPrime = get2DArrayAtIndex( xPrime2D );
-   RealOpenMM* inverseMasses = get1DArrayAtIndex( InverseMasses );
 
    // first-time-through initialization
 

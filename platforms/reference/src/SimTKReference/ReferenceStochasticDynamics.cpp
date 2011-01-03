@@ -32,6 +32,9 @@
 
 #include <cstdio>
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceStochasticDynamics constructor
@@ -69,10 +72,8 @@ ReferenceStochasticDynamics::ReferenceStochasticDynamics( int numberOfAtoms,
       _tau = one;
      
    }
-
-   allocate2DArrays( numberOfAtoms, 3, Max2DArrays );
-   allocate1DArrays( numberOfAtoms, Max1DArrays );
-   
+   xPrime.resize(numberOfAtoms);
+   inverseMasses.resize(numberOfAtoms);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -125,10 +126,10 @@ RealOpenMM ReferenceStochasticDynamics::getTau( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                              RealOpenMM** velocities,
-                                              RealOpenMM** forces, RealOpenMM* inverseMasses,
-                                              RealOpenMM** xPrime ){
+int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                              vector<RealVec>& velocities,
+                                              vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
+                                              vector<RealVec>& xPrime ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -169,10 +170,10 @@ int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, RealOpenMM** at
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                              RealOpenMM** velocities,
-                                              RealOpenMM** forces, RealOpenMM* inverseMasses,
-                                              RealOpenMM** xPrime ){
+int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                              vector<RealVec>& velocities,
+                                              vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
+                                              vector<RealVec>& xPrime ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -207,8 +208,8 @@ int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, RealOpenMM** at
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceStochasticDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                          RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses ){
+int ReferenceStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                          vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -218,11 +219,6 @@ int ReferenceStochasticDynamics::update( int numberOfAtoms, RealOpenMM** atomCoo
    static const RealOpenMM one        =  1.0;
 
    // ---------------------------------------------------------------------------------------
-
-   // get work arrays
-
-   RealOpenMM** xPrime          = get2DArrayAtIndex( xPrime2D );
-   RealOpenMM* inverseMasses    = get1DArrayAtIndex( InverseMasses );
 
    // first-time-through initialization
 

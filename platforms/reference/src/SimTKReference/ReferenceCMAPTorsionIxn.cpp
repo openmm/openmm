@@ -26,6 +26,7 @@
 #include "ReferenceForce.h"
 
 using std::vector;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -51,7 +52,7 @@ ReferenceCMAPTorsionIxn::ReferenceCMAPTorsionIxn(const vector<vector<vector<Real
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateIxn(RealOpenMM** atomCoordinates, RealOpenMM** forces, RealOpenMM* totalEnergy) const {
+void ReferenceCMAPTorsionIxn::calculateIxn(vector<RealVec>& atomCoordinates, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
     for (unsigned int i = 0; i < torsionMaps.size(); i++)
         calculateOneIxn(i, atomCoordinates, forces, totalEnergy);
 }
@@ -67,7 +68,7 @@ void ReferenceCMAPTorsionIxn::calculateIxn(RealOpenMM** atomCoordinates, RealOpe
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, RealOpenMM** atomCoordinates, RealOpenMM** forces,
+void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<RealVec>& atomCoordinates, vector<RealVec>& forces,
                      RealOpenMM* totalEnergy) const {
     int map = torsionMaps[index];
     int a1 = torsionIndices[index][0];
@@ -188,6 +189,6 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, RealOpenMM** atomCoordi
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
-        RealOpenMM* parameters, RealOpenMM** forces, RealOpenMM* totalEnergy) const {
+void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, vector<RealVec>& atomCoordinates,
+        RealOpenMM* parameters, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
 }

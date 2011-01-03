@@ -32,6 +32,9 @@
 #include "../SimTKReference/ReferenceForce.h"
 #include <math.h>
 
+using namespace std;
+using namespace OpenMM;
+
 /**---------------------------------------------------------------------------------------
 
    CpuGBVI constructor
@@ -146,7 +149,7 @@ int CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
 
 #define GBVIDebug 0
 
-int CpuGBVI::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* chain ){
+int CpuGBVI::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* chain ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -435,7 +438,7 @@ RealOpenMM CpuGBVI::Sgb( RealOpenMM t ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
+RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
                                        const RealOpenMM* partialCharges ){
 
    // ---------------------------------------------------------------------------------------
@@ -554,8 +557,8 @@ partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
    --------------------------------------------------------------------------------------- */
 
 
-int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                const RealOpenMM* partialCharges, RealOpenMM** inputForces ){
+int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+                                const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces){
 
    // ---------------------------------------------------------------------------------------
 
@@ -919,8 +922,8 @@ std::string CpuGBVI::getStateString( const char* title ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int CpuGBVI::writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                   const RealOpenMM* partialCharges, RealOpenMM** forces,
+int CpuGBVI::writeBornEnergyForces( vector<RealVec>& atomCoordinates,
+                                   const RealOpenMM* partialCharges, vector<RealVec>& forces,
                                    const std::string& resultsFileName ) const {
 
    // ---------------------------------------------------------------------------------------
@@ -1002,123 +1005,6 @@ int CpuGBVI::writeBornEnergyForces( RealOpenMM** atomCoordinates,
 
 /**---------------------------------------------------------------------------------------
 
-   Write  results from first loop
-
-   @param numberOfAtoms       number of atoms
-   @param forces              forces
-   @param bornForce           Born force prefactor
-   @param outputFileName      output file name
-
-   @return SimTKOpenMMCommon::DefaultReturn unless
-           file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuGBVI::writeForceLoop1( int numberOfAtoms, RealOpenMM** forces, const RealOpenMM* bornForce,
-                             const std::string& outputFileName ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nCpuGBVI::writeForceLoop1";
-
-   // ---------------------------------------------------------------------------------------
-
-   int chunkSize;
-   if( bornForce ){
-      chunkSize = 3;
-   } else {
-      chunkSize = 4;
-   }
-
-   StringVector lineVector;
-   std::stringstream header;
-   lineVector.push_back( "# bornF F" );
-   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      std::stringstream line;
-      line << (atomI+1) << " ";
-      SimTKOpenMMUtilities::formatRealStringStream( line, forces[atomI], chunkSize );
-      if( bornForce ){
-         line << " " << bornForce[atomI];
-      }
-      lineVector.push_back( line.str() );
-   }
-   return SimTKOpenMMUtilities::writeFile( lineVector, outputFileName );
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write results
-
-   @param numberOfAtoms        number of atoms
-   @param chunkSizes           vector of chunk sizes for realRealOpenMMVector
-   @param realRealOpenMMVector vector of RealOpenMM**
-   @param realVector           vector of RealOpenMM*
-   @param outputFileName       output file name
-
-   @return SimTKOpenMMCommon::DefaultReturn unless
-           file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuGBVI::writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
-                            const RealOpenMMPtrPtrVector& realRealOpenMMVector, 
-                            const RealOpenMMPtrVector& realVector,
-                            const std::string& outputFileName ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nCpuGBVI::writeForceLoop";
-
-   static const int maxChunks = 10;
-   int chunks[maxChunks];
-
-   // ---------------------------------------------------------------------------------------
-
-   for( int ii = 0; ii < (int) chunkSizes.size(); ii++ ){
-      chunks[ii] = chunkSizes[ii];
-   }
-   for( int ii = (int) chunkSizes.size(); ii < maxChunks; ii++ ){
-      chunks[ii] = 3;
-   }
-
-   StringVector lineVector;
-   std::stringstream header;
-   // lineVector.push_back( "# " );
-
-   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-
-      std::stringstream line;
-		char buffer[128];
-
-		(void) sprintf( buffer, "%4d ", atomI );
-		line << buffer;
-
-      int index = 0;
-      for( RealOpenMMPtrPtrVectorCI ii = realRealOpenMMVector.begin(); ii != realRealOpenMMVector.end(); ii++ ){
-         RealOpenMM** forces = *ii;
-			(void) sprintf( buffer, "%11.5f %11.5f %11.5f ", forces[atomI][0], forces[atomI][1], forces[atomI][2] );
-			line << buffer;
-//         SimTKOpenMMUtilities::formatRealStringStream( line, forces[atomI], chunks[index++] );
-//         line << " ";
-      }
-
-      for( RealOpenMMPtrVectorCI ii = realVector.begin(); ii != realVector.end(); ii++ ){
-         RealOpenMM* array = *ii;
-			(void) sprintf( buffer, "%11.5f ", array[atomI] );
-         line << buffer;
-      }
-
-      lineVector.push_back( line.str() );
-   }
-   return SimTKOpenMMUtilities::writeFile( lineVector, outputFileName );
-
-}
-
-/**---------------------------------------------------------------------------------------
-
    Get Obc Born energy and forces -- used debugging
 
    @param bornRadii           Born radii -- optional; if NULL, then GBVIParameters 
@@ -1133,8 +1019,8 @@ int CpuGBVI::writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
 
    --------------------------------------------------------------------------------------- */
 
-int CpuGBVI::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                      const RealOpenMM* partialCharges, RealOpenMM** forces ){
+int CpuGBVI::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+                                      const RealOpenMM* partialCharges, vector<RealVec>& forces ){
  
    // ---------------------------------------------------------------------------------------
 

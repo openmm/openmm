@@ -63,8 +63,8 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
-                                    RealOpenMM* parameters, RealOpenMM** forces,
+      virtual void calculateBondIxn( int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+                                    RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
                                     RealOpenMM* totalEnergy ) const;
       
       /**---------------------------------------------------------------------------------------

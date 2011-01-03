@@ -1,14 +1,14 @@
 #ifndef OPENMM_REFERENCE_NEIGHBORLIST_H_
 #define OPENMM_REFERENCE_NEIGHBORLIST_H_
 
-#include "../SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../SimTKUtilities/RealVec.h"
 #include "openmm/internal/windowsExport.h"
 #include <set>
 #include <vector>
 
 namespace OpenMM {
 
-typedef RealOpenMM** AtomLocationList;
+typedef std::vector<RealVec> AtomLocationList;
 typedef unsigned int AtomIndex;
 typedef std::pair<AtomIndex, AtomIndex> AtomPair;
 typedef std::vector<AtomPair>  NeighborList;

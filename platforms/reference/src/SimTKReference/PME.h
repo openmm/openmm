@@ -30,6 +30,7 @@
  */
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include <vector>
 
 typedef RealOpenMM rvec[3];
 
@@ -74,8 +75,8 @@ pme_init(pme_t *       ppme,
  */
 int
 pme_exec(pme_t       pme,
-		 RealOpenMM **  atomCoordinates,
-		 RealOpenMM **  forces,
+		 std::vector<OpenMM::RealVec>&  atomCoordinates,
+		 std::vector<OpenMM::RealVec>&  forces,
 		 RealOpenMM **  atomParameters,
 		 const RealOpenMM  periodicBoxSize[3],
 		 RealOpenMM *    energy,

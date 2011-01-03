@@ -32,6 +32,7 @@
 #include "ReferenceForce.h"
 
 using namespace std;
+using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
@@ -82,9 +83,9 @@ ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn( ){
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomExternalIxn::calculateForce( int atomIndex,
-                                                RealOpenMM** atomCoordinates,
+                                                vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
-                                                RealOpenMM** forces,
+                                                vector<RealVec>& forces,
                                                 RealOpenMM* energy ) const {
 
    static const std::string methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";

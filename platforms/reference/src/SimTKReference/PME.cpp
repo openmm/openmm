@@ -36,6 +36,8 @@
 #include "PME.h"
 #include "fftpack.h"
 
+using std::vector;
+using OpenMM::RealVec;
 
 typedef int    ivec[3];
 
@@ -193,7 +195,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
 
 static void
 pme_update_grid_index_and_fraction(pme_t    pme,
-                                   RealOpenMM ** atomCoordinates,
+                                   vector<RealVec>& atomCoordinates,
                                    const RealOpenMM   periodicBoxSize[3])
 {
     int    i;
@@ -522,7 +524,7 @@ static void
 pme_grid_interpolate_force(pme_t      pme,
                            const RealOpenMM     periodicBoxSize[3],
                            RealOpenMM **   atomParameters,
-                           RealOpenMM **   forces)
+                           vector<RealVec>&   forces)
 {
         static const int   QIndex = 2; // atom charges are stored in atomParameters[atomID][2]
     int       i;
@@ -667,8 +669,8 @@ pme_init(pme_t *       ppme,
 
 
 int pme_exec(pme_t       pme,
-             RealOpenMM **   atomCoordinates,
-             RealOpenMM **   forces,
+             vector<RealVec>&   atomCoordinates,
+             vector<RealVec>&   forces,
              RealOpenMM **   atomParameters,
              const RealOpenMM      periodicBoxSize[3],
              RealOpenMM *    energy,

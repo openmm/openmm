@@ -68,9 +68,9 @@ class OPENMM_EXPORT ReferencePairIxn {
             
          --------------------------------------------------------------------------------------- */
           
-      virtual int calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+      virtual int calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, RealOpenMM** forces,
+                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;
       
 };

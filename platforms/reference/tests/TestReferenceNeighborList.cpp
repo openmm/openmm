@@ -34,22 +34,16 @@
 #include "sfmt/SFMT.h"
 #include <cassert>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 using namespace OpenMM;
 
 void testNeighborList()
 {
-    RealOpenMM* particleList[2];
-    particleList[0] = new RealOpenMM[3];
-    particleList[1] = new RealOpenMM[3];
-    // particleList[2] = new RealOpenMM[3];
-    particleList[0][0] = 13.6f;
-    particleList[0][1] = 0;
-    particleList[0][2] = 0;
-    particleList[1][0] = 0;
-    particleList[1][1] = 0;
-    particleList[1][2] = 0;
+    vector<RealVec> particleList(2);
+    particleList[0] = RealVec(13.6, 0, 0);
+    particleList[1] = RealVec(0, 0, 0);
     vector<set<int> > exclusions(2);
     
     NeighborList neighborList;
@@ -65,10 +59,6 @@ void testNeighborList()
     
     computeNeighborListVoxelHash(neighborList, 2, particleList, exclusions, NULL, 13.5, 0.01);
     assert(neighborList.size() == 0);
-    
-    delete[] particleList[0];
-    delete[] particleList[1];
-    // delete[] particleList[2];
 }
 
 double periodicDifference(double val1, double val2, double period) {
@@ -77,14 +67,14 @@ double periodicDifference(double val1, double val2, double period) {
     return diff-base;
 }
 
-double distance2(RealOpenMM* pos1, RealOpenMM* pos2, const RealOpenMM* periodicBoxSize) {
+double distance2(RealVec& pos1, RealVec& pos2, const RealOpenMM* periodicBoxSize) {
     double dx = periodicDifference(pos1[0], pos2[0], periodicBoxSize[0]);
     double dy = periodicDifference(pos1[1], pos2[1], periodicBoxSize[1]);
     double dz = periodicDifference(pos1[2], pos2[2], periodicBoxSize[2]);
     return dx*dx+dy*dy+dz*dz;
 }
 
-void verifyNeighborList(NeighborList& list, int numParticles, RealOpenMM** positions, const RealOpenMM* periodicBoxSize, double cutoff) {
+void verifyNeighborList(NeighborList& list, int numParticles, vector<RealVec>& positions, const RealOpenMM* periodicBoxSize, double cutoff) {
     for (int i = 0; i < (int) list.size(); i++) {
         int particle1 = list[i].first;
         int particle2 = list[i].second;
@@ -102,12 +92,11 @@ void testPeriodic() {
     const int numParticles = 100;
     const double cutoff = 3.0;
     const RealOpenMM periodicBoxSize[3] = {20.0, 15.0, 22.0};
-    RealOpenMM* particleList[numParticles];
+    vector<RealVec> particleList(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
     for (int i = 0; i <numParticles; i++) {
-        particleList[i] = new RealOpenMM[3];
         particleList[i][0] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxSize[0]*3);
         particleList[i][1] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxSize[1]*3);
         particleList[i][2] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxSize[2]*3);
@@ -118,8 +107,6 @@ void testPeriodic() {
     verifyNeighborList(neighborList, numParticles, particleList, periodicBoxSize, cutoff);
     computeNeighborListVoxelHash(neighborList, numParticles, particleList, exclusions, periodicBoxSize, cutoff);
     verifyNeighborList(neighborList, numParticles, particleList, periodicBoxSize, cutoff);
-    for (int i = 0; i <numParticles; i++)
-        delete[] particleList[i];
 }
 
 int main() 

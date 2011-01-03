@@ -67,7 +67,7 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM* masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
+      ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
 
@@ -142,8 +142,8 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 
          --------------------------------------------------------------------------------------- */
 
-      int apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                       RealOpenMM** atomCoordinatesP, RealOpenMM* inverseMasses );
+      int apply( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses );
 
       /**---------------------------------------------------------------------------------------
 
@@ -157,7 +157,7 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 
          --------------------------------------------------------------------------------------- */
 
-      int reportCCMA( int numberOfAtoms, RealOpenMM** atomCoordinates, std::stringstream& message );
+      int reportCCMA( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::stringstream& message );
 };
 
 class ReferenceCCMAAlgorithm::AngleInfo

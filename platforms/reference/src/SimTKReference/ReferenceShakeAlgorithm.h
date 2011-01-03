@@ -134,8 +134,8 @@ class ReferenceShakeAlgorithm : public ReferenceConstraintAlgorithm {
       
          --------------------------------------------------------------------------------------- */
       
-      int apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                       RealOpenMM** atomCoordinatesP, RealOpenMM* inverseMasses );
+      int apply( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses );
       
       /**---------------------------------------------------------------------------------------
       
@@ -149,7 +149,7 @@ class ReferenceShakeAlgorithm : public ReferenceConstraintAlgorithm {
       
          --------------------------------------------------------------------------------------- */
       
-      int reportShake( int numberOfAtoms, RealOpenMM** atomCoordinates, std::stringstream& message );
+      int reportShake( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::stringstream& message );
 };
 
 // ---------------------------------------------------------------------------------------

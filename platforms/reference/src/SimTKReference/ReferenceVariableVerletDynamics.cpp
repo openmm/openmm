@@ -30,6 +30,9 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceVariableVerletDynamics.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceVariableVerletDynamics constructor
@@ -52,9 +55,8 @@ ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics( int numberOfAt
 
    // ---------------------------------------------------------------------------------------
 
-   allocate2DArrays( numberOfAtoms, 3, Max2DArrays );
-   allocate1DArrays( numberOfAtoms, Max1DArrays );
-
+   xPrime.resize(numberOfAtoms);
+   inverseMasses.resize(numberOfAtoms);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -111,9 +113,9 @@ void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                          RealOpenMM** velocities,
-                                          RealOpenMM** forces, RealOpenMM* masses, RealOpenMM maxStepSize ){
+int ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                          vector<RealVec>& velocities,
+                                          vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize ){
 
     // ---------------------------------------------------------------------------------------
 
@@ -123,11 +125,6 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** ato
     static const RealOpenMM one        =  1.0;
 
     // ---------------------------------------------------------------------------------------
-
-    // get work arrays
-
-    RealOpenMM** xPrime = get2DArrayAtIndex( xPrime2D );
-    RealOpenMM* inverseMasses = get1DArrayAtIndex( InverseMasses );
 
     // first-time-through initialization
 

@@ -35,6 +35,7 @@ using std::map;
 using std::string;
 using std::stringstream;
 using std::vector;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -145,9 +146,9 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
-                                             RealOpenMM* fixedParameters, const map<string, double>& globalParameters, RealOpenMM** forces,
+                                             RealOpenMM* fixedParameters, const map<string, double>& globalParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
    map<string, double> variables = globalParameters;
@@ -211,8 +212,8 @@ int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoordinates,
-                        map<string, double>& variables, RealOpenMM** forces,
+void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
+                        map<string, double>& variables, vector<RealVec>& forces,
                         RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
     // ---------------------------------------------------------------------------------------

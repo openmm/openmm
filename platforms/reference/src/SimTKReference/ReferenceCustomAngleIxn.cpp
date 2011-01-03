@@ -30,6 +30,7 @@
 #include "ReferenceCustomAngleIxn.h"
 #include "ReferenceForce.h"
 
+using namespace OpenMM;
 using namespace std;
 
 /**---------------------------------------------------------------------------------------
@@ -79,9 +80,9 @@ ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn( ){
    --------------------------------------------------------------------------------------- */
 
 void ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
-                                                RealOpenMM** atomCoordinates,
+                                                vector<RealVec>& atomCoordinates,
                                                 RealOpenMM* parameters,
-                                                RealOpenMM** forces,
+                                                vector<RealVec>& forces,
                                                 RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceCustomAngleIxn::calculateAngleIxn";

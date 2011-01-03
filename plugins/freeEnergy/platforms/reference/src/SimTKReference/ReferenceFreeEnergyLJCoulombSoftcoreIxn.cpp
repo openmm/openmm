@@ -39,6 +39,7 @@
 #include "openmm/internal/MSVC_erfc.h"
 
 using std::vector;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -238,9 +239,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::getDerivedParameters( RealOpenMM c6
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                                                  RealOpenMM** atomParameters, int** exclusions,
-                                                                 RealOpenMM* fixedParameters, RealOpenMM** forces,
+                                                                 RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                                                  RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
 #if 0
     typedef std::complex<RealOpenMM> d_complex;
@@ -546,9 +547,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtom
       
    --------------------------------------------------------------------------------------- */
  
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                                               RealOpenMM** atomParameters, int** exclusions,
-                                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
+                                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                                               RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
 
 
@@ -678,9 +679,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms,
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
-                                             RealOpenMM* fixedParameters, RealOpenMM** forces,
+                                             RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
    if (ewald || pme)
@@ -739,8 +740,8 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms
 
      --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoordinates,
-                        RealOpenMM** atomParameters, RealOpenMM** forces,
+int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
+                        RealOpenMM** atomParameters, vector<RealVec>& forces,
                         RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
     // ---------------------------------------------------------------------------------------
@@ -825,59 +826,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, Re
            energyByAtom[ii] += energy;
            energyByAtom[jj] += energy;
         }
-    }
-
-    // debug
-
-    if( debug == ii ){
-       static bool printHeader = false;
-       std::stringstream message;
-       message << methodName;
-       message << std::endl;
-       int pairArray[2] = { ii, jj };
-       if( !printHeader  ){
-          printHeader = true;
-          message << std::endl;
-          message << methodName.c_str() << " a0 k [c q p s] r1 r2  angle dt rp p[] dot cosine angle dEdR*r F[]" << std::endl;
-       }
-
-       message << std::endl;
-       for( int kk = 0; kk < 2; kk++ ){
-          message << " Atm " << pairArray[kk] << " [" << atomCoordinates[pairArray[kk]][0] << " " << atomCoordinates[pairArray[kk]][1] << " " << atomCoordinates[pairArray[kk]][2] << "] ";
-       }
-       message << std::endl << " Delta:";
-       for( int kk = 0; kk < (LastAtomIndex - 1); kk++ ){
-          message << " [";
-          for( int jj = 0; jj < ReferenceForce::LastDeltaRIndex; jj++ ){
-             message << deltaR[kk][jj] << " ";
-          }
-          message << "]";
-       }
-       message << std::endl;
-
-       for( int kk = 0; kk < 2; kk++ ){
-          message << " p" << pairArray[kk] << " [";
-          message << atomParameters[pairArray[kk]][0] << " " << atomParameters[pairArray[kk]][1] << " " << atomParameters[pairArray[kk]][2];
-          message << "]";
-       }
-      message << std::endl;
-
-       message << " dEdR=" << dEdR;
-       message << " E=" << energy << " force factors: ";
-       message << "F=compute force; f=cumulative force";
-
-       message << std::endl << "  ";
-       message << " f" << ii << "[";
-       SimTKOpenMMUtilities::formatRealStringStream( message, deltaR[0], threeI, dEdR );
-       message << "]";
-
-       for( int kk = 0; kk < 2; kk++ ){
-          message << " F" <<  pairArray[kk] << " [";
-          SimTKOpenMMUtilities::formatRealStringStream( message, forces[pairArray[kk]], threeI );
-          message << "]";
-       }
-
-       //SimTKOpenMMLog::printMessage( message );
     }
     return ReferenceForce::DefaultReturn;
   }

@@ -61,8 +61,8 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn( int atom1, int atom2, RealOpenMM** atomCoordinates,
-                            std::map<std::string, double>& variables, RealOpenMM** forces,
+      void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
+                            std::map<std::string, double>& variables, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 
@@ -133,10 +133,10 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      int calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+      int calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            RealOpenMM** forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+                            std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 // ---------------------------------------------------------------------------------------
 

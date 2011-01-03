@@ -31,6 +31,9 @@
 #include "ReferenceForce.h"
 #include "ReferenceBondIxn.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceBondIxn constructor
@@ -75,8 +78,8 @@ ReferenceBondIxn::~ReferenceBondIxn( ){
       
    --------------------------------------------------------------------------------------- */
      
-   void ReferenceBondIxn::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
-                                           RealOpenMM* parameters, RealOpenMM** forces,
+   void ReferenceBondIxn::calculateBondIxn( int* atomIndices, vector<RealVec>& atomCoordinates,
+                                           RealOpenMM* parameters, vector<RealVec>& forces,
                                            RealOpenMM* totalEnergy ) const {
    // ---------------------------------------------------------------------------------------
 

@@ -128,7 +128,7 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii,
+      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
                             RealOpenMM* obcChain = NULL );
       
       /**---------------------------------------------------------------------------------------
@@ -144,8 +144,8 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                   const RealOpenMM* partialCharges, RealOpenMM** forces );
+      int computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                                   const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------
       

@@ -37,6 +37,7 @@ using std::pair;
 using std::string;
 using std::stringstream;
 using std::vector;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -118,8 +119,8 @@ void ReferenceCustomHbondIxn::setPeriodic(RealOpenMM* boxSize) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomHbondIxn::calculatePairIxn(RealOpenMM** atomCoordinates, RealOpenMM** donorParameters, RealOpenMM** acceptorParameters,
-                                             int** exclusions, const map<string, double>& globalParameters, RealOpenMM** forces,
+void ReferenceCustomHbondIxn::calculatePairIxn(vector<RealVec>& atomCoordinates, RealOpenMM** donorParameters, RealOpenMM** acceptorParameters,
+                                             int** exclusions, const map<string, double>& globalParameters, vector<RealVec>& forces,
                                              RealOpenMM* totalEnergy) const {
 
    map<string, double> variables = globalParameters;
@@ -174,8 +175,8 @@ void ReferenceCustomHbondIxn::calculatePairIxn(RealOpenMM** atomCoordinates, Rea
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, RealOpenMM** atomCoordinates,
-                        map<string, double>& variables, RealOpenMM** forces, RealOpenMM* totalEnergy) const {
+void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<RealVec>& atomCoordinates,
+                        map<string, double>& variables, vector<RealVec>& forces, RealOpenMM* totalEnergy) const {
 
     // ---------------------------------------------------------------------------------------
 
@@ -299,7 +300,7 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, RealOpenM
         *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
 }
 
-void ReferenceCustomHbondIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, RealOpenMM** atomCoordinates) const {
+void ReferenceCustomHbondIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, vector<RealVec>& atomCoordinates) const {
     if (periodic)
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxSize, delta);
     else

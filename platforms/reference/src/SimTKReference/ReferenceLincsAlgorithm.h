@@ -25,7 +25,7 @@
 #define __ReferenceLincsAlgorithm_H__
 
 #include "ReferenceConstraintAlgorithm.h"
-#include "openmm/Vec3.h"
+#include "../SimTKUtilities/SimTKOpenMMRealType.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
       std::vector<RealOpenMM> _rhs2;
       std::vector<RealOpenMM> _solution;
       std::vector<std::vector<RealOpenMM> > _couplingMatrix;
-      std::vector<OpenMM::Vec3> _constraintDir;
+      std::vector<OpenMM::RealVec> _constraintDir;
 
 
       /**---------------------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void initialize(int numberOfAtoms, RealOpenMM* inverseMasses);
+      void initialize(int numberOfAtoms, std::vector<RealOpenMM>& inverseMasses);
 
       /**---------------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      void updateAtomPositions(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM* inverseMasses);
+      void updateAtomPositions(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& inverseMasses);
 
    public:
 
@@ -136,8 +136,8 @@ class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      int apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                       RealOpenMM** atomCoordinatesP, RealOpenMM* inverseMasses );
+      int apply( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                       std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses );
 };
 
 // ---------------------------------------------------------------------------------------

@@ -31,6 +31,9 @@
 #include "ReferenceShakeAlgorithm.h"
 #include "ReferenceDynamics.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceShakeAlgorithm constructor
@@ -218,9 +221,9 @@ void ReferenceShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                         RealOpenMM** atomCoordinatesP,
-                                         RealOpenMM* inverseMasses ){
+int ReferenceShakeAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                         vector<RealVec>& atomCoordinatesP,
+                                         vector<RealOpenMM>& inverseMasses ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -336,7 +339,7 @@ int ReferenceShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordina
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceShakeAlgorithm::reportShake( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceShakeAlgorithm::reportShake( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           std::stringstream& message ){
 
    // ---------------------------------------------------------------------------------------

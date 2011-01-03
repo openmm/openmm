@@ -51,7 +51,7 @@ private:
 
          --------------------------------------------------------------------------------------- */
 
-    void calculateOneIxn(int index, RealOpenMM** atomCoordinates, RealOpenMM** forces,
+    void calculateOneIxn(int index, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces,
                          RealOpenMM* totalEnergy) const;
 
 public:
@@ -76,7 +76,7 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-    void calculateIxn(RealOpenMM** atomCoordinates, RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+    void calculateIxn(std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
 
     /**---------------------------------------------------------------------------------------
 
@@ -84,8 +84,8 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    void calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
-                         RealOpenMM* parameters, RealOpenMM** forces,
+    void calculateBondIxn(int* atomIndices, std::vector<OpenMM::RealVec>& atomCoordinates,
+                         RealOpenMM* parameters, std::vector<OpenMM::RealVec>& forces,
                          RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------

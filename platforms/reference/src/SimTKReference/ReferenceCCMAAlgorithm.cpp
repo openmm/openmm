@@ -39,6 +39,7 @@ using std::pair;
 using std::vector;
 using std::set;
 using OpenMM::Vec3;
+using OpenMM::RealVec;
 
 /**---------------------------------------------------------------------------------------
 
@@ -58,7 +59,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
                                                   int numberOfConstraints,
                                                   int** atomIndices,
                                                   RealOpenMM* distance,
-                                                  RealOpenMM* masses,
+                                                  vector<RealOpenMM>& masses,
                                                   vector<AngleInfo>& angles,
                                                   RealOpenMM tolerance){
 
@@ -348,9 +349,9 @@ void ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                         RealOpenMM** atomCoordinatesP,
-                                         RealOpenMM* inverseMasses ){
+int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                         vector<RealVec>& atomCoordinatesP,
+                                         vector<RealOpenMM>& inverseMasses ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -479,7 +480,7 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinat
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCCMAAlgorithm::reportCCMA( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceCCMAAlgorithm::reportCCMA( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           std::stringstream& message ){
 
    // ---------------------------------------------------------------------------------------

@@ -65,8 +65,8 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-    virtual int apply(int numberOfAtoms, RealOpenMM** atomCoordinates,
-                     RealOpenMM** atomCoordinatesP, RealOpenMM* inverseMasses) = 0;
+    virtual int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                     std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses) = 0;
 };
 
 // ---------------------------------------------------------------------------------------

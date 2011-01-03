@@ -30,6 +30,9 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceBondForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceBondForce constructor
@@ -78,9 +81,9 @@ ReferenceBondForce::~ReferenceBondForce( ){
    --------------------------------------------------------------------------------------- */
 
 void ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
-                                        RealOpenMM** atomCoordinates,
+                                        vector<RealVec>& atomCoordinates,
                                         RealOpenMM** parameters,
-                                        RealOpenMM** forces, 
+                                        vector<RealVec>& forces, 
                                         RealOpenMM *totalEnergy, 
                                         ReferenceBondIxn& referenceBondIxn ){
 

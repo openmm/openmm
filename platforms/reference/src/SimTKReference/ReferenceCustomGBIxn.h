@@ -69,7 +69,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleValue(int index, int numAtoms, RealOpenMM** atomCoordinates, std::vector<std::vector<RealOpenMM> >& values,
+      void calculateSingleParticleValue(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<std::vector<RealOpenMM> >& values,
                                         const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters) const;
 
       /**---------------------------------------------------------------------------------------
@@ -87,7 +87,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairValue(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+      void calculateParticlePairValue(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                       std::vector<std::vector<RealOpenMM> >& values,
                                       const std::map<std::string, double>& globalParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions) const;
@@ -106,7 +106,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairValue(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+      void calculateOnePairValue(int index, int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                  const std::map<std::string, double>& globalParameters,
                                  std::vector<std::vector<RealOpenMM> >& values) const;
 
@@ -126,8 +126,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, const std::vector<std::vector<RealOpenMM> >& values,
-                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters, RealOpenMM** forces,
+      void calculateSingleParticleEnergyTerm(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, const std::vector<std::vector<RealOpenMM> >& values,
+                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
                                         RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
 
       /**---------------------------------------------------------------------------------------
@@ -148,11 +148,11 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateParticlePairEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+      void calculateParticlePairEnergyTerm(int index, int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                       const std::vector<std::vector<RealOpenMM> >& values,
                                       const std::map<std::string, double>& globalParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions,
-                                      RealOpenMM** forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+                                      std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -171,10 +171,10 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                  const std::map<std::string, double>& globalParameters,
                                  const std::vector<std::vector<RealOpenMM> >& values,
-                                 RealOpenMM** forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+                                 std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -191,11 +191,11 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateChainRuleForces(int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+      void calculateChainRuleForces(int numAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                       const std::vector<std::vector<RealOpenMM> >& values,
                                       const std::map<std::string, double>& globalParameters,
                                       const std::vector<std::set<int> >& exclusions,
-                                      RealOpenMM** forces, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+                                      std::vector<OpenMM::RealVec>& forces, std::vector<std::vector<RealOpenMM> >& dEdV) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -213,10 +213,10 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOnePairChainRule(int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+      void calculateOnePairChainRule(int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters,
                                  const std::map<std::string, double>& globalParameters,
                                  const std::vector<std::vector<RealOpenMM> >& values,
-                                 RealOpenMM** forces, std::vector<std::vector<RealOpenMM> >& dEdV,
+                                 std::vector<OpenMM::RealVec>& forces, std::vector<std::vector<RealOpenMM> >& dEdV,
                                  bool isExcluded) const;
 
    public:
@@ -283,8 +283,8 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateIxn(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
-                       std::map<std::string, double>& globalParameters, RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+      void calculateIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
+                       std::map<std::string, double>& globalParameters, std::vector<OpenMM::RealVec>& forces, RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------
 

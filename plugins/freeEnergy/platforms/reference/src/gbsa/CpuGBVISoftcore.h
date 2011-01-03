@@ -115,7 +115,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadii,
+      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
                             RealOpenMM* switchDeriviative = NULL );
       
       /**---------------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
+      RealOpenMM computeBornEnergy( const RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                     const RealOpenMM* partialCharges );
       
       /**---------------------------------------------------------------------------------------
@@ -226,8 +226,8 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                             const RealOpenMM* partialCharges, RealOpenMM** inputForces );
+      int computeBornForces( const RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                             const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------
       
