@@ -69,7 +69,8 @@ private:
     int numParticles, num14;
     int **exclusionArray, **bonded14IndexArray;
     RealOpenMM **particleParamArray, **bonded14ParamArray;
-    RealOpenMM nonbondedCutoff, periodicBoxSize[3], rfDielectric, ewaldAlpha;
+    RealOpenMM nonbondedCutoff, rfDielectric, ewaldAlpha;
+    RealVec periodicBoxSize;
     int kmax[3];
     std::vector<std::set<int> > exclusions;
     NonbondedSoftcoreMethod nonbondedMethod;

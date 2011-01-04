@@ -115,7 +115,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
+      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii,
                             RealOpenMM* switchDeriviative = NULL );
       
       /**---------------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy( const RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      RealOpenMM computeBornEnergy( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                     const RealOpenMM* partialCharges );
       
       /**---------------------------------------------------------------------------------------
@@ -226,7 +226,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornForces( const RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      int computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                              const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------
@@ -319,7 +319,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
       int computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
                                               GBVISoftcoreParameters* gbviParameters, 
-                                              RealOpenMM* bornRadius, RealOpenMM* switchDeriviative );
+                                              RealOpenMM& bornRadius, RealOpenMM* switchDeriviative );
       
 };
 

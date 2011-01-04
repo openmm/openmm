@@ -90,18 +90,7 @@ CpuImplicitSolvent::~CpuImplicitSolvent( ){
 
    // ---------------------------------------------------------------------------------------
 
-//#ifdef UseGromacsMalloc
-//      save_free( "_bornForce", __FILE__, __LINE__, _bornForce );
-//#else
-//      delete[] _bornForce;
-//#endif
-
    delete _implicitSolventParameters;
-
-   delete[] _bornForce;
-   delete[] _bornRadii;
-   delete[] _tempBornRadii;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -118,10 +107,6 @@ void CpuImplicitSolvent::_initializeDataMembers( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   _bornRadii                           = NULL;
-   _tempBornRadii                       = NULL;
-   _bornForce                           = NULL;
- 
    _includeAceApproximation             = 0;
 
    _forceConversionFactor               = (RealOpenMM) 1.0;
@@ -490,7 +475,7 @@ int CpuImplicitSolvent::incrementForceCallIndex( void ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuImplicitSolvent::getBornForce( void ){
+vector<RealOpenMM>& CpuImplicitSolvent::getBornForce( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -498,8 +483,8 @@ RealOpenMM* CpuImplicitSolvent::getBornForce( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _bornForce == NULL ){
-      _bornForce = new RealOpenMM[_implicitSolventParameters->getNumberOfAtoms()];
+   if( _bornForce.size() == 0 ){
+      _bornForce.resize(_implicitSolventParameters->getNumberOfAtoms());
    }
    return _bornForce;
 
@@ -514,7 +499,7 @@ RealOpenMM* CpuImplicitSolvent::getBornForce( void ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuImplicitSolvent::getBornRadii( void ){
+vector<RealOpenMM>& CpuImplicitSolvent::getBornRadii( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -522,9 +507,8 @@ RealOpenMM* CpuImplicitSolvent::getBornRadii( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _bornRadii == NULL ){
-      _bornRadii = new RealOpenMM[_implicitSolventParameters->getNumberOfAtoms()];
-      _bornRadii[0] = 0.0;
+   if( _bornRadii.size() == 0 ){
+      _bornRadii.resize(_implicitSolventParameters->getNumberOfAtoms(), 0.0);
    }
    return _bornRadii;
 }
@@ -537,7 +521,7 @@ RealOpenMM* CpuImplicitSolvent::getBornRadii( void ){
 
    --------------------------------------------------------------------------------------- */
 
-const RealOpenMM* CpuImplicitSolvent::getBornRadiiConst( void ) const {
+const vector<RealOpenMM>& CpuImplicitSolvent::getBornRadiiConst( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -557,7 +541,7 @@ const RealOpenMM* CpuImplicitSolvent::getBornRadiiConst( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuImplicitSolvent::getBornRadiiTemp( void ){
+vector<RealOpenMM>& CpuImplicitSolvent::getBornRadiiTemp( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -565,8 +549,8 @@ RealOpenMM* CpuImplicitSolvent::getBornRadiiTemp( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _tempBornRadii == NULL ){
-      _tempBornRadii = new RealOpenMM[_implicitSolventParameters->getNumberOfAtoms()];
+   if( _tempBornRadii.size() == 0 ){
+      _tempBornRadii.resize(_implicitSolventParameters->getNumberOfAtoms(), 0.0);
    }
    return _tempBornRadii;
 }
@@ -584,8 +568,7 @@ RealOpenMM* CpuImplicitSolvent::getBornRadiiTemp( void ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii,
-                                          RealOpenMM* obcChain ){
+int CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -647,7 +630,7 @@ int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoord
    // after first iteration Born radii are updated in force calculation (computeBornEnergyForces())
    // unless updateBornRadii is set
 
-   RealOpenMM* bornRadii = getBornRadii();
+   vector<RealOpenMM>& bornRadii = getBornRadii();
    if( updateBornRadii || bornRadii[0] < (RealOpenMM) 0.0001 || callId == 1 ){
       computeBornRadii( atomCoordinates, bornRadii );
    }
@@ -674,7 +657,7 @@ int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoord
 
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeBornEnergyForces( RealOpenMM* bornRadii,
+int CpuImplicitSolvent::computeBornEnergyForces( vector<RealOpenMM>& bornRadii,
                                                  vector<RealVec>& atomCoordinates,
                                                  const RealOpenMM* partialCharges,
                                                  vector<RealVec>& forces ){
@@ -708,8 +691,8 @@ int CpuImplicitSolvent::computeBornEnergyForces( RealOpenMM* bornRadii,
    --------------------------------------------------------------------------------------- */
 
 int CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
-                                                 const RealOpenMM* bornRadii, RealOpenMM* energy,
-                                                 RealOpenMM* forces ) const {
+                                                 const vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
+                                                 vector<RealOpenMM>& forces ) const {
 
    // ---------------------------------------------------------------------------------------
 

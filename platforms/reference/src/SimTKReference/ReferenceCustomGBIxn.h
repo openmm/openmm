@@ -267,7 +267,7 @@ class ReferenceCustomGBIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic( RealOpenMM* boxSize );
+      void setPeriodic( OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 

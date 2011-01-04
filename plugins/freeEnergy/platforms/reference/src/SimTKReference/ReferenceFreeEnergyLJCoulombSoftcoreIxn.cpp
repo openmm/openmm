@@ -108,7 +108,7 @@ ReferenceFreeEnergyLJCoulombSoftcoreIxn::~ReferenceFreeEnergyLJCoulombSoftcoreIx
 
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceFreeEnergyLJCoulombSoftcoreIxn::setPeriodic( RealOpenMM* boxSize ) {
+  int ReferenceFreeEnergyLJCoulombSoftcoreIxn::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);

@@ -26,6 +26,7 @@
 #define __CpuImplicitSolvent_H__
 
 #include "ImplicitSolventParameters.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -71,12 +72,12 @@ class OPENMM_EXPORT CpuImplicitSolvent {
 
       // work arrays
 
-      RealOpenMM* _bornForce;
+      std::vector<RealOpenMM> _bornForce;
 
       // Born radii and force
 
-      RealOpenMM* _bornRadii;
-      RealOpenMM* _tempBornRadii;
+      std::vector<RealOpenMM> _bornRadii;
+      std::vector<RealOpenMM> _tempBornRadii;
 
       // convert units for energy/force
 
@@ -107,7 +108,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM* getBornForce( void );
+      std::vector<RealOpenMM>& getBornForce( void );
 
       /**---------------------------------------------------------------------------------------
       
@@ -118,7 +119,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM* getBornRadiiTemp( void );
+      std::vector<RealOpenMM>& getBornRadiiTemp( void );
 
       /**---------------------------------------------------------------------------------------
       
@@ -330,7 +331,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM* getBornRadii( void );
+      std::vector<RealOpenMM>& getBornRadii( void );
       
       /**---------------------------------------------------------------------------------------
       
@@ -340,7 +341,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMM* getBornRadiiConst( void ) const;
+      const std::vector<RealOpenMM>& getBornRadiiConst( void ) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -372,8 +373,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
-                                    RealOpenMM* obcChain = NULL );
+      virtual int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -388,7 +388,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      virtual int computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                            const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------
@@ -405,8 +405,8 @@ class OPENMM_EXPORT CpuImplicitSolvent {
          --------------------------------------------------------------------------------------- */
       
       int computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
-                                   const RealOpenMM* bornRadii, RealOpenMM* energy, 
-                                   RealOpenMM* forces ) const;
+                                   const std::vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
+                                   std::vector<RealOpenMM>& forces ) const;
 
       /**---------------------------------------------------------------------------------------
             

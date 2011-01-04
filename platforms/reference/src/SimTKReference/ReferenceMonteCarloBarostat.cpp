@@ -62,7 +62,7 @@ ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, RealOpenMM* boxSize, RealOpenMM scale) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scale) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)

@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <sstream>
+#include <vector>
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
@@ -243,7 +244,7 @@ int CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
 
 int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
                                                          GBVISoftcoreParameters* gbviParameters, 
-                                                         RealOpenMM* bornRadius, RealOpenMM* switchDeriviative ){
+                                                         RealOpenMM& bornRadius, RealOpenMM* switchDeriviative ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -301,7 +302,7 @@ int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius
       sum                = atomicRadius3 - bornSum; 
       *switchDeriviative = one;
    }
-   *bornRadius = POW( sum, minusOneThird );
+   bornRadius = POW( sum, minusOneThird );
   
    return 0; 
 }
@@ -322,7 +323,7 @@ int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius
 
 #define GBVISoftcoreDebug 0
 
-int CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* switchDeriviative ){
+int CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii, RealOpenMM* switchDeriviative ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -402,7 +403,7 @@ if( atomI == 0 || atomI == 1 ){
          switchDeriviative[atomI]  = one;
       } else if( _gbviParameters->getBornRadiusScalingSoftcoreMethod() == GBVISoftcoreParameters::QuinticSpline ){
          computeBornRadiiUsingQuinticSpline( atomicRadius3, sum, gbviParameters, 
-                                             bornRadii + atomI, switchDeriviative + atomI );
+                                             bornRadii[atomI], switchDeriviative + atomI );
       }
 
 #if( GBVISoftcoreDebug == 1 )
@@ -607,7 +608,7 @@ RealOpenMM CpuGBVISoftcore::Sgb( RealOpenMM t ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuGBVISoftcore::computeBornEnergy( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+RealOpenMM CpuGBVISoftcore::computeBornEnergy( const vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                                const RealOpenMM* partialCharges ){
 
    // ---------------------------------------------------------------------------------------
@@ -630,10 +631,6 @@ RealOpenMM CpuGBVISoftcore::computeBornEnergy( const RealOpenMM* bornRadii, vect
    const int numberOfAtoms              = gbviParameters->getNumberOfAtoms();
    const RealOpenMM* atomicRadii        = gbviParameters->getAtomicRadii();
    const RealOpenMM* gammaParameters    = gbviParameters->getGammaParameters();
-
-   if( bornRadii == NULL ){
-      bornRadii   = getBornRadii();
-   }
 
 #if( GBVISoftcoreDebug == 1 )
    FILE* logFile                        = stderr;
@@ -723,7 +720,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
    --------------------------------------------------------------------------------------- */
 
 
-int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+int CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                         const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
@@ -753,10 +750,6 @@ int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, vector<Real
    const RealOpenMM* atomicRadii        = gbviParameters->getAtomicRadii();
    const RealOpenMM* gammaParameters    = gbviParameters->getGammaParameters();
 
-   if( bornRadii == NULL ){
-      bornRadii   = getBornRadii();
-   }
-
    // ---------------------------------------------------------------------------------------
 
    // constants
@@ -767,8 +760,6 @@ int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, vector<Real
 
    // set energy/forces to zero
 
-   const unsigned int arraySzInBytes    = sizeof( RealOpenMM )*numberOfAtoms;
-
    RealOpenMM** forces  = new RealOpenMM*[numberOfAtoms];
    RealOpenMM*  block   = new RealOpenMM[numberOfAtoms*3];
 	memset( block, 0, sizeof( RealOpenMM )*numberOfAtoms*3 );
@@ -778,8 +769,8 @@ int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, vector<Real
 		blockPtr  += 3;
    }
 
-   RealOpenMM* bornForces = getBornForce();
-   memset( bornForces, 0, arraySzInBytes );
+   vector<RealOpenMM>& bornForces = getBornForce();
+   bornForces.assign(numberOfAtoms, 0.0);
 
    // ---------------------------------------------------------------------------------------
 

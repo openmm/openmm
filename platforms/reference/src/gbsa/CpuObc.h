@@ -40,8 +40,8 @@ class CpuObc : public CpuImplicitSolvent {
 
       // arrays containing OBC chain derivative 
 
-      RealOpenMM* _obcChain;
-      RealOpenMM* _obcChainTemp;
+      std::vector<RealOpenMM> _obcChain;
+      std::vector<RealOpenMM> _obcChainTemp;
 
       // initialize data members (more than
       // one constructor, so centralize intialization here)
@@ -101,8 +101,8 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM* getObcChain( void );
-      RealOpenMM* getObcChainConst( void ) const;
+      std::vector<RealOpenMM>& getObcChain( void );
+      const std::vector<RealOpenMM>& getObcChainConst( void ) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -113,7 +113,7 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM* getObcChainTemp( void );
+      std::vector<RealOpenMM>& getObcChainTemp( void );
       
       /**---------------------------------------------------------------------------------------
       
@@ -128,8 +128,7 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii,
-                            RealOpenMM* obcChain = NULL );
+      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -144,7 +143,7 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      int computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                    const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------

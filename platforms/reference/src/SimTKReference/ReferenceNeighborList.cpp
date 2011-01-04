@@ -18,9 +18,9 @@ static double periodicDifference(double val1, double val2, double period) {
 }
 
 // squared distance between two points
-static double compPairDistanceSquared(const RealVec& pos1, const RealVec& pos2, const RealOpenMM* periodicBoxSize) {
+static double compPairDistanceSquared(const RealVec& pos1, const RealVec& pos2, const RealVec& periodicBoxSize, bool usePeriodic) {
     double dx, dy, dz;
-    if (periodicBoxSize == NULL) {
+    if (!usePeriodic) {
         dx = pos2[0] - pos1[0];
         dy = pos2[1] - pos1[1];
         dz = pos2[2] - pos1[2];
@@ -40,7 +40,8 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const vector<set<int> >& exclusions,
-                              const RealOpenMM* periodicBoxSize,
+                              const RealVec& periodicBoxSize,
+                              bool usePeriodic,
                               double maxDistance,
                               double minDistance,
                               bool reportSymmetricPairs
@@ -55,7 +56,7 @@ void OPENMM_EXPORT computeNeighborListNaive(
     {
         for (AtomIndex atomJ = atomI + 1; atomJ < (AtomIndex) nAtoms; ++atomJ)
         {
-            double pairDistanceSquared = compPairDistanceSquared(atomLocations[atomI], atomLocations[atomJ], periodicBoxSize);
+            double pairDistanceSquared = compPairDistanceSquared(atomLocations[atomI], atomLocations[atomJ], periodicBoxSize, usePeriodic);
             if ( (pairDistanceSquared <= maxDistanceSquared)  && (pairDistanceSquared >= minDistanceSquared))
                 if (exclusions[atomI].find(atomJ) == exclusions[atomI].end())
                 {
@@ -95,9 +96,9 @@ typedef std::vector< VoxelItem > Voxel;
 class VoxelHash
 {
 public:
-    VoxelHash(double vsx, double vsy, double vsz, const RealOpenMM* periodicBoxSize) :
-            voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxSize(periodicBoxSize) {
-        if (periodicBoxSize != NULL) {
+    VoxelHash(double vsx, double vsy, double vsz, const RealVec& periodicBoxSize, bool usePeriodic) :
+            voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxSize(periodicBoxSize), usePeriodic(usePeriodic) {
+        if (usePeriodic) {
             nx = (int) floor(periodicBoxSize[0]/voxelSizeX+0.5);
             ny = (int) floor(periodicBoxSize[1]/voxelSizeY+0.5);
             nz = (int) floor(periodicBoxSize[2]/voxelSizeZ+0.5);
@@ -115,7 +116,7 @@ public:
 
     VoxelIndex getVoxelIndex(const RealVec& location) const {
         double xperiodic, yperiodic, zperiodic;
-        if (periodicBoxSize == NULL) {
+        if (!usePeriodic) {
             xperiodic = location[0];
             yperiodic = location[1];
             zperiodic = location[2];
@@ -162,7 +163,7 @@ public:
         int lastx = centerVoxelIndex.x+dIndexX;
         int lasty = centerVoxelIndex.y+dIndexY;
         int lastz = centerVoxelIndex.z+dIndexZ;
-        if (periodicBoxSize != NULL) {
+        if (usePeriodic) {
             lastx = min(lastx, centerVoxelIndex.x-dIndexX+nx-1);
             lasty = min(lasty, centerVoxelIndex.y-dIndexY+ny-1);
             lastz = min(lastz, centerVoxelIndex.z-dIndexZ+nz-1);
@@ -174,7 +175,7 @@ public:
                 for (int z = centerVoxelIndex.z - dIndexZ; z <= lastz; ++z)
                 {
                     VoxelIndex voxelIndex(x, y, z);
-                    if (periodicBoxSize != NULL) {
+                    if (usePeriodic) {
                         voxelIndex.x = (x+nx)%nx;
                         voxelIndex.y = (y+ny)%ny;
                         voxelIndex.z = (z+nz)%nz;
@@ -192,7 +193,7 @@ public:
                         // Ignore exclusions.
                         if (exclusions[atomI].find(atomJ) != exclusions[atomI].end()) continue;
                         
-                        double dSquared = compPairDistanceSquared(locationI, locationJ, periodicBoxSize);
+                        double dSquared = compPairDistanceSquared(locationI, locationJ, periodicBoxSize, usePeriodic);
                         if (dSquared > maxDistanceSquared) continue;
                         if (dSquared < minDistanceSquared) continue;
                         
@@ -208,7 +209,8 @@ public:
 private:
     double voxelSizeX, voxelSizeY, voxelSizeZ;
     int nx, ny, nz;
-    const RealOpenMM* periodicBoxSize;
+    const RealVec& periodicBoxSize;
+    const bool usePeriodic;
     std::map<VoxelIndex, Voxel> voxelMap;
 };
 
@@ -219,7 +221,8 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const vector<set<int> >& exclusions,
-                              const RealOpenMM* periodicBoxSize,
+                              const RealVec& periodicBoxSize,
+                              bool usePeriodic,
                               double maxDistance,
                               double minDistance,
                               bool reportSymmetricPairs
@@ -228,14 +231,14 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
     neighborList.clear();
 
     double edgeSizeX, edgeSizeY, edgeSizeZ;
-    if (periodicBoxSize == NULL)
+    if (!usePeriodic)
         edgeSizeX = edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed
     else {
         edgeSizeX = periodicBoxSize[0]/floor(periodicBoxSize[0]/maxDistance);
         edgeSizeY = periodicBoxSize[1]/floor(periodicBoxSize[1]/maxDistance);
         edgeSizeZ = periodicBoxSize[2]/floor(periodicBoxSize[2]/maxDistance);
     }
-    VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize);
+    VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize, usePeriodic);
     for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs
     {
         // 1) Find other atoms that are close to this one

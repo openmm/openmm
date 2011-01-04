@@ -107,7 +107,7 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
 
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceLJCoulombIxn::setPeriodic( RealOpenMM* boxSize ) {
+  int ReferenceLJCoulombIxn::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);

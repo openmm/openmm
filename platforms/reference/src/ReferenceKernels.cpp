@@ -121,9 +121,9 @@ static vector<RealVec>& extractForces(ContextImpl& context) {
     return *((vector<RealVec>*) data->forces);
 }
 
-static RealOpenMM* extractBoxSize(ContextImpl& context) {
+static RealVec& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM*) data->periodicBoxSize;
+    return *(RealVec*) data->periodicBoxSize;
 }
 
 static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorithm::AngleInfo>& angles) {
@@ -215,14 +215,14 @@ void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector
 }
 
 void ReferenceUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
-    RealOpenMM* box = extractBoxSize(context);
+    RealVec& box = extractBoxSize(context);
     a = Vec3(box[0], 0, 0);
     b = Vec3(0, box[1], 0);
     c = Vec3(0, 0, box[2]);
 }
 
 void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
-    RealOpenMM* box = extractBoxSize(context);
+    RealVec& box = extractBoxSize(context);
     box[0] = (RealOpenMM) a[0];
     box[1] = (RealOpenMM) b[1];
     box[2] = (RealOpenMM) c[2];
@@ -668,7 +668,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic || ewald || pme)
@@ -682,7 +682,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     ReferenceLJCoulomb14 nonbonded14;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
     if (periodic || ewald || pme) {
-        RealOpenMM* boxSize = extractBoxSize(context);
+        RealVec& boxSize = extractBoxSize(context);
         energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
     }
     return energy;
@@ -799,7 +799,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic)
@@ -885,10 +885,10 @@ void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIFo
 
 double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
-    RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
+    vector<RealOpenMM> bornRadii(context.getSystem().getNumParticles());
     if (isPeriodic)
         gbvi->getGBVIParameters()->setPeriodic(extractBoxSize(context));
-    gbvi->computeBornRadii(posData, bornRadii, NULL );
+    gbvi->computeBornRadii(posData, bornRadii );
     if (includeForces) {
         vector<RealVec>& forceData = extractForces(context);
         gbvi->computeBornForces(bornRadii, posData, &charges[0], forceData);
@@ -896,7 +896,6 @@ double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeF
     RealOpenMM energy = 0.0;
     if (includeEnergy)
         energy = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
-    delete[] bornRadii;
     return static_cast<double>(energy);
 }
 
@@ -1029,7 +1028,7 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
     if (periodic)
         ixn.setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
@@ -1525,7 +1524,7 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
     if (barostat == NULL)
         barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
     vector<RealVec>& posData = extractPositions(context);
-    RealOpenMM* boxSize = extractBoxSize(context);
+    RealVec& boxSize = extractBoxSize(context);
     barostat->applyBarostat(posData, boxSize, scale);
 }
 

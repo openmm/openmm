@@ -88,13 +88,12 @@ ReferencePlatform::PlatformData::PlatformData(int numParticles) : time(0.0), ste
     positions = new vector<RealVec>(numParticles);
     velocities = new vector<RealVec>(numParticles);
     forces = new vector<RealVec>(numParticles);
-    periodicBoxSize = new RealOpenMM[3];
+    periodicBoxSize = new RealVec();
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
     delete (vector<RealVec>*) positions;
     delete (vector<RealVec>*) velocities;
     delete (vector<RealVec>*) forces;
-    RealOpenMM* periodicBoxSize = (RealOpenMM*) this->periodicBoxSize;
-    delete[] periodicBoxSize;
+    delete (RealVec*) periodicBoxSize;
 }

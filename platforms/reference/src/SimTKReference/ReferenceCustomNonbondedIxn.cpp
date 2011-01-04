@@ -110,7 +110,7 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
 
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceCustomNonbondedIxn::setPeriodic( RealOpenMM* boxSize ) {
+  int ReferenceCustomNonbondedIxn::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);

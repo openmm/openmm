@@ -241,7 +241,7 @@ class GBVIParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( RealOpenMM* boxSize );
+      int setPeriodic( OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 

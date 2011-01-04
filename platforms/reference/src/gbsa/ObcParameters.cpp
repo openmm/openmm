@@ -30,13 +30,8 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 
-// #define UseGromacsMalloc 1
-
-#ifdef UseGromacsMalloc
-extern "C" {
-#include "smalloc.h" 
-}
-#endif
+using std::vector;
+using OpenMM::RealVec;
 
 const std::string ObcParameters::ParameterFileName = std::string( "params.agb" );
 
@@ -619,7 +614,7 @@ RealOpenMM ObcParameters::getCutoffDistance() {
 
      --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setPeriodic( RealOpenMM* boxSize ) {
+int ObcParameters::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);

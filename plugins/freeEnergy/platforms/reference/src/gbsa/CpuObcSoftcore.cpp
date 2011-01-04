@@ -32,6 +32,7 @@
 #include "../SimTKReference/ReferenceForce.h"
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
 using std::vector;
 using OpenMM::RealVec;
@@ -71,13 +72,6 @@ CpuObcSoftcore::~CpuObcSoftcore( ){
    // static const char* methodName = "\nCpuObcSoftcore::~CpuObcSoftcore";
 
    // ---------------------------------------------------------------------------------------
-
-   //if( _obcSoftcoreParameters != NULL ){
-     // delete _obcSoftcoreParameters;
-   //}
-
-   delete[] _obcChain;
-   delete[] _obcChainTemp;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -95,8 +89,6 @@ void CpuObcSoftcore::_initializeObcDataMembers( void ){
    // ---------------------------------------------------------------------------------------
 
    _obcSoftcoreParameters = NULL;
-   _obcChain              = NULL;
-   _obcChainTemp          = NULL;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -149,7 +141,7 @@ int CpuObcSoftcore::setObcSoftcoreParameters(  ObcSoftcoreParameters* obcSoftcor
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuObcSoftcore::getObcChain( void ){
+vector<RealOpenMM>& CpuObcSoftcore::getObcChain( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -157,8 +149,8 @@ RealOpenMM* CpuObcSoftcore::getObcChain( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _obcChain == NULL ){
-      _obcChain = new RealOpenMM[_obcSoftcoreParameters->getNumberOfAtoms()];
+   if( _obcChain.size() == 0 ){
+      _obcChain.resize(_obcSoftcoreParameters->getNumberOfAtoms());
    }
    return _obcChain;
 }
@@ -171,7 +163,7 @@ RealOpenMM* CpuObcSoftcore::getObcChain( void ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuObcSoftcore::getObcChainConst( void ) const {
+const vector<RealOpenMM>& CpuObcSoftcore::getObcChainConst( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -191,7 +183,7 @@ RealOpenMM* CpuObcSoftcore::getObcChainConst( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuObcSoftcore::getObcChainTemp( void ){
+vector<RealOpenMM>& CpuObcSoftcore::getObcChainTemp( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -199,8 +191,8 @@ RealOpenMM* CpuObcSoftcore::getObcChainTemp( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _obcChainTemp == NULL ){
-      _obcChainTemp = new RealOpenMM[_obcSoftcoreParameters->getNumberOfAtoms()];
+   if( _obcChainTemp.size() == 0 ){
+      _obcChainTemp.resize(_obcSoftcoreParameters->getNumberOfAtoms());
    }
    return _obcChainTemp;
 }
@@ -219,7 +211,7 @@ RealOpenMM* CpuObcSoftcore::getObcChainTemp( void ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* obcChain ){
+int CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -239,9 +231,7 @@ int CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpen
    int numberOfAtoms                        = obcSoftcoreParameters->getNumberOfAtoms();
    RealOpenMM* atomicRadii                  = obcSoftcoreParameters->getAtomicRadii();
    const RealOpenMM* scaledRadiusFactor     = obcSoftcoreParameters->getScaledRadiusFactors();
-   if( !obcChain ){
-      obcChain                              = getObcChain();
-   }
+   vector<RealOpenMM>& obcChain             = getObcChain();
 
    const RealOpenMM* nonPolarScaleFactors   = obcSoftcoreParameters->getNonPolarScaleFactors();
    RealOpenMM dielectricOffset              = obcSoftcoreParameters->getDielectricOffset();
@@ -363,8 +353,8 @@ if( logFile ){
    --------------------------------------------------------------------------------------- */
 
 int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSoftcoreParameters,
-                                             const RealOpenMM* bornRadii, RealOpenMM* energy,
-                                             RealOpenMM* forces ) const {
+                                             const vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
+                                             vector<RealOpenMM>& forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -429,7 +419,7 @@ int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSof
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+int CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                              const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
@@ -449,10 +439,6 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealV
 
    const ObcSoftcoreParameters* obcSoftcoreParameters = getObcSoftcoreParameters();
    const int numberOfAtoms            = obcSoftcoreParameters->getNumberOfAtoms();
-
-   if( bornRadii == NULL ){
-      bornRadii   = getBornRadii();
-   }
 
    // ---------------------------------------------------------------------------------------
 
@@ -482,7 +468,6 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealV
    // set energy/forces to zero
 
    RealOpenMM obcEnergy                 = zero;
-   const unsigned int arraySzInBytes    = sizeof( RealOpenMM )*numberOfAtoms;
 
    RealOpenMM** forces  = (RealOpenMM**) malloc( sizeof( RealOpenMM* )*numberOfAtoms );
    RealOpenMM*  block   = (RealOpenMM*)  malloc( sizeof( RealOpenMM )*numberOfAtoms*3 );
@@ -493,8 +478,8 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealV
 		blockPtr  += 3;
    }
 
-   RealOpenMM* bornForces = getBornForce();
-   memset( bornForces, 0, arraySzInBytes );
+   vector<RealOpenMM>& bornForces = getBornForce();
+   bornForces.assign(numberOfAtoms, 0.0);
 
    // ---------------------------------------------------------------------------------------
 
@@ -585,13 +570,13 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealV
    // initialize Born radii & ObcChain temp arrays -- contain values
    // used in next iteration
 
-   RealOpenMM* bornRadiiTemp             = getBornRadiiTemp();
-   memset( bornRadiiTemp, 0, arraySzInBytes );
+   vector<RealOpenMM>& bornRadiiTemp     = getBornRadiiTemp();
+   bornRadiiTemp.assign(numberOfAtoms, 0.0);
 
-   RealOpenMM* obcChainTemp              = getObcChainTemp();
-   memset( obcChainTemp, 0, arraySzInBytes );
+   vector<RealOpenMM>& obcChainTemp      = getObcChainTemp();
+   obcChainTemp.assign(numberOfAtoms, 0.0);
 
-   RealOpenMM* obcChain                  = getObcChain();
+   vector<RealOpenMM>& obcChain          = getObcChain();
    const RealOpenMM* atomicRadii         = obcSoftcoreParameters->getAtomicRadii();
 
    const RealOpenMM alphaObc             = obcSoftcoreParameters->getAlphaObc();
@@ -732,8 +717,8 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealV
 
    // copy new Born radii and obcChain values into permanent array
 
-   memcpy( bornRadii, bornRadiiTemp, arraySzInBytes );
-   memcpy( obcChain, obcChainTemp, arraySzInBytes );
+   bornRadii = bornRadiiTemp;
+   obcChain = obcChainTemp;
 
 	free( (char*) block );
 	free( (char*) forces );

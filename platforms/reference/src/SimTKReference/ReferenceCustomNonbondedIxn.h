@@ -110,7 +110,7 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( RealOpenMM* boxSize );
+      int setPeriodic( OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 

@@ -22,7 +22,8 @@ void OPENMM_EXPORT computeNeighborListNaive(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const std::vector<std::set<int> >& exclusions,
-                              const RealOpenMM* periodicBoxSize,
+                              const RealVec& periodicBoxSize,
+                              bool usePeriodic,
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false
@@ -36,7 +37,8 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
                               const std::vector<std::set<int> >& exclusions,
-                              const RealOpenMM* periodicBoxSize,
+                              const RealVec& periodicBoxSize,
+                              bool usePeriodic,
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false

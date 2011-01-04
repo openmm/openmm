@@ -219,7 +219,7 @@ double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl&
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodicBoxSize, periodic || ewald || pme, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic || ewald || pme)
@@ -374,7 +374,7 @@ void ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& sy
 double ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
 
-    RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
+    vector<RealOpenMM> bornRadii(context.getSystem().getNumParticles());
     gbviSoftcore->computeBornRadii(posData, bornRadii, NULL );
     if (includeForces) {
         vector<RealVec>& forceData = extractForces(context);
@@ -382,7 +382,6 @@ double ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& cont
     }
     RealOpenMM energy = 0.0;
     if (includeEnergy)
-        energy = gbviSoftcore->computeBornEnergy(bornRadii ,posData, &charges[0]);
-    delete[] bornRadii;
+        energy = gbviSoftcore->computeBornEnergy(bornRadii, posData, &charges[0]);
     return static_cast<double>(energy);
 }

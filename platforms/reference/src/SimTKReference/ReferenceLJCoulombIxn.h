@@ -117,7 +117,7 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      int setPeriodic( RealOpenMM* boxSize );      
+      int setPeriodic( OpenMM::RealVec& boxSize );
        
       /**---------------------------------------------------------------------------------------
       

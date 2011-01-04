@@ -90,7 +90,7 @@ void ReferenceCustomHbondIxn::setUseCutoff(RealOpenMM distance) {
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceCustomHbondIxn::setPeriodic(RealOpenMM* boxSize) {
+void ReferenceCustomHbondIxn::setPeriodic(RealVec& boxSize) {
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
     assert(boxSize[1] >= 2.0*cutoffDistance);

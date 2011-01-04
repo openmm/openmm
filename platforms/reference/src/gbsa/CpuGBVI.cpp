@@ -149,7 +149,7 @@ int CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
 
 #define GBVIDebug 0
 
-int CpuGBVI::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* chain ){
+int CpuGBVI::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -438,7 +438,7 @@ RealOpenMM CpuGBVI::Sgb( RealOpenMM t ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+RealOpenMM CpuGBVI::computeBornEnergy( const vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                        const RealOpenMM* partialCharges ){
 
    // ---------------------------------------------------------------------------------------
@@ -461,10 +461,6 @@ RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, vector<RealV
    const int numberOfAtoms              = gbviParameters->getNumberOfAtoms();
    const RealOpenMM* atomicRadii        = gbviParameters->getAtomicRadii();
    const RealOpenMM* gammaParameters    = gbviParameters->getGammaParameters();
-
-   if( bornRadii == NULL ){
-      bornRadii   = getBornRadii();
-   }
 
 #if( GBVIDebug == 1 )
    FILE* logFile                        = stderr;
@@ -557,7 +553,7 @@ partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
    --------------------------------------------------------------------------------------- */
 
 
-int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+int CpuGBVI::computeBornForces( const std::vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                 const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces){
 
    // ---------------------------------------------------------------------------------------
@@ -587,10 +583,6 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& at
    const RealOpenMM* atomicRadii        = gbviParameters->getAtomicRadii();
    const RealOpenMM* gammaParameters    = gbviParameters->getGammaParameters();
 
-   if( bornRadii == NULL ){
-      bornRadii   = getBornRadii();
-   }
-
    // ---------------------------------------------------------------------------------------
 
    // constants
@@ -601,8 +593,6 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& at
 
    // set energy/forces to zero
 
-   const unsigned int arraySzInBytes    = sizeof( RealOpenMM )*numberOfAtoms;
-
    RealOpenMM** forces  = new RealOpenMM*[numberOfAtoms];
    RealOpenMM*  block   = new RealOpenMM[numberOfAtoms*3];
 	memset( block, 0, sizeof( RealOpenMM )*numberOfAtoms*3 );
@@ -612,8 +602,8 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, vector<RealVec>& at
 		blockPtr  += 3;
    }
 
-   RealOpenMM* bornForces = getBornForce();
-   memset( bornForces, 0, arraySzInBytes );
+   vector<RealOpenMM>& bornForces = getBornForce();
+   bornForces.assign(numberOfAtoms, 0.0);
 
    // ---------------------------------------------------------------------------------------
 

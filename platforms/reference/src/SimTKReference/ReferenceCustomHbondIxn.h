@@ -114,7 +114,7 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic(RealOpenMM* boxSize);
+      void setPeriodic(OpenMM::RealVec& boxSize);
 
       /**---------------------------------------------------------------------------------------
 

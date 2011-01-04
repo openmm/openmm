@@ -71,13 +71,6 @@ CpuObc::~CpuObc( ){
    // static const char* methodName = "\nCpuObc::~CpuObc";
 
    // ---------------------------------------------------------------------------------------
-
-   //if( _obcParameters != NULL ){
-     // delete _obcParameters;
-   //}
-
-   delete[] _obcChain;
-   delete[] _obcChainTemp;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -95,8 +88,6 @@ void CpuObc::_initializeObcDataMembers( void ){
    // ---------------------------------------------------------------------------------------
 
    _obcParameters = NULL;
-   _obcChain      = NULL;
-   _obcChainTemp  = NULL;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -149,7 +140,7 @@ int CpuObc::setObcParameters(  ObcParameters* obcParameters ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuObc::getObcChain( void ){
+vector<RealOpenMM>& CpuObc::getObcChain( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -157,8 +148,8 @@ RealOpenMM* CpuObc::getObcChain( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _obcChain == NULL ){
-      _obcChain = new RealOpenMM[_obcParameters->getNumberOfAtoms()];
+   if( _obcChain.size() == 0 ){
+      _obcChain.resize(_obcParameters->getNumberOfAtoms());
    }
    return _obcChain;
 }
@@ -171,7 +162,7 @@ RealOpenMM* CpuObc::getObcChain( void ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuObc::getObcChainConst( void ) const {
+const vector<RealOpenMM>& CpuObc::getObcChainConst( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -191,7 +182,7 @@ RealOpenMM* CpuObc::getObcChainConst( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* CpuObc::getObcChainTemp( void ){
+vector<RealOpenMM>& CpuObc::getObcChainTemp( void ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -199,9 +190,6 @@ RealOpenMM* CpuObc::getObcChainTemp( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   if( _obcChainTemp == NULL ){
-      _obcChainTemp = new RealOpenMM[_obcParameters->getNumberOfAtoms()];
-   }
    return _obcChainTemp;
 }
 
@@ -219,7 +207,7 @@ RealOpenMM* CpuObc::getObcChainTemp( void ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii, RealOpenMM* obcChain ){
+int CpuObc::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -239,9 +227,7 @@ int CpuObc::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* born
    int numberOfAtoms                     = obcParameters->getNumberOfAtoms();
    RealOpenMM* atomicRadii               = obcParameters->getAtomicRadii();
    const RealOpenMM* scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
-   if( !obcChain ){
-      obcChain                           = getObcChain();
-   }
+   vector<RealOpenMM>& obcChain          = getObcChain();
 
    RealOpenMM dielectricOffset           = obcParameters->getDielectricOffset();
    RealOpenMM alphaObc                   = obcParameters->getAlphaObc();
@@ -361,7 +347,7 @@ if( logFile ){
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+int CpuObc::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                      const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
@@ -381,10 +367,6 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& ato
 
    const ObcParameters* obcParameters = getObcParameters();
    const int numberOfAtoms            = obcParameters->getNumberOfAtoms();
-
-   if( bornRadii == NULL ){
-      bornRadii   = getBornRadii();
-   }
 
    // ---------------------------------------------------------------------------------------
 
@@ -414,7 +396,6 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& ato
    // set energy/forces to zero
 
    RealOpenMM obcEnergy                 = zero;
-   const unsigned int arraySzInBytes    = sizeof( RealOpenMM )*numberOfAtoms;
 
    RealOpenMM** forces  = (RealOpenMM**) malloc( sizeof( RealOpenMM* )*numberOfAtoms );
    RealOpenMM*  block   = (RealOpenMM*)  malloc( sizeof( RealOpenMM )*numberOfAtoms*3 );
@@ -425,8 +406,8 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& ato
 		blockPtr  += 3;
    }
 
-   RealOpenMM* bornForces = getBornForce();
-   memset( bornForces, 0, arraySzInBytes );
+   vector<RealOpenMM>& bornForces = getBornForce();
+   bornForces.assign(numberOfAtoms, 0.0);
 
    // ---------------------------------------------------------------------------------------
 
@@ -518,13 +499,13 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& ato
    // initialize Born radii & ObcChain temp arrays -- contain values
    // used in next iteration
 
-   RealOpenMM* bornRadiiTemp             = getBornRadiiTemp();
-   memset( bornRadiiTemp, 0, arraySzInBytes );
+   vector<RealOpenMM>& bornRadiiTemp     = getBornRadiiTemp();
+   bornRadiiTemp.assign(numberOfAtoms, 0.0);
 
-   RealOpenMM* obcChainTemp              = getObcChainTemp();
-   memset( obcChainTemp, 0, arraySzInBytes );
+   vector<RealOpenMM>& obcChainTemp      = getObcChainTemp();
+   obcChainTemp.assign(numberOfAtoms, 0.0);
 
-   RealOpenMM* obcChain                  = getObcChain();
+   vector<RealOpenMM>& obcChain          = getObcChain();
    const RealOpenMM* atomicRadii         = obcParameters->getAtomicRadii();
 
    const RealOpenMM alphaObc             = obcParameters->getAlphaObc();
@@ -644,8 +625,8 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& ato
 
    // copy new Born radii and obcChain values into permanent array
 
-   memcpy( bornRadii, bornRadiiTemp, arraySzInBytes );
-   memcpy( obcChain, obcChainTemp, arraySzInBytes );
+   bornRadii = bornRadiiTemp;
+   obcChain = obcChainTemp;
 
 	free( (char*) block );
 	free( (char*) forces );
