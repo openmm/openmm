@@ -25,6 +25,9 @@
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce( RealOpenMM epso, RealOpenMM epsh, RealOpenMM rmino, RealOpenMM rminh, 
                                                                       RealOpenMM awater, RealOpenMM shctd, RealOpenMM dispoff, RealOpenMM slevy ) :
                                _epso(epso), _epsh(epsh), _rmino(rmino), _rminh(rminh), _awater(awater), _shctd(shctd), _dispoff(dispoff), _slevy(slevy) {
@@ -32,8 +35,8 @@ AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce( RealOpenMM
 
 
 RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiusI, RealOpenMM radiusK, 
-                                                                const RealOpenMM* particleIPosition,
-                                                                const RealOpenMM* particleJPosition,
+                                                                const RealVec& particleIPosition,
+                                                                const RealVec& particleJPosition,
                                                                 const RealOpenMM* const intermediateValues,
                                                                 Vec3& force ) const {
 
@@ -252,11 +255,11 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculatePairIxn( RealOpenMM radiu
 }
 
 RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numParticles,
-                                                                       RealOpenMM** const particlePositions, 
+                                                                       const vector<RealVec>& particlePositions,
                                                                        const std::vector<RealOpenMM>& radii,
                                                                        const std::vector<RealOpenMM>& epsilons,
                                                                        RealOpenMM totalMaximumDispersionEnergy,
-                                                                       RealOpenMM** forces ) const {
+                                                                       vector<RealVec>& forces ) const {
 
     // ---------------------------------------------------------------------------------------
 

@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferencePiTorsionForce_H__
 #define __AmoebaReferencePiTorsionForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numPiTorsions, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numPiTorsions, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>&  particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<int>&  particle3,
@@ -80,7 +80,7 @@ public:
                                         const std::vector<int>&  particle5,
                                         const std::vector<int>&  particle6,
                                         const std::vector<RealOpenMM>& kTorsion,
-                                        RealOpenMM** forceData ) const;
+                                        std::vector<OpenMM::RealVec>& forceData ) const;
 
 
 private:
@@ -102,10 +102,10 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculatePiTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                      const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                      const RealOpenMM* positionAtomE, const RealOpenMM* positionAtomF,
-                                      RealOpenMM kTorsion, RealOpenMM** forces ) const;
+    RealOpenMM calculatePiTorsionIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                      const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
+                                      const OpenMM::RealVec& positionAtomE, const OpenMM::RealVec& positionAtomF,
+                                      RealOpenMM kTorsion, OpenMM::RealVec* forces ) const;
          
 };
 

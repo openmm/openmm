@@ -25,6 +25,9 @@
 #include "AmoebaReferenceHarmonicBondForce.h"
 #include "AmoebaReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba harmonic bond ixn (force and energy)
@@ -41,10 +44,10 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceHarmonicBondForce::calculateBondIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+RealOpenMM AmoebaReferenceHarmonicBondForce::calculateBondIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
                                                                RealOpenMM bondLength, RealOpenMM bondK,
                                                                RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                                               RealOpenMM** forces ) const {
+                                                               RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -85,21 +88,21 @@ RealOpenMM AmoebaReferenceHarmonicBondForce::calculateBondIxn( const RealOpenMM*
 }
 
 RealOpenMM AmoebaReferenceHarmonicBondForce::calculateForceAndEnergy( int numBonds,
-                                                                      RealOpenMM** particlePositions,
+                                                                      vector<RealVec>& particlePositions,
                                                                       const std::vector<int>&   particle1,
                                                                       const std::vector<int>&   particle2,
                                                                       const std::vector<RealOpenMM>& length,
                                                                       const std::vector<RealOpenMM>& kQuadratic,
                                                                       RealOpenMM globalHarmonicBondCubic,
                                                                       RealOpenMM globalHarmonicBondQuartic,
-                                                                      RealOpenMM** forceData ) const {
+                                                                      vector<RealVec>& forceData ) const {
     RealOpenMM energy      = 0.0; 
     for( int ii = 0; ii < numBonds; ii++ ){
         int particle1Index      = particle1[ii];
         int particle2Index      = particle2[ii];
         RealOpenMM bondLength   = length[ii];
         RealOpenMM bondK        = kQuadratic[ii];
-        RealOpenMM* forces[2];
+        RealVec forces[2];
         forces[0]               = forceData[particle1Index];
         forces[1]               = forceData[particle2Index];
         energy                 += calculateBondIxn( particlePositions[particle1Index], particlePositions[particle2Index],

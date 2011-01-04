@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceMultipoleForce_H__
 #define __AmoebaReferenceMultipoleForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include "openmm/Vec3.h"
 #include "AmoebaMultipoleForce.h"
 #include <string>
@@ -203,7 +203,7 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateForceAndEnergy( int numParticles, RealOpenMM** particlePositions,
+    RealOpenMM calculateForceAndEnergy( int numParticles, std::vector<OpenMM::RealVec>& particlePositions,
                                         const std::vector<RealOpenMM>& charges,
                                         const std::vector<RealOpenMM>& dipoles,
                                         const std::vector<RealOpenMM>& quadrupoles,
@@ -215,7 +215,7 @@ public:
                                         const std::vector<int>& multipoleAtomXs,
                                         const std::vector<int>& multipoleAtomYs,
                                         const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
-                                        RealOpenMM** forces );
+                                        std::vector<OpenMM::RealVec>& forces );
 
 
          
@@ -270,7 +270,7 @@ private:
     
     void initialize( void );
 
-    void loadParticleData( RealOpenMM** particlePositions, 
+    void loadParticleData( std::vector<OpenMM::RealVec>& particlePositions, 
                                                       const std::vector<RealOpenMM>& charges,
                                                       const std::vector<RealOpenMM>& dipoles,
                                                       const std::vector<RealOpenMM>& quadrupoles,
@@ -319,7 +319,7 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    void getDelta( unsigned int particleI, unsigned int particleJ, RealOpenMM** particlePositions, RealOpenMM* delta ) const;
+    void getDelta( unsigned int particleI, unsigned int particleJ, std::vector<OpenMM::RealVec>& particlePositions, RealOpenMM* delta ) const;
 
     /**---------------------------------------------------------------------------------------
     
@@ -464,7 +464,7 @@ private:
 
     RealOpenMM calculateNoCutoffElectrostaticPairIxn( const MultipoleParticleData& particleI,
                                                       const MultipoleParticleData& particleK,
-                                                      RealOpenMM* scalingFactors, RealOpenMM** forces, std::vector<Vec3>& torque ) const;
+                                                      RealOpenMM* scalingFactors, std::vector<OpenMM::RealVec>& forces, std::vector<Vec3>& torque ) const;
 
     /**---------------------------------------------------------------------------------------
     
@@ -483,19 +483,19 @@ private:
                            const MultipoleParticleData& particleU,
                            const MultipoleParticleData& particleV,
                                  MultipoleParticleData* particleW,
-                           int axisType, const Vec3& torque, RealOpenMM** forces ) const;
+                           int axisType, const Vec3& torque, std::vector<OpenMM::RealVec>& forces ) const;
 
     void mapTorqueToForceOld( const MultipoleParticleData& particleI,
                               const MultipoleParticleData& particleU,
                               const MultipoleParticleData& particleV,
-                              int axisType, const Vec3& torque, RealOpenMM** forces ) const;
+                              int axisType, const Vec3& torque, std::vector<OpenMM::RealVec>& forces ) const;
 
     RealOpenMM calculateNoCutoffElectrostatic( std::vector<MultipoleParticleData>& particleData, 
                                                const std::vector<int>& axisTypes,
                                                const std::vector<int>& multipoleAtomZs,
                                                const std::vector<int>& multipoleAtomXs,
                                                const std::vector<int>& multipoleAtomYs,
-                                               RealOpenMM** forces ) const;
+                                               std::vector<OpenMM::RealVec>& forces ) const;
 
     /**---------------------------------------------------------------------------------------
     
@@ -515,7 +515,7 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateNoCutoffForceAndEnergy( unsigned int numParticles, RealOpenMM** particlePositions,
+    RealOpenMM calculateNoCutoffForceAndEnergy( unsigned int numParticles, std::vector<OpenMM::RealVec>& particlePositions,
                                                 const std::vector<RealOpenMM>& charges,
                                                 const std::vector<RealOpenMM>& dipoles,
                                                 const std::vector<RealOpenMM>& quadrupoles,
@@ -526,7 +526,7 @@ private:
                                                 const std::vector<int>& multipoleAtomZs,
                                                 const std::vector<int>& multipoleAtomXs,
                                                 const std::vector<int>& multipoleAtomYs,
-                                                RealOpenMM** forces );
+                                                std::vector<OpenMM::RealVec>& forces );
 
 };
 

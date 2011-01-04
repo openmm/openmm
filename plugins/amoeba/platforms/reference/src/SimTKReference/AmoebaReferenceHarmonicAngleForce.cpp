@@ -25,6 +25,9 @@
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceHarmonicAngleForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Get dEdT and energy prefactor given cosine of angle :: the calculation for different
@@ -110,12 +113,12 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::getPrefactorsGivenAngleCosine( Rea
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateAngleIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                 const RealOpenMM* positionAtomC,
+RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateAngleIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                 const RealVec& positionAtomC,
                                                                  RealOpenMM angle,          RealOpenMM angleK,
                                                                  RealOpenMM angleCubic,     RealOpenMM angleQuartic,
                                                                  RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                                                 RealOpenMM** forces ) const {
+                                                                 RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -180,7 +183,7 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateAngleIxn( const RealOpenM
     return energy;
 }
 
-RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( int numAngles, RealOpenMM** posData,
+RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( int numAngles, vector<RealVec>& posData,
                                                                        const std::vector<int>&  particle1,
                                                                        const std::vector<int>&  particle2,
                                                                        const std::vector<int>&  particle3,
@@ -190,7 +193,7 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( int numAn
                                                                        RealOpenMM angleQuartic,
                                                                        RealOpenMM anglePentic,
                                                                        RealOpenMM angleSextic,
-                                                                       RealOpenMM** forceData) const {
+                                                                       vector<RealVec>& forceData) const {
     RealOpenMM energy      = 0.0; 
     for (unsigned int ii = 0; ii < numAngles; ii++) {
         int particle1Index      = particle1[ii];
@@ -198,7 +201,7 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( int numAn
         int particle3Index      = particle3[ii];
         RealOpenMM idealAngle   = angle[ii];
         RealOpenMM angleK       = kQuadratic[ii];
-        RealOpenMM* forces[3];
+        RealVec forces[3];
         forces[0]               = forceData[particle1Index];
         forces[1]               = forceData[particle2Index];
         forces[2]               = forceData[particle3Index];

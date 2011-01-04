@@ -51,24 +51,24 @@
 using namespace OpenMM;
 using namespace std;
 
-static RealOpenMM** extractPositions(ContextImpl& context) {
+static vector<RealVec>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM**) data->positions;
+    return *((vector<RealVec>*) data->positions);
 }
- 
-static RealOpenMM** extractVelocities(ContextImpl& context) {
+
+static vector<RealVec>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM**) data->velocities;
+    return *((vector<RealVec>*) data->velocities);
 }
- 
-static RealOpenMM** extractForces(ContextImpl& context) {
+
+static vector<RealVec>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM**) data->forces;
+    return *((vector<RealVec>*) data->forces);
 }
- 
-static RealOpenMM* extractBoxSize(ContextImpl& context) {
+
+static RealVec& extractBoxSize(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return (RealOpenMM*) data->periodicBoxSize;
+    return *(RealVec*) data->periodicBoxSize;
 }
 
 // ***************************************************************************
@@ -99,8 +99,8 @@ void ReferenceCalcAmoebaHarmonicBondForceKernel::initialize(const System& system
 }
 
 double ReferenceCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceHarmonicBondForce amoebaReferenceHarmonicBondForce;
     RealOpenMM energy      = amoebaReferenceHarmonicBondForce.calculateForceAndEnergy( numBonds, posData, particle1, particle2, length, kQuadratic,
                                                                                        globalHarmonicBondCubic, globalHarmonicBondQuartic,
@@ -136,8 +136,8 @@ void ReferenceCalcAmoebaUreyBradleyForceKernel::initialize(const System& system,
 }
 
 double ReferenceCalcAmoebaUreyBradleyForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceUreyBradleyForce amoebaReferenceUreyBradleyForce;
     RealOpenMM energy      = amoebaReferenceUreyBradleyForce.calculateForceAndEnergy( numIxns, posData, particle1, particle2, length, kQuadratic,
                                                                                       globalUreyBradleyCubic, globalUreyBradleyQuartic,
@@ -173,8 +173,8 @@ void ReferenceCalcAmoebaHarmonicAngleForceKernel::initialize(const System& syste
 }
 
 double ReferenceCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceHarmonicAngleForce amoebaReferenceHarmonicAngleForce;
     RealOpenMM energy      = amoebaReferenceHarmonicAngleForce.calculateForceAndEnergy( numAngles, 
                                        posData, particle1, particle2, particle3, angle, kQuadratic, globalHarmonicAngleCubic, globalHarmonicAngleQuartic, globalHarmonicAnglePentic, globalHarmonicAngleSextic, forceData );
@@ -210,8 +210,8 @@ void ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System
 
 double ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceHarmonicInPlaneAngleForce amoebaReferenceHarmonicInPlaneAngleForce;
     RealOpenMM energy      = amoebaReferenceHarmonicInPlaneAngleForce.calculateForceAndEnergy( numAngles, posData, particle1, particle2, particle3, particle4, 
                                                                                                angle, kQuadratic, globalHarmonicInPlaneAngleCubic, globalHarmonicInPlaneAngleQuartic,
@@ -260,8 +260,8 @@ void ReferenceCalcAmoebaTorsionForceKernel::initialize(const System& system, con
 }
 
 double ReferenceCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceTorsionForce amoebaReferenceTorsionForce;
     RealOpenMM energy      = amoebaReferenceTorsionForce.calculateForceAndEnergy( numTorsions, posData, particle1, particle2, particle3, particle4,
                                                                                   torsionParameters1, torsionParameters2, torsionParameters3, forceData );
@@ -294,8 +294,8 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, c
 }
 
 double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferencePiTorsionForce amoebaReferencePiTorsionForce;
     RealOpenMM energy      = amoebaReferencePiTorsionForce.calculateForceAndEnergy( numPiTorsions, posData, particle1, particle2,
                                                                                     particle3, particle4, particle5, particle6,
@@ -328,8 +328,8 @@ void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system,
 }
 
 double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceStretchBendForce amoebaReferenceStretchBendForce;
     RealOpenMM energy      = amoebaReferenceStretchBendForce.calculateForceAndEnergy( numStretchBends, posData, particle1, particle2, particle3,
                                                                                       lengthABParameters, lengthCBParameters, angleParameters, kParameters, forceData );
@@ -366,8 +366,8 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& syst
 }
 
 double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceOutOfPlaneBendForce amoebaReferenceOutOfPlaneBendForce;
     RealOpenMM energy      = amoebaReferenceOutOfPlaneBendForce.calculateForceAndEnergy( numOutOfPlaneBends, posData,
                                                                                          particle1, particle2, particle3, particle4,
@@ -430,8 +430,8 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
 
 double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceTorsionTorsionForce amoebaReferenceTorsionTorsionForce;
     RealOpenMM energy      = amoebaReferenceTorsionTorsionForce.calculateForceAndEnergy( numTorsionTorsions, posData,
                                                                                          particle1, particle2, particle3, particle4, particle5,
@@ -524,8 +524,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
 }
 
 double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
 
     AmoebaReferenceMultipoleForce amoebaReferenceMultipoleForce( AmoebaReferenceMultipoleForce::NoCutoff );
     amoebaReferenceMultipoleForce.setMutualInducedDipoleTargetEpsilon( mutualInducedTargetEpsilon );
@@ -627,8 +627,8 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce( sigmaCombiningRule, epsilonCombiningRule, AmoebaReferenceVdwForce::NoCutoff );
     RealOpenMM energy      = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, indexClasses, sigmas, epsilons, reductions, allExclusions, forceData);
     return static_cast<double>(energy);
@@ -674,8 +674,8 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::initialize(const System& syste
 }
 
 double ReferenceCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
+    vector<RealVec>& posData   = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceWcaDispersionForce amoebaReferenceWcaDispersionForce( epso, epsh, rmino, rminh, awater, shctd, dispoff, slevy );
     RealOpenMM energy      = amoebaReferenceWcaDispersionForce.calculateForceAndEnergy( numParticles, posData, radii, epsilons, totalMaximumDispersionEnergy, forceData);
     return static_cast<double>(energy);

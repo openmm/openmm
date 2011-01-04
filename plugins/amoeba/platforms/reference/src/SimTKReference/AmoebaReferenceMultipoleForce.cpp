@@ -27,6 +27,9 @@
 #include <sstream>
 #include <algorithm>
 
+using std::vector;
+using OpenMM::RealVec;
+
 #define AMOEBA_DEBUG
 
 AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce( ) : _nonbondedMethod(NoCutoff) {
@@ -134,7 +137,7 @@ void AmoebaReferenceMultipoleForce::setMutualInducedDipoleTargetEpsilon( RealOpe
     _mutualInducedDipoleTargetEpsilon = mutualInducedDipoleTargetEpsilon;
 }
 
-void AmoebaReferenceMultipoleForce::getDelta( unsigned int particleI, unsigned int particleJ, RealOpenMM** particlePositions,
+void AmoebaReferenceMultipoleForce::getDelta( unsigned int particleI, unsigned int particleJ, vector<RealVec>& particlePositions,
                                               RealOpenMM* delta ) const {
 
     delta[0]  = particlePositions[particleJ][0] - particlePositions[particleI][0];
@@ -332,7 +335,7 @@ void AmoebaReferenceMultipoleForce::getScaleFactors( unsigned int particleI, uns
     scaleFactors[U_SCALE] = getScaleFactor( particleI, particleJ, U_SCALE );
 }
 
-void AmoebaReferenceMultipoleForce::loadParticleData( RealOpenMM** particlePositions, 
+void AmoebaReferenceMultipoleForce::loadParticleData( vector<RealVec>& particlePositions,
                                                       const std::vector<RealOpenMM>& charges,
                                                       const std::vector<RealOpenMM>& dipoles,
                                                       const std::vector<RealOpenMM>& quadrupoles,
@@ -1023,7 +1026,7 @@ fprintf( stderr, "MIb %3u eps=%15.7e %15.7e %15.7e\n", iteration, epsilonDirect,
 
 RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn( const MultipoleParticleData& particleI,
                                                                                  const MultipoleParticleData& particleK,
-                                                                                 RealOpenMM* scalingFactors, RealOpenMM** forces,
+                                                                                 RealOpenMM* scalingFactors, vector<RealVec>& forces,
                                                                                  std::vector<Vec3>& torque ) const {
 
     // ---------------------------------------------------------------------------------------
@@ -1545,7 +1548,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
                                                       const MultipoleParticleData& particleU,
                                                       const MultipoleParticleData& particleV,
                                                             MultipoleParticleData* particleW,
-                                                      int axisType, const Vec3& torque, RealOpenMM** forces ) const {
+                                                      int axisType, const Vec3& torque, vector<RealVec>& forces ) const {
  
     // ---------------------------------------------------------------------------------------
  
@@ -1782,7 +1785,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
 void AmoebaReferenceMultipoleForce::mapTorqueToForceOld( const MultipoleParticleData& particleI,
                                                          const MultipoleParticleData& particleU,
                                                          const MultipoleParticleData& particleV,
-                                                         int axisType, const Vec3& torque, RealOpenMM** forces ) const {
+                                                         int axisType, const Vec3& torque, vector<RealVec>& forces ) const {
  
     // ---------------------------------------------------------------------------------------
  
@@ -1877,7 +1880,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
                                                                           const std::vector<int>& multipoleAtomZs,
                                                                           const std::vector<int>& multipoleAtomXs,
                                                                           const std::vector<int>& multipoleAtomYs,
-                                                                          RealOpenMM** forces ) const {
+                                                                          vector<RealVec>& forces ) const {
 
     // ---------------------------------------------------------------------------------------
 
@@ -1982,7 +1985,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
 }
 
 RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( unsigned int numParticles,
-                                                                           RealOpenMM** particlePositions, 
+                                                                           vector<RealVec>& particlePositions,
                                                                            const std::vector<RealOpenMM>& charges,
                                                                            const std::vector<RealOpenMM>& dipoles,
                                                                            const std::vector<RealOpenMM>& quadrupoles,
@@ -1993,7 +1996,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( unsig
                                                                            const std::vector<int>& multipoleAtomZs,
                                                                            const std::vector<int>& multipoleAtomXs,
                                                                            const std::vector<int>& multipoleAtomYs,
-                                                                           RealOpenMM** forces ){
+                                                                           vector<RealVec>& forces ){
 
 
     // ---------------------------------------------------------------------------------------
@@ -2091,7 +2094,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( unsig
 }
 
 RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy( int numParticles,
-                                                         RealOpenMM** particlePositions, 
+                                                         vector<RealVec>& particlePositions,
                                                          const std::vector<RealOpenMM>& charges,
                                                          const std::vector<RealOpenMM>& dipoles,
                                                          const std::vector<RealOpenMM>& quadrupoles,
@@ -2103,7 +2106,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy( int numPartic
                                                          const std::vector<int>& multipoleAtomXs,
                                                          const std::vector<int>& multipoleAtomYs,
                                                          const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo,
-                                                         RealOpenMM** forces ){
+                                                         vector<RealVec>& forces ){
 
     
     setupScaleMaps( multipoleParticleCovalentInfo );

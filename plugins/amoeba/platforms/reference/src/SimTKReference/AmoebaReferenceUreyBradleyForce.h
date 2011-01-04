@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceUreyBradleyForce_H__
 #define __AmoebaReferenceUreyBradleyForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -68,13 +68,13 @@ public:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateForceAndEnergy( int numIxns, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numIxns, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>& particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<RealOpenMM>& length,
                                         const std::vector<RealOpenMM>& kForce,
                                         RealOpenMM cubic, RealOpenMM quartic,
-                                        RealOpenMM** forceData ) const;
+                                        std::vector<OpenMM::RealVec>& forceData ) const;
 
 private:
 
@@ -94,10 +94,10 @@ private:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateUreyBradleyIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+    RealOpenMM calculateUreyBradleyIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
                                         RealOpenMM idealLength, RealOpenMM kForce,
                                         RealOpenMM cubic, RealOpenMM quartic,
-                                        RealOpenMM** forces ) const;
+                                        OpenMM::RealVec* forces ) const;
      
 };
 

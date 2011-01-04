@@ -25,6 +25,8 @@
 #include "AmoebaReferenceForce.h"
 #include <vector>
 
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Load delta of two vectors
@@ -35,7 +37,7 @@
 
    --------------------------------------------------------------------------------------- */
 
-void AmoebaReferenceForce::loadDeltaR( const RealOpenMM* xVector, const RealOpenMM* yVector,
+void AmoebaReferenceForce::loadDeltaR( const RealVec& xVector, const RealVec& yVector,
                                        std::vector<RealOpenMM>& deltaR ){
 
 

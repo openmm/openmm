@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceTorsionForce_H__
 #define __AmoebaReferenceTorsionForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numTorsions, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numTorsions, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>&  particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<int>&  particle3,
@@ -78,7 +78,7 @@ public:
                                         const std::vector< std::vector<RealOpenMM> >& torsionParameters1,
                                         const std::vector< std::vector<RealOpenMM> >& torsionParameters2,
                                         const std::vector< std::vector<RealOpenMM> >& torsionParameters3,
-                                        RealOpenMM** forceData ) const;
+                                        std::vector<OpenMM::RealVec>& forceData ) const;
 
 private:
 
@@ -99,12 +99,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                               const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+    RealOpenMM calculateTorsionIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                               const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
                                                const std::vector<RealOpenMM>& torsionParameters1,
                                                const std::vector<RealOpenMM>& torsionParameters2,
                                                const std::vector<RealOpenMM>& torsionParameters3,
-                                               RealOpenMM** forces ) const;
+                                               OpenMM::RealVec* forces ) const;
          
 };
 

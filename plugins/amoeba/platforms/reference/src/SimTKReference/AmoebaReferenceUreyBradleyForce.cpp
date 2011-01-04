@@ -25,6 +25,9 @@
 #include "AmoebaReferenceUreyBradleyForce.h"
 #include "AmoebaReferenceForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba UB ixn (force and energy)
@@ -41,10 +44,10 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceUreyBradleyForce::calculateUreyBradleyIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+RealOpenMM AmoebaReferenceUreyBradleyForce::calculateUreyBradleyIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
                                                                      RealOpenMM idealLength, RealOpenMM kForceConstant,
                                                                      RealOpenMM cubicK, RealOpenMM quarticK,
-                                                                     RealOpenMM** forces ) const {
+                                                                     RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -85,21 +88,21 @@ RealOpenMM AmoebaReferenceUreyBradleyForce::calculateUreyBradleyIxn( const RealO
 }
 
 RealOpenMM AmoebaReferenceUreyBradleyForce::calculateForceAndEnergy( int numIxns,
-                                                                      RealOpenMM** particlePositions,
+                                                                      vector<RealVec>& particlePositions,
                                                                       const std::vector<int>&   particle1,
                                                                       const std::vector<int>&   particle2,
                                                                       const std::vector<RealOpenMM>& length,
                                                                       const std::vector<RealOpenMM>& kQuadratic,
                                                                       RealOpenMM globalUreyBradleyCubic,
                                                                       RealOpenMM globalUreyBradleyQuartic,
-                                                                      RealOpenMM** forceData ) const {
+                                                                      vector<RealVec>& forceData ) const {
     RealOpenMM energy      = 0.0; 
     for( int ii = 0; ii < numIxns; ii++ ){
         int particle1Index            = particle1[ii];
         int particle2Index            = particle2[ii];
         RealOpenMM idealLength        = length[ii];
         RealOpenMM kForceConstant     = kQuadratic[ii];
-        RealOpenMM* forces[2];
+        RealVec forces[2];
         forces[0]                     = forceData[particle1Index];
         forces[1]                     = forceData[particle2Index];
         energy                       += calculateUreyBradleyIxn( particlePositions[particle1Index], particlePositions[particle2Index],

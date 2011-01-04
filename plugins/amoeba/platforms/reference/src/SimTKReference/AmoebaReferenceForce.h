@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceForce_H__
 #define __AmoebaReferenceForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include "openmm/Vec3.h"
 #include <vector>
 
@@ -62,7 +62,7 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    static void loadDeltaR( const RealOpenMM* xVector, const RealOpenMM* yVector,
+    static void loadDeltaR( const OpenMM::RealVec& xVector, const OpenMM::RealVec& yVector,
                             std::vector<RealOpenMM>& deltaR );
     
     /**---------------------------------------------------------------------------------------

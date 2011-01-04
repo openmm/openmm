@@ -26,6 +26,9 @@
 #include "AmoebaReferenceStretchBendForce.h"
 #include <vector>
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba stretch bend angle ixn (force and energy)
@@ -46,11 +49,11 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                     const RealOpenMM* positionAtomC,
+RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                     const RealVec& positionAtomC,
                                                                      RealOpenMM lengthAB,      RealOpenMM lengthCB,
                                                                      RealOpenMM idealAngle,    RealOpenMM kParameter,
-                                                                     RealOpenMM** forces ) const {
+                                                                     RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -144,7 +147,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealO
     return (kParameter*dt*dr);
 }
 
-RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStretchBends, RealOpenMM** posData,
+RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStretchBends, vector<RealVec>& posData,
                                                                        const std::vector<int>&  particle1,
                                                                        const std::vector<int>&  particle2,
                                                                        const std::vector<int>&  particle3,
@@ -152,7 +155,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
                                                                        const std::vector<RealOpenMM>& lengthCBParameters,
                                                                        const std::vector<RealOpenMM>&  angle,
                                                                        const std::vector<RealOpenMM>&  kQuadratic,
-                                                                       RealOpenMM** forceData) const {
+                                                                       vector<RealVec>& forceData) const {
     RealOpenMM energy      = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numStretchBends); ii++) {
         int particle1Index      = particle1[ii];
@@ -162,7 +165,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
         RealOpenMM cbLength     = lengthCBParameters[ii];
         RealOpenMM idealAngle   = angle[ii];
         RealOpenMM angleK       = kQuadratic[ii];
-        RealOpenMM* forces[3];
+        RealVec forces[3];
         forces[0]               = forceData[particle1Index];
         forces[1]               = forceData[particle2Index];
         forces[2]               = forceData[particle3Index];

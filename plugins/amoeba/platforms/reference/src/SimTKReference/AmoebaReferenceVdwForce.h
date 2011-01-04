@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceVdwForce_H__
 #define __AmoebaReferenceVdwForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include "openmm/Vec3.h"
 #include <string>
 #include <vector>
@@ -168,13 +168,13 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateForceAndEnergy( int numParticles, RealOpenMM** const particlePositions, 
+    RealOpenMM calculateForceAndEnergy( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions,
                                         const std::vector<int>& indexIVs, 
                                         const std::vector<int>& indexClasses, 
                                         const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                         const std::vector<RealOpenMM>& reductions,
                                         const std::vector< std::vector<int> >& vdwExclusions,
-                                        RealOpenMM** forces ) const;
+                                        std::vector<OpenMM::RealVec>& forces ) const;
          
 private:
 
@@ -208,7 +208,7 @@ private:
     
     void addReducedForce( unsigned int particleI, unsigned int particleIV,
                           RealOpenMM reduction, RealOpenMM sign,
-                          Vec3& force, RealOpenMM** forces ) const;
+                          Vec3& force, std::vector<OpenMM::RealVec>& forces ) const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -246,13 +246,13 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateNoCutoffForceAndEnergy( int numParticles, RealOpenMM** const particlePositions, 
+    RealOpenMM calculateNoCutoffForceAndEnergy( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
                                                 const std::vector<int>& indexIVs, 
                                                 const std::vector<int>& indexClasses, 
                                                 const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                                 const std::vector<RealOpenMM>& reductions,
                                                 const std::vector< std::vector<int> >& vdwExclusions,
-                                                RealOpenMM** forces ) const;
+                                                std::vector<OpenMM::RealVec>& forces ) const;
          
 };
 

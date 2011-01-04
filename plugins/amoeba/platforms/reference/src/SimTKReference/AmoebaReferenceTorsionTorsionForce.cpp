@@ -25,6 +25,9 @@
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Load grid values from rectenclosing angles
@@ -273,8 +276,8 @@ void AmoebaReferenceTorsionTorsionForce::getBicubicValues(
     --------------------------------------------------------------------------------------- */
  
 int AmoebaReferenceTorsionTorsionForce::checkTorsionSign( 
-         const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-         const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD ) const {
+         const RealVec& positionAtomA, const RealVec& positionAtomB,
+         const RealVec& positionAtomC, const RealVec& positionAtomD ) const {
  
     // ---------------------------------------------------------------------------------------
  
@@ -323,11 +326,11 @@ int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                           const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                                                           const RealOpenMM* positionAtomE, const RealOpenMM* positionChiralCheckAtom,
+RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                           const RealVec& positionAtomC, const RealVec& positionAtomD,
+                                                                           const RealVec& positionAtomE, const RealVec* positionChiralCheckAtom,
                                                                            const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
-                                                                           RealOpenMM** forces ) const {
+                                                                           RealVec* forces ) const {
  
    // ---------------------------------------------------------------------------------------
 
@@ -421,7 +424,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     // is 'negative'
   
     if( positionChiralCheckAtom ){
-        sign = checkTorsionSign( positionChiralCheckAtom, positionAtomB, positionAtomC, positionAtomD );
+        sign = checkTorsionSign( *positionChiralCheckAtom, positionAtomB, positionAtomC, positionAtomD );
         if( sign < zero ){
            angle1 = -angle1;
            angle2 = -angle2;
@@ -549,7 +552,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     return gridEnergy;
 }
 
-RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numTorsionTorsions, RealOpenMM** posData,
+RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numTorsionTorsions, vector<RealVec>& posData,
                                                                         const std::vector<int>&  particle1,
                                                                         const std::vector<int>&  particle2,
                                                                         const std::vector<int>&  particle3,
@@ -558,7 +561,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numT
                                                                         const std::vector<int>&  chiralCheckAtom,
                                                                         const std::vector<int>&  gridIndices,
                                                                         const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
-                                                                        RealOpenMM** forceData ) const {
+                                                                        vector<RealVec>& forceData ) const {
     RealOpenMM energy  = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numTorsionTorsions); ii++) {
 
@@ -572,16 +575,16 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numT
 
         int gridIndex            = gridIndices[ii];
 
-        RealOpenMM* forces[5];
+        RealVec forces[5];
         forces[0]                = forceData[particle1Index];
         forces[1]                = forceData[particle2Index];
         forces[2]                = forceData[particle3Index];
         forces[3]                = forceData[particle4Index];
         forces[4]                = forceData[particle5Index];
 
-        RealOpenMM* chiralCheckAtom;
+        RealVec* chiralCheckAtom;
         if( chiralCheckAtomIndex >= 0 ){
-            chiralCheckAtom = posData[chiralCheckAtomIndex];
+            chiralCheckAtom = &posData[chiralCheckAtomIndex];
         } else {
             chiralCheckAtom = NULL;
         }

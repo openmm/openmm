@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceTorsionTorsionForce_H__
 #define __AmoebaReferenceTorsionTorsionForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numTorsionTorsions, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numTorsionTorsions, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>&  particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<int>&  particle3,
@@ -80,7 +80,7 @@ public:
                                         const std::vector<int>&  chiralCheckAtom,
                                         const std::vector<int>&  gridIndices,
                                         const std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > >& torsionTorsionGrids,
-                                        RealOpenMM** forceData ) const;
+                                        std::vector<OpenMM::RealVec>& forceData ) const;
 
 private:
 
@@ -185,8 +185,8 @@ private:
      
         --------------------------------------------------------------------------------------- */
     
-    int checkTorsionSign( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                          const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD ) const;
+    int checkTorsionSign( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                          const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD ) const;
     
     /**---------------------------------------------------------------------------------------
     
@@ -206,11 +206,11 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateTorsionTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                           const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                           const RealOpenMM* positionAtomE, const RealOpenMM* chiralCheckAtom,
+    RealOpenMM calculateTorsionTorsionIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                           const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
+                                           const OpenMM::RealVec& positionAtomE, const OpenMM::RealVec* chiralCheckAtom,
                                            const std::vector< std::vector< std::vector<RealOpenMM> > >& grid,
-                                           RealOpenMM** forces ) const;
+                                           OpenMM::RealVec* forces ) const;
          
 };
 

@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceHarmonicAngleForce_H__
 #define __AmoebaReferenceHarmonicAngleForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numAngles, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numAngles, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>& particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<int>&  particle3,
@@ -82,7 +82,7 @@ public:
                                         RealOpenMM globalHarmonicAngleQuartic,
                                         RealOpenMM globalHarmonicAnglePentic,
                                         RealOpenMM globalHarmonicAngleSextic,
-                                        RealOpenMM** forceData ) const;
+                                        std::vector<OpenMM::RealVec>& forceData ) const;
 
 private:
 
@@ -128,12 +128,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateAngleIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                  const RealOpenMM* positionAtomC,
+    RealOpenMM calculateAngleIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                  const OpenMM::RealVec& positionAtomC,
                                   RealOpenMM angle,          RealOpenMM angleK,
                                   RealOpenMM angleCubic,     RealOpenMM angleQuartic,
                                   RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                  RealOpenMM** forces ) const;
+                                  OpenMM::RealVec* forces ) const;
          
 };
 

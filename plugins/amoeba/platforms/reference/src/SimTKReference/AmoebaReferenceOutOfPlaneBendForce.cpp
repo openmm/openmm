@@ -25,6 +25,9 @@
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba Out-Of-Plane-Bend  ixn (force and energy)
@@ -45,12 +48,12 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                           const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                           const RealVec& positionAtomC, const RealVec& positionAtomD,
                                                                            RealOpenMM angleK,
                                                                            RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
                                                                            RealOpenMM anglePentic,                RealOpenMM angleSextic,
-                                                                           RealOpenMM** forces ) const {
+                                                                           RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -193,7 +196,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
     return energy;
 }
 
-RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numOutOfPlaneBends, RealOpenMM** posData,
+RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numOutOfPlaneBends, vector<RealVec>& posData,
                                                                        const std::vector<int>&  particle1,
                                                                        const std::vector<int>&  particle2,
                                                                        const std::vector<int>&  particle3,
@@ -203,7 +206,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numO
                                                                        RealOpenMM angleQuartic,
                                                                        RealOpenMM anglePentic,
                                                                        RealOpenMM angleSextic,
-                                                                       RealOpenMM** forceData) const {
+                                                                       vector<RealVec>& forceData) const {
     RealOpenMM energy      = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numOutOfPlaneBends); ii++) {
         int particle1Index      = particle1[ii];
@@ -211,7 +214,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numO
         int particle3Index      = particle3[ii];
         int particle4Index      = particle4[ii];
         RealOpenMM kAngle       = kQuadratic[ii];
-        RealOpenMM* forces[4];
+        RealVec forces[4];
         forces[0]               = forceData[particle1Index];
         forces[1]               = forceData[particle2Index];
         forces[2]               = forceData[particle3Index];

@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceOutOfPlaneBendForce_H__
 #define __AmoebaReferenceOutOfPlaneBendForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ public:
      
         --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numOutOfPlaneBends, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numOutOfPlaneBends, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>&  particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<int>&  particle3,
@@ -82,7 +82,7 @@ public:
                                         RealOpenMM angleQuartic,
                                         RealOpenMM anglePentic,
                                         RealOpenMM angleSextic,
-                                        RealOpenMM** forceData) const;
+                                        std::vector<OpenMM::RealVec>& forceData) const;
 
 private:
 
@@ -105,12 +105,12 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateOutOfPlaneBendIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                           const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+    RealOpenMM calculateOutOfPlaneBendIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
+                                           const OpenMM::RealVec& positionAtomC, const OpenMM::RealVec& positionAtomD,
                                            RealOpenMM angleK,
                                            RealOpenMM angleCubic,     RealOpenMM angleQuartic,
                                            RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                           RealOpenMM** forces ) const;
+                                           OpenMM::RealVec* forces ) const;
          
 };
 

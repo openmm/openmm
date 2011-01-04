@@ -26,6 +26,9 @@
 #include "AmoebaReferencePiTorsionForce.h"
 #include <vector>
 
+using std::vector;
+using OpenMM::RealVec;
+
 /**---------------------------------------------------------------------------------------
 
    Calculate Amoeba pi-torsion ixn (force and energy)
@@ -43,10 +46,10 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                                                 const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
-                                                                 const RealOpenMM* positionAtomE, const RealOpenMM* positionAtomF,
-                                                                 RealOpenMM piTorsionK, RealOpenMM** forces ) const {
+RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn( const RealVec& positionAtomA, const RealVec& positionAtomB,
+                                                                 const RealVec& positionAtomC, const RealVec& positionAtomD,
+                                                                 const RealVec& positionAtomE, const RealVec& positionAtomF,
+                                                                 RealOpenMM piTorsionK, RealVec* forces ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -183,7 +186,7 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn( const RealOpenM
  
 }
 
-RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTorsions, RealOpenMM** posData,
+RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTorsions, vector<RealVec>& posData,
                                                                    const std::vector<int>&  particle1,
                                                                    const std::vector<int>&  particle2,
                                                                    const std::vector<int>&  particle3,
@@ -191,7 +194,7 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTors
                                                                    const std::vector<int>&  particle5,
                                                                    const std::vector<int>&  particle6,
                                                                    const std::vector<RealOpenMM>& kTorsion,
-                                                                   RealOpenMM** forceData ) const {
+                                                                   vector<RealVec>& forceData ) const {
     RealOpenMM energy  = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numPiTorsions); ii++) {
 
@@ -202,7 +205,7 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTors
         int particle5Index      = particle5[ii];
         int particle6Index      = particle6[ii];
 
-        RealOpenMM* forces[6];
+        RealVec forces[6];
         forces[0]               = forceData[particle1Index];
         forces[1]               = forceData[particle2Index];
         forces[2]               = forceData[particle3Index];

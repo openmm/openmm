@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceHarmonicBondForce_H__
 #define __AmoebaReferenceHarmonicBondForce_H__
 
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKUtilities/RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
@@ -69,13 +69,13 @@ public:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateForceAndEnergy( int numBonds, RealOpenMM** posData,
+    RealOpenMM calculateForceAndEnergy( int numBonds, std::vector<OpenMM::RealVec>& posData,
                                         const std::vector<int>& particle1,
                                         const std::vector<int>&  particle2,
                                         const std::vector<RealOpenMM>& bondLength,
                                         const std::vector<RealOpenMM>& bondK,
                                         RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                        RealOpenMM** forceData ) const;
+                                        std::vector<OpenMM::RealVec>& forceData ) const;
 
 private:
 
@@ -95,10 +95,10 @@ private:
      
         --------------------------------------------------------------------------------------- */
      
-    RealOpenMM calculateBondIxn( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+    RealOpenMM calculateBondIxn( const OpenMM::RealVec& positionAtomA, const OpenMM::RealVec& positionAtomB,
                                  RealOpenMM bondLength, RealOpenMM bondK,
                                  RealOpenMM bondCubic, RealOpenMM bondQuartic,
-                                 RealOpenMM** forces ) const;
+                                 OpenMM::RealVec* forces ) const;
      
 };
 
