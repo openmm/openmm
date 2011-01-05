@@ -925,9 +925,9 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, NULL );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, NULL );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI_GK", fileId, outputVector );
      }
 #endif

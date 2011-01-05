@@ -122,6 +122,7 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
                 fieldPolarSum[1]       += mask ? ijField[1].z : 0.0f;
                 fieldPolarSum[2]       += mask ? ijField[2].z : 0.0f;
 
+/*
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || (y+j) == targetAtom ){
             unsigned int index                 = atomI == targetAtom ? (y+j) : atomI;
@@ -173,7 +174,6 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
             debugArray[index].z                = ijField[indexJ+1][2];
             debugArray[index].w                = flag;
 
-/*
             index                             += cAmoebaSim.paddedNumberOfAtoms;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -189,10 +189,10 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
             debugArray[index].y                = scaleMask.x & mask ? 1.0f : -1.0f;
             debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
             debugArray[index].w                = + 10.0f;
-*/
 
 }
 #endif
+*/
             }
 
             // Write results
@@ -308,6 +308,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
                         }
     
+/*
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || (y+jIdx) == targetAtom ){
             unsigned int index                 = atomI == targetAtom ? (y+jIdx) : atomI;
@@ -360,6 +361,7 @@ if( atomI == targetAtom || (y+jIdx) == targetAtom ){
             debugArray[index].w                = flag;
 }
 #endif
+*/
                     }
     
                     tj                  = (tj + 1) & (GRID - 1);

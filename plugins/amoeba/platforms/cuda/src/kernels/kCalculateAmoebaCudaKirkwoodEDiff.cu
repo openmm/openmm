@@ -1215,9 +1215,9 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psKirkwoodEDiffForce,      outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,             outputVector);
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
+            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL );
+            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psTorque,             outputVector, NULL);
             cudaWriteVectorOfDoubleVectorsToFile( "CudaForceTorque", fileId, outputVector );
          }
 
@@ -1260,8 +1260,8 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psKirkwoodEDiffForce,      outputVector );
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
+            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodEDiffForce", fileId, outputVector );
          }
 

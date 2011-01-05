@@ -779,16 +779,14 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     if( data.getMultipoleForceCount() == 0 ){
         gpuCopyWorkUnit( gpu );
     }
-    //if( data.getApplyCutoff() && (data.getMultipoleForceCount() % 100) == 0 ){
-        //gpuReorderAtoms(gpu->gpuContext);
-    //}
     data.incrementMultipoleForceCount();
-    data.initializeGpu();
 
     if( 0 && data.getLog() ){
-        (void) fprintf( data.getLog(), "computeAmoebaMultipoleForce\n" );
+        (void) fprintf( data.getLog(), "In computeAmoebaMultipoleForce\n" );
         (void) fflush( data.getLog());
     }
+
+    data.initializeGpu();
 
     // calculate Born radii
 
@@ -974,23 +972,27 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         nb.setCutoffDistance(force.getCutoffDistance());
         std::vector<int> pmeGridDimension;
         force.getPmeGridDimensions( pmeGridDimension );
-        if( 1 || pmeGridDimension[0] == 0 ){
+        int pmeParametersSetBasedOnEwaldErrorTolerance;
+        if( pmeGridDimension[0] == 0 ){
             NonbondedForceImpl::calcPMEParameters(system, nb, alpha, xsize, ysize, zsize);
-/*
-alpha = 5.446;
-xsize = 60;
-ysize = 48;
-zsize = 48;
-*/
+            pmeParametersSetBasedOnEwaldErrorTolerance = 1;
         } else {
             alpha = force.getAEwald();
             xsize = pmeGridDimension[0];
             ysize = pmeGridDimension[1];
             zsize = pmeGridDimension[2];
+            pmeParametersSetBasedOnEwaldErrorTolerance = 0;
         }
         if( data.getLog() ){
-            (void) fprintf( data.getLog(), "AmoebaMultipoleForce: PME parameters tol=%12.3e cutoff=%12.3f alpha=%12.3f [%d %d %d]\n",
+            (void) fprintf( data.getLog(), "AmoebaMultipoleForce: PME parameters tol=%12.3e cutoff=%12.3f alpha=%12.3f [%d %d %d] -",
                             force.getEwaldErrorTolerance(), force.getCutoffDistance(),  alpha, xsize, ysize, zsize );
+            if( pmeParametersSetBasedOnEwaldErrorTolerance  ){
+                 (void) fprintf( data.getLog(), " parameters set based on error tolerance and OpenMM algorithm.\n" );
+            } else {
+                 double impliedTolerance  = alpha*force.getCutoffDistance();
+                        impliedTolerance  = 0.5*exp( -(impliedTolerance*impliedTolerance) );
+                 (void) fprintf( data.getLog(), " using input parameters   implied tolerance=%12.3e\n", impliedTolerance );
+            }
             (void) fflush( data.getLog() );
         }
         gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);

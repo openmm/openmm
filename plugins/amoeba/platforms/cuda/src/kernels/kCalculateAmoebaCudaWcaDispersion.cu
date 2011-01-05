@@ -631,8 +631,8 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,   outputVector );
-        cudaLoadCudaFloatArray(  gpu->natoms, 3, psTempForce,    outputVector );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,   outputVector, NULL );
+        cudaLoadCudaFloatArray(  gpu->natoms, 3, psTempForce,    outputVector, NULL );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaWca", fileId, outputVector );
         delete psTempForce;
         //exit(0);

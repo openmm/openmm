@@ -1748,10 +1748,10 @@ static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( amoebaGpu->gpuContext->natoms,  3, amoebaGpu->gpuContext->psPosq4,       outputVector );
-            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornRadii,   outputVector );
-            cudaLoadCudaFloat2Array( amoebaGpu->gpuContext->natoms,  2, amoebaGpu->gpuContext->psObcData,     outputVector );
-            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornForce,   outputVector );
+            cudaLoadCudaFloat4Array( amoebaGpu->gpuContext->natoms,  3, amoebaGpu->gpuContext->psPosq4,       outputVector, NULL );
+            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornRadii,   outputVector, NULL );
+            cudaLoadCudaFloat2Array( amoebaGpu->gpuContext->natoms,  2, amoebaGpu->gpuContext->psObcData,     outputVector, NULL );
+            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornForce,   outputVector, NULL );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaBornForce", fileId, outputVector );
             (void) fprintf( amoebaGpu->log, "kReduceToBornForcePrefactor: exiting.\n" );
             (void) fprintf( stderr, "kReduceToBornForcePrefactor: exiting.\n" ); (void) fflush( stderr );
@@ -2069,8 +2069,8 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
             cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psKirkwoodForce,      outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,             outputVector);
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psKirkwoodForce,      outputVector, NULL );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,             outputVector, NULL);
             cudaWriteVectorOfDoubleVectorsToFile( "CudaForceTorque", fileId, outputVector );
 
          }
@@ -2113,8 +2113,8 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psKirkwoodForce,      outputVector );
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psKirkwoodForce,      outputVector, NULL );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodForce", fileId, outputVector );
          }
 

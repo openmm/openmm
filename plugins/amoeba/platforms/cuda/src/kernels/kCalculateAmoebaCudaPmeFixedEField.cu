@@ -194,18 +194,18 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
         float ralpha      = cSim.alphaEwald*r;
 
-        float bn0             = erfc(ralpha)/r;
+        float bn0         = erfc(ralpha)/r;
         float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
         float exp2a       = exp(-(ralpha*ralpha));
         alsq2n           *= alsq2;
-        float bn1             = (bn0+alsq2n*exp2a)/r2;
+        float bn1         = (bn0+alsq2n*exp2a)/r2;
 
         alsq2n           *= alsq2;
-        float bn2             = (3.0f*bn1+alsq2n*exp2a)/r2;
+        float bn2         = (3.0f*bn1+alsq2n*exp2a)/r2;
 
         alsq2n           *= alsq2;
-        float bn3             = (5.0f*bn2+alsq2n*exp2a)/r2;
+        float bn3         = (5.0f*bn2+alsq2n*exp2a)/r2;
 
         // compute the error function scaled and unscaled terms
 
@@ -565,9 +565,9 @@ if( fabs(debugArray->_pSysStream[0][jj+3*paddedNumberOfAtoms].x) > 0.0 ){
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector);
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
          }
          delete debugArray;
@@ -578,9 +578,9 @@ if( fabs(debugArray->_pSysStream[0][jj+3*paddedNumberOfAtoms].x) > 0.0 ){
             std::vector<int> fileId;
             fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector);
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData);
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
 
          }
@@ -590,4 +590,15 @@ void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
 {
     kCalculateAmoebaPMEFixedMultipoles( amoebaGpu );
     cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
+
+    if( 0 ){
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
+    }
 }

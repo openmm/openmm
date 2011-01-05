@@ -594,8 +594,8 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
 //        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, NULL );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, NULL );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
      }
 

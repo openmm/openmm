@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(5e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
+AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(1e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
                                                mutualInducedTargetEpsilon(1.0e-05), scalingDistanceCutoff(100.0), electricConstant(138.9354558456) {
 }
 

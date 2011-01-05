@@ -3909,6 +3909,33 @@ void cudaWriteVectorOfDoubleVectorsToFile( char* fname, std::vector<int>& fileId
     (void) fclose( filePtr );
 }
 
+CUDAStream<float>* reorderFloat( amoebaGpuContext amoebaGpu, CUDAStream<float>* arrayToReorder ){
+
+     gpuContext gpu                       = amoebaGpu->gpuContext;
+     CUDAStream<float>* reorderdArray     = new CUDAStream<float>(amoebaGpu->gpuContext->sim.paddedNumberOfAtoms, 1, "TempReorder");
+     int* order                           = gpu->psAtomIndex->_pSysData;
+     for( int ii = 0; ii < gpu->natoms; ii++ ){
+         reorderdArray->_pSysStream[0][order[ii]] = arrayToReorder->_pSysStream[0][ii];
+     }
+     return reorderdArray;
+
+}
+
+CUDAStream<float4>* reorderFloat4( amoebaGpuContext amoebaGpu, CUDAStream<float4>* arrayToReorder ){
+
+     gpuContext gpu                       = amoebaGpu->gpuContext;
+     CUDAStream<float4>* reorderdArray    = new CUDAStream<float4>(amoebaGpu->gpuContext->sim.paddedNumberOfAtoms, 1, "TempReorder4");
+     int* order                           = gpu->psAtomIndex->_pSysData;
+     for( int ii = 0; ii < gpu->natoms; ii++ ){
+         reorderdArray->_pSysStream[0][order[ii]].x = arrayToReorder->_pSysStream[0][ii].x;
+         reorderdArray->_pSysStream[0][order[ii]].y = arrayToReorder->_pSysStream[0][ii].y;
+         reorderdArray->_pSysStream[0][order[ii]].z = arrayToReorder->_pSysStream[0][ii].z;
+         reorderdArray->_pSysStream[0][order[ii]].w = arrayToReorder->_pSysStream[0][ii].w;
+     }
+     return reorderdArray;
+
+}
+
 /**---------------------------------------------------------------------------------------
 
    Load contents of arrays into vector
@@ -3920,7 +3947,9 @@ void cudaWriteVectorOfDoubleVectorsToFile( char* fname, std::vector<int>& fileId
 
    --------------------------------------------------------------------------------------- */
 
-void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDAStream<float>* array, VectorOfDoubleVectors& outputVector )
+void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle,
+                             CUDAStream<float>* array, VectorOfDoubleVectors& outputVector,
+                             int* order )
 {
     // ---------------------------------------------------------------------------------------
 
@@ -3929,14 +3958,19 @@ void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDA
     // ---------------------------------------------------------------------------------------
 
     array->Download();
-    int runningIndex  = 0;
+    int orderIndex    = 0;
     
     outputVector.resize( numberOfParticles ); 
- 
     for( int ii = 0; ii < numberOfParticles; ii++ ){ 
-       for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
-          outputVector[ii].push_back( array->_pSysStream[0][runningIndex++] );
-       }
+        if( order ){
+            orderIndex = order[ii];
+        } else {
+            orderIndex = ii;
+        }
+        for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
+            outputVector[orderIndex].push_back( array->_pSysStream[0][entriesPerParticle*ii+jj] );
+        }
+        
     }
 }
 
@@ -3975,6 +4009,7 @@ void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUD
     }
 }
 
+
 /**---------------------------------------------------------------------------------------
 
    Load contents of arrays into vector
@@ -3983,10 +4018,12 @@ void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUD
    @param entriesPerParticle   entries/particles array
    @param array                cuda array
    @param outputVector         output vector
+   @param order                if set, reorder entries
 
    --------------------------------------------------------------------------------------- */
 
-void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array, VectorOfDoubleVectors& outputVector ) 
+void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array,
+                              VectorOfDoubleVectors& outputVector, int* order ) 
 {
     // ---------------------------------------------------------------------------------------
 
@@ -3996,21 +4033,27 @@ void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUD
 
     array->Download();
     int runningIndex  = 0;
+    int orderIndex;
     
     outputVector.resize( numberOfParticles ); 
  
     for( int ii = 0; ii < numberOfParticles; ii++ ){ 
+        if( order ){
+            orderIndex = order[runningIndex];
+        } else {
+            orderIndex = runningIndex;
+        }
         if( entriesPerParticle > 0 ){
-            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].x );
+            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].x );
         }
         if( entriesPerParticle > 1 ){
-            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].y );
+            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].y );
         }
         if( entriesPerParticle > 2 ){
-            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].z );
+            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].z );
         }
         if( entriesPerParticle > 3 ){
-            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].w );
+            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].w );
         }
         runningIndex++;
     }
@@ -4353,8 +4396,8 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
         }
         (void) fflush( amoebaGpu->log );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psVelm4,                    outputVector );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psVelm4,                    outputVector, NULL );
 /*
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );

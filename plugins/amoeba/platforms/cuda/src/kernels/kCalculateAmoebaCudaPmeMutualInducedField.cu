@@ -193,6 +193,7 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
         fields[2].z       = 0.0f;
         fields[2].w       = 0.0f;
     }
+/*
 #ifdef AMOEBA_DEBUG
     pullBack[0].x = xr;
     pullBack[0].y = yr;
@@ -204,7 +205,6 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
     pullBack[1].z = bn2;
     pullBack[1].w = exp2a;
 
-/*
     pullBack[1].x = atomJ.x - atomI.x;
     pullBack[1].y = atomJ.y - atomI.y;
     pullBack[1].z = atomJ.z - atomI.z;
@@ -212,8 +212,8 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
     pullBack[1].x = scale3;
     pullBack[1].y = scale5;
     pullBack[1].z = scale7;
-*/
 #endif
+*/
 }
 
 // Include versions of the kernels for N^2 calculations.
@@ -385,8 +385,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
     static const char* methodName = "cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply";
     static int iteration = 1;
     if( 1 && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s: scalingDistanceCutoff=%.5f\n",
-                        methodName, amoebaGpu->scalingDistanceCutoff );
+        (void) fprintf( amoebaGpu->log, "%s\n", methodName );
         (void) fflush( amoebaGpu->log );
     }
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
@@ -748,9 +747,9 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         std::vector<int> fileId;
         fileId.push_back( iteration );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeMI", fileId, outputVector );
      }
 
@@ -780,9 +779,9 @@ fflush( amoebaGpu->log );
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeMI", fileId, outputVector );
      }
 
