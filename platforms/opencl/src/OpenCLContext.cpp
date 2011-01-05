@@ -61,7 +61,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
             // Try to figure out which device is the fastest.
 
-            int bestSpeed = 0;
+            int bestSpeed = -1;
             for (int i = 0; i < (int) devices.size(); i++) {
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU ? 8 : 1);
