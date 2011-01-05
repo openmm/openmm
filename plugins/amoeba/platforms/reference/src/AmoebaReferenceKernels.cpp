@@ -36,12 +36,12 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "AmoebaReferenceVdwForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
-#include "internal/AmoebaWcaDispersionForceImpl.h"
+#include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include "AmoebaReferenceUreyBradleyForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
-#include "AmoebaMultipoleForce.h"
-#include "internal/AmoebaMultipoleForceImpl.h"
+#include "openmm/AmoebaMultipoleForce.h"
+#include "openmm/internal/AmoebaMultipoleForceImpl.h"
 
 #include <cmath>
 #ifdef _MSC_VER

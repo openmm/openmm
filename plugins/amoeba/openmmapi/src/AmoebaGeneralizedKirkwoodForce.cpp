@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaGeneralizedKirkwoodForce.h"
-#include "internal/AmoebaGeneralizedKirkwoodForceImpl.h"
+#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
+#include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 
 using namespace OpenMM;
 

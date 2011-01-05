@@ -29,9 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/AmoebaGeneralizedKirkwoodForceImpl.h"
+#include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
-#include "amoebaKernels.h"
+#include "openmm/amoebaKernels.h"
 
 using namespace OpenMM;
 using std::vector;

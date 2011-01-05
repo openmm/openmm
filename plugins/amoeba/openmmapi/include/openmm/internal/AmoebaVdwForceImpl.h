@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_TORSION_TORSION_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_TORSION_TORSION_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_VDW_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_VDW_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,23 +33,24 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaTorsionTorsionForce.h"
+#include "openmm/AmoebaVdwForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
+#include <set>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaTorsionTorsionForce.
+ * This is the internal implementation of AmoebaVdwForce.
  */
 
-class AmoebaTorsionTorsionForceImpl : public ForceImpl {
+class AmoebaVdwForceImpl : public ForceImpl {
 public:
-    AmoebaTorsionTorsionForceImpl(AmoebaTorsionTorsionForce& owner);
-    ~AmoebaTorsionTorsionForceImpl();
+    AmoebaVdwForceImpl(AmoebaVdwForce& owner);
+    ~AmoebaVdwForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaTorsionTorsionForce& getOwner() {
+    AmoebaVdwForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,10 +62,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    AmoebaTorsionTorsionForce& owner;
+    AmoebaVdwForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_TORSION_TORSION_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_VDW_FORCE_IMPL_H_*/

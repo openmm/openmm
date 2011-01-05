@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ContextImpl.h"
-#include "internal/AmoebaHarmonicInPlaneAngleForceImpl.h"
-#include "amoebaKernels.h"
+#include "openmm/internal/AmoebaHarmonicInPlaneAngleForceImpl.h"
+#include "openmm/amoebaKernels.h"
 
 using namespace OpenMM;
 

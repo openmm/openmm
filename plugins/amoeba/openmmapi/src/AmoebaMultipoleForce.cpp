@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaMultipoleForce.h"
-#include "internal/AmoebaMultipoleForceImpl.h"
+#include "openmm/AmoebaMultipoleForce.h"
+#include "openmm/internal/AmoebaMultipoleForceImpl.h"
 
 using namespace OpenMM;
 using std::string;

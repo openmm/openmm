@@ -16,26 +16,6 @@
 
 #INCLUDE(Dart)
 
-SET(LOG TRUE)
-# ----------------------------------------------------------------------------
-IF(LOG)
-   SET(LOG_FILE "CMakeLog.txt" )
-   FILE( WRITE ${LOG_FILE} "In OpenMM Cmake\n")
-ENDIF(LOG)
-
-IF(LOG)
-   MACRO(LOG_DIR LOG_FILE DIR_LIST )
-    
-      FILE( APPEND ${LOG_FILE} "\n${DIR_LIST}\n")
-      FOREACH(currentFile ${ARGN})
-         FILE( APPEND ${LOG_FILE} "   ${currentFile}\n" )
-      ENDFOREACH(currentFile)
-    
-    ENDMACRO(LOG_DIR) 
-ENDIF(LOG)
-
-# ----------------------------------------------------------------------------
-
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_FREE_ENERGY_PLUGIN_SOURCE_SUBDIRS . openmmapi platforms/reference)
@@ -103,16 +83,6 @@ FOREACH(subdir ${OPENMM_FREE_ENERGY_PLUGIN_SOURCE_SUBDIRS})
 ENDFOREACH(subdir)
 INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src)
 INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src/SimTKReference)
-
-# ----------------------------------------------------------------------------
-IF(LOG)
-    FILE( APPEND ${LOG_FILE} "SOURCE_FREE_ENERGY_FILES=" ${SOURCE_FREE_ENERGY_FILES} "\n" )
-    FILE( APPEND ${LOG_FILE} "SOURCE_FREE_ENERGY_INCLUDE_FILES=" ${SOURCE_FREE_ENERGY_INCLUDE_FILES} "\n" )
-    FILE( APPEND ${LOG_FILE} "OPENMM_PATH="            ${OPENMM_PATH} "\n" )
-    FILE( APPEND ${LOG_FILE} "CUDA_PATH="              ${CUDA_PATH} "\n" )
-ENDIF(LOG)
-
-# ----------------------------------------------------------------------------
 
 # If API_FREE_ENERGY wrappers are being generated, and add them to the build.
 #SET(OPENMM_BUILD_API_FREE_ENERGY_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")

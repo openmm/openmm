@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_TORSION_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_TORSION_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,25 +33,24 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaTorsionForce.h"
+#include "openmm/AmoebaOutOfPlaneBendForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>
-#include <map>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaTorsionForce.
+ * This is the internal implementation of AmoebaOutOfPlaneBendForce.
  */
 
-class AmoebaTorsionForceImpl : public ForceImpl {
+class AmoebaOutOfPlaneBendForceImpl : public ForceImpl {
 public:
-    AmoebaTorsionForceImpl(AmoebaTorsionForce& owner);
-    ~AmoebaTorsionForceImpl();
+    AmoebaOutOfPlaneBendForceImpl(AmoebaOutOfPlaneBendForce& owner);
+    ~AmoebaOutOfPlaneBendForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaTorsionForce& getOwner() {
+    AmoebaOutOfPlaneBendForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -63,10 +62,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    AmoebaTorsionForce& owner;
+    AmoebaOutOfPlaneBendForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_TORSION_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_*/

@@ -38,7 +38,7 @@
 #include "openmm/Context.h"
 #include "AmoebaOpenMM.h"
 #include "openmm/System.h"
-#include "AmoebaVdwForce.h"
+#include "openmm/AmoebaVdwForce.h"
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
 #include <vector>

@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_STRETCH_BEND_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_STRETCH_BEND_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_HARMONIC_ANGLE_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_HARMONIC_ANGLE_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaStretchBendForce.h"
+#include "openmm/AmoebaHarmonicAngleForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>
@@ -42,15 +42,15 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaStretchBendForce.
+ * This is the internal implementation of AmoebaHarmonicAngleForce.
  */
 
-class AmoebaStretchBendForceImpl : public ForceImpl {
+class AmoebaHarmonicAngleForceImpl : public ForceImpl {
 public:
-    AmoebaStretchBendForceImpl(AmoebaStretchBendForce& owner);
-    ~AmoebaStretchBendForceImpl();
+    AmoebaHarmonicAngleForceImpl(AmoebaHarmonicAngleForce& owner);
+    ~AmoebaHarmonicAngleForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaStretchBendForce& getOwner() {
+    AmoebaHarmonicAngleForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -62,10 +62,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    AmoebaStretchBendForce& owner;
+    AmoebaHarmonicAngleForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_STRETCH_BEND_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_HARMONIC_ANGLE_FORCE_IMPL_H_*/

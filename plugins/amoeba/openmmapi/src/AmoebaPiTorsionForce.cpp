@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaPiTorsionForce.h"
-#include "internal/AmoebaPiTorsionForceImpl.h"
+#include "openmm/AmoebaPiTorsionForce.h"
+#include "openmm/internal/AmoebaPiTorsionForceImpl.h"
 
 using namespace OpenMM;
 

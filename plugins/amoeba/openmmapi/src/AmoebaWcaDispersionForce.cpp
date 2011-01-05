@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaWcaDispersionForce.h"
-#include "internal/AmoebaWcaDispersionForceImpl.h"
+#include "openmm/AmoebaWcaDispersionForce.h"
+#include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include <cmath>
 
 using namespace OpenMM;

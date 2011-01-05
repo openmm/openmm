@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaHarmonicInPlaneAngleForce.h"
+#include "openmm/AmoebaHarmonicInPlaneAngleForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>

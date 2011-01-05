@@ -39,7 +39,7 @@ const double DegreesToRadians = 3.14159265/180.0;
 #include "openmm/Context.h"
 #include "AmoebaOpenMM.h"
 #include "openmm/System.h"
-#include "AmoebaTorsionTorsionForce.h"
+#include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
 #include <vector>

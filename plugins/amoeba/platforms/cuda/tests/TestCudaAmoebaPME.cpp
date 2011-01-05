@@ -36,7 +36,7 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
-#include "AmoebaMultipoleForce.h"
+#include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"

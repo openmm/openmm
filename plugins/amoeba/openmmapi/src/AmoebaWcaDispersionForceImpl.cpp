@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ContextImpl.h"
-#include "internal/AmoebaWcaDispersionForceImpl.h"
-#include "amoebaKernels.h"
+#include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
+#include "openmm/amoebaKernels.h"
 #include <cmath>
 
 using namespace OpenMM;

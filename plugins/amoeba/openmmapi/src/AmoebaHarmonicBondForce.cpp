@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaHarmonicBondForce.h"
-#include "internal/AmoebaHarmonicBondForceImpl.h"
+#include "openmm/AmoebaHarmonicBondForce.h"
+#include "openmm/internal/AmoebaHarmonicBondForceImpl.h"
 
 using namespace OpenMM;
 

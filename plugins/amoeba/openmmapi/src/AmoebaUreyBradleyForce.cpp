@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaUreyBradleyForce.h"
-#include "internal/AmoebaUreyBradleyForceImpl.h"
+#include "openmm/AmoebaUreyBradleyForce.h"
+#include "openmm/internal/AmoebaUreyBradleyForceImpl.h"
 
 using namespace OpenMM;
 

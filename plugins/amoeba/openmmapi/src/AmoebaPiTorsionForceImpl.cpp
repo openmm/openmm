@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ContextImpl.h"
-#include "internal/AmoebaPiTorsionForceImpl.h"
-#include "amoebaKernels.h"
+#include "openmm/internal/AmoebaPiTorsionForceImpl.h"
+#include "openmm/amoebaKernels.h"
 
 using namespace OpenMM;
 

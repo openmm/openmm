@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_WCA_DISPERSION_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_WCA_DISPERSION_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaOutOfPlaneBendForce.h"
+#include "openmm/AmoebaWcaDispersionForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>
@@ -42,15 +42,15 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaOutOfPlaneBendForce.
+ * This is the internal implementation of AmoebaWcaDispersionForce.
  */
 
-class AmoebaOutOfPlaneBendForceImpl : public ForceImpl {
+class OPENMM_EXPORT AmoebaWcaDispersionForceImpl : public ForceImpl {
 public:
-    AmoebaOutOfPlaneBendForceImpl(AmoebaOutOfPlaneBendForce& owner);
-    ~AmoebaOutOfPlaneBendForceImpl();
+    AmoebaWcaDispersionForceImpl(AmoebaWcaDispersionForce& owner);
+    ~AmoebaWcaDispersionForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaOutOfPlaneBendForce& getOwner() {
+    AmoebaWcaDispersionForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,11 +61,30 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+
+    /** 
+     * Get the maximum dispersion energy for a particle
+     * 
+     * @param force               AmoebaWcaDispersionForce reference
+     * @param particleIndex       the particle index
+     * @param maxDispersionEnergy maximum dispersion energy
+     */
+    static void getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy );
+
+    /** 
+     * Get the total maximum dispersion energy
+     * 
+     * @param force               AmoebaWcaDispersionForce reference
+     *
+     * @return total maximum dispersion energy for the system
+     */
+    static double getTotalMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force);
+
 private:
-    AmoebaOutOfPlaneBendForce& owner;
+    AmoebaWcaDispersionForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_OUT_OF_PLANE_BEND_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_WCA_DISPERSION_FORCE_IMPL_H_*/

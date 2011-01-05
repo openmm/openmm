@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaVdwForce.h"
-#include "internal/AmoebaVdwForceImpl.h"
+#include "openmm/AmoebaVdwForce.h"
+#include "openmm/internal/AmoebaVdwForceImpl.h"
 
 using namespace OpenMM;
 using std::string;

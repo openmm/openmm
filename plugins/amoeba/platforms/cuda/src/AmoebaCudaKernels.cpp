@@ -29,8 +29,8 @@
 #include "kernels/amoebaGpuTypes.h"
 #include "kernels/cudaKernels.h"
 #include "kernels/amoebaCudaKernels.h"
-#include "internal/AmoebaMultipoleForceImpl.h"
-#include "internal/AmoebaWcaDispersionForceImpl.h"
+#include "openmm/internal/AmoebaMultipoleForceImpl.h"
+#include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaForceInfo.h"
 

@@ -32,18 +32,18 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AmoebaHarmonicBondForce.h"
-#include "AmoebaUreyBradleyForce.h"
-#include "AmoebaHarmonicAngleForce.h"
-#include "AmoebaHarmonicInPlaneAngleForce.h"
-#include "AmoebaTorsionForce.h"
-#include "AmoebaPiTorsionForce.h"
-#include "AmoebaStretchBendForce.h"
-#include "AmoebaOutOfPlaneBendForce.h"
-#include "AmoebaTorsionTorsionForce.h"
-#include "AmoebaMultipoleForce.h"
-#include "AmoebaGeneralizedKirkwoodForce.h"
-#include "AmoebaVdwForce.h"
-#include "AmoebaWcaDispersionForce.h"
+#include "openmm/AmoebaHarmonicBondForce.h"
+#include "openmm/AmoebaUreyBradleyForce.h"
+#include "openmm/AmoebaHarmonicAngleForce.h"
+#include "openmm/AmoebaHarmonicInPlaneAngleForce.h"
+#include "openmm/AmoebaTorsionForce.h"
+#include "openmm/AmoebaPiTorsionForce.h"
+#include "openmm/AmoebaStretchBendForce.h"
+#include "openmm/AmoebaOutOfPlaneBendForce.h"
+#include "openmm/AmoebaTorsionTorsionForce.h"
+#include "openmm/AmoebaMultipoleForce.h"
+#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
+#include "openmm/AmoebaVdwForce.h"
+#include "openmm/AmoebaWcaDispersionForce.h"
 
 #endif /*AMOEBA_OPENMM_H_*/

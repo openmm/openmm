@@ -1,8 +1,8 @@
-#ifndef OPENMM_AMOEBA_WCA_DISPERSION_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_WCA_DISPERSION_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_GK_FORCE_FIELD_IMPL_H_
+#define OPENMM_AMOEBA_GK_FORCE_FIELD_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
- *                                AmoebaOpenMM                                *
+ *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -10,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors:                                                                   *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -33,24 +33,21 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaWcaDispersionForce.h"
+#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
 #include "openmm/Kernel.h"
-#include <utility>
-#include <set>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaWcaDispersionForce.
+ * This is the internal implementation of AmoebaGeneralizedKirkwoodForce.
  */
 
-class OPENMM_EXPORT AmoebaWcaDispersionForceImpl : public ForceImpl {
+class AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
 public:
-    AmoebaWcaDispersionForceImpl(AmoebaWcaDispersionForce& owner);
-    ~AmoebaWcaDispersionForceImpl();
+    AmoebaGeneralizedKirkwoodForceImpl(AmoebaGeneralizedKirkwoodForce& owner);
     void initialize(ContextImpl& context);
-    AmoebaWcaDispersionForce& getOwner() {
+    AmoebaGeneralizedKirkwoodForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,30 +58,11 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
-
-    /** 
-     * Get the maximum dispersion energy for a particle
-     * 
-     * @param force               AmoebaWcaDispersionForce reference
-     * @param particleIndex       the particle index
-     * @param maxDispersionEnergy maximum dispersion energy
-     */
-    static void getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy );
-
-    /** 
-     * Get the total maximum dispersion energy
-     * 
-     * @param force               AmoebaWcaDispersionForce reference
-     *
-     * @return total maximum dispersion energy for the system
-     */
-    static double getTotalMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force);
-
 private:
-    AmoebaWcaDispersionForce& owner;
+    AmoebaGeneralizedKirkwoodForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_WCA_DISPERSION_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_GBSA_OBC_FORCE_FIELD_IMPL_H_*/

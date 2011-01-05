@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_HARMONIC_BOND_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_HARMONIC_BOND_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_PI_TORSION_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_PI_TORSION_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaHarmonicBondForce.h"
+#include "openmm/AmoebaPiTorsionForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>
@@ -42,15 +42,15 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaHarmonicBondForce.
+ * This is the internal implementation of AmoebaPiTorsionForce.
  */
 
-class AmoebaHarmonicBondForceImpl : public ForceImpl {
+class AmoebaPiTorsionForceImpl : public ForceImpl {
 public:
-    AmoebaHarmonicBondForceImpl(AmoebaHarmonicBondForce& owner);
-    ~AmoebaHarmonicBondForceImpl();
+    AmoebaPiTorsionForceImpl(AmoebaPiTorsionForce& owner);
+    ~AmoebaPiTorsionForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaHarmonicBondForce& getOwner() {
+    AmoebaPiTorsionForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -62,10 +62,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    AmoebaHarmonicBondForce& owner;
+    AmoebaPiTorsionForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_HARMONIC_BOND_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_PI_TORSION_FORCE_IMPL_H_*/

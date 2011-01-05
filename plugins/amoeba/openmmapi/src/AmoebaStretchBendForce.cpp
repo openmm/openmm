@@ -31,8 +31,8 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "AmoebaStretchBendForce.h"
-#include "internal/AmoebaStretchBendForceImpl.h"
+#include "openmm/AmoebaStretchBendForce.h"
+#include "openmm/internal/AmoebaStretchBendForceImpl.h"
 
 using namespace OpenMM;
 

@@ -1,8 +1,8 @@
-#ifndef OPENMM_AMOEBA_GK_FORCE_FIELD_IMPL_H_
-#define OPENMM_AMOEBA_GK_FORCE_FIELD_IMPL_H_
+#ifndef OPENMM_AMOEBA_UREY_BRADLEY_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_UREY_BRADLEY_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
+ *                                AmoebaOpenMM                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -10,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -33,21 +33,24 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaGeneralizedKirkwoodForce.h"
+#include "openmm/AmoebaUreyBradleyForce.h"
 #include "openmm/Kernel.h"
+#include <utility>
+#include <set>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaGeneralizedKirkwoodForce.
+ * This is the internal implementation of AmoebaUreyBradleyForce.
  */
 
-class AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
+class AmoebaUreyBradleyForceImpl : public ForceImpl {
 public:
-    AmoebaGeneralizedKirkwoodForceImpl(AmoebaGeneralizedKirkwoodForce& owner);
+    AmoebaUreyBradleyForceImpl(AmoebaUreyBradleyForce& owner);
+    ~AmoebaUreyBradleyForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaGeneralizedKirkwoodForce& getOwner() {
+    AmoebaUreyBradleyForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -59,10 +62,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    AmoebaGeneralizedKirkwoodForce& owner;
+    AmoebaUreyBradleyForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_GBSA_OBC_FORCE_FIELD_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_UREY_BRADLEY_FORCE_IMPL_H_*/

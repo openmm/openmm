@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_MULTIPOLE_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_MULTIPOLE_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_TORSION_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_TORSION_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,23 +33,25 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaMultipoleForce.h"
+#include "openmm/AmoebaTorsionForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
+#include <set>
+#include <map>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaMultipoleForce.
+ * This is the internal implementation of AmoebaTorsionForce.
  */
 
-class OPENMM_EXPORT AmoebaMultipoleForceImpl : public ForceImpl {
+class AmoebaTorsionForceImpl : public ForceImpl {
 public:
-    AmoebaMultipoleForceImpl(AmoebaMultipoleForce& owner);
-    ~AmoebaMultipoleForceImpl();
+    AmoebaTorsionForceImpl(AmoebaTorsionForce& owner);
+    ~AmoebaTorsionForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaMultipoleForce& getOwner() {
+    AmoebaTorsionForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -60,36 +62,11 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
-
-    /**
-     * Get the CovalentMap for an atom
-     * 
-     * @param force                AmoebaMultipoleForce force reference
-     * @param index                the index of the atom for which to set parameters
-     * @param minCovalentIndex     minimum covalent index
-     * @param maxCovalentIndex     maximum covalent index
-     */
-    static void getCovalentRange( const AmoebaMultipoleForce& force, int index,
-                                  const std::vector< AmoebaMultipoleForce::CovalentType>& lists,
-                                  int* minCovalentIndex, int* maxCovalentIndex );
-
-    /**
-     * Get the covalent degree for the  CovalentEnd lists
-     * 
-     * @param force                AmoebaMultipoleForce force reference
-     * @param covalentDegree      covalent degrees for the CovalentEnd lists
-     */
-    static void getCovalentDegree( const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree );
-
 private:
-    AmoebaMultipoleForce& owner;
+    AmoebaTorsionForce& owner;
     Kernel kernel;
-
-    static int CovalentDegrees[AmoebaMultipoleForce::CovalentEnd];
-    static bool initializedCovalentDegrees;
-    static const int* getCovalentDegrees( void );
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_MULTIPOLE_FORCE_IMPL_H_*/
+#endif /*OPENMM_AMOEBA_TORSION_FORCE_IMPL_H_*/

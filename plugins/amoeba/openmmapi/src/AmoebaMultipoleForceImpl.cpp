@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ContextImpl.h"
-#include "internal/AmoebaMultipoleForceImpl.h"
-#include "amoebaKernels.h"
+#include "openmm/internal/AmoebaMultipoleForceImpl.h"
+#include "openmm/amoebaKernels.h"
 
 using namespace OpenMM;
 

@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ContextImpl.h"
-#include "internal/AmoebaUreyBradleyForceImpl.h"
-#include "amoebaKernels.h"
+#include "openmm/internal/AmoebaUreyBradleyForceImpl.h"
+#include "openmm/amoebaKernels.h"
 #include "openmm/Platform.h"
 
 using namespace OpenMM;

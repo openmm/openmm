@@ -1,5 +1,5 @@
-#ifndef OPENMM_AMOEBA_VDW_FORCE_IMPL_H_
-#define OPENMM_AMOEBA_VDW_FORCE_IMPL_H_
+#ifndef OPENMM_AMOEBA_HARMONIC_BOND_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_HARMONIC_BOND_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                AmoebaOpenMM                                *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/ForceImpl.h"
-#include "AmoebaVdwForce.h"
+#include "openmm/AmoebaHarmonicBondForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>
@@ -42,15 +42,15 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of AmoebaVdwForce.
+ * This is the internal implementation of AmoebaHarmonicBondForce.
  */
 
-class AmoebaVdwForceImpl : public ForceImpl {
+class AmoebaHarmonicBondForceImpl : public ForceImpl {
 public:
-    AmoebaVdwForceImpl(AmoebaVdwForce& owner);
-    ~AmoebaVdwForceImpl();
+    AmoebaHarmonicBondForceImpl(AmoebaHarmonicBondForce& owner);
+    ~AmoebaHarmonicBondForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaVdwForce& getOwner() {
+    AmoebaHarmonicBondForce& getOwner() {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -62,10 +62,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    AmoebaVdwForce& owner;
+    AmoebaHarmonicBondForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_AMOEBA_VDW_FORCE_IMPL_H_*/
+#endif /*OPENMM_HARMONIC_BOND_FORCE_IMPL_H_*/

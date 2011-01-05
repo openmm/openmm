@@ -27,7 +27,7 @@
 
 #include "SimTKUtilities/RealVec.h"
 #include "openmm/Vec3.h"
-#include "AmoebaMultipoleForce.h"
+#include "openmm/AmoebaMultipoleForce.h"
 #include <string>
 #include <vector>
 #include <map>
