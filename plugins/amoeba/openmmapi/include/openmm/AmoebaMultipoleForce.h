@@ -63,17 +63,17 @@ public:
         PME = 1 
     };  
 
-    enum MultipoleAxisTypes { ZThenX, Bisector, ZBisect, ThreeFold, ZOnly, LastAxisTypeIndex };
+    enum MultipoleAxisTypes { ZThenX = 0, Bisector = 1, ZBisect = 2, ThreeFold = 3, ZOnly = 4, LastAxisTypeIndex = 5 };
 
     // Algorithm used to converge mutual induced dipoles:
     //     SOR: successive-over-relaxation
 
     //enum MutualInducedIterationMethod { SOR, ConjugateGradient };
-    enum MutualInducedIterationMethod { SOR };
+    enum MutualInducedIterationMethod { SOR = 0 };
 
     enum CovalentType { 
-                          Covalent12, Covalent13, Covalent14, Covalent15, 
-                          PolarizationCovalent11, PolarizationCovalent12, PolarizationCovalent13, PolarizationCovalent14, CovalentEnd };
+                          Covalent12 = 0, Covalent13 = 1, Covalent14 = 2, Covalent15 = 3, 
+                          PolarizationCovalent11 = 4, PolarizationCovalent12 = 5, PolarizationCovalent13 = 6, PolarizationCovalent14 = 7, CovalentEnd = 8 };
 
     /**
      * Create a Amoeba MultipoleForce.
