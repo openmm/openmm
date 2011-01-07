@@ -2,7 +2,7 @@
 #define OPENMM_AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
- *                                AmoebaOpenMM                                *
+ *                                OpenMMAmoeba                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *

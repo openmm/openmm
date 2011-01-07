@@ -2,7 +2,7 @@
 #define OPENMM_AMOEBA_UREY_BRADLEY_FORCE_H_
 
 /* -------------------------------------------------------------------------- *
- *                              AmoebaOpenMM                                  *
+ *                              OpenMMAmoeba                                  *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -156,6 +156,6 @@ public:
     }
 };
 
-} // namespace AmoebaOpenMM
+} // namespace OpenMM
 
 #endif /*OPENMM_AMOEBA_UREY_BRADLEY_FORCE_H_*/

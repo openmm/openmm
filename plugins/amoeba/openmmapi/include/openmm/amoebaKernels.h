@@ -2,7 +2,7 @@
 #define AMOEBA_OPENMM_KERNELS_H_
 
 /* -------------------------------------------------------------------------- *
- *                             AmoebaOpenMM                                   *
+ *                             OpenMMAmoeba                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AmoebaOpenMM.h"
+#include "OpenMMAmoeba.h"
 #include "openmm/KernelImpl.h"
 #include "openmm/System.h"
 #include "openmm/Platform.h"

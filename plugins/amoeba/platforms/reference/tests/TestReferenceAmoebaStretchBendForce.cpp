@@ -37,7 +37,7 @@
 //#include "AmoebaTinkerParameterFile.h"
 const double DegreesToRadians = 3.14159265/180.0;
 #include "openmm/Context.h"
-#include "AmoebaOpenMM.h"
+#include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>

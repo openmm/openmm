@@ -33,8 +33,8 @@ void GetCalculateAmoebaCudaPmeMutualInducedFieldSim(amoebaGpuContext amoebaGpu)
     RTERROR(status, "GetCalculateAmoebaCudaPmeMutualInducedFieldSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
+#define AMOEBA_DEBUG
+//#undef AMOEBA_DEBUG
 
 #undef INCLUDE_MI_FIELD_BUFFERS
 #define INCLUDE_MI_FIELD_BUFFERS 

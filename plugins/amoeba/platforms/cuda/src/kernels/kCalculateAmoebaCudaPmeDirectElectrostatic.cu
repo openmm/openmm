@@ -1413,7 +1413,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         zeroForce( amoebaGpu );
     }
 
-    if( 0 ){
+    if( 1 ){
         gpuContext gpu = amoebaGpu->gpuContext;
         std::vector<int> fileId;
 
@@ -1448,7 +1448,6 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPrePmeForce", fileId, outputVector );
     }
 
-//zeroForce( amoebaGpu );
     cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpu );
     kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
 }

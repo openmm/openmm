@@ -2,7 +2,7 @@
 #define OPENMM_AMOEBA_HARMONIC_BOND_FORCE_H_
 
 /* -------------------------------------------------------------------------- *
- *                              AmoebaOpenMM                                  *
+ *                              OpenMMAmoeba                                  *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -38,7 +38,6 @@
 #include <vector>
 #include "openmm/internal/windowsExport.h"
 
-//namespace AmoebaOpenMM {
 namespace OpenMM {
 
 /**
@@ -157,6 +156,6 @@ public:
     }
 };
 
-} // namespace AmoebaOpenMM
+} // namespace OpenMM
 
 #endif /*OPENMM_AMOEBA_HARMONIC_BOND_FORCE_H_*/

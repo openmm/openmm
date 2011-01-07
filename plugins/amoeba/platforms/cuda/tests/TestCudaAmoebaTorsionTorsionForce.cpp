@@ -1,5 +1,5 @@
 /* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
+ *                                   OpenMMAmoeba                             *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -37,7 +37,7 @@
 //#include "AmoebaTinkerParameterFile.h"
 const double DegreesToRadians = 3.14159265/180.0;
 #include "openmm/Context.h"
-#include "AmoebaOpenMM.h"
+#include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/LangevinIntegrator.h"

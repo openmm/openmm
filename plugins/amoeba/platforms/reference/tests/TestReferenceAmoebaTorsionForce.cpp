@@ -36,7 +36,7 @@
 #include "../../../tests/AssertionUtilities.h"
 //#include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
-#include "AmoebaOpenMM.h"
+#include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
