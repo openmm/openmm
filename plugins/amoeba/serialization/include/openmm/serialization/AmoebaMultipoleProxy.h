@@ -41,9 +41,9 @@ namespace OpenMM {
  * This is a proxy for serializing AmoebaUreyBradleyForce objects.
  */
 
-class OPENMM_EXPORT AmoebaMultipole : public SerializationProxy {
+class OPENMM_EXPORT AmoebaMultipoleForceProxy : public SerializationProxy {
 public:
-    AmoebaMultipole();
+    AmoebaMultipoleForceProxy();
     void serialize(const void* object, SerializationNode& node) const;
     void* deserialize(const SerializationNode& node) const;
 };
