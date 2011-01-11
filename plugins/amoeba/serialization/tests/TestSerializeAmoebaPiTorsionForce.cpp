@@ -41,26 +41,26 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaPiTorsionForce force;
-    force.addPiTorsion(0, 1, 3, 4, 5, 6, 2.0);
-    force.addPiTorsion(0, 2, 3, 5, 12, 13, 2.1);
-    force.addPiTorsion(2, 3, 5, 6, 81, 91, 2.2);
-    force.addPiTorsion(5, 1, 8, 8, 101, 102, 2.3);
+    AmoebaPiTorsionForce force1;
+    force1.addPiTorsion(0, 1, 3, 4, 5, 6, 2.0);
+    force1.addPiTorsion(0, 2, 3, 5, 12, 13, 2.1);
+    force1.addPiTorsion(2, 3, 5, 6, 81, 91, 2.2);
+    force1.addPiTorsion(5, 1, 8, 8, 101, 102, 2.3);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaPiTorsionForce>(&force, "Force", buffer);
+    XmlSerializer::serialize<AmoebaPiTorsionForce>(&force1, "Force", buffer);
     AmoebaPiTorsionForce* copy = XmlSerializer::deserialize<AmoebaPiTorsionForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
     AmoebaPiTorsionForce& force2 = *copy;
-    ASSERT_EQUAL(force.getNumPiTorsions(), force2.getNumPiTorsions());
-    for (int i = 0; i < force.getNumPiTorsions(); i++) {
+    ASSERT_EQUAL(force1.getNumPiTorsions(), force2.getNumPiTorsions());
+    for (unsigned int ii = 0; ii < force1.getNumPiTorsions(); ii++) {
         int a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6;
         double ka, kb;
-        force.getPiTorsionParameters( i, a1, a2, a3, a4, a5, a6, ka);
-        force2.getPiTorsionParameters(i, b1, b2, b3, b4, b5, b6, kb);
+        force1.getPiTorsionParameters(ii, a1, a2, a3, a4, a5, a6, ka);
+        force2.getPiTorsionParameters(ii, b1, b2, b3, b4, b5, b6, kb);
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
         ASSERT_EQUAL(a3, b3);

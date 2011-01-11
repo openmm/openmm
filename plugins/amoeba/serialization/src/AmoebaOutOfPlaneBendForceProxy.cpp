@@ -44,15 +44,16 @@ AmoebaOutOfPlaneBendForceProxy::AmoebaOutOfPlaneBendForceProxy() : Serialization
 void AmoebaOutOfPlaneBendForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaOutOfPlaneBendForce& force = *reinterpret_cast<const AmoebaOutOfPlaneBendForce*>(object);
-    node.setDoubleProperty("OutOfPlaneBendCubic", force.getAmoebaGlobalOutOfPlaneBendCubic());
+    node.setDoubleProperty("OutOfPlaneBendCubic",   force.getAmoebaGlobalOutOfPlaneBendCubic());
     node.setDoubleProperty("OutOfPlaneBendQuartic", force.getAmoebaGlobalOutOfPlaneBendQuartic());
-    node.setDoubleProperty("OutOfPlaneBendPentic", force.getAmoebaGlobalOutOfPlaneBendPentic());
-    node.setDoubleProperty("OutOfPlaneBendSextic", force.getAmoebaGlobalOutOfPlaneBendSextic());
-    SerializationNode& bonds = node.createChildNode("OutOfPlaneBend");
-    for (int i = 0; i < force.getNumOutOfPlaneBends(); i++) {
+    node.setDoubleProperty("OutOfPlaneBendPentic",  force.getAmoebaGlobalOutOfPlaneBendPentic());
+    node.setDoubleProperty("OutOfPlaneBendSextic",  force.getAmoebaGlobalOutOfPlaneBendSextic());
+
+    SerializationNode& bonds = node.createChildNode("OutOfPlaneBend").setIntProperty( "size", force.getNumOutOfPlaneBends() );
+    for (unsigned int ii = 0; ii < force.getNumOutOfPlaneBends(); ii++) {
         int particle1, particle2, particle3, particle4;
         double k;
-        force.getOutOfPlaneBendParameters(i, particle1, particle2, particle3, particle4, k);
+        force.getOutOfPlaneBendParameters(ii, particle1, particle2, particle3, particle4, k);
         bonds.createChildNode("OutOfPlaneBend").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4).setDoubleProperty("k", k);
     }
 }
@@ -62,13 +63,15 @@ void* AmoebaOutOfPlaneBendForceProxy::deserialize(const SerializationNode& node)
         throw OpenMMException("Unsupported version number");
     AmoebaOutOfPlaneBendForce* force = new AmoebaOutOfPlaneBendForce();
     try {
-        force->setAmoebaGlobalOutOfPlaneBendCubic(node.getDoubleProperty("OutOfPlaneBendCubic"));
+
+        force->setAmoebaGlobalOutOfPlaneBendCubic(node.getDoubleProperty(  "OutOfPlaneBendCubic"));
         force->setAmoebaGlobalOutOfPlaneBendQuartic(node.getDoubleProperty("OutOfPlaneBendQuartic"));
-        force->setAmoebaGlobalOutOfPlaneBendPentic(node.getDoubleProperty("OutOfPlaneBendPentic"));
-        force->setAmoebaGlobalOutOfPlaneBendSextic(node.getDoubleProperty("OutOfPlaneBendSextic"));
+        force->setAmoebaGlobalOutOfPlaneBendPentic(node.getDoubleProperty( "OutOfPlaneBendPentic"));
+        force->setAmoebaGlobalOutOfPlaneBendSextic(node.getDoubleProperty( "OutOfPlaneBendSextic"));
+
         const SerializationNode& bonds = node.getChildNode("OutOfPlaneBend");
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+        for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
+            const SerializationNode& bond = bonds.getChildren()[ii];
             force->addOutOfPlaneBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getIntProperty("p4"), bond.getDoubleProperty("k"));
         }
     }

@@ -1,8 +1,5 @@
-#ifndef OPENMM_HARMONICBONDFORCE_PROXY_H_
-#define OPENMM_HARMONICBONDFORCE_PROXY_H_
-
 /* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
+ *                                OpenMMAmoeba                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -32,22 +29,47 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/windowsExport.h"
-#include "openmm/serialization/SerializationProxy.h"
+#include "openmm/serialization/AmoebaStretchBendForceProxy.h"
+#include "openmm/serialization/SerializationNode.h"
+#include "openmm/Force.h"
+#include "openmm/AmoebaStretchBendForce.h"
+#include <sstream>
 
-namespace OpenMM {
+using namespace OpenMM;
+using namespace std;
 
-/**
- * This is a proxy for serializing HarmonicBondForce objects.
- */
+AmoebaStretchBendForceProxy::AmoebaStretchBendForceProxy() : SerializationProxy("AmoebaStretchBendForce") {
+}
 
-class OPENMM_EXPORT HarmonicBondForceProxy : public SerializationProxy {
-public:
-    HarmonicBondForceProxy();
-    void serialize(const void* object, SerializationNode& node) const;
-    void* deserialize(const SerializationNode& node) const;
-};
+void AmoebaStretchBendForceProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    const AmoebaStretchBendForce& force = *reinterpret_cast<const AmoebaStretchBendForce*>(object);
+    SerializationNode& bonds = node.createChildNode("StretchBendAngles").setIntProperty( "size", force.getNumStretchBends() );
+    for (unsigned int ii = 0; ii < force.getNumStretchBends(); ii++) {
+        int particle1, particle2, particle3;
+        double distanceAB, distanceCB, angle, k;
+        force.getStretchBendParameters(ii, particle1, particle2, particle3, distanceAB, distanceCB, angle, k);
+        bonds.createChildNode("StretchBendAngle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("dAB", distanceAB).setDoubleProperty("dCB", distanceCB).setDoubleProperty("angle", angle).setDoubleProperty("k", k);
+    }
 
-} // namespace OpenMM
+}
 
-#endif /*OPENMM_HARMONICBONDFORCE_PROXY_H_*/
+void* AmoebaStretchBendForceProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    AmoebaStretchBendForce* force = new AmoebaStretchBendForce();
+    try {
+        const SerializationNode& bonds = node.getChildNode("StretchBendAngles");
+        for ( unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
+            const SerializationNode& bond = bonds.getChildren()[ii];
+            force->addStretchBend(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getDoubleProperty("dAB"), bond.getDoubleProperty("dCB"), bond.getDoubleProperty("angle"), bond.getDoubleProperty("k"));
+
+        }
+    }
+    catch (...) {
+        delete force;
+        throw;
+    }
+
+    return force;
+}

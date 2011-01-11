@@ -42,17 +42,20 @@ AmoebaHarmonicInPlaneAngleForceProxy::AmoebaHarmonicInPlaneAngleForceProxy() : S
 }
 
 void AmoebaHarmonicInPlaneAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+
     node.setIntProperty("version", 1);
     const AmoebaHarmonicInPlaneAngleForce& force = *reinterpret_cast<const AmoebaHarmonicInPlaneAngleForce*>(object);
-    node.setDoubleProperty("HarmonicInPlaneAngleCubic", force.getAmoebaGlobalHarmonicInPlaneAngleCubic());
-    node.setDoubleProperty("HarmonicInPlaneAngleQuartic", force.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
-    node.setDoubleProperty("HarmonicInPlaneAnglePentic", force.getAmoebaGlobalHarmonicInPlaneAnglePentic());
-    node.setDoubleProperty("HarmonicInPlaneAngleSextic", force.getAmoebaGlobalHarmonicInPlaneAngleSextic());
-    SerializationNode& bonds = node.createChildNode("InPlaneAngles");
-    for (int i = 0; i < force.getNumAngles(); i++) {
+
+    node.setDoubleProperty("HarmonicInPlaneAngleCubic",      force.getAmoebaGlobalHarmonicInPlaneAngleCubic());
+    node.setDoubleProperty("HarmonicInPlaneAngleQuartic",    force.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
+    node.setDoubleProperty("HarmonicInPlaneAnglePentic",     force.getAmoebaGlobalHarmonicInPlaneAnglePentic());
+    node.setDoubleProperty("HarmonicInPlaneAngleSextic",     force.getAmoebaGlobalHarmonicInPlaneAngleSextic());
+
+    SerializationNode& bonds = node.createChildNode("InPlaneAngles").setIntProperty( "size", force.getNumAngles() );
+    for ( unsigned int ii = 0; ii < force.getNumAngles(); ii++) {
         int particle1, particle2, particle3, particle4;
         double distance, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, particle4, distance, k);
+        force.getAngleParameters(ii, particle1, particle2, particle3, particle4, distance, k);
         bonds.createChildNode("InPlaneAngle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4).setDoubleProperty("d", distance).setDoubleProperty("k", k);
     }
 }
@@ -62,13 +65,15 @@ void* AmoebaHarmonicInPlaneAngleForceProxy::deserialize(const SerializationNode&
         throw OpenMMException("Unsupported version number");
     AmoebaHarmonicInPlaneAngleForce* force = new AmoebaHarmonicInPlaneAngleForce();
     try {
-        force->setAmoebaGlobalHarmonicInPlaneAngleCubic(node.getDoubleProperty("HarmonicInPlaneAngleCubic"));
+
+        force->setAmoebaGlobalHarmonicInPlaneAngleCubic(  node.getDoubleProperty("HarmonicInPlaneAngleCubic"));
         force->setAmoebaGlobalHarmonicInPlaneAngleQuartic(node.getDoubleProperty("HarmonicInPlaneAngleQuartic"));
-        force->setAmoebaGlobalHarmonicInPlaneAnglePentic(node.getDoubleProperty("HarmonicInPlaneAnglePentic"));
-        force->setAmoebaGlobalHarmonicInPlaneAngleSextic(node.getDoubleProperty("HarmonicInPlaneAngleSextic"));
+        force->setAmoebaGlobalHarmonicInPlaneAnglePentic( node.getDoubleProperty("HarmonicInPlaneAnglePentic"));
+        force->setAmoebaGlobalHarmonicInPlaneAngleSextic( node.getDoubleProperty("HarmonicInPlaneAngleSextic"));
+
         const SerializationNode& bonds = node.getChildNode("InPlaneAngles");
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+        for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
+            const SerializationNode& bond = bonds.getChildren()[ii];
             force->addAngle(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getIntProperty("p4"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
         }
     }

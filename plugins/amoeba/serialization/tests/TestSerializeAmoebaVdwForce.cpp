@@ -41,67 +41,78 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaVdwForce force;
-    force.setSigmaCombiningRule( "GEOMETRIC" );
-    force.setEpsilonCombiningRule( "GEOMETRIC" );
-    force.setCutoff( 0.9 );
-    force.setUseNeighborList( 1 );
-    force.setPBC( 1 );
+    AmoebaVdwForce force1;
+    force1.setSigmaCombiningRule(   "GEOMETRIC" );
+    force1.setEpsilonCombiningRule( "GEOMETRIC" );
+    force1.setCutoff( 0.9 );
+    force1.setUseNeighborList( 1 );
+    force1.setPBC( 1 );
 
-    force.addParticle(0, 1, 1.0, 2.0, 0.9);
-    force.addParticle(1, 0, 1.1, 2.1, 0.9);
-    force.addParticle(2, 3, 1.3, 4.1, 0.9);
+    force1.addParticle(0, 1, 1.0, 2.0, 0.9);
+    force1.addParticle(1, 0, 1.1, 2.1, 0.9);
+    force1.addParticle(2, 3, 1.3, 4.1, 0.9);
     for( unsigned int ii = 0; ii < 3; ii++ ){
         std::vector< int > exclusions;
         exclusions.push_back( ii );
         exclusions.push_back( ii + 1 );
         exclusions.push_back( ii + 10 );
-        force.setParticleExclusions( ii, exclusions );
+        force1.setParticleExclusions( ii, exclusions );
     }
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaVdwForce>(&force, "Force", buffer);
-if( 1 ){
-FILE* filePtr = fopen("Vdw.xml", "w" );
-(void) fprintf( filePtr, "%s", buffer.str().c_str() );
-(void) fclose( filePtr );
-}
+    XmlSerializer::serialize<AmoebaVdwForce>(&force1, "Force", buffer);
+
+    if( 0 ){
+        FILE* filePtr = fopen("Vdw.xml", "w" );
+        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
+        (void) fclose( filePtr );
+    }
 
     AmoebaVdwForce* copy = XmlSerializer::deserialize<AmoebaVdwForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
     AmoebaVdwForce& force2 = *copy;
-    ASSERT_EQUAL(force.getSigmaCombiningRule(), force2.getSigmaCombiningRule());
-    ASSERT_EQUAL(force.getEpsilonCombiningRule(), force2.getEpsilonCombiningRule());
-    ASSERT_EQUAL(force.getCutoff(), force2.getCutoff());
-    ASSERT_EQUAL(force.getUseNeighborList(), force2.getUseNeighborList());
-    ASSERT_EQUAL(force.getPBC(), force2.getPBC());
-    ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
-    for (int i = 0; i < force.getNumParticles(); i++) {
+
+    ASSERT_EQUAL(force1.getSigmaCombiningRule(),    force2.getSigmaCombiningRule());
+    ASSERT_EQUAL(force1.getEpsilonCombiningRule(),  force2.getEpsilonCombiningRule());
+    ASSERT_EQUAL(force1.getCutoff(),                force2.getCutoff());
+    ASSERT_EQUAL(force1.getUseNeighborList(),       force2.getUseNeighborList());
+    ASSERT_EQUAL(force1.getPBC(),                   force2.getPBC());
+
+    ASSERT_EQUAL(force1.getNumParticles(),          force2.getNumParticles());
+
+    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+
         int ivIndex1, classIndex1;
         int ivIndex2, classIndex2;
+
         double sigma1, epsilon1, reductionFactor1;
         double sigma2, epsilon2, reductionFactor2;
-        force.getParticleParameters( i, ivIndex1, classIndex1, sigma1, epsilon1, reductionFactor1 );
-        force2.getParticleParameters(i, ivIndex2, classIndex2, sigma2, epsilon2, reductionFactor2 );
-        ASSERT_EQUAL(ivIndex1, ivIndex2 );
-        ASSERT_EQUAL(classIndex1, classIndex2 );
-        ASSERT_EQUAL(sigma1, sigma2);
-        ASSERT_EQUAL(epsilon1, epsilon2);
-        ASSERT_EQUAL(reductionFactor1, reductionFactor2);
+
+        force1.getParticleParameters( ii, ivIndex1, classIndex1, sigma1, epsilon1, reductionFactor1 );
+        force2.getParticleParameters( ii, ivIndex2, classIndex2, sigma2, epsilon2, reductionFactor2 );
+
+        ASSERT_EQUAL(ivIndex1,          ivIndex2 );
+        ASSERT_EQUAL(classIndex1,       classIndex2 );
+        ASSERT_EQUAL(sigma1,            sigma2);
+        ASSERT_EQUAL(epsilon1,          epsilon2);
+        ASSERT_EQUAL(reductionFactor1,  reductionFactor2);
     }
-    for (int i = 0; i < force.getNumParticles(); i++) {
+    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+
         std::vector< int > exclusions1;
         std::vector< int > exclusions2;
-        force.getParticleExclusions(  i, exclusions1 );
-        force2.getParticleExclusions( i, exclusions2 );
+
+        force1.getParticleExclusions( ii, exclusions1 );
+        force2.getParticleExclusions( ii, exclusions2 );
+
         ASSERT_EQUAL(exclusions1.size(), exclusions2.size());
-        for (unsigned int ii = 0; ii < exclusions1.size(); ii++) {
+        for (unsigned int jj = 0; jj < exclusions1.size(); jj++) {
             int hit = 0;
-            for (unsigned int jj = 0; jj < exclusions2.size() && hit == 0; jj++) {
-                if( exclusions2[jj] == exclusions1[ii] )hit++;
+            for (unsigned int kk = 0; kk < exclusions2.size(); kk++) {
+                if( exclusions2[jj] == exclusions1[kk] )hit++;
             }
             ASSERT_EQUAL(hit, 1);
         }

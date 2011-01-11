@@ -41,34 +41,38 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaOutOfPlaneBendForce force;
-    force.setAmoebaGlobalOutOfPlaneBendCubic( 12.3 );
-    force.setAmoebaGlobalOutOfPlaneBendQuartic( 98.7 );
-    force.setAmoebaGlobalOutOfPlaneBendPentic( 91.7 );
-    force.setAmoebaGlobalOutOfPlaneBendSextic( 93.7 );
-    force.addOutOfPlaneBend(0, 1, 3, 4, 2.0);
-    force.addOutOfPlaneBend(0, 2, 3, 5, 2.1);
-    force.addOutOfPlaneBend(2, 3, 5, 6, 2.2);
-    force.addOutOfPlaneBend(5, 1, 8, 8, 2.3);
+    AmoebaOutOfPlaneBendForce force1;
+
+    force1.setAmoebaGlobalOutOfPlaneBendCubic( 12.3 );
+    force1.setAmoebaGlobalOutOfPlaneBendQuartic( 98.7 );
+    force1.setAmoebaGlobalOutOfPlaneBendPentic( 91.7 );
+    force1.setAmoebaGlobalOutOfPlaneBendSextic( 93.7 );
+
+    force1.addOutOfPlaneBend(0, 1, 3, 4, 2.0);
+    force1.addOutOfPlaneBend(0, 2, 3, 5, 2.1);
+    force1.addOutOfPlaneBend(2, 3, 5, 6, 2.2);
+    force1.addOutOfPlaneBend(5, 1, 8, 8, 2.3);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaOutOfPlaneBendForce>(&force, "Force", buffer);
+    XmlSerializer::serialize<AmoebaOutOfPlaneBendForce>(&force1, "Force", buffer);
     AmoebaOutOfPlaneBendForce* copy = XmlSerializer::deserialize<AmoebaOutOfPlaneBendForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
     AmoebaOutOfPlaneBendForce& force2 = *copy;
-    ASSERT_EQUAL(force.getAmoebaGlobalOutOfPlaneBendCubic(), force2.getAmoebaGlobalOutOfPlaneBendCubic());
-    ASSERT_EQUAL(force.getAmoebaGlobalOutOfPlaneBendQuartic(), force2.getAmoebaGlobalOutOfPlaneBendQuartic());
-    ASSERT_EQUAL(force.getAmoebaGlobalOutOfPlaneBendPentic(), force2.getAmoebaGlobalOutOfPlaneBendPentic());
-    ASSERT_EQUAL(force.getAmoebaGlobalOutOfPlaneBendSextic(), force2.getAmoebaGlobalOutOfPlaneBendSextic());
-    ASSERT_EQUAL(force.getNumOutOfPlaneBends(), force2.getNumOutOfPlaneBends());
-    for (int i = 0; i < force.getNumOutOfPlaneBends(); i++) {
+
+    ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendCubic(), force2.getAmoebaGlobalOutOfPlaneBendCubic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendQuartic(), force2.getAmoebaGlobalOutOfPlaneBendQuartic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendPentic(), force2.getAmoebaGlobalOutOfPlaneBendPentic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendSextic(), force2.getAmoebaGlobalOutOfPlaneBendSextic());
+    ASSERT_EQUAL(force1.getNumOutOfPlaneBends(), force2.getNumOutOfPlaneBends());
+
+    for (unsigned int ii = 0; ii < force1.getNumOutOfPlaneBends(); ii++) {
         int a1, a2, a3, a4, b1, b2, b3, b4;
         double ka, kb;
-        force.getOutOfPlaneBendParameters(i, a1, a2, a3, a4, ka);
-        force2.getOutOfPlaneBendParameters(i, b1, b2, b3, b4, kb);
+        force1.getOutOfPlaneBendParameters(ii, a1, a2, a3, a4, ka);
+        force2.getOutOfPlaneBendParameters(ii, b1, b2, b3, b4, kb);
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
         ASSERT_EQUAL(a3, b3);

@@ -42,30 +42,31 @@ AmoebaTorsionForceProxy::AmoebaTorsionForceProxy() : SerializationProxy("AmoebaT
 }
 
 static void addTorsionValues( SerializationNode& torsion, const std::vector<double>& torsionValues ){
-    for (int j = 0; j < torsionValues.size(); j++) {
-        torsion.createChildNode("Value").setDoubleProperty("v", torsionValues[j]);
+    for (unsigned int jj = 0; jj < torsionValues.size(); jj++) {
+        torsion.createChildNode("Value").setDoubleProperty("v", torsionValues[jj]);
     }
 }
 
 static void loadTorsionValues( SerializationNode& torsion, std::vector<double>& torsionValues ){
     int size = torsion.getIntProperty("size");
     torsionValues.resize(size);
-    for (int j = 0; j < size; j++) {
-        torsionValues[j] = ( torsion.getChildren()[j].getDoubleProperty("v") );
+    for (unsigned int jj = 0; jj < size; jj++) {
+        torsionValues[jj] = ( torsion.getChildren()[jj].getDoubleProperty("v") );
     }
 }
 
 void AmoebaTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaTorsionForce& force = *reinterpret_cast<const AmoebaTorsionForce*>(object);
-    SerializationNode& bonds = node.createChildNode("Torsion");
-    for (int i = 0; i < force.getNumTorsions(); i++) {
+
+    SerializationNode& bonds = node.createChildNode("Torsion").setIntProperty("size",  force.getNumTorsions() );
+    for (unsigned int ii = 0; ii < force.getNumTorsions(); ii++) {
 
         int particle1, particle2, particle3, particle4;
         std::vector<double> torsion1;
         std::vector<double> torsion2;
         std::vector<double> torsion3;
-        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3);
+        force.getTorsionParameters(ii, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3);
 
         SerializationNode& torsionBond        = bonds.createChildNode("Torsion");
         torsionBond.setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4);
@@ -92,15 +93,20 @@ void* AmoebaTorsionForceProxy::deserialize(const SerializationNode& node) const 
         vector<SerializationNode> children = bonds.getChildren();
         for (unsigned int i = 0; i < children.size(); i++) {
             SerializationNode& bond = children[i];
+
             std::vector<double> torsion1;
             std::vector<double> torsion2;
             std::vector<double> torsion3;
+
             SerializationNode& torsionNode1 = bond.getChildNode("Torsion1");
             loadTorsionValues( torsionNode1, torsion1 );
+
             SerializationNode& torsionNode2 = bond.getChildNode("Torsion2");
             loadTorsionValues( torsionNode2, torsion2 );
+
             SerializationNode& torsionNode3 = bond.getChildNode("Torsion3");
             loadTorsionValues( torsionNode3, torsion3 );
+
             force->addTorsion(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getIntProperty("p4"), torsion1, torsion2, torsion3 );
         }
     }

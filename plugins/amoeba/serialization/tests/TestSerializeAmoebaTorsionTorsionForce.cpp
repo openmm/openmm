@@ -43,11 +43,11 @@ static void loadTorsionTorsionGrid( std::vector< std::vector< std::vector<double
  
     static const int gridSize = 25;
     gridVector.resize( gridSize );
-    for( int ii = 0; ii < gridSize; ii++ ){
+    for( unsigned int ii = 0; ii < gridSize; ii++ ){
         gridVector[ii].resize( gridSize );
-        for( int jj = 0; jj < gridSize; jj++ ){
+        for( unsigned int jj = 0; jj < gridSize; jj++ ){
             gridVector[ii][jj].resize( 6 );
-            for( int kk = 0; kk < 6; kk++ ){
+            for( unsigned int kk = 0; kk < 6; kk++ ){
                 gridVector[ii][jj][0] = -180.0 + 15.0*static_cast<double>(ii);
                 gridVector[ii][jj][1] = -180.0 + 15.0*static_cast<double>(jj);
                 gridVector[ii][jj][2] = static_cast<double>( rand());
@@ -62,12 +62,12 @@ static void loadTorsionTorsionGrid( std::vector< std::vector< std::vector<double
 static void compareGrids( const std::vector< std::vector< std::vector<double> > >& grid1, const std::vector< std::vector< std::vector<double> > >& grid2 ) {
 
     ASSERT_EQUAL(grid1.size(), grid2.size());
-    for (int i = 0; i < grid1.size(); i++) {
-        ASSERT_EQUAL(grid1[i].size(), grid2[i].size());
-        for (int jj = 0; jj < grid1[i].size(); jj++) {
-            ASSERT_EQUAL(grid1[i][jj].size(), grid2[i][jj].size());
-            for (int kk = 0; kk < grid1[i][jj].size(); kk++) {
-                ASSERT_EQUAL(grid1[i][jj][kk], grid2[i][jj][kk]);
+    for (unsigned int ii = 0; ii < grid1.size(); ii++) {
+        ASSERT_EQUAL(grid1[ii].size(), grid2[ii].size());
+        for (int jj = 0; jj < grid1[ii].size(); jj++) {
+            ASSERT_EQUAL(grid1[ii][jj].size(), grid2[ii][jj].size());
+            for (int kk = 0; kk < grid1[ii][jj].size(); kk++) {
+                ASSERT_EQUAL(grid1[ii][jj][kk], grid2[ii][jj][kk]);
             }
         }
     }
@@ -76,40 +76,40 @@ static void compareGrids( const std::vector< std::vector< std::vector<double> > 
 void testSerialization() {
     // Create a Force.
 
-    AmoebaTorsionTorsionForce force;
+    AmoebaTorsionTorsionForce force1;
 
-    for( int ii = 0; ii < 5; ii++ ){
+    for( unsigned int ii = 0; ii < 5; ii++ ){
         std::vector< std::vector< std::vector<double> > > gridVector;
         loadTorsionTorsionGrid( gridVector );
-        force.setTorsionTorsionGrid( ii, gridVector );
+        force1.setTorsionTorsionGrid( ii, gridVector );
     }
-    for( int ii = 0; ii < 5; ii++ ){
-        force.addTorsionTorsion( ii, ii+1,ii+3, ii+4, ii+5, ( (ii % 2 ) ? 1 : 0), (ii % 4) );
+    for( unsigned int ii = 0; ii < 5; ii++ ){
+        force1.addTorsionTorsion( ii, ii+1,ii+3, ii+4, ii+5, ( (ii % 2 ) ? 1 : 0), (ii % 4) );
     }
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaTorsionTorsionForce>(&force, "Force", buffer);
+    XmlSerializer::serialize<AmoebaTorsionTorsionForce>(&force1, "Force", buffer);
 
-if( 0 ){
-FILE* filePtr = fopen("TorsionTorsion.xml", "w" );
-(void) fprintf( filePtr, "%s", buffer.str().c_str() );
-(void) fclose( filePtr );
-}
+    if( 0 ){
+        FILE* filePtr = fopen("TorsionTorsion.xml", "w" );
+        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
+        (void) fclose( filePtr );
+    }
 
     AmoebaTorsionTorsionForce* copy = XmlSerializer::deserialize<AmoebaTorsionTorsionForce>(buffer);
 
-    // Compare the two forces to see if they are identical.  
+    // Compare the two force1s to see if they are identical.  
 
     AmoebaTorsionTorsionForce & force2 = *copy;
-    ASSERT_EQUAL(force.getNumTorsionTorsions(), force2.getNumTorsionTorsions());
-    for (int i = 0; i < force.getNumTorsionTorsions(); i++) {
+    ASSERT_EQUAL(force1.getNumTorsionTorsions(), force2.getNumTorsionTorsions());
+    for (unsigned int ii = 0; ii < force1.getNumTorsionTorsions(); ii++) {
 
         int a1, a2, a3, a4, a5, aChiral, aGridIndex, b1, b2, b3, b4, b5, bChiral, bGridIndex;
 
-        force.getTorsionTorsionParameters( i, a1, a2, a3, a4, a5, aChiral, aGridIndex);
-        force2.getTorsionTorsionParameters( i, b1, b2, b3, b4, b5, bChiral, bGridIndex);
+        force1.getTorsionTorsionParameters( ii, a1, a2, a3, a4, a5, aChiral, aGridIndex);
+        force2.getTorsionTorsionParameters( ii, b1, b2, b3, b4, b5, bChiral, bGridIndex);
 
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
@@ -120,10 +120,10 @@ FILE* filePtr = fopen("TorsionTorsion.xml", "w" );
         ASSERT_EQUAL(aGridIndex, bGridIndex );
     }
 
-    ASSERT_EQUAL(force.getNumTorsionTorsionGrids(), force2.getNumTorsionTorsionGrids());
-    for (int i = 0; i < force.getNumTorsionTorsionGrids(); i++) {
-        const std::vector< std::vector< std::vector<double> > >& grid1 = force.getTorsionTorsionGrid( i );
-        const std::vector< std::vector< std::vector<double> > >& grid2 = force2.getTorsionTorsionGrid( i );
+    ASSERT_EQUAL(force1.getNumTorsionTorsionGrids(), force2.getNumTorsionTorsionGrids());
+    for (unsigned int ii = 0; ii < force1.getNumTorsionTorsionGrids(); ii++) {
+        const std::vector< std::vector< std::vector<double> > >& grid1 = force1.getTorsionTorsionGrid( ii );
+        const std::vector< std::vector< std::vector<double> > >& grid2 = force2.getTorsionTorsionGrid( ii );
         compareGrids(grid1, grid2 );
     }
 

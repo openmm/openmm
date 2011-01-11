@@ -77,9 +77,9 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
 
     SerializationNode& grids = node.createChildNode("TorsionTorsionGrids");
     grids.setIntProperty("size", static_cast<int>(force.getNumTorsionTorsionGrids()));
-    for (int i = 0; i < force.getNumTorsionTorsionGrids(); i++) {
+    for (unsigned int kk = 0; kk < force.getNumTorsionTorsionGrids(); kk++) {
 
-        const std::vector< std::vector< std::vector<double> > > grid = force.getTorsionTorsionGrid( i );
+        const std::vector< std::vector< std::vector<double> > > grid = force.getTorsionTorsionGrid( kk );
 
         unsigned int gridCount = 0;
         unsigned int gridYsize =  grid[0].size();
@@ -107,10 +107,10 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
     }
 
     SerializationNode& bonds = node.createChildNode("TorsionTorsion");
-    for (int i = 0; i < force.getNumTorsionTorsions(); i++) {
+    for (unsigned int ii = 0; ii < force.getNumTorsionTorsions(); ii++) {
         int particle1, particle2, particle3, particle4, particle5;
         int chiralCheckAtomIndex, gridIndex;
-        force.getTorsionTorsionParameters(i, particle1, particle2, particle3, particle4, particle5, chiralCheckAtomIndex, gridIndex );
+        force.getTorsionTorsionParameters(ii, particle1, particle2, particle3, particle4, particle5, chiralCheckAtomIndex, gridIndex );
         bonds.createChildNode("TorsionTorsion").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4).setIntProperty("p5", particle5).setIntProperty("chiralCheckAtomIndex", chiralCheckAtomIndex).setIntProperty("gridIndex", gridIndex );
 
     }

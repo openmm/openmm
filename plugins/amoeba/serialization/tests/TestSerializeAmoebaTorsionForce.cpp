@@ -47,42 +47,43 @@ void loadTorsion( std::vector<double>& torsion, double offset ){
 
 void compareTorsion( std::vector<double> torsionA, std::vector<double> torsionB ){
     ASSERT_EQUAL(torsionA.size(), torsionB.size());
-    for (int i = 0; i < torsionA.size(); i++) {
-        ASSERT_EQUAL(torsionA[i], torsionB[i]);
+    for (unsigned int ii = 0; ii < torsionA.size(); ii++) {
+        ASSERT_EQUAL(torsionA[ii], torsionB[ii]);
     }
 }
 
 void testSerialization() {
+
     // Create a Force.
 
-    AmoebaTorsionForce force;
-    for( int ii = 0; ii < 5; ii++ ){
+    AmoebaTorsionForce force1;
+    for( unsigned int ii = 0; ii < 5; ii++ ){
         std::vector<double> torsion1;
         std::vector<double> torsion2;
         std::vector<double> torsion3;
         loadTorsion( torsion1, static_cast<double>(5*ii) + 11.1);
         loadTorsion( torsion2, static_cast<double>(5*ii) + 21.2);
         loadTorsion( torsion3, static_cast<double>(5*ii) + 31.3);
-        force.addTorsion( ii, ii+1,ii+3, ii+4, torsion1, torsion2, torsion3 );
+        force1.addTorsion( ii, ii+1,ii+3, ii+4, torsion1, torsion2, torsion3 );
     }
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaTorsionForce>(&force, "Force", buffer);
+    XmlSerializer::serialize<AmoebaTorsionForce>(&force1, "Force", buffer);
 
-if( 0 ){
-FILE* filePtr = fopen("Torsion.xml", "w" );
-(void) fprintf( filePtr, "%s", buffer.str().c_str() );
-(void) fclose( filePtr );
-}
+    if( 0 ){
+        FILE* filePtr = fopen("Torsion.xml", "w" );
+        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
+        (void) fclose( filePtr );
+    }
 
     AmoebaTorsionForce* copy = XmlSerializer::deserialize<AmoebaTorsionForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
     AmoebaTorsionForce& force2 = *copy;
-    ASSERT_EQUAL(force.getNumTorsions(), force2.getNumTorsions());
-    for (int i = 0; i < force.getNumTorsions(); i++) {
+    ASSERT_EQUAL(force1.getNumTorsions(), force2.getNumTorsions());
+    for (unsigned int ii = 0; ii < force1.getNumTorsions(); ii++) {
 
         int a1, a2, a3, a4, b1, b2, b3, b4;
 
@@ -93,8 +94,8 @@ FILE* filePtr = fopen("Torsion.xml", "w" );
         std::vector<double> torsion2b;
         std::vector<double> torsion3b;
 
-        force.getTorsionParameters( i, a1, a2, a3, a4, torsion1a, torsion2a, torsion3a);
-        force2.getTorsionParameters( i, b1, b2, b3, b4, torsion1b, torsion2b, torsion3b);
+        force1.getTorsionParameters( ii, a1, a2, a3, a4, torsion1a, torsion2a, torsion3a);
+        force2.getTorsionParameters( ii, b1, b2, b3, b4, torsion1b, torsion2b, torsion3b);
 
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);

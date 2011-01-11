@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/AmoebaHarmonicInPlaneAngleForce.h"
+#include "openmm/AmoebaWcaDispersionForce.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
@@ -41,44 +41,56 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaHarmonicInPlaneAngleForce force1;
+    AmoebaWcaDispersionForce force1;
+    force1.setEpso(    1.0 );
+    force1.setEpsh(    1.1 );
+    force1.setRmino(   1.2 );
+    force1.setRminh(   1.3 );
+    force1.setAwater(  1.4 );
+    force1.setShctd(   1.5 );
+    force1.setDispoff( 1.6 );
+    force1.setSlevy(   1.7 );
 
-    force1.setAmoebaGlobalHarmonicInPlaneAngleCubic( 12.3 );
-    force1.setAmoebaGlobalHarmonicInPlaneAngleQuartic( 98.7 );
-    force1.setAmoebaGlobalHarmonicInPlaneAnglePentic( 91.7 );
-    force1.setAmoebaGlobalHarmonicInPlaneAngleSextic( 93.7 );
-
-    force1.addAngle(0, 1, 3, 4, 1.0, 2.0);
-    force1.addAngle(0, 2, 3, 5, 2.0, 2.1);
-    force1.addAngle(2, 3, 5, 6, 3.0, 2.2);
-    force1.addAngle(5, 1, 8, 8, 4.0, 2.3);
+    force1.addParticle(1.0, 2.0);
+    force1.addParticle(1.1, 2.1);
+    force1.addParticle(1.2, 2.2);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaHarmonicInPlaneAngleForce>(&force1, "Force", buffer);
-    AmoebaHarmonicInPlaneAngleForce* copy = XmlSerializer::deserialize<AmoebaHarmonicInPlaneAngleForce>(buffer);
+    XmlSerializer::serialize<AmoebaWcaDispersionForce>(&force1, "Force", buffer);
+    if( 1 ){
+        FILE* filePtr = fopen("WcaDispersion.xml", "w" );
+        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
+        (void) fclose( filePtr );
+    }
+
+    AmoebaWcaDispersionForce* copy = XmlSerializer::deserialize<AmoebaWcaDispersionForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
-    AmoebaHarmonicInPlaneAngleForce& force2 = *copy;
 
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleCubic(),    force2.getAmoebaGlobalHarmonicInPlaneAngleCubic());
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleQuartic(),  force2.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAnglePentic(),   force2.getAmoebaGlobalHarmonicInPlaneAnglePentic());
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleSextic(),   force2.getAmoebaGlobalHarmonicInPlaneAngleSextic());
-    ASSERT_EQUAL(force1.getNumAngles(),                                force2.getNumAngles());
+    AmoebaWcaDispersionForce& force2 = *copy;
 
-    for ( unsigned int ii = 0; ii < force1.getNumAngles(); ii++) {
-        int a1, a2, a3, a4, b1, b2, b3, b4;
-        double da, db, ka, kb;
-        force1.getAngleParameters(ii, a1, a2, a3, a4, da, ka);
-        force2.getAngleParameters(ii, b1, b2, b3, b4, db, kb);
-        ASSERT_EQUAL(a1, b1);
-        ASSERT_EQUAL(a2, b2);
-        ASSERT_EQUAL(a3, b3);
-        ASSERT_EQUAL(a4, b4);
-        ASSERT_EQUAL(da, db);
-        ASSERT_EQUAL(ka, kb);
+    ASSERT_EQUAL(force1.getEpso(),    force2.getEpso());
+    ASSERT_EQUAL(force1.getEpsh(),    force2.getEpsh());
+    ASSERT_EQUAL(force1.getRmino(),   force2.getRmino());
+    ASSERT_EQUAL(force1.getRminh(),   force2.getRminh());
+    ASSERT_EQUAL(force1.getAwater(),  force2.getAwater());
+    ASSERT_EQUAL(force1.getShctd(),   force2.getShctd());
+    ASSERT_EQUAL(force1.getDispoff(), force2.getDispoff());
+    ASSERT_EQUAL(force1.getSlevy(),   force2.getSlevy());
+
+    ASSERT_EQUAL(force1.getNumParticles(), force2.getNumParticles());
+    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+
+        double radius1, epsilon1;
+        double radius2, epsilon2;
+
+        force1.getParticleParameters( ii, radius1, epsilon1 );
+        force2.getParticleParameters( ii, radius2, epsilon2 );
+
+        ASSERT_EQUAL(radius1,  radius2);
+        ASSERT_EQUAL(epsilon1, epsilon2);
     }
 }
 

@@ -44,28 +44,32 @@ AmoebaVdwForceProxy::AmoebaVdwForceProxy() : SerializationProxy("AmoebaVdwForce"
 void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaVdwForce& force = *reinterpret_cast<const AmoebaVdwForce*>(object);
-    node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
-    node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
-    node.setDoubleProperty("VdwCutoff", force.getCutoff());
-    node.setIntProperty("VdwUseNeighborList", force.getUseNeighborList());
-    node.setIntProperty("VdwPBC", force.getPBC());
-    SerializationNode& particles = node.createChildNode("VdwParticles");
-    for (int i = 0; i < force.getNumParticles(); i++) {
+
+    node.setStringProperty("SigmaCombiningRule",     force.getSigmaCombiningRule());
+    node.setStringProperty("EpsilonCombiningRule",   force.getEpsilonCombiningRule());
+    node.setDoubleProperty("VdwCutoff",              force.getCutoff());
+
+    node.setIntProperty(   "VdwUseNeighborList",     force.getUseNeighborList());
+    node.setIntProperty(   "VdwPBC",                 force.getPBC());
+
+    SerializationNode& particles = node.createChildNode("VdwParticles").setIntProperty("size", force.getNumParticles() );
+    for (unsigned int ii = 0; ii < force.getNumParticles(); ii++) {
+
         int ivIndex, classIndex;
         double sigma, epsilon, reductionFactor;
-        force.getParticleParameters( i,  ivIndex, classIndex, sigma, epsilon, reductionFactor );
-        particles.createChildNode("Particle").setIntProperty("index", i).setIntProperty("ivIndex", ivIndex).setIntProperty("classIndex", classIndex).setDoubleProperty("sig", sigma).setDoubleProperty("eps", epsilon).setDoubleProperty("red", reductionFactor);
-    }
+        force.getParticleParameters( ii, ivIndex, classIndex, sigma, epsilon, reductionFactor );
 
-    SerializationNode& particleExclusions = node.createChildNode("VdwParticleExclusions");
-    for (int i = 0; i < force.getNumParticles(); i++) {
+        SerializationNode& particle = particles.createChildNode("Particle");
+        particle.setIntProperty("index", ii).setIntProperty("ivIndex", ivIndex).setIntProperty("classIndex", classIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor);
+
         std::vector< int > exclusions;
-        force.getParticleExclusions( i,  exclusions );
-        SerializationNode& particle = particleExclusions.createChildNode("ParticleExclusion");
-        particle.setIntProperty("size", exclusions.size() );
-        particle.setIntProperty("index", i );
+        force.getParticleExclusions( ii,  exclusions );
+
+        SerializationNode& particleExclusions = particle.createChildNode("ParticleExclusions");
+        particleExclusions.setIntProperty("size", exclusions.size() );
+        particleExclusions.setIntProperty("index", ii );
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
-            particle.createChildNode("ParticleExclusion").setIntProperty( "ex", exclusions[jj] );
+            particleExclusions.createChildNode( "excl" ).setIntProperty( "index", exclusions[jj] );
         }
     }
 }
@@ -76,30 +80,27 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
 
-        force->setSigmaCombiningRule( node.getStringProperty( "SigmaCombiningRule" ) );
+        force->setSigmaCombiningRule(   node.getStringProperty( "SigmaCombiningRule" ) );
         force->setEpsilonCombiningRule( node.getStringProperty( "EpsilonCombiningRule" ) );
-        force->setCutoff( node.getDoubleProperty( "VdwCutoff" ) );
-        force->setUseNeighborList( node.getIntProperty( "VdwUseNeighborList" ) );
-        force->setPBC( node.getIntProperty( "VdwPBC" ) );
+        force->setCutoff(               node.getDoubleProperty( "VdwCutoff" ) );
+        force->setUseNeighborList(      node.getIntProperty(    "VdwUseNeighborList" ) );
+        force->setPBC(                  node.getIntProperty(    "VdwPBC" ) );
 
         const SerializationNode& particles = node.getChildNode("VdwParticles");
-        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
-            const SerializationNode& particle = particles.getChildren()[i];
-            force->addParticle(particle.getIntProperty("ivIndex"), particle.getIntProperty("classIndex"), particle.getDoubleProperty("sig"), particle.getDoubleProperty("eps"), particle.getDoubleProperty("red"));
-        }
+        for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
+            const SerializationNode& particle = particles.getChildren()[ii];
+            force->addParticle(particle.getIntProperty("ivIndex"), particle.getIntProperty("classIndex"), particle.getDoubleProperty("sigma"), particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
 
-        // exclusions
+            // exclusions
 
-        const SerializationNode& particleExclusions = node.getChildNode("VdwParticleExclusions");
-        for (int i = 0; i < (int) particleExclusions.getChildren().size(); i++) {
-            const SerializationNode& particleExclusion = particleExclusions.getChildren()[i];
+            const SerializationNode& particleExclusions = particle.getChildNode("ParticleExclusions");
             std::vector< int > exclusions;
-            for (unsigned int jj = 0; jj < particleExclusion.getChildren().size(); jj++) {
-                exclusions.push_back( particleExclusion.getChildren()[jj].getIntProperty("ex") );
+            for (unsigned int jj = 0; jj < particleExclusions.getChildren().size(); jj++) {
+                exclusions.push_back( particleExclusions.getChildren()[jj].getIntProperty("index") );
             }
-            int index = particleExclusion.getIntProperty( "index" );
-            force->setParticleExclusions( index, exclusions );
+            force->setParticleExclusions( ii, exclusions );
         }
+
     }
     catch (...) {
         delete force;

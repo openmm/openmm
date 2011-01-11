@@ -41,34 +41,34 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaHarmonicAngleForce force;
-    force.setAmoebaGlobalHarmonicAngleCubic( 12.3 );
-    force.setAmoebaGlobalHarmonicAngleQuartic( 98.7 );
-    force.setAmoebaGlobalHarmonicAnglePentic( 91.7 );
-    force.setAmoebaGlobalHarmonicAngleSextic( 93.7 );
-    force.addAngle(0, 1, 3, 1.0, 2.0);
-    force.addAngle(0, 2, 3, 2.0, 2.1);
-    force.addAngle(2, 3, 5, 3.0, 2.2);
-    force.addAngle(5, 1, 8, 4.0, 2.3);
+    AmoebaHarmonicAngleForce force1;
+    force1.setAmoebaGlobalHarmonicAngleCubic( 12.3 );
+    force1.setAmoebaGlobalHarmonicAngleQuartic( 98.7 );
+    force1.setAmoebaGlobalHarmonicAnglePentic( 91.7 );
+    force1.setAmoebaGlobalHarmonicAngleSextic( 93.7 );
+    force1.addAngle(0, 1, 3, 1.0, 2.0);
+    force1.addAngle(0, 2, 3, 2.0, 2.1);
+    force1.addAngle(2, 3, 5, 3.0, 2.2);
+    force1.addAngle(5, 1, 8, 4.0, 2.3);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaHarmonicAngleForce>(&force, "Force", buffer);
+    XmlSerializer::serialize<AmoebaHarmonicAngleForce>(&force1, "Force", buffer);
     AmoebaHarmonicAngleForce* copy = XmlSerializer::deserialize<AmoebaHarmonicAngleForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
     AmoebaHarmonicAngleForce& force2 = *copy;
-    ASSERT_EQUAL(force.getAmoebaGlobalHarmonicAngleCubic(), force2.getAmoebaGlobalHarmonicAngleCubic());
-    ASSERT_EQUAL(force.getAmoebaGlobalHarmonicAngleQuartic(), force2.getAmoebaGlobalHarmonicAngleQuartic());
-    ASSERT_EQUAL(force.getAmoebaGlobalHarmonicAnglePentic(), force2.getAmoebaGlobalHarmonicAnglePentic());
-    ASSERT_EQUAL(force.getAmoebaGlobalHarmonicAngleSextic(), force2.getAmoebaGlobalHarmonicAngleSextic());
-    ASSERT_EQUAL(force.getNumAngles(), force2.getNumAngles());
-    for (int i = 0; i < force.getNumAngles(); i++) {
+    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicAngleCubic(),   force2.getAmoebaGlobalHarmonicAngleCubic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicAngleQuartic(), force2.getAmoebaGlobalHarmonicAngleQuartic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicAnglePentic(),  force2.getAmoebaGlobalHarmonicAnglePentic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicAngleSextic(),  force2.getAmoebaGlobalHarmonicAngleSextic());
+    ASSERT_EQUAL(force1.getNumAngles(),                        force2.getNumAngles());
+    for (unsigned int ii = 0; ii < force1.getNumAngles(); ii++) {
         int a1, a2, a3, b1, b2, b3;
         double da, db, ka, kb;
-        force.getAngleParameters(i, a1, a2, a3, da, ka);
-        force2.getAngleParameters(i, b1, b2, b3, db, kb);
+        force1.getAngleParameters(ii, a1, a2, a3, da, ka);
+        force2.getAngleParameters(ii, b1, b2, b3, db, kb);
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
         ASSERT_EQUAL(a3, b3);

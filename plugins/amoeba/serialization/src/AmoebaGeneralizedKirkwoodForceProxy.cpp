@@ -29,57 +29,61 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/AmoebaHarmonicAngleForceProxy.h"
+#include "openmm/serialization/AmoebaGeneralizedKirkwoodForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/AmoebaHarmonicAngleForce.h"
+#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-AmoebaHarmonicAngleForceProxy::AmoebaHarmonicAngleForceProxy() : SerializationProxy("AmoebaHarmonicAngleForce") {
+AmoebaGeneralizedKirkwoodForceProxy::AmoebaGeneralizedKirkwoodForceProxy() : SerializationProxy("AmoebaGeneralizedKirkwoodForce") {
 }
 
-void AmoebaHarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
+    const AmoebaGeneralizedKirkwoodForce& force = *reinterpret_cast<const AmoebaGeneralizedKirkwoodForce*>(object);
 
-    const AmoebaHarmonicAngleForce& force = *reinterpret_cast<const AmoebaHarmonicAngleForce*>(object);
+    node.setDoubleProperty("GeneralizedKirkwoodSolventDielectric", force.getSolventDielectric() );
+    node.setDoubleProperty("GeneralizedKirkwoodSoluteDielectric",  force.getSoluteDielectric() );
+    node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset() );
+    node.setDoubleProperty("GeneralizedKirkwoodProbeRadius",       force.getProbeRadius() );
+    node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor() );
+    node.setIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm() );
 
-    node.setDoubleProperty("HarmonicAngleCubic",   force.getAmoebaGlobalHarmonicAngleCubic());
-    node.setDoubleProperty("HarmonicAngleQuartic", force.getAmoebaGlobalHarmonicAngleQuartic());
-    node.setDoubleProperty("HarmonicAnglePentic",  force.getAmoebaGlobalHarmonicAnglePentic());
-    node.setDoubleProperty("HarmonicAngleSextic",  force.getAmoebaGlobalHarmonicAngleSextic());
-
-    SerializationNode& bonds = node.createChildNode("Angles").setIntProperty( "size", force.getNumAngles() );
-    for (unsigned int ii = 0; ii < force.getNumAngles(); ii++) {
-        int particle1, particle2, particle3;
-        double distance, k;
-        force.getAngleParameters(ii, particle1, particle2, particle3, distance, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("d", distance).setDoubleProperty("k", k);
+    SerializationNode& particles = node.createChildNode("GeneralizedKirkwoodParticles").setIntProperty( "size", force.getNumParticles() );
+    for (unsigned int ii = 0; ii < force.getNumParticles(); ii++) {
+        double radius, charge, scalingFactor;
+        force.getParticleParameters( ii, charge, radius, scalingFactor );
+        particles.createChildNode("Particle").setIntProperty("index", ii).setDoubleProperty("charge", charge).setDoubleProperty("radius", radius).setDoubleProperty("scaleFactor", scalingFactor);
     }
+
 }
 
-void* AmoebaHarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
+void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    AmoebaHarmonicAngleForce* force = new AmoebaHarmonicAngleForce();
+    AmoebaGeneralizedKirkwoodForce* force = new AmoebaGeneralizedKirkwoodForce();
     try {
 
-        force->setAmoebaGlobalHarmonicAngleCubic(node.getDoubleProperty(  "HarmonicAngleCubic"));
-        force->setAmoebaGlobalHarmonicAngleQuartic(node.getDoubleProperty("HarmonicAngleQuartic"));
-        force->setAmoebaGlobalHarmonicAnglePentic(node.getDoubleProperty( "HarmonicAnglePentic"));
-        force->setAmoebaGlobalHarmonicAngleSextic(node.getDoubleProperty( "HarmonicAngleSextic"));
+        force->setSolventDielectric(   node.getDoubleProperty( "GeneralizedKirkwoodSolventDielectric" ) );
+        force->setSoluteDielectric(    node.getDoubleProperty( "GeneralizedKirkwoodSoluteDielectric" ) );
+        force->setDielectricOffset(    node.getDoubleProperty( "GeneralizedKirkwoodDielectricOffset" ) );
+        force->setProbeRadius(         node.getDoubleProperty( "GeneralizedKirkwoodProbeRadius" ) );
+        force->setSurfaceAreaFactor(   node.getDoubleProperty( "GeneralizedKirkwoodSurfaceAreaFactor" ) );
+        force->setIncludeCavityTerm(   node.getIntProperty(    "GeneralizedKirkwoodIncludeCavityTerm" ) );
 
-        const SerializationNode& bonds = node.getChildNode("Angles");
-        for ( unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
-            const SerializationNode& bond = bonds.getChildren()[ii];
-            force->addAngle(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
+        const SerializationNode& particles = node.getChildNode("GeneralizedKirkwoodParticles");
+        for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
+            const SerializationNode& particle = particles.getChildren()[ii];
+            force->addParticle( particle.getDoubleProperty("charge"), particle.getDoubleProperty("radius"), particle.getDoubleProperty("scaleFactor"));
         }
     }
     catch (...) {
         delete force;
         throw;
     }
+
     return force;
 }

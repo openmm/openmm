@@ -29,53 +29,63 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/AmoebaHarmonicAngleForceProxy.h"
+#include "openmm/serialization/AmoebaWcaDispersionForceProxy.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/AmoebaHarmonicAngleForce.h"
+#include "openmm/AmoebaWcaDispersionForce.h"
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-AmoebaHarmonicAngleForceProxy::AmoebaHarmonicAngleForceProxy() : SerializationProxy("AmoebaHarmonicAngleForce") {
+AmoebaWcaDispersionForceProxy::AmoebaWcaDispersionForceProxy() : SerializationProxy("AmoebaWcaDispersionForce") {
 }
 
-void AmoebaHarmonicAngleForceProxy::serialize(const void* object, SerializationNode& node) const {
+void AmoebaWcaDispersionForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
+    const AmoebaWcaDispersionForce& force = *reinterpret_cast<const AmoebaWcaDispersionForce*>(object);
+    node.setDoubleProperty("Epso",    force.getEpso());
+    node.setDoubleProperty("Epsh",    force.getEpsh());
+    node.setDoubleProperty("Rmino",   force.getRmino());
+    node.setDoubleProperty("Rminh",   force.getRminh());
+    node.setDoubleProperty("Awater",  force.getAwater());
+    node.setDoubleProperty("Shctd",   force.getShctd());
+    node.setDoubleProperty("Dispoff", force.getDispoff());
+    node.setDoubleProperty("Slevy",   force.getSlevy());
 
-    const AmoebaHarmonicAngleForce& force = *reinterpret_cast<const AmoebaHarmonicAngleForce*>(object);
-
-    node.setDoubleProperty("HarmonicAngleCubic",   force.getAmoebaGlobalHarmonicAngleCubic());
-    node.setDoubleProperty("HarmonicAngleQuartic", force.getAmoebaGlobalHarmonicAngleQuartic());
-    node.setDoubleProperty("HarmonicAnglePentic",  force.getAmoebaGlobalHarmonicAnglePentic());
-    node.setDoubleProperty("HarmonicAngleSextic",  force.getAmoebaGlobalHarmonicAngleSextic());
-
-    SerializationNode& bonds = node.createChildNode("Angles").setIntProperty( "size", force.getNumAngles() );
-    for (unsigned int ii = 0; ii < force.getNumAngles(); ii++) {
-        int particle1, particle2, particle3;
-        double distance, k;
-        force.getAngleParameters(ii, particle1, particle2, particle3, distance, k);
-        bonds.createChildNode("Angle").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setDoubleProperty("d", distance).setDoubleProperty("k", k);
+    SerializationNode& particles = node.createChildNode("WcaDispersionParticles").setIntProperty( "size", force.getNumParticles() );
+    for (unsigned int ii = 0; ii < force.getNumParticles(); ii++) {
+        double radius, epsilon;
+        force.getParticleParameters( ii,  radius, epsilon );
+        particles.createChildNode("Particle").setIntProperty("index", ii).setDoubleProperty("radius", radius).setDoubleProperty("epsilon", epsilon);
     }
+
 }
 
-void* AmoebaHarmonicAngleForceProxy::deserialize(const SerializationNode& node) const {
+void* AmoebaWcaDispersionForceProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    AmoebaHarmonicAngleForce* force = new AmoebaHarmonicAngleForce();
+    AmoebaWcaDispersionForce* force = new AmoebaWcaDispersionForce();
+
     try {
 
-        force->setAmoebaGlobalHarmonicAngleCubic(node.getDoubleProperty(  "HarmonicAngleCubic"));
-        force->setAmoebaGlobalHarmonicAngleQuartic(node.getDoubleProperty("HarmonicAngleQuartic"));
-        force->setAmoebaGlobalHarmonicAnglePentic(node.getDoubleProperty( "HarmonicAnglePentic"));
-        force->setAmoebaGlobalHarmonicAngleSextic(node.getDoubleProperty( "HarmonicAngleSextic"));
+        force->setEpso(    node.getDoubleProperty( "Epso" ) );
+        force->setEpsh(    node.getDoubleProperty( "Epsh" ) );
+        force->setRmino(   node.getDoubleProperty( "Rmino" ) );
+        force->setRminh(   node.getDoubleProperty( "Rminh" ) );
 
-        const SerializationNode& bonds = node.getChildNode("Angles");
-        for ( unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
-            const SerializationNode& bond = bonds.getChildren()[ii];
-            force->addAngle(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
+
+        force->setAwater(  node.getDoubleProperty( "Awater" ) );
+        force->setShctd(   node.getDoubleProperty( "Shctd" ) );
+        force->setDispoff( node.getDoubleProperty( "Dispoff" ) );
+        force->setSlevy(   node.getDoubleProperty( "Slevy" ) );
+
+        const SerializationNode& particles = node.getChildNode("WcaDispersionParticles");
+        for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
+            const SerializationNode& particle = particles.getChildren()[ii];
+            force->addParticle( particle.getDoubleProperty("radius"), particle.getDoubleProperty("epsilon"));
         }
+
     }
     catch (...) {
         delete force;

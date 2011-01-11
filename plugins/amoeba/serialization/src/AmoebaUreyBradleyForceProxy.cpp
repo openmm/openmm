@@ -44,14 +44,16 @@ AmoebaUreyBradleyForceProxy::AmoebaUreyBradleyForceProxy() : SerializationProxy(
 void AmoebaUreyBradleyForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaUreyBradleyForce& force = *reinterpret_cast<const AmoebaUreyBradleyForce*>(object);
-    node.setDoubleProperty("UreyBradleyCubic", force.getAmoebaGlobalUreyBradleyCubic());
+
+    node.setDoubleProperty("UreyBradleyCubic",   force.getAmoebaGlobalUreyBradleyCubic());
     node.setDoubleProperty("UreyBradleyQuartic", force.getAmoebaGlobalUreyBradleyQuartic());
-    SerializationNode& bonds = node.createChildNode("Bonds");
-    for (int i = 0; i < force.getNumInteractions(); i++) {
+
+    SerializationNode& bonds = node.createChildNode("UreyBradley").setIntProperty( "size", force.getNumInteractions() );
+    for (unsigned int ii = 0; ii < force.getNumInteractions(); ii++) {
         int particle1, particle2;
         double distance, k;
-        force.getUreyBradleyParameters(i, particle1, particle2, distance, k);
-        bonds.createChildNode("Bond").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setDoubleProperty("d", distance).setDoubleProperty("k", k);
+        force.getUreyBradleyParameters(ii, particle1, particle2, distance, k);
+        bonds.createChildNode("Ixn").setIntProperty( "index", ii ).setIntProperty("p1", particle1).setIntProperty("p2", particle2).setDoubleProperty("d", distance).setDoubleProperty("k", k);
     }
 }
 
@@ -60,11 +62,13 @@ void* AmoebaUreyBradleyForceProxy::deserialize(const SerializationNode& node) co
         throw OpenMMException("Unsupported version number");
     AmoebaUreyBradleyForce* force = new AmoebaUreyBradleyForce();
     try {
-        force->setAmoebaGlobalUreyBradleyCubic(node.getDoubleProperty("UreyBradleyCubic"));
+
+        force->setAmoebaGlobalUreyBradleyCubic(node.getDoubleProperty(  "UreyBradleyCubic"));
         force->setAmoebaGlobalUreyBradleyQuartic(node.getDoubleProperty("UreyBradleyQuartic"));
-        const SerializationNode& bonds = node.getChildNode("Bonds");
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+
+        const SerializationNode& bonds = node.getChildNode("UreyBradley");
+        for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
+            const SerializationNode& bond = bonds.getChildren()[ii];
             force->addUreyBradley(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
         }
     }

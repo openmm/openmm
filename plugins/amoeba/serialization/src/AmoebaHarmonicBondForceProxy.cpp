@@ -44,13 +44,15 @@ AmoebaHarmonicBondForceProxy::AmoebaHarmonicBondForceProxy() : SerializationProx
 void AmoebaHarmonicBondForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaHarmonicBondForce& force = *reinterpret_cast<const AmoebaHarmonicBondForce*>(object);
-    node.setDoubleProperty("HarmonicBondCubic", force.getAmoebaGlobalHarmonicBondCubic());
+
+    node.setDoubleProperty("HarmonicBondCubic",   force.getAmoebaGlobalHarmonicBondCubic());
     node.setDoubleProperty("HarmonicBondQuartic", force.getAmoebaGlobalHarmonicBondQuartic());
-    SerializationNode& bonds = node.createChildNode("Bonds");
-    for (int i = 0; i < force.getNumBonds(); i++) {
+
+    SerializationNode& bonds = node.createChildNode("Bonds").setIntProperty( "size", force.getNumBonds() );
+    for (unsigned int ii = 0; ii < force.getNumBonds(); ii++) {
         int particle1, particle2;
         double distance, k;
-        force.getBondParameters(i, particle1, particle2, distance, k);
+        force.getBondParameters(ii, particle1, particle2, distance, k);
         bonds.createChildNode("Bond").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setDoubleProperty("d", distance).setDoubleProperty("k", k);
     }
 }
@@ -63,8 +65,8 @@ void* AmoebaHarmonicBondForceProxy::deserialize(const SerializationNode& node) c
         force->setAmoebaGlobalHarmonicBondCubic(node.getDoubleProperty("HarmonicBondCubic"));
         force->setAmoebaGlobalHarmonicBondQuartic(node.getDoubleProperty("HarmonicBondQuartic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
+        for ( unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
+            const SerializationNode& bond = bonds.getChildren()[ii];
             force->addBond(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getDoubleProperty("d"), bond.getDoubleProperty("k"));
         }
     }

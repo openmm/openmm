@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/AmoebaHarmonicInPlaneAngleForce.h"
+#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
@@ -41,44 +41,51 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaHarmonicInPlaneAngleForce force1;
+    AmoebaGeneralizedKirkwoodForce force1;
+    force1.setSolventDielectric(   80.0 );
+    force1.setSoluteDielectric(    1.0 );
+    force1.setDielectricOffset(    0.09 );
+    force1.setProbeRadius(         1.40 );
+    force1.setSurfaceAreaFactor(   0.888 );
+    force1.setIncludeCavityTerm(   1 );
 
-    force1.setAmoebaGlobalHarmonicInPlaneAngleCubic( 12.3 );
-    force1.setAmoebaGlobalHarmonicInPlaneAngleQuartic( 98.7 );
-    force1.setAmoebaGlobalHarmonicInPlaneAnglePentic( 91.7 );
-    force1.setAmoebaGlobalHarmonicInPlaneAngleSextic( 93.7 );
-
-    force1.addAngle(0, 1, 3, 4, 1.0, 2.0);
-    force1.addAngle(0, 2, 3, 5, 2.0, 2.1);
-    force1.addAngle(2, 3, 5, 6, 3.0, 2.2);
-    force1.addAngle(5, 1, 8, 8, 4.0, 2.3);
+    force1.addParticle(1.0, 2.0, 0.9);
+    force1.addParticle(-1.1,2.1, 0.8);
+    force1.addParticle(0.1, 2.2, 0.7);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaHarmonicInPlaneAngleForce>(&force1, "Force", buffer);
-    AmoebaHarmonicInPlaneAngleForce* copy = XmlSerializer::deserialize<AmoebaHarmonicInPlaneAngleForce>(buffer);
+    XmlSerializer::serialize<AmoebaGeneralizedKirkwoodForce>(&force1, "Force", buffer);
+    if( 0 ){
+        FILE* filePtr = fopen("GeneralizedKirkwood.xml", "w" );
+        (void) fprintf( filePtr, "%s", buffer.str().c_str() );
+        (void) fclose( filePtr );
+    }
+
+    AmoebaGeneralizedKirkwoodForce* copy = XmlSerializer::deserialize<AmoebaGeneralizedKirkwoodForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
-    AmoebaHarmonicInPlaneAngleForce& force2 = *copy;
+    AmoebaGeneralizedKirkwoodForce& force2 = *copy;
+    ASSERT_EQUAL(force1.getSolventDielectric(),    force2.getSolventDielectric());
+    ASSERT_EQUAL(force1.getSoluteDielectric(),     force2.getSoluteDielectric());
+    ASSERT_EQUAL(force1.getDielectricOffset(),     force2.getDielectricOffset());
+    ASSERT_EQUAL(force1.getProbeRadius(),          force2.getProbeRadius());
+    ASSERT_EQUAL(force1.getSurfaceAreaFactor(),    force2.getSurfaceAreaFactor());
+    ASSERT_EQUAL(force1.getIncludeCavityTerm(),    force2.getIncludeCavityTerm());
 
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleCubic(),    force2.getAmoebaGlobalHarmonicInPlaneAngleCubic());
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleQuartic(),  force2.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAnglePentic(),   force2.getAmoebaGlobalHarmonicInPlaneAnglePentic());
-    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleSextic(),   force2.getAmoebaGlobalHarmonicInPlaneAngleSextic());
-    ASSERT_EQUAL(force1.getNumAngles(),                                force2.getNumAngles());
+    ASSERT_EQUAL(force1.getNumParticles(), force2.getNumParticles());
+    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
 
-    for ( unsigned int ii = 0; ii < force1.getNumAngles(); ii++) {
-        int a1, a2, a3, a4, b1, b2, b3, b4;
-        double da, db, ka, kb;
-        force1.getAngleParameters(ii, a1, a2, a3, a4, da, ka);
-        force2.getAngleParameters(ii, b1, b2, b3, b4, db, kb);
-        ASSERT_EQUAL(a1, b1);
-        ASSERT_EQUAL(a2, b2);
-        ASSERT_EQUAL(a3, b3);
-        ASSERT_EQUAL(a4, b4);
-        ASSERT_EQUAL(da, db);
-        ASSERT_EQUAL(ka, kb);
+        double radius1, charge1, scaleFactor1;
+        double radius2, charge2, scaleFactor2;
+
+        force1.getParticleParameters( ii, charge1, radius1, scaleFactor1 );
+        force2.getParticleParameters( ii, charge2, radius2, scaleFactor2 );
+
+        ASSERT_EQUAL(charge1,      charge2);
+        ASSERT_EQUAL(radius1,      radius2);
+        ASSERT_EQUAL(scaleFactor1, scaleFactor2);
     }
 }
 

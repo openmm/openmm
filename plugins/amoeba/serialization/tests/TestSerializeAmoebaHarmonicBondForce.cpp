@@ -41,30 +41,30 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    AmoebaHarmonicBondForce force;
-    force.setAmoebaGlobalHarmonicBondCubic( 12.3 );
-    force.setAmoebaGlobalHarmonicBondQuartic( 98.7 );
-    force.addBond(0, 1, 1.0, 2.0);
-    force.addBond(0, 2, 2.0, 2.1);
-    force.addBond(2, 3, 3.0, 2.2);
-    force.addBond(5, 1, 4.0, 2.3);
+    AmoebaHarmonicBondForce force1;
+    force1.setAmoebaGlobalHarmonicBondCubic( 12.3 );
+    force1.setAmoebaGlobalHarmonicBondQuartic( 98.7 );
+    force1.addBond(0, 1, 1.0, 2.0);
+    force1.addBond(0, 2, 2.0, 2.1);
+    force1.addBond(2, 3, 3.0, 2.2);
+    force1.addBond(5, 1, 4.0, 2.3);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
-    XmlSerializer::serialize<AmoebaHarmonicBondForce>(&force, "Force", buffer);
+    XmlSerializer::serialize<AmoebaHarmonicBondForce>(&force1, "Force", buffer);
     AmoebaHarmonicBondForce* copy = XmlSerializer::deserialize<AmoebaHarmonicBondForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
     AmoebaHarmonicBondForce& force2 = *copy;
-    ASSERT_EQUAL(force.getAmoebaGlobalHarmonicBondCubic(), force2.getAmoebaGlobalHarmonicBondCubic());
-    ASSERT_EQUAL(force.getAmoebaGlobalHarmonicBondQuartic(), force2.getAmoebaGlobalHarmonicBondQuartic());
-    ASSERT_EQUAL(force.getNumBonds(), force2.getNumBonds());
-    for (int i = 0; i < force.getNumBonds(); i++) {
+    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicBondCubic(), force2.getAmoebaGlobalHarmonicBondCubic());
+    ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicBondQuartic(), force2.getAmoebaGlobalHarmonicBondQuartic());
+    ASSERT_EQUAL(force1.getNumBonds(), force2.getNumBonds());
+    for (unsigned int ii = 0; ii < force1.getNumBonds(); ii++) {
         int a1, a2, b1, b2;
         double da, db, ka, kb;
-        force.getBondParameters(i, a1, a2, da, ka);
-        force2.getBondParameters(i, b1, b2, db, kb);
+        force1.getBondParameters(ii, a1, a2, da, ka);
+        force2.getBondParameters(ii, b1, b2, db, kb);
         ASSERT_EQUAL(a1, b1);
         ASSERT_EQUAL(a2, b2);
         ASSERT_EQUAL(da, db);

@@ -44,11 +44,11 @@ AmoebaPiTorsionForceProxy::AmoebaPiTorsionForceProxy() : SerializationProxy("Amo
 void AmoebaPiTorsionForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaPiTorsionForce& force = *reinterpret_cast<const AmoebaPiTorsionForce*>(object);
-    SerializationNode& bonds = node.createChildNode("PiTorsion");
-    for (int i = 0; i < force.getNumPiTorsions(); i++) {
+    SerializationNode& bonds = node.createChildNode("PiTorsion").setIntProperty( "size", force.getNumPiTorsions() );
+    for ( unsigned int ii = 0; ii < force.getNumPiTorsions(); ii++) {
         int particle1, particle2, particle3, particle4, particle5, particle6;
         double k;
-        force.getPiTorsionParameters(i, particle1, particle2, particle3, particle4, particle5, particle6, k);
+        force.getPiTorsionParameters(ii, particle1, particle2, particle3, particle4, particle5, particle6, k);
         bonds.createChildNode("PiTorsion").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setIntProperty("p3", particle3).setIntProperty("p4", particle4).setIntProperty("p5", particle5).setIntProperty("p6", particle6).setDoubleProperty("k", k);
     }
 }
@@ -59,9 +59,9 @@ void* AmoebaPiTorsionForceProxy::deserialize(const SerializationNode& node) cons
     AmoebaPiTorsionForce* force = new AmoebaPiTorsionForce();
     try {
         const SerializationNode& bonds = node.getChildNode("PiTorsion");
-        for (int i = 0; i < (int) bonds.getChildren().size(); i++) {
-            const SerializationNode& bond = bonds.getChildren()[i];
-            force->addPiTorsion(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getIntProperty("p4"), bond.getIntProperty("p5"),  bond.getIntProperty("p6"),bond.getDoubleProperty("k"));
+        for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
+            const SerializationNode& bond = bonds.getChildren()[ii];
+            force->addPiTorsion(bond.getIntProperty("p1"), bond.getIntProperty("p2"), bond.getIntProperty("p3"),  bond.getIntProperty("p4"), bond.getIntProperty("p5"), bond.getIntProperty("p6"), bond.getDoubleProperty("k"));
         }
     }
     catch (...) {
