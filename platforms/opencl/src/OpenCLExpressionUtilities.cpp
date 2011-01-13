@@ -130,7 +130,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             if (valueNode != NULL)
                 out << valueName << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(params.z*params.z);\n";
             if (derivNode != NULL)
-                out << derivName << " = (coeff.y-coeff.x)*params.z-((3.0f*a*a-1.0f)*coeff.z+(4.0f*b*b-1.0f)*coeff.w)/params.z;\n";
+                out << derivName << " = (coeff.y-coeff.x)*params.z+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/params.z;\n";
             out << "}\n";
             out << "}";
             break;
