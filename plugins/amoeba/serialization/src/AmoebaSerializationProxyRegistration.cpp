@@ -100,8 +100,8 @@ extern "C" void registerAmoebaSerializationProxies() {
     HMODULE handle = LoadLibrary(file.c_str());
     SetErrorMode(oldErrorMode); // Restore previous error mode.
     if (handle == NULL) {
-        string message;
-        stringstream(message) << "Error loading library " << file << ": " << GetLastError();
+        std::string message;
+        std::stringstream(message) << "Error loading library " << file << ": " << GetLastError();
         throw OpenMMException(message);
     }   
 #else

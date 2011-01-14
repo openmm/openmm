@@ -63,7 +63,7 @@ static void addCovalentMap( SerializationNode& particleExclusions, int particleI
     }
 }
 
-int loadCovalentMap( const SerializationNode& map, std::vector< int >& covalentMap ){
+void loadCovalentMap( const SerializationNode& map, std::vector< int >& covalentMap ){
     for (unsigned int ii = 0; ii < map.getChildren().size(); ii++) {
         covalentMap.push_back( map.getChildren()[ii].getIntProperty( "v" ) );
     }
