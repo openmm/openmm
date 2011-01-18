@@ -163,7 +163,7 @@ void kComputeAmoebaBsplines_kernel()
 __global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(1024, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(512, 1)
 #else
 __launch_bounds__(256, 1)

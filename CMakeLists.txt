@@ -329,6 +329,7 @@ IF(CUDA_FOUND)
         SET(FLAGS "")
         # Note that cmake will insert semicolons between these item automatically...
         SET(FLAGS ${FLAGS} -gencode arch=compute_11,code=sm_11)
+        SET(FLAGS ${FLAGS} -gencode arch=compute_12,code=sm_12)
         SET(FLAGS ${FLAGS} -gencode arch=compute_13,code=sm_13)
         SET(FLAGS ${FLAGS} -gencode arch=compute_20,code=sm_20)
         SET(FLAGS ${FLAGS} -use_fast_math)

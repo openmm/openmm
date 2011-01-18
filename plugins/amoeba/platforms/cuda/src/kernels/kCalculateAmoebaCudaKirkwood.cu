@@ -1576,7 +1576,7 @@ static void kReduce_dBorn(amoebaGpuContext amoebaGpu )
 __global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
@@ -1633,7 +1633,7 @@ __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 __global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)

@@ -29,7 +29,7 @@
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(256, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(128, 1)
 #else
 __launch_bounds__(64, 1)
