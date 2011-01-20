@@ -1390,6 +1390,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
     }
 
 }
+
 /**---------------------------------------------------------------------------------------
 
    Compute Amoeba electrostatic force & torque using PME
@@ -1413,7 +1414,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         zeroForce( amoebaGpu );
     }
 
-    if( 1 ){
+    if( 0 ){
         gpuContext gpu = amoebaGpu->gpuContext;
         std::vector<int> fileId;
 

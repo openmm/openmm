@@ -191,12 +191,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
 
     (void) fprintf( log, "\n\n" );
     (void) fprintf( log, "     gpuContext                         %p\n",      amoebaGpu->gpuContext );
-    (void) fprintf( log, "     log                                %p\n",      amoebaGpu->log );
+    (void) fprintf( log, "     log                                %p %s\n",   amoebaGpu->log, amoebaGpu->log == stderr ? "is stderr" : "is not stderr");
     (void) fprintf( log, "     sm_version                         %u\n",      gpu->sm_version );
     (void) fprintf( log, "     device                             %u\n",      gpu->device );
     (void) fprintf( log, "     sharedMemoryPerBlock               %u\n",      gpu->sharedMemoryPerBlock );
-    (void) fprintf( log, "     pMapArray                          %p\n",      amoebaGpu->pMapArray );
-    (void) fprintf( log, "     dMapArray                          %p\n",      amoebaGpu->dMapArray );
     (void) fprintf( log, "     bOutputBufferPerWarp               %d\n",      amoebaGpu->bOutputBufferPerWarp );
     (void) fprintf( log, "     paddedNumberOfAtoms                %u\n",      amoebaGpu->paddedNumberOfAtoms );
     (void) fprintf( log, "     nonbondBlocks                      %u\n",      amoebaGpu->nonbondBlocks );
@@ -209,6 +207,13 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     outputBuffers                      %u\n",      amoebaGpu->outputBuffers );
     (void) fprintf( log, "     workUnits                          %u\n",      amoebaGpu->workUnits );
 
+    gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psEnergy,    log );
+    gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psForce4,    log );
+    gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psPosq4,     log );
+    gpuPrintCudaStreamFloat2( amoebaGpu->gpuContext->psObcData,   log );
+    gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psBornForce, log );
+    (void) fprintf( log, "\n\n" );
+    (void) fprintf( log, "     amoebaBonds                       %u\n",      amoebaGpu->amoebaSim.amoebaBonds );
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_1, log );
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_2, log );
     gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_3, log );
@@ -337,6 +342,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     quartic                            %15.7e\n",  amoebaGpu->amoebaSim.amoebaUreyBradleyQuarticicParameter);
     (void) fprintf( log, "     pAmoebaUreyBradleyID               %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyID );
     (void) fprintf( log, "     pAmoebaUreyBradleyParameter        %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter );
+    (void) fprintf( log, "\n\n" );
     
 //    if( amoebaGpu->psRotationMatrix)(void) fprintf( log, "\n" );
 //    gpuPrintCudaStreamFloat( amoebaGpu->psRotationMatrix, log );
@@ -393,7 +399,6 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     mutualInducedCurrentEpsilon        %10.3e\n",  amoebaGpu->mutualInducedCurrentEpsilon );
 
     gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipole, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipolePolar, log );
     gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipolePolar, log );
     gpuPrintCudaStreamFloat( amoebaGpu->psCurrentEpsilon, log );
 
@@ -4437,3 +4442,32 @@ void gpuCopyWorkUnit( amoebaGpuContext amoebaGpu ){
 }
 
 #undef  AMOEBA_DEBUG
+
+/**---------------------------------------------------------------------------------------
+
+   Load contents of arrays into vector
+
+   @param numberOfParticles    number of particles
+   @param entriesPerParticle   entries/particles array
+   @param array                cuda array
+   @param initValue            vector init value
+
+   --------------------------------------------------------------------------------------- */
+
+void initializeCudaFloatArray( int numberOfParticles, int entriesPerParticle,
+                               CUDAStream<float>* array, float initValue )
+{
+    // ---------------------------------------------------------------------------------------
+
+    // static const std::string methodName = "initializeCudaFloatArray";
+
+    // ---------------------------------------------------------------------------------------
+
+    for( int ii = 0; ii < numberOfParticles; ii++ ){ 
+        for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
+            array->_pSysStream[0][entriesPerParticle*ii+jj] = initValue;
+        }
+    }
+    array->Upload();
+}
+

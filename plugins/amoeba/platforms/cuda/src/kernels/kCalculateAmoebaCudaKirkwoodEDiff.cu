@@ -1059,6 +1059,7 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
         threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle)), maxThreads);
     }   
     
+#ifdef AMOEBA_DEBUG
     if( amoebaGpu->log && timestep == 1 ){
         (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces: blocks=%u threads=%u bffr/Warp=%u atm=%lu shrd=%lu"
                                         " Ebuf=%u ixnCt=%lu workUnits=%u sm=%d device=%d sharedMemoryPerBlock=%u\n",
@@ -1068,6 +1069,7 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
         //gpuPrintCudaAmoebaGmxSimulation(amoebaGpu, amoebaGpu->log );
         (void) fflush( amoebaGpu->log );
     }   
+#endif
 
     if (gpu->bOutputBufferPerWarp){
 

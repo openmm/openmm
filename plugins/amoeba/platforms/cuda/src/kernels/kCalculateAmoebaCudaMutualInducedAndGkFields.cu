@@ -502,8 +502,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
     int targetAtom    = 0;
     static const char* methodName       = "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply";
     if( 1 && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s: scalingDistanceCutoff=%.5f\n",
-                        methodName, amoebaGpu->scalingDistanceCutoff );
+        (void) fprintf( amoebaGpu->log, "%s\n", methodName );
         (void) fflush( amoebaGpu->log );
     }
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
@@ -583,7 +582,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
         //printMiFieldBuffer( amoebaGpu, 37 );
         //printMiFieldBuffer( amoebaGpu, 38 );
 
-    if( amoebaGpu->log && iteration == -1 ){
+    if( amoebaGpu->log && iteration == 1 ){
 
         (void) fprintf( amoebaGpu->log, "Finished MI kernel execution %d\n", iteration ); (void) fflush( amoebaGpu->log );
 

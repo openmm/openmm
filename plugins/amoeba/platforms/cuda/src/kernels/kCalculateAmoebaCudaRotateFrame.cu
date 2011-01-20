@@ -565,7 +565,23 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     if( hasAmoebaGeneralizedKirkwood ){
         cudaComputeAmoebaFixedEAndGkFields( amoebaGpu );
+        if( 0 ){
+            gpuContext gpu = amoebaGpu->gpuContext;
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psE_Field, 0.0 );
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psE_FieldPolar, 0.0 );
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psGk_Field, 0.0 );
+        }
+
         cudaComputeAmoebaMutualInducedAndGkField( amoebaGpu );
+        if( 0 ){
+            gpuContext gpu = amoebaGpu->gpuContext;
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipole, 0.0 );
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipolePolar, 0.0 );
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipoleS, 0.0 );
+            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipolePolarS, 0.0 );
+            amoebaGpu->mutualInducedDone = 1;
+        }
+
     } else {
         if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
             cudaComputeAmoebaFixedEField( amoebaGpu );
