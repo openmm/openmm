@@ -137,9 +137,9 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealV
     // add in forces
  
     for( int jj = 0; jj < LastAtomIndex; jj++ ){
-        forces[jj][0] -= subForce[jj][0];
-        forces[jj][1] -= subForce[jj][1];
-        forces[jj][2] -= subForce[jj][2];
+        forces[jj][0] = subForce[jj][0];
+        forces[jj][1] = subForce[jj][1];
+        forces[jj][2] = subForce[jj][2];
     }
  
     // ---------------------------------------------------------------------------------------
@@ -166,11 +166,16 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateForceAndEnergy( int numStre
         RealOpenMM idealAngle   = angle[ii];
         RealOpenMM angleK       = kQuadratic[ii];
         RealVec forces[3];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
         energy                 += calculateStretchBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index],
                                                            abLength, cbLength, idealAngle, angleK, forces );
+        // accumulate forces
+    
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] -= forces[0][jj];
+            forceData[particle2Index][jj] -= forces[1][jj];
+            forceData[particle3Index][jj] -= forces[2][jj];
+        }
+
     }   
     return energy;
 }

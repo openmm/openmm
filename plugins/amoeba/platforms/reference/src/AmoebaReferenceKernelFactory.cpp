@@ -37,18 +37,20 @@ extern "C" void OPENMM_EXPORT registerKernelFactories() {
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
         if( platform.getName() == "Reference" ){
+
              AmoebaReferenceKernelFactory* factory = new AmoebaReferenceKernelFactory();
-             platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaUreyBradleyForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
+
+             platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(),          factory);
+             platform.registerKernelFactory(CalcAmoebaUreyBradleyForceKernel::Name(),           factory);
+             platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(),         factory);
+             platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(),  factory);
+             platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(),               factory);
+             platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(),             factory);
+             platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(),           factory);
+             platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(),        factory);
+             platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(),        factory);
+             platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(),                   factory);
+             platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(),             factory);
 /*
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
 */

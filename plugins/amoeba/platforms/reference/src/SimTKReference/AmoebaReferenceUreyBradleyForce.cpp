@@ -75,13 +75,13 @@ RealOpenMM AmoebaReferenceUreyBradleyForce::calculateUreyBradleyIxn( const RealV
    dEdR                      *= two*kForceConstant*deltaIdeal;
    dEdR                       = r > zero ? (dEdR/r) : zero;
 
-   forces[0][0]              += dEdR*deltaR[0];
-   forces[0][1]              += dEdR*deltaR[1];
-   forces[0][2]              += dEdR*deltaR[2];
+   forces[0][0]              = dEdR*deltaR[0];
+   forces[0][1]              = dEdR*deltaR[1];
+   forces[0][2]              = dEdR*deltaR[2];
 
-   forces[1][0]              -= dEdR*deltaR[0];
-   forces[1][1]              -= dEdR*deltaR[1];
-   forces[1][2]              -= dEdR*deltaR[2];
+   forces[1][0]              = dEdR*deltaR[0];
+   forces[1][1]              = dEdR*deltaR[1];
+   forces[1][2]              = dEdR*deltaR[2];
 
    RealOpenMM energy          = kForceConstant*deltaIdeal2*( one + cubicK*deltaIdeal + quarticK*deltaIdeal2 );
    return energy;
@@ -103,11 +103,16 @@ RealOpenMM AmoebaReferenceUreyBradleyForce::calculateForceAndEnergy( int numIxns
         RealOpenMM idealLength        = length[ii];
         RealOpenMM kForceConstant     = kQuadratic[ii];
         RealVec forces[2];
-        forces[0]                     = forceData[particle1Index];
-        forces[1]                     = forceData[particle2Index];
         energy                       += calculateUreyBradleyIxn( particlePositions[particle1Index], particlePositions[particle2Index],
                                                                  idealLength, kForceConstant, globalUreyBradleyCubic, globalUreyBradleyQuartic,
                                                                  forces );
+        // accumulate forces
+    
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] += forces[0][jj];
+            forceData[particle2Index][jj] -= forces[1][jj];
+        }
+
     }   
     return energy;
 }

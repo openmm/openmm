@@ -236,9 +236,9 @@ RealOpenMM AmoebaReferenceHarmonicInPlaneAngleForce::calculateAngleIxn( const Re
     // accumulate forces
  
     for( int jj = 0; jj < 4; jj++ ){
-        forces[jj][0] -= forceTerm[jj][0];
-        forces[jj][1] -= forceTerm[jj][1];
-        forces[jj][2] -= forceTerm[jj][2];
+        forces[jj][0] = forceTerm[jj][0];
+        forces[jj][1] = forceTerm[jj][1];
+        forces[jj][2] = forceTerm[jj][2];
     }
  
     return energy;
@@ -266,12 +266,18 @@ RealOpenMM AmoebaReferenceHarmonicInPlaneAngleForce::calculateForceAndEnergy( in
         RealOpenMM idealAngle   = angle[ii];
         RealOpenMM angleK       = kQuadratic[ii];
         RealVec forces[4];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
         energy                 += calculateAngleIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
                                                      idealAngle, angleK, angleCubic, angleQuartic, anglePentic, angleSextic, forces );
+
+        // accumulate forces
+     
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] -= forces[0][jj];
+            forceData[particle2Index][jj] -= forces[1][jj];
+            forceData[particle3Index][jj] -= forces[2][jj];
+            forceData[particle4Index][jj] -= forces[3][jj];
+        }
+ 
     }   
     return energy;
 }

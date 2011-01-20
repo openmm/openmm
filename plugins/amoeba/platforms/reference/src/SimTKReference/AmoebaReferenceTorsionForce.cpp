@@ -185,21 +185,21 @@ RealOpenMM AmoebaReferenceTorsionForce::calculateTorsionIxn( const RealVec& posi
      
     // forces
   
-    forces[0][0] -= tempVector[0][0];
-    forces[0][1] -= tempVector[0][1];
-    forces[0][2] -= tempVector[0][2];
+    forces[0][0] = tempVector[0][0];
+    forces[0][1] = tempVector[0][1];
+    forces[0][2] = tempVector[0][2];
  
-    forces[1][0] -= tempVector[1][0];
-    forces[1][1] -= tempVector[1][1];
-    forces[1][2] -= tempVector[1][2];
+    forces[1][0] = tempVector[1][0];
+    forces[1][1] = tempVector[1][1];
+    forces[1][2] = tempVector[1][2];
  
-    forces[2][0] -= tempVector[2][0];
-    forces[2][1] -= tempVector[2][1];
-    forces[2][2] -= tempVector[2][2];
+    forces[2][0] = tempVector[2][0];
+    forces[2][1] = tempVector[2][1];
+    forces[2][2] = tempVector[2][2];
  
-    forces[3][0] -= tempVector[3][0];
-    forces[3][1] -= tempVector[3][1];
-    forces[3][2] -= tempVector[3][2];
+    forces[3][0] = tempVector[3][0];
+    forces[3][1] = tempVector[3][1];
+    forces[3][2] = tempVector[3][2];
  
     // ---------------------------------------------------------------------------------------
  
@@ -228,12 +228,17 @@ RealOpenMM AmoebaReferenceTorsionForce::calculateForceAndEnergy( int numTorsions
         int particle3Index      = particle3[ii];
         int particle4Index      = particle4[ii];
         RealVec forces[4];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
         energy                 += calculateTorsionIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
                                                        torsionParameters1[ii], torsionParameters2[ii], torsionParameters3[ii], forces );
+        // accumulate forces
+    
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] -= forces[0][jj];
+            forceData[particle2Index][jj] -= forces[1][jj];
+            forceData[particle3Index][jj] -= forces[2][jj];
+            forceData[particle4Index][jj] -= forces[3][jj];
+        }
+
     }   
     return energy;
 }

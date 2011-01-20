@@ -182,7 +182,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
  
     for( int jj = 0; jj < LastAtomIndex; jj++ ){
        for( int ii = 0; ii < 3; ii++ ){
-          forces[jj][ii] -= subForce[jj][ii];
+          forces[jj][ii] = subForce[jj][ii];
        }
     }
  
@@ -215,12 +215,15 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateForceAndEnergy( int numO
         int particle4Index      = particle4[ii];
         RealOpenMM kAngle       = kQuadratic[ii];
         RealVec forces[4];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
         energy                 += calculateOutOfPlaneBendIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
                                                               kAngle, angleCubic, angleQuartic, anglePentic, angleSextic, forces );
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] -= forces[0][jj];
+            forceData[particle2Index][jj] -= forces[1][jj];
+            forceData[particle3Index][jj] -= forces[2][jj];
+            forceData[particle4Index][jj] -= forces[3][jj];
+        }
+
     }   
     return energy;
 }

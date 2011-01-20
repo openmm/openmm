@@ -75,13 +75,14 @@ RealOpenMM AmoebaReferenceHarmonicBondForce::calculateBondIxn( const RealVec& po
    dEdR                      *= two*bondK*deltaIdeal;
    dEdR                       = r > zero ? (dEdR/r) : zero;
 
-   forces[0][0]              += dEdR*deltaR[0];
-   forces[0][1]              += dEdR*deltaR[1];
-   forces[0][2]              += dEdR*deltaR[2];
+   forces[0][0]               = dEdR*deltaR[0];
+   forces[0][1]               = dEdR*deltaR[1];
+   forces[0][2]               = dEdR*deltaR[2];
 
-   forces[1][0]              -= dEdR*deltaR[0];
-   forces[1][1]              -= dEdR*deltaR[1];
-   forces[1][2]              -= dEdR*deltaR[2];
+   dEdR                      *= -1.0;
+   forces[1][0]               = dEdR*deltaR[0];
+   forces[1][1]               = dEdR*deltaR[1];
+   forces[1][2]               = dEdR*deltaR[2];
 
    RealOpenMM energy          = bondK*deltaIdeal2*( one + bondCubic*deltaIdeal + bondQuartic*deltaIdeal2 );
    return energy;
@@ -103,11 +104,16 @@ RealOpenMM AmoebaReferenceHarmonicBondForce::calculateForceAndEnergy( int numBon
         RealOpenMM bondLength   = length[ii];
         RealOpenMM bondK        = kQuadratic[ii];
         RealVec forces[2];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
+
         energy                 += calculateBondIxn( particlePositions[particle1Index], particlePositions[particle2Index],
                                                     bondLength, bondK, globalHarmonicBondCubic, globalHarmonicBondQuartic,
                                                     forces );
+
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] += forces[0][jj];
+            forceData[particle2Index][jj] += forces[1][jj];
+        }
+
     }   
     return energy;
 }

@@ -154,29 +154,29 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculatePiTorsionIxn( const RealVec& 
  
     // add in forces
  
-    forces[0][0] -= d[0][0];
-    forces[0][1] -= d[0][1];
-    forces[0][2] -= d[0][2];
+    forces[0][0] = d[0][0];
+    forces[0][1] = d[0][1];
+    forces[0][2] = d[0][2];
  
-    forces[1][0] -= d[1][0];
-    forces[1][1] -= d[1][1];
-    forces[1][2] -= d[1][2];
+    forces[1][0] = d[1][0];
+    forces[1][1] = d[1][1];
+    forces[1][2] = d[1][2];
  
-    forces[2][0] -= d[2][0];
-    forces[2][1] -= d[2][1];
-    forces[2][2] -= d[2][2];
+    forces[2][0] = d[2][0];
+    forces[2][1] = d[2][1];
+    forces[2][2] = d[2][2];
  
-    forces[3][0] -= d[3][0];
-    forces[3][1] -= d[3][1];
-    forces[3][2] -= d[3][2];
+    forces[3][0] = d[3][0];
+    forces[3][1] = d[3][1];
+    forces[3][2] = d[3][2];
  
-    forces[4][0] -= d[4][0];
-    forces[4][1] -= d[4][1];
-    forces[4][2] -= d[4][2];
+    forces[4][0] = d[4][0];
+    forces[4][1] = d[4][1];
+    forces[4][2] = d[4][2];
  
-    forces[5][0] -= d[5][0];
-    forces[5][1] -= d[5][1];
-    forces[5][2] -= d[5][2];
+    forces[5][0] = d[5][0];
+    forces[5][1] = d[5][1];
+    forces[5][2] = d[5][2];
  
     // ---------------------------------------------------------------------------------------
  
@@ -206,16 +206,21 @@ RealOpenMM AmoebaReferencePiTorsionForce::calculateForceAndEnergy( int numPiTors
         int particle6Index      = particle6[ii];
 
         RealVec forces[6];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
-        forces[3]               = forceData[particle4Index];
-        forces[4]               = forceData[particle5Index];
-        forces[5]               = forceData[particle6Index];
         energy                 += calculatePiTorsionIxn( posData[particle1Index], posData[particle2Index],
                                                          posData[particle3Index], posData[particle4Index],
                                                          posData[particle5Index], posData[particle6Index],
                                                          kTorsion[ii], forces );
+        // accumulate forces
+     
+        for( int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] -= forces[0][jj];
+            forceData[particle2Index][jj] -= forces[1][jj];
+            forceData[particle3Index][jj] -= forces[2][jj];
+            forceData[particle4Index][jj] -= forces[3][jj];
+            forceData[particle5Index][jj] -= forces[4][jj];
+            forceData[particle6Index][jj] -= forces[5][jj];
+        }   
+
     }   
     return energy;
 }

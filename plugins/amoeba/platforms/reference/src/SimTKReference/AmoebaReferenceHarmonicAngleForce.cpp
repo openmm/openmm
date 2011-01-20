@@ -175,9 +175,9 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateAngleIxn( const RealVec& 
     // accumulate forces
  
     for( int jj = 0; jj < 3; jj++ ){
-        forces[jj][0] += deltaCrossP[jj][0];
-        forces[jj][1] += deltaCrossP[jj][1];
-        forces[jj][2] += deltaCrossP[jj][2];
+        forces[jj][0] = deltaCrossP[jj][0];
+        forces[jj][1] = deltaCrossP[jj][1];
+        forces[jj][2] = deltaCrossP[jj][2];
     }
  
     return energy;
@@ -202,11 +202,14 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( int numAn
         RealOpenMM idealAngle   = angle[ii];
         RealOpenMM angleK       = kQuadratic[ii];
         RealVec forces[3];
-        forces[0]               = forceData[particle1Index];
-        forces[1]               = forceData[particle2Index];
-        forces[2]               = forceData[particle3Index];
         energy                 += calculateAngleIxn( posData[particle1Index], posData[particle2Index], posData[particle3Index],
                                                      idealAngle, angleK, angleCubic, angleQuartic, anglePentic, angleSextic, forces );
+
+        for( unsigned int jj = 0; jj < 3; jj++ ){
+            forceData[particle1Index][jj] += forces[0][jj];
+            forceData[particle2Index][jj] += forces[1][jj];
+            forceData[particle3Index][jj] += forces[2][jj];
+        }
     }   
     return energy;
 }
