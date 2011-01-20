@@ -25,6 +25,7 @@
 #ifndef __ReferenceConstraintAlgorithm_H__
 #define __ReferenceConstraintAlgorithm_H__
 
+#include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "openmm/internal/windowsExport.h"
 
 /**
