@@ -752,7 +752,7 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
             for (unsigned int jj = 0; jj < grid[ii].size(); jj++) {
 
                 floatGrids[gridIndex][ii][jj].resize( grid[ii][jj].size() );
-                for (unsigned int kk = 0; kk < grid[ii][kk].size(); kk++) {
+                for (unsigned int kk = 0; kk < grid[ii][jj].size(); kk++) {
                     floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(grid[ii][jj][kk]);
                 }
             }

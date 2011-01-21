@@ -15,6 +15,7 @@ using namespace std;
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
+extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
 
 void SetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext amoebaGpu)
 {

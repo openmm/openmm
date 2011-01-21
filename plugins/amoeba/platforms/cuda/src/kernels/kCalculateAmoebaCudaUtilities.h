@@ -9,7 +9,7 @@ __global__ void kReduceFieldsToFloat4_kernel( unsigned int fieldComponents, unsi
 
 extern __global__ void kFindBlockBoundsPeriodic_kernel();
 extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
-extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
+//extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
 
 
 extern __global__ void kFindBlocksWithInteractionsVdwPeriodic_kernel();
