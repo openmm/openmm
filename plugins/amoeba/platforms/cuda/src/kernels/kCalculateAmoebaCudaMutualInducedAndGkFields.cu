@@ -292,7 +292,7 @@ void kReduceMutualInducedAndGkFieldDelta_kernel( float* arrayOfDeltas1, float* a
 
     // load deltas
 
-    while( pos <  3*cAmoebaSim.numberOfAtoms )
+    while( pos < 3*cAmoebaSim.numberOfAtoms )
     {   
         delta[threadIdx.x].x  += arrayOfDeltas1[pos];
         delta[threadIdx.x].y  += arrayOfDeltas2[pos];

@@ -1125,12 +1125,13 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
 {
  
     // make sure only flip once
-
+/*
     static int flipped = 0;
     if( amoebaGpu && flipped ){
         return;
     }
     flipped = 1;
+*/
     _gpuContext* gpu                                           = amoebaGpu->gpuContext;
 
     amoebaGpu->amoebaSim.amoebaBond_offset                     = amoebaGpu->psAmoebaBondParameter ? amoebaGpu->psAmoebaBondParameter->_stride : 0;
@@ -1270,7 +1271,6 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
         }
 
     }
-
 }
 
 /**---------------------------------------------------------------------------------------
