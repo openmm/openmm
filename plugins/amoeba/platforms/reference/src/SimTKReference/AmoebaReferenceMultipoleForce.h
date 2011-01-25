@@ -203,7 +203,7 @@ public:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateForceAndEnergy( int numParticles, std::vector<OpenMM::RealVec>& particlePositions,
+    RealOpenMM calculateForceAndEnergy( const std::vector<OpenMM::RealVec>& particlePositions,
                                         const std::vector<RealOpenMM>& charges,
                                         const std::vector<RealOpenMM>& dipoles,
                                         const std::vector<RealOpenMM>& quadrupoles,
@@ -270,14 +270,14 @@ private:
     
     void initialize( void );
 
-    void loadParticleData( std::vector<OpenMM::RealVec>& particlePositions, 
-                                                      const std::vector<RealOpenMM>& charges,
-                                                      const std::vector<RealOpenMM>& dipoles,
-                                                      const std::vector<RealOpenMM>& quadrupoles,
-                                                      const std::vector<RealOpenMM>& tholes,
-                                                      const std::vector<RealOpenMM>& dampingFactors,
-                                                      const std::vector<RealOpenMM>& polarity,
-                                                      std::vector<MultipoleParticleData>& particleData ) const;
+    void loadParticleData( const std::vector<OpenMM::RealVec>& particlePositions, 
+                           const std::vector<RealOpenMM>& charges,
+                           const std::vector<RealOpenMM>& dipoles,
+                           const std::vector<RealOpenMM>& quadrupoles,
+                           const std::vector<RealOpenMM>& tholes,
+                           const std::vector<RealOpenMM>& dampingFactors,
+                           const std::vector<RealOpenMM>& polarity,
+                           std::vector<MultipoleParticleData>& particleData ) const;
 
     /**---------------------------------------------------------------------------------------
     
@@ -515,7 +515,7 @@ private:
     
        --------------------------------------------------------------------------------------- */
     
-    RealOpenMM calculateNoCutoffForceAndEnergy( unsigned int numParticles, std::vector<OpenMM::RealVec>& particlePositions,
+    RealOpenMM calculateNoCutoffForceAndEnergy( const std::vector<OpenMM::RealVec>& particlePositions,
                                                 const std::vector<RealOpenMM>& charges,
                                                 const std::vector<RealOpenMM>& dipoles,
                                                 const std::vector<RealOpenMM>& quadrupoles,

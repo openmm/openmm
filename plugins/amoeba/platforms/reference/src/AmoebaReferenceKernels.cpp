@@ -531,7 +531,7 @@ double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bo
     amoebaReferenceMultipoleForce.setMutualInducedDipoleTargetEpsilon( mutualInducedTargetEpsilon );
     amoebaReferenceMultipoleForce.setMaximumMutualInducedDipoleIterations( mutualInducedMaxIterations );
 
-    RealOpenMM energy      = amoebaReferenceMultipoleForce.calculateForceAndEnergy( numMultipoles, posData, 
+    RealOpenMM energy      = amoebaReferenceMultipoleForce.calculateForceAndEnergy( posData, 
                                                                                     charges, dipoles, quadrupoles, tholes,
                                                                                     dampingFactors, polarity, axisTypes, 
                                                                                     multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
