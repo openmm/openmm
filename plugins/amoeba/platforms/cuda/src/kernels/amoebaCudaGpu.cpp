@@ -1665,11 +1665,6 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         // for z-only need to add access to random numbers
         // and need test system
 
-        if( axisType[ii] == 4 ){
-            //fprintf( stderr, "Axis type z-only (atom=%d) not fully implemented -- aborting.\n", ii );
-            fprintf( stderr, "Warning: Axis type z-only (atom=%d) not fully implemented.\n", ii );
-//            exit(0);
-        }
         int axisParticleIndex                                                     = multipoleParticleZ[ii];
         if( maxIndices[axisParticleIndex] < ii ){
             maxIndices[axisParticleIndex] = ii;

@@ -85,6 +85,7 @@ void kCudaComputeCheckChiral_kernel( void )
     // ---------------------------------------------------------------------------------------
  
     int atomIndex                = blockIdx.x;
+    if( atomIndex >= cSim.atoms )return;
  
     int axisType                 = multiPoleAtoms[atomIndex].w; 
  
@@ -108,7 +109,7 @@ void kCudaComputeCheckChiral_kernel( void )
 
     // skip z-then-x
 
-    if( axisType == 0 )return;
+    if( axisType == 0 || multiPoleAtoms[atomIndex].y < 0 )return;
  
     // ---------------------------------------------------------------------------------------
  
