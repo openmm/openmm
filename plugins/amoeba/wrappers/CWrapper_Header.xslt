@@ -21,7 +21,7 @@
 <xsl:variable name="vector_tortor_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::vector&lt;std::vector&lt;double')]/@id"/>
 
 <!-- Do not generate functions for the following classes -->
-<xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl', 'OpenMMException', 'Force', 'ForceImpl')"/>
+<xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'System', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl', 'OpenMMException', 'Force', 'ForceImpl')"/>
 <!-- Do not generate the following functions -->
 <xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
 <!-- Suppress any function which references any of the following classes -->
