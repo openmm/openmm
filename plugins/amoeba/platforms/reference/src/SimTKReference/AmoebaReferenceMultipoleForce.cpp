@@ -945,6 +945,7 @@ void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( std::vector
     static const RealOpenMM  one           = 1.0;
     static const RealOpenMM  two           = 2.0;
 
+    static const int debug                 = 0;
 	 FILE* log                              = stderr;
 
     // ---------------------------------------------------------------------------------------
@@ -992,7 +993,7 @@ void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( std::vector
         RealOpenMM epsilon = epsilonDirect > epsilonPolar ? epsilonDirect : epsilonPolar;
                    epsilon = _polarSOR*_debye*SQRT( epsilon/( static_cast<RealOpenMM>(numParticles) ) );
 
-fprintf( stderr, "MIb %3u eps=%15.7e %15.7e %15.7e\n", iteration, epsilonDirect, epsilonPolar, epsilon );
+        //fprintf( stderr, "MIb %3u eps=%15.7e %15.7e %15.7e\n", iteration, epsilonDirect, epsilonPolar, epsilon );
 
         if( epsilon < getMutualInducedDipoleTargetEpsilon() ){
             setMutualInducedDipoleConverged( true );
@@ -1008,7 +1009,7 @@ fprintf( stderr, "MIb %3u eps=%15.7e %15.7e %15.7e\n", iteration, epsilonDirect,
     setMutualInducedDipoleIterations( iteration );
 
 #ifdef AMOEBA_DEBUG
-    if( log ){
+    if( debug && log ){
         std::stringstream header;
         header << "MutualInducedDipoles:";
         header << " converged=" << getMutualInducedDipoleConverged();
@@ -2029,6 +2030,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
     static const RealOpenMM  one           = 1.0;
     static const RealOpenMM  two           = 2.0;
 
+    static const int debug                 = 0;
 	 FILE* log                              = stderr;
 
     // ---------------------------------------------------------------------------------------
@@ -2059,7 +2061,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
     }
 
 #ifdef AMOEBA_DEBUG
-    if( log ){
+    if( debug && log ){
         std::string header = "Reference: labFrameQuadrupole and labFrameDipole\n";
         unsigned int printFlag    =  (1 << PARTICLE_DIPOLE) | (1 << PARTICLE_QUADRUPOLE);
         int maxPrint              = 10;
@@ -2089,7 +2091,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
     }
 
 #ifdef AMOEBA_DEBUG
-    if( log ){
+    if( debug && log ){
         std::string header        = "Reference: fixed fields\n";
         unsigned int printFlag    =  (1<<PARTICLE_FIELD) | (1<<PARTICLE_FIELD_POLAR);
         int maxPrint              = 10;

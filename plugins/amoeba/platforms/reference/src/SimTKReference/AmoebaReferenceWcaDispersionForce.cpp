@@ -328,13 +328,13 @@ RealOpenMM AmoebaReferenceWcaDispersionForce::calculateForceAndEnergy( int numPa
                                         particlePositions[ii], particlePositions[jj],
                                         intermediateValues, force );
             
-            forces[ii][0] -= force[0];
-            forces[ii][1] -= force[1];
-            forces[ii][2] -= force[2];
+            forces[ii][0] += force[0];
+            forces[ii][1] += force[1];
+            forces[ii][2] += force[2];
 
-            forces[jj][0] += force[0];
-            forces[jj][1] += force[1];
-            forces[jj][2] += force[2];
+            forces[jj][0] -= force[0];
+            forces[jj][1] -= force[1];
+            forces[jj][2] -= force[2];
         }
 
     }
