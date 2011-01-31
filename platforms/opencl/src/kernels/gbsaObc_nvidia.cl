@@ -340,14 +340,15 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                     float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
                     float Gpol = tempEnergy*RECIP(denominator2);
                     float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                    force.w += dGpol_dalpha2_ij*bornRadius2;
                     float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                     if (r2 > CUTOFF_SQUARED) {
                         dEdR = 0.0f;
                         tempEnergy  = 0.0f;
+                        dGpol_dalpha2_ij = 0.0f;
                     }
 #endif
+                    force.w += dGpol_dalpha2_ij*bornRadius2;
                     energy += 0.5f*tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
@@ -409,7 +410,6 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                             float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
                             float Gpol = tempEnergy*RECIP(denominator2);
                             float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                            force.w += dGpol_dalpha2_ij*bornRadius2;
                             float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                             if (atom1 >= NUM_ATOMS || y*TILE_SIZE+j >= NUM_ATOMS || r2 > CUTOFF_SQUARED) {
@@ -417,9 +417,11 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                             if (atom1 >= NUM_ATOMS || y*TILE_SIZE+j >= NUM_ATOMS) {
 #endif
                                 dEdR = 0.0f;
+                                dGpol_dalpha2_ij = 0.0f;
 				tempEnergy = 0.0f;
                             }
 			    energy += tempEnergy;
+                            force.w += dGpol_dalpha2_ij*bornRadius2;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
                             tempBuffer[get_local_id(0)] = (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius1);
@@ -472,14 +474,15 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                         float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
                         float Gpol = tempEnergy*RECIP(denominator2);
                         float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                        force.w += dGpol_dalpha2_ij*bornRadius2;
                         float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                         if (r2 > CUTOFF_SQUARED) {
                             dEdR = 0.0f;
                             tempEnergy  = 0.0f;
+                            dGpol_dalpha2_ij = 0.0f;
                         }
 #endif
+                        force.w += dGpol_dalpha2_ij*bornRadius2;
                         energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;

@@ -274,12 +274,13 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                 float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
                 float Gpol = tempEnergy*RECIP(denominator2);
                 float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
                 float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                 dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
                 tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
+                dGpol_dalpha2_ij = select(dGpol_dalpha2_ij, 0.0f, r2 > CUTOFF_SQUARED);
 #endif
+                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
                 energy += select(0.0f, 0.5f*tempEnergy, includeInteraction);
                 delta.xyz *= select(0.0f, dEdR, includeInteraction);
                 force.xyz -= delta.xyz;
@@ -342,12 +343,13 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                 float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
                 float Gpol = tempEnergy*RECIP(denominator2);
                 float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
                 float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                 dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
                 tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
+                dGpol_dalpha2_ij = select(dGpol_dalpha2_ij, 0.0f, r2 > CUTOFF_SQUARED);
 #endif
+                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
                 energy += select(0.0f, tempEnergy, includeInteraction);
                 delta.xyz *= select(0.0f, dEdR, includeInteraction);
                 force.xyz -= delta.xyz;
