@@ -186,12 +186,16 @@ void kSetVelocitiesFromPositions_kernel()
     while (pos < cSim.atoms)
     {
         float4 posq = cSim.pPosq[pos];
-        float4 oldPosq = cSim.pOldPosq[pos];
+        float4 posqP = cSim.pPosqP[pos];
         float4 velm = cSim.pVelm4[pos];
-        velm.x = (float) (oneOverDt*((double)posq.x-(double)oldPosq.x));
-        velm.y = (float) (oneOverDt*((double)posq.y-(double)oldPosq.y));
-        velm.z = (float) (oneOverDt*((double)posq.z-(double)oldPosq.z));
+        velm.x = (float) (oneOverDt*posqP.x);
+        velm.y = (float) (oneOverDt*posqP.y);
+        velm.z = (float) (oneOverDt*posqP.z);
         cSim.pVelm4[pos] = velm;
+        posq.x += posqP.x;
+        posq.y += posqP.y;
+        posq.z += posqP.z;
+        cSim.pPosq[pos] = posq;
         pos += blockDim.x * gridDim.x;
     }
 }

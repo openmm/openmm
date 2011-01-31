@@ -148,7 +148,6 @@ struct _gpuContext {
     CUDAStream<float2>* psRbDihedralParameter2;
     CUDAStream<int4>* psLJ14ID;
     CUDAStream<float4>* psLJ14Parameter;
-    CUDAStream<int>* psNonShakeID;
     CUDAStream<int4>* psShakeID;
     CUDAStream<float4>* psShakeParameter;
     CUDAStream<int4>* psSettleID;

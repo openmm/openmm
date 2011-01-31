@@ -56,9 +56,9 @@ void kApplyConstraints(gpuContext gpu)
 {
     kPrepareConstraints_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(gpu->natoms, gpu->sim.pOldPosq, gpu->sim.pPosq, gpu->sim.pPosqP);
     LAUNCHERROR("kPrepareConstraints");
-    kApplyFirstShake(gpu);
-    kApplyFirstSettle(gpu);
-    kApplyFirstCCMA(gpu);
+    kApplyShake(gpu);
+    kApplySettle(gpu);
+    kApplyCCMA(gpu);
     kFinishConstraints_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(gpu->natoms, gpu->sim.pPosq, gpu->sim.pPosqP);
     LAUNCHERROR("kFinishConstraints");
 }

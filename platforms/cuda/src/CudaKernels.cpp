@@ -1216,9 +1216,9 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
         prevStepSize = stepSize;
     }
     kVerletUpdatePart1(gpu);
-    kApplyFirstShake(gpu);
-    kApplyFirstSettle(gpu);
-    kApplyFirstCCMA(gpu);
+    kApplyShake(gpu);
+    kApplySettle(gpu);
+    kApplyCCMA(gpu);
     if (data.removeCM)
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
@@ -1261,9 +1261,9 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     kLangevinUpdatePart2(gpu);
-    kApplySecondShake(gpu);
-    kApplySecondSettle(gpu);
-    kApplySecondCCMA(gpu);
+    kApplyShake(gpu);
+    kApplySettle(gpu);
+    kApplyCCMA(gpu);
     kSetVelocitiesFromPositions(gpu);
     data.time += stepSize;
     data.stepCount++;
@@ -1299,9 +1299,9 @@ void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const Browni
         prevStepSize = stepSize;
     }
     kBrownianUpdatePart1(gpu);
-    kApplyFirstShake(gpu);
-    kApplyFirstSettle(gpu);
-    kApplyFirstCCMA(gpu);
+    kApplyShake(gpu);
+    kApplySettle(gpu);
+    kApplyCCMA(gpu);
     if (data.removeCM)
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
@@ -1331,9 +1331,9 @@ void CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const 
     float maxStepSize = (float)(maxTime-data.time);
     kSelectVerletStepSize(gpu, maxStepSize);
     kVerletUpdatePart1(gpu);
-    kApplyFirstShake(gpu);
-    kApplyFirstSettle(gpu);
-    kApplyFirstCCMA(gpu);
+    kApplyShake(gpu);
+    kApplySettle(gpu);
+    kApplyCCMA(gpu);
     if (data.removeCM)
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
@@ -1381,9 +1381,9 @@ void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, cons
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     kLangevinUpdatePart2(gpu);
-    kApplySecondShake(gpu);
-    kApplySecondSettle(gpu);
-    kApplySecondCCMA(gpu);
+    kApplyShake(gpu);
+    kApplySettle(gpu);
+    kApplyCCMA(gpu);
     kSetVelocitiesFromPositions(gpu);
     gpu->psStepSize->Download();
     data.time += (*gpu->psStepSize)[0].y;

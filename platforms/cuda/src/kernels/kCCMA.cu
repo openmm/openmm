@@ -205,16 +205,9 @@ void kApplyCCMA(gpuContext gpu, float4* posq, bool addOldPosition)
     }
 }
 
-void kApplyFirstCCMA(gpuContext gpu)
+void kApplyCCMA(gpuContext gpu)
 {
-//    printf("kApplyFirstCCMA\n");
+//    printf("kApplyCCMA\n");
     if (gpu->sim.ccmaConstraints > 0)
         kApplyCCMA(gpu, gpu->sim.pPosqP, true);
-}
-
-void kApplySecondCCMA(gpuContext gpu)
-{
-//    printf("kApplySecondCCMA\n");
-    if (gpu->sim.ccmaConstraints > 0)
-        kApplyCCMA(gpu, gpu->sim.pPosq, false);
 }

@@ -1568,44 +1568,6 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         gpu->sim.ccma_threads_per_block = gpu->sim.threads_per_block;
     if (gpu->sim.ccma_threads_per_block < gpu->sim.blocks)
         gpu->sim.ccma_threads_per_block = gpu->sim.blocks;
-
-    // count number of atoms w/o constraint
-
-    int count = 0;
-    for (int i = 0; i < gpu->natoms; i++)
-       if (!isShakeAtom[i])
-          count++;
-
-    // Allocate NonShake parameters
-
-    gpu->sim.NonShakeConstraints                  = count;
-    if( count || true ){
-
-       CUDAStream<int>* psNonShakeID              = new CUDAStream<int>(count, 1, "NonShakeID");
-       gpu->psNonShakeID                          = psNonShakeID;
-       gpu->sim.pNonShakeID                       = psNonShakeID->_pDevStream[0];
-
-       gpu->sim.nonshake_threads_per_block        = (count + gpu->sim.blocks - 1) / gpu->sim.blocks;
-
-       if (gpu->sim.nonshake_threads_per_block > gpu->sim.max_shake_threads_per_block)
-           gpu->sim.nonshake_threads_per_block = gpu->sim.max_shake_threads_per_block;
-
-       if (gpu->sim.nonshake_threads_per_block < 1)
-               gpu->sim.nonshake_threads_per_block = 1;
-
-       // load indices
-
-       count = 0;
-       for (int i = 0; i < gpu->natoms; i++){
-          if (!isShakeAtom[i]){
-             (*psNonShakeID)[count++] = i;
-          }
-       }
-       psNonShakeID->Upload();
-
-    } else {
-       gpu->sim.nonshake_threads_per_block           = 0;
-    }
 }
 
 extern "C"
@@ -1949,7 +1911,6 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psShakeParameter           = NULL;
     gpu->psSettleID                 = NULL;
     gpu->psSettleParameter          = NULL;
-    gpu->psNonShakeID               = NULL;
     gpu->psExclusion                = NULL;
     gpu->psExclusionIndex           = NULL;
     gpu->psWorkUnit                 = NULL;
@@ -2114,8 +2075,6 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psShakeParameter;
     delete gpu->psSettleID;
     delete gpu->psSettleParameter;
-    if (gpu->psNonShakeID != NULL)
-        delete gpu->psNonShakeID;
     delete gpu->psExclusion;
     delete gpu->psExclusionIndex;
     delete gpu->psWorkUnit;

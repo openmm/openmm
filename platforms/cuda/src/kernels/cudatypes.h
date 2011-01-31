@@ -312,7 +312,6 @@ struct cudaGmxSimulation {
     unsigned int    shake_threads_per_block;        // Threads per block in shake kernel calls
     unsigned int    settle_threads_per_block;       // Threads per block in SETTLE kernel calls
     unsigned int    ccma_threads_per_block;         // Threads per block in CCMA kernel calls
-    unsigned int    nonshake_threads_per_block;     // Threads per block in nonshaking kernel call
     unsigned int    max_localForces_threads_per_block;  // Threads per block in local forces kernel calls
     unsigned int    localForces_threads_per_block;  // Threads per block in local forces kernel calls
     unsigned int    random_threads_per_block;       // Threads per block in RNG kernel calls
@@ -447,7 +446,6 @@ struct cudaGmxSimulation {
     unsigned int    rigidClusters;                  // Total number of rigid clusters
     unsigned int    maxRigidClusterSize;            // The size of the largest rigid cluster
     unsigned int    clusterShakeBlockSize;          // The number of threads to process each rigid cluster
-    unsigned int    NonShakeConstraints;            // Total number of NonShake atoms
     unsigned int    maxShakeIterations;             // Maximum shake iterations
     unsigned int    degreesOfFreedom;               // Number of degrees of freedom in system
     float           shakeTolerance;                 // Shake tolerance
