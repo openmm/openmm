@@ -464,17 +464,19 @@ void testBlockInteractions(bool periodic) {
     system.addForce(nonbonded);
     Context context(system, integrator, cl);
     context.setPositions(positions);
-    State state = context.getState(State::Positions | State::Velocities | State::Forces);
     ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(contextImpl->getPlatformData());
     OpenCLContext& clcontext = *data.context;
+    OpenCLNonbondedUtilities& nb = clcontext.getNonbondedUtilities();
+    State state = context.getState(State::Positions | State::Velocities | State::Forces);
+    nb.updateNeighborListSize();
+    state = context.getState(State::Positions | State::Velocities | State::Forces);
 
     // Verify that the bounds of each block were calculated correctly.
 
     clcontext.getPosq().download();
     vector<mm_float4> blockCenters(numBlocks);
     vector<mm_float4> blockBoundingBoxes(numBlocks);
-    OpenCLNonbondedUtilities& nb = clcontext.getNonbondedUtilities();
     nb.getBlockCenters().download(blockCenters);
     nb.getBlockBoundingBoxes().download(blockBoundingBoxes);
     for (int i = 0; i < numBlocks; i++) {
