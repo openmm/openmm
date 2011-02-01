@@ -461,14 +461,13 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, exclusionIndices->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionRowIndices->getDeviceBuffer());
     kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize*localDataSize : OpenCLContext::ThreadBlockSize*localDataSize), NULL);
-    kernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+    kernel.setArg(index++, 4*OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
     if (useCutoff) {
         kernel.setArg<cl::Buffer>(index++, interactingTiles->getDeviceBuffer());
         kernel.setArg<cl::Buffer>(index++, interactionCount->getDeviceBuffer());
         index += 2; // The periodic box size arguments are set when the kernel is executed.
         kernel.setArg<cl_uint>(index++, interactingTiles->getSize());
-        if (context.getSIMDWidth() == 32 || deviceIsCpu)
-            kernel.setArg<cl::Buffer>(index++, interactionFlags->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, interactionFlags->getDeviceBuffer());
     }
     else {
         kernel.setArg<cl_uint>(index++, context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2);
