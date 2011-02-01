@@ -2017,7 +2017,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         else if (cl.getSIMDWidth() == 32)
             file = OpenCLKernelSources::customGBValueN2_nvidia;
         else
-            OpenCLKernelSources::customGBValueN2_default;
+            file = OpenCLKernelSources::customGBValueN2_default;
         cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairValueKernel = cl::Kernel(program, "computeN2Value");
     }
