@@ -93,8 +93,8 @@ extern "C" void registerAmoebaSerializationProxies() {
 
     // is there a cleaner solution?
 
-    std::string file = "libOpenMMSerialization.so";
 #ifdef WIN32
+    std::string file = "OpenMMSerialization.dll";
     // Tell Windows not to bother the user with ugly error boxes.
     const UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
     HMODULE handle = LoadLibrary(file.c_str());
@@ -105,9 +105,16 @@ extern "C" void registerAmoebaSerializationProxies() {
         throw OpenMMException(message);
     }   
 #else
+    std::string fileName  = "OpenMMSerialization";
+    std::string file      = "libOpenMMSerialization.so";
+    std::string macFile   = "libOpenMMSerialization.dylib";
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    if (handle == NULL)
-        throw OpenMMException("Error loading library "+file+": "+dlerror());
+    if (handle == NULL){
+        handle = dlopen(macFile.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+        if (handle == NULL){
+            throw OpenMMException("Error loading library "+fileName+": "+dlerror());
+        }
+    }
 
 #endif
 
