@@ -36,8 +36,15 @@
 using namespace OpenMM;
 using namespace std;
 
-map<const string, const SerializationProxy*> SerializationProxy::proxiesByType;
-map<const string, const SerializationProxy*> SerializationProxy::proxiesByName;
+map<const string, const SerializationProxy*>& SerializationProxy::getProxiesByType() {
+    static map<const string, const SerializationProxy*> proxies;
+    return proxies;
+}
+
+map<const string, const SerializationProxy*>& SerializationProxy::getProxiesByName() {
+    static map<const string, const SerializationProxy*> proxies;
+    return proxies;
+}
 
 SerializationProxy::SerializationProxy(const string& typeName) : typeName(typeName) {
 }
@@ -47,20 +54,20 @@ const string& SerializationProxy::getTypeName() const {
 }
 
 void SerializationProxy::registerProxy(const type_info& type, const SerializationProxy* proxy) {
-    proxiesByType[type.name()] = proxy;
-    proxiesByName[proxy->getTypeName()] = proxy;
+    getProxiesByType()[type.name()] = proxy;
+    getProxiesByName()[proxy->getTypeName()] = proxy;
 }
 
 const SerializationProxy& SerializationProxy::getProxy(const string& typeName) {
-    map<const string, const SerializationProxy*>::const_iterator iter = proxiesByName.find(typeName);
-    if (iter == proxiesByName.end())
+    map<const string, const SerializationProxy*>::const_iterator iter = getProxiesByName().find(typeName);
+    if (iter == getProxiesByName().end())
         throw OpenMMException("There is no serialization proxy registered for type '"+string(typeName)+"'");
     return *iter->second;
 }
 
 const SerializationProxy& SerializationProxy::getProxy(const type_info& type) {
-    map<const string, const SerializationProxy*>::const_iterator iter = proxiesByType.find(type.name());
-    if (iter == proxiesByType.end())
+    map<const string, const SerializationProxy*>::const_iterator iter = getProxiesByType().find(type.name());
+    if (iter == getProxiesByType().end())
         throw OpenMMException("There is no serialization proxy registered for type "+string(type.name()));
     return *iter->second;
 }
