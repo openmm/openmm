@@ -131,6 +131,8 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
         pos.y = (cl_float) p[1];
         pos.z = (cl_float) p[2];
     }
+    for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+        posq[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
     posq.upload();
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
@@ -159,6 +161,8 @@ void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std:
         vel.y = (cl_float) p[1];
         vel.z = (cl_float) p[2];
     }
+    for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+        velm[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
     velm.upload();
 }
 
