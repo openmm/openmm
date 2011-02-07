@@ -182,7 +182,7 @@ static void initializePlugins(vector<HMODULE>& plugins) {
 }
 #else
 static void* loadOneLibrary(const string& file) {
-    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_FIRST);
     if (handle == NULL)
         throw OpenMMException("Error loading library "+file+": "+dlerror());
     return handle;
@@ -249,7 +249,7 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
         try {
             plugins.push_back(loadOneLibrary(directory+dirSeparator+files[i]));
             loadedLibraries.push_back(files[i]);
-        } catch (OpenMMException ex) {
+        } catch (OpenMMException& ex) {
             // Just ignore it.
         }
     }
