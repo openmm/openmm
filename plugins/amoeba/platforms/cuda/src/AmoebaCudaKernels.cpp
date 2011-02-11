@@ -990,9 +990,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             if( pmeParametersSetBasedOnEwaldErrorTolerance  ){
                  (void) fprintf( data.getLog(), " parameters set based on error tolerance and OpenMM algorithm.\n" );
             } else {
+                 double alphaT;
+                 int xsizeT, ysizeT, zsizeT;
+                 NonbondedForceImpl::calcPMEParameters(system, nb, alphaT, xsizeT, ysizeT, zsizeT);
                  double impliedTolerance  = alpha*force.getCutoffDistance();
                         impliedTolerance  = 0.5*exp( -(impliedTolerance*impliedTolerance) );
-                 (void) fprintf( data.getLog(), " using input parameters   implied tolerance=%12.3e\n", impliedTolerance );
+                 (void) fprintf( data.getLog(), " using input parameters implied tolerance=%12.3e;", impliedTolerance );
+                 (void) fprintf( data.getLog(), "OpenMM param: aEwald=%12.3f [%6d %6d %6d]\n", alphaT, xsizeT, ysizeT, zsizeT);
             }
             (void) fflush( data.getLog() );
         }

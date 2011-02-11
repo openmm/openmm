@@ -936,12 +936,12 @@ static void kReduceForceTorque( amoebaGpuContext amoebaGpu )
 
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                            amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                           amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psKirkwoodEDiffForce->_pDevStream[0] );
+                           amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psKirkwoodEDiffForce->_pDevData );
     LAUNCHERROR("kReduceForceTorqueKirkwoodEDiff1");
 
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                            amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                           amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psTorque->_pDevStream[0] );
+                           amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psTorque->_pDevData );
 
     LAUNCHERROR("kReduceForceTorqueKirkwoodEDiff2");
 }
@@ -959,12 +959,12 @@ static void printKirkwoodEDiffBuffer( amoebaGpuContext amoebaGpu, unsigned int b
         unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
         (void) fprintf( amoebaGpu->log, "   %6u %3u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
                             ii/3,  bufferIndex, particleIndex,
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii],
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+1],
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+2],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+1],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+2] );
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii],
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii+1],
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii+2],
+                            amoebaGpu->psWorkArray_3_2->_pSysData[ii],
+                            amoebaGpu->psWorkArray_3_2->_pSysData[ii+1],
+                            amoebaGpu->psWorkArray_3_2->_pSysData[ii+2] );
     } 
 
 /*
@@ -972,14 +972,14 @@ static void printKirkwoodEDiffBuffer( amoebaGpuContext amoebaGpu, unsigned int b
     stop  = -146016;
     float maxV = -1.0e+99;
     for( unsigned int ii = start; ii < stop; ii += 3 ){
-        if(  amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii] > maxV ){ 
+        if(  amoebaGpu->psWorkArray_3_1->_pSysData[ii] > maxV ){ 
             unsigned int ii3Index      = ii/3;
             unsigned int bufferIndex   = ii3Index/(amoebaGpu->paddedNumberOfAtoms);
             unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
             (void) fprintf( amoebaGpu->log, "MaxQ %6u %3u %6u %14.6e\n", 
                             ii/3,  bufferIndex, particleIndex,
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii] );
-            maxV = amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii];
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii] );
+            maxV = amoebaGpu->psWorkArray_3_1->_pSysData[ii];
         } 
     } 
 */
@@ -992,12 +992,12 @@ static void printKirkwoodEDiffAtomBuffers( amoebaGpuContext amoebaGpu, unsigned 
         unsigned int particleIndex = 3*(targetAtom + ii*amoebaGpu->paddedNumberOfAtoms);
         (void) fprintf( amoebaGpu->log, " %2u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
                         ii, particleIndex,
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex],
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+1],
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+2],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+1],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+2] );
+                        amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex],
+                        amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex+1],
+                        amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex+2],
+                        amoebaGpu->psWorkArray_3_2->_pSysData[particleIndex],
+                        amoebaGpu->psWorkArray_3_2->_pSysData[particleIndex+1],
+                        amoebaGpu->psWorkArray_3_2->_pSysData[particleIndex+2] );
     } 
 }
 #endif
@@ -1041,7 +1041,7 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     }   
     int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
     unsigned int targetAtom                   = 0;
 #endif
@@ -1074,39 +1074,39 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     if (gpu->bOutputBufferPerWarp){
 
         kCalculateAmoebaCudaKirkwoodEDiffN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                           gpu->psPosq4->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipolePolar->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipoleS->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipolePolarS->_pDevStream[0],
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                                           amoebaGpu->psWorkUnit->_pDevData,
+                                                                           gpu->psPosq4->_pDevData,
+                                                                           amoebaGpu->psLabFrameDipole->_pDevData,
+                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevData,
+                                                                           amoebaGpu->psInducedDipole->_pDevData,
+                                                                           amoebaGpu->psInducedDipolePolar->_pDevData,
+                                                                           amoebaGpu->psInducedDipoleS->_pDevData,
+                                                                           amoebaGpu->psInducedDipolePolarS->_pDevData,
+                                                                           amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                           debugArray->_pDevStream[0], targetAtom );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                           debugArray->_pDevData, targetAtom );
 #else
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
 
     } else {
 
         kCalculateAmoebaCudaKirkwoodEDiffN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                           gpu->psPosq4->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipole->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipolePolar->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipoleS->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipolePolarS->_pDevStream[0],
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                                           amoebaGpu->psWorkUnit->_pDevData,
+                                                                           gpu->psPosq4->_pDevData,
+                                                                           amoebaGpu->psLabFrameDipole->_pDevData,
+                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevData,
+                                                                           amoebaGpu->psInducedDipole->_pDevData,
+                                                                           amoebaGpu->psInducedDipolePolar->_pDevData,
+                                                                           amoebaGpu->psInducedDipoleS->_pDevData,
+                                                                           amoebaGpu->psInducedDipolePolarS->_pDevData,
+                                                                           amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                           debugArray->_pDevStream[0], targetAtom );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                           debugArray->_pDevData, targetAtom );
 #else
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
     }
 
@@ -1138,34 +1138,34 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
            // force
 
            (void) fprintf( amoebaGpu->log,"KirkwoodEDiffF [%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][indexOffset],
-                           amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psKirkwoodEDiffForce->_pSysData[indexOffset],
+                           amoebaGpu->psKirkwoodEDiffForce->_pSysData[indexOffset+1],
+                           amoebaGpu->psKirkwoodEDiffForce->_pSysData[indexOffset+2] );
     
            // torque
 
            (void) fprintf( amoebaGpu->log,"T [%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psTorque->_pSysStream[0][indexOffset],
-                           amoebaGpu->psTorque->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psTorque->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psTorque->_pSysData[indexOffset],
+                           amoebaGpu->psTorque->_pSysData[indexOffset+1],
+                           amoebaGpu->psTorque->_pSysData[indexOffset+2] );
 
            // coords
 
 #if 0
             (void) fprintf( amoebaGpu->log,"x[%16.9e %16.9e %16.9e] ",
-                            gpu->psPosq4->_pSysStream[0][ii].x,
-                            gpu->psPosq4->_pSysStream[0][ii].y,
-                            gpu->psPosq4->_pSysStream[0][ii].z);
+                            gpu->psPosq4->_pSysData[ii].x,
+                            gpu->psPosq4->_pSysData[ii].y,
+                            gpu->psPosq4->_pSysData[ii].z);
 
 
            for( int jj = 0; jj < gpu->natoms && jj < 5; jj++ ){
                int debugIndex = jj*gpu->natoms + ii;
-               float xx       =  gpu->psPosq4->_pSysStream[0][jj].x -  gpu->psPosq4->_pSysStream[0][ii].x;
-               float yy       =  gpu->psPosq4->_pSysStream[0][jj].y -  gpu->psPosq4->_pSysStream[0][ii].y;
-               float zz       =  gpu->psPosq4->_pSysStream[0][jj].z -  gpu->psPosq4->_pSysStream[0][ii].z;
+               float xx       =  gpu->psPosq4->_pSysData[jj].x -  gpu->psPosq4->_pSysData[ii].x;
+               float yy       =  gpu->psPosq4->_pSysData[jj].y -  gpu->psPosq4->_pSysData[ii].y;
+               float zz       =  gpu->psPosq4->_pSysData[jj].z -  gpu->psPosq4->_pSysData[ii].z;
                (void) fprintf( amoebaGpu->log,"\n%4d %4d delta [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] ",
                                ii, jj, xx, yy, zz,
-                               debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y, debugArray->_pSysStream[0][debugIndex].z );
+                               debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y, debugArray->_pSysData[debugIndex].z );
 
            }
 #endif
@@ -1177,8 +1177,8 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
                    (void) fprintf( amoebaGpu->log,"%5d %5d ediff F%T\n", ii, jj );
                    for( int kk = 0; kk < 5; kk++ ){
                        (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                       debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
-                                       debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                                       debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
+                                       debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
                        debugIndex += paddedNumberOfAtoms;
                    }
                    (void) fprintf( amoebaGpu->log,"\n" );
@@ -1203,12 +1203,12 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
                 int offset  = 3*ii;
     
                 (void) fprintf( amoebaGpu->log,"%6d F[%16.7e %16.7e %16.7e] T[%16.7e %16.7e %16.7e]\n", ii,
-                                amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][offset],
-                                amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][offset+1],
-                                amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][offset+2],
-                                amoebaGpu->psTorque->_pSysStream[0][offset],
-                                amoebaGpu->psTorque->_pSysStream[0][offset+1],
-                                amoebaGpu->psTorque->_pSysStream[0][offset+2] );
+                                amoebaGpu->psKirkwoodEDiffForce->_pSysData[offset],
+                                amoebaGpu->psKirkwoodEDiffForce->_pSysData[offset+1],
+                                amoebaGpu->psKirkwoodEDiffForce->_pSysData[offset+2],
+                                amoebaGpu->psTorque->_pSysData[offset],
+                                amoebaGpu->psTorque->_pSysData[offset+1],
+                                amoebaGpu->psTorque->_pSysData[offset+2] );
                 if( (ii == maxPrint) && (ii < (gpu->natoms - maxPrint)) )ii = gpu->natoms - maxPrint; 
             }   
         }   
@@ -1248,9 +1248,9 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
            // force
 
            (void) fprintf( amoebaGpu->log,"KirkwoodEDiffF [%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][indexOffset],
-                           amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psKirkwoodEDiffForce->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psKirkwoodEDiffForce->_pSysData[indexOffset],
+                           amoebaGpu->psKirkwoodEDiffForce->_pSysData[indexOffset+1],
+                           amoebaGpu->psKirkwoodEDiffForce->_pSysData[indexOffset+2] );
     
            (void) fprintf( amoebaGpu->log,"\n" );
            if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){

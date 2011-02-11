@@ -144,14 +144,13 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
     unsigned int index                 = atomI == targetAtom ? (y + j) : atomI;
     unsigned int indexI                = 0;
     unsigned int indexJ                = indexI ? 0 : 2;
-    unsigned int indices[4]            = { indexI, indexJ, indexI+1, indexJ+1 };
     float flag                         = 7.0f;
 
     debugArray[index].x                = (float) atomI;
     debugArray[index].y                = (float) (y + j);
     debugArray[index].z                = dScaleValue;
     debugArray[index].w                = pScaleValue;
-
+/*
     index                             += cAmoebaSim.paddedNumberOfAtoms;
     debugArray[index].x                = (float) bExclusionFlag;
     debugArray[index].y                = (float) (tgx);
@@ -163,14 +162,31 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
     debugArray[index].y                = (float) pScaleMask.x;
     debugArray[index].z                = (float) pScaleMask.y;
     debugArray[index].w                = flag;
+*/
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = match ? 0.0f : ijField[0].x;
+    debugArray[index].y                = match ? 0.0f : ijField[1].x;
+    debugArray[index].z                = match ? 0.0f : ijField[2].x;
+    debugArray[index].w                = flag + 1.0f;
 
-    for( int ii = 0; ii < 4; ii++ ){
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
-        debugArray[index].x                = match ? 0.0f : ijField[indices[ii]][0];
-        debugArray[index].y                = match ? 0.0f : ijField[indices[ii]][1];
-        debugArray[index].z                = match ? 0.0f : ijField[indices[ii]][2];
-        debugArray[index].w                = flag;
-    }
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = match ? 0.0f : ijField[0].z;
+    debugArray[index].y                = match ? 0.0f : ijField[1].z;
+    debugArray[index].z                = match ? 0.0f : ijField[2].z;
+    debugArray[index].w                = flag + 2.0f;
+
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = match ? 0.0f : ijField[0].y;
+    debugArray[index].y                = match ? 0.0f : ijField[1].y;
+    debugArray[index].z                = match ? 0.0f : ijField[2].y;
+    debugArray[index].w                = flag + 3.0f;
+
+    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    debugArray[index].x                = match ? 0.0f : ijField[0].w;
+    debugArray[index].y                = match ? 0.0f : ijField[1].w;
+    debugArray[index].z                = match ? 0.0f : ijField[2].w;
+    debugArray[index].w                = flag + 4.0f;
+
 
     for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
         index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -314,6 +330,7 @@ if( (atomI == targetAtom || (y + jIdx) == targetAtom) ){
             debugArray[index].w                = pScaleValue;
 
             float flag                         = 9.0f;
+/*
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             debugArray[index].x                = (float) bExclusionFlag;
             debugArray[index].y                = (float) (tgx);
@@ -325,30 +342,30 @@ if( (atomI == targetAtom || (y + jIdx) == targetAtom) ){
             debugArray[index].y                = (float) pScaleMask.x;
             debugArray[index].z                = (float) pScaleMask.y;
             debugArray[index].w                = (float) flags;
-        
+ */       
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[indexI][0];
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[indexI][1];
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[indexI][2];
-            debugArray[index].w                =  flag;
+            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].x;
+            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].x;
+            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].x;
+            debugArray[index].w                =  flag + 1.0f;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[indexJ][0];
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[indexJ][1];
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[indexJ][2];
-            debugArray[index].w                = flag;
+            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].y;
+            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].y;
+            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].y;
+            debugArray[index].w                = flag + 2.0f;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[indexI+1][0];
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[indexI+1][1];
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[indexI+1][2];
-            debugArray[index].w                = flag;
+            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].z;
+            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].z;
+            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].z;
+            debugArray[index].w                = flag + 3.0f;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[indexJ+1][0];
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[indexJ+1][1];
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[indexJ+1][2];
-            debugArray[index].w                = flag;
+            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].w;
+            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].w;
+            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].w;
+            debugArray[index].w                = flag + 4.0f;
 
             for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
                 index                             += cAmoebaSim.paddedNumberOfAtoms;

@@ -1089,12 +1089,12 @@ static void kReduceForceTorque(amoebaGpuContext amoebaGpu )
 {
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                              amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                             amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psForce->_pDevStream[0] );
+                             amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psForce->_pDevData );
     LAUNCHERROR("kReducePmeDirectElectrostaticForce");
 
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                              amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                             amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psTorque->_pDevStream[0] );
+                             amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psTorque->_pDevData );
     LAUNCHERROR("kReducePmeDirectElectrostaticTorque");
 }
 
@@ -1109,9 +1109,9 @@ static void zeroForce( amoebaGpuContext amoebaGpu )
 {
     gpuContext gpu   = amoebaGpu->gpuContext;
     for( int ii = 0; ii < amoebaGpu->gpuContext->natoms; ii++ ){
-        gpu->psForce4->_pSysStream[0][ii].x  = 0.0f;
-        gpu->psForce4->_pSysStream[0][ii].y  = 0.0f;
-        gpu->psForce4->_pSysStream[0][ii].z  = 0.0f;
+        gpu->psForce4->_pSysData[ii].x  = 0.0f;
+        gpu->psForce4->_pSysData[ii].y  = 0.0f;
+        gpu->psForce4->_pSysData[ii].z  = 0.0f;
     }
     gpu->psForce4->Upload();
 }
@@ -1129,10 +1129,10 @@ static void copyForce( amoebaGpuContext amoebaGpu, float conversion )
     gpu->psForce4->Download();
     int indexOffset  = 0;
     for( int ii = 0; ii < amoebaGpu->gpuContext->natoms; ii++ ){
-        amoebaGpu->psForce->_pSysStream[0][indexOffset]    = conversion*(gpu->psForce4->_pSysStream[0][ii].x);
-        amoebaGpu->psForce->_pSysStream[0][indexOffset+1]  = conversion*(gpu->psForce4->_pSysStream[0][ii].y);
-        amoebaGpu->psForce->_pSysStream[0][indexOffset+2]  = conversion*(gpu->psForce4->_pSysStream[0][ii].z);
-        indexOffset                                       += 3;
+        amoebaGpu->psForce->_pSysData[indexOffset]    = conversion*(gpu->psForce4->_pSysData[ii].x);
+        amoebaGpu->psForce->_pSysData[indexOffset+1]  = conversion*(gpu->psForce4->_pSysData[ii].y);
+        amoebaGpu->psForce->_pSysData[indexOffset+2]  = conversion*(gpu->psForce4->_pSysData[ii].z);
+        indexOffset                                  += 3;
     }
     amoebaGpu->psForce->Upload();
 }
@@ -1179,8 +1179,9 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                       methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
     }
     int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    int maxOffset                             = 20;
+    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(maxOffset*paddedNumberOfAtoms, 1, "DebugArray");
+    memset( debugArray->_pSysData,      0, sizeof( float )*4*maxOffset*paddedNumberOfAtoms);
     debugArray->Upload();
     unsigned int targetAtom                   = 49;
 #endif
@@ -1198,18 +1199,18 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
         unsigned int lineTokenIndex = 1;
 
         // (void) fprintf( amoebaGpu->log, "   %u %s %s\n", ii, lineTokens[0].c_str(), lineTokens[lineTokenIndex].c_str() ); fflush(  amoebaGpu->log );
-        amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipole->_pSysData[offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipole->_pSysData[offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipole->_pSysData[offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
         offset                                              -= 3;
-        amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipolePolar->_pSysData[offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipolePolar->_pSysData[offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
+        amoebaGpu->psInducedDipolePolar->_pSysData[offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
     }
     float conversion = 0.1f;
     for( int ii = 0; ii < 3*gpu->natoms; ii++ ){
-        amoebaGpu->psInducedDipole->_pSysStream[0][ii]       *= conversion;
-        amoebaGpu->psInducedDipolePolar->_pSysStream[0][ii]  *= conversion;
+        amoebaGpu->psInducedDipole->_pSysData[ii]       *= conversion;
+        amoebaGpu->psInducedDipolePolar->_pSysData[ii]  *= conversion;
     }
     amoebaGpu->gpuContext->sim.alphaEwald = 5.4459052e+00f;
     SetCalculateAmoebaPmeDirectElectrostaticSim(amoebaGpu);
@@ -1248,24 +1249,24 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
         kCalculateAmoebaPmeDirectElectrostaticCutoffByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                           gpu->sim.pInteractingWorkUnit,
-                                                                          amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                                          amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                          amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                          debugArray->_pDevStream[0], targetAtom );
+                                                                          amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                          debugArray->_pDevData, targetAtom );
 #else
-                                                                          amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
+                                                                          amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
 
     } else {
 
         kCalculateAmoebaPmeDirectElectrostaticCutoffForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                     gpu->sim.pInteractingWorkUnit,
-                                                                    amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                                    amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                    amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                    debugArray->_pDevStream[0], targetAtom );
+                                                                    amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                    debugArray->_pDevData, targetAtom );
 #else
-                                                                    amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
+                                                                    amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
     }
     LAUNCHERROR("kCalculateAmoebaPmeDirectElectrostaticCutoffForces");
@@ -1292,20 +1293,20 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
             // force
 
             (void) fprintf( amoebaGpu->log,"PmeDirectElectrostaticF [%16.9e %16.9e %16.9e] ",
-                            conversion*amoebaGpu->psForce->_pSysStream[0][indexOffset],
-                            conversion*amoebaGpu->psForce->_pSysStream[0][indexOffset+1],
-                            conversion*amoebaGpu->psForce->_pSysStream[0][indexOffset+2] );
+                            conversion*amoebaGpu->psForce->_pSysData[indexOffset],
+                            conversion*amoebaGpu->psForce->_pSysData[indexOffset+1],
+                            conversion*amoebaGpu->psForce->_pSysData[indexOffset+2] );
 
-            forceSum[0]         += amoebaGpu->psForce->_pSysStream[0][indexOffset];
-            forceSum[1]         += amoebaGpu->psForce->_pSysStream[0][indexOffset+1];
-            forceSum[2]         += amoebaGpu->psForce->_pSysStream[0][indexOffset+2];
+            forceSum[0]         += amoebaGpu->psForce->_pSysData[indexOffset];
+            forceSum[1]         += amoebaGpu->psForce->_pSysData[indexOffset+1];
+            forceSum[2]         += amoebaGpu->psForce->_pSysData[indexOffset+2];
 
             // torque
 
             (void) fprintf( amoebaGpu->log,"PmeDirectElectrostaticT [%16.9e %16.9e %16.9e] ",
-                            conversion*amoebaGpu->psTorque->_pSysStream[0][indexOffset],
-                            conversion*amoebaGpu->psTorque->_pSysStream[0][indexOffset+1],
-                            conversion*amoebaGpu->psTorque->_pSysStream[0][indexOffset+2] );
+                            conversion*amoebaGpu->psTorque->_pSysData[indexOffset],
+                            conversion*amoebaGpu->psTorque->_pSysData[indexOffset+1],
+                            conversion*amoebaGpu->psTorque->_pSysData[indexOffset+2] );
 
             (void) fprintf( amoebaGpu->log,"\n" );
             if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
@@ -1337,15 +1338,15 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
             int offset3             = 8*paddedNumberOfAtoms;
             for( int jj = 0; jj < gpu->natoms; jj++ ){
                 int debugIndex = jj;
-                if( fabs( debugArray->_pSysStream[0][debugIndex+5*paddedNumberOfAtoms].y ) < 1.0e-10 )continue;
+                if( fabs( debugArray->_pSysData[debugIndex+5*paddedNumberOfAtoms].y ) < 1.0e-10 )continue;
                 if( jj != targetAtom ){
-                    torqueSum0[0] += debugArray->_pSysStream[0][debugIndex+offset0].x + debugArray->_pSysStream[0][debugIndex+offset1].x; 
-                    torqueSum0[1] += debugArray->_pSysStream[0][debugIndex+offset0].y + debugArray->_pSysStream[0][debugIndex+offset1].y; 
-                    torqueSum0[2] += debugArray->_pSysStream[0][debugIndex+offset0].z + debugArray->_pSysStream[0][debugIndex+offset1].z; 
+                    torqueSum0[0] += debugArray->_pSysData[debugIndex+offset0].x + debugArray->_pSysData[debugIndex+offset1].x; 
+                    torqueSum0[1] += debugArray->_pSysData[debugIndex+offset0].y + debugArray->_pSysData[debugIndex+offset1].y; 
+                    torqueSum0[2] += debugArray->_pSysData[debugIndex+offset0].z + debugArray->_pSysData[debugIndex+offset1].z; 
 
-                    torqueSum1[0] += debugArray->_pSysStream[0][debugIndex+offset2].x + debugArray->_pSysStream[0][debugIndex+offset3].x; 
-                    torqueSum1[1] += debugArray->_pSysStream[0][debugIndex+offset2].y + debugArray->_pSysStream[0][debugIndex+offset3].y; 
-                    torqueSum1[2] += debugArray->_pSysStream[0][debugIndex+offset2].z + debugArray->_pSysStream[0][debugIndex+offset3].z; 
+                    torqueSum1[0] += debugArray->_pSysData[debugIndex+offset2].x + debugArray->_pSysData[debugIndex+offset3].x; 
+                    torqueSum1[1] += debugArray->_pSysData[debugIndex+offset2].y + debugArray->_pSysData[debugIndex+offset3].y; 
+                    torqueSum1[2] += debugArray->_pSysData[debugIndex+offset2].z + debugArray->_pSysData[debugIndex+offset3].z; 
                 }
                 if( jj == 2 ){
                     offset0             += 2*paddedNumberOfAtoms;
@@ -1353,8 +1354,8 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                 }
                 for( int kk = 0; kk < 12; kk++ ){
                     (void) fprintf( amoebaGpu->log,"%5d %5d %5d [%16.9e %16.9e %16.9e %16.9e] E11\n", targetAtom, jj, kk,
-                                    debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
-                                    debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
+                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
                     debugIndex += paddedNumberOfAtoms;
                 }
                 (void) fprintf( amoebaGpu->log,"%5d %5d [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] Sum\n", targetAtom, jj,
@@ -1405,13 +1406,48 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
     if( 0 ){
         gpuContext gpu = amoebaGpu->gpuContext;
         std::vector<int> fileId;
-        zeroForce( amoebaGpu );
-        kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
-        copyForce( amoebaGpu, -1.0f/41.84 );
+        float conversion = -1.0f/41.84;
+        copyForce( amoebaGpu, conversion );
         VectorOfDoubleVectors outputVector;
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipForce", fileId, outputVector );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipDemForce", fileId, outputVector );
+
+
+        int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+        CUDAStream<float>* debugArray             = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "FArray");
+        int index                                 = 0;
+        for( int ii = 0; ii < amoebaGpu->gpuContext->natoms; ii++ ){
+            debugArray->_pSysData[index]    = amoebaGpu->psForce->_pSysData[index];
+            debugArray->_pSysData[index+1]  = amoebaGpu->psForce->_pSysData[index+1];
+            debugArray->_pSysData[index+2]  = amoebaGpu->psForce->_pSysData[index+2];
+            index                          += 3;
+        }
+        //zeroForce( amoebaGpu );
+        kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
+        copyForce( amoebaGpu, conversion );
+        VectorOfDoubleVectors outputVector1;
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector1, gpu->psAtomIndex->_pSysData );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipForce", fileId, outputVector1 );
+
+        VectorOfDoubleVectors outputVector2;
+        index = 0;
+        for( int ii = 0; ii < amoebaGpu->gpuContext->natoms; ii++ ){
+            amoebaGpu->psForce->_pSysData[index]   -= debugArray->_pSysData[index];
+            amoebaGpu->psForce->_pSysData[index+1] -= debugArray->_pSysData[index+1];
+            amoebaGpu->psForce->_pSysData[index+2] -= debugArray->_pSysData[index+2];
+            index                                  += 3;
+ 
+        }
+        amoebaGpu->psForce->Upload();
+        outputVector.resize(0);
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector2, gpu->psAtomIndex->_pSysData );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipDepForce", fileId, outputVector2 );
+
+
         zeroForce( amoebaGpu );
+        kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
+        //zeroForce( amoebaGpu );
+        exit(0);
     }
 
     if( 0 ){

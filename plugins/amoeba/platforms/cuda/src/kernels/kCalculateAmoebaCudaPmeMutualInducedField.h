@@ -122,7 +122,6 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
                 fieldPolarSum[1]       += mask ? ijField[1].z : 0.0f;
                 fieldPolarSum[2]       += mask ? ijField[2].z : 0.0f;
 
-/*
 #ifdef AMOEBA_DEBUG
 if( atomI == targetAtom || (y+j) == targetAtom ){
             unsigned int index                 = atomI == targetAtom ? (y+j) : atomI;
@@ -151,35 +150,35 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             float flag                         = 6.0f;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
+            debugArray[index].x                = ijField[0].x;
+            debugArray[index].y                = ijField[1].x;
+            debugArray[index].z                = ijField[2].x;
             debugArray[index].w                = flag;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ][0];
-            debugArray[index].y                = ijField[indexJ][1];
-            debugArray[index].z                = ijField[indexJ][2];
+            debugArray[index].x                = ijField[0].x;
+            debugArray[index].y                = ijField[1].x;
+            debugArray[index].z                = ijField[2].x;
             debugArray[index].w                = flag;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI+1][0];
-            debugArray[index].y                = ijField[indexI+1][1];
-            debugArray[index].z                = ijField[indexI+1][2];
+            debugArray[index].x                = ijField[0].z;
+            debugArray[index].y                = ijField[1].z;
+            debugArray[index].z                = ijField[2].z;
             debugArray[index].w                = flag;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ+1][0];
-            debugArray[index].y                = ijField[indexJ+1][1];
-            debugArray[index].z                = ijField[indexJ+1][2];
+            debugArray[index].x                = ijField[0].z;
+            debugArray[index].y                = ijField[1].z;
+            debugArray[index].z                = ijField[2].z;
             debugArray[index].w                = flag;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
 
             index                             += cAmoebaSim.paddedNumberOfAtoms;
-            debugArray[index].x                = match ? 0.0f : ijField[indexI][0];
-            debugArray[index].y                = match ? 0.0f : ijField[indexI][1];
-            debugArray[index].z                = match ? 0.0f : ijField[indexI][2];
+            debugArray[index].x                = match ? 0.0f : ijField[0].x;
+            debugArray[index].y                = match ? 0.0f : ijField[1].x;
+            debugArray[index].z                = match ? 0.0f : ijField[2].x;
             index                             += cAmoebaSim.paddedNumberOfAtoms;
             unsigned int mask                  = 1 << j;
             unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
@@ -192,7 +191,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
 }
 #endif
-*/
+
             }
 
             // Write results
@@ -274,13 +273,13 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
                         } else {
 
-                            sA[threadIdx.x].tempBuffer[0]  = mask ? 0.0f : ijField[0].y;
-                            sA[threadIdx.x].tempBuffer[1]  = mask ? 0.0f : ijField[1].y;
-                            sA[threadIdx.x].tempBuffer[2]  = mask ? 0.0f : ijField[2].y;
+                            sA[threadIdx.x].tempBuffer[0]  = mask ? ijField[0].y : 0.0;
+                            sA[threadIdx.x].tempBuffer[1]  = mask ? ijField[1].y : 0.0;
+                            sA[threadIdx.x].tempBuffer[2]  = mask ? ijField[2].y : 0.0;
 
-                            sA[threadIdx.x].tempBufferP[0] = mask ? 0.0f : ijField[0].w;
-                            sA[threadIdx.x].tempBufferP[1] = mask ? 0.0f : ijField[1].w;
-                            sA[threadIdx.x].tempBufferP[2] = mask ? 0.0f : ijField[2].w;
+                            sA[threadIdx.x].tempBufferP[0] = mask ? ijField[0].w : 0.0;
+                            sA[threadIdx.x].tempBufferP[1] = mask ? ijField[1].w : 0.0;
+                            sA[threadIdx.x].tempBufferP[2] = mask ? ijField[2].w : 0.0;
 
                             if( tgx % 2 == 0 ){
                                 sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );

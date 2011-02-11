@@ -335,8 +335,8 @@ if( atomI == targetAtom || atomJ == targetAtom ){
                             } else {
     
                                 sA[threadIdx.x].tempForce[0]  = forceTorqueEnergy[0].x;
-                                sA[threadIdx.x].tempForce[1]  = forceTorqueEnergy[1].y;
-                                sA[threadIdx.x].tempForce[2]  = forceTorqueEnergy[2].z;
+                                sA[threadIdx.x].tempForce[1]  = forceTorqueEnergy[0].y;
+                                sA[threadIdx.x].tempForce[2]  = forceTorqueEnergy[0].z;
     
                                 sA[threadIdx.x].tempTorque[0] = forceTorqueEnergy[2].x;
                                 sA[threadIdx.x].tempTorque[1] = forceTorqueEnergy[2].y;

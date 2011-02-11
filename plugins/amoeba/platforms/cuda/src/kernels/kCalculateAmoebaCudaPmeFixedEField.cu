@@ -95,6 +95,7 @@ static void kReducePmeEField_kernel( unsigned int fieldComponents, unsigned int 
     // Reduce field
 
     const float term = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
+    //const float term = 0.0;
     while (pos < fieldComponents)
     {   
 
@@ -138,14 +139,14 @@ static void kReducePmeDirectE_Fields(amoebaGpuContext amoebaGpu )
 
     kReducePmeEFieldPolar_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                    amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                                   amoebaGpu->psE_Field->_pDevStream[0], amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psE_FieldPolar->_pDevStream[0] );
+                                   amoebaGpu->psE_Field->_pDevData, amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData );
     LAUNCHERROR("kReducePmeE_Fields1");
 
     // E_Field = E_Field (reciprocal) + E_Field (direct) + self
 
     kReducePmeEField_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                              amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psE_Field->_pDevStream[0] );
+                              amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psE_Field->_pDevData );
     LAUNCHERROR("kReducePmeE_Fields2");
 }
 
@@ -188,6 +189,7 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
     float r2          = xr*xr + yr*yr + zr*zr;
     if( r2 <= cSim.nonbondedCutoffSqr ){
+
         float r           = sqrtf(r2);
 
         // calculate the error function damping terms
@@ -248,7 +250,7 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
         float prr5        = 3.0f *(1.0f-psc5)/r5;
         float prr7        = 15.0f*(1.0f-psc7)/r7;
 
-        float dir         = atomI.labFrameDipole_X*xr + atomI.labFrameDipole_Y*yr + atomI.labFrameDipole_Z*zr;
+        float dir         = atomI.labFrameDipole_X*xr      + atomI.labFrameDipole_Y*yr      + atomI.labFrameDipole_Z*zr;
 
         float qix         = atomI.labFrameQuadrupole_XX*xr + atomI.labFrameQuadrupole_XY*yr + atomI.labFrameQuadrupole_XZ*zr;
         float qiy         = atomI.labFrameQuadrupole_XY*xr + atomI.labFrameQuadrupole_YY*yr + atomI.labFrameQuadrupole_YZ*zr;
@@ -256,65 +258,37 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
         float qir         = qix*xr + qiy*yr + qiz*zr;
 
-        float dkr         = atomJ.labFrameDipole_X*xr + atomJ.labFrameDipole_Y*yr + atomJ.labFrameDipole_Z*zr;
+        float dkr         = atomJ.labFrameDipole_X*xr      + atomJ.labFrameDipole_Y*yr      + atomJ.labFrameDipole_Z*zr;
+
         float qkx         = atomJ.labFrameQuadrupole_XX*xr + atomJ.labFrameQuadrupole_XY*yr + atomJ.labFrameQuadrupole_XZ*zr;
         float qky         = atomJ.labFrameQuadrupole_XY*xr + atomJ.labFrameQuadrupole_YY*yr + atomJ.labFrameQuadrupole_YZ*zr;
         float qkz         = atomJ.labFrameQuadrupole_XZ*xr + atomJ.labFrameQuadrupole_YZ*yr + atomJ.labFrameQuadrupole_ZZ*zr;
+
         float qkr         = qkx*xr + qky*yr + qkz*zr;
 
-        float fim0            = -xr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
-                             - bn1*atomJ.labFrameDipole_X + 2.0f*bn2*qkx;
+        float fim0        = -xr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)    - bn1*atomJ.labFrameDipole_X  + 2.0f*bn2*qkx;
+        float fim1        = -yr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)    - bn1*atomJ.labFrameDipole_Y  + 2.0f*bn2*qky;
+        float fim2        = -zr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)    - bn1*atomJ.labFrameDipole_Z  + 2.0f*bn2*qkz;
 
-        float fim1            = -yr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
-                             - bn1*atomJ.labFrameDipole_Y + 2.0f*bn2*qky;
+        float fkm0        = xr*(bn1*atomI.q+bn2*dir+bn3*qir)     - bn1*atomI.labFrameDipole_X  - 2.0f*bn2*qix;
+        float fkm1        = yr*(bn1*atomI.q+bn2*dir+bn3*qir)     - bn1*atomI.labFrameDipole_Y  - 2.0f*bn2*qiy;
+        float fkm2        = zr*(bn1*atomI.q+bn2*dir+bn3*qir)     - bn1*atomI.labFrameDipole_Z  - 2.0f*bn2*qiz;
 
-        float fim2            = -zr*(bn1*atomJ.q-bn2*dkr+bn3*qkr)
-                             - bn1*atomJ.labFrameDipole_Z + 2.0f*bn2*qkz;
+        float fid0        = -xr*(drr3*atomJ.q-drr5*dkr+drr7*qkr) - drr3*atomJ.labFrameDipole_X + 2.0f*drr5*qkx;
+        float fid1        = -yr*(drr3*atomJ.q-drr5*dkr+drr7*qkr) - drr3*atomJ.labFrameDipole_Y + 2.0f*drr5*qky;
+        float fid2        = -zr*(drr3*atomJ.q-drr5*dkr+drr7*qkr) - drr3*atomJ.labFrameDipole_Z + 2.0f*drr5*qkz;
 
-        float fkm0            = xr*(bn1*atomI.q+bn2*dir+bn3*qir)
-                             - bn1*atomI.labFrameDipole_X - 2.0f*bn2*qix;
+        float fkd0        = xr*(drr3*atomI.q+drr5*dir+drr7*qir)  - drr3*atomI.labFrameDipole_X - 2.0f*drr5*qix;
+        float fkd1        = yr*(drr3*atomI.q+drr5*dir+drr7*qir)  - drr3*atomI.labFrameDipole_Y - 2.0f*drr5*qiy;
+        float fkd2        = zr*(drr3*atomI.q+drr5*dir+drr7*qir)  - drr3*atomI.labFrameDipole_Z - 2.0f*drr5*qiz;
 
-        float fkm1            = yr*(bn1*atomI.q+bn2*dir+bn3*qir)
-                             - bn1*atomI.labFrameDipole_Y - 2.0f*bn2*qiy;
+        float fip0        = -xr*(prr3*atomJ.q-prr5*dkr+prr7*qkr) - prr3*atomJ.labFrameDipole_X + 2.0f*prr5*qkx;
+        float fip1        = -yr*(prr3*atomJ.q-prr5*dkr+prr7*qkr) - prr3*atomJ.labFrameDipole_Y + 2.0f*prr5*qky;
+        float fip2        = -zr*(prr3*atomJ.q-prr5*dkr+prr7*qkr) - prr3*atomJ.labFrameDipole_Z + 2.0f*prr5*qkz;
 
-        float fkm2            = zr*(bn1*atomI.q+bn2*dir+bn3*qir)
-                             - bn1*atomI.labFrameDipole_Z - 2.0f*bn2*qiz;
-
-        float fid0            = -xr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
-                             - drr3*atomJ.labFrameDipole_X + 2.0f*drr5*qkx;
-
-        float fid1            = -yr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
-                             - drr3*atomJ.labFrameDipole_Y + 2.0f*drr5*qky;
-
-        float fid2            = -zr*(drr3*atomJ.q-drr5*dkr+drr7*qkr)
-                             - drr3*atomJ.labFrameDipole_Z + 2.0f*drr5*qkz;
-
-        float fkd0            = xr*(drr3*atomI.q+drr5*dir+drr7*qir)
-                             - drr3*atomI.labFrameDipole_X - 2.0f*drr5*qix;
-
-        float fkd1            = yr*(drr3*atomI.q+drr5*dir+drr7*qir)
-                             - drr3*atomI.labFrameDipole_Y - 2.0f*drr5*qiy;
-
-        float fkd2            = zr*(drr3*atomI.q+drr5*dir+drr7*qir)
-                             - drr3*atomI.labFrameDipole_Z - 2.0f*drr5*qiz;
-
-        float fip0            = -xr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
-                             - prr3*atomJ.labFrameDipole_X + 2.0f*prr5*qkx;
-
-        float fip1            = -yr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
-                             - prr3*atomJ.labFrameDipole_Y + 2.0f*prr5*qky;
-
-        float fip2            = -zr*(prr3*atomJ.q-prr5*dkr+prr7*qkr)
-                             - prr3*atomJ.labFrameDipole_Z + 2.0f*prr5*qkz;
-
-        float fkp0            = xr*(prr3*atomI.q+prr5*dir+prr7*qir)
-                             - prr3*atomI.labFrameDipole_X - 2.0f*prr5*qix;
-
-        float fkp1            = yr*(prr3*atomI.q+prr5*dir+prr7*qir)
-                             - prr3*atomI.labFrameDipole_Y - 2.0f*prr5*qiy;
-
-        float fkp2            = zr*(prr3*atomI.q+prr5*dir+prr7*qir)
-                             - prr3*atomI.labFrameDipole_Z - 2.0f*prr5*qiz;
+        float fkp0        = xr*(prr3*atomI.q+prr5*dir+prr7*qir)  - prr3*atomI.labFrameDipole_X - 2.0f*prr5*qix;
+        float fkp1        = yr*(prr3*atomI.q+prr5*dir+prr7*qir)  - prr3*atomI.labFrameDipole_Y - 2.0f*prr5*qiy;
+        float fkp2        = zr*(prr3*atomI.q+prr5*dir+prr7*qir)  - prr3*atomI.labFrameDipole_Z - 2.0f*prr5*qiz;
 
         // increment the field at each site due to this interaction
 
@@ -363,11 +337,6 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
     pullBack[1].z = atomJ.z - atomI.z;
     pullBack[1].w = (atomJ.x - atomI.x)*(atomJ.x - atomI.x) + (atomJ.y - atomI.y)*(atomJ.y - atomI.y)+ (atomJ.z - atomI.z)*(atomJ.z - atomI.z);
 
-    pullBack[2].x = scale3;
-    pullBack[2].y = scale5;
-    pullBack[2].z = scale7;
-    pullBack[2].w = -1.0;
-
 #endif
 }
 
@@ -395,6 +364,34 @@ static int isNanOrInfinity( double number ){
 }
 #endif
 
+static void bubbleSort( std::vector<int>& array, std::vector<int>& track, int length)
+{
+  int i, j, temp;
+  int test; /*use this only if unsure whether the list is already sorted or not*/
+  for(i = length - 1; i > 0; i--)
+  {
+    test=0;
+    for(j = 0; j < i; j++)
+    {
+      if(array[j] > array[j+1]) /* compare neighboring elements */
+      {
+
+        temp = array[j];    /* swap array[j] and array[j+1] */
+        array[j] = array[j+1];
+        array[j+1] = temp;
+
+        temp = track[j];    /* swap array[j] and array[j+1] */
+        track[j] = track[j+1];
+        track[j+1] = temp;
+
+        test=1;
+      }
+    } /*end for j*/
+    if(test==0) break; /*will exit if the list is sorted!*/
+  } /*end for i*/
+      
+}/*end bubbleSort*/
+
 /**---------------------------------------------------------------------------------------
 
    Compute fixed electric field using PME
@@ -415,16 +412,14 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "\n%s\n", methodName ); (void) fflush( amoebaGpu->log );
     }
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-
-    // N2 debug array
-
-    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysStream[0], 0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    int slots                                  = 15;
+    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*slots, 1, "DebugArray");
+    memset( debugArray->_pSysData, 0, sizeof( float )*4*paddedNumberOfAtoms*slots);
     debugArray->Upload();
 
     // print intermediate results for the targetAtom 
 
-    unsigned int targetAtom  = 1280;
+    unsigned int targetAtom  = 0;
 #endif
 
     kClearFields_3( amoebaGpu, 2 );
@@ -445,22 +440,22 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaPmeDirectFixedE_FieldCutoffByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                                           amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                           debugArray->_pDevStream[0], targetAtom );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                           debugArray->_pDevData, targetAtom );
 #else
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
     } else {
         kCalculateAmoebaPmeDirectFixedE_FieldCutoff_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevStream[0],
+                                                                           amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                           debugArray->_pDevStream[0], targetAtom );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                           debugArray->_pDevData, targetAtom );
 #else
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0] );
+                                                                           amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
     }
     LAUNCHERROR("kCalculateAmoebaPmeDirectFixedE_Field_kernel");
@@ -490,16 +485,16 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
            // buffer 1
 
            (void) fprintf( amoebaGpu->log,"WArry1[%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psWorkArray_3_1->_pSysStream[0][indexOffset],
-                           amoebaGpu->psWorkArray_3_1->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psWorkArray_3_1->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psWorkArray_3_1->_pSysData[indexOffset],
+                           amoebaGpu->psWorkArray_3_1->_pSysData[indexOffset+1],
+                           amoebaGpu->psWorkArray_3_1->_pSysData[indexOffset+2] );
    
            // buffer 2
 
            (void) fprintf( amoebaGpu->log,"WArry2[%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psWorkArray_3_2->_pSysStream[0][indexOffset],
-                           amoebaGpu->psWorkArray_3_2->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psWorkArray_3_2->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psWorkArray_3_2->_pSysData[indexOffset],
+                           amoebaGpu->psWorkArray_3_2->_pSysData[indexOffset+1],
+                           amoebaGpu->psWorkArray_3_2->_pSysData[indexOffset+2] );
 
            (void) fprintf( amoebaGpu->log,"\n" );
            if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
@@ -520,16 +515,16 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
            // E_Field
 
            (void) fprintf( amoebaGpu->log,"E[%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psE_Field->_pSysStream[0][indexOffset],
-                           amoebaGpu->psE_Field->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psE_Field->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psE_Field->_pSysData[indexOffset],
+                           amoebaGpu->psE_Field->_pSysData[indexOffset+1],
+                           amoebaGpu->psE_Field->_pSysData[indexOffset+2] );
    
            // E_Field polar
 
            (void) fprintf( amoebaGpu->log,"Epol[%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psE_FieldPolar->_pSysStream[0][indexOffset],
-                           amoebaGpu->psE_FieldPolar->_pSysStream[0][indexOffset+1],
-                           amoebaGpu->psE_FieldPolar->_pSysStream[0][indexOffset+2] );
+                           amoebaGpu->psE_FieldPolar->_pSysData[indexOffset],
+                           amoebaGpu->psE_FieldPolar->_pSysData[indexOffset+1],
+                           amoebaGpu->psE_FieldPolar->_pSysData[indexOffset+2] );
 
            (void) fprintf( amoebaGpu->log,"\n" );
            if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
@@ -542,20 +537,61 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "DebugQ\n" );
         debugArray->Download();
 
-        int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        amoebaGpu->gpuContext->psPosq4->Download();
+        std::vector<int> indices;
+        std::vector<int> track;
         for( int jj = 0; jj < gpu->natoms; jj++ ){
             int debugIndex = jj;
-if( fabs(debugArray->_pSysStream[0][jj+3*paddedNumberOfAtoms].x) > 0.0 ){
-            (void) fprintf( amoebaGpu->log,"%5d PmeFixedEField\n", jj );
+            if( fabs(debugArray->_pSysData[jj+3*paddedNumberOfAtoms].x) > 0.0 ){
+                int orderIndex = gpu->psAtomIndex->_pSysData[jj];
+                indices.push_back( orderIndex );
+                track.push_back( jj );
+            }
+        }
+        bubbleSort( indices, track, static_cast<int>(track.size()) );
+
+        int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+        amoebaGpu->gpuContext->psPosq4->Download();
+        unsigned int count = 0;
+        float sum0[3] = { 0.0f, 0.0f, 0.0f };
+        float sum1[3] = { 0.0f, 0.0f, 0.0f };
+        int offset0   = 1;
+        int offset1   = 2;
+/*
+        for( int jj = 0; jj < gpu->natoms; jj++ ){
+            int debugIndex = jj;
+if( fabs(debugArray->_pSysData[jj+3*paddedNumberOfAtoms].x) > 0.0 ){
+            int orderIndex = gpu->psAtomIndex->_pSysData[jj];
+            count++;
+*/
+
+        for( unsigned int ii = 0; ii < track.size(); ii++ ){
+            int jj         = track[ii];
+            int debugIndex = jj;
+            int orderIndex = indices[ii];
+            if( orderIndex > 31 && offset0 == 1 ){
+                offset0 = 2;
+                offset1 = 2;
+            }
+            count++;
+
+            sum0[0] += debugArray->_pSysData[jj+offset0*paddedNumberOfAtoms].x;
+            sum0[1] += debugArray->_pSysData[jj+offset0*paddedNumberOfAtoms].y;
+            sum0[2] += debugArray->_pSysData[jj+offset0*paddedNumberOfAtoms].z;
+
+            sum1[0] += debugArray->_pSysData[jj+offset1*paddedNumberOfAtoms].x;
+            sum1[1] += debugArray->_pSysData[jj+offset1*paddedNumberOfAtoms].y;
+            sum1[2] += debugArray->_pSysData[jj+offset1*paddedNumberOfAtoms].z;
+
+            (void) fprintf( amoebaGpu->log,"%5d %5d %u PmeFixedEField\n", orderIndex, jj, count );
             for( int kk = 0; kk < 7; kk++ ){
                 (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
-                                debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                                debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
+                                debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
                 debugIndex += paddedNumberOfAtoms;
             }
+            (void) fprintf( amoebaGpu->log,"%6d %16.9e %16.9e %16.9e %16.9e %16.9e %16.9e %6d %6d cum sumsOp\n", 
+                            orderIndex, sum0[0], sum0[1], sum0[2], sum1[0], sum1[1], sum1[2], jj, count );
             (void) fprintf( amoebaGpu->log,"\n" );
-}
 
         }
 
@@ -565,7 +601,7 @@ if( fabs(debugArray->_pSysStream[0][jj+3*paddedNumberOfAtoms].x) > 0.0 ){
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+            //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
@@ -574,20 +610,11 @@ if( fabs(debugArray->_pSysStream[0][jj+3*paddedNumberOfAtoms].x) > 0.0 ){
     }
 #endif
 
-        if( 0 ){
-            std::vector<int> fileId;
-            fileId.push_back( 0 );
-            VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData);
-            cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
-
-         }
 }
 
 void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
 {
+
     kCalculateAmoebaPMEFixedMultipoles( amoebaGpu );
     cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
 
@@ -596,9 +623,34 @@ void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
         std::vector<int> fileId;
         fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipEField", fileId, outputVector );
+        //exit(0);
+    }
+
+    if( 0 ){
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
+    }
+
+
+    if( 0 ){
+        cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        //fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaDirectEField", fileId, outputVector );
     }
 }

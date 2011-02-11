@@ -423,15 +423,15 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
         for( int ii = 0; ii < gpu->natoms; ii++ ){
             int mIndex = 3*ii;
              (void) fprintf( amoebaGpu->log,"%6d [%6d %6d %6d] x[%16.9e %16.9e %16.9e] dpl[%16.9e %16.9e %16.9e]\nRot[%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n\n", ii,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w,
-                             gpu->psPosq4->_pSysStream[0][ii].x,
-                             gpu->psPosq4->_pSysStream[0][ii].y,
-                             gpu->psPosq4->_pSysStream[0][ii].z,
-                             amoebaGpu->psMolecularDipole->_pSysStream[0][mIndex],
-                             amoebaGpu->psMolecularDipole->_pSysStream[0][mIndex+1],
-                             amoebaGpu->psMolecularDipole->_pSysStream[0][mIndex+2] );
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x,
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y,
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w,
+                             gpu->psPosq4->_pSysData[ii].x,
+                             gpu->psPosq4->_pSysData[ii].y,
+                             gpu->psPosq4->_pSysData[ii].z,
+                             amoebaGpu->psMolecularDipole->_pSysData[mIndex],
+                             amoebaGpu->psMolecularDipole->_pSysData[mIndex+1],
+                             amoebaGpu->psMolecularDipole->_pSysData[mIndex+2] );
         }
     }
 //    int64 kernelTime = AmoebaTiming::getTimeOfDay();
@@ -452,10 +452,10 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "Finished rotation kernel execution in %lf us\n", kernelTime ); (void) fflush( amoebaGpu->log );
         (void) fprintf( amoebaGpu->log, "psLabFrameDipole=%p _pSysStream=%p _pSysStream[0]=%p _pDevStream=%p _pDevStream[0]=%p\n",
                         amoebaGpu->psLabFrameDipole,  amoebaGpu->psLabFrameDipole->_pSysStream, 
-                        amoebaGpu->psLabFrameDipole->_pSysStream[0], amoebaGpu->psLabFrameDipole->_pDevStream, amoebaGpu->psLabFrameDipole->_pDevStream[0] );
+                        amoebaGpu->psLabFrameDipole->_pSysData, amoebaGpu->psLabFrameDipole->_pDevStream, amoebaGpu->psLabFrameDipole->_pDevData );
         fflush( amoebaGpu->log );
 
-        amoebaGpu->psRotationMatrix->Download();
+        //amoebaGpu->psRotationMatrix->Download();
         amoebaGpu->psLabFrameDipole->Download();
         (void) fprintf( amoebaGpu->log, "psLabFrameDipole completed\n" );  (void) fflush( amoebaGpu->log );
 
@@ -469,46 +469,46 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
              int quadrupoleOffset = 9*ii;
 
              (void) fprintf( amoebaGpu->log,"\n%6d [%6d %6d %6d] ", ii,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w );
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x,
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y,
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w );
              // coords
 
              (void) fprintf( amoebaGpu->log,"x[%16.9e %16.9e %16.9e]\n",
-                             gpu->psPosq4->_pSysStream[0][ii].x,
-                             gpu->psPosq4->_pSysStream[0][ii].y,
-                             gpu->psPosq4->_pSysStream[0][ii].z);
-
+                             gpu->psPosq4->_pSysData[ii].x,
+                             gpu->psPosq4->_pSysData[ii].y,
+                             gpu->psPosq4->_pSysData[ii].z);
+/*
              (void) fprintf( amoebaGpu->log,"   R[%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n",
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+1],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+2],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+3],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+4],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+5],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+6],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+7],
-                             amoebaGpu->psRotationMatrix->_pSysStream[0][quadrupoleOffset+8] );
-
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+1],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+2],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+3],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+4],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+5],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+6],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+7],
+                             amoebaGpu->psRotationMatrix->_pSysData[quadrupoleOffset+8] );
+*/
              // dipole
 
              (void) fprintf( amoebaGpu->log,"   D[%16.9e %16.9e %16.9e]\n",
-                             amoebaGpu->psLabFrameDipole->_pSysStream[0][dipoleOffset],
-                             amoebaGpu->psLabFrameDipole->_pSysStream[0][dipoleOffset+1],
-                             amoebaGpu->psLabFrameDipole->_pSysStream[0][dipoleOffset+2] );
+                             amoebaGpu->psLabFrameDipole->_pSysData[dipoleOffset],
+                             amoebaGpu->psLabFrameDipole->_pSysData[dipoleOffset+1],
+                             amoebaGpu->psLabFrameDipole->_pSysData[dipoleOffset+2] );
     
              // quadrupole
 
              (void) fprintf( amoebaGpu->log,"   Q[%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n",
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+1],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+2],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+3],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+4],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+5],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+6],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+7],
-                             amoebaGpu->psLabFrameQuadrupole->_pSysStream[0][quadrupoleOffset+8] );
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+1],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+2],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+3],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+4],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+5],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+6],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+7],
+                             amoebaGpu->psLabFrameQuadrupole->_pSysData[quadrupoleOffset+8] );
 
             if( ii == maxPrint && (ii < (gpu->natoms - maxPrint)) ){
                 ii = gpu->natoms - maxPrint;
@@ -549,41 +549,30 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
   
 }
 
-//#define GET_INDUCED_DIPOLE_FROM_FILE
-#ifdef GET_INDUCED_DIPOLE_FROM_FILE
-#include <stdlib.h>
-#endif
-
 void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood ) 
 {
     std::string methodName = "kCalculateAmoebaMultipoleForces";
-    //printf("%s \n", methodName.c_str() ); fflush( stdout );
 
     // compute lab frame moments
 
     cudaComputeAmoebaLabFrameMoments( amoebaGpu );
 
+    if( 0 ){
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        //fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psLabFrameDipole,     outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  9, amoebaGpu->psLabFrameQuadrupole, outputVector, gpu->psAtomIndex->_pSysData );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaLabMoments", fileId, outputVector );
+    }   
+
     // compute fixed E-field and mutual induced field 
 
     if( hasAmoebaGeneralizedKirkwood ){
         cudaComputeAmoebaFixedEAndGkFields( amoebaGpu );
-        if( 0 ){
-            gpuContext gpu = amoebaGpu->gpuContext;
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psE_Field, 0.0 );
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psE_FieldPolar, 0.0 );
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psGk_Field, 0.0 );
-        }
-
         cudaComputeAmoebaMutualInducedAndGkField( amoebaGpu );
-        if( 0 ){
-            gpuContext gpu = amoebaGpu->gpuContext;
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipole, 0.0 );
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipolePolar, 0.0 );
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipoleS, 0.0 );
-            initializeCudaFloatArray( gpu->natoms, 3, amoebaGpu->psInducedDipolePolarS, 0.0 );
-            amoebaGpu->mutualInducedDone = 1;
-        }
-
     } else {
         if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
             cudaComputeAmoebaFixedEField( amoebaGpu );
@@ -595,75 +584,12 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
             kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
             LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
             //compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, amoebaGpu->psWorkUnit->_pDevStream[0], gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, amoebaGpu->psWorkUnit->_pDevData, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
             kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
-/*
-            if( 0 ){ 
-                gpu->psInteractionCount->Download();
-                gpu->psInteractingWorkUnit->Download();
-                gpu->psInteractionFlag->Download();
-                amoebaGpu->psWorkUnit->Download();
-                (void) fprintf( amoebaGpu->log, "Ixn count=%u\n", gpu->psInteractionCount->_pSysStream[0][0] );
-                for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
-            
-                    unsigned int x          = gpu->psInteractingWorkUnit->_pSysStream[0][ii];
-                    unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-                    //unsigned int y          = ((x >> 2) & 0x7fff);
-                    unsigned int exclusions = (x & 0x1);
-                                 x          = (x >> 17) << GRIDBITS;
-                    //             x          = (x >> 17);
-                    (void) fprintf( amoebaGpu->log, "GpuCell %8u  %8u [%5u %5u %1u] %10u ", ii, gpu->psInteractingWorkUnit->_pSysStream[0][ii], x,y,exclusions, gpu->psInteractionFlag->_pSysStream[0][ii] );
-            
-                                 x          = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
-                                 y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-                                 exclusions = (x & 0x1);
-                                 x          = (x >> 17) << GRIDBITS;
-                    (void) fprintf( amoebaGpu->log, "   AmGpu %8u [%5u %5u %1u]\n", amoebaGpu->psWorkUnit->_pSysStream[0][ii], x,y,exclusions );
-                }    
-            }
-*/
             cudaComputeAmoebaPmeFixedEField( amoebaGpu );
             cudaComputeAmoebaPmeMutualInducedField( amoebaGpu );
-
-#ifdef GET_INDUCED_DIPOLE_FROM_FILE
-            if( 0 ){
-                //std::string fileName = "waterInducedDipole.txt";
-                std::string fileName = "water_3_MI.txt";
-                StringVectorVector fileContents;
-                readFile( fileName, fileContents );
-                unsigned int offset  = 0; 
-                (void) fprintf( amoebaGpu->log, "Read file: %s %u\n", fileName.c_str(), fileContents.size() ); fflush(  amoebaGpu->log );
-                for( unsigned int ii = 1; ii < fileContents.size()-1; ii++ ){
-            
-                    StringVector lineTokens     = fileContents[ii];
-                    unsigned int lineTokenIndex = 1; 
-            
-                    (void) fprintf( amoebaGpu->log, "   %u %s [%s %s %s] [%15.7e %15.7e %15.7e]\n", ii, lineTokens[0].c_str(),
-                                    lineTokens[lineTokenIndex].c_str(), lineTokens[lineTokenIndex+1].c_str(), lineTokens[lineTokenIndex+2].c_str(),
-                                    amoebaGpu->psInducedDipole->_pSysStream[0][offset], amoebaGpu->psInducedDipole->_pSysStream[0][offset+1], amoebaGpu->psInducedDipole->_pSysStream[0][offset+2]); 
-                    amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-                    amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-                    amoebaGpu->psInducedDipole->_pSysStream[0][offset++]       = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-                    offset                                                    -= 3;
-                    amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-                    amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-                    amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset++]  = static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-                }
-                (void) fflush( amoebaGpu->log );
-                float conversion = 0.1f;
-                for( int ii = 0; ii < 3*gpu->natoms; ii++ ){
-                    amoebaGpu->psInducedDipole->_pSysStream[0][ii]       *= conversion;
-                    amoebaGpu->psInducedDipolePolar->_pSysStream[0][ii]  *= conversion;
-                }    
-                //amoebaGpu->gpuContext->sim.alphaEwald = 5.4459052e+00f;
-                //SetCalculateAmoebaPmeDirectElectrostaticSim(amoebaGpu);
-                amoebaGpu->psInducedDipole->Upload();
-                amoebaGpu->psInducedDipolePolar->Upload();
-           }
-#endif
-
         }
     }
 

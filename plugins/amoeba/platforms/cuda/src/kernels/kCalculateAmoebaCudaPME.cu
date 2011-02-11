@@ -6,8 +6,6 @@
 #include "amoebaCudaKernels.h"
 #include "bbsort.h"
 
-//#define AMOEBA_DEBUG
-
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
 
@@ -241,6 +239,9 @@ void kGridSpreadFixedMultipoles_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                    if( iz >= cSim.pmeGridSize.z ){
+                        iz -= cSim.pmeGridSize.z;
+                    }
                     float atomCharge = cSim.pPosq[atomIndex].w;
                     float atomDipoleX = xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
                     float atomDipoleY = yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
@@ -271,6 +272,9 @@ void kGridSpreadFixedMultipoles_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                        if( iz >= cSim.pmeGridSize.z ){
+                            iz -= cSim.pmeGridSize.z;
+                        }
                         float atomCharge = cSim.pPosq[atomIndex].w;
                         float atomDipoleX = xscale*cAmoebaSim.pLabFrameDipole[atomIndex*3];
                         float atomDipoleY = yscale*cAmoebaSim.pLabFrameDipole[atomIndex*3+1];
@@ -332,6 +336,9 @@ void kGridSpreadInducedDipoles_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                    if( iz >= cSim.pmeGridSize.z ){
+                        iz -= cSim.pmeGridSize.z;
+                    }
                     float inducedDipoleX = xscale*cAmoebaSim.pInducedDipole[atomIndex*3];
                     float inducedDipoleY = yscale*cAmoebaSim.pInducedDipole[atomIndex*3+1];
                     float inducedDipoleZ = zscale*cAmoebaSim.pInducedDipole[atomIndex*3+2];
@@ -360,6 +367,9 @@ void kGridSpreadInducedDipoles_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                        if( iz >= cSim.pmeGridSize.z ){
+                            iz -= cSim.pmeGridSize.z;
+                        }
                         float inducedDipoleX = xscale*cAmoebaSim.pInducedDipole[atomIndex*3];
                         float inducedDipoleY = yscale*cAmoebaSim.pInducedDipole[atomIndex*3+1];
                         float inducedDipoleZ = zscale*cAmoebaSim.pInducedDipole[atomIndex*3+2];
@@ -705,21 +715,23 @@ void kComputeInducedPotentialFromGrid_kernel()
         cAmoebaSim.pPhid[10*m+1] = tuv100_1;
         cAmoebaSim.pPhid[10*m+2] = tuv010_1;
         cAmoebaSim.pPhid[10*m+3] = tuv001_1;
-        cAmoebaSim.pPhid[10*m+4] = tuv100_1;
-        cAmoebaSim.pPhid[10*m+5] = tuv010_1;
+        cAmoebaSim.pPhid[10*m+4] = tuv200_1;
+        cAmoebaSim.pPhid[10*m+5] = tuv020_1;
         cAmoebaSim.pPhid[10*m+6] = tuv002_1;
         cAmoebaSim.pPhid[10*m+7] = tuv110_1;
         cAmoebaSim.pPhid[10*m+8] = tuv101_1;
         cAmoebaSim.pPhid[10*m+9] = tuv011_1;
+
         cAmoebaSim.pPhip[10*m+1] = tuv100_2;
         cAmoebaSim.pPhip[10*m+2] = tuv010_2;
         cAmoebaSim.pPhip[10*m+3] = tuv001_2;
-        cAmoebaSim.pPhip[10*m+4] = tuv100_2;
-        cAmoebaSim.pPhip[10*m+5] = tuv010_2;
+        cAmoebaSim.pPhip[10*m+4] = tuv200_2;
+        cAmoebaSim.pPhip[10*m+5] = tuv020_2;
         cAmoebaSim.pPhip[10*m+6] = tuv002_2;
         cAmoebaSim.pPhip[10*m+7] = tuv110_2;
         cAmoebaSim.pPhip[10*m+8] = tuv101_2;
         cAmoebaSim.pPhip[10*m+9] = tuv011_2;
+
         cAmoebaSim.pPhidp[20*m] = tuv000;
         cAmoebaSim.pPhidp[20*m+1] = tuv100;
         cAmoebaSim.pPhidp[20*m+2] = tuv010;
@@ -888,23 +900,40 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         float* phip = &cAmoebaSim.pPhip[10*i];
         float* phid = &cAmoebaSim.pPhid[10*i];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
             int j2 = deriv2[k+1];
             int j3 = deriv3[k+1];
             energy += inducedDipole[k]*phi[k+1];
+
             f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1] + inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1];
             f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2] + inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
             f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3] + inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3];
+
         }
+
+        f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+        f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+        f.z *= cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+
         for (int k = 0; k < 10; k++) {
             f.x += multipole[k]*phidp[deriv1[k]];
             f.y += multipole[k]*phidp[deriv2[k]];
             f.z += multipole[k]*phidp[deriv3[k]];
         }
+
+
         f.x *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
         f.y *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
         f.z *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+
+/*
+        f.x *= 0.5f*cAmoebaSim.electric;
+        f.y *= 0.5f*cAmoebaSim.electric;
+        f.z *= 0.5f*cAmoebaSim.electric;
+*/
+
         float4 force = cSim.pForce4[i];
         force.x -= f.x;
         force.y -= f.y;
@@ -1021,5 +1050,7 @@ void kCalculateAmoebaPMEInducedDipoleForces(amoebaGpuContext amoebaGpu)
     gpuContext gpu = amoebaGpu->gpuContext;
     kComputeInducedDipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeInducedDipoleForceAndEnergy");
+
     cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
+    LAUNCHERROR("cudaComputeAmoebaMapTorquesAndAddTotalForce2_kCalculateAmoebaPMEInducedDipoleForces");
 }

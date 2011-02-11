@@ -417,22 +417,22 @@ static void kReduceMutualInducedAndGkFields(amoebaGpuContext amoebaGpu,
 {
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevStream[0], outputArray->_pDevStream[0] );
+                               amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields1");
 
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                               amoebaGpu->psWorkArray_3_2->_pDevStream[0], outputPolarArray->_pDevStream[0] );
+                               amoebaGpu->psWorkArray_3_2->_pDevData, outputPolarArray->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields2");
 
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                               amoebaGpu->psWorkArray_3_3->_pDevStream[0], outputArrayS->_pDevStream[0] );
+                               amoebaGpu->psWorkArray_3_3->_pDevData, outputArrayS->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields3");
 
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
-                               amoebaGpu->psWorkArray_3_4->_pDevStream[0], outputPolarArrayS->_pDevStream[0] );
+                               amoebaGpu->psWorkArray_3_4->_pDevData, outputPolarArrayS->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields4");
 }
 
@@ -449,12 +449,12 @@ static void printMiFieldBuffer( amoebaGpuContext amoebaGpu, unsigned int bufferI
         unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
         (void) fprintf( amoebaGpu->log, "   %6u %3u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
                             ii/3,  bufferIndex, particleIndex,
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii],
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+1],
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+2],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+1],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+2] );
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii],
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii+1],
+                            amoebaGpu->psWorkArray_3_1->_pSysData[ii+2],
+                            amoebaGpu->psWorkArray_3_2->_pSysData[ii],
+                            amoebaGpu->psWorkArray_3_2->_pSysData[ii+1],
+                            amoebaGpu->psWorkArray_3_2->_pSysData[ii+2] );
     } 
 }
 
@@ -465,12 +465,12 @@ static void printMiFieldAtomBuffers( amoebaGpuContext amoebaGpu, unsigned int ta
         unsigned int particleIndex = 3*(targetAtom + ii*amoebaGpu->paddedNumberOfAtoms);
         (void) fprintf( amoebaGpu->log, " %2u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
                         ii, particleIndex,
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex],
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+1],
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+2],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+1],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+2] );
+                        amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex],
+                        amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex+1],
+                        amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex+2],
+                        amoebaGpu->psWorkArray_3_2->_pSysData[particleIndex],
+                        amoebaGpu->psWorkArray_3_2->_pSysData[particleIndex+1],
+                        amoebaGpu->psWorkArray_3_2->_pSysData[particleIndex+2] );
     } 
 }
 #endif
@@ -507,7 +507,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
     }
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
 #endif
 
@@ -530,15 +530,15 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
     
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
-                                                                 amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                 amoebaGpu->psWorkArray_3_1->_pDevStream[0],
-                                                                 amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                 amoebaGpu->psWorkArray_3_3->_pDevStream[0],
+                                                                 amoebaGpu->psWorkUnit->_pDevData,
+                                                                 amoebaGpu->psWorkArray_3_1->_pDevData,
+                                                                 amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                                 amoebaGpu->psWorkArray_3_3->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                                 amoebaGpu->psWorkArray_3_4->_pDevStream[0],
-                                                                 debugArray->_pDevStream[0], targetAtom );
+                                                                 amoebaGpu->psWorkArray_3_4->_pDevData,
+                                                                 debugArray->_pDevData, targetAtom );
 #else
-                                                                 amoebaGpu->psWorkArray_3_4->_pDevStream[0] );
+                                                                 amoebaGpu->psWorkArray_3_4->_pDevData );
 #endif
     } else {
 
@@ -552,15 +552,15 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
 #endif
 
         kCalculateAmoebaMutualInducedAndGkFieldsN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
-                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
-                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                            amoebaGpu->psWorkArray_3_3->_pDevStream[0],
+                                                            amoebaGpu->psWorkUnit->_pDevData,
+                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
+                                                            amoebaGpu->psWorkArray_3_2->_pDevData,
+                                                            amoebaGpu->psWorkArray_3_3->_pDevData,
 #ifdef AMOEBA_DEBUG
-                                                            amoebaGpu->psWorkArray_3_4->_pDevStream[0],
-                                                            debugArray->_pDevStream[0], targetAtom );
+                                                            amoebaGpu->psWorkArray_3_4->_pDevData,
+                                                            debugArray->_pDevData, targetAtom );
 #else
-                                                            amoebaGpu->psWorkArray_3_4->_pDevStream[0] );
+                                                            amoebaGpu->psWorkArray_3_4->_pDevData );
 #endif
 
     }
@@ -603,48 +603,48 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
            // Mi
 
            (void) fprintf( amoebaGpu->log," Mult[%16.9e %16.9e %16.9e] ",
-                           outputArray->_pSysStream[0][indexOffset],
-                           outputArray->_pSysStream[0][indexOffset+1],
-                           outputArray->_pSysStream[0][indexOffset+2] );
+                           outputArray->_pSysData[indexOffset],
+                           outputArray->_pSysData[indexOffset+1],
+                           outputArray->_pSysData[indexOffset+2] );
     
            // Mi polar
 
            (void) fprintf( amoebaGpu->log," MultP[%16.9e %16.9e %16.9e]\n",
-                           outputPolarArray->_pSysStream[0][indexOffset],
-                           outputPolarArray->_pSysStream[0][indexOffset+1],
-                           outputPolarArray->_pSysStream[0][indexOffset+2] );
+                           outputPolarArray->_pSysData[indexOffset],
+                           outputPolarArray->_pSysData[indexOffset+1],
+                           outputPolarArray->_pSysData[indexOffset+2] );
 
            // MiS
 
            (void) fprintf( amoebaGpu->log,"      MultS[%16.9e %16.9e %16.9e] ",
-                           outputArrayS->_pSysStream[0][indexOffset],
-                           outputArrayS->_pSysStream[0][indexOffset+1],
-                           outputArrayS->_pSysStream[0][indexOffset+2] );
+                           outputArrayS->_pSysData[indexOffset],
+                           outputArrayS->_pSysData[indexOffset+1],
+                           outputArrayS->_pSysData[indexOffset+2] );
     
            // Mi polarS
 
            (void) fprintf( amoebaGpu->log,"MultPS[%16.9e %16.9e %16.9e]\n",
-                           outputPolarArrayS->_pSysStream[0][indexOffset],
-                           outputPolarArrayS->_pSysStream[0][indexOffset+1],
-                           outputPolarArrayS->_pSysStream[0][indexOffset+2] );
+                           outputPolarArrayS->_pSysData[indexOffset],
+                           outputPolarArrayS->_pSysData[indexOffset+1],
+                           outputPolarArrayS->_pSysData[indexOffset+2] );
 
            // coords
 
 #if 0
             (void) fprintf( amoebaGpu->log,"x[%16.9e %16.9e %16.9e] ",
-                            gpu->psPosq4->_pSysStream[0][ii].x,
-                            gpu->psPosq4->_pSysStream[0][ii].y,
-                            gpu->psPosq4->_pSysStream[0][ii].z);
+                            gpu->psPosq4->_pSysData[ii].x,
+                            gpu->psPosq4->_pSysData[ii].y,
+                            gpu->psPosq4->_pSysData[ii].z);
 
 
            for( int jj = 0; jj < gpu->natoms && jj < 5; jj++ ){
                int debugIndex = jj*gpu->natoms + ii;
-               float xx       =  gpu->psPosq4->_pSysStream[0][jj].x -  gpu->psPosq4->_pSysStream[0][ii].x;
-               float yy       =  gpu->psPosq4->_pSysStream[0][jj].y -  gpu->psPosq4->_pSysStream[0][ii].y;
-               float zz       =  gpu->psPosq4->_pSysStream[0][jj].z -  gpu->psPosq4->_pSysStream[0][ii].z;
+               float xx       =  gpu->psPosq4->_pSysData[jj].x -  gpu->psPosq4->_pSysData[ii].x;
+               float yy       =  gpu->psPosq4->_pSysData[jj].y -  gpu->psPosq4->_pSysData[ii].y;
+               float zz       =  gpu->psPosq4->_pSysData[jj].z -  gpu->psPosq4->_pSysData[ii].z;
                (void) fprintf( amoebaGpu->log,"\n%4d %4d delta [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] ",
                                ii, jj, xx, yy, zz,
-                               debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y, debugArray->_pSysStream[0][debugIndex].z );
+                               debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y, debugArray->_pSysData[debugIndex].z );
 
            }
 #endif
@@ -655,13 +655,13 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
                    int debugIndex = jj;
                    (void) fprintf( amoebaGpu->log,"%4d %4d Rint [%16.9e %16.9e %16.9e %16.9e]\n",
                                    ii, jj,
-                                   debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y,
-                                   debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
+                                   debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
 
                    for( int kk = 0; kk < 9; kk++ ){
                        debugIndex += paddedNumberOfAtoms;
                        (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %5.1f]\n",
-                                       debugArray->_pSysStream[0][debugIndex].x, debugArray->_pSysStream[0][debugIndex].y, debugArray->_pSysStream[0][debugIndex].z, debugArray->_pSysStream[0][debugIndex].w );
+                                       debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y, debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
                    }
                }
                (void) fprintf( amoebaGpu->log,"\n" );
@@ -731,14 +731,14 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     // initialize [ InducedDipole & InducedDipolePolar ] to [ E_Field & E_FieldPolar]*Polarizability
 
     kInitializeMutualInducedAndGkField_kernel<<< numBlocks, numThreads >>>(
-         amoebaGpu->psE_Field->_pDevStream[0],
-         amoebaGpu->psE_FieldPolar->_pDevStream[0],
-         amoebaGpu->psGk_Field->_pDevStream[0],
-         amoebaGpu->psPolarizability->_pDevStream[0],
-         amoebaGpu->psInducedDipole->_pDevStream[0],
-         amoebaGpu->psInducedDipolePolar->_pDevStream[0],
-         amoebaGpu->psInducedDipoleS->_pDevStream[0],
-         amoebaGpu->psInducedDipolePolarS->_pDevStream[0] );
+         amoebaGpu->psE_Field->_pDevData,
+         amoebaGpu->psE_FieldPolar->_pDevData,
+         amoebaGpu->psGk_Field->_pDevData,
+         amoebaGpu->psPolarizability->_pDevData,
+         amoebaGpu->psInducedDipole->_pDevData,
+         amoebaGpu->psInducedDipolePolar->_pDevData,
+         amoebaGpu->psInducedDipoleS->_pDevData,
+         amoebaGpu->psInducedDipolePolarS->_pDevData );
     LAUNCHERROR("kInitializeMutualInducedAndGkField");  
 
 #ifdef AMOEBA_DEBUG
@@ -757,23 +757,23 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         int maxPrint = 10;
         for( int ii = 0; ii < gpu->natoms; ii++ ){
             (void) fprintf( amoebaGpu->log, "\n%4d pol=%12.4e\n", ii, 
-                            amoebaGpu->psPolarizability->_pSysStream[0][offset] );
-            if( amoebaGpu->psPolarizability->_pSysStream[0][offset] != amoebaGpu->psPolarizability->_pSysStream[0][offset+1] ||
-                amoebaGpu->psPolarizability->_pSysStream[0][offset] != amoebaGpu->psPolarizability->_pSysStream[0][offset+2] ){
-                (void) fprintf( amoebaGpu->log, "PolX!!! %12.4e %12.4e ", amoebaGpu->psPolarizability->_pSysStream[0][offset+1], amoebaGpu->psPolarizability->_pSysStream[0][offset+2] ); 
+                            amoebaGpu->psPolarizability->_pSysData[offset] );
+            if( amoebaGpu->psPolarizability->_pSysData[offset] != amoebaGpu->psPolarizability->_pSysData[offset+1] ||
+                amoebaGpu->psPolarizability->_pSysData[offset] != amoebaGpu->psPolarizability->_pSysData[offset+2] ){
+                (void) fprintf( amoebaGpu->log, "PolX!!! %12.4e %12.4e ", amoebaGpu->psPolarizability->_pSysData[offset+1], amoebaGpu->psPolarizability->_pSysData[offset+2] ); 
             }
 
             (void) fprintf( amoebaGpu->log," E[%14.6e %14.6e %14.6e]  Mi[%14.6e %14.6e %14.6e]\n",
-                            amoebaGpu->psE_Field->_pSysStream[0][offset],       amoebaGpu->psE_Field->_pSysStream[0][offset+1],       amoebaGpu->psE_Field->_pSysStream[0][offset+2],
-                            amoebaGpu->psInducedDipole->_pSysStream[0][offset], amoebaGpu->psInducedDipole->_pSysStream[0][offset+1], amoebaGpu->psInducedDipole->_pSysStream[0][offset+2] );
+                            amoebaGpu->psE_Field->_pSysData[offset],       amoebaGpu->psE_Field->_pSysData[offset+1],       amoebaGpu->psE_Field->_pSysData[offset+2],
+                            amoebaGpu->psInducedDipole->_pSysData[offset], amoebaGpu->psInducedDipole->_pSysData[offset+1], amoebaGpu->psInducedDipole->_pSysData[offset+2] );
             (void) fprintf( amoebaGpu->log,"Ep[%14.6e %14.6e %14.6e] Mip[%14.6e %14.6e %14.6e]\n",
-                            amoebaGpu->psE_FieldPolar->_pSysStream[0][offset],       amoebaGpu->psE_FieldPolar->_pSysStream[0][offset+1],       amoebaGpu->psE_FieldPolar->_pSysStream[0][offset+2],
-                            amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset], amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset+1], amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset+2] );
+                            amoebaGpu->psE_FieldPolar->_pSysData[offset],       amoebaGpu->psE_FieldPolar->_pSysData[offset+1],       amoebaGpu->psE_FieldPolar->_pSysData[offset+2],
+                            amoebaGpu->psInducedDipolePolar->_pSysData[offset], amoebaGpu->psInducedDipolePolar->_pSysData[offset+1], amoebaGpu->psInducedDipolePolar->_pSysData[offset+2] );
 
             (void) fprintf( amoebaGpu->log,"Gk[%14.6e %14.6e %14.6e] MiS[%14.6e %14.6e %14.6e] MipS[%14.6e %14.6e %14.6e]\n",
-                            amoebaGpu->psGk_Field->_pSysStream[0][offset],            amoebaGpu->psGk_Field->_pSysStream[0][offset+1],            amoebaGpu->psGk_Field->_pSysStream[0][offset+2],
-                            amoebaGpu->psInducedDipoleS->_pSysStream[0][offset],      amoebaGpu->psInducedDipoleS->_pSysStream[0][offset+1],      amoebaGpu->psInducedDipoleS->_pSysStream[0][offset+2],
-                            amoebaGpu->psInducedDipolePolarS->_pSysStream[0][offset], amoebaGpu->psInducedDipolePolarS->_pSysStream[0][offset+1], amoebaGpu->psInducedDipolePolarS->_pSysStream[0][offset+2] );
+                            amoebaGpu->psGk_Field->_pSysData[offset],            amoebaGpu->psGk_Field->_pSysData[offset+1],            amoebaGpu->psGk_Field->_pSysData[offset+2],
+                            amoebaGpu->psInducedDipoleS->_pSysData[offset],      amoebaGpu->psInducedDipoleS->_pSysData[offset+1],      amoebaGpu->psInducedDipoleS->_pSysData[offset+2],
+                            amoebaGpu->psInducedDipolePolarS->_pSysData[offset], amoebaGpu->psInducedDipolePolarS->_pSysData[offset+1], amoebaGpu->psInducedDipolePolarS->_pSysData[offset+2] );
             offset += 3;
             if( ii == maxPrint && (ii < (gpu->natoms - maxPrint) ) )ii =  (gpu->natoms - maxPrint);
         }   
@@ -801,26 +801,26 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         // post matrix multiply
 
         kSorUpdateMutualInducedAndGkField_kernel<<< numBlocks, numThreads >>>(
-           amoebaGpu->psPolarizability->_pDevStream[0],
-           amoebaGpu->psInducedDipole->_pDevStream[0],     amoebaGpu->psInducedDipolePolar->_pDevStream[0],
-           amoebaGpu->psE_Field->_pDevStream[0],           amoebaGpu->psE_FieldPolar->_pDevStream[0],
-           amoebaGpu->psWorkVector[0]->_pDevStream[0],     amoebaGpu->psWorkVector[1]->_pDevStream[0] );
+           amoebaGpu->psPolarizability->_pDevData,
+           amoebaGpu->psInducedDipole->_pDevData,     amoebaGpu->psInducedDipolePolar->_pDevData,
+           amoebaGpu->psE_Field->_pDevData,           amoebaGpu->psE_FieldPolar->_pDevData,
+           amoebaGpu->psWorkVector[0]->_pDevData,     amoebaGpu->psWorkVector[1]->_pDevData );
         LAUNCHERROR("cudaComputeAmoebaMutualInducedAndGkFieldSorUpdate1");  
 
         kSorUpdateMutualInducedAndGkFieldS_kernel<<< numBlocks, numThreads >>>(
-           amoebaGpu->psPolarizability->_pDevStream[0],
-           amoebaGpu->psInducedDipoleS->_pDevStream[0],    amoebaGpu->psInducedDipolePolarS->_pDevStream[0],
-           amoebaGpu->psE_Field->_pDevStream[0],          amoebaGpu->psE_FieldPolar->_pDevStream[0],
-           amoebaGpu->psGk_Field->_pDevStream[0],
-           amoebaGpu->psWorkVector[2]->_pDevStream[0],     amoebaGpu->psWorkVector[3]->_pDevStream[0] );
+           amoebaGpu->psPolarizability->_pDevData,
+           amoebaGpu->psInducedDipoleS->_pDevData,    amoebaGpu->psInducedDipolePolarS->_pDevData,
+           amoebaGpu->psE_Field->_pDevData,          amoebaGpu->psE_FieldPolar->_pDevData,
+           amoebaGpu->psGk_Field->_pDevData,
+           amoebaGpu->psWorkVector[2]->_pDevData,     amoebaGpu->psWorkVector[3]->_pDevData );
         LAUNCHERROR("cudaComputeAmoebaMutualInducedAndGkFieldSorUpdate2");  
 
         // get total epsilon -- performing sums on gpu
 
         kReduceMutualInducedAndGkFieldDelta_kernel<<<1, amoebaGpu->epsilonThreadsPerBlock, 4*sizeof(float)*amoebaGpu->epsilonThreadsPerBlock>>>(
-           amoebaGpu->psWorkVector[0]->_pDevStream[0], amoebaGpu->psWorkVector[1]->_pDevStream[0],
-           amoebaGpu->psWorkVector[2]->_pDevStream[0], amoebaGpu->psWorkVector[3]->_pDevStream[0],
-           amoebaGpu->psCurrentEpsilon->_pDevStream[0] );
+           amoebaGpu->psWorkVector[0]->_pDevData, amoebaGpu->psWorkVector[1]->_pDevData,
+           amoebaGpu->psWorkVector[2]->_pDevData, amoebaGpu->psWorkVector[3]->_pDevData,
+           amoebaGpu->psCurrentEpsilon->_pDevData );
         LAUNCHERROR("kReduceMutualInducedAndGkFieldDelta_kernel");
 
 #if 0
@@ -839,15 +839,15 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         amoebaGpu->mutualInducedCurrentEpsilon  = currentEpsilon;
         (void) fprintf( amoebaGpu->log, "%s iteration=%3d eps %14.6e [%14.6e %14.6e] done=%d sums=%14.6e %14.6e %14.6e %14.6e\n",
                         methodName, iteration, amoebaGpu->mutualInducedCurrentEpsilon,
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][1], 
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][2], done, sum[0], sum[1], sum[2], sum[3] );
+                           amoebaGpu->psCurrentEpsilon->_pSysData[1], 
+                           amoebaGpu->psCurrentEpsilon->_pSysData[2], done, sum[0], sum[1], sum[2], sum[3] );
 }
 #endif
 
         // Debye=48.033324f
 
         amoebaGpu->psCurrentEpsilon->Download();
-        float currentEpsilon                     = amoebaGpu->psCurrentEpsilon->_pSysStream[0][0];
+        float currentEpsilon                     = amoebaGpu->psCurrentEpsilon->_pSysData[0];
         amoebaGpu->mutualInducedCurrentEpsilon   = currentEpsilon;
 
         if( iteration > amoebaGpu->mutualInducedMaxIterations || amoebaGpu->mutualInducedCurrentEpsilon < amoebaGpu->mutualInducedTargetEpsilon ){ 
@@ -867,14 +867,14 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
 #if 1
            (void) fprintf( amoebaGpu->log, "%s iteration=%3d eps %14.6e [%14.6e %14.6e] done=%d\n",
                            methodName, iteration, amoebaGpu->mutualInducedCurrentEpsilon,
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][1], 
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][2], done );
+                           amoebaGpu->psCurrentEpsilon->_pSysData[1], 
+                           amoebaGpu->psCurrentEpsilon->_pSysData[2], done );
 #else
            (void) fprintf( amoebaGpu->log, "%s iteration=%3d eps %14.6e %14.6e crrntEps=%14.6e %14.6e %14.6e %14.6e done=%d\n",
                            methodName, iteration, sum1, sum2, amoebaGpu->mutualInducedCurrentEpsilon,
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][0], 
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][1], 
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][2], done );
+                           amoebaGpu->psCurrentEpsilon->_pSysData[0], 
+                           amoebaGpu->psCurrentEpsilon->_pSysData[1], 
+                           amoebaGpu->psCurrentEpsilon->_pSysData[2], done );
 #endif
            (void) fflush( amoebaGpu->log );
 
@@ -884,20 +884,20 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
                 (void) fprintf( amoebaGpu->log, "%4d ", ii ); 
     
                 (void) fprintf( amoebaGpu->log," Mi[%14.6e %14.6e %14.6e] ",
-                                amoebaGpu->psInducedDipole->_pSysStream[0][offset], amoebaGpu->psInducedDipole->_pSysStream[0][offset+1], amoebaGpu->psInducedDipole->_pSysStream[0][offset+2] );
+                                amoebaGpu->psInducedDipole->_pSysData[offset], amoebaGpu->psInducedDipole->_pSysData[offset+1], amoebaGpu->psInducedDipole->_pSysData[offset+2] );
                 (void) fprintf( amoebaGpu->log,"Mip[%14.6e %14.6e %14.6e]",
-                                amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset], amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset+1], amoebaGpu->psInducedDipolePolar->_pSysStream[0][offset+2] );
+                                amoebaGpu->psInducedDipolePolar->_pSysData[offset], amoebaGpu->psInducedDipolePolar->_pSysData[offset+1], amoebaGpu->psInducedDipolePolar->_pSysData[offset+2] );
                 (void) fprintf( amoebaGpu->log," MiS[%14.6e %14.6e %14.6e] ",
-                                amoebaGpu->psInducedDipoleS->_pSysStream[0][offset], amoebaGpu->psInducedDipoleS->_pSysStream[0][offset+1], amoebaGpu->psInducedDipoleS->_pSysStream[0][offset+2] );
+                                amoebaGpu->psInducedDipoleS->_pSysData[offset], amoebaGpu->psInducedDipoleS->_pSysData[offset+1], amoebaGpu->psInducedDipoleS->_pSysData[offset+2] );
                 (void) fprintf( amoebaGpu->log,"MipS[%14.6e %14.6e %14.6e]\n",
-                                amoebaGpu->psInducedDipolePolarS->_pSysStream[0][offset], amoebaGpu->psInducedDipolePolarS->_pSysStream[0][offset+1], amoebaGpu->psInducedDipolePolarS->_pSysStream[0][offset+2] );
+                                amoebaGpu->psInducedDipolePolarS->_pSysData[offset], amoebaGpu->psInducedDipolePolarS->_pSysData[offset+1], amoebaGpu->psInducedDipolePolarS->_pSysData[offset+2] );
 /*
                 (void) fprintf( amoebaGpu->log,"Gk [%14.6e %14.6e %14.6e]\n",
-                                amoebaGpu->psGk_Field->_pSysStream[0][offset], amoebaGpu->psGk_Field->_pSysStream[0][offset+1], amoebaGpu->psGk_Field->_pSysStream[0][offset+2] );
+                                amoebaGpu->psGk_Field->_pSysData[offset], amoebaGpu->psGk_Field->_pSysData[offset+1], amoebaGpu->psGk_Field->_pSysData[offset+2] );
                 (void) fprintf( amoebaGpu->log,"W2 [%14.6e %14.6e %14.6e] ",
-                                amoebaGpu->psWorkVector[2]->_pSysStream[0][offset], amoebaGpu->psWorkVector[2]->_pSysStream[0][offset+1], amoebaGpu->psWorkVector[2]->_pSysStream[0][offset+2] );
+                                amoebaGpu->psWorkVector[2]->_pSysData[offset], amoebaGpu->psWorkVector[2]->_pSysData[offset+1], amoebaGpu->psWorkVector[2]->_pSysData[offset+2] );
                 (void) fprintf( amoebaGpu->log,"W3 [%14.6e %14.6e %14.6e]\n",
-                                amoebaGpu->psWorkVector[3]->_pSysStream[0][offset], amoebaGpu->psWorkVector[3]->_pSysStream[0][offset+1], amoebaGpu->psWorkVector[3]->_pSysStream[0][offset+2] );
+                                amoebaGpu->psWorkVector[3]->_pSysData[offset], amoebaGpu->psWorkVector[3]->_pSysData[offset+1], amoebaGpu->psWorkVector[3]->_pSysData[offset+2] );
 */
                 if( ii == maxPrint && (ii < (gpu->natoms - maxPrint) ) ){
                     ii =  (gpu->natoms - maxPrint);
