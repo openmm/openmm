@@ -1399,6 +1399,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
    @param amoebaGpu        amoebaGpu context
 
    --------------------------------------------------------------------------------------- */
+extern double kReduceEnergy(  gpuContext gpu);
 
 void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
 {
@@ -1423,7 +1424,10 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
             index                          += 3;
         }
         //zeroForce( amoebaGpu );
+        double dem = kReduceEnergy( gpu );
         kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
+        double dep = kReduceEnergy( gpu );
+        fprintf( stderr, "Recip Em=%15.7e ep=%15.7e  ttl=%15.7e", dem/4.184, (dep-dem)/4.184, dep/4.184 );
         copyForce( amoebaGpu, conversion );
         VectorOfDoubleVectors outputVector1;
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector1, gpu->psAtomIndex->_pSysData );

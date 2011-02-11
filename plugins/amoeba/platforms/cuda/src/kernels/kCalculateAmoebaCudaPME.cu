@@ -901,11 +901,14 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         float* phid = &cAmoebaSim.pPhid[10*i];
         float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 
+        energy += cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX*inducedDipole[0]*phi[1];
+        energy += cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY*inducedDipole[1]*phi[2];
+        energy += cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ*inducedDipole[2]*phi[3];
+
         for (int k = 0; k < 3; k++) {
             int j1 = deriv1[k+1];
             int j2 = deriv2[k+1];
             int j3 = deriv3[k+1];
-            energy += inducedDipole[k]*phi[k+1];
 
             f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1] + inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1];
             f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2] + inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
@@ -923,16 +926,9 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
             f.z += multipole[k]*phidp[deriv3[k]];
         }
 
-
         f.x *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
         f.y *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
         f.z *= 0.5f*cAmoebaSim.electric*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
-
-/*
-        f.x *= 0.5f*cAmoebaSim.electric;
-        f.y *= 0.5f*cAmoebaSim.electric;
-        f.z *= 0.5f*cAmoebaSim.electric;
-*/
 
         float4 force = cSim.pForce4[i];
         force.x -= f.x;
