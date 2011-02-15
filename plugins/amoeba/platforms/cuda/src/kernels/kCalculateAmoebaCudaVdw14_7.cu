@@ -715,8 +715,8 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4, outputVector, gpu->psAtomIndex->_pSysData );
-        cudaLoadCudaFloat4Array( gpu->natoms,  3, psTempForce, outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloat4Array( gpu->natoms,  3, psTempForce, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaVdw", fileId, outputVector );
         delete psTempForce;
         //exit(0);

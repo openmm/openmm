@@ -1369,9 +1369,9 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, gpu->psAtomIndex->_pSysData );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector, gpu->psAtomIndex->_pSysData);
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectForceTorque", fileId, outputVector );
          }
 
@@ -1386,7 +1386,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
         copyForce( amoebaGpu, -1.0f/41.84f );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce, outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectForce", fileId, outputVector );
     }
 
@@ -1410,7 +1410,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         float conversion = -1.0f/41.84;
         copyForce( amoebaGpu, conversion );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipDemForce", fileId, outputVector );
 
 
@@ -1430,7 +1430,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         fprintf( stderr, "Recip Em=%15.7e ep=%15.7e  ttl=%15.7e", dem/4.184, (dep-dem)/4.184, dep/4.184 );
         copyForce( amoebaGpu, conversion );
         VectorOfDoubleVectors outputVector1;
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector1, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector1, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipForce", fileId, outputVector1 );
 
         VectorOfDoubleVectors outputVector2;
@@ -1444,7 +1444,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         }
         amoebaGpu->psForce->Upload();
         outputVector.resize(0);
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector2, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector2, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeRecipDepForce", fileId, outputVector2 );
 
 
@@ -1463,7 +1463,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         copyForce( amoebaGpu, -1.0f/41.84f );
 
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "yCudaPmeDirectForce", fileId, outputVector );
         zeroForce( amoebaGpu );
     }
@@ -1476,7 +1476,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
         copyForce( amoebaGpu, -1.0f/41.84f );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeForce", fileId, outputVector );
     }
 
@@ -1485,7 +1485,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         std::vector<int> fileId;
         copyForce( amoebaGpu, -1.0f/41.84f );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPrePmeForce", fileId, outputVector );
     }
 

@@ -446,16 +446,11 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-//        kernelTime          = AmoebaTiming::getTimeOfDay() - kernelTime;
         static int timestep = 0;
         timestep++;
         (void) fprintf( amoebaGpu->log, "Finished rotation kernel execution in %lf us\n", kernelTime ); (void) fflush( amoebaGpu->log );
-        (void) fprintf( amoebaGpu->log, "psLabFrameDipole=%p _pSysStream=%p _pSysStream[0]=%p _pDevStream=%p _pDevStream[0]=%p\n",
-                        amoebaGpu->psLabFrameDipole,  amoebaGpu->psLabFrameDipole->_pSysStream, 
-                        amoebaGpu->psLabFrameDipole->_pSysData, amoebaGpu->psLabFrameDipole->_pDevStream, amoebaGpu->psLabFrameDipole->_pDevData );
-        fflush( amoebaGpu->log );
+        (void) fflush( amoebaGpu->log );
 
-        //amoebaGpu->psRotationMatrix->Download();
         amoebaGpu->psLabFrameDipole->Download();
         (void) fprintf( amoebaGpu->log, "psLabFrameDipole completed\n" );  (void) fflush( amoebaGpu->log );
 
@@ -530,8 +525,8 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( particles, 3, gpu->psPosq4,                     outputVector, gpu->psAtomIndex->_pSysData );
-        cudaLoadCudaFloatArray( particles,  9, amoebaGpu->psRotationMatrix,      outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloat4Array( particles, 3, gpu->psPosq4,                     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( particles,  9, amoebaGpu->psRotationMatrix,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaRotationMatrices", fileId, outputVector );
     }
     if( 0 ){
@@ -541,9 +536,9 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
         //fileId.push_back( 0 );
 
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( particles, 3, gpu->psPosq4,                     outputVector, gpu->psAtomIndex->_pSysData );
-        cudaLoadCudaFloatArray( particles,  3, amoebaGpu->psLabFrameDipole,      outputVector, gpu->psAtomIndex->_pSysData );
-        cudaLoadCudaFloatArray( particles,  9, amoebaGpu->psLabFrameQuadrupole,  outputVector, gpu->psAtomIndex->_pSysData );
+        cudaLoadCudaFloat4Array( particles, 3, gpu->psPosq4,                     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( particles,  3, amoebaGpu->psLabFrameDipole,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( particles,  9, amoebaGpu->psLabFrameQuadrupole,  outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaRotatedMoments", fileId, outputVector );
     }
   
@@ -562,9 +557,9 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psLabFrameDipole,     outputVector, gpu->psAtomIndex->_pSysData );
-        cudaLoadCudaFloatArray( gpu->natoms,  9, amoebaGpu->psLabFrameQuadrupole, outputVector, gpu->psAtomIndex->_pSysData );
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psLabFrameDipole,     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  9, amoebaGpu->psLabFrameQuadrupole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaLabMoments", fileId, outputVector );
     }   
 
@@ -610,6 +605,16 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
         // map torques to forces
 
         cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpu, amoebaGpu->psTorque, amoebaGpu->psForce, amoebaGpu->gpuContext->psForce4 );
+
+        if( 0 ){
+            gpuContext gpu = amoebaGpu->gpuContext;
+            std::vector<int> fileId;
+            //fileId.push_back( 0 );
+            VectorOfDoubleVectors outputVector;
+            //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloat4Array( gpu->natoms,  3, amoebaGpu->gpuContext->psForce4,     outputVector, gpu->psAtomIndex->_pSysData, 1.0f/4.184 );
+            cudaWriteVectorOfDoubleVectorsToFile( "CudaMpole", fileId, outputVector );
+        }   
 
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );

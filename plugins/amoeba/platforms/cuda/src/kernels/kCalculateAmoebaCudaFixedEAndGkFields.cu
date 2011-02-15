@@ -561,10 +561,10 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, NULL );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, NULL);
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psGk_Field,     outputVector, NULL);
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, NULL, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, NULL, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, NULL, 1.0f);
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psGk_Field,     outputVector, NULL, 1.0f);
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEAndGkField", fileId, outputVector );
 
          }

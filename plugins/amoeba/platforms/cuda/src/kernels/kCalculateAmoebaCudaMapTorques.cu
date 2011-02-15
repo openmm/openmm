@@ -828,9 +828,9 @@ void cudaComputeAmoebaMapTorques( amoebaGpuContext amoebaGpu, CUDAStream<float>*
         //std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, NULL );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque, outputVector, NULL);
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,        outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,  outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque, outputVector, NULL, 1.0f);
         cudaWriteVectorOfDoubleVectorsToFile( "CudaVacuumElecForce", fileId, outputVector );
     }
 #endif
@@ -1030,10 +1030,10 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext amoebaGpu,
         //std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
-        cudaLoadCudaFloat4Array( gpu->natoms, 4, gpu->psForce4,             outputVector, NULL );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, psForce,        outputVector, NULL );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, psTorque,       outputVector, NULL);
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,   outputVector, NULL, 1.0f );
+        cudaLoadCudaFloat4Array( gpu->natoms, 4, gpu->psForce4,  outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, psForce,        outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, psTorque,       outputVector, NULL, 1.0f);
         cudaWriteVectorOfDoubleVectorsToFile( "CudaVacuumElecForce", fileId, outputVector );
     }
 #endif
@@ -1122,10 +1122,10 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext amoebaGpu,
         //std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
-        cudaLoadCudaFloat4Array( gpu->natoms, 4, gpu->psForce4,             outputVector, NULL );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,        outputVector, NULL );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,       outputVector, NULL);
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, NULL, 1.0f );
+        cudaLoadCudaFloat4Array( gpu->natoms, 4, gpu->psForce4,             outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,        outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,       outputVector, NULL, 1.0f);
         cudaWriteVectorOfDoubleVectorsToFile( "CudaVacuumElecForce", fileId, outputVector );
     }
 #endif

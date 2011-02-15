@@ -1039,14 +1039,16 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
                         methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
         (void) fflush( amoebaGpu->log );
     }   
-    int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    int maxSlots                      = 20;
+    int paddedNumberOfAtoms           = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+    CUDAStream<float4>* debugArray    = new CUDAStream<float4>(maxSlots*paddedNumberOfAtoms, 1, "DebugArray");
+    memset( debugArray->_pSysData,      0, sizeof( float )*4*maxSlots*paddedNumberOfAtoms);
     debugArray->Upload();
-    unsigned int targetAtom                   = 0;
+    unsigned int targetAtom           = 0;
 #endif
 
     kClearFields_3( amoebaGpu, 6 );
+    LAUNCHERROR("kClearFields_3_kCalculateAmoebaCudaKirkwoodEDiff");
 
     if( threadsPerBlock == 0 ){
         unsigned int maxThreads;
@@ -1066,7 +1068,6 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
                         amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sm_version, gpu->device, gpu->sharedMemoryPerBlock );
-        //gpuPrintCudaAmoebaGmxSimulation(amoebaGpu, amoebaGpu->log );
         (void) fflush( amoebaGpu->log );
     }   
 #endif
@@ -1113,17 +1114,13 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     LAUNCHERROR("kCalculateAmoebaCudaKirkwoodEDiffN2Forces");
 
     kReduceForceTorque( amoebaGpu );
+    LAUNCHERROR("kReduceForceTorque_kCalculateAmoebaCudaKirkwoodEDiff");
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
 
         amoebaGpu->psWorkArray_3_1->Download();
         amoebaGpu->psWorkArray_3_2->Download();
-
-        //printKirkwoodEDiffAtomBuffers( amoebaGpu, (targetAtom + 0) );
-        //printKirkwoodEDiffAtomBuffers( amoebaGpu, (targetAtom + 1231) );
-        //printKirkwoodEDiffBuffer( amoebaGpu, 0 );
-        //printKirkwoodEDiffBuffer( amoebaGpu, 38 );
 
         amoebaGpu->psKirkwoodEDiffForce->Download();
         amoebaGpu->psTorque->Download();
@@ -1149,26 +1146,6 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
                            amoebaGpu->psTorque->_pSysData[indexOffset+1],
                            amoebaGpu->psTorque->_pSysData[indexOffset+2] );
 
-           // coords
-
-#if 0
-            (void) fprintf( amoebaGpu->log,"x[%16.9e %16.9e %16.9e] ",
-                            gpu->psPosq4->_pSysData[ii].x,
-                            gpu->psPosq4->_pSysData[ii].y,
-                            gpu->psPosq4->_pSysData[ii].z);
-
-
-           for( int jj = 0; jj < gpu->natoms && jj < 5; jj++ ){
-               int debugIndex = jj*gpu->natoms + ii;
-               float xx       =  gpu->psPosq4->_pSysData[jj].x -  gpu->psPosq4->_pSysData[ii].x;
-               float yy       =  gpu->psPosq4->_pSysData[jj].y -  gpu->psPosq4->_pSysData[ii].y;
-               float zz       =  gpu->psPosq4->_pSysData[jj].z -  gpu->psPosq4->_pSysData[ii].z;
-               (void) fprintf( amoebaGpu->log,"\n%4d %4d delta [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] ",
-                               ii, jj, xx, yy, zz,
-                               debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y, debugArray->_pSysData[debugIndex].z );
-
-           }
-#endif
            if( ii == targetAtom ){
                (void) fprintf( amoebaGpu->log,"\n" );
                int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
@@ -1217,9 +1194,9 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
-            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL );
-            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psTorque,             outputVector, NULL);
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL, 1.0f );
+            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL, 1.0f );
+            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psTorque,             outputVector, NULL, 1.0f);
             cudaWriteVectorOfDoubleVectorsToFile( "CudaForceTorque", fileId, outputVector );
          }
 
@@ -1262,14 +1239,23 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
-            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL );
+            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL, 1.0f );
+            cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL, 1.0f );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodEDiffForce", fileId, outputVector );
          }
 
     }   
 #endif
 
+    if( 0 ){
+        cudaComputeAmoebaMapTorques( amoebaGpu, amoebaGpu->psTorque, amoebaGpu->psKirkwoodEDiffForce );
+        std::vector<int> fileId;
+        //fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL, 1.0f );
+        cudaLoadCudaFloatArray(  gpu->natoms, 3, amoebaGpu->psKirkwoodEDiffForce, outputVector, NULL, 1.0f/4.184 );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodEDiffForce", fileId, outputVector );
+    }
+
    // ---------------------------------------------------------------------------------------
 }
-

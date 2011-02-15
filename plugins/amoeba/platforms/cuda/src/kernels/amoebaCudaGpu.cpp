@@ -470,11 +470,11 @@ void gpuSetAmoebaBondParameters(amoebaGpuContext amoebaGpu, const std::vector<in
 
     CUDAStream<int4>* psBondID                        = new CUDAStream<int4>(bonds, 1, "AmoebaBondID");
     amoebaGpu->psAmoebaBondID                         = psBondID;
-    amoebaGpu->amoebaSim.pAmoebaBondID                = psBondID->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaBondID                = psBondID->_pDevData;
 
     CUDAStream<float2>* psBondParameter               = new CUDAStream<float2>(bonds, 1, "AmoebaBondParameter");
     amoebaGpu->psAmoebaBondParameter                  = psBondParameter;
-    amoebaGpu->amoebaSim.pAmoebaBondParameter         = psBondParameter->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaBondParameter         = psBondParameter->_pDevData;
 
     amoebaGpu->amoebaSim.amoebaBondCubicParameter     = cubic;
     amoebaGpu->amoebaSim.amoebaBondQuarticicParameter = quartic;
@@ -514,11 +514,11 @@ void gpuSetAmoebaUreyBradleyParameters(amoebaGpuContext amoebaGpu, const std::ve
 
     CUDAStream<int4>* psUreyBradleyID                        = new CUDAStream<int4>(bonds, 1, "AmoebaUreyBradleyID");
     amoebaGpu->psAmoebaUreyBradleyID                         = psUreyBradleyID;
-    amoebaGpu->amoebaSim.pAmoebaUreyBradleyID                = psUreyBradleyID->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaUreyBradleyID                = psUreyBradleyID->_pDevData;
 
     CUDAStream<float2>* psUreyBradleyParameter               = new CUDAStream<float2>(bonds, 1, "AmoebaUreyBradleyParameter");
     amoebaGpu->psAmoebaUreyBradleyParameter                  = psUreyBradleyParameter;
-    amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter         = psUreyBradleyParameter->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter         = psUreyBradleyParameter->_pDevData;
 
     amoebaGpu->amoebaSim.amoebaUreyBradleyCubicParameter     = cubic;
     amoebaGpu->amoebaSim.amoebaUreyBradleyQuarticicParameter = quartic;
@@ -560,15 +560,15 @@ void gpuSetAmoebaAngleParameters(amoebaGpuContext amoebaGpu, const std::vector<i
 
     CUDAStream<int4>* psAngleID1                      = new CUDAStream<int4>(bond_angles, 1, "AmoebaAngleID1");
     amoebaGpu->psAmoebaAngleID1                       = psAngleID1;
-    amoebaGpu->amoebaSim.pAmoebaAngleID1              = psAngleID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaAngleID1              = psAngleID1->_pDevData;
 
     CUDAStream<int2>* psAngleID2                      = new CUDAStream<int2>(bond_angles, 1, "AmoebaAngleID2");
     amoebaGpu->psAmoebaAngleID2                       = psAngleID2;
-    amoebaGpu->amoebaSim.pAmoebaAngleID2              = psAngleID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaAngleID2              = psAngleID2->_pDevData;
 
     CUDAStream<float2>* psAngleParameter              = new CUDAStream<float2>(bond_angles, 1, "AmoebaAngleParameter");
     amoebaGpu->psAmoebaAngleParameter                 = psAngleParameter;
-    amoebaGpu->amoebaSim.pAmoebaAngleParameter        = psAngleParameter->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaAngleParameter        = psAngleParameter->_pDevData;        
 
     amoebaGpu->amoebaSim.amoebaAngleCubicK            = cubicK;
     amoebaGpu->amoebaSim.amoebaAngleQuarticK          = quarticK;
@@ -618,15 +618,15 @@ void gpuSetAmoebaInPlaneAngleParameters(amoebaGpuContext amoebaGpu, const std::v
 
     CUDAStream<int4>* psAngleID1                            = new CUDAStream<int4>(bond_angles, 1, "AmoebaInPlaneAngleID1");
     amoebaGpu->psAmoebaInPlaneAngleID1                      = psAngleID1;
-    amoebaGpu->amoebaSim.pAmoebaInPlaneAngleID1             = psAngleID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaInPlaneAngleID1             = psAngleID1->_pDevData;
 
     CUDAStream<int4>* psAngleID2                            = new CUDAStream<int4>(bond_angles, 1, "AmoebaInPlaneAngleID2");
     amoebaGpu->psAmoebaInPlaneAngleID2                      = psAngleID2;
-    amoebaGpu->amoebaSim.pAmoebaInPlaneAngleID2             = psAngleID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaInPlaneAngleID2             = psAngleID2->_pDevData;
 
     CUDAStream<float2>* psAngleParameter                    = new CUDAStream<float2>(bond_angles, 1, "AmoebaInPlaneAngleParameter");
     amoebaGpu->psAmoebaInPlaneAngleParameter                = psAngleParameter;
-    amoebaGpu->amoebaSim.pAmoebaInPlaneAngleParameter       = psAngleParameter->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaInPlaneAngleParameter       = psAngleParameter->_pDevData;        
 
     amoebaGpu->amoebaSim.amoebaInPlaneAngleCubicK           = cubicK;
     amoebaGpu->amoebaSim.amoebaInPlaneAngleQuarticK         = quarticK;
@@ -681,19 +681,19 @@ void gpuSetAmoebaTorsionParameters(amoebaGpuContext amoebaGpu, const std::vector
 
     CUDAStream<int4>* psTorsionID1                     = new CUDAStream<int4>(torsions, 1, "AmoebaTorsionID1");
     amoebaGpu->psAmoebaTorsionID1                      = psTorsionID1;
-    amoebaGpu->amoebaSim.pAmoebaTorsionID1             = psTorsionID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaTorsionID1             = psTorsionID1->_pDevData;
 
     CUDAStream<int4>* psTorsionID2                     = new CUDAStream<int4>(torsions, 1, "AmoebaTorsionID2");
     amoebaGpu->psAmoebaTorsionID2                      = psTorsionID2;
-    amoebaGpu->amoebaSim.pAmoebaTorsionID2             = psTorsionID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaTorsionID2             = psTorsionID2->_pDevData;
 
     CUDAStream<float4>* psTorsionParameter1            = new CUDAStream<float4>(torsions, 1, "AmoebaTorsionParameter1");
     amoebaGpu->psAmoebaTorsionParameter1               = psTorsionParameter1;
-    amoebaGpu->amoebaSim.pAmoebaTorsionParameter1      = psTorsionParameter1->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaTorsionParameter1      = psTorsionParameter1->_pDevData;        
 
     CUDAStream<float2>* psTorsionParameter2            = new CUDAStream<float2>(torsions, 1, "AmoebaTorsionParameter2");
     amoebaGpu->psAmoebaTorsionParameter2               = psTorsionParameter2;
-    amoebaGpu->amoebaSim.pAmoebaTorsionParameter2      = psTorsionParameter2->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaTorsionParameter2      = psTorsionParameter2->_pDevData;        
 
     for (int i = 0; i < torsions; i++)
     {
@@ -751,19 +751,19 @@ void gpuSetAmoebaPiTorsionParameters(amoebaGpuContext amoebaGpu, const std::vect
 
     CUDAStream<int4>* psPiTorsionID1                     = new CUDAStream<int4>(piTorsions, 1, "AmoebaPiTorsionID1");
     amoebaGpu->psAmoebaPiTorsionID1                      = psPiTorsionID1;
-    amoebaGpu->amoebaSim.pAmoebaPiTorsionID1             = psPiTorsionID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaPiTorsionID1             = psPiTorsionID1->_pDevData;
 
     CUDAStream<int4>* psPiTorsionID2                     = new CUDAStream<int4>(piTorsions, 1, "AmoebaPiTorsionID2");
     amoebaGpu->psAmoebaPiTorsionID2                      = psPiTorsionID2;
-    amoebaGpu->amoebaSim.pAmoebaPiTorsionID2             = psPiTorsionID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaPiTorsionID2             = psPiTorsionID2->_pDevData;
 
     CUDAStream<int4>* psPiTorsionID3                     = new CUDAStream<int4>(piTorsions, 1, "AmoebaPiTorsionID3");
     amoebaGpu->psAmoebaPiTorsionID3                      = psPiTorsionID3;
-    amoebaGpu->amoebaSim.pAmoebaPiTorsionID3             = psPiTorsionID3->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaPiTorsionID3             = psPiTorsionID3->_pDevData;
 
     CUDAStream<float>* psPiTorsionParameter              = new CUDAStream<float>(piTorsions, 1, "AmoebaPiTorsionParameter1");
     amoebaGpu->psAmoebaPiTorsionParameter                = psPiTorsionParameter;
-    amoebaGpu->amoebaSim.pAmoebaPiTorsionParameter       = psPiTorsionParameter->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaPiTorsionParameter       = psPiTorsionParameter->_pDevData;        
 
     for (int i = 0; i < piTorsions; i++)
     {
@@ -820,15 +820,15 @@ void gpuSetAmoebaStretchBendParameters(amoebaGpuContext amoebaGpu, const std::ve
 
     CUDAStream<int4>* psStretchBendID1                = new CUDAStream<int4>(stretchBends, 1, "AmoebaStretchBendID1");
     amoebaGpu->psAmoebaStretchBendID1                 = psStretchBendID1;
-    amoebaGpu->amoebaSim.pAmoebaStretchBendID1        = psStretchBendID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaStretchBendID1        = psStretchBendID1->_pDevData;
 
     CUDAStream<int2>* psStretchBendID2                = new CUDAStream<int2>(stretchBends, 1, "AmoebaStretchBendID2");
     amoebaGpu->psAmoebaStretchBendID2                 = psStretchBendID2;
-    amoebaGpu->amoebaSim.pAmoebaStretchBendID2        = psStretchBendID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaStretchBendID2        = psStretchBendID2->_pDevData;
 
     CUDAStream<float4>* psStretchBendParameter        = new CUDAStream<float4>(stretchBends, 1, "AmoebaStretchBendParameter1");
     amoebaGpu->psAmoebaStretchBendParameter           = psStretchBendParameter;
-    amoebaGpu->amoebaSim.pAmoebaStretchBendParameter  = psStretchBendParameter->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaStretchBendParameter  = psStretchBendParameter->_pDevData;        
 
     for (int i = 0; i < stretchBends; i++)
     {
@@ -874,15 +874,15 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
 
     CUDAStream<int4>* psOutOfPlaneBendID1                = new CUDAStream<int4>(outOfPlaneBends, 1, "AmoebaOutOfPlaneBendID1");
     amoebaGpu->psAmoebaOutOfPlaneBendID1                 = psOutOfPlaneBendID1;
-    amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendID1        = psOutOfPlaneBendID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendID1        = psOutOfPlaneBendID1->_pDevData;
 
     CUDAStream<int4>* psOutOfPlaneBendID2                = new CUDAStream<int4>(outOfPlaneBends, 1, "AmoebaOutOfPlaneBendID2");
     amoebaGpu->psAmoebaOutOfPlaneBendID2                 = psOutOfPlaneBendID2;
-    amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendID2        = psOutOfPlaneBendID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendID2        = psOutOfPlaneBendID2->_pDevData;
 
     CUDAStream<float>* psOutOfPlaneBendParameter         = new CUDAStream<float>(outOfPlaneBends, 1, "AmoebaOutOfPlaneBendParameter");
     amoebaGpu->psAmoebaOutOfPlaneBendParameter           = psOutOfPlaneBendParameter;
-    amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendParameter  = psOutOfPlaneBendParameter->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendParameter  = psOutOfPlaneBendParameter->_pDevData;        
 
     amoebaGpu->amoebaSim.amoebaOutOfPlaneBendCubicK      = cubicK;
     amoebaGpu->amoebaSim.amoebaOutOfPlaneBendQuarticK    = quarticK;
@@ -937,15 +937,15 @@ void gpuSetAmoebaTorsionTorsionParameters(amoebaGpuContext amoebaGpu, const std:
 
     CUDAStream<int4>* psTorsionTorsionID1                = new CUDAStream<int4>(torsionTorsions, 1, "AmoebaTorsionTorsionID1");
     amoebaGpu->psAmoebaTorsionTorsionID1                 = psTorsionTorsionID1;
-    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionID1        = psTorsionTorsionID1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionID1        = psTorsionTorsionID1->_pDevData;
 
     CUDAStream<int4>* psTorsionTorsionID2                = new CUDAStream<int4>(torsionTorsions, 1, "AmoebaTorsionTorsionID2");
     amoebaGpu->psAmoebaTorsionTorsionID2                 = psTorsionTorsionID2;
-    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionID2        = psTorsionTorsionID2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionID2        = psTorsionTorsionID2->_pDevData;
 
     CUDAStream<int4>* psTorsionTorsionID3                = new CUDAStream<int4>(torsionTorsions, 1, "AmoebaTorsionTorsionID3");
     amoebaGpu->psAmoebaTorsionTorsionID3                 = psTorsionTorsionID3;
-    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionID3        = psTorsionTorsionID3->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionID3        = psTorsionTorsionID3->_pDevData;
 
     for (int i = 0; i < torsionTorsions; i++)
     {
@@ -1025,7 +1025,7 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     unsigned int totalEntries                            = totalGridEntries/4;
     CUDAStream<float4>* psTorsionTorsionGrids            = new CUDAStream<float4>(totalEntries, 1, "AmoebaTorsionTorsionGrids");
     amoebaGpu->psAmoebaTorsionTorsionGrids               = psTorsionTorsionGrids;
-    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionGrids      = psTorsionTorsionGrids->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaTorsionTorsionGrids      = psTorsionTorsionGrids->_pDevData;
 
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "Grids %u totalGridEntries=%u totalFloat4 entries=%u\n", torsionTorsionGrids, totalGridEntries, totalEntries );
@@ -1303,32 +1303,32 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
     // work space
  
 //    amoebaGpu->psRotationMatrix                            = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "RotationMatrix");
-//    amoebaGpu->amoebaSim.pRotationMatrix                   = amoebaGpu->psRotationMatrix->_pDevStream[0];
+//    amoebaGpu->amoebaSim.pRotationMatrix                   = amoebaGpu->psRotationMatrix->_pDevData;
  
     // parameters
  
     amoebaGpu->psMultipoleParticlesIdsAndAxisType          = new CUDAStream<int4>(amoebaGpu->paddedNumberOfAtoms,    1, "MultipoleParticlesIdsAndAxisType");
-    amoebaGpu->amoebaSim.pMultipoleParticlesIdsAndAxisType = amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pDevStream[0];
+    amoebaGpu->amoebaSim.pMultipoleParticlesIdsAndAxisType = amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pDevData;
 
     amoebaGpu->psMultipoleAxisOffset                       = new CUDAStream<int>(amoebaGpu->paddedNumberOfAtoms,    1, "psMultipoleAxisOffset");
-    amoebaGpu->amoebaSim.pMultipoleAxisOffset              = amoebaGpu->psMultipoleAxisOffset->_pDevStream[0];
+    amoebaGpu->amoebaSim.pMultipoleAxisOffset              = amoebaGpu->psMultipoleAxisOffset->_pDevData;
 
     amoebaGpu->psMolecularDipole                           = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "MolecularDipole");
-    amoebaGpu->amoebaSim.pMolecularDipole                  = amoebaGpu->psMolecularDipole->_pDevStream[0];
+    amoebaGpu->amoebaSim.pMolecularDipole                  = amoebaGpu->psMolecularDipole->_pDevData;
 
     amoebaGpu->psMolecularQuadrupole                       = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "MolecularQuadrupole");
-    amoebaGpu->amoebaSim.pMolecularQuadrupole              = amoebaGpu->psMolecularQuadrupole->_pDevStream[0];
+    amoebaGpu->amoebaSim.pMolecularQuadrupole              = amoebaGpu->psMolecularQuadrupole->_pDevData;
  
     // output
  
     amoebaGpu->psLabFrameDipole                            = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameDipole");
-    amoebaGpu->amoebaSim.pLabFrameDipole                   = amoebaGpu->psLabFrameDipole->_pDevStream[0];
+    amoebaGpu->amoebaSim.pLabFrameDipole                   = amoebaGpu->psLabFrameDipole->_pDevData;
 
     amoebaGpu->psLabFrameQuadrupole                        = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameQuadrupole");
-    amoebaGpu->amoebaSim.pLabFrameQuadrupole               = amoebaGpu->psLabFrameQuadrupole->_pDevStream[0];
+    amoebaGpu->amoebaSim.pLabFrameQuadrupole               = amoebaGpu->psLabFrameQuadrupole->_pDevData;
 
-    memset( amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0], 0, sizeof(int)*4*amoebaGpu->paddedNumberOfAtoms );
-    memset( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0],              0, sizeof(int)*amoebaGpu->paddedNumberOfAtoms );
+    memset( amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData, 0, sizeof(int)*4*amoebaGpu->paddedNumberOfAtoms );
+    memset( amoebaGpu->psMultipoleAxisOffset->_pSysData,              0, sizeof(int)*amoebaGpu->paddedNumberOfAtoms );
 }
 
 static void gpuFixedEFieldAllocate( amoebaGpuContext amoebaGpu )
@@ -1359,21 +1359,21 @@ static void gpuFixedEFieldAllocate( amoebaGpuContext amoebaGpu )
     // parameters
 
     amoebaGpu->psDampingFactorAndThole               = new CUDAStream<float2>(paddedNumberOfAtoms, 1, "DampingFactorAndThole");
-    amoebaGpu->amoebaSim.pDampingFactorAndThole      = amoebaGpu->psDampingFactorAndThole->_pDevStream[0];
+    amoebaGpu->amoebaSim.pDampingFactorAndThole      = amoebaGpu->psDampingFactorAndThole->_pDevData;
 
     amoebaGpu->psCovalentDegree                      = new CUDAStream<int>(amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms, 1, "CovalentDegree");
     amoebaGpu->psPolarizationDegree                  = new CUDAStream<int>(amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms, 1, "PolarizationDegree");
     
     unsigned int offset                              = paddedNumberOfAtoms*sizeof( float );
-    memset( amoebaGpu->psDampingFactorAndThole->_pSysStream[0],              0,2*offset );
-    //memset( amoebaGpu->psE_Field->_pSysStream[0],            0, offset*3 );
-    //memset( amoebaGpu->psE_FieldPolar->_pSysStream[0],       0, offset*3 );
+    memset( amoebaGpu->psDampingFactorAndThole->_pSysData,              0,2*offset );
+    //memset( amoebaGpu->psE_Field->_pSysData,            0, offset*3 );
+    //memset( amoebaGpu->psE_FieldPolar->_pSysData,       0, offset*3 );
 
     // should be removed XXXXX
 
     offset                                           = amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms*sizeof( int );
-    memset( amoebaGpu->psCovalentDegree->_pSysStream[0],     0, offset );
-    memset( amoebaGpu->psPolarizationDegree->_pSysStream[0], 0, offset );
+    memset( amoebaGpu->psCovalentDegree->_pSysData,     0, offset );
+    memset( amoebaGpu->psPolarizationDegree->_pSysData, 0, offset );
 
 }
 
@@ -1404,10 +1404,10 @@ void gpuMutualInducedFieldAllocate( amoebaGpuContext amoebaGpu )
 #endif
 
     amoebaGpu->psInducedDipole                 = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipole");
-    amoebaGpu->amoebaSim.pInducedDipole        = amoebaGpu->psInducedDipole->_pDevStream[0];
+    amoebaGpu->amoebaSim.pInducedDipole        = amoebaGpu->psInducedDipole->_pDevData;
 
     amoebaGpu->psInducedDipolePolar            = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipolePolar");
-    amoebaGpu->amoebaSim.pInducedDipolePolar   = amoebaGpu->psInducedDipolePolar->_pDevStream[0];
+    amoebaGpu->amoebaSim.pInducedDipolePolar   = amoebaGpu->psInducedDipolePolar->_pDevData;
 
     amoebaGpu->psCurrentEpsilon                = new CUDAStream<float>(5, 1, "CurrentEpsilon");
     amoebaGpu->epsilonThreadsPerBlock          = 384;
@@ -1424,9 +1424,9 @@ void gpuMutualInducedFieldAllocate( amoebaGpuContext amoebaGpu )
         }
     }
  
-    memset( amoebaGpu->psInducedDipole->_pSysStream[0],      0, offset );
-    memset( amoebaGpu->psInducedDipolePolar->_pSysStream[0], 0, offset );
-    memset( amoebaGpu->psPolarizability->_pSysStream[0],     0, offset );
+    memset( amoebaGpu->psInducedDipole->_pSysData,      0, offset );
+    memset( amoebaGpu->psInducedDipolePolar->_pSysData, 0, offset );
+    memset( amoebaGpu->psPolarizability->_pSysData,     0, offset );
 
 }
 
@@ -1464,8 +1464,8 @@ void gpuElectrostaticAllocate( amoebaGpuContext amoebaGpu )
     amoebaGpu->amoebaSim.pTorque               = amoebaGpu->psTorque->_pDevData;
 
     unsigned int offset                        = 3*paddedNumberOfAtoms*sizeof( float );
-    memset( amoebaGpu->psForce->_pSysStream[0],          0, offset );
-    memset( amoebaGpu->psTorque->_pSysStream[0],         0, offset );
+    memset( amoebaGpu->psForce->_pSysData,          0, offset );
+    memset( amoebaGpu->psTorque->_pSysData,         0, offset );
 
     amoebaGpu->psForce->Download();
     amoebaGpu->psTorque->Download();
@@ -1507,17 +1507,17 @@ void gpuKirkwoodAllocate( amoebaGpuContext amoebaGpu )
     amoebaGpu->psGk_Field                        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Gk_Fixed_Field");
 
     amoebaGpu->psInducedDipoleS                  = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipoleS");
-    amoebaGpu->amoebaSim.pInducedDipoleS         = amoebaGpu->psInducedDipoleS->_pDevStream[0];
+    amoebaGpu->amoebaSim.pInducedDipoleS         = amoebaGpu->psInducedDipoleS->_pDevData;
 
     amoebaGpu->psInducedDipolePolarS             = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipolePolarS");
-    amoebaGpu->amoebaSim.pInducedDipolePolarS    = amoebaGpu->psInducedDipolePolarS->_pDevStream[0];
+    amoebaGpu->amoebaSim.pInducedDipolePolarS    = amoebaGpu->psInducedDipolePolarS->_pDevData;
 
     amoebaGpu->psKirkwoodForce                   = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodForce");
     amoebaGpu->psKirkwoodEDiffForce              = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodEDiffForce");
 
     unsigned int offset                          = paddedNumberOfAtoms*sizeof( float );
-    memset( amoebaGpu->psBorn->_pSysStream[0],               0, offset );
-    memset( amoebaGpu->psBornPolar->_pSysStream[0],          0, offset );
+    memset( amoebaGpu->psBorn->_pSysData,               0, offset );
+    memset( amoebaGpu->psBornPolar->_pSysData,          0, offset );
 
     amoebaGpu->psBorn->Download();
     amoebaGpu->psBornPolar->Download();
@@ -1620,7 +1620,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     std::vector<int> maxIndices;
     for( unsigned int ii = 0; ii < charges.size(); ii++ ){
         maxIndices.push_back(ii);
-        amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][ii]   = ii;
+        amoebaGpu->psMultipoleAxisOffset->_pSysData[ii]   = ii;
     }
 
     if( nonbondedMethod == 0 ){
@@ -1652,10 +1652,10 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
         // axis type & multipole particles ids
  
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x       = multipoleParticleX[ii];
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y       = multipoleParticleY[ii];
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z       = multipoleParticleZ[ii];
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w       = axisType[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x       = multipoleParticleX[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y       = multipoleParticleY[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].z       = multipoleParticleZ[ii];
+        amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w       = axisType[ii];
         if( axisType[ii] < (maxAxisType) && axisType[ii] > -1 ){
             axisTypeCount[axisType[ii]]++;
         } else {
@@ -1669,16 +1669,16 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         if( maxIndices[axisParticleIndex] < ii ){
             maxIndices[axisParticleIndex] = ii;
         }
-        if( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] > ii ){
-            amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] = ii;
+        if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
+            amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
         }
 
         axisParticleIndex                                                         = multipoleParticleX[ii];
         if( maxIndices[axisParticleIndex] < ii ){
             maxIndices[axisParticleIndex] = ii;
         }
-        if( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] > ii ){
-            amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] = ii;
+        if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
+            amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
         }
 
         axisParticleIndex                                                         = multipoleParticleY[ii];
@@ -1686,60 +1686,60 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             if( maxIndices[axisParticleIndex] < ii ){
                 maxIndices[axisParticleIndex] = ii;
             }
-            if( amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] > ii ){
-                amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][axisParticleIndex] = ii;
+            if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
+                amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
             }
         }
 
         if( 0 && amoebaGpu->log )
             fprintf( amoebaGpu->log, "Z1 %4d [%4d %4d] %4d %4d %4d %4d   %d %d\n", ii,
                      multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii],
-                     amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][multipoleParticleZ[ii]],
+                     amoebaGpu->psMultipoleAxisOffset->_pSysData[multipoleParticleZ[ii]],
                      maxIndices[multipoleParticleZ[ii]],
-                     amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][multipoleParticleX[ii]],
+                     amoebaGpu->psMultipoleAxisOffset->_pSysData[multipoleParticleX[ii]],
                      maxIndices[multipoleParticleX[ii]],
-                     amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][0], maxIndices[0] );
+                     amoebaGpu->psMultipoleAxisOffset->_pSysData[0], maxIndices[0] );
 
         // charges
 
-        amoebaGpu->gpuContext->psPosq4->_pSysStream[0][ii].w                  = charges[ii];
+        amoebaGpu->gpuContext->psPosq4->_pSysData[ii].w                  = charges[ii];
  
         // molecule dipole
  
-        amoebaGpu->psMolecularDipole->_pSysStream[0][dipoleIndex]             = dipoles[dipoleIndex]; 
-        amoebaGpu->psMolecularDipole->_pSysStream[0][dipoleIndex+1]           = dipoles[dipoleIndex+1]; 
-        amoebaGpu->psMolecularDipole->_pSysStream[0][dipoleIndex+2]           = dipoles[dipoleIndex+2]; 
+        amoebaGpu->psMolecularDipole->_pSysData[dipoleIndex]             = dipoles[dipoleIndex]; 
+        amoebaGpu->psMolecularDipole->_pSysData[dipoleIndex+1]           = dipoles[dipoleIndex+1]; 
+        amoebaGpu->psMolecularDipole->_pSysData[dipoleIndex+2]           = dipoles[dipoleIndex+2]; 
         dipoleIndex                                                          += 3;
  
         // molecule quadrupole
  
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex]     = quadrupoles[quadrupoleIndex]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+1]   = quadrupoles[quadrupoleIndex+1]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+2]   = quadrupoles[quadrupoleIndex+2]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+3]   = quadrupoles[quadrupoleIndex+3]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+4]   = quadrupoles[quadrupoleIndex+4]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+5]   = quadrupoles[quadrupoleIndex+5]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+6]   = quadrupoles[quadrupoleIndex+6]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+7]   = quadrupoles[quadrupoleIndex+7]; 
-        amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleIndex+8]   = quadrupoles[quadrupoleIndex+8]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex]     = quadrupoles[quadrupoleIndex]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+1]   = quadrupoles[quadrupoleIndex+1]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+2]   = quadrupoles[quadrupoleIndex+2]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+3]   = quadrupoles[quadrupoleIndex+3]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+4]   = quadrupoles[quadrupoleIndex+4]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+5]   = quadrupoles[quadrupoleIndex+5]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+6]   = quadrupoles[quadrupoleIndex+6]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+7]   = quadrupoles[quadrupoleIndex+7]; 
+        amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleIndex+8]   = quadrupoles[quadrupoleIndex+8]; 
         quadrupoleIndex                                                      += 9;
 
         // damping factor 
 
-        amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].x              = dampingFactors[ii];
-        amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].y              = tholes[ii];
+        amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x              = dampingFactors[ii];
+        amoebaGpu->psDampingFactorAndThole->_pSysData[ii].y              = tholes[ii];
 
         // polarizability
 
-        amoebaGpu->psPolarizability->_pSysStream[0][3*ii]                     = polarity[ii];
-        amoebaGpu->psPolarizability->_pSysStream[0][3*ii+1]                   = polarity[ii];
-        amoebaGpu->psPolarizability->_pSysStream[0][3*ii+2]                   = polarity[ii];
+        amoebaGpu->psPolarizability->_pSysData[3*ii]                     = polarity[ii];
+        amoebaGpu->psPolarizability->_pSysData[3*ii+1]                   = polarity[ii];
+        amoebaGpu->psPolarizability->_pSysData[3*ii+2]                   = polarity[ii];
  
         // psCovalentDegree & psPolarizationDegree are arrays of size maxCovalentDegreeSz*paddedNumberOfAtoms
 
         const int particlesOffset                                             = ii*amoebaGpu->maxCovalentDegreeSz;
         const int minCovalentIndex                                            = minCovalentIndices[ii];
-        amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset]          = minCovalentIndex;
+        amoebaGpu->psCovalentDegree->_pSysData[particlesOffset]          = minCovalentIndex;
 
         // covalent info
 
@@ -1753,7 +1753,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                ") is out of range -- maxCovalentDegreeSz needs to be increased." << std::endl;
                     errorCount++;
                 } else {
-                    amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
+                    amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
                 }
             }
         }
@@ -1761,7 +1761,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         // polarization covalent info
 
         const int minCovalentPolarizationIndex                                = minCovalentPolarizationIndices[ii];
-        amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset]      = minCovalentPolarizationIndex;
+        amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset]      = minCovalentPolarizationIndex;
 
         for( unsigned int jj = 4; jj < covalentInfo.size(); jj++ ){
             const std::vector<int> covalentList = covalentInfo[jj];
@@ -1772,7 +1772,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                ") is out of range -- maxCovalentDegreeSz needs to be increased." << std::endl;
                     errorCount++;
                 } else {
-                    amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
+                    amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
                 }
             }
         }
@@ -1783,19 +1783,19 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // axis particles
 
             (void) fprintf( amoebaGpu->log,"%u axis particles [%6d %6d %6d] axis=%d max=%d diff=%d ", ii,
-                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].x,
-                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].y,
-                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z,
-                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].w,
-                            maxIndices[ii], maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][ii] );
+                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x,
+                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y,
+                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].z,
+                            amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w,
+                            maxIndices[ii], maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysData[ii] );
 
             // dipole
 
             int dipoleOffset = 3*ii; 
             (void) fprintf( amoebaGpu->log,"d[%16.9e %16.9e %16.9e]\n",
-                            amoebaGpu->psMolecularDipole->_pSysStream[0][dipoleOffset],
-                            amoebaGpu->psMolecularDipole->_pSysStream[0][dipoleOffset+1],
-                            amoebaGpu->psMolecularDipole->_pSysStream[0][dipoleOffset+2] );
+                            amoebaGpu->psMolecularDipole->_pSysData[dipoleOffset],
+                            amoebaGpu->psMolecularDipole->_pSysData[dipoleOffset+1],
+                            amoebaGpu->psMolecularDipole->_pSysData[dipoleOffset+2] );
 
             // quadrupole
 
@@ -1803,7 +1803,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             (void) fprintf( amoebaGpu->log,"\nq[" );
             for( int jj = 0; jj < 9; jj++ ){
                (void) fprintf( amoebaGpu->log,"%16.9e ", 
-                               amoebaGpu->psMolecularQuadrupole->_pSysStream[0][quadrupoleOffset+jj] );
+                               amoebaGpu->psMolecularQuadrupole->_pSysData[quadrupoleOffset+jj] );
                if( jj == 2 || jj == 5 ){
                   (void) fprintf( amoebaGpu->log,"\n  ");
                }
@@ -1813,8 +1813,8 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // covalent/polarization degree
 
             (void) fprintf( amoebaGpu->log,"%3d covalent/polarization degree: minIdx[%6d %6d] Thole=%12.5f dampingFactor=%12.5f\n", ii,
-                            amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset],  amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset],
-                            amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].y, amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].x );
+                            amoebaGpu->psCovalentDegree->_pSysData[particlesOffset],  amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset],
+                            amoebaGpu->psDampingFactorAndThole->_pSysData[ii].y, amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x );
 
             // covalent
 
@@ -1826,20 +1826,20 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
                 int count = 0;
                 for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                    if( amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset+jj] == kk ){ 
+                    if( amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj] == kk ){ 
                         if( count == 0 ){
                             (void) fprintf( amoebaGpu->log,"%d [", kk );
                         }
                         float pScale        = polarScale[kk-1];
-                        int particle2Index  = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset] + jj - 1;
-                        if( kk == 4 && particle2Index >= amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset] ){
-                            int particle2Offset = particle2Index - amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset] + 1;
-                            if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+particle2Offset] == 1 ){
+                        int particle2Index  = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset] + jj - 1;
+                        if( kk == 4 && particle2Index >= amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] ){
+                            int particle2Offset = particle2Index - amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] + 1;
+                            if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+particle2Offset] == 1 ){
                                 pScale *= 0.5;
                             }
                         }
                         (void) fprintf( amoebaGpu->log,"%5d %5.1f   ",
-                                        amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset] + jj - 1, pScale );
+                                        amoebaGpu->psCovalentDegree->_pSysData[particlesOffset] + jj - 1, pScale );
                         count++;
                    }
                 }
@@ -1856,11 +1856,11 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
                 int count = 0;
                 for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                    if( amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+jj] == kk ){ 
+                    if( amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj] == kk ){ 
                         if( count == 0 ){
                             (void) fprintf( amoebaGpu->log,"%d [", kk );
                         }
-                        (void) fprintf( amoebaGpu->log,"%5d ", amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset] + jj - 1 );
+                        (void) fprintf( amoebaGpu->log,"%5d ", amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] + jj - 1 );
                         count++;
                     }
                 }
@@ -1873,9 +1873,9 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             (void) fprintf( amoebaGpu->log,"\n" );
             (void) fflush( amoebaGpu->log );
         }
-        if( amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].x != amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].x ||
-            amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].x == std::numeric_limits<double>::infinity() || 
-            amoebaGpu->psDampingFactorAndThole->_pSysStream[0][ii].x == -std::numeric_limits<double>::infinity()){
+        if( amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x != amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x ||
+            amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x == std::numeric_limits<double>::infinity() || 
+            amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x == -std::numeric_limits<double>::infinity()){
             (void) fprintf( amoebaGpu->log,"Nan detected at index=%d in psDampingFactor\n", ii );
         }
 #endif
@@ -1892,19 +1892,19 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // print entries w/ degree=kk
 
             for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                if( amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset+jj] ){ 
-                    int index           = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset+jj];
+                if( amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj] ){ 
+                    int index           = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj];
                     float pScale        = polarScale[index-1];
                     float mScale        = mpoleScale[index-1];
-                    int particle2Index  = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset] + jj - 1;
-                    if( index == 4 && particle2Index >= amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset] ){
-                        int particle2Offset = particle2Index - amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset] + 1;
-                        if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+particle2Offset] == 1 ){
+                    int particle2Index  = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset] + jj - 1;
+                    if( index == 4 && particle2Index >= amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] ){
+                        int particle2Offset = particle2Index - amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] + 1;
+                        if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+particle2Offset] == 1 ){
                             pScale *= 0.5;
                         }
                     }
                     pScaleCheckSum[ii] += (pScale - 1.0f);
-                    int covIndex        = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset];
+                    int covIndex        = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset];
                     if( pScale != 1.0f ){
                         MapIntFloat* pMap = amoebaGpu->pMapArray[ii];
                         (*pMap)[covIndex+jj-1] = pScale;
@@ -1915,10 +1915,10 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // polarization
 
             for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                if( amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+jj] ){ 
-                    int index    = amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+jj];
+                if( amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj] ){ 
+                    int index    = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj];
                     dScaleCheckSum[ii] += (directScale[index-1] - 1.0f);
-                    int covIndex        = amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset];
+                    int covIndex        = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset];
                     if( directScale[index-1] != 1.0f ){
                         MapIntFloat* dMap      = amoebaGpu->dMapArray[ii];
                         (*dMap)[covIndex+jj-1] = directScale[index-1];
@@ -1967,7 +1967,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
         // axis type & multipole particles ids
 
-        int diff = maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysStream[0][ii];
+        int diff = maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysData[ii];
         if( diff > amoebaGpu->maxMapTorqueDifference ){
             amoebaGpu->maxMapTorqueDifference = diff;
         }
@@ -1981,7 +1981,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     amoebaGpu->maxMapTorqueDifferencePow2        = static_cast<int>(powf( 2.0f, static_cast<float>(logDiffI) ));
  
     amoebaGpu->torqueMapForce                    = new CUDAStream<float>(amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->maxMapTorqueDifference, 1, "torqueMapForce");
-    memset( amoebaGpu->torqueMapForce->_pSysStream[0], 0, amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->maxMapTorqueDifference*sizeof( float ) );
+    memset( amoebaGpu->torqueMapForce->_pSysData, 0, amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->maxMapTorqueDifference*sizeof( float ) );
     amoebaGpu->torqueMapForce->Upload();
 
     amoebaGpuBuildOutputBuffers( amoebaGpu );
@@ -2159,16 +2159,16 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     amoebaGpu->psVdwSigmaEpsilon           = new CUDAStream<float2>(amoebaGpu->paddedNumberOfAtoms,   1, "VdwSigmaEpsilon");
     for (unsigned int ii = 0; ii < particles; ii++) 
     {    
-        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].x    = sigmas[ii];
-        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].y    = epsilons[ii];
+        amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].x    = sigmas[ii];
+        amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].y    = epsilons[ii];
     }    
 
     // Dummy out extra particles data
 
     for (unsigned int ii = particles; ii < amoebaGpu->paddedNumberOfAtoms; ii++) 
     {    
-        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].x     = 1.0f;
-        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].y     = 0.0f;
+        amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].x     = 1.0f;
+        amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].y     = 0.0f;
     }    
     amoebaGpu->psVdwSigmaEpsilon->Upload();
 
@@ -2222,15 +2222,15 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
 
     CUDAStream<int>* psVdwNonReductionID               = new CUDAStream<int>(numberOfNonReductions, 1, "AmoebaVdwNonReductionID");
     amoebaGpu->psAmoebaVdwNonReductionID               = psVdwNonReductionID;
-    amoebaGpu->amoebaSim.pAmoebaVdwNonReductionID      = psVdwNonReductionID->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaVdwNonReductionID      = psVdwNonReductionID->_pDevData;
 
     CUDAStream<int4>* psVdwReductionID                 = new CUDAStream<int4>(numberOfReductions, 1, "AmoebaVdwReductionID");
     amoebaGpu->psAmoebaVdwReductionID                  = psVdwReductionID;
-    amoebaGpu->amoebaSim.pAmoebaVdwReductionID         = psVdwReductionID->_pDevStream[0];
+    amoebaGpu->amoebaSim.pAmoebaVdwReductionID         = psVdwReductionID->_pDevData;
 
     CUDAStream<float>* psAmoebaVdwReduction            = new CUDAStream<float>(numberOfReductions, 1, "AmoebaVdwReduction");
     amoebaGpu->psAmoebaVdwReduction                    = psAmoebaVdwReduction;
-    amoebaGpu->amoebaSim.pAmoebaVdwReduction           = psAmoebaVdwReduction->_pDevStream[0];        
+    amoebaGpu->amoebaSim.pAmoebaVdwReduction           = psAmoebaVdwReduction->_pDevData;        
     amoebaGpu->psAmoebaVdwCoordinates                  = new CUDAStream<float4>( amoebaGpu->paddedNumberOfAtoms,  1, "VdwCoordinates");
 
    unsigned int count    = 0;
@@ -2239,23 +2239,23 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     {    
         if( ivNonMapping[ii] )
         {
-            psVdwNonReductionID->_pSysStream[0][nonCount++] = ii;
+            psVdwNonReductionID->_pSysData[nonCount++] = ii;
         }
 
         if( ivMapping[ii].size() > 0 )
         {
-            psAmoebaVdwReduction->_pSysStream[0][count] = reductionFactors[ii];
-            psVdwReductionID->_pSysStream[0][count].x   = ii;
-            psVdwReductionID->_pSysStream[0][count].y   = ivMapping[ii][0];
+            psAmoebaVdwReduction->_pSysData[count] = reductionFactors[ii];
+            psVdwReductionID->_pSysData[count].x   = ii;
+            psVdwReductionID->_pSysData[count].y   = ivMapping[ii][0];
             if( ivMapping[ii].size() > 1 ){
-                psVdwReductionID->_pSysStream[0][count].z   = ivMapping[ii][1];
+                psVdwReductionID->_pSysData[count].z   = ivMapping[ii][1];
             } else {
-                psVdwReductionID->_pSysStream[0][count].z   = ii;
+                psVdwReductionID->_pSysData[count].z   = ii;
             }
             if( ivMapping[ii].size() > 2 ){
-                psVdwReductionID->_pSysStream[0][count].w   = ivMapping[ii][2];
+                psVdwReductionID->_pSysData[count].w   = ivMapping[ii][2];
             } else {
-                psVdwReductionID->_pSysStream[0][count].w   = ii;
+                psVdwReductionID->_pSysData[count].w   = ii;
             }
             if( ivMapping[ii].size() > 3 ){
                 (void) fprintf( stderr, "Atom %u has %u reductions -- invalid -- aborting", ii, static_cast<unsigned int>(ivMapping[ii].size()) );
@@ -2476,12 +2476,12 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
 
     CUDAStream<int>* psVdwExclusionIndicesIndex     = new CUDAStream<int>(cells, 1u, "VdwExclusionIndicesIndex");
     amoebaGpu->psVdwExclusionIndicesIndex           = psVdwExclusionIndicesIndex;
-    amoebaGpu->amoebaSim.pVdwExclusionIndicesIndex  = psVdwExclusionIndicesIndex->_pDevStream[0];
+    amoebaGpu->amoebaSim.pVdwExclusionIndicesIndex  = psVdwExclusionIndicesIndex->_pDevData;
 
-    //memset( amoebaGpu->psVdwExclusionIndicesIndex->_pSysStream[0], 0, sizeof(cells)*sizeof(int) );
+    //memset( amoebaGpu->psVdwExclusionIndicesIndex->_pSysData, 0, sizeof(cells)*sizeof(int) );
     for (unsigned int ii = 0; ii < cells; ii++)
     {
-        amoebaGpu->psVdwExclusionIndicesIndex->_pSysStream[0][ii] = -1;
+        amoebaGpu->psVdwExclusionIndicesIndex->_pSysData[ii] = -1;
     }
     int numWithExclusionIndices                     = 0;
     int gridOffset                                  = grid - 1;
@@ -2494,7 +2494,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
         int xAtomMax = xAtomMin + gridOffset;
         if( (maxCellIndex[y] >= xAtomMin && minCellIndex[y] <= xAtomMax) || (x == lastBlock || y == lastBlock) ){
             pWorkList[ii]                                   = encodeCellExclusion( pWorkList[ii] );
-            psVdwExclusionIndicesIndex->_pSysStream[0][ii]  = grid*numWithExclusionIndices;
+            psVdwExclusionIndicesIndex->_pSysData[ii]  = grid*numWithExclusionIndices;
             numWithExclusionIndices++;
 //(void) fprintf( amoebaGpu->log, "%5d cellIdx[%6d %6d] atomCell[%6d %6d] exclCell[%6d %6d] num=%5d last=%5d\n",
 //                ii, x, y, xAtomMin, xAtomMax, minCellIndex[y], maxCellIndex[y], numWithExclusionIndices, lastBlock );
@@ -2502,9 +2502,9 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
     }
     for ( unsigned int ii = 0; ii < cells; ii++)
     {
-        if( amoebaGpu->psVdwExclusionIndicesIndex->_pSysStream[0][ii] == -1 )
+        if( amoebaGpu->psVdwExclusionIndicesIndex->_pSysData[ii] == -1 )
         {
-            amoebaGpu->psVdwExclusionIndicesIndex->_pSysStream[0][ii] = grid*numWithExclusionIndices;
+            amoebaGpu->psVdwExclusionIndicesIndex->_pSysData[ii] = grid*numWithExclusionIndices;
         }
     }
 
@@ -2519,7 +2519,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
             if( exclusion ){
                 (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u [%6u %6u] has excl: indexInToIndices=%8d\n",
                                 ii, x, y, exclusion, pWorkList[ii], 32*x, 32*y,
-                                psVdwExclusionIndicesIndex->_pSysStream[0][ii] );
+                                psVdwExclusionIndicesIndex->_pSysData[ii] );
             } else {
                 (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u [%6u %6u]\n",
                                 ii, x, y, exclusion, pWorkList[ii], 32*x, 32*y );
@@ -2532,9 +2532,9 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
 
     CUDAStream<int>* psVdwExclusionIndices       = new CUDAStream<int>((numWithExclusionIndices+1)*grid, 1u, "VdwExclusionIndices");
     amoebaGpu->psVdwExclusionIndices             = psVdwExclusionIndices;
-    amoebaGpu->amoebaSim.pVdwExclusionIndices    = psVdwExclusionIndices->_pDevStream[0];
+    amoebaGpu->amoebaSim.pVdwExclusionIndices    = psVdwExclusionIndices->_pDevData;
 
-    memset( psVdwExclusionIndices->_pSysStream[0], 0, (numWithExclusionIndices+1)*grid*sizeof( int ) );
+    memset( psVdwExclusionIndices->_pSysData, 0, (numWithExclusionIndices+1)*grid*sizeof( int ) );
 
     // load scaling indices
 
@@ -2550,7 +2550,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
         decodeCell( pWorkList[ii], &x, &y, &exclusion );
         if( exclusion )
         {
-            int scaleIndex = psVdwExclusionIndicesIndex->_pSysStream[0][ii];  
+            int scaleIndex = psVdwExclusionIndicesIndex->_pSysData[ii];  
             for (unsigned int jj = 0; jj < grid; jj++)
             {
                 unsigned int atomI = grid*x + jj;
@@ -2566,7 +2566,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
                         }
                     }
                     if( (hit == 1) || (atomI >= actualAtoms) || (atomJ >= actualAtoms) ){
-                        psVdwExclusionIndices->_pSysStream[0][scaleOffset] |= (1 << kk);
+                        psVdwExclusionIndices->_pSysData[scaleOffset] |= (1 << kk);
 //if( hit )
 //(void) fprintf( amoebaGpu->log, "Excluding %u %u\n", atomI, atomJ );
                     }
@@ -2589,7 +2589,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
             unsigned int x, y, exclusion;
             decodeCell( pWorkList[ii], &x, &y, &exclusion );
             if( exclusion ){
-                int scaleIndex     = psVdwExclusionIndicesIndex->_pSysStream[0][ii];  
+                int scaleIndex     = psVdwExclusionIndicesIndex->_pSysData[ii];  
                 for (unsigned int jj = 0; jj < grid; jj++)
                 {
                     unsigned int atomI        = grid*x + jj;
@@ -2598,7 +2598,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
                     {
                         unsigned int atomJ         = grid*y + kk;
                         unsigned int mask          = 1 << kk;
-                        unsigned int exclude       = psVdwExclusionIndices->_pSysStream[0][scaleOffset] & mask ? 1 : 0;
+                        unsigned int exclude       = psVdwExclusionIndices->_pSysData[scaleOffset] & mask ? 1 : 0;
                         if( exclude ){
                              if( (atomJ < actualAtoms) && (atomI < actualAtoms) ){
                                  echoExclusions[atomI][atomJ] = 1;
@@ -2606,7 +2606,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
                              }
                              (void) fprintf( amoebaGpu->log, "%6d cell[%6u %6u] %1u atom[%6u %6u] %6u  scaleOffset=%u %d kk=%u\n",
                                              ii, x, y, exclusion, atomI, atomJ, exclude, scaleOffset,
-                                             psVdwExclusionIndices->_pSysStream[0][scaleOffset],kk );
+                                             psVdwExclusionIndices->_pSysData[scaleOffset],kk );
                         }
                     }
                 }
@@ -2672,16 +2672,16 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
     amoebaGpu->psWcaDispersionRadiusEpsilon  = new CUDAStream<float2>(amoebaGpu->paddedNumberOfAtoms,   1, "WcaDispersionRadiusEpsilon");
     for (unsigned int ii = 0; ii < particles; ii++) 
     {    
-        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysStream[0][ii].x    = radii[ii];
-        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysStream[0][ii].y    = epsilons[ii];
+        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].x    = radii[ii];
+        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].y    = epsilons[ii];
     }    
     
     // Dummy out extra particles data
 
     for (unsigned int ii = particles; ii < amoebaGpu->paddedNumberOfAtoms; ii++) 
     {    
-        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysStream[0][ii].x     = 1.0f;
-        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysStream[0][ii].y     = 0.0f;
+        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].x     = 1.0f;
+        amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].y     = 0.0f;
     }    
     amoebaGpu->psWcaDispersionRadiusEpsilon->Upload();
     amoebaGpu->amoebaSim.totalMaxWcaDispersionEnergy = totalMaxWcaDispersionEnergy;
@@ -2946,20 +2946,20 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu )
         delete amoebaGpu->psWorkArray_1_2;
     }
     amoebaGpu->psWorkArray_3_1            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_1");
-    amoebaGpu->amoebaSim.pWorkArray_3_1   = amoebaGpu->psWorkArray_3_1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pWorkArray_3_1   = amoebaGpu->psWorkArray_3_1->_pDevData;
 
     amoebaGpu->psWorkArray_3_2            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_2");
-    amoebaGpu->amoebaSim.pWorkArray_3_2   = amoebaGpu->psWorkArray_3_2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pWorkArray_3_2   = amoebaGpu->psWorkArray_3_2->_pDevData;
 
     // used GK
     amoebaGpu->psWorkArray_3_3            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_3");
     amoebaGpu->psWorkArray_3_4            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_4");
 
     amoebaGpu->psWorkArray_1_1            = new CUDAStream<float>(  paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_1_1");
-    amoebaGpu->amoebaSim.pWorkArray_1_1   = amoebaGpu->psWorkArray_1_1->_pDevStream[0];
+    amoebaGpu->amoebaSim.pWorkArray_1_1   = amoebaGpu->psWorkArray_1_1->_pDevData;
 
     amoebaGpu->psWorkArray_1_2            = new CUDAStream<float>(  paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_1_2");
-    amoebaGpu->amoebaSim.pWorkArray_1_2   = amoebaGpu->psWorkArray_1_2->_pDevStream[0];
+    amoebaGpu->amoebaSim.pWorkArray_1_2   = amoebaGpu->psWorkArray_1_2->_pDevData;
 
     return;
 }
@@ -3025,19 +3025,19 @@ static void getScalingDegrees( amoebaGpuContext amoebaGpu, unsigned int particle
 {
     int particlesOffset                        = particleI*amoebaGpu->maxCovalentDegreeSz;
 
-    unsigned int minCovalentIndex              = static_cast<unsigned int>(amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset]);
-    unsigned int minCovalentPolarizationIndex  = static_cast<unsigned int>(amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset]);
+    unsigned int minCovalentIndex              = static_cast<unsigned int>(amoebaGpu->psCovalentDegree->_pSysData[particlesOffset]);
+    unsigned int minCovalentPolarizationIndex  = static_cast<unsigned int>(amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset]);
 
     if( particleJ < minCovalentIndex || particleJ >= (minCovalentIndex + amoebaGpu->maxCovalentDegreeSz-1) ){
         *covalentDegree     = 0;
     } else {
-        *covalentDegree     = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset + (particleJ-minCovalentIndex) + 1];
+        *covalentDegree     = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset + (particleJ-minCovalentIndex) + 1];
     }
 
     if( particleJ < minCovalentPolarizationIndex || particleJ >= (minCovalentPolarizationIndex + amoebaGpu->maxCovalentDegreeSz-1) ){
         *polarizationDegree = 0;
     } else {
-        *polarizationDegree = amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset + (particleJ-minCovalentPolarizationIndex) + 1];
+        *polarizationDegree = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset + (particleJ-minCovalentPolarizationIndex) + 1];
     }
 
 /* if( *covalentDegree > 5 || *polarizationDegree > 5 ){
@@ -3061,13 +3061,13 @@ int amoebaGpuBuildThreadBlockWorkList( amoebaGpuContext amoebaGpu )
     CUDAStream<unsigned int>* psWorkUnit       = new CUDAStream<unsigned int>(cells, 1u, "WorkUnit");
     unsigned int* pWorkList                    = psWorkUnit->_pSysData;
     amoebaGpu->psWorkUnit                      = psWorkUnit;
-    memset( amoebaGpu->psWorkUnit->_pSysStream[0], 0, cells*sizeof( unsigned int) );
+    memset( amoebaGpu->psWorkUnit->_pSysData, 0, cells*sizeof( unsigned int) );
 
     CUDAStream<unsigned int>* psVdwWorkUnit    = new CUDAStream<unsigned int>(cells, 1u, "VdwWorkUnit");
     unsigned int* pVdwWorkList                 = psVdwWorkUnit->_pSysData;
-    amoebaGpu->amoebaSim.pVdwWorkUnit          = psVdwWorkUnit->_pDevStream[0];
+    amoebaGpu->amoebaSim.pVdwWorkUnit          = psVdwWorkUnit->_pDevData;
     amoebaGpu->psVdwWorkUnit                   = psVdwWorkUnit;
-    memset( amoebaGpu->psVdwWorkUnit->_pSysStream[0], 0, cells*sizeof( unsigned int) );
+    memset( amoebaGpu->psVdwWorkUnit->_pSysData, 0, cells*sizeof( unsigned int) );
 
     unsigned int count = 0;
     for (unsigned int y = 0; y < dim; y++)
@@ -3128,18 +3128,18 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
     {
         int x                  = atom1/grid;
         int particlesOffset    = atom1*amoebaGpu->maxCovalentDegreeSz;
-        int minCovalentIndex   = amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset];
-        int minPolarCovIndex   = amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset];
+        int minCovalentIndex   = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset];
+        int minPolarCovIndex   = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset];
         int maxCIndex          = 0;
         int maxPIndex          = 0;
         for (int jj = amoebaGpu->maxCovalentDegreeSz - 1; jj >= 1 && (maxPIndex == 0 || maxCIndex == 0); jj-- )
         {
-            if( amoebaGpu->psCovalentDegree->_pSysStream[0][particlesOffset+jj] && maxCellIndex[x] < (minCovalentIndex+jj) )
+            if( amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj] && maxCellIndex[x] < (minCovalentIndex+jj) )
             { 
                 maxCellIndex[x] =  minCovalentIndex + jj;
                 maxCIndex++; 
             }
-            if( amoebaGpu->psPolarizationDegree->_pSysStream[0][particlesOffset+jj] && maxCellIndex[x] < (minPolarCovIndex+jj) )
+            if( amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj] && maxCellIndex[x] < (minPolarCovIndex+jj) )
             { 
                 maxCellIndex[x] =  minPolarCovIndex + jj;
                 maxPIndex++; 
@@ -3168,8 +3168,8 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
 
     CUDAStream<int>* psScalingIndicesIndex          = new CUDAStream<int>(cells, 1u, "ScalingIndicesIndex");
     amoebaGpu->psScalingIndicesIndex                = psScalingIndicesIndex;
-    amoebaGpu->amoebaSim.pScaleIndicesIndex         = psScalingIndicesIndex->_pDevStream[0];
-    memset( amoebaGpu->psScalingIndicesIndex->_pSysStream[0], 0, cells*sizeof(unsigned int) );
+    amoebaGpu->amoebaSim.pScaleIndicesIndex         = psScalingIndicesIndex->_pDevData;
+    memset( amoebaGpu->psScalingIndicesIndex->_pSysData, 0, cells*sizeof(unsigned int) );
 
     int numWithScalingIndices                       = 0;
     int gridOffset                                  = grid - 1;
@@ -3182,7 +3182,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
         int xAtomMax = xAtomMin + gridOffset;
         if( (maxCellIndex[y] >= xAtomMin && minCellIndex[y] <= xAtomMax) || (x == lastBlock || y == lastBlock) ){
             pWorkList[ii]                              = encodeCellExclusion( pWorkList[ii] );
-            psScalingIndicesIndex->_pSysStream[0][ii]  = numWithScalingIndices*grid;
+            psScalingIndicesIndex->_pSysData[ii]  = numWithScalingIndices*grid;
             numWithScalingIndices++;
 //(void) fprintf( amoebaGpu->log, "%5d [%6d %6d] [%6d %6d] [%6d %6d] num=%5d last=%5d\n",
 //                ii, x, y, xAtomMin, xAtomMax, minCellIndex[y], maxCellIndex[y], numWithScalingIndices, lastBlock );
@@ -3202,7 +3202,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
             if( exclusion ){
                 (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u [%6u %6u]indexInToIndices=%8d\n",
                                 ii, x, y, exclusion, pWorkList[ii], 32*x, 32*y,
-                                psScalingIndicesIndex->_pSysStream[0][ii] );
+                                psScalingIndicesIndex->_pSysData[ii] );
             } else {
                 (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u [%6u %6u]\n",
                                 ii, x, y, exclusion, pWorkList[ii], 32*x, 32*y );
@@ -3220,7 +3220,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
             decodeCell( pWorkList[ii], &x, &y, &exclusion );
             if( exclusion ){
                 (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u indexInToIndices=%8d\n", ii, x, y, exclusion, pWorkList[ii],
-                                psScalingIndicesIndex->_pSysStream[0][ii] );
+                                psScalingIndicesIndex->_pSysData[ii] );
             }
         }
         (void) fflush( amoebaGpu->log );
@@ -3230,19 +3230,19 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
 
     CUDAStream<int>* ps_D_ScaleIndices           = new CUDAStream<int>(numWithScalingIndices*grid, 1u, "ps_D_ScaleIndices");
     amoebaGpu->ps_D_ScaleIndices                 = ps_D_ScaleIndices;
-    amoebaGpu->amoebaSim.pD_ScaleIndices         = ps_D_ScaleIndices->_pDevStream[0];
+    amoebaGpu->amoebaSim.pD_ScaleIndices         = ps_D_ScaleIndices->_pDevData;
 
     CUDAStream<int2>* ps_P_ScaleIndices          = new CUDAStream<int2>(numWithScalingIndices*grid, 1u, "ps_P_ScaleIndices");
     amoebaGpu->ps_P_ScaleIndices                 = ps_P_ScaleIndices;
-    amoebaGpu->amoebaSim.pP_ScaleIndices         = ps_P_ScaleIndices->_pDevStream[0];
+    amoebaGpu->amoebaSim.pP_ScaleIndices         = ps_P_ScaleIndices->_pDevData;
 
     CUDAStream<int2>* ps_M_ScaleIndices          = new CUDAStream<int2>(numWithScalingIndices*grid, 1u, "ps_M_ScaleIndices");
     amoebaGpu->ps_M_ScaleIndices                 = ps_M_ScaleIndices;
-    amoebaGpu->amoebaSim.pM_ScaleIndices         = ps_M_ScaleIndices->_pDevStream[0];
+    amoebaGpu->amoebaSim.pM_ScaleIndices         = ps_M_ScaleIndices->_pDevData;
 
-    memset( ps_D_ScaleIndices->_pSysStream[0], 0, numWithScalingIndices*grid*sizeof( int )   );
-    memset( ps_P_ScaleIndices->_pSysStream[0], 0, numWithScalingIndices*grid*sizeof( int )*2 );
-    memset( ps_M_ScaleIndices->_pSysStream[0], 0, numWithScalingIndices*grid*sizeof( int )*2 );
+    memset( ps_D_ScaleIndices->_pSysData, 0, numWithScalingIndices*grid*sizeof( int )   );
+    memset( ps_P_ScaleIndices->_pSysData, 0, numWithScalingIndices*grid*sizeof( int )*2 );
+    memset( ps_M_ScaleIndices->_pSysData, 0, numWithScalingIndices*grid*sizeof( int )*2 );
 
     // load scaling indices
 
@@ -3253,14 +3253,14 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
     // ps_X_ScaleIndices[scaleIndex + threadIdI] is the mask for atomI (x + threadIdI) w/ the the y-atoms 
     // the ith bits of the mask give the scale index for atomI w/ atom (y + i)
  
-static unsigned int targetAtoms[2] = { 0, 1};
+static unsigned int targetAtoms[2] = { -1, -1};
     for ( unsigned int ii = 0; ii < cells; ++ii)
     {
         unsigned int x, y, exclusion;
         decodeCell( pWorkList[ii], &x, &y, &exclusion );
         if ( exclusion )
         {
-            int scaleIndex = psScalingIndicesIndex->_pSysStream[0][ii];  
+            int scaleIndex = psScalingIndicesIndex->_pSysData[ii];  
             for (unsigned int jj = 0; jj < grid; jj++)
             {
                 unsigned int atomI = grid*x + jj;
@@ -3312,16 +3312,16 @@ static unsigned int targetAtoms[2] = { 0, 1};
                     }
 
                     if( pX ){
-                        ps_P_ScaleIndices->_pSysStream[0][scaleOffset].x |= (pX << kk);
+                        ps_P_ScaleIndices->_pSysData[scaleOffset].x |= (pX << kk);
                     }
                     if( pY ){
-                        ps_P_ScaleIndices->_pSysStream[0][scaleOffset].y |= (pY << kk);
+                        ps_P_ScaleIndices->_pSysData[scaleOffset].y |= (pY << kk);
                     }
 
                     // directScale[5]  = { 0.0f, 1.0f, 1.0f, 1.0f, 1.0f };
                     // dScale[2]       = { 1.0f, 0.0f };
                     if( (polarizationDegree == 1) || (atomI >= actualAtoms) || (atomJ >= actualAtoms) ){
-                        ps_D_ScaleIndices->_pSysStream[0][scaleOffset] |= (1 << kk);
+                        ps_D_ScaleIndices->_pSysData[scaleOffset] |= (1 << kk);
                     }
 
                     int mX = 0;
@@ -3352,10 +3352,10 @@ static unsigned int targetAtoms[2] = { 0, 1};
                     }
 
                     if( mX ){
-                        ps_M_ScaleIndices->_pSysStream[0][scaleOffset].x |= (1 << kk);
+                        ps_M_ScaleIndices->_pSysData[scaleOffset].x |= (1 << kk);
                     }
                     if( mY ){
-                        ps_M_ScaleIndices->_pSysStream[0][scaleOffset].y |= (1 << kk);
+                        ps_M_ScaleIndices->_pSysData[scaleOffset].y |= (1 << kk);
                     }
 
                     if( 0 && amoebaGpu->log && ( (atomI == targetAtoms[0]) || (atomI == targetAtoms[1]) ) ){
@@ -3400,7 +3400,7 @@ static unsigned int targetAtoms[2] = { 0, 1};
             unsigned int x, y, exclusion;
             decodeCell( pWorkList[ii], &x, &y, &exclusion );
             if( exclusion ){
-                int scaleIndex     = psScalingIndicesIndex->_pSysStream[0][ii];  
+                int scaleIndex     = psScalingIndicesIndex->_pSysData[ii];  
                 for (unsigned int jj = 0; jj < grid; jj++)
                 {
                     unsigned int atomI        = grid*x + jj;
@@ -3411,11 +3411,11 @@ static unsigned int targetAtoms[2] = { 0, 1};
                         int polarizationDegree;
                         unsigned int atomJ         = grid*y + kk;
                         unsigned int mask          = 1 << kk;
-                        unsigned int valueP_X      = ps_P_ScaleIndices->_pSysStream[0][scaleOffset].x & mask;
-                        unsigned int valueP_Y      = ps_P_ScaleIndices->_pSysStream[0][scaleOffset].y & mask;
-                        unsigned int valueM_X      = ps_M_ScaleIndices->_pSysStream[0][scaleOffset].x & mask;
-                        unsigned int valueM_Y      = ps_M_ScaleIndices->_pSysStream[0][scaleOffset].y & mask;
-                        unsigned int valueD        = ps_D_ScaleIndices->_pSysStream[0][scaleOffset]   & mask;
+                        unsigned int valueP_X      = ps_P_ScaleIndices->_pSysData[scaleOffset].x & mask;
+                        unsigned int valueP_Y      = ps_P_ScaleIndices->_pSysData[scaleOffset].y & mask;
+                        unsigned int valueM_X      = ps_M_ScaleIndices->_pSysData[scaleOffset].x & mask;
+                        unsigned int valueM_Y      = ps_M_ScaleIndices->_pSysData[scaleOffset].y & mask;
+                        unsigned int valueD        = ps_D_ScaleIndices->_pSysData[scaleOffset]   & mask;
                         unsigned int valueI        = 0;
                         if( valueP_X ){
                             valueI++;
@@ -3441,8 +3441,8 @@ static unsigned int targetAtoms[2] = { 0, 1};
                                              ii, x, y, exclusion,
                                              atomI, atomJ, covalentDegree, polarizationDegree, 
                                              (valueP_X ? 1 : 0), (valueP_Y ? 1 : 0), valueI, pScale[valueI], dScale,
-                                             (ps_P_ScaleIndices->_pSysStream[0][0].x & 1),
-                                             (ps_P_ScaleIndices->_pSysStream[0][0].y & 1)
+                                             (ps_P_ScaleIndices->_pSysData[0].x & 1),
+                                             (ps_P_ScaleIndices->_pSysData[0].y & 1)
                                              );
                         }
 
@@ -3505,9 +3505,9 @@ tgx     = 0;
                             unsigned int xi        = x >> GRIDBITS;
                             unsigned int yi        = y >> GRIDBITS;
                             unsigned int cell      = xi+yi*amoebaGpu->paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
-                            unsigned int cellIndex = psScalingIndicesIndex->_pSysStream[0][cell]+tgx;
-                            int  dScaleMask        = ps_D_ScaleIndices->_pSysStream[0][cellIndex];
-                            int2 pScaleMask        = ps_P_ScaleIndices->_pSysStream[0][cellIndex];
+                            unsigned int cellIndex = psScalingIndicesIndex->_pSysData[cell]+tgx;
+                            int  dScaleMask        = ps_D_ScaleIndices->_pSysData[cellIndex];
+                            int2 pScaleMask        = ps_P_ScaleIndices->_pSysData[cellIndex];
                             (void) sprintf( buffer, "   xi=%u yi=%u cell=%u cellIndex=%u",
                                            xi, yi, cell, cellIndex );
                             message << buffer;
@@ -3788,12 +3788,12 @@ void cudaWriteFloat4AndFloat1ArraysToFile( int numberOfParticles, char* fname, i
     int offset       = entriesPerParticle1 == 4 ? 4 : 3;
     for ( ii = 0; ii < numberOfParticles; ii++ ){ 
  
-       values[0] = array1->_pSysStream[0][ii].x;
-       values[1] = array1->_pSysStream[0][ii].y;
-       values[2] = array1->_pSysStream[0][ii].z;
+       values[0] = array1->_pSysData[ii].x;
+       values[1] = array1->_pSysData[ii].y;
+       values[2] = array1->_pSysData[ii].z;
  
        for( jj = 0; jj < entriesPerParticle2; jj++ ) { 
-          values[offset+jj] = array2->_pSysStream[0][runningIndex++];
+          values[offset+jj] = array2->_pSysData[runningIndex++];
        }
        printValues( filePtr, ii, (offset+entriesPerParticle2), values ); 
     }
@@ -3843,11 +3843,11 @@ void cudaWriteFloat1AndFloat1ArraysToFile( int numberOfParticles, char* fname, s
  
     for ( ii = 0; ii < numberOfParticles; ii++ ){ 
        for( jj = 0; jj < entriesPerParticle1; jj++ ) { 
-          sum1 += array1->_pSysStream[0][runningIndex1]*array1->_pSysStream[0][runningIndex1];
+          sum1 += array1->_pSysData[runningIndex1]*array1->_pSysData[runningIndex1];
           runningIndex1++;
        }
        for( jj = 0; jj < entriesPerParticle2; jj++ ) { 
-          sum2 += array2->_pSysStream[0][runningIndex2]*array2->_pSysStream[0][runningIndex2];
+          sum2 += array2->_pSysData[runningIndex2]*array2->_pSysData[runningIndex2];
           runningIndex2++;
        }
     }
@@ -3859,10 +3859,10 @@ void cudaWriteFloat1AndFloat1ArraysToFile( int numberOfParticles, char* fname, s
   
        int index = 0;
        for( jj = 0; jj < entriesPerParticle1; jj++ ) { 
-          values[index++] = array1->_pSysStream[0][runningIndex1++];
+          values[index++] = array1->_pSysData[runningIndex1++];
        }
        for( jj = 0; jj < entriesPerParticle2; jj++ ) { 
-          values[index++] = array2->_pSysStream[0][runningIndex2++];
+          values[index++] = array2->_pSysData[runningIndex2++];
        }
        printValues( filePtr, ii, index, values ); 
     }
@@ -3915,7 +3915,7 @@ CUDAStream<float>* reorderFloat( amoebaGpuContext amoebaGpu, CUDAStream<float>* 
      CUDAStream<float>* reorderdArray     = new CUDAStream<float>(amoebaGpu->gpuContext->sim.paddedNumberOfAtoms, 1, "TempReorder");
      int* order                           = gpu->psAtomIndex->_pSysData;
      for( int ii = 0; ii < gpu->natoms; ii++ ){
-         reorderdArray->_pSysStream[0][order[ii]] = arrayToReorder->_pSysStream[0][ii];
+         reorderdArray->_pSysData[order[ii]] = arrayToReorder->_pSysData[ii];
      }
      return reorderdArray;
 
@@ -3927,10 +3927,10 @@ CUDAStream<float4>* reorderFloat4( amoebaGpuContext amoebaGpu, CUDAStream<float4
      CUDAStream<float4>* reorderdArray    = new CUDAStream<float4>(amoebaGpu->gpuContext->sim.paddedNumberOfAtoms, 1, "TempReorder4");
      int* order                           = gpu->psAtomIndex->_pSysData;
      for( int ii = 0; ii < gpu->natoms; ii++ ){
-         reorderdArray->_pSysStream[0][order[ii]].x = arrayToReorder->_pSysStream[0][ii].x;
-         reorderdArray->_pSysStream[0][order[ii]].y = arrayToReorder->_pSysStream[0][ii].y;
-         reorderdArray->_pSysStream[0][order[ii]].z = arrayToReorder->_pSysStream[0][ii].z;
-         reorderdArray->_pSysStream[0][order[ii]].w = arrayToReorder->_pSysStream[0][ii].w;
+         reorderdArray->_pSysData[order[ii]].x = arrayToReorder->_pSysData[ii].x;
+         reorderdArray->_pSysData[order[ii]].y = arrayToReorder->_pSysData[ii].y;
+         reorderdArray->_pSysData[order[ii]].z = arrayToReorder->_pSysData[ii].z;
+         reorderdArray->_pSysData[order[ii]].w = arrayToReorder->_pSysData[ii].w;
      }
      return reorderdArray;
 
@@ -3949,7 +3949,7 @@ CUDAStream<float4>* reorderFloat4( amoebaGpuContext amoebaGpu, CUDAStream<float4
 
 void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle,
                              CUDAStream<float>* array, VectorOfDoubleVectors& outputVector,
-                             int* order )
+                             int* order, float conversion )
 {
     // ---------------------------------------------------------------------------------------
 
@@ -3968,7 +3968,7 @@ void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle,
             orderIndex = ii;
         }
         for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
-            outputVector[orderIndex].push_back( array->_pSysStream[0][entriesPerParticle*ii+jj] );
+            outputVector[orderIndex].push_back( conversion*array->_pSysData[entriesPerParticle*ii+jj] );
         }
         
     }
@@ -3985,7 +3985,8 @@ void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle,
 
    --------------------------------------------------------------------------------------- */
 
-void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float2>* array, VectorOfDoubleVectors& outputVector ) 
+void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float2>* array,
+                              VectorOfDoubleVectors& outputVector ) 
 {
     // ---------------------------------------------------------------------------------------
 
@@ -4000,10 +4001,10 @@ void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUD
  
     for( int ii = 0; ii < numberOfParticles; ii++ ){ 
         if( entriesPerParticle > 0 ){
-            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].x );
+            outputVector[ii].push_back( array->_pSysData[runningIndex].x );
         }
         if( entriesPerParticle > 1 ){
-            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].y );
+            outputVector[ii].push_back( array->_pSysData[runningIndex].y );
         }
         runningIndex++;
     }
@@ -4023,7 +4024,7 @@ void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUD
    --------------------------------------------------------------------------------------- */
 
 void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array,
-                              VectorOfDoubleVectors& outputVector, int* order ) 
+                              VectorOfDoubleVectors& outputVector, int* order, float conversion ) 
 {
     // ---------------------------------------------------------------------------------------
 
@@ -4044,16 +4045,16 @@ void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUD
             orderIndex = runningIndex;
         }
         if( entriesPerParticle > 0 ){
-            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].x );
+            outputVector[orderIndex].push_back( conversion*array->_pSysData[ii].x );
         }
         if( entriesPerParticle > 1 ){
-            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].y );
+            outputVector[orderIndex].push_back( conversion*array->_pSysData[ii].y );
         }
         if( entriesPerParticle > 2 ){
-            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].z );
+            outputVector[orderIndex].push_back( conversion*array->_pSysData[ii].z );
         }
         if( entriesPerParticle > 3 ){
-            outputVector[orderIndex].push_back( array->_pSysStream[0][ii].w );
+            outputVector[orderIndex].push_back( conversion*array->_pSysData[ii].w );
         }
         runningIndex++;
     }
@@ -4085,7 +4086,7 @@ float cudaGetSum( int numberOfElements, CUDAStream<float>* array )
  
     sum = 0.0f;
     for ( ii = 0; ii < numberOfElements; ii++ ){ 
-       sum += array->_pSysStream[0][ii];
+       sum += array->_pSysData[ii];
     }
     return sum;
 }
@@ -4116,7 +4117,7 @@ float cudaGetNorm2( int numberOfElements, CUDAStream<float>* array )
  
     sum = 0.0f;
     for ( ii = 0; ii < numberOfElements; ii++ ){ 
-       sum += (array->_pSysStream[0][ii]*array->_pSysStream[0][ii]);
+       sum += (array->_pSysData[ii]*array->_pSysData[ii]);
     }
     return sum;
 }
@@ -4143,9 +4144,9 @@ int checkForNansAndInfinities( int numberOfElements, CUDAStream<float>* array )
     array->Download();
     int nansDetected = 0;
     for( int ii = 0; ii < numberOfElements; ii++ ){
-        if( array->_pSysStream[0][ii] !=  array->_pSysStream[0][ii]   ||  
-            array->_pSysStream[0][ii] ==  std::numeric_limits<double>::infinity() ||
-            array->_pSysStream[0][ii] == -std::numeric_limits<double>::infinity() ){
+        if( array->_pSysData[ii] !=  array->_pSysData[ii]   ||  
+            array->_pSysData[ii] ==  std::numeric_limits<double>::infinity() ||
+            array->_pSysData[ii] == -std::numeric_limits<double>::infinity() ){
             nansDetected++;
         }
     }   
@@ -4366,12 +4367,12 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
         int nansPresent = isNanOrInfinity( amoebaGpu->mutualInducedCurrentEpsilon );
         if( nansPresent == 0 ){ 
             for( int ii = 0; ii < gpu->natoms && nansPresent == 0; ii++ ){
-                if( isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].x )  || 
-                    isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].y )  || 
-                    isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].z )  || 
-                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].x  ) || 
-                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].y  ) || 
-                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].z  ) ){ 
+                if( isNanOrInfinity( gpu->psPosq4->_pSysData[ii].x )  || 
+                    isNanOrInfinity( gpu->psPosq4->_pSysData[ii].y )  || 
+                    isNanOrInfinity( gpu->psPosq4->_pSysData[ii].z )  || 
+                    isNanOrInfinity( gpu->psVelm4->_pSysData[ii].x  ) || 
+                    isNanOrInfinity( gpu->psVelm4->_pSysData[ii].y  ) || 
+                    isNanOrInfinity( gpu->psVelm4->_pSysData[ii].z  ) ){ 
                     nansPresent = 1; 
                 }
             }
@@ -4396,8 +4397,8 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
         }
         (void) fflush( amoebaGpu->log );
         VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL );
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psVelm4,                    outputVector, NULL );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, NULL, 1.0f );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psVelm4,                    outputVector, NULL, 1.0f );
 /*
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
@@ -4426,7 +4427,7 @@ void gpuCopyWorkUnit( amoebaGpuContext amoebaGpu ){
     gpu->psWorkUnit->Download();
     amoebaGpu->psWorkUnit->Download();
     for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
-        gpu->psWorkUnit->_pSysStream[0][ii]            = amoebaGpu->psWorkUnit->_pSysStream[0][ii];
+        gpu->psWorkUnit->_pSysData[ii]            = amoebaGpu->psWorkUnit->_pSysData[ii];
     }    
     gpu->psInteractingWorkUnit->Upload();
     gpu->psWorkUnit->Upload();
@@ -4460,7 +4461,7 @@ void initializeCudaFloatArray( int numberOfParticles, int entriesPerParticle,
 
     for( int ii = 0; ii < numberOfParticles; ii++ ){ 
         for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
-            array->_pSysStream[0][entriesPerParticle*ii+jj] = initValue;
+            array->_pSysData[entriesPerParticle*ii+jj] = initValue;
         }
     }
     array->Upload();
