@@ -1160,7 +1160,6 @@ void kCalculateAmoebaLocalForces_kernel()
             float dot               = xad*xcd + yad*ycd + zad*zcd;
             float cc                = rad2*rcd2 - dot*dot;
             float bkk2              = (cc   != 0.0f ) ? (ee*ee)/(cc) : 0.0f;
-            float bkk3              = (rdb2 != 0.0f ) ? bkk2/rdb2    : 0.0f;
                   bkk2              = rdb2 - bkk2;
 
             float adXcd_0           = yad*zcd - zad*ycd;
@@ -1171,18 +1170,7 @@ void kCalculateAmoebaLocalForces_kernel()
             float adXcd_dot_db      = xdb*adXcd_0 + ydb*adXcd_1 + zdb*adXcd_2;
                   adXcd_dot_db     /= sqrt(rdb2*adXcd_nrm2);
 
-            float angle;
-/*
-            if( bkk3 < 1.0e-6f ){
-                angle             = sqrtf( bkk3 );
-            } else if( bkk3 < 0.98f ){
-                float cosine      = sqrtf(1.0f - bkk3);
-                angle             = acos(cosine);
-            } else {
-                angle             = abs( asin(adXcd_dot_db) );
-            }
-*/
-                angle             = abs( asin(adXcd_dot_db) );
+            float angle             = abs( asin(adXcd_dot_db) );
                 
             // find the out-of-plane energy and master chain rule terms
 
