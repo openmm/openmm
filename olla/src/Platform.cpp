@@ -182,7 +182,7 @@ static void initializePlugins(vector<HMODULE>& plugins) {
 }
 #else
 static void* loadOneLibrary(const string& file) {
-    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_FIRST);
+    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (handle == NULL)
         throw OpenMMException("Error loading library "+file+": "+dlerror());
     return handle;
