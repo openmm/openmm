@@ -34,8 +34,9 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include <vector>
 #include "openmm/internal/windowsExport.h"
+#include <vector>
+#include <sstream>
 
 namespace OpenMM {
 
@@ -157,21 +158,21 @@ public:
         particle1(particle1), particle2(particle2), particle3(particle3), particle4(particle4)  {
 
         if( torsion1.size() != AmoebaTorsionForce::ParametersPerTorsion ){
-           char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion1 size(=%u) is not %d!", static_cast<unsigned int>(torsion1.size()), AmoebaTorsionForce::ParametersPerTorsion);
-           throw OpenMMException( buffer );
+           std::stringstream buffer;
+           buffer << "TorsionInfo::TorsionInfo: torsion1 size(=" << torsion1.size() << ") is not " << AmoebaTorsionForce::ParametersPerTorsion;
+           throw OpenMMException( buffer.str() );
         }
 
         if( torsion2.size() != AmoebaTorsionForce::ParametersPerTorsion ){
-           char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion2 size(=%u) is not %d!", static_cast<unsigned int>(torsion2.size()), AmoebaTorsionForce::ParametersPerTorsion);
-           throw OpenMMException( buffer );
+           std::stringstream buffer;
+           buffer << "TorsionInfo::TorsionInfo: torsion2 size(=" << torsion2.size() << ") is not " << AmoebaTorsionForce::ParametersPerTorsion;
+           throw OpenMMException( buffer.str() );
         }
 
         if( torsion3.size() != AmoebaTorsionForce::ParametersPerTorsion ){
-           char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion3 size(=%u) is not %d!", static_cast<unsigned int>(torsion3.size()), AmoebaTorsionForce::ParametersPerTorsion);
-           throw OpenMMException( buffer );
+           std::stringstream buffer;
+           buffer << "TorsionInfo::TorsionInfo: torsion3 size(=" << torsion3.size() << ") is not " << AmoebaTorsionForce::ParametersPerTorsion;
+           throw OpenMMException( buffer.str() );
         }
 
        _initialize();   
@@ -184,10 +185,9 @@ public:
     int copyTorsionParameter(int index, const std::vector<double>& torsionParameter ) {
 
         if( torsionParameter.size() != AmoebaTorsionForce::ParametersPerTorsion ){
-           char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::copyTorsionParameter: input torsionParameter size(=%u) is not %d!", 
-                           static_cast<unsigned int>(torsionParameter.size()), AmoebaTorsionForce::ParametersPerTorsion);
-           throw OpenMMException( buffer );
+           std::stringstream buffer;
+           buffer << "TorsionInfo::copyTorsionParameter: input torsionParameter size(=" << torsionParameter.size() << ") is not " << AmoebaTorsionForce::ParametersPerTorsion;
+           throw OpenMMException( buffer.str() );
         }
 
         if( index >= 0 && index < maxTorsions ){
@@ -195,9 +195,9 @@ public:
                 torsionParameters[index][ii] = torsionParameter[ii];
             }
         } else {
-           char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::copyTorsionParameter: input torsionParameter index(=%u) is not in range [0,%u)!", index, maxTorsions );
-           throw OpenMMException( buffer );
+           std::stringstream buffer;
+           buffer << "TorsionInfo::copyTorsionParameter: input torsionParameter index(=" << index << ") is not in range [0," << maxTorsions << ")!";
+           throw OpenMMException( buffer.str() );
         }
     }
 };
