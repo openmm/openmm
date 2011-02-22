@@ -133,7 +133,7 @@ public:
      *                         grid[x][y][5] = dfd(xy) value 
      */
     //void setTorsionTorsionGrid(int index, TorsionTorsionGrid& grid );
-    void setTorsionTorsionGrid(int index, std::vector< std::vector< std::vector<double> > >& grid );
+    void setTorsionTorsionGrid(int index, const std::vector< std::vector< std::vector<double> > >& grid );
 
 protected:
     ForceImpl* createImpl();

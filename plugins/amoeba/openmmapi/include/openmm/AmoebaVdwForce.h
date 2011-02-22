@@ -133,7 +133,7 @@ public:
      * @param particleIndex particle index
      * @param exclusions output vector of exclusions
      */
-    void setParticleExclusions( int particleIndex, std::vector< int >& exclusions );
+    void setParticleExclusions( int particleIndex, const std::vector< int >& exclusions );
 
     /**
      * Get exclusions for specified particle
