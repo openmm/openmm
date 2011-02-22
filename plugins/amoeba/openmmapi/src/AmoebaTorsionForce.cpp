@@ -40,7 +40,7 @@ AmoebaTorsionForce::AmoebaTorsionForce() {
 }
 
 int AmoebaTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4,
-                                   std::vector<double>& torsion1, std::vector<double>& torsion2, std::vector<double>& torsion3 ) {
+                                   const std::vector<double>& torsion1, const std::vector<double>& torsion2, const std::vector<double>& torsion3 ) {
     torsions.push_back(TorsionInfo(particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3));
     return torsions.size()-1;
 }
@@ -64,7 +64,7 @@ void AmoebaTorsionForce::getTorsionParameters(int index, int& particle1, int& pa
 }
 
 void AmoebaTorsionForce::setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4,
-                                              std::vector<double>& torsion1, std::vector<double>& torsion2, std::vector<double>& torsion3 ) {
+                                              const std::vector<double>& torsion1, const std::vector<double>& torsion2, const std::vector<double>& torsion3 ) {
 
     torsions[index].particle1  = particle1;
     torsions[index].particle2  = particle2;

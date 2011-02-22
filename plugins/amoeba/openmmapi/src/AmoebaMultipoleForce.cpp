@@ -144,7 +144,7 @@ void AmoebaMultipoleForce::setEwaldErrorTolerance(double tol) {
     ewaldErrorTol = tol;
 }
 
-int AmoebaMultipoleForce::addParticle( double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, int axisType, 
+int AmoebaMultipoleForce::addParticle( double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, int axisType, 
                                        int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) {
     multipoles.push_back(MultipoleInfo( charge, molecularDipole, molecularQuadrupole,  axisType, multipoleAtomZ,  multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity));
     return multipoles.size()-1;
@@ -180,7 +180,7 @@ void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std
     polarity                    = multipoles[index].polarity;
 }
 
-void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, 
+void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, 
                                                   int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity ) {
 
     multipoles[index].charge                      = charge;

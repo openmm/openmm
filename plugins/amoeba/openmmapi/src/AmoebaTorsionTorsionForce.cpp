@@ -72,7 +72,7 @@ const TorsionTorsionGrid& AmoebaTorsionTorsionForce::getTorsionTorsionGrid(int i
    return torsionTorsionGrids[index].getTorsionTorsionGrid();
 }
 
-void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, TorsionTorsionGrid& grid ) {
+void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, const TorsionTorsionGrid& grid ) {
    if( index >= torsionTorsionGrids.size() ){
       torsionTorsionGrids.resize( index + 1);
    }

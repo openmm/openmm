@@ -80,7 +80,7 @@ const std::string& AmoebaVdwForce::getEpsilonCombiningRule( void ) const {
     return epsilonCombiningRule;
 }
 
-void AmoebaVdwForce::setParticleExclusions( int particleIndex, std::vector< int >& inputExclusions ) {
+void AmoebaVdwForce::setParticleExclusions( int particleIndex, const std::vector< int >& inputExclusions ) {
 
    if( exclusions.size() < parameters.size() ){
        exclusions.resize( parameters.size() );
