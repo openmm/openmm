@@ -32,33 +32,6 @@ else:
     flags = sys.getdlopenflags()
     sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
-import simtk.chem
-from simtk.chem.openmm.openmm import *
 
-skipPluginFilenames=["OpenMMFreeEnergy"]
-if len(simtk.chem.__path__) > 1:
-   raise Exception("more than one item in simtk.chem.openmm.__path__")
-pluginPath = os.path.join(simtk.chem.__path__[0],
-                          'openmm',
-                          'OpenMM',
-                          'plugins')
-pluginLoadingErrors={}
-pluginLoadedLibNames=[]
-libFilenames=glob.glob(os.path.join(pluginPath, "*.%s" % (libExt)))
-
-# Load plugins
-for filename in libFilenames:
-    skipPlugin=False
-    for pFilename in skipPluginFilenames:
-        fullFilename = "%s%s.%s" % (libPrefix, pFilename, libExt)
-        if os.path.split(filename)[-1] == fullFilename:
-            skipPlugin=True
-            break
-    if skipPlugin: continue
-    try:
-        Platform.loadPluginLibrary(os.path.join(pluginPath, filename))
-        pluginLoadedLibNames.append(filename)
-    except:
-        pluginLoadingErrors[filename]=sys.exc_info()
-
-
+from simtk.chem.openmm.openmm import Platform
+pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())
