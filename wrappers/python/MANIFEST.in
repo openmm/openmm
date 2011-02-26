@@ -1,0 +1,17 @@
+include setup.py
+include *.py
+include *.txt
+include doc/*.pdf
+include images/*.bmp
+include images/*.png
+global-include README
+recursive-include simtk     *.txt *.py
+recursive-include OpenMM    *.txt *.py *.so *.dll *.lib *.dylib *.h
+recursive-include examples  *.txt *.py *.pdb *.top *.prmtop *.crd *.sh *.leap
+recursive-include test      *.txt *.py *.pdb *.top *.prmtop *.crd *.sh *.in *log
+recursive-include scripts   *.txt *.py
+recursive-include src       *.txt *.py *.i *.c *.cxx *.h *.sh Doxyfile
+prune src/swig_doxygen/doxygen/html
+prune src/swig_doxygen/doxygen/xml
+global-exclude CMakeLists.txt
+

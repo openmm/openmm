@@ -85,39 +85,6 @@
 using namespace OpenMM;
 
 extern "C" void registerAmoebaSerializationProxies() {
-
-    // force libOpenMMSerialization to load before libOpenMMSerialization
-    // required in order guarantee initialization of
-    //    map<const string, const SerializationProxy*> SerializationProxy::proxiesByType;
-    //    map<const string, const SerializationProxy*> SerializationProxy::proxiesByName;
-
-    // is there a cleaner solution?
-
-#ifdef WIN32
-    std::string file = "OpenMMSerialization.dll";
-    // Tell Windows not to bother the user with ugly error boxes.
-    const UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
-    HMODULE handle = LoadLibrary(file.c_str());
-    SetErrorMode(oldErrorMode); // Restore previous error mode.
-    if (handle == NULL) {
-        std::string message;
-        std::stringstream(message) << "Error loading library " << file << ": " << GetLastError();
-        throw OpenMMException(message);
-    }   
-#else
-    std::string fileName  = "OpenMMSerialization";
-    std::string file      = "libOpenMMSerialization.so";
-    std::string macFile   = "libOpenMMSerialization.dylib";
-    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-    if (handle == NULL){
-        handle = dlopen(macFile.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-        if (handle == NULL){
-            throw OpenMMException("Error loading library "+fileName+": "+dlerror());
-        }
-    }
-
-#endif
-
     SerializationProxy::registerProxy(typeid(AmoebaGeneralizedKirkwoodForce),         new AmoebaGeneralizedKirkwoodForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaHarmonicBondForce),                new AmoebaHarmonicBondForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaHarmonicAngleForce),               new AmoebaHarmonicAngleForceProxy());
