@@ -2660,6 +2660,7 @@ void testTorsionTorsion( FILE* log, int systemId ) {
         forces[ii][2] *= conversion;
     }
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaTorsionTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -2669,6 +2670,7 @@ void testTorsionTorsion( FILE* log, int systemId ) {
         }
         (void) fflush( log );
     }
+#endif
 
     double tolerance = 1.0e-03;
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -2689,8 +2691,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //FILE* log = fopen( "AmoebaTorsionTorsionForce1.log", "w" );;
 //        testTorsionTorsion( log, 0 );
         testTorsionTorsion( log, 1 );
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {

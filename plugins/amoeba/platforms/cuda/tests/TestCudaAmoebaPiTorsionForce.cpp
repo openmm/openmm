@@ -84,11 +84,13 @@ static void computeAmoebaPiTorsionForce(int bondIndex,  std::vector<Vec3>& posit
 
     amoebaPiTorsionForce.getPiTorsionParameters(bondIndex, particle1, particle2, particle3, particle4,  particle5, particle6, kTorsion);
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaPiTorsionForce: bond %d [%d %d %d %d %d %d] k=%10.3e\n", 
                              bondIndex, particle1, particle2, particle3, particle4, particle5, particle6, kTorsion );
         (void) fflush( log );
     }
+#endif
 
     enum { AD, BD, EC, FC, P, Q, CP, DC, QD, T, U, TU, DP, QC, dT, dU, dP, dQ, dC1, dC2, dD1, dD2, LastDeltaIndex };
     double deltaR[LastDeltaIndex][3];
@@ -229,6 +231,7 @@ static void computeAmoebaPiTorsionForces( Context& context, AmoebaPiTorsionForce
         computeAmoebaPiTorsionForce(ii, positions, amoebaPiTorsionForce, expectedForces, expectedEnergy, log );
     }
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaPiTorsionForces: expected energy=%14.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -236,6 +239,7 @@ static void computeAmoebaPiTorsionForces( Context& context, AmoebaPiTorsionForce
         }
         (void) fflush( log );
     }
+#endif
     return;
 
 }
@@ -250,6 +254,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaPiTorsionForce& 
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaPiTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -258,6 +263,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaPiTorsionForce& 
         }
         (void) fflush( log );
     }
+#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -308,8 +314,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //FILE* log = fopen( "AmoebaPiTorsionForce1.log", "w" );;
 
         testOnePiTorsion( log );
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {

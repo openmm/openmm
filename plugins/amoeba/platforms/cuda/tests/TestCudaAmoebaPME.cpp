@@ -109,12 +109,15 @@ void testPMEWater() {
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
+
+#ifdef AMOEBA_DEBUG
     (void) fprintf( stderr, "PME forces\n" );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
             (void) fprintf( stderr, "%6u [%14.7e %14.7e %14.7e]\n", ii, 
                             forces[ii][0], forces[ii][1], forces[ii][2] );
     }
     (void) fflush( stderr );
+#endif
 
 }
 

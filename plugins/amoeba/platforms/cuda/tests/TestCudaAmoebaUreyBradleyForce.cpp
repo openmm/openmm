@@ -102,6 +102,7 @@ static void computeAmoebaUreyBradleyForces( Context& context, AmoebaUreyBradleyF
         computeAmoebaUreyBradleyForce(ii, positions, amoebaUreyBradleyForce, expectedForces, expectedEnergy );
     }
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaUreyBradleyForces: expected energy=%15.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -109,6 +110,7 @@ static void computeAmoebaUreyBradleyForces( Context& context, AmoebaUreyBradleyF
         }
         (void) fflush( log );
     }
+#endif
     return;
 
 }
@@ -122,6 +124,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaUreyBradleyForce
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaUreyBradleyForces: expected energy=%15.7e %15.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -130,6 +133,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaUreyBradleyForce
         }
         (void) fflush( log );
     }
+#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -211,8 +215,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //testOneBond( log );
         testTwoBond( log );
 
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {

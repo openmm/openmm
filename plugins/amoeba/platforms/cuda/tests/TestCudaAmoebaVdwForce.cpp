@@ -151,6 +151,7 @@ void testVdw( FILE* log ) {
     }    
     expectedEnergy *= CalToJoule;
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaVdwForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -159,6 +160,7 @@ void testVdw( FILE* log ) {
         }
         (void) fflush( log );
     }
+#endif
 
     double tolerance = 1.0e-03;
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -178,8 +180,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaVdwForce1.log", "w" );;
         testVdw( log );
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {
