@@ -883,7 +883,9 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoleField( std::vector<Mul
     static const RealOpenMM  one           = 1.0;
     static const RealOpenMM  two           = 2.0;
 
-	 FILE* log                              = stderr;
+#ifdef AMOEBA_DEBUG
+    FILE* log                              = stderr;
+#endif
 
     // ---------------------------------------------------------------------------------------
 
@@ -954,7 +956,9 @@ void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( std::vector
     static const RealOpenMM  two           = 2.0;
 
     static const int debug                 = 0;
-	 FILE* log                              = stderr;
+#ifdef AMOEBA_DEBUG
+    FILE* log                              = stderr;
+#endif
 
     // ---------------------------------------------------------------------------------------
 
@@ -1927,7 +1931,10 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
     static const RealOpenMM  one           = 1.0;
 
     static const int debug                 = 0;
+
+#ifdef AMOEBA_DEBUG
     FILE* log                              = stderr;
+#endif
 
     // ---------------------------------------------------------------------------------------
 
@@ -2050,7 +2057,9 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
     static const RealOpenMM  two           = 2.0;
 
     static const int debug                 = 0;
-	 FILE* log                              = stderr;
+#ifdef AMOEBA_DEBUG
+    FILE* log                              = stderr;
+#endif
 
     // ---------------------------------------------------------------------------------------
 
