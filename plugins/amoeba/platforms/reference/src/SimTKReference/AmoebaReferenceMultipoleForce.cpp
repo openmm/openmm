@@ -30,7 +30,7 @@
 using std::vector;
 using OpenMM::RealVec;
 
-#define AMOEBA_DEBUG
+//#define AMOEBA_DEBUG
 
 AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce( ) : _nonbondedMethod(NoCutoff) {
     initialize();
@@ -166,21 +166,23 @@ void AmoebaReferenceMultipoleForce::loadArrayFromVector( unsigned int particleI,
 void AmoebaReferenceMultipoleForce::logRealOpenMMVectors( const std::string& header, const VectorOfRealOpenMMVectors& printVector,
                                                           FILE* log, unsigned int itemsPerVector, int maxPrint ) const {
 
-    (void) fprintf( log, "%s", header.c_str() );
-    for( unsigned int ii = 0; ii < printVector[0].size()/itemsPerVector; ii++ ){
-        (void) fprintf( log, "%5u ", ii );
-        for( unsigned int jj = 0; jj < printVector.size(); jj++ ){
-            if( itemsPerVector > 1 ){
-                (void) fprintf( log, "[" );
+    if( log ){
+        (void) fprintf( log, "%s", header.c_str() );
+        for( unsigned int ii = 0; ii < printVector[0].size()/itemsPerVector; ii++ ){
+            (void) fprintf( log, "%5u ", ii );
+            for( unsigned int jj = 0; jj < printVector.size(); jj++ ){
+                if( itemsPerVector > 1 ){
+                    (void) fprintf( log, "[" );
+                }
+                for( unsigned int kk = 0; kk < itemsPerVector; kk++ ){
+                    (void) fprintf( log, "%15.7e ", printVector[jj][ii*itemsPerVector+kk] );
+                }
+                if( itemsPerVector > 1 ){
+                    (void) fprintf( log, "] " );
+                }
             }
-            for( unsigned int kk = 0; kk < itemsPerVector; kk++ ){
-                (void) fprintf( log, "%15.7e ", printVector[jj][ii*itemsPerVector+kk] );
-            }
-            if( itemsPerVector > 1 ){
-                (void) fprintf( log, "] " );
-            }
+            (void) fprintf( log, "\n" );
         }
-        (void) fprintf( log, "\n" );
     }
 }
 

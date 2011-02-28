@@ -360,7 +360,7 @@ private:
     void addField( unsigned int particleIOffset, int sign, RealOpenMM field[3], std::vector<RealOpenMM>& vectorToAddTo ) const;
 
     void logRealOpenMMVectors( const std::string& header, const VectorOfRealOpenMMVectors& printVector,
-                               FILE* log = stderr, unsigned int itemsPerVector = 1, int maxPrint = -1 ) const;
+                               FILE* log = NULL, unsigned int itemsPerVector = 1, int maxPrint = -1 ) const;
 
     void logParticleData( const std::string& header, const std::vector<MultipoleParticleData>& particleData,
                           unsigned int printFlag, FILE* log, unsigned int maxPrint ) const;
