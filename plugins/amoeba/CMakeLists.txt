@@ -17,7 +17,8 @@
 #INCLUDE(Dart)
 
 # ----------------------------------------------------------------------------
-SET(CREATE_SERIALIZABLE_OPENMM_AMOEBA OFF CACHE BOOL "Build verison of OpenMMAmoeba w/ backdoor serialization capability")
+#SET(CREATE_SERIALIZABLE_OPENMM_AMOEBA OFF CACHE BOOL "Build verison of OpenMMAmoeba w/ backdoor serialization capability")
+SET(CREATE_SERIALIZABLE_OPENMM_AMOEBA FALSE )
 # ----------------------------------------------------------------------------
 
 # The source is organized into subdirectories, but we handle them all from
