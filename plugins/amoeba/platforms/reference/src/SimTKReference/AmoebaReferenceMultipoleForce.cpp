@@ -166,6 +166,7 @@ void AmoebaReferenceMultipoleForce::loadArrayFromVector( unsigned int particleI,
 void AmoebaReferenceMultipoleForce::logRealOpenMMVectors( const std::string& header, const VectorOfRealOpenMMVectors& printVector,
                                                           FILE* log, unsigned int itemsPerVector, int maxPrint ) const {
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "%s", header.c_str() );
         for( unsigned int ii = 0; ii < printVector[0].size()/itemsPerVector; ii++ ){
@@ -184,11 +185,13 @@ void AmoebaReferenceMultipoleForce::logRealOpenMMVectors( const std::string& hea
             (void) fprintf( log, "\n" );
         }
     }
+#endif
 }
 
 void AmoebaReferenceMultipoleForce::logParticleData( const std::string& header, const std::vector<MultipoleParticleData>& particleData,
                                                      unsigned int printFlag, FILE* log, unsigned int maxPrint ) const {
 
+#ifdef AMOEBA_DEBUG
     (void) fprintf( log, "%s", header.c_str() );
 
     for( unsigned int ii = 0; ii < particleData.size(); ii++ ){
@@ -222,6 +225,7 @@ void AmoebaReferenceMultipoleForce::logParticleData( const std::string& header, 
             ii = particleData.size() - maxPrint;
         }
     }
+#endif
 }
 
 /* 
@@ -229,6 +233,7 @@ void AmoebaReferenceMultipoleForce::logParticleData( const std::string& header, 
  */ 
 void AmoebaReferenceMultipoleForce::showScaleMapForParticle( unsigned int particleI, FILE* log ) const {
 
+#ifdef AMOEBA_DEBUG
     (void) fprintf( log, "Scale map particle %5u maxIndex=%u\n", particleI, _maxScaleIndex[particleI] );
 
     std::string scaleNames[LAST_SCALE_TYPE_INDEX] = { "D", "P", "M" }; 
@@ -244,6 +249,7 @@ void AmoebaReferenceMultipoleForce::showScaleMapForParticle( unsigned int partic
     }
     (void) fprintf( log, "\n" );
     (void) fflush( log );
+#endif
 }
 
 void AmoebaReferenceMultipoleForce::setupScaleMaps( const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo ){
@@ -1932,6 +1938,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
         torques[ii]   = Vec3( zero, zero, zero );
     }
 
+#ifdef AMOEBA_DEBUG
     if( debug ){
         if( log ){
             (void) fprintf( log, "\n%s Zeroing forces\n", methodName.c_str() );
@@ -1942,6 +1949,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
             forces[ii][2] = zero;
         }
     }
+#endif
     RealOpenMM energy = zero;
 
     RealOpenMM scaleFactors[LAST_SCALE_TYPE_INDEX];
@@ -1970,6 +1978,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
 
     // diagnostics
 
+#ifdef AMOEBA_DEBUG
     if( debug && log ){
         RealOpenMM conversion        = 1.0/4.184;
         RealOpenMM torqueConversion = conversion;
@@ -1985,6 +1994,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
             }
         }
     }
+#endif
 
     // map torques to forces
 
@@ -1997,6 +2007,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
 
     // diagnostics
 
+#ifdef AMOEBA_DEBUG
     if( debug && log ){
         RealOpenMM conversion        = 1.0/4.184;
         RealOpenMM torqueConversion = conversion;
@@ -2011,6 +2022,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
             }
         }
     }
+#endif
 
     return energy;
 }
