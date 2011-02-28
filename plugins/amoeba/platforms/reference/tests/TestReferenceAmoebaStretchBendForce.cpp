@@ -85,11 +85,13 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
 
     amoebaStretchBendForce.getStretchBendParameters(bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend);
     angleStretchBend *= RADIAN;
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaStretchBendForce: bond %d [%d %d %d] ab=%10.3e cb=%10.3e angle=%10.3e k=%10.3e\n", 
                              bondIndex, particle1, particle2, particle3, abBondLength, cbBondLength, angleStretchBend, kStretchBend );
         (void) fflush( log );
     }
+#endif
 
     enum { A, B, C, LastAtomIndex };
     enum { AB, CB, CBxAB, ABxP, CBxP, LastDeltaIndex };
@@ -182,11 +184,12 @@ static void computeAmoebaStretchBendForce(int bondIndex,  std::vector<Vec3>& pos
     forces[particle3][2]       -= subForce[2][2];
 
     *energy                    += term*dt*dr;
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaStretchBendForce: angle=%10.3e dt=%10.3e dr=%10.3e\n", angle, dt, dr ); 
         (void) fflush( log );
     }
+#endif
 
     return;
 }
@@ -210,7 +213,7 @@ static void computeAmoebaStretchBendForces( Context& context, AmoebaStretchBendF
     for( int ii = 0; ii < amoebaStretchBendForce.getNumStretchBends(); ii++ ){
         computeAmoebaStretchBendForce(ii, positions, amoebaStretchBendForce, expectedForces, expectedEnergy, log );
     }
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaStretchBendForces: expected energy=%14.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -218,6 +221,7 @@ static void computeAmoebaStretchBendForces( Context& context, AmoebaStretchBendF
         }
         (void) fflush( log );
     }
+#endif
     return;
 
 }
@@ -231,7 +235,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaStretchBendForce
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaStretchBendForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -240,6 +244,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaStretchBendForce
         }
         (void) fflush( log );
     }
+#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -291,8 +296,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaStretchBendForce1.log", "w" );;
         testOneStretchBend( log );
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {

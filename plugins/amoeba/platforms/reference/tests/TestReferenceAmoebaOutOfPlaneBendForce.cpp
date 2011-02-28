@@ -88,12 +88,14 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
     int particle1, particle2, particle3, particle4;
     double kAngleQuadratic;
     amoebaOutOfPlaneBendForce.getOutOfPlaneBendParameters(bondIndex, particle1, particle2, particle3, particle4, kAngleQuadratic );
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaOutOfPlaneBendForce: bond %d [%d %d %d %d] k=[%10.3e %10.3e %10.3e %10.3e %10.3e]\n", 
                              bondIndex, particle1, particle2, particle3, particle4, kAngleQuadratic, kAngleCubic, kAngleQuartic, kAnglePentic, kAngleSextic );
         (void) fflush( log );
     }
+#endif
+
 
     enum { A, B, C, D, LastAtomIndex };
     enum { AB, CB, DB, AD, CD, LastDeltaIndex };
@@ -135,12 +137,13 @@ static void computeAmoebaOutOfPlaneBendForce(int bondIndex,  std::vector<Vec3>& 
     } else {
         angle = RADIAN*acos(cosine);
     }
- 
+#ifdef AMOEBA_DEBUG 
     if( log ){
         (void) fprintf( log, "computeAmoebaOutOfPlaneBendForce: bkk2=%14.7e rDB2=%14.7e cos=%14.7e dt=%14.7e]\n", 
                              bkk2, rDB2, cosine, angle );
         (void) fflush( log );
     }
+#endif
 
     // chain rule
  
@@ -256,6 +259,7 @@ static void computeAmoebaOutOfPlaneBendForces( Context& context, AmoebaOutOfPlan
         computeAmoebaOutOfPlaneBendForce(ii, positions, amoebaOutOfPlaneBendForce, expectedForces, expectedEnergy, log );
     }
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaOutOfPlaneBendForces: expected energy=%14.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -263,6 +267,7 @@ static void computeAmoebaOutOfPlaneBendForces( Context& context, AmoebaOutOfPlan
         }
         (void) fflush( log );
     }
+#endif
     return;
 
 }
@@ -276,7 +281,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaOutOfPlaneBendFo
    
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaOutOfPlaneBendForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -285,6 +290,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaOutOfPlaneBendFo
         }
         (void) fflush( log );
     }
+#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -412,16 +418,20 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
         particleIndices.push_back( 442 ); 
         kOutOfPlaneBend = 0.214755281E-01;
     } else {
+#ifdef AMOEBA_DEBUG
         if( log ){
             (void) fprintf( log, "Set id %d not recognized.\n", setId );
         }
-        char buffer[1024];
-        (void) sprintf( buffer, "Set id %d not recognized.", setId );
-        throw OpenMMException( buffer );
+#endif
+        std::stringstream buffer;
+        buffer << "Set id " << setId << " not recognized.";
+        throw OpenMMException( buffer.str() );
     }
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "Set id %d.\n", setId );
     }
+#endif
 
     amoebaOutOfPlaneBendForce->addOutOfPlaneBend(0, 1, 2, 3, kOutOfPlaneBend );
 
@@ -431,12 +441,14 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
 
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
         if( coordinates.find( particleIndices[ii] ) == coordinates.end() ){
+#ifdef AMOEBA_DEBUG
             if( log ){
                 (void) fprintf( log, "Coordinates %d not loaded.", particleIndices[ii] );
             }
-            char buffer[1024];
-            (void) sprintf( buffer, "Coordinates %d not loaded.", particleIndices[ii] );
-            throw OpenMMException( buffer );
+#endif
+            std::stringstream buffer;
+            buffer << "Coordinates " << particleIndices[ii] << " not loaded.";
+            throw OpenMMException( buffer.str() );
         }
         positions[ii] = coordinates[particleIndices[ii]];
     }
@@ -475,6 +487,7 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
     }
 
     if( iter == 6 ){
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaOutOfPlaneBendForces: energy=%14.7e\n", totalEnergy);
         for( std::map<int,Vec3>::iterator ii = totalForces.begin(); ii != totalForces.end(); ii++ ){
@@ -485,6 +498,7 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
         }
         (void) fflush( log );
     }
+#endif
     }
 
 }
@@ -504,8 +518,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //for( int ii = 1; ii <= 6; ii++ ){
         //     testOneOutOfPlaneBend2( log, ii );
         //}
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {

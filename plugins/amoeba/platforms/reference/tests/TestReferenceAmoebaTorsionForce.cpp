@@ -95,6 +95,7 @@ static void computeAmoebaTorsionForce(int bondIndex,  std::vector<Vec3>& positio
     torsions.push_back( torsion2 );
     torsions.push_back( torsion3 );
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaTorsionForce: bond %d [%d %d %d %d]\n", 
                              bondIndex, particle1, particle2, particle3, particle4 );
@@ -103,6 +104,7 @@ static void computeAmoebaTorsionForce(int bondIndex,  std::vector<Vec3>& positio
         }
         (void) fflush( log );
     }
+#endif
 
     enum { BA, CB, DC, CA, DB, LastDeltaIndex };
     double deltaR[LastDeltaIndex][3];
@@ -251,6 +253,7 @@ static void computeAmoebaTorsionForces( Context& context, AmoebaTorsionForce& am
         computeAmoebaTorsionForce(ii, positions, amoebaTorsionForce, expectedForces, expectedEnergy, log );
     }
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaTorsionForces: expected energy=%14.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -258,6 +261,8 @@ static void computeAmoebaTorsionForces( Context& context, AmoebaTorsionForce& am
         }
         (void) fflush( log );
     }
+#endif
+
     return;
 
 }
@@ -272,6 +277,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaTorsionForce& am
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaTorsionForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -280,6 +286,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaTorsionForce& am
         }
         (void) fflush( log );
     }
+#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -336,8 +343,10 @@ int main( int numberOfArguments, char* argv[] ) {
         FILE* log = NULL;
         //FILE* log = fopen( "AmoebaTorsionForce.log", "w" );;
         testOneTorsion( log );
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {

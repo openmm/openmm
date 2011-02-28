@@ -85,11 +85,12 @@ static void getPrefactorsGivenAngleCosine( double cosine, double idealAngle, dou
     } else {
         angle = RADIAN*acos(cosine);
     }
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "getPrefactorsGivenAngleCosine: cosine=%10.3e angle=%10.3e ideal=%10.3e\n", cosine, angle, idealAngle ); 
         (void) fflush( log );
     }
+#endif
 
     double deltaIdeal         = angle - idealAngle;
     double deltaIdeal2        = deltaIdeal*deltaIdeal;
@@ -128,12 +129,13 @@ static void computeAmoebaHarmonicAngleForce(int bondIndex,  std::vector<Vec3>& p
     double quarticK       = amoebaHarmonicAngleForce.getAmoebaGlobalHarmonicAngleQuartic();
     double penticK        = amoebaHarmonicAngleForce.getAmoebaGlobalHarmonicAnglePentic();
     double sexticK        = amoebaHarmonicAngleForce.getAmoebaGlobalHarmonicAngleSextic();
-
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaHarmonicAngleForce: bond %d [%d %d %d] ang=%10.3f k=%10.3f [%10.3e %10.3e %10.3e %10.3e]\n", 
                              bondIndex, particle1, particle2, particle3, idealAngle, quadraticK, cubicK, quarticK, penticK, sexticK );
         (void) fflush( log );
     }
+#endif
 
     double deltaR[2][3];
     double r2_0 = 0.0;
@@ -157,10 +159,12 @@ static void computeAmoebaHarmonicAngleForce(int bondIndex,  std::vector<Vec3>& p
     double dot    = deltaR[0][0]*deltaR[1][0] + deltaR[0][1]*deltaR[1][1] + deltaR[0][2]*deltaR[1][2];
     double cosine = dot/sqrt(r2_0*r2_1);
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "dot=%10.3e r2_0=%10.3e r2_1=%10.3e\n", dot, r2_0, r2_1 ); 
         (void) fflush( log );
     }
+#endif
 
     double dEdR;
     double energyTerm;
@@ -214,6 +218,7 @@ static void computeAmoebaHarmonicAngleForces( Context& context, AmoebaHarmonicAn
         computeAmoebaHarmonicAngleForce(ii, positions, amoebaHarmonicAngleForce, expectedForces, expectedEnergy, log );
     }
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaHarmonicAngleForces: expected energy=%14.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -221,6 +226,7 @@ static void computeAmoebaHarmonicAngleForces( Context& context, AmoebaHarmonicAn
         }
         (void) fflush( log );
     }
+#endif
     return;
 
 }
@@ -235,6 +241,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaHarmonicAngleFor
     State state                      = context.getState(State::Forces | State::Energy);
     const std::vector<Vec3> forces   = state.getForces();
 
+#ifdef AMOEBA_DEBUG
     if( log ){
         (void) fprintf( log, "computeAmoebaHarmonicAngleForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -243,6 +250,7 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaHarmonicAngleFor
         }
         (void) fflush( log );
     }
+#endif
 
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
@@ -299,8 +307,10 @@ int main( int numberOfArguments, char* argv[] ) {
         //FILE* log = stderr;
 
         testOneAngle( log );
+#ifdef AMOEBA_DEBUG
         if( log && log != stderr )
             (void) fclose( log );
+#endif
 
     }
     catch(const std::exception& e) {
