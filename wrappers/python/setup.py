@@ -51,7 +51,7 @@ def uninstall(verbose=True):
         if item!='.' and item!=os.getcwd():
             sys.path.append(item)
     try:
-        import simtk.chem.openmm as openmm
+        import simtk.openmm as openmm
         removePackage(openmm, verbose)
     except ImportError:
         pass
@@ -81,13 +81,11 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["download_url"]      = "https://simtk.org/home/openmm"
     setupKeywords["packages"]          = ["simtk",
                                           "simtk.unit",
-                                          "simtk.chem",
-                                          "simtk.chem.openmm"]
+                                          "simtk.openmm"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"simtk" : [],
                                           "simtk.unit" : [],
-                                          "simtk.chem" : [],
-                                          "simtk.chem.openmm" : []}
+                                          "simtk.openmm" : []}
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
@@ -123,13 +121,9 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     if not openmm_lib_path:
         reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
 
-    runtime_library_dirs=[]
     extra_compile_args=[]
     extra_link_args=[]
     if platform.system() == "Windows":
-        libPrefix = ""
-        libExtList = ["dll", "lib"]
-        libExtPython = "pyd"
         define_macros.append( ('WIN32', None) )
         define_macros.append( ('_WINDOWS', None) )
         define_macros.append( (' _MSC_VER', None) )
@@ -141,21 +135,13 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                 os.environ['MACOSX_DEPLOYMENT_TARGET']='10.5'
             extra_compile_args.append("-m32")
             extra_link_args.append('-Wl,-rpath,@loader_path/OpenMM')
-            libPrefix = "lib"
-            libExtList = ["dylib"]
-            libExtPython = "so"
-        else:
-            runtime_library_dirs.append('$ORIGIN/OpenMM')
-            libPrefix = "lib"
-            libExtList = ["so"]
-            libExtPython = "so"
 
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')
 
     setupKeywords["ext_modules"] = [
-       Extension(name = "simtk.chem.openmm._openmm",
+       Extension(name = "simtk.openmm._openmm",
                  sources = ["src/swig_doxygen/OpenMMSwig.cxx"],
                  include_dirs = include_dirs,
                  define_macros = define_macros,

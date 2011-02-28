@@ -7,7 +7,7 @@ rm -f *.cxx
 SWIG_REV_FILE_OPENMM=RevisionNumber_OpenMM.txt
 SWIG_REV_FILE_PYOPENMM=RevisionNumber_pyopenmm.txt
 
-PYTHON_PACKAGE_DIR=../../simtk/chem/openmm
+PYTHON_PACKAGE_DIR=../../simtk/openmm
 
 
 if [ -n "$OPENMM_SVN_PATH" ] ; then

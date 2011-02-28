@@ -10,7 +10,7 @@ set(OPENMM_PYTHON_STAGING_DIR "${CMAKE_BINARY_DIR}/python"
 mark_as_advanced(OPENMM_PYTHON_STAGING_DIR)
 
 # Create package directory structure
-file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/chem/openmm)
+file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/unit)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/swig_lib/python)
 
@@ -172,10 +172,10 @@ if(OPENMM_PYTHON_BUILD_SWIG)
     
     # Run swig
     add_custom_command(
-        OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/simtk/chem/openmm/openmm.py"
+        OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py"
         COMMAND ${SWIG_EXECUTABLE} 
             -python -c++ 
-            -outdir "${OPENMM_PYTHON_STAGING_DIR}/simtk/chem/openmm"
+            -outdir "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm"
             -o OpenMMSwig.cxx 
             OpenMM.i
         WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
@@ -187,11 +187,11 @@ if(OPENMM_PYTHON_BUILD_SWIG)
     )
     add_custom_target(RunSwig DEPENDS 
         "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx"
-        "${OPENMM_PYTHON_STAGING_DIR}/simtk/chem/openmm/openmm.py")
+        "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
 
     set (STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
         "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/OpenMMSwig.cxx"
-        "${OPENMM_PYTHON_STAGING_DIR}/simtk/chem/openmm/openmm.py")
+        "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
 else(OPENMM_PYTHON_BUILD_SWIG)
     add_custom_target(RunSwig)
 endif(OPENMM_PYTHON_BUILD_SWIG)
