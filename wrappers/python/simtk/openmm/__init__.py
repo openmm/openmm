@@ -33,5 +33,5 @@ else:
     sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 
-from simtk.openmm.openmm import Platform
+from simtk.openmm.openmm import *
 pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())
