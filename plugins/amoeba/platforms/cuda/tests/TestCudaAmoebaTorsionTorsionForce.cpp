@@ -2686,8 +2686,8 @@ int main( int numberOfArguments, char* argv[] ) {
         std::cout << "TestCudaAmoebaTorsionTorsionForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
 
-        //FILE* log = NULL;
-        FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaTorsionTorsionForce1.log", "w" );;
 //        testTorsionTorsion( log, 0 );
         testTorsionTorsion( log, 1 );
