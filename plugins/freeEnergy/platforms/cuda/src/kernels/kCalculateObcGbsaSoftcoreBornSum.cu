@@ -171,8 +171,8 @@ __global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
 void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
 {
 
-    kReduceObcGbsaSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
-    LAUNCHERROR("kReduceObcGbsaBornForces");
+    kReduceObcGbsaSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
+    LAUNCHERROR("kReduceObcGbsaSoftcoreBornForces");
 }
 
 
