@@ -249,11 +249,17 @@ class Unit(object):
             units[unit] = power
         return 'Unit(%s)' % repr(units)
 
+    # Performance
+    _is_compatible_cache = {}
+
     def is_compatible(self, other):
         """
         Returns True if two Units share the same dimension.
         Returns False otherwise.
         """
+        if self in Unit._is_compatible_cache:
+            if other in Unit._is_compatible_cache[self]:
+                return Unit._is_compatible_cache[self][other]
         if not is_unit(other):
             if self.is_dimensionless():
                 return True
@@ -266,18 +272,32 @@ class Unit(object):
         for dimension, exponent in other.iter_base_dimensions():
             other_dims[dimension] = exponent
         if len(self_dims) != len(other_dims):
-            return False
-        return self_dims == other_dims
+            result = False
+        else:
+            result = (self_dims == other_dims)
+        if not self in Unit._is_compatible_cache:
+            Unit._is_compatible_cache[self] = {}
+        Unit._is_compatible_cache[self][other] = result
+        return result
     
+    _is_dimensionless_cache = {}
+
     def is_dimensionless(self):
         """Returns True if this Unit has no dimensions.
         Returns False otherwise.
         """
+        if self in Unit._is_dimensionless_cache:
+            return Unit._is_dimensionless_cache[self]
         for dimension, exponent in self.iter_base_dimensions():
             if exponent != 0:
+                Unit._is_dimensionless_cache[self] = False
                 return False
+        Unit._is_dimensionless_cache[self] = True
         return True
         
+    # Performance
+    _conversion_factor_cache = {}
+
     def conversion_factor_to(self, other):
         """
         Returns conversion factor for computing all of the common dimensions
@@ -292,6 +312,9 @@ class Unit(object):
         factor = 1.0
         if (self is other): 
             return factor
+        if self in Unit._conversion_factor_cache:
+            if other in Unit._conversion_factor_cache[self]:
+                return Unit._conversion_factor_cache[self][other]
         assert self.is_compatible(other)
         factor *= self.get_conversion_factor_to_base_units()
         factor /= other.get_conversion_factor_to_base_units()
@@ -312,6 +335,9 @@ class Unit(object):
                     factor /= unit.conversion_factor_to(canonical_units[d])**power
             else:
                 canonical_units[d] = unit
+        if not self in Unit._conversion_factor_cache:
+            Unit._conversion_factor_cache[self] = {}
+        Unit._conversion_factor_cache[self][other] = factor
         return factor
 
     def in_unit_system(self, system):
