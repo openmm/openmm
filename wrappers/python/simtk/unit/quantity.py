@@ -528,17 +528,31 @@ class Quantity(object):
                     value = []
                     for i in self._value:
                         value.append(i)
-                result = Quantity(value, new_unit)
-                for i in range(len(result)):
-                    # Push multiply operation one level deeper
-                    if post_multiply:
-                        result[i] = result[i]*factor
-                    else:
-                        result[i] = factor*result[i]
+                result = Quantity(self._scale_sequence(value, factor, post_multiply), new_unit)
         if (new_unit.is_dimensionless()):
             return result._value
         else:
             return result
+
+    def _scale_sequence(self, value, factor, post_multiply):
+        try:
+            if post_multiply:
+                if isinstance(value, tuple):
+                    value = tuple([x*factor for x in value])
+                else:
+                    for i in range(len(value)):
+                        value[i] = value[i]*factor
+            else:
+                if isinstance(value, tuple):
+                    value = tuple([factor*x for x in value])
+                else:
+                    for i in range(len(value)):
+                        value[i] = factor*value[i]
+        except TypeError as ex:
+            for i in range(len(value)):
+                value[i] = self._scale_sequence(value[i], factor, post_multiply)
+        return value
+
 
 
     ####################################

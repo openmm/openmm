@@ -247,12 +247,12 @@ Collections of numbers can also be used as values.
 >>> print s3
 [(1, 2, 3), (4, 5, 6)] cm
 >>> print s3 / millimeters
-[[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]]
+[(10.0, 20.0, 30.0), (40.0, 50.0, 60.0)]
 >>> s4 = ((1,2,3),(4,5,6)) * centimeters
 >>> print s4
 ((1, 2, 3), (4, 5, 6)) cm
 >>> print s4 / millimeters
-[[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]]
+[(10.0, 20.0, 30.0), (40.0, 50.0, 60.0)]
 >>> t = (1,2,3) * centimeters
 >>> print t
 (1, 2, 3) cm
