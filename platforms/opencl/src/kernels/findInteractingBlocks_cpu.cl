@@ -134,8 +134,8 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
 
         unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*index));
         unsigned int x = (index-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-            y++;
+        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y += (x < y ? -1 : 1);
             x = (index-y*NUM_BLOCKS+y*(y+1)/2);
         }
 

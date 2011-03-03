@@ -41,8 +41,8 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
         {
             y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                y++;
+            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+                y += (x < y ? -1 : 1);
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
         }
