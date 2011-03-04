@@ -42,7 +42,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
     unsigned int end = (warp+1)*numWorkUnits/totalWarps;
     float totalEnergy = 0.0f;
 #ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
+    float3* tempBuffer = (float3*) &variables[9*blockDim.x];
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
