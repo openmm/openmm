@@ -71,7 +71,7 @@ __kernel void computeCMAPTorsionForces(int numAtoms, int numTorsions, __global f
         int s = (int) (angleA/delta);
         int t = (int) (angleB/delta);
         float4 c[4];
-        int coeffIndex = 4*(pos.x+s+size*t);
+        int coeffIndex = pos.x+4*(s+size*t);
         c[0] = coeff[coeffIndex];
         c[1] = coeff[coeffIndex+1];
         c[2] = coeff[coeffIndex+2];

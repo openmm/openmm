@@ -49,7 +49,7 @@ void CMAPTorsionForceProxy::serialize(const void* object, SerializationNode& nod
         int size;
         vector<double> energy;
         force.getMapParameters(i, size, energy);
-        SerializationNode& map = maps.createChildNode("Torsion").setIntProperty("size", size);
+        SerializationNode& map = maps.createChildNode("Map").setIntProperty("size", size);
         for (int i = 0; i < (int) energy.size(); i++)
             map.createChildNode("Energy").setDoubleProperty("e", energy[i]);
     }
