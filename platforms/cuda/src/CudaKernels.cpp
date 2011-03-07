@@ -645,7 +645,8 @@ void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAP
 }
 
 double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
+    if( numTorsions )
+        kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
     return 0.0;
 }
 
