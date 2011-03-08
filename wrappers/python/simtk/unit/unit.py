@@ -89,7 +89,6 @@ class Unit(object):
         """
         Yields (BaseDimension, exponent) tuples comprising this unit.
         """
-        result = {}
         # There might be two units with the same dimension? No.
         for dimension in sorted(self._all_base_units.iterkeys()):
             exponent = 0
@@ -105,7 +104,6 @@ class Unit(object):
         
         There might be multiple BaseUnits with the same dimension.
         """
-        result = {}
         for dimension in sorted(self._all_base_units.iterkeys()):
             for base_unit in sorted(self._all_base_units[dimension].iterkeys()):
                 exponent = self._all_base_units[dimension][base_unit]
@@ -526,6 +524,7 @@ class ScaledUnit(object):
 class UnitSystem(object):
     def __init__(self, units):
         self.units = units
+        self._unit_conversion_cache = {}
         # Create a set of base units to be used for dimension conversion
         base_units = {}
         for unit in self.units:
@@ -577,6 +576,9 @@ class UnitSystem(object):
     def express_unit(self, old_unit):
         """
         """
+        unit_name = old_unit.get_name()
+        if unit_name in self._unit_conversion_cache:
+            return self._unit_conversion_cache[unit_name]
         # First express unit in terms of base dimensions found in this unit system
         # (plus other dimensions not found)
         m = len(self.dimensions)
@@ -606,6 +608,7 @@ class UnitSystem(object):
                 found_dims[dim] = base_unit
                 exponent = other_dims[dim]
                 new_unit *= Unit({base_unit: exponent})
+        self._unit_conversion_cache[unit_name] = new_unit
         return new_unit
 
 def is_unit(x):

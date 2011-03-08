@@ -42,6 +42,7 @@ class BaseDimension(object):
         if not self.name in BaseDimension._index_by_name.keys():
             BaseDimension._index_by_name[name] = BaseDimension._next_unused_index
             BaseDimension._next_unused_index += 1
+        self._index = BaseDimension._index_by_name[name]
         
     def __cmp__(self, other):
         """
@@ -51,13 +52,13 @@ class BaseDimension(object):
         
         Returns 0 if self == other, -1 if self < other, and 1 if self > other.
         """
-        return cmp(BaseDimension._index_by_name[self.name], BaseDimension._index_by_name[other.name])
+        return cmp(self._index, other._index)
         
     def __hash__(self):
         """
         Needed for using BaseDimensions as hash keys.
         """
-        return hash(BaseDimension._index_by_name[self.name])
+        return self._index
 
     def __repr__(self):
         return 'BaseDimension("%s")' % self.name
