@@ -144,16 +144,22 @@ class Unit(object):
     def __eq__(self, other):
         if not is_unit(other):
             return False
-        if not self.is_compatible(other):
+        if self._all_base_units == other._all_base_units and self._scaled_units == other._scaled_units:
+            return True
+        if hash(self) != hash(other):
             return False
-        return NotImplemented # punt to cmp()
+        factor = 1.0
+        factor *= self.get_conversion_factor_to_base_units()
+        factor /= other.get_conversion_factor_to_base_units()
+        for (base1, exp1), (base2, exp2) in zip(self.iter_all_base_units(), other.iter_all_base_units()):
+            if base1.dimension != base2.dimension or exp1 != exp2:
+                return False
+            if base1 != base2:
+                factor *= base1.conversion_factor_to(base2)**exp1
+        return factor == 1.0
 
     def __ne__(self, other):
-        if not is_unit(other):
-            return True
-        if not self.is_compatible(other):
-            return True
-        return NotImplemented # punt to cmp()
+        return not self.__eq__(other)
 
     def __cmp__(self, other):
         """Compare two Units.
@@ -166,6 +172,20 @@ class Unit(object):
         if not self.is_compatible(other):
             raise TypeError('Unit "%s" is not compatible with Unit "%s".', (self, other))
         return cmp(self.conversion_factor_to(other), 1.0)
+
+    def __hash__(self):
+        """
+        Compute a hash code for this object.
+        """
+        try:
+            return self._hash
+        except AttributeError:
+            pass
+        description = ""
+        for unit, power in self.iter_all_base_units():
+            description += unit.name + str(power)
+        self._hash = hash(description)
+        return self._hash
 
     # def __mul__(self, other):
     # See unit_operators.py for Unit.__mul__ operator
@@ -576,9 +596,8 @@ class UnitSystem(object):
     def express_unit(self, old_unit):
         """
         """
-        unit_name = old_unit.get_name()
-        if unit_name in self._unit_conversion_cache:
-            return self._unit_conversion_cache[unit_name]
+        if old_unit in self._unit_conversion_cache:
+            return self._unit_conversion_cache[old_unit]
         # First express unit in terms of base dimensions found in this unit system
         # (plus other dimensions not found)
         m = len(self.dimensions)
@@ -608,7 +627,7 @@ class UnitSystem(object):
                 found_dims[dim] = base_unit
                 exponent = other_dims[dim]
                 new_unit *= Unit({base_unit: exponent})
-        self._unit_conversion_cache[unit_name] = new_unit
+        self._unit_conversion_cache[old_unit] = new_unit
         return new_unit
 
 def is_unit(x):

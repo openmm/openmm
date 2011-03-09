@@ -475,7 +475,9 @@ class Quantity(object):
         """
         Returns a new Quantity equal to this one, expressed in a particular unit system.
         """
-        return self.in_units_of(self.unit.in_unit_system(system))
+        new_units = system.express_unit(self.unit)
+        f = self.unit.conversion_factor_to(new_units)
+        return self._change_units_with_factor(new_units, f)
 
     def in_units_of(self, other_unit):
         """
