@@ -35,17 +35,17 @@ using namespace OpenMM;
 
 #if defined(WIN32)
     #include <windows.h>
-    extern "C" void registerAmoebaSerializationProxies();
+    extern "C" void registerKernelFactories();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-            registerAmoebaSerializationProxies();
+            registerKernelFactories();
         return TRUE;
     }
 #else
     extern "C" void __attribute__((constructor)) registerKernelFactories();
 #endif
 
-extern "C" void OPENMM_EXPORT registerKernelFactories() {
+extern "C" void registerKernelFactories() {
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
         if( platform.getName() == "Reference" ){

@@ -38,10 +38,10 @@ using namespace OpenMM;
 
 #if defined(WIN32)
     #include <windows.h>
-    extern "C" void registerAmoebaSerializationProxies();
+    extern "C" void registerKernelFactories();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-            registerAmoebaSerializationProxies();
+            registerKernelFactories();
         return TRUE;
     }
 #else
