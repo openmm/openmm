@@ -20,8 +20,7 @@ IF( NOT PROJECT_NAME )
     PROJECT (OpenMM)
 ENDIF( NOT PROJECT_NAME )
 
-# On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 #SET(CMAKE_VERBOSE_MAKEFILE 1)
 
