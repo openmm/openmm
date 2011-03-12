@@ -144,19 +144,7 @@ class Unit(object):
     def __eq__(self, other):
         if not is_unit(other):
             return False
-        if self._all_base_units == other._all_base_units and self._scaled_units == other._scaled_units:
-            return True
-        if hash(self) != hash(other):
-            return False
-        factor = 1.0
-        factor *= self.get_conversion_factor_to_base_units()
-        factor /= other.get_conversion_factor_to_base_units()
-        for (base1, exp1), (base2, exp2) in zip(self.iter_all_base_units(), other.iter_all_base_units()):
-            if base1.dimension != base2.dimension or exp1 != exp2:
-                return False
-            if base1 != base2:
-                factor *= base1.conversion_factor_to(base2)**exp1
-        return factor == 1.0
+        return self.get_name() == other.get_name()
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -181,10 +169,7 @@ class Unit(object):
             return self._hash
         except AttributeError:
             pass
-        description = ""
-        for unit, power in self.iter_all_base_units():
-            description += unit.name + str(power)
-        self._hash = hash(description)
+        self._hash = hash(self.get_name())
         return self._hash
 
     # def __mul__(self, other):
@@ -204,15 +189,24 @@ class Unit(object):
     # def __rdiv__(self, other):
     # Because rdiv returns a Quantity, look in quantity.py for definition of Unit.__rdiv__
 
+    _pow_cache = {}
+
     def __pow__(self, exponent):
         """Raise a Unit to a power.
         
         Returns a new Unit with different exponents on the BaseUnits.
         """
+        if self in Unit._pow_cache:
+            if exponent in Unit._pow_cache[self]:
+                return Unit._pow_cache[self][exponent]
+        else:
+            Unit._pow_cache[self] = {}
         result = {} # dictionary of unit: exponent
         for unit, exponent2 in self.iter_base_or_scaled_units():
             result[unit] = exponent2 * exponent
-        return Unit(result)
+        new_unit = Unit(result)
+        Unit._pow_cache[self][exponent] = new_unit
+        return new_unit
 
     def sqrt(self):
         """
@@ -419,6 +413,10 @@ class Unit(object):
         Returns a unit name (string) for this Unit, composed of its various
         BaseUnit symbols.  e.g. 'kilogram meter**2 secon**-1'.
         """
+        try:
+            return self._name
+        except AttributeError:
+            pass
         # emit positive exponents first
         pos = ""
         pos_count = 0
@@ -456,6 +454,7 @@ class Unit(object):
             name = "dimensionless"
         else:
             name = "%s%s" % (pos_string, neg_string)
+        self._name = name
         return name
 
 

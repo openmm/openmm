@@ -261,6 +261,8 @@ class Quantity(object):
     def __lt__(self, other):
         return self._value < (other.value_in_unit(self.unit))     
 
+    _reduce_cache = {}
+
     def reduce_unit(self, guide_unit=None):
         """
         Combine similar component units and scale, to form an
@@ -268,41 +270,46 @@ class Quantity(object):
         
         Returns underlying value type if unit is dimensionless.
         """
-        value_factor = 1.0
-        canonical_units = {} # dict of dimensionTuple: (Base/ScaledUnit, exponent)
-        # Bias result toward guide units
-        if guide_unit != None:
-            for u, exponent in guide_unit.iter_base_or_scaled_units():
-                d = u.get_dimension_tuple()
-                if d not in canonical_units:
-                    canonical_units[d] = [u, 0]
-        for u, exponent in self.unit.iter_base_or_scaled_units():
-            d = u.get_dimension_tuple()
-            # Take first unit found in a dimension as canonical
-            if d not in canonical_units:
-                canonical_units[d] = [u, exponent]
-            else:
-                value_factor *= (u.conversion_factor_to(canonical_units[d][0])**exponent)
-                canonical_units[d][1] += exponent
-        new_base_units = {}
-        for d in canonical_units:
-            u, exponent = canonical_units[d]
-            if exponent != 0:
-                assert u not in new_base_units
-                new_base_units[u] = exponent
-        # Create new unit
-        if len(new_base_units) == 0:
-            unit = dimensionless
+        key = (self.unit, guide_unit)
+        if key in Quantity._reduce_cache:
+            (unit, value_factor) = Quantity._reduce_cache[key]
         else:
-            unit = Unit(new_base_units)
-        # There might be a factor due to unit conversion, even though unit is dimensionless
-        # e.g. suppose unit is meter/centimeter
-        if unit.is_dimensionless():
-            unit_factor = unit.conversion_factor_to(dimensionless)
-            if unit_factor != 1.0:
-                value_factor *= unit_factor
-                # print "value_factor = %s" % value_factor
-            unit = dimensionless
+            value_factor = 1.0
+            canonical_units = {} # dict of dimensionTuple: (Base/ScaledUnit, exponent)
+            # Bias result toward guide units
+            if guide_unit != None:
+                for u, exponent in guide_unit.iter_base_or_scaled_units():
+                    d = u.get_dimension_tuple()
+                    if d not in canonical_units:
+                        canonical_units[d] = [u, 0]
+            for u, exponent in self.unit.iter_base_or_scaled_units():
+                d = u.get_dimension_tuple()
+                # Take first unit found in a dimension as canonical
+                if d not in canonical_units:
+                    canonical_units[d] = [u, exponent]
+                else:
+                    value_factor *= (u.conversion_factor_to(canonical_units[d][0])**exponent)
+                    canonical_units[d][1] += exponent
+            new_base_units = {}
+            for d in canonical_units:
+                u, exponent = canonical_units[d]
+                if exponent != 0:
+                    assert u not in new_base_units
+                    new_base_units[u] = exponent
+            # Create new unit
+            if len(new_base_units) == 0:
+                unit = dimensionless
+            else:
+                unit = Unit(new_base_units)
+            # There might be a factor due to unit conversion, even though unit is dimensionless
+            # e.g. suppose unit is meter/centimeter
+            if unit.is_dimensionless():
+                unit_factor = unit.conversion_factor_to(dimensionless)
+                if unit_factor != 1.0:
+                    value_factor *= unit_factor
+                    # print "value_factor = %s" % value_factor
+                unit = dimensionless
+            Quantity._reduce_cache[key] = (unit, value_factor)
         # Create Quantity, then scale (in case value is a container)
         # That's why we don't just scale the value.
         result = Quantity(self._value, unit)

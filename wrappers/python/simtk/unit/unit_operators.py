@@ -61,6 +61,11 @@ def _unit_class_mul(self, other):
     of the Quantity is returned.
     """
     if is_unit(other):
+        if self in Unit._multiplication_cache:
+            if other in Unit._multiplication_cache[self]:
+                return Unit._multiplication_cache[self][other]
+        else:
+            Unit._multiplication_cache[self] = {}
         # print "unit * unit"
         result1 = {} # dictionary of dimensionTuple: (BaseOrScaledUnit, exponent)
         for unit, exponent in self.iter_base_or_scaled_units():
@@ -83,7 +88,9 @@ def _unit_class_mul(self, other):
                 if exponent != 0:
                     assert unit not in result2
                     result2[unit] = exponent
-        return Unit(result2)
+        new_unit = Unit(result2)
+        Unit._multiplication_cache[self][other] = new_unit
+        return new_unit
     elif is_quantity(other):
         # print "unit * quantity"
         value = other._value
@@ -99,6 +106,7 @@ def _unit_class_mul(self, other):
         
 Unit.__mul__ = _unit_class_mul
 Unit.__rmul__ = Unit.__mul__
+Unit._multiplication_cache = {}
 
 
 # run module directly for testing
