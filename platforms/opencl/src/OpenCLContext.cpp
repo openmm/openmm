@@ -49,6 +49,9 @@ using namespace std;
   #define CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV 0x4000
 #endif
 
+const int OpenCLContext::ThreadBlockSize = 64;
+const int OpenCLContext::TileSize = 32;
+
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
         forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL) {
     try {

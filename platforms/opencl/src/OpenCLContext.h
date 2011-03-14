@@ -130,8 +130,8 @@ struct mm_int16 {
 
 class OPENMM_EXPORT OpenCLContext {
 public:
-    static const int ThreadBlockSize = 64;
-    static const int TileSize = 32;
+    static const int ThreadBlockSize;
+    static const int TileSize;
     OpenCLContext(int numParticles, int deviceIndex);
     ~OpenCLContext();
     /**
