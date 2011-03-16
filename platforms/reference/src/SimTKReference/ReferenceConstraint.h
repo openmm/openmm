@@ -137,11 +137,6 @@ class ReferenceShakeConstraint : public ReferenceConstraint {
       int getLightAtomIndex( void );
 };
 
-typedef std::vector<ReferenceShakeConstraint*> ShakeVector;
-typedef ShakeVector::iterator ShakeVectorI;
-typedef std::map<int, ShakeVector*> IntShakeMap;
-typedef IntShakeMap::iterator IntShakeMapI;
-
 // ---------------------------------------------------------------------------------------
 
 #endif // __ReferenceShakeConstraint_H__

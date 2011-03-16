@@ -32,26 +32,7 @@
 
 class OPENMM_EXPORT CpuImplicitSolvent {
 
-   public:
-
-      // fields in info file
-
-      const static std::string CpuImplicitSolventBaseFileName;
-      const static std::string CpuImplicitSolventFileGenerationFrequency;
-
    private:
-
-      // default info file name
-
-      static std::string _defaultInfoFileName;
-
-      // base file name
-
-      std::string _baseFileName;
-
-      // frequency to output diagnostic files
-
-      int _outputFileFrequency;
 
       // used for direct calls 
 
@@ -154,14 +135,6 @@ class OPENMM_EXPORT CpuImplicitSolvent {
          --------------------------------------------------------------------------------------- */
 
       virtual ~CpuImplicitSolvent( );
-
-      // override of new/delete -- used when run in PS3 framework(?)
-
-      // static void* operator new( size_t size ); 
-      // static void  operator delete( void *p );
-
-      // static void* operator new[]( size_t size ); 
-      // static void  operator delete[]( void *p );
 
       /**---------------------------------------------------------------------------------------
       
@@ -419,112 +392,6 @@ class OPENMM_EXPORT CpuImplicitSolvent {
          --------------------------------------------------------------------------------------- */
       
       std::string getStateString( const char* title ) const;
-      
-      /**---------------------------------------------------------------------------------------
-
-         Get BaseFileName
-
-         @return    baseFileName
-      
-         --------------------------------------------------------------------------------------- */
-
-      const std::string& getBaseFileName( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Set BaseFileName
-
-         @param    input baseFileName
-
-         @return   SimTKOpenMMCommon::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-
-      int setBaseFileName( const std::string& baseFileName );
-
-      /**---------------------------------------------------------------------------------------
-      
-         Get OutputFileFrequency
-      
-         @return    outputFileFrequency
-      
-         --------------------------------------------------------------------------------------- */
-     
-      int getOutputFileFrequency( void ) const;
-     
-      /**---------------------------------------------------------------------------------------
-      
-         Set OutputFileFrequency
-      
-         @param    input outputFileFrequency
-      
-         @return   SimTKOpenMMCommon::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-     
-      int setOutputFileFrequency( int outputFileFrequency );
-
-      /**---------------------------------------------------------------------------------------
-      
-         Read info file
-      
-         @param infoFileName       file name to read
-      
-         @return CpuImplicitSolventCommon::DefaultReturn if ok; else CpuImplicitSolventCommon::ErrorReturn; if major 
-                 problem, program will exit
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int readInfoFile( const std::string infoFileName );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get output file name (helper method) (Simbios)
-      
-         fileName = (inputFileName || getBaseFileName()) . getForceCallIndex() . suffix
-      
-         if inputFileName is NULL, then use getBaseFileName() as base file name
-      
-         if getForceCallIndex() > 0, insert '.getForceCallIndex()' 
-      
-         append suffix, if not NULL
-      
-         @param inputFileName                inputFileName
-         @param suffix                       file suffix
-      
-         @return file name
-      
-         --------------------------------------------------------------------------------------- */
-
-      std::string getOutputFileName( const std::string* inputFileName, const std::string* suffix ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Write Tinker xyz file (Simbios)
-      
-         @param numberOfAtoms      number of atoms
-         @param atomCoordinates    atom coordinates
-         @param atomNames          atom names
-         @param header             header
-         @param xyzFileName        output file name
-         @param bondsArray         bond array -- used to print 1-2 bonds
-      
-         @return 0 unless error detected
-      
-         Currently no attempt is made to get the atom name/type to accurately 
-         reflect the Tinker names/types. Rather method is used to output atoms
-         in Gromacs order and then reorder those in a corresponding xyz file
-         w/ the correct atom names/types so that they match the Gromacs order
-         This makes it easier to compare results between Gromacs and Tinker
-      
-         --------------------------------------------------------------------------------------- */
-      
-      /*
-      static int writeXyzFile( int numberOfAtoms, const std::vector<OpenMM::RealVec>& atomCoordinates, 
-                               const char** atomNames,
-                               const std::string& header, const std::string& xyzFileName,
-                               const implicitSolventBonds** bondsArray ); */
-      
 };
 
 // ---------------------------------------------------------------------------------------

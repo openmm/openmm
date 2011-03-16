@@ -25,7 +25,7 @@
 #ifndef __SimTKOpenMMLog_H__
 #define __SimTKOpenMMLog_H__
 
-#include <stdio.h>
+#include <cstdio>
 #include <sstream>
 #include "SimTKOpenMMCommon.h"
 #include "openmm/internal/windowsExport.h"

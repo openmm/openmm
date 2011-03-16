@@ -36,15 +36,3 @@ const int SimTKOpenMMCommon::DefaultReturn                   = 0;
 const int SimTKOpenMMCommon::ErrorReturn                     = -1;
 const RealOpenMM SimTKOpenMMCommon::BigCutoffValue           = 1.0e+05;
 
-// units
-
-const int SimTKOpenMMCommon::MdUnits                         = 1;
-const int SimTKOpenMMCommon::KcalAngUnits                    = 2;
-
-// specify RealOpenMM number format
-  
-const int SimTKOpenMMCommon::HighStringStreamNumberWidth     = 20;   
-const int SimTKOpenMMCommon::HighStringStreamNumberPrecision = 12;
-
-const RealOpenMM SimTKOpenMMCommon::DegreeToRadians          = (RealOpenMM) 0.017453292;
-

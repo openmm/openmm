@@ -26,7 +26,7 @@
 #ifndef __RealSimTk_H__
 #define __RealSimTk_H__
 
-#include <math.h>
+#include <cmath>
 
 // Set RealOpenMMType to 2 for double precision, 1 for float
 

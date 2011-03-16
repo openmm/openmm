@@ -105,10 +105,6 @@ cpuSetObcParameters( int numberOfAtoms, RealOpenMM* atomicRadii, RealOpenMM* obc
 
    CpuImplicitSolvent::setCpuImplicitSolvent( cpuObc );
 
-   // set base file name, ...
-
-   //cpuObc->readInfoFile( "CpuImplicitSolventInfo" );
-
    // include/do not include ACE approximation (nonpolar solvation)
 
    cpuObc->setIncludeAceApproximation( includeAceApproximation );
