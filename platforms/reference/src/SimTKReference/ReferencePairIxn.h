@@ -63,12 +63,10 @@ class OPENMM_EXPORT ReferencePairIxn {
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
-      
-         @return ReferenceForce::DefaultReturn
             
          --------------------------------------------------------------------------------------- */
           
-      virtual int calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      virtual void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;

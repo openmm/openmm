@@ -279,11 +279,9 @@ int ReferenceCCMAAlgorithm::getMaximumNumberOfIterations( void ) const {
 
    @param maximumNumberOfIterations   new maximum number of iterations
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCCMAAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIterations ){
+void ReferenceCCMAAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIterations ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -292,8 +290,6 @@ int ReferenceCCMAAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIte
    // ---------------------------------------------------------------------------------------
 
    _maximumNumberOfIterations = maximumNumberOfIterations;
-
-   return ReferenceDynamics::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -344,8 +340,8 @@ void ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
    @param atomCoordinatesP atom coordinates prime
    @param inverseMasses    1/mass
 
-   @return ReferenceDynamics::DefaultReturn if converge; else
-    return ReferenceDynamics::ErrorReturn
+   @return SimTKOpenMMCommon::DefaultReturn if converge; else
+    return SimTKOpenMMCommon::ErrorReturn
 
    --------------------------------------------------------------------------------------- */
 
@@ -464,7 +460,7 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoord
       }
    }
 
-   return (numberConverged == _numberOfConstraints ? ReferenceDynamics::DefaultReturn : ReferenceDynamics::ErrorReturn);
+   return (numberConverged == _numberOfConstraints ? SimTKOpenMMCommon::DefaultReturn : SimTKOpenMMCommon::ErrorReturn);
 
 }
 

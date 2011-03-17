@@ -80,19 +80,15 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
      @param neighbors           the neighbor list to use
      @param solventDielectric   the dielectric constant of the bulk solvent
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceLJCoulombIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric ) {
+  void ReferenceLJCoulombIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric ) {
 
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
     krf = pow(cutoffDistance, -3.0)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
     crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
-
-    return ReferenceForce::DefaultReturn;
   }
 
   /**---------------------------------------------------------------------------------------
@@ -103,11 +99,9 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
 
      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceLJCoulombIxn::setPeriodic( RealVec& boxSize ) {
+  void ReferenceLJCoulombIxn::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
@@ -117,8 +111,6 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return ReferenceForce::DefaultReturn;
-
   }
 
   /**---------------------------------------------------------------------------------------
@@ -173,11 +165,9 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
@@ -446,10 +436,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>
 
     if( totalEnergy )
         *totalEnergy -= totalExclusionEnergy;
-
-// ***********************************************************************
-
-   return ReferenceForce::DefaultReturn;
 }
 
 
@@ -469,11 +455,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
@@ -514,8 +498,6 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>&
 
        delete[] exclusionIndices;
    }
-
-   return ReferenceForce::DefaultReturn;
 }
 
   /**---------------------------------------------------------------------------------------
@@ -530,11 +512,9 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>&
      @param energyByAtom     atom energy
      @param totalEnergy      total energy
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
+void ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
                         RealOpenMM** atomParameters, vector<RealVec>& forces,
                         RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
@@ -607,7 +587,5 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& ato
            energyByAtom[jj] += energy;
         }
     }
-
-    return ReferenceForce::DefaultReturn;
   }
 

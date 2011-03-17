@@ -92,8 +92,8 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      int setScaledRadii( RealOpenMM* scaledRadii );
-      int setScaledRadii( const RealOpenMMVector& scaledRadii );
+      void setScaledRadii( RealOpenMM* scaledRadii );
+      void setScaledRadii( const RealOpenMMVector& scaledRadii );
         
       /**---------------------------------------------------------------------------------------
       
@@ -101,12 +101,10 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          @param ownScaledRadiusFactors flag indicating whether scaled radii
                                        array should be deleted
-
-         @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setOwnScaledRadii( int ownScaledRadii );
+      void setOwnScaledRadii( int ownScaledRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -124,11 +122,9 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          @param atomicRadii array of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( RealOpenMM* atomicRadii );
+      void setAtomicRadii( RealOpenMM* atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -136,11 +132,9 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          @param atomicRadii vector of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( const RealOpenMMVector& atomicRadii );
+      void setAtomicRadii( const RealOpenMMVector& atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -148,12 +142,10 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          @param ownGammaParameters   flag indicating whether gamma parameter
                                      array should be deleted
-
-         @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setOwnGammaParameters( int ownGammaParameters );
+      void setOwnGammaParameters( int ownGammaParameters );
       
       /**---------------------------------------------------------------------------------------
       
@@ -171,11 +163,9 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          @param gammaParameters    array of gamma parameters
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setGammaParameters( RealOpenMM* gammaParameters );
+      void setGammaParameters( RealOpenMM* gammaParameters );
 
       /**---------------------------------------------------------------------------------------
       
@@ -183,11 +173,9 @@ class GBVIParameters : public ImplicitSolventParameters {
       
          @param gammaParameters   array of gamma parameters
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setGammaParameters( const RealOpenMMVector& gammaParameters );
+      void setGammaParameters( const RealOpenMMVector& gammaParameters );
 
       /**---------------------------------------------------------------------------------------
             
@@ -207,11 +195,9 @@ class GBVIParameters : public ImplicitSolventParameters {
 
          @param distance            the cutoff distance
 
-         @return SimTKOpenMMCommon::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setUseCutoff( RealOpenMM distance );
+      void setUseCutoff( RealOpenMM distance );
 
       /**---------------------------------------------------------------------------------------
 
@@ -237,11 +223,9 @@ class GBVIParameters : public ImplicitSolventParameters {
 
          @param boxSize             the X, Y, and Z widths of the periodic box
 
-         @return SimTKOpenMMCommon::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic( OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 

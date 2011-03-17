@@ -102,11 +102,10 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
          Set maximum number of iterations
 
          @param maximumNumberOfIterations   new maximum number of iterations
-         @return ReferenceDynamics::DefaultReturn
 
          --------------------------------------------------------------------------------------- */
 
-      int setMaximumNumberOfIterations( int maximumNumberOfIterations );
+      void setMaximumNumberOfIterations( int maximumNumberOfIterations );
 
       /**---------------------------------------------------------------------------------------
 
@@ -137,8 +136,8 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
          @param atomCoordinatesP atom coordinates prime
          @param inverseMasses    1/mass
 
-         @return ReferenceDynamics::DefaultReturn if converge; else
-          return ReferenceDynamics::ErrorReturn
+         @return SimTKOpenMMCommon::DefaultReturn if converge; else
+          return SimTKOpenMMCommon::ErrorReturn
 
          --------------------------------------------------------------------------------------- */
 

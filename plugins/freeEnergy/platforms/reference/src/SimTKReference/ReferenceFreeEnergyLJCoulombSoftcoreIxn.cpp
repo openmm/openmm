@@ -81,19 +81,15 @@ ReferenceFreeEnergyLJCoulombSoftcoreIxn::~ReferenceFreeEnergyLJCoulombSoftcoreIx
      @param neighbors           the neighbor list to use
      @param solventDielectric   the dielectric constant of the bulk solvent
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceFreeEnergyLJCoulombSoftcoreIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric ) {
+  void ReferenceFreeEnergyLJCoulombSoftcoreIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric ) {
 
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
     krf = pow(cutoffDistance, (RealOpenMM)-3.0)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
     crf = (1.0f/cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
-
-    return ReferenceForce::DefaultReturn;
   }
 
   /**---------------------------------------------------------------------------------------
@@ -104,11 +100,9 @@ ReferenceFreeEnergyLJCoulombSoftcoreIxn::~ReferenceFreeEnergyLJCoulombSoftcoreIx
 
      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceFreeEnergyLJCoulombSoftcoreIxn::setPeriodic( RealVec& boxSize ) {
+  void ReferenceFreeEnergyLJCoulombSoftcoreIxn::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
@@ -118,8 +112,6 @@ ReferenceFreeEnergyLJCoulombSoftcoreIxn::~ReferenceFreeEnergyLJCoulombSoftcoreIx
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return ReferenceForce::DefaultReturn;
-
   }
 
   /**---------------------------------------------------------------------------------------
@@ -180,11 +172,9 @@ ReferenceFreeEnergyLJCoulombSoftcoreIxn::~ReferenceFreeEnergyLJCoulombSoftcoreIx
 										parameter[EpsIndex]  = sqrt(c6*c6/c12)       (2*sqrt(epsilon))
 										parameter[QIndex]    = epsfactorSqrt*q1
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
                                                                    RealOpenMM epsfacSqrt,
                                                                    RealOpenMM* parameters ) const {
 
@@ -215,8 +205,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::getDerivedParameters( RealOpenMM c6
    }
 
    parameters[QIndex]   = epsfacSqrt*q1;
-
-   return ReferenceForce::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -235,11 +223,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::getDerivedParameters( RealOpenMM c6
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                                                  RealOpenMM** atomParameters, int** exclusions,
                                                                  RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                                                  RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
@@ -524,7 +510,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtom
    // ***********************************************************************
 
 #endif
-   return ReferenceForce::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -542,12 +527,10 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtom
    @param forces           force array (forces added)
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
-
-   @return ReferenceForce::DefaultReturn
       
    --------------------------------------------------------------------------------------- */
  
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                                               RealOpenMM** atomParameters, int** exclusions,
                                                               RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                                               RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
@@ -655,7 +638,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms,
 // ***********************************************************************
 
 #endif
-   return ReferenceForce::DefaultReturn;
 }
 
 
@@ -675,11 +657,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms,
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
@@ -720,8 +700,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms
 
        delete[] exclusionIndices;
    }
-
-   return ReferenceForce::DefaultReturn;
 }
 
   /**---------------------------------------------------------------------------------------
@@ -736,11 +714,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtoms
      @param energyByAtom     atom energy
      @param totalEnergy      total energy
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
                         RealOpenMM** atomParameters, vector<RealVec>& forces,
                         RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
@@ -827,7 +803,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, ve
            energyByAtom[jj] += energy;
         }
     }
-    return ReferenceForce::DefaultReturn;
   }
 
   /**---------------------------------------------------------------------------------------
@@ -840,11 +815,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, ve
      @param dEdR             output force factor
      @param energy           LJ energy
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneLJIxn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneLJIxn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
                         RealOpenMM* dEdR, RealOpenMM* energy ) const {
 
     // ---------------------------------------------------------------------------------------
@@ -866,8 +839,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneLJIxn( RealOpenMM inver
               *dEdR                     = eps*( twelve*sig6 - six )*sig6;
                
         *energy                        += eps*(sig6-one)*sig6;
-
-    return ReferenceForce::DefaultReturn;
 }
 
   /**---------------------------------------------------------------------------------------
@@ -881,11 +852,9 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneLJIxn( RealOpenMM inver
      @param dEdR             output force factor
      @param energy           LJ energy
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneSoftCoreLJIxn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneSoftCoreLJIxn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
                                                                         RealOpenMM lambda,
                                                                         RealOpenMM* dEdR, RealOpenMM* energy ) const {
 
@@ -932,5 +901,4 @@ if( maxPrint++ < 5 ){
            r, sig, eps/lambda, lambda, dEdROrig, *dEdR, E_Orig, *energy, softcoreLJInv, sig6 ); 
 }
 #endif
-    return ReferenceForce::DefaultReturn;
 }

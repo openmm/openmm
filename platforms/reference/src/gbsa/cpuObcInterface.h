@@ -104,11 +104,9 @@ int cpuSetObcParameters( int numberOfAtoms, RealOpenMM* atomicRadii, RealOpenMM*
 
    Function calls a static method in CpuImplicitSolvent class to calculate forces/energy
 
-   @return result from CpuImplicitSolvent::computeImplicitSolventForces
-
    --------------------------------------------------------------------------------------- */
 
-externC int cpuCalculateImplicitSolventForces( std::vector<OpenMM::RealVec>& atomCoordinates,
+externC void cpuCalculateImplicitSolventForces( std::vector<OpenMM::RealVec>& atomCoordinates,
                                                const RealOpenMM* partialChargesIn,
                                                std::vector<OpenMM::RealVec>& forces, RealOpenMM* energy,
                                                int updateBornRadii );
@@ -121,11 +119,9 @@ externC int cpuCalculateImplicitSolventForces( std::vector<OpenMM::RealVec>& ato
    @param masses        input masses 
    @param scaleFactors  output atomic numbers
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-externC int getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealOpenMM* masses,
+externC void getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealOpenMM* masses,
                                                RealOpenMM* scaleFactors );
 
 /**---------------------------------------------------------------------------------------
@@ -136,11 +132,9 @@ externC int getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealOpen
    @param atomicNumber  input atomic number for each atom
    @param scaleFactors  output atomic numbers
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-externC int getObcScaleFactors( int numberOfAtoms, const int* atomicNumber,
+externC void getObcScaleFactors( int numberOfAtoms, const int* atomicNumber,
                                 RealOpenMM* scaleFactors );
 
 /**---------------------------------------------------------------------------------------
@@ -156,11 +150,9 @@ externC int getObcScaleFactors( int numberOfAtoms, const int* atomicNumber,
                                     then indexOfCovalentPartner[22] = 24
    @param gbsaRadii                 output GBSA radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-externC int getGbsaRadii( int numberOfAtoms, const int* atomicNumber, 
+externC void getGbsaRadii( int numberOfAtoms, const int* atomicNumber,
                           const int* numberOfCovalentPartners, 
                           const int* indexOfCovalentPartner, RealOpenMM* gbsaRadii );
 

@@ -196,11 +196,9 @@ ObcSoftcoreParameters::ObcType ObcSoftcoreParameters::getObcType( void ) const {
 
    @param obcType OBC type (ObcTypeI or ObcTypeII -- Eq. 7 or 8)
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setObcTypeParameters( ObcSoftcoreParameters::ObcType obcType ){
+void ObcSoftcoreParameters::setObcTypeParameters( ObcSoftcoreParameters::ObcType obcType ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -218,8 +216,6 @@ int ObcSoftcoreParameters::setObcTypeParameters( ObcSoftcoreParameters::ObcType 
       _gammaObc   = 4.85f;
    }
    _obcType = obcType;
-
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -327,11 +323,9 @@ RealOpenMM* ObcSoftcoreParameters::getAtomicRadii( void ) const {
 
    @param atomicRadii array of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
+void ObcSoftcoreParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -339,7 +333,7 @@ int ObcSoftcoreParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -348,11 +342,9 @@ int ObcSoftcoreParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    @param atomicRadii vector of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
+void ObcSoftcoreParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -360,7 +352,7 @@ int ObcSoftcoreParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii )
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -396,11 +388,9 @@ const RealOpenMM* ObcSoftcoreParameters::getScaledRadiusFactors( void ) const {
    @param ownScaledRadiusFactors flag indicating whether scale factors 
                                  array should be deleted
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
+void ObcSoftcoreParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -409,8 +399,6 @@ int ObcSoftcoreParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
    // ---------------------------------------------------------------------------------------
 
    _ownScaledRadiusFactors = ownScaledRadiusFactors;
-
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -419,11 +407,9 @@ int ObcSoftcoreParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
 
    @param scaledRadiusFactors  scaledRadiusFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
+void ObcSoftcoreParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -437,9 +423,6 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFacto
    }
 
    _scaledRadiusFactors = scaledRadiusFactors;
-
-   return 0;
-
 }
 
 #if RealOpenMMType == 0
@@ -450,11 +433,9 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFacto
 
    @param scaledRadiusFactors  scaledRadiusFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setScaledRadiusFactors( float* scaledRadiusFactors ){
+void ObcSoftcoreParameters::setScaledRadiusFactors( float* scaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -469,9 +450,6 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( float* scaledRadiusFactors ){
    for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
       _scaledRadiusFactors[ii] = (RealOpenMM) scaledRadiusFactors[ii];
    }
-
-   return 0;
-
 }
 
 #endif
@@ -482,11 +460,9 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( float* scaledRadiusFactors ){
 
    @param scaledRadiusFactors  scaledRadiusFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors ){
+void ObcSoftcoreParameters::setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -502,8 +478,6 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( const RealOpenMMVector& scale
    for( int ii = 0; ii < (int) scaledRadiusFactors.size(); ii++ ){
       _scaledRadiusFactors[ii] = scaledRadiusFactors[ii];
    }
-
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -621,15 +595,12 @@ std::string ObcSoftcoreParameters::getStateString( const char* title ) const {
 
      @param distance            the cutoff distance
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setUseCutoff( RealOpenMM distance ) {
+void ObcSoftcoreParameters::setUseCutoff( RealOpenMM distance ) {
 
     cutoff = true;
     cutoffDistance = distance;
-    return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -660,11 +631,9 @@ RealOpenMM ObcSoftcoreParameters::getCutoffDistance() {
 
      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
+void ObcSoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
@@ -674,7 +643,6 @@ int ObcSoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -730,11 +698,9 @@ const RealOpenMM* ObcSoftcoreParameters::getNonPolarScaleFactors( void ) const {
    @param ownNonPolarScaleFactors flag indicating whether scale factors 
                                  array should be deleted
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setOwnNonPolarScaleFactors( int ownNonPolarScaleFactors ){
+void ObcSoftcoreParameters::setOwnNonPolarScaleFactors( int ownNonPolarScaleFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -743,8 +709,6 @@ int ObcSoftcoreParameters::setOwnNonPolarScaleFactors( int ownNonPolarScaleFacto
    // ---------------------------------------------------------------------------------------
 
    _ownNonPolarScaleFactors = ownNonPolarScaleFactors;
-
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -753,11 +717,9 @@ int ObcSoftcoreParameters::setOwnNonPolarScaleFactors( int ownNonPolarScaleFacto
 
    @param nonPolarScaleFactors  nonPolarScaleFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setNonPolarScaleFactors( const RealOpenMMVector& nonPolarScaleFactors ){
+void ObcSoftcoreParameters::setNonPolarScaleFactors( const RealOpenMMVector& nonPolarScaleFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -774,9 +736,6 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( const RealOpenMMVector& nonP
    for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
       _nonPolarScaleFactors[ii] = nonPolarScaleFactors[ii];
    }
-
-   return 0;
-
 }
 
 #if RealOpenMMType == 0
@@ -787,11 +746,9 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( const RealOpenMMVector& nonP
 
    @param nonPolarScaleFactors  nonPolarScaleFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setNonPolarScaleFactors( float* nonPolarScaleFactors ){
+void ObcSoftcoreParameters::setNonPolarScaleFactors( float* nonPolarScaleFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -806,9 +763,6 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( float* nonPolarScaleFactors 
    for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
       _nonPolarScaleFactors[ii] = (RealOpenMM) nonPolarScaleFactors[ii];
    }
-
-   return 0;
-
 }
 
 #endif
@@ -819,11 +773,9 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( float* nonPolarScaleFactors 
 
    @param nonPolarScaleFactors  nonPolarScaleFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcSoftcoreParameters::setNonPolarPrefactor( RealOpenMM nonPolarPreFactor ){
+void ObcSoftcoreParameters::setNonPolarPrefactor( RealOpenMM nonPolarPreFactor ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -832,6 +784,5 @@ int ObcSoftcoreParameters::setNonPolarPrefactor( RealOpenMM nonPolarPreFactor ){
    // ---------------------------------------------------------------------------------------
 
    _nonPolarPreFactor = nonPolarPreFactor;
-   return 0;
 }
 

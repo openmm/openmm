@@ -90,11 +90,9 @@ FILE* SimTKOpenMMLog::getLogFile( void ) const {
 
    @param    input logFile
 
-   @return   SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMLog::setLogFile( FILE* logFile ){
+void SimTKOpenMMLog::setLogFile( FILE* logFile ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -103,7 +101,6 @@ int SimTKOpenMMLog::setLogFile( FILE* logFile ){
 // ---------------------------------------------------------------------------------------
 
    _logFile = logFile;
-   return SimTKOpenMMCommon::DefaultReturn;
 
 }
 
@@ -113,11 +110,9 @@ int SimTKOpenMMLog::setLogFile( FILE* logFile ){
 
    @param    input logLevel
 
-   @return   SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMLog::setLogLevel( SimTKOpenMMLog::LogLevels logLevel ){
+void SimTKOpenMMLog::setLogLevel( SimTKOpenMMLog::LogLevels logLevel ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -126,7 +121,6 @@ int SimTKOpenMMLog::setLogLevel( SimTKOpenMMLog::LogLevels logLevel ){
 // ---------------------------------------------------------------------------------------
 
    _logLevel = logLevel;
-   return SimTKOpenMMCommon::DefaultReturn;
 
 }
 
@@ -136,11 +130,9 @@ int SimTKOpenMMLog::setLogLevel( SimTKOpenMMLog::LogLevels logLevel ){
 
    @param message         message to log
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMLog::logMessage( const std::stringstream& message ) const {
+void SimTKOpenMMLog::logMessage( const std::stringstream& message ) const {
 
 // ---------------------------------------------------------------------------------------
 
@@ -157,7 +149,6 @@ int SimTKOpenMMLog::logMessage( const std::stringstream& message ) const {
       (void) fflush( _logFile );
 
    }
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -238,11 +229,9 @@ FILE* SimTKOpenMMLog::getSimTKOpenMMLogFile( void ){
 
    @param message         message to log
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMLog::printMessage( const std::stringstream& message ){
+void SimTKOpenMMLog::printMessage( const std::stringstream& message ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -256,7 +245,6 @@ int SimTKOpenMMLog::printMessage( const std::stringstream& message ){
       (void) fprintf( stderr, "%s", message.str().c_str() );
       (void) fflush( stderr );
    }
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -266,11 +254,9 @@ int SimTKOpenMMLog::printMessage( const std::stringstream& message ){
 
    @param message         message to log
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMLog::printWarning( const std::stringstream& message ){
+void SimTKOpenMMLog::printWarning( const std::stringstream& message ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -285,8 +271,6 @@ int SimTKOpenMMLog::printWarning( const std::stringstream& message ){
    } else {
       (void) fprintf( stderr, "Warning: %s", message.str().c_str() );
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -296,11 +280,9 @@ int SimTKOpenMMLog::printWarning( const std::stringstream& message ){
 
    @param message   message to log
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMLog::printError( const std::stringstream& message ){
+void SimTKOpenMMLog::printError( const std::stringstream& message ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -317,6 +299,4 @@ int SimTKOpenMMLog::printError( const std::stringstream& message ){
       (void) fflush( stderr );
    }
    exit(-1);
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }

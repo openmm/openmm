@@ -61,11 +61,9 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
          @param  dEdR                 output dEdR
          @param  energyTerm           output energyTerm
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM* angleParameters,
+      void getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM* angleParameters,
                                          RealOpenMM* dEdR, RealOpenMM* energyTerm ) const;
       
       /**---------------------------------------------------------------------------------------

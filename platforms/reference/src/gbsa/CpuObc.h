@@ -86,11 +86,9 @@ class CpuObc : public CpuImplicitSolvent {
       
          @param ImplicitSolventParameters
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
 
-      int setObcParameters( ObcParameters* obcParameters );
+      void setObcParameters( ObcParameters* obcParameters );
  
       /**---------------------------------------------------------------------------------------
       
@@ -124,11 +122,9 @@ class CpuObc : public CpuImplicitSolvent {
          @param obcChain          output array of OBC chain derivative factors; if NULL,
                                   then ignored
       
-         @return array of Born radii
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -139,11 +135,9 @@ class CpuObc : public CpuImplicitSolvent {
          @param partialCharges    partial charges
          @param forces            forces
       
-         @return force array
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                    const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------

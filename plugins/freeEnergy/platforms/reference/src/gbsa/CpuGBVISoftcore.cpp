@@ -122,11 +122,9 @@ GBVISoftcoreParameters* CpuGBVISoftcore::getGBVISoftcoreParameters( void ) const
 
    @param GBVISoftcoreParameters reference
 
-   @return 0;
-
    --------------------------------------------------------------------------------------- */
 
-int CpuGBVISoftcore::setGBVISoftcoreParameters( GBVISoftcoreParameters* gbviParameters ){
+void CpuGBVISoftcore::setGBVISoftcoreParameters( GBVISoftcoreParameters* gbviParameters ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -135,7 +133,6 @@ int CpuGBVISoftcore::setGBVISoftcoreParameters( GBVISoftcoreParameters* gbviPara
    // ---------------------------------------------------------------------------------------
 
    _gbviParameters = gbviParameters;
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -190,13 +187,11 @@ RealOpenMM* CpuGBVISoftcore::getSwitchDeriviativeConst( void ) const {
    @param outValue            value of spline at x
    @param outDerivative       value of derivative of spline at x
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
 #define GBVISoftcoreDebug 0
 
-int CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
+void CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
                                     RealOpenMM* outValue, RealOpenMM* outDerivative ){
 
    // ---------------------------------------------------------------------------------------
@@ -220,8 +215,6 @@ int CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
 
    *outValue               = one + ratio3*(minusTen + fifteen*ratio + minusSix*ratio2);
    *outDerivative          = ratio2*(minusThirty + sixty*ratio + minusThirty*ratio2)/denominator;
-
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -236,13 +229,11 @@ int CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
    @param bornRadius          output Born radius
    @param switchDeriviative   output switching function deriviative
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
 #define GBVISoftcoreDebug 0
 
-int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
+void CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
                                                          GBVISoftcoreParameters* gbviParameters, 
                                                          RealOpenMM& bornRadius, RealOpenMM* switchDeriviative ){
 
@@ -303,8 +294,6 @@ int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius
       *switchDeriviative = one;
    }
    bornRadius = POW( sum, minusOneThird );
-  
-   return 0; 
 }
 
 #undef GBVISoftcoreDebug
@@ -317,13 +306,11 @@ int CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius
    @param bornRadii           output array of Born radii
    @param chain               not used here
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
 #define GBVISoftcoreDebug 0
 
-int CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii, RealOpenMM* switchDeriviative ){
+void CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii, RealOpenMM* switchDeriviative ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -411,8 +398,6 @@ if( atomI == 0 || atomI == 1 ){
 #endif
 
    }
-
-   return 0;
 
 }
 
@@ -715,12 +700,10 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return 0;
-
    --------------------------------------------------------------------------------------- */
 
 
-int CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
+void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                         const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
@@ -1103,9 +1086,6 @@ if( atomI == 0 ){
 
    delete[] forces;
    delete[] block;
-
-   return 0;
-
 }
 
 /**---------------------------------------------------------------------------------------

@@ -76,11 +76,9 @@ ReferenceAngleBondIxn::~ReferenceAngleBondIxn( ){
    @param  dEdR                 output dEdR
    @param  energyTerm           output energyTerm
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM* angleParameters,
+void ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM* angleParameters,
                                                           RealOpenMM* dEdR, RealOpenMM* energyTerm ) const {
 
    // ---------------------------------------------------------------------------------------
@@ -106,8 +104,6 @@ int ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, Rea
 
   *dEdR                          = angleParameters[1]*deltaIdeal;
   *energyTerm                    = half*angleParameters[1]*deltaIdeal2;
-
-   return ReferenceForce::DefaultReturn;
 
 }
 

@@ -35,9 +35,6 @@
 using std::vector;
 using OpenMM::RealVec;
 
-const int ReferenceDynamics::DefaultReturn      = 0;
-const int ReferenceDynamics::ErrorReturn        = -1;
-
 
 /**---------------------------------------------------------------------------------------
 
@@ -222,11 +219,9 @@ ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm
 
    @param referenceConstraint  ReferenceConstraint object
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint ){
+void ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -242,8 +237,6 @@ int ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgor
 
    _referenceConstraint = referenceConstraint;
    _ownReferenceConstraint = 0;
-
-   return ReferenceDynamics::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -257,11 +250,9 @@ int ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgor
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
    // ---------------------------------------------------------------------------------------
@@ -272,8 +263,6 @@ int ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinat
    static const RealOpenMM one        =  1.0;
 
    // ---------------------------------------------------------------------------------------
-
-   return ReferenceDynamics::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -284,11 +273,9 @@ int ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinat
    @param masses             masses
    @param velocities         velocities
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses,
+void ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses,
                                                   vector<RealVec>& velocities ) const {
 
    // ---------------------------------------------------------------------------------------
@@ -322,6 +309,4 @@ int ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM*
          velocities[ii][2]     -= linearMomentum[2];
       }
    }
-
-   return ReferenceDynamics::DefaultReturn;
 }

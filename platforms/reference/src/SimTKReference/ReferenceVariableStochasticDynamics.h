@@ -99,11 +99,9 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param masses              atom masses
          @param maxStepSize         maximum time step
 
-         @return ReferenceDynamics::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize );
 
       /**---------------------------------------------------------------------------------------
@@ -119,11 +117,9 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param xPrime              xPrime
          @param maxStepSize         maximum time step
 
-         @return ReferenceDynamics::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+      void updatePart1( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, std::vector<RealOpenMM>& inverseMasses,
                        std::vector<OpenMM::RealVec>& xPrime, RealOpenMM maxStepSize );
 
@@ -137,11 +133,9 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param forces              forces
          @param masses              atom masses
 
-         @return ReferenceDynamics::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
+      void updatePart2( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& velocities,
                        std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& inverseMasses,
                        std::vector<OpenMM::RealVec>& xPrime );
       

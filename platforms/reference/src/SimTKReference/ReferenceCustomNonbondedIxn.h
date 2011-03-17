@@ -92,11 +92,9 @@ class ReferenceCustomNonbondedIxn {
          @param distance            the cutoff distance
          @param neighbors           the neighbor list to use
 
-         @return ReferenceForce::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
+      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
 
       /**---------------------------------------------------------------------------------------
 
@@ -106,11 +104,9 @@ class ReferenceCustomNonbondedIxn {
 
          @param boxSize             the X, Y, and Z widths of the periodic box
 
-         @return ReferenceForce::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic( OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -129,11 +125,9 @@ class ReferenceCustomNonbondedIxn {
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
 
-         @return ReferenceForce::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
                             std::vector<OpenMM::RealVec>& forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;

@@ -174,11 +174,9 @@ int CpuImplicitSolvent::deleteCpuImplicitSolvent( void ){
 
    Set static member _cpuImplicitSolvent
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::setCpuImplicitSolvent( CpuImplicitSolvent* cpuImplicitSolvent ){
+void CpuImplicitSolvent::setCpuImplicitSolvent( CpuImplicitSolvent* cpuImplicitSolvent ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -187,8 +185,6 @@ int CpuImplicitSolvent::setCpuImplicitSolvent( CpuImplicitSolvent* cpuImplicitSo
    // ---------------------------------------------------------------------------------------
 
    _cpuImplicitSolvent = cpuImplicitSolvent;
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -216,11 +212,9 @@ CpuImplicitSolvent* CpuImplicitSolvent::getCpuImplicitSolvent( void ){
 
    @param energy
 
-   @return SimTKOpenMMCommon::DefaultReturn 
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::setEnergy( RealOpenMM energy ){
+void CpuImplicitSolvent::setEnergy( RealOpenMM energy ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -229,7 +223,6 @@ int CpuImplicitSolvent::setEnergy( RealOpenMM energy ){
    // ---------------------------------------------------------------------------------------
 
    _implicitSolventEnergy = energy;
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -258,11 +251,9 @@ ImplicitSolventParameters* CpuImplicitSolvent::getImplicitSolventParameters( voi
 
    @param ImplicitSolventParameters
 
-   @return SimTKOpenMMCommon::DefaultReturn 
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::setImplicitSolventParameters( ImplicitSolventParameters* implicitSolventParameters ){
+void CpuImplicitSolvent::setImplicitSolventParameters( ImplicitSolventParameters* implicitSolventParameters ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -271,9 +262,6 @@ int CpuImplicitSolvent::setImplicitSolventParameters( ImplicitSolventParameters*
    // ---------------------------------------------------------------------------------------
 
    _implicitSolventParameters = implicitSolventParameters;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -302,11 +290,9 @@ int CpuImplicitSolvent::includeAceApproximation( void ) const {
 
    @param includeAceApproximation new includeAceApproximation value
 
-   @return SimTKOpenMMCommon::DefaultReturn 
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::setIncludeAceApproximation( int includeAceApproximation ){
+void CpuImplicitSolvent::setIncludeAceApproximation( int includeAceApproximation ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -315,9 +301,6 @@ int CpuImplicitSolvent::setIncludeAceApproximation( int includeAceApproximation 
    // ---------------------------------------------------------------------------------------
 
    _includeAceApproximation = includeAceApproximation;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -346,11 +329,9 @@ RealOpenMM CpuImplicitSolvent::getForceConversionFactor( void ) const {
 
    @param ForceConversionFactor (units conversion)
 
-   @return SimTKOpenMMCommon::DefaultReturn 
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::setForceConversionFactor( RealOpenMM forceConversionFactor ){
+void CpuImplicitSolvent::setForceConversionFactor( RealOpenMM forceConversionFactor ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -359,9 +340,6 @@ int CpuImplicitSolvent::setForceConversionFactor( RealOpenMM forceConversionFact
    // ---------------------------------------------------------------------------------------
 
    _forceConversionFactor = forceConversionFactor;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -390,11 +368,9 @@ RealOpenMM CpuImplicitSolvent::getEnergyConversionFactor( void ) const {
 
    @param EnergyConversionFactor (units conversion)
 
-   @return SimTKOpenMMCommon::DefaultReturn 
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::setEnergyConversionFactor( RealOpenMM energyConversionFactor ){
+void CpuImplicitSolvent::setEnergyConversionFactor( RealOpenMM energyConversionFactor ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -403,9 +379,6 @@ int CpuImplicitSolvent::setEnergyConversionFactor( RealOpenMM energyConversionFa
    // ---------------------------------------------------------------------------------------
 
    _energyConversionFactor = energyConversionFactor;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -547,12 +520,9 @@ vector<RealOpenMM>& CpuImplicitSolvent::getBornRadiiTemp( void ){
    @param bornRadii           output array of Born radii
    @param obcChain            output array of Obc chain derivatives
 
-   @return SimTKOpenMMCommon::DefaultReturn or SimTKOpenMMCommon::ErrorReturn 
-           if problems encountered
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
+void CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -564,8 +534,6 @@ int CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vect
    message << methodName;
    message << " Error: calling from base class.";
    SimTKOpenMMLog::printError( message );
-   return SimTKOpenMMCommon::ErrorReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -578,12 +546,9 @@ int CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vect
    @param updateBornRadii     if set, then Born radii are updated for current configuration; 
                               otherwise radii correspond to configuration from previous iteration
 
-
-   @return SimTKOpenMMCommon::DefaultReturn; abort if cpuImplicitSolvent is not set
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoordinates,
+void CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoordinates,
                                                       const RealOpenMM* partialCharges,
                                                       vector<RealVec>& forces, int updateBornRadii ){
 
@@ -603,7 +568,6 @@ int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoord
       message << methodName;
       message << " implicitSolventParameters has not been initialized!";
       SimTKOpenMMLog::printError( message );
-      return SimTKOpenMMCommon::ErrorReturn; 
    }
 
    // check to see if Born radii have been previously calculated
@@ -622,8 +586,6 @@ int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoord
    // compute forces
 
    computeBornEnergyForces( getBornRadii(), atomCoordinates, partialCharges, forces );
-
-   return SimTKOpenMMCommon::DefaultReturn; 
 }
 
 /**---------------------------------------------------------------------------------------
@@ -636,12 +598,9 @@ int CpuImplicitSolvent::computeImplicitSolventForces( vector<RealVec>& atomCoord
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::ErrorReturn since the call should be implemented 
-           in a derived class
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeBornEnergyForces( vector<RealOpenMM>& bornRadii,
+void CpuImplicitSolvent::computeBornEnergyForces( vector<RealOpenMM>& bornRadii,
                                                  vector<RealVec>& atomCoordinates,
                                                  const RealOpenMM* partialCharges,
                                                  vector<RealVec>& forces ){
@@ -656,8 +615,6 @@ int CpuImplicitSolvent::computeBornEnergyForces( vector<RealOpenMM>& bornRadii,
    message << methodName;
    message << " Error: calling from base class.";
    SimTKOpenMMLog::printError( message );
-   return SimTKOpenMMCommon::ErrorReturn; 
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -670,11 +627,9 @@ int CpuImplicitSolvent::computeBornEnergyForces( vector<RealOpenMM>& bornRadii,
    @param energy                    energy (output): value is incremented from input value 
    @param forces                    forces: values are incremented from input values
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
+void CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
                                                  const vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
                                                  vector<RealOpenMM>& forces ) const {
 
@@ -719,9 +674,6 @@ int CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters
          forces[atomI]          += minusSix*saTerm/bornRadii[atomI]; 
       }
    }
-
-   return SimTKOpenMMCommon::DefaultReturn; 
-
 }
 
 /**---------------------------------------------------------------------------------------

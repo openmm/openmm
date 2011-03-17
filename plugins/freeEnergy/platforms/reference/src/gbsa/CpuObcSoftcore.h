@@ -86,11 +86,9 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
       
          @param ImplicitSolventParameters
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
 
-      int setObcSoftcoreParameters( ObcSoftcoreParameters* obcSoftcoreParameters );
+      void setObcSoftcoreParameters( ObcSoftcoreParameters* obcSoftcoreParameters );
  
       /**---------------------------------------------------------------------------------------
       
@@ -124,11 +122,9 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
          @param obcChain          output array of OBC chain derivative factors; if NULL,
                                   then ignored
       
-         @return array of Born radii
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii );
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -140,11 +136,9 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
          @param energy                    energy (output): value is incremented from input value 
          @param forces                    forces: values are incremented from input values
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeAceNonPolarForce( const ObcSoftcoreParameters* obcSoftcoreParameters,
+      void computeAceNonPolarForce( const ObcSoftcoreParameters* obcSoftcoreParameters,
                                    const std::vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
                                    std::vector<RealOpenMM>& forces ) const;
       
@@ -157,11 +151,9 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
          @param partialCharges    partial charges
          @param forces            forces
       
-         @return force array
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                    const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
 };
 

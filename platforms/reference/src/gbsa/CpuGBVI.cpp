@@ -119,11 +119,9 @@ GBVIParameters* CpuGBVI::getGBVIParameters( void ) const {
 
    @param GBVIParameters reference
 
-   @return SimTKOpenMMCommon::DefaultReturn;
-
    --------------------------------------------------------------------------------------- */
 
-int CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
+void CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -132,7 +130,6 @@ int CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
    // ---------------------------------------------------------------------------------------
 
    _gbviParameters = gbviParameters;
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -143,13 +140,11 @@ int CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
    @param bornRadii           output array of Born radii
    @param chain               not used here
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
 #define GBVIDebug 0
 
-int CpuGBVI::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
+void CpuGBVI::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -241,8 +236,6 @@ if( atomI == 1568 || atomJ == 1568 ){
    }
    (void) fclose( brFile );
 #endif
-
-   return SimTKOpenMMCommon::DefaultReturn;
 
 }
 
@@ -548,12 +541,10 @@ partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::DefaultReturn;
-
    --------------------------------------------------------------------------------------- */
 
 
-int CpuGBVI::computeBornForces( const std::vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
+void CpuGBVI::computeBornForces( const std::vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                 const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces){
 
    // ---------------------------------------------------------------------------------------
@@ -869,8 +860,6 @@ if( atomI == 0 ){
    delete[] forces;
    delete[] block;
 
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -1003,20 +992,16 @@ int CpuGBVI::writeBornEnergyForces( vector<RealVec>& atomCoordinates,
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::DefaultReturn;
-
    The array bornRadii is also updated and the obcEnergy
 
    --------------------------------------------------------------------------------------- */
 
-int CpuGBVI::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
+void CpuGBVI::computeBornEnergyForces( RealOpenMM* bornRadii, vector<RealVec>& atomCoordinates,
                                       const RealOpenMM* partialCharges, vector<RealVec>& forces ){
  
    // ---------------------------------------------------------------------------------------
 
    // static const char* methodName = "\nCpuGBVI::computeBornEnergyForcesPrint";
-
-   return SimTKOpenMMCommon::DefaultReturn;
 
 }
 

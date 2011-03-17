@@ -67,9 +67,6 @@ class OPENMM_EXPORT  ReferenceForce {
        static const int LastDeltaRIndex    = 5;
 
        static const int DeltaRMaxIndex     = 5;
-
-       static const int DefaultReturn      = 0;
-       static const int ErrorReturn        = -1;
    
       /**---------------------------------------------------------------------------------------
       
@@ -80,11 +77,9 @@ class OPENMM_EXPORT  ReferenceForce {
          @param atomCoordinatesI    atom j coordinates
          @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      static int getDeltaR( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
+      static void getDeltaR( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
                             RealOpenMM* deltaR );
       
       /**---------------------------------------------------------------------------------------
@@ -97,11 +92,9 @@ class OPENMM_EXPORT  ReferenceForce {
          @param boxSize             X, Y, and Z sizes of the periodic box
          @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
 
-         @return ReferenceForce::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      static int getDeltaRPeriodic( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
+      static void getDeltaRPeriodic( const OpenMM::RealVec& atomCoordinatesI, const OpenMM::RealVec& atomCoordinatesJ,
                                              const RealOpenMM* boxSize, RealOpenMM* deltaR );
 
     /**---------------------------------------------------------------------------------------
@@ -112,11 +105,9 @@ class OPENMM_EXPORT  ReferenceForce {
          @param atomCoordinatesI    atom j coordinates
          @param deltaR              deltaX, deltaY, deltaZ upon return
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      static int getDeltaROnly( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+      static void getDeltaROnly( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
                                 RealOpenMM* deltaR );
 };
 

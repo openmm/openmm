@@ -87,11 +87,9 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
          @param masses              atom masses
          @param maxStepSize         maximum time step
 
-         @return ReferenceDynamics::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize );
 
 };

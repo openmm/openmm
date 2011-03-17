@@ -68,12 +68,10 @@ class ObcParameters : public ImplicitSolventParameters {
          Set solvent dielectric (Simbios) 
       
          @param dielectricOffset         solvent dielectric
-      
-         @return SimTKOpenMMCommon::DefaultReturn
 
          --------------------------------------------------------------------------------------- */
       
-      int setDielectricOffset( RealOpenMM dielectricOffset );
+      void setDielectricOffset( RealOpenMM dielectricOffset );
 
    public:
 
@@ -119,11 +117,9 @@ class ObcParameters : public ImplicitSolventParameters {
       
          @param obcType OBC type (ObcTypeI or ObcTypeII -- Eq. 7 or 8)
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setObcTypeParameters( ObcParameters::ObcType obcType );
+      void setObcTypeParameters( ObcParameters::ObcType obcType );
       
       /**---------------------------------------------------------------------------------------
       
@@ -183,8 +179,8 @@ class ObcParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      int setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
-      int setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
+      void setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
+      void setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
         
       /**---------------------------------------------------------------------------------------
       
@@ -192,12 +188,10 @@ class ObcParameters : public ImplicitSolventParameters {
       
          @param ownScaledRadiusFactors flag indicating whether scale factors 
                                        array should be deleted
-
-         @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setOwnScaleFactors( int ownScaledRadiusFactors );
+      void setOwnScaleFactors( int ownScaledRadiusFactors );
       
       /**--------------------------------------------------------------------------------------- 
       
@@ -215,11 +209,9 @@ class ObcParameters : public ImplicitSolventParameters {
          @param radii               array to store Macromodel radii for each atom
          @param log                 if set, then print error messages to log file
       
-         @return SimTKOpenMMCommon::DefaultReturn always
-      
          --------------------------------------------------------------------------------------- */
       
-      int getMacroModelAtomicRadii( int numberOfAtoms,
+      void getMacroModelAtomicRadii( int numberOfAtoms,
                                     char*** atomNames, RealOpenMM* radii, FILE* log );
 
       /**---------------------------------------------------------------------------------------
@@ -238,11 +230,9 @@ class ObcParameters : public ImplicitSolventParameters {
       
          @param atomicRadii array of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( RealOpenMM* atomicRadii );
+      void setAtomicRadii( RealOpenMM* atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -250,11 +240,9 @@ class ObcParameters : public ImplicitSolventParameters {
       
          @param atomicRadii vector of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( const RealOpenMMVector& atomicRadii );
+      void setAtomicRadii( const RealOpenMMVector& atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -287,11 +275,9 @@ class ObcParameters : public ImplicitSolventParameters {
 
          @param distance            the cutoff distance
 
-         @return SimTKOpenMMCommon::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setUseCutoff( RealOpenMM distance );
+      void setUseCutoff( RealOpenMM distance );
 
       /**---------------------------------------------------------------------------------------
 
@@ -317,11 +303,9 @@ class ObcParameters : public ImplicitSolventParameters {
 
          @param boxSize             the X, Y, and Z widths of the periodic box
 
-         @return SimTKOpenMMCommon::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic( OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 

@@ -213,8 +213,8 @@ void ReferenceLincsAlgorithm::updateAtomPositions(int numberOfAtoms, vector<Real
    @param atomCoordinatesP atom coordinates prime
    @param inverseMasses    1/mass
 
-   @return ReferenceDynamics::DefaultReturn if converge; else
-    return ReferenceDynamics::ErrorReturn
+   @return SimTKOpenMMCommon::DefaultReturn if converge; else
+    return SimTKOpenMMCommon::ErrorReturn
 
    --------------------------------------------------------------------------------------- */
 
@@ -233,7 +233,7 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
    // ---------------------------------------------------------------------------------------
 
    if (_numberOfConstraints == 0)
-       return ReferenceDynamics::DefaultReturn;
+       return SimTKOpenMMCommon::DefaultReturn;
 
    if( !_hasInitialized )
        initialize(numberOfAtoms, inverseMasses);
@@ -288,7 +288,7 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
    solveMatrix();
    updateAtomPositions(numberOfAtoms, atomCoordinatesP, inverseMasses);
 
-   return ReferenceDynamics::DefaultReturn;
+   return SimTKOpenMMCommon::DefaultReturn;
 
 }
 

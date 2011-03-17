@@ -43,8 +43,6 @@ using OpenMM::RealVec;
    @param fValues2  on return contains the values of the derivative of the function wrt second dimension
    @param fValues12 on return contains the values of the derivative of the function wrt first & second dimension
 
-   @return AmoebaCommon::DefaultReturn
-
    On first call a check is performed to see if the grid is valid
 
    --------------------------------------------------------------------------------------- */

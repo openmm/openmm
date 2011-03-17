@@ -89,11 +89,9 @@ RealOpenMM ReferenceForce::periodicDifference(RealOpenMM val1, RealOpenMM val2, 
    @param atomCoordinatesI    atom j coordinates
    @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+void ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
                                RealOpenMM* deltaR ){
 
    // ---------------------------------------------------------------------------------------
@@ -108,8 +106,6 @@ int ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& a
 
    deltaR[R2Index]   = DOT3( deltaR, deltaR );
    deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
-
-   return ReferenceForce::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -122,11 +118,9 @@ int ReferenceForce::getDeltaR( const RealVec& atomCoordinatesI, const RealVec& a
    @param boxSize             X, Y, and Z sizes of the periodic box
    @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
+void ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const RealVec& atomCoordinatesJ,
                                const RealOpenMM* boxSize, RealOpenMM* deltaR ){
 
    // ---------------------------------------------------------------------------------------
@@ -141,8 +135,6 @@ int ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const Re
 
    deltaR[R2Index]   = DOT3( deltaR, deltaR );
    deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
-
-   return ReferenceForce::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -153,11 +145,9 @@ int ReferenceForce::getDeltaRPeriodic( const RealVec& atomCoordinatesI, const Re
    @param atomCoordinatesI    atom j coordinates
    @param deltaR              deltaX, deltaY, deltaZ upon return
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceForce::getDeltaROnly( const RealOpenMM* atomCoordinatesI,
+void ReferenceForce::getDeltaROnly( const RealOpenMM* atomCoordinatesI,
                                    const RealOpenMM* atomCoordinatesJ,
                                    RealOpenMM* deltaR ){
 
@@ -170,6 +160,4 @@ int ReferenceForce::getDeltaROnly( const RealOpenMM* atomCoordinatesI,
    deltaR[XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
    deltaR[YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
    deltaR[ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
-
-   return ReferenceForce::DefaultReturn;
 }

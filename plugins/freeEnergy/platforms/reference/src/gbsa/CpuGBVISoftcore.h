@@ -85,11 +85,9 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          @param ImplicitSolventParameters
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
 
-      int setGBVISoftcoreParameters( GBVISoftcoreParameters* gbviParameters );
+      void setGBVISoftcoreParameters( GBVISoftcoreParameters* gbviParameters );
  
       /**---------------------------------------------------------------------------------------
       
@@ -111,11 +109,9 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
          @param bornRadii         output array of Born radii
          @param switchDeriviative derivative of switch function
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii,
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii,
                             RealOpenMM* switchDeriviative = NULL );
       
       /**---------------------------------------------------------------------------------------
@@ -222,11 +218,9 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
          @param partialCharges      partial charges
          @param forces              output forces
       
-         @return SimTKOpenMMCommon::DefaultReturn;
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                              const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------
@@ -295,11 +289,9 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
          @param outValue            value of spline at x
          @param outDerivative       value of derivative of spline at x
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru, RealOpenMM* outValue, RealOpenMM* outDerivative );
+      void quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru, RealOpenMM* outValue, RealOpenMM* outDerivative );
       
       /**---------------------------------------------------------------------------------------
       
@@ -313,11 +305,9 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
          @param bornRadius          output Born radius
          @param switchDeriviative   output switching function deriviative
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
+      void computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
                                               GBVISoftcoreParameters* gbviParameters, 
                                               RealOpenMM& bornRadius, RealOpenMM* switchDeriviative );
       

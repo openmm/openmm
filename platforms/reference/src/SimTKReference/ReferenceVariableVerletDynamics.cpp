@@ -109,11 +109,9 @@ void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
    @param masses              atom masses
    @param maxStepSize         maximum time step
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize ){
 
@@ -190,9 +188,6 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>&
    }
 
    incrementTimeStep();
-
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 

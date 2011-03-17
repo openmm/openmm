@@ -73,18 +73,14 @@ ReferenceFreeEnergyLJCoulomb14Softcore::~ReferenceFreeEnergyLJCoulomb14Softcore(
      @param distance            the cutoff distance
      @param solventDielectric   the dielectric constant of the bulk solvent
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceFreeEnergyLJCoulomb14Softcore::setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric ) {
+  void ReferenceFreeEnergyLJCoulomb14Softcore::setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric ) {
     
     cutoff = true;
     cutoffDistance = distance;
     krf = pow(cutoffDistance, (RealOpenMM)-3.0)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
     crf = (1.0f/cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
-            
-    return ReferenceForce::DefaultReturn;
   }
   
 /**---------------------------------------------------------------------------------------
@@ -101,11 +97,9 @@ ReferenceFreeEnergyLJCoulomb14Softcore::~ReferenceFreeEnergyLJCoulomb14Softcore(
 										parameter[1]= (c12/c6)**1/6
 										parameter[2]= epsfactor*q1*q2
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
+void ReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
                                                                   RealOpenMM q2, RealOpenMM epsfac,
                                                                   RealOpenMM* parameters ) const {
 
@@ -128,8 +122,6 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters( RealOpenMM c6,
       parameters[1] = POW( (c12/c6), oneSixth );
    }
    parameters[2] = epsfac*q1*q2;
-
-   return ReferenceForce::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -236,11 +228,9 @@ void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices,
      @param dEdR             output force factor
      @param energy           LJ energy
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneLJ14Ixn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
+void ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneLJ14Ixn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
                                                                  RealOpenMM* dEdR, RealOpenMM* energy ) const {
 
     // ---------------------------------------------------------------------------------------
@@ -262,8 +252,6 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneLJ14Ixn( RealOpenMM inve
               *dEdR                     = eps*( twelve*sig6 - six )*sig6;
                
         *energy                        += eps*(sig6-one)*sig6;
-
-    return ReferenceForce::DefaultReturn;
 }
 
   /**---------------------------------------------------------------------------------------
@@ -277,11 +265,9 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneLJ14Ixn( RealOpenMM inve
      @param dEdR             output force factor
      @param energy           LJ energy
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneSoftCoreLJ14Ixn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
+void ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneSoftCoreLJ14Ixn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
                                                                          RealOpenMM lambda,
                                                                          RealOpenMM* dEdR, RealOpenMM* energy ) const {
 
@@ -328,5 +314,4 @@ if( maxPrint++ < 5 ){
            r, sig, eps/lambda, lambda, dEdROrig, *dEdR, E_Orig, *energy, softcoreLJInv, sig6 ); 
 }
 #endif
-    return ReferenceForce::DefaultReturn;
 }

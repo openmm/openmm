@@ -41,77 +41,6 @@ OpenMM_SFMT::SFMT SimTKOpenMMUtilities::sfmt;
 
 /* ---------------------------------------------------------------------------------------
 
-   Find distances**2 from a given atom (Simbios)
-
-   @param atomCoordinates     atom coordinates
-   @param atomIndex           atom index to find distances from
-   @param numberOfAtoms       number of atoms
-   @param distances           array of distances squared on return; array size must be at least
-                              numberOfAtoms
-   @param log                 if set, then print error messages to log file
-
-   @return distances
-
-   --------------------------------------------------------------------------------------- */
-
-int SimTKOpenMMUtilities::getDistanceSquaredFromSpecifiedAtom( RealOpenMM** atomCoordinates, int atomIndex,
-                                                               int numberOfAtoms, RealOpenMM* distances,
-                                                               FILE* log ){
-
-   // ---------------------------------------------------------------------------------------
-
-   RealOpenMM atomXyz[3];
-   // static const char* methodName    = "\nSimTKOpenMMUtilities::getDistanceSquaredFromSpecifiedAtom";
-
-   // ---------------------------------------------------------------------------------------
-
-   for( int jj = 0; jj < 3; jj++ ){
-      atomXyz[jj] = atomCoordinates[atomIndex][jj];
-   }
-      
-   return getDistanceSquaredFromSpecifiedPoint( atomCoordinates, atomXyz,
-                                                numberOfAtoms, distances, log );
-}
-
-/* ---------------------------------------------------------------------------------------
-
-   Find distances**2 from a given point (Simbios)
-
-   @param atomCoordinates     atom coordinates
-   @param point               point to find distances from
-   @param numberOfAtoms       number of atoms
-   @param distances           array of distances squared on return; array size must be at least \n
-                              numberOfAtoms
-   @param log                 if set, then print error messages to log file
-
-   @return distances
-
-   --------------------------------------------------------------------------------------- */
-
-int SimTKOpenMMUtilities::getDistanceSquaredFromSpecifiedPoint( RealOpenMM** atomCoordinates,
-                                                                RealOpenMM* point,
-                                                                int numberOfAtoms,
-                                                                RealOpenMM* distances, FILE* log ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName    = "\nSimTKOpenMMUtilities::getDistanceSquaredFromSpecifiedPoint";
-
-   // ---------------------------------------------------------------------------------------
-
-   memset( distances, 0, sizeof( RealOpenMM )*numberOfAtoms );
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      for( int jj = 0; jj < 3; jj++ ){
-         RealOpenMM diff = (point[jj] - atomCoordinates[ii][jj]);
-         distances[ii] += diff*diff;
-      }
-   }
-      
-   return SimTKOpenMMCommon::DefaultReturn;
-}
-
-/* ---------------------------------------------------------------------------------------
-
    Allocate 1D RealOpenMM array (Simbios)
 
    array[i]
@@ -214,11 +143,9 @@ RealOpenMM** SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray( int iSize, int j
    @param array2D              array (if null on entry allocated)
    @param idString             id string
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const std::string& idString ){
+void SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const std::string& idString ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -234,8 +161,6 @@ int SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const s
       delete[] array2D[0];
       delete[] array2D;
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /* ---------------------------------------------------------------------------------------
@@ -247,11 +172,9 @@ int SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( RealOpenMM** array2D, const s
    @param array1D              array (if null on entry allocated)
    @param idString             id string
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const std::string& idString ){
+void SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const std::string& idString ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -262,8 +185,6 @@ int SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const st
    if( array1D != NULL ){
       delete[] array1D;
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /* ---------------------------------------------------------------------------------------
@@ -277,11 +198,9 @@ int SimTKOpenMMUtilities::freeOneDRealOpenMMArray( RealOpenMM* array1D, const st
    @param array2D              array (if null on entry allocated)
    @param initialValue         intitial value
 
-   @return array
-
    --------------------------------------------------------------------------------------- */
 
-int SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
+void SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
                                                        RealOpenMM** array2D,
                                                        RealOpenMM initialValue ){
 
@@ -321,8 +240,6 @@ int SimTKOpenMMUtilities::initialize2DRealOpenMMArray( int iSize, int jSize,
          }
       }
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /* ---------------------------------------------------------------------------------------
@@ -431,8 +348,6 @@ uint32_t SimTKOpenMMUtilities::getRandomNumberSeed( void ) {
    Set random number seed
 
    @param seed    new seed value
-
-   @return ReferenceDynamics::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
 

@@ -69,11 +69,9 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
          @param forces              forces
          @param masses              atom masses
       
-         @return ReferenceDynamics::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
      
-      int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
       
 };

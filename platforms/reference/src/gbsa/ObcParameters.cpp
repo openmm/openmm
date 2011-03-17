@@ -180,11 +180,9 @@ ObcParameters::ObcType ObcParameters::getObcType( void ) const {
 
    @param obcType OBC type (ObcTypeI or ObcTypeII -- Eq. 7 or 8)
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setObcTypeParameters( ObcParameters::ObcType obcType ){
+void ObcParameters::setObcTypeParameters( ObcParameters::ObcType obcType ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -202,8 +200,6 @@ int ObcParameters::setObcTypeParameters( ObcParameters::ObcType obcType ){
       _gammaObc   = 4.85f;
    }
    _obcType = obcType;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -311,11 +307,9 @@ RealOpenMM* ObcParameters::getAtomicRadii( void ) const {
 
    @param atomicRadii array of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
+void ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -323,7 +317,7 @@ int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -332,11 +326,9 @@ int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    @param atomicRadii vector of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
+void ObcParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -344,7 +336,7 @@ int ObcParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -380,11 +372,9 @@ const RealOpenMM* ObcParameters::getScaledRadiusFactors( void ) const {
    @param ownScaledRadiusFactors flag indicating whether scale factors 
                                  array should be deleted
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
+void ObcParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -393,8 +383,6 @@ int ObcParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
    // ---------------------------------------------------------------------------------------
 
    _ownScaledRadiusFactors = ownScaledRadiusFactors;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -403,11 +391,9 @@ int ObcParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
 
    @param scaledRadiusFactors  scaledRadiusFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
+void ObcParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -421,9 +407,6 @@ int ObcParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
    }
 
    _scaledRadiusFactors = scaledRadiusFactors;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -432,11 +415,9 @@ int ObcParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
 
    @param scaledRadiusFactors  scaledRadiusFactors
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors ){
+void ObcParameters::setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -452,8 +433,6 @@ int ObcParameters::setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusF
    for( int ii = 0; ii < (int) scaledRadiusFactors.size(); ii++ ){
       _scaledRadiusFactors[ii] = scaledRadiusFactors[ii];
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -571,15 +550,12 @@ std::string ObcParameters::getStateString( const char* title ) const {
 
      @param distance            the cutoff distance
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setUseCutoff( RealOpenMM distance ) {
+void ObcParameters::setUseCutoff( RealOpenMM distance ) {
 
     cutoff = true;
     cutoffDistance = distance;
-    return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -610,11 +586,9 @@ RealOpenMM ObcParameters::getCutoffDistance() {
 
      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setPeriodic( RealVec& boxSize ) {
+void ObcParameters::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
@@ -624,7 +598,6 @@ int ObcParameters::setPeriodic( RealVec& boxSize ) {
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------

@@ -147,11 +147,9 @@ RealOpenMM ReferenceVariableStochasticDynamics::getTau( void ) const {
    @param xPrime              xPrime
    @param maxStepSize         maximum time step
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                               vector<RealVec>& velocities,
                                               vector<RealVec>& forces, vector<RealOpenMM>& masses, vector<RealOpenMM>& inverseMasses,
                                               vector<RealVec>& xPrime, RealOpenMM maxStepSize ){
@@ -222,8 +220,6 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, vector<
       }
    }
 
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -236,11 +232,9 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, vector<
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                               vector<RealVec>& velocities,
                                               vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
                                               vector<RealVec>& xPrime ){
@@ -259,8 +253,6 @@ int ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector<
       }
    }
 
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -274,11 +266,9 @@ int ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector<
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVariableStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVariableStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize ){
 
@@ -311,7 +301,5 @@ int ReferenceVariableStochasticDynamics::update( int numberOfAtoms, vector<RealV
    }
 
    incrementTimeStep();
-
-   return ReferenceDynamics::DefaultReturn;
 
 }

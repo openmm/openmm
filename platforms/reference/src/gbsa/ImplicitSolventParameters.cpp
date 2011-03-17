@@ -173,11 +173,9 @@ RealOpenMM ImplicitSolventParameters::getSolventDielectric( void ) const {
 
    @param solventDielectric solvent dielectric
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setSolventDielectric( RealOpenMM solventDielectric ){
+void ImplicitSolventParameters::setSolventDielectric( RealOpenMM solventDielectric ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -187,7 +185,6 @@ int ImplicitSolventParameters::setSolventDielectric( RealOpenMM solventDielectri
 
    _solventDielectric = solventDielectric;
    _resetPreFactor();
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -215,11 +212,9 @@ RealOpenMM ImplicitSolventParameters::getSoluteDielectric( void ) const {
 
    @param soluteDielectric solute dielectric
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setSoluteDielectric( RealOpenMM soluteDielectric ){
+void ImplicitSolventParameters::setSoluteDielectric( RealOpenMM soluteDielectric ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -229,7 +224,6 @@ int ImplicitSolventParameters::setSoluteDielectric( RealOpenMM soluteDielectric 
 
    _soluteDielectric = soluteDielectric;
    _resetPreFactor();
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -257,11 +251,9 @@ RealOpenMM ImplicitSolventParameters::getElectricConstant( void ) const {
 
    @param electricConstant			electric constant
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setElectricConstant( RealOpenMM electricConstant ){
+void ImplicitSolventParameters::setElectricConstant( RealOpenMM electricConstant ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -271,8 +263,6 @@ int ImplicitSolventParameters::setElectricConstant( RealOpenMM electricConstant 
 
    _electricConstant = electricConstant;
    _resetPreFactor();
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -300,11 +290,9 @@ RealOpenMM ImplicitSolventParameters::getProbeRadius( void ) const {
 
    @param probeRadius	probe radius
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setProbeRadius( RealOpenMM probeRadius ){
+void ImplicitSolventParameters::setProbeRadius( RealOpenMM probeRadius ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -313,7 +301,6 @@ int ImplicitSolventParameters::setProbeRadius( RealOpenMM probeRadius ){
    // ---------------------------------------------------------------------------------------
 
    _probeRadius = probeRadius;
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -364,11 +351,9 @@ RealOpenMM ImplicitSolventParameters::getPreFactor( void ) const {
 
    @param pi4Asolv	probe radius
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setPi4Asolv( RealOpenMM pi4Asolv ){
+void ImplicitSolventParameters::setPi4Asolv( RealOpenMM pi4Asolv ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -377,7 +362,6 @@ int ImplicitSolventParameters::setPi4Asolv( RealOpenMM pi4Asolv ){
    // ---------------------------------------------------------------------------------------
 
    _pi4Asolv = pi4Asolv;
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -405,11 +389,9 @@ RealOpenMM ImplicitSolventParameters::getKcalA_To_kJNm( void ) const {
 
    @param kcalA_To_kJNm	probe radius
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setKcalA_To_kJNm( RealOpenMM kcalA_To_kJNm ){
+void ImplicitSolventParameters::setKcalA_To_kJNm( RealOpenMM kcalA_To_kJNm ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -418,7 +400,6 @@ int ImplicitSolventParameters::setKcalA_To_kJNm( RealOpenMM kcalA_To_kJNm ){
    // ---------------------------------------------------------------------------------------
 
    _kcalA_To_kJNm = kcalA_To_kJNm;
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -452,11 +433,9 @@ RealOpenMM* ImplicitSolventParameters::getAtomicRadii( void ) const {
 
    @param atomicRadii array of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
+void ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -469,8 +448,6 @@ int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
       _ownAtomicRadii = false;
    }
    _atomicRadii = atomicRadii;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -479,11 +456,9 @@ int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    @param atomicRadii array of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
+void ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -512,46 +487,7 @@ int ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRad
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
       _atomicRadii[ii] = atomicRadii[ii];
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
-
-/**---------------------------------------------------------------------------------------
-
-   Set AtomicRadii array
-
-   @param atomicRadii array of atomic radii
-
-   @return SimTKOpenMMCommon::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-/*
-int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nImplicitSolventParameters::setAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   int numberOfAtoms = getNumberOfAtoms();
-
-   if( _ownAtomicRadii ){
-      delete[] _atomicRadii;
-      _atomicRadii = new RealOpenMM[numberOfAtoms];
-   } else if( _atomicRadii == NULL ){
-      _atomicRadii    = new RealOpenMM[numberOfAtoms];
-      _ownAtomicRadii = true;
-   }
-   
-   // force kcal/A units
-
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      _atomicRadii[ii] = atomicRadii[ii];
-   }
-
-   return SimTKOpenMMCommon::DefaultReturn;
-} */
 
 /**---------------------------------------------------------------------------------------
 
@@ -559,11 +495,9 @@ int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    @param atomicRadii vector of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setOwnAtomicRadii( int ownAtomicRadii ){
+void ImplicitSolventParameters::setOwnAtomicRadii( int ownAtomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -572,8 +506,6 @@ int ImplicitSolventParameters::setOwnAtomicRadii( int ownAtomicRadii ){
    // ---------------------------------------------------------------------------------------
 
    _ownAtomicRadii = ownAtomicRadii;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -602,11 +534,9 @@ int ImplicitSolventParameters::getFreeArrays( void ) const {
 
    @param freeArrays flag
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setFreeArrays( int freeArrays ){
+void ImplicitSolventParameters::setFreeArrays( int freeArrays ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -615,8 +545,6 @@ int ImplicitSolventParameters::setFreeArrays( int freeArrays ){
    // ---------------------------------------------------------------------------------------
 
     _freeArrays = freeArrays;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -682,8 +610,6 @@ void ImplicitSolventParameters::_resetPreFactor( void ){
    Get state (Simbios)
    
    @param title               title (optional)
-      
-   @return SimTKOpenMMCommon::DefaultReturn always
       
    --------------------------------------------------------------------------------------- */
 

@@ -122,11 +122,9 @@ RealOpenMM ReferenceStochasticDynamics::getTau( void ) const {
    @param inverseMasses       inverse atom masses
    @param xPrime              xPrime
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                               vector<RealVec>& velocities,
                                               vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
                                               vector<RealVec>& xPrime ){
@@ -151,9 +149,6 @@ int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>
            velocities[ii][jj]  = vscale*velocities[ii][jj] + fscale*inverseMasses[ii]*forces[ii][jj] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
       }
    }
-
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -166,11 +161,9 @@ int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, vector<RealVec>
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                               vector<RealVec>& velocities,
                                               vector<RealVec>& forces, vector<RealOpenMM>& inverseMasses,
                                               vector<RealVec>& xPrime ){
@@ -188,9 +181,6 @@ int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>
          xPrime[ii][jj] = atomCoordinates[ii][jj]+getDeltaT()*velocities[ii][jj];
       }
    }
-
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -204,11 +194,9 @@ int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, vector<RealVec>
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
    // ---------------------------------------------------------------------------------------
@@ -269,7 +257,4 @@ int ReferenceStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& ato
        }
 
    incrementTimeStep();
-
-   return ReferenceDynamics::DefaultReturn;
-
 }

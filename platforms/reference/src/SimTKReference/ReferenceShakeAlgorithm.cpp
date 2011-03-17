@@ -151,11 +151,9 @@ int ReferenceShakeAlgorithm::getMaximumNumberOfIterations( void ) const {
 
    @param maximumNumberOfIterations   new maximum number of iterations
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
    
-int ReferenceShakeAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIterations ){
+void ReferenceShakeAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIterations ){
    
    // ---------------------------------------------------------------------------------------
 
@@ -164,8 +162,6 @@ int ReferenceShakeAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIt
    // ---------------------------------------------------------------------------------------
 
    _maximumNumberOfIterations = maximumNumberOfIterations;
-
-   return ReferenceDynamics::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -216,8 +212,8 @@ void ReferenceShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
    @param atomCoordinatesP atom coordinates prime
    @param inverseMasses    1/mass
 
-   @return ReferenceDynamics::DefaultReturn if converge; else 
-    return ReferenceDynamics::ErrorReturn
+   @return SimTKOpenMMCommon::DefaultReturn if converge; else
+    return SimTKOpenMMCommon::ErrorReturn
 
    --------------------------------------------------------------------------------------- */
 
@@ -323,7 +319,7 @@ int ReferenceShakeAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
       }
    }
 
-   return (done ? ReferenceDynamics::DefaultReturn : ReferenceDynamics::ErrorReturn);
+   return (done ? SimTKOpenMMCommon::DefaultReturn : SimTKOpenMMCommon::ErrorReturn);
 
 }
 

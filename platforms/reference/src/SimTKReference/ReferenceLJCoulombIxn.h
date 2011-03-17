@@ -63,12 +63,10 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
-      
-         @return ReferenceForce::DefaultReturn
             
          --------------------------------------------------------------------------------------- */
           
-      int calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
@@ -99,11 +97,9 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          @param neighbors           the neighbor list to use
          @param solventDielectric   the dielectric constant of the bulk solvent
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric );
+      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric );
       
       /**---------------------------------------------------------------------------------------
       
@@ -113,11 +109,9 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
       
          @param boxSize             the X, Y, and Z widths of the periodic box
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic( OpenMM::RealVec& boxSize );
        
       /**---------------------------------------------------------------------------------------
       
@@ -160,11 +154,9 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
       
-         @return ReferenceForce::DefaultReturn
-            
          --------------------------------------------------------------------------------------- */
           
-      int calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
@@ -185,41 +177,13 @@ private:
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
-
-         @return ReferenceForce::DefaultReturn
             
          --------------------------------------------------------------------------------------- */
           
-      int calculateEwaldIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateEwaldIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate PME ixn
-      
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
-         @param fixedParameters  non atom parameters (not currently used)
-         @param forces           force array (forces added)
-         @param energyByAtom     atom energy
-         @param totalEnergy      total energy
-
-         @return ReferenceForce::DefaultReturn
-            
-         --------------------------------------------------------------------------------------- */
-          
-      int calculatePMEIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
-      
 };
 
 // ---------------------------------------------------------------------------------------

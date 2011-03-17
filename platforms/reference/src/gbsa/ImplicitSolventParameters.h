@@ -75,11 +75,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param kcalA_To_kJNm probe radius
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setKcalA_To_kJNm( RealOpenMM kcalA_To_kJNm );
+      void setKcalA_To_kJNm( RealOpenMM kcalA_To_kJNm );
 
       /**---------------------------------------------------------------------------------------
       
@@ -87,11 +85,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param freeArrays flag
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setFreeArrays( int freeArrays );
+      void setFreeArrays( int freeArrays );
 
       /**---------------------------------------------------------------------------------------
       
@@ -167,11 +163,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param solventDielectric solvent dielectric
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setSolventDielectric( RealOpenMM solventDielectric );
+      void setSolventDielectric( RealOpenMM solventDielectric );
       
       /**---------------------------------------------------------------------------------------
       
@@ -189,11 +183,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param soluteDielectric solute dielectric
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setSoluteDielectric( RealOpenMM soluteDielectric );
+      void setSoluteDielectric( RealOpenMM soluteDielectric );
       
       /**---------------------------------------------------------------------------------------
       
@@ -222,11 +214,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param electricConstant       electric constant
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setElectricConstant( RealOpenMM electricConstant );
+      void setElectricConstant( RealOpenMM electricConstant );
 
       /**---------------------------------------------------------------------------------------
       
@@ -244,11 +234,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param probeRadius   probe radius
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setProbeRadius( RealOpenMM probeRadius );
+      void setProbeRadius( RealOpenMM probeRadius );
       
       /**---------------------------------------------------------------------------------------
       
@@ -278,11 +266,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param pi4Asolv   see above
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setPi4Asolv( RealOpenMM pi4Asolv );
+      void setPi4Asolv( RealOpenMM pi4Asolv );
       
       /**---------------------------------------------------------------------------------------
       
@@ -300,11 +286,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param atomicRadii array of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      virtual int setAtomicRadii( RealOpenMM* atomicRadii );
+      virtual void setAtomicRadii( RealOpenMM* atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -312,23 +296,9 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
          @param atomicRadii vector of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      virtual int setAtomicRadii( const RealOpenMMVector& atomicRadii );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Set AtomicRadii array
-      
-         @param atomicRadii array of atomic radii
-      
-         @return SimTKOpenMMCommon::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      //virtual int setAtomicRadii( RealOpenMM* atomicRadii );
+      virtual void setAtomicRadii( const RealOpenMMVector& atomicRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -339,19 +309,15 @@ class OPENMM_EXPORT ImplicitSolventParameters {
          @param ownAtomicRadii flag indicating whether array of atomic radii
                                should be freed
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setOwnAtomicRadii( int ownAtomicRadii );
+      void setOwnAtomicRadii( int ownAtomicRadii );
 
       /**---------------------------------------------------------------------------------------
             
          Print state to log file (Simbios)
          
          @param title               title (optional)
-            
-         @return SimTKOpenMMCommon::DefaultReturn
             
          --------------------------------------------------------------------------------------- */
       

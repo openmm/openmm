@@ -160,8 +160,6 @@ private:
         @param functionValue1  d(energy)/dx1
         @param functionValue2  d(energy)/dx2
      
-        @return AmoebaCommon::DefaultReturn
-     
         --------------------------------------------------------------------------------------- */
     
     void getBicubicValues(

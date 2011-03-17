@@ -62,11 +62,9 @@ class ReferenceFreeEnergyLJCoulomb14Softcore : public ReferenceBondIxn {
          @param distance            the cutoff distance
          @param solventDielectric   the dielectric constant of the bulk solvent
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric );
+      void setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric );
        
       /**---------------------------------------------------------------------------------------
       
@@ -82,11 +80,9 @@ class ReferenceFreeEnergyLJCoulomb14Softcore : public ReferenceBondIxn {
                                     parameter[1]= (c12/c6)**1/6
                                     parameter[2]= epsfactor*q1*q2
       
-         @return ReferenceForce::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
+      void getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
                                                RealOpenMM q2, RealOpenMM epsfac,
                                                RealOpenMM* parameters ) const;
       
@@ -116,11 +112,9 @@ class ReferenceFreeEnergyLJCoulomb14Softcore : public ReferenceBondIxn {
            @param dEdR             output force factor
            @param energy           LJ energy
       
-           @return ReferenceForce::DefaultReturn
-      
            --------------------------------------------------------------------------------------- */
       
-      int calculateOneLJ14Ixn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
+      void calculateOneLJ14Ixn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
                                RealOpenMM* dEdR, RealOpenMM* energy ) const;
       
       
@@ -135,11 +129,9 @@ class ReferenceFreeEnergyLJCoulomb14Softcore : public ReferenceBondIxn {
            @param dEdR             output force factor
            @param energy           LJ energy
       
-           @return ReferenceForce::DefaultReturn
-      
            --------------------------------------------------------------------------------------- */
       
-      int calculateOneSoftCoreLJ14Ixn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
+      void calculateOneSoftCoreLJ14Ixn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
                                        RealOpenMM lambda, RealOpenMM* dEdR, RealOpenMM* energy ) const;
       
 };

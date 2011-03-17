@@ -70,18 +70,6 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
 
-      /**---------------------------------------------------------------------------------------
-      
-         Set solvent dielectric (Simbios) 
-      
-         @param dielectricOffset         solvent dielectric
-      
-         @return SimTKOpenMMCommon::DefaultReturn
-
-         --------------------------------------------------------------------------------------- */
-      
-      int setDielectricOffset( RealOpenMM dielectricOffset );
-
    public:
 
       /**---------------------------------------------------------------------------------------
@@ -118,11 +106,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          @param obcType OBC type (ObcTypeI or ObcTypeII -- Eq. 7 or 8)
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setObcTypeParameters( ObcSoftcoreParameters::ObcType obcType );
+      void setObcTypeParameters( ObcSoftcoreParameters::ObcType obcType );
       
       /**---------------------------------------------------------------------------------------
       
@@ -182,11 +168,11 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      int setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
+      void setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
 #if RealOpenMMType == 0
-      int setScaledRadiusFactors( float* scaledRadiusFactors );
+      void setScaledRadiusFactors( float* scaledRadiusFactors );
 #endif
-      int setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
+      void setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
         
       /**---------------------------------------------------------------------------------------
       
@@ -194,35 +180,10 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          @param ownScaledRadiusFactors flag indicating whether scale factors 
                                        array should be deleted
-
-         @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setOwnScaleFactors( int ownScaledRadiusFactors );
-      
-      /**--------------------------------------------------------------------------------------- 
-      
-         Assign standard radii for GB/SA methods other than ACE;
-         taken from Macromodel and OPLS-AA, except for hydrogens (Simbios)
-      
-         Logic based on logic in Tinker's ksolv.f
-      
-         Currently only works for standard amino acid atoms
-         If invalid atom name is encountered, a message is printed to log file and the
-         radius for that atom is set to 1.0f
-      
-         @param numberOfAtoms       number of atoms
-         @param atomNames           array of atom names from GMX top data struct
-         @param radii               array to store Macromodel radii for each atom
-         @param log                 if set, then print error messages to log file
-      
-         @return SimTKOpenMMCommon::DefaultReturn always
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int getMacroModelAtomicRadii( int numberOfAtoms,
-                                    char*** atomNames, RealOpenMM* radii, FILE* log );
+      void setOwnScaleFactors( int ownScaledRadiusFactors );
 
       /**---------------------------------------------------------------------------------------
       
@@ -240,11 +201,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          @param atomicRadii array of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( RealOpenMM* atomicRadii );
+      void setAtomicRadii( RealOpenMM* atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -252,11 +211,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          @param atomicRadii vector of atomic radii
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( const RealOpenMMVector& atomicRadii );
+      void setAtomicRadii( const RealOpenMMVector& atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -289,11 +246,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          @param distance            the cutoff distance
 
-         @return SimTKOpenMMCommon::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setUseCutoff( RealOpenMM distance );
+      void setUseCutoff( RealOpenMM distance );
 
       /**---------------------------------------------------------------------------------------
 
@@ -319,11 +274,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          @param boxSize             the X, Y, and Z widths of the periodic box
 
-         @return SimTKOpenMMCommon::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( RealOpenMM* boxSize );
+      void setPeriodic( RealOpenMM* boxSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -348,11 +301,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
          @param ownNonPolarScaleFactors flag indicating whether scale factors 
                                        array should be deleted
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setOwnNonPolarScaleFactors( int ownNonPolarScaleFactors );
+      void setOwnNonPolarScaleFactors( int ownNonPolarScaleFactors );
       
       /**---------------------------------------------------------------------------------------
       
@@ -371,11 +322,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          @param nonPolarScaleFactors nonpolar scale factors
       
-         @return array 
-      
          --------------------------------------------------------------------------------------- */
       
-      int setNonPolarScaleFactors( const RealOpenMMVector& nonPolarScaleFactors );
+      void setNonPolarScaleFactors( const RealOpenMMVector& nonPolarScaleFactors );
 
       /**---------------------------------------------------------------------------------------
       
@@ -383,11 +332,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          @param nonPolarPrefactor solute dielectric
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      int setNonPolarPrefactor( RealOpenMM nonPolarPrefactor );
+      void setNonPolarPrefactor( RealOpenMM nonPolarPrefactor );
 
 };
    

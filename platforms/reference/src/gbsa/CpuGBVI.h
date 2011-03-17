@@ -83,11 +83,9 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          @param ImplicitSolventParameters
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
 
-      int setGBVIParameters( GBVIParameters* gbviParameters );
+      void setGBVIParameters( GBVIParameters* gbviParameters );
  
       /**---------------------------------------------------------------------------------------
       
@@ -97,11 +95,9 @@ class CpuGBVI : public CpuImplicitSolvent {
          @param bornRadii         output array of Born radii
          @param gbviChain         not used
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -112,15 +108,10 @@ class CpuGBVI : public CpuImplicitSolvent {
          @param partialCharges    partial charges
          @param forces            forces
       
-         @return force array
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                    const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
-      
-      int computeBornEnergyForcesPrint( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                        const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------
       
@@ -243,11 +234,9 @@ class CpuGBVI : public CpuImplicitSolvent {
          @param partialCharges      partial charges
          @param forces              output forces
       
-         @return SimTKOpenMMCommon::DefaultReturn;
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                              const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------

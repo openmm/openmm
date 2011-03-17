@@ -120,11 +120,9 @@ RealOpenMM ReferenceBrownianDynamics::getFriction( void ) const {
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
@@ -187,7 +185,5 @@ int ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atomC
    }
 
    incrementTimeStep();
-
-   return ReferenceDynamics::DefaultReturn;
 
 }

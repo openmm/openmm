@@ -85,17 +85,13 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
      @param distance            the cutoff distance
      @param neighbors           the neighbor list to use
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceCustomNonbondedIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors ) {
+  void ReferenceCustomNonbondedIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors ) {
 
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
-
-    return ReferenceForce::DefaultReturn;
   }
 
   /**---------------------------------------------------------------------------------------
@@ -106,11 +102,9 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
 
      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceCustomNonbondedIxn::setPeriodic( RealVec& boxSize ) {
+  void ReferenceCustomNonbondedIxn::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
@@ -120,7 +114,6 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return ReferenceForce::DefaultReturn;
 
   }
 
@@ -142,11 +135,9 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
 
-   @return ReferenceForce::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, const map<string, double>& globalParameters, vector<RealVec>& forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
@@ -194,8 +185,6 @@ int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, vector<Rea
 
        delete[] exclusionIndices;
    }
-
-   return ReferenceForce::DefaultReturn;
 }
 
   /**---------------------------------------------------------------------------------------

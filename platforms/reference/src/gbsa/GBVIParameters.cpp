@@ -180,11 +180,9 @@ RealOpenMM* GBVIParameters::getAtomicRadii( void ) const {
 
    @param atomicRadii array of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
+void GBVIParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -192,7 +190,7 @@ int GBVIParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -201,11 +199,9 @@ int GBVIParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    @param atomicRadii vector of atomic radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
+void GBVIParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -213,7 +209,7 @@ int GBVIParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -249,11 +245,9 @@ const RealOpenMM* GBVIParameters::getScaledRadii( void ) const {
    @param ownScaledRadii flag indicating whether scale factors 
                                  array should be deleted
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setOwnScaledRadii( int ownScaledRadii ){
+void GBVIParameters::setOwnScaledRadii( int ownScaledRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -262,8 +256,6 @@ int GBVIParameters::setOwnScaledRadii( int ownScaledRadii ){
    // ---------------------------------------------------------------------------------------
 
    _ownScaledRadii = ownScaledRadii;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -272,11 +264,9 @@ int GBVIParameters::setOwnScaledRadii( int ownScaledRadii ){
 
    @param scaledRadii  scaledRadii
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
+void GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -290,9 +280,6 @@ int GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
    }
 
    _scaledRadii = scaledRadii;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -301,11 +288,9 @@ int GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
 
    @param scaledRadii  scaledRadii
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setScaledRadii( const RealOpenMMVector& scaledRadii ){
+void GBVIParameters::setScaledRadii( const RealOpenMMVector& scaledRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -321,8 +306,6 @@ int GBVIParameters::setScaledRadii( const RealOpenMMVector& scaledRadii ){
    for( int ii = 0; ii < (int) scaledRadii.size(); ii++ ){
       _scaledRadii[ii] = scaledRadii[ii];
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -358,11 +341,9 @@ RealOpenMM* GBVIParameters::getGammaParameters( void ) const {
    @param ownGammaParameters   flag indicating whether gamma parameter
                                array should be deleted
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setOwnGammaParameters( int ownGammaParameters ){
+void GBVIParameters::setOwnGammaParameters( int ownGammaParameters ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -371,8 +352,6 @@ int GBVIParameters::setOwnGammaParameters( int ownGammaParameters ){
    // ---------------------------------------------------------------------------------------
 
    _ownGammaParameters = ownGammaParameters;
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -381,11 +360,9 @@ int GBVIParameters::setOwnGammaParameters( int ownGammaParameters ){
 
    @param gammas  gamma parameters
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
+void GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -399,9 +376,6 @@ int GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
    }
 
    _gammaParameters = gammas;
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -410,11 +384,9 @@ int GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
 
    @param gammas  gammas
 
-   @return SimTKOpenMMCommon::DefaultReturn always
-
    --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setGammaParameters( const RealOpenMMVector& gammas ){
+void GBVIParameters::setGammaParameters( const RealOpenMMVector& gammas ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -431,8 +403,6 @@ int GBVIParameters::setGammaParameters( const RealOpenMMVector& gammas ){
    for( int ii = 0; ii < (int) gammas.size(); ii++ ){
       _gammaParameters[ii] = gammas[ii];
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -468,15 +438,12 @@ std::string GBVIParameters::getStateString( const char* title ) const {
 
      @param distance            the cutoff distance
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setUseCutoff( RealOpenMM distance ) {
+void GBVIParameters::setUseCutoff( RealOpenMM distance ) {
 
     cutoff = true;
     cutoffDistance = distance;
-    return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -507,11 +474,9 @@ RealOpenMM GBVIParameters::getCutoffDistance() {
 
      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     @return ReferenceForce::DefaultReturn
-
      --------------------------------------------------------------------------------------- */
 
-int GBVIParameters::setPeriodic( RealVec& boxSize ) {
+void GBVIParameters::setPeriodic( RealVec& boxSize ) {
 
     assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
@@ -521,7 +486,6 @@ int GBVIParameters::setPeriodic( RealVec& boxSize ) {
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------

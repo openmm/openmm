@@ -84,11 +84,9 @@ class OPENMM_EXPORT SimTKOpenMMLog {
       
          @param message         message to log
       
-         @return 0
-      
          --------------------------------------------------------------------------------------- */
       
-     int logMessage( const std::stringstream& message ) const;
+     void logMessage( const std::stringstream& message ) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -105,24 +103,20 @@ class OPENMM_EXPORT SimTKOpenMMLog {
          Set LogFile
 
          @param    input logFile
-
-         @return   AmoebaCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setLogFile( FILE* logFile );
+      void setLogFile( FILE* logFile );
 
       /**---------------------------------------------------------------------------------------
 
          Set LogLevel
 
          @param    input logLevel
-
-         @return   AmoebaCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setLogLevel( SimTKOpenMMLog::LogLevels logLevel );
+      void setLogLevel( SimTKOpenMMLog::LogLevels logLevel );
 
       /**---------------------------------------------------------------------------------------
       
@@ -162,11 +156,9 @@ class OPENMM_EXPORT SimTKOpenMMLog {
       
          @param message         message to log
       
-         @return 0
-      
          --------------------------------------------------------------------------------------- */
       
-      static int printMessage( const std::stringstream& message );
+      static void printMessage( const std::stringstream& message );
       
       /**---------------------------------------------------------------------------------------
       
@@ -174,11 +166,9 @@ class OPENMM_EXPORT SimTKOpenMMLog {
       
          @param message         message to log
       
-         @return 0
-      
          --------------------------------------------------------------------------------------- */
       
-      static int printWarning( const std::stringstream& message );
+      static void printWarning( const std::stringstream& message );
       
       /**---------------------------------------------------------------------------------------
       
@@ -186,11 +176,9 @@ class OPENMM_EXPORT SimTKOpenMMLog {
       
          @param message         message to log
       
-         @return 0
-      
          --------------------------------------------------------------------------------------- */
 
-     static int printError( const std::stringstream& message );
+     static void printError( const std::stringstream& message );
 
 };
 

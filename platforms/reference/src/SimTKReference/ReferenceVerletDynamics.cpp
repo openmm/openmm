@@ -90,11 +90,9 @@ ReferenceVerletDynamics::~ReferenceVerletDynamics( ){
    @param forces              forces
    @param masses              atom masses
 
-   @return ReferenceDynamics::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
@@ -156,7 +154,4 @@ int ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoo
    }
 
    incrementTimeStep();
-
-   return ReferenceDynamics::DefaultReturn;
-
 }

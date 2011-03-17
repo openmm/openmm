@@ -115,11 +115,9 @@ ObcParameters* CpuObc::getObcParameters( void ) const {
 
    @param ObcParameters reference
 
-   @return SimTKOpenMMCommon::DefaultReturn;
-
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::setObcParameters(  ObcParameters* obcParameters ){
+void CpuObc::setObcParameters(  ObcParameters* obcParameters ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -128,7 +126,6 @@ int CpuObc::setObcParameters(  ObcParameters* obcParameters ){
    // ---------------------------------------------------------------------------------------
 
    _obcParameters = obcParameters;
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -203,11 +200,9 @@ vector<RealOpenMM>& CpuObc::getObcChainTemp( void ){
    @param atomCoordinates     atomic coordinates
    @param bornRadii           output array of Born radii
 
-   @return array of Born radii
-
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
+void CpuObc::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -326,9 +321,6 @@ if( logFile ){
 if( logFile ){
       (void) fclose( logFile );
 } */
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -341,13 +333,11 @@ if( logFile ){
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::DefaultReturn;
-
    The array bornRadii is also updated and the obcEnergy
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObc::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
+void CpuObc::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                      const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
@@ -628,11 +618,8 @@ int CpuObc::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealV
    bornRadii = bornRadiiTemp;
    obcChain = obcChainTemp;
 
-	free( (char*) block );
-	free( (char*) forces );
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
+    free( (char*) block );
+    free( (char*) forces );
 }
 
 /**---------------------------------------------------------------------------------------

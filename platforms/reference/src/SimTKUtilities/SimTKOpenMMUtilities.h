@@ -56,44 +56,6 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
 
        SimTKOpenMMUtilities(){};
       ~SimTKOpenMMUtilities(){};
-
-      /**---------------------------------------------------------------------------------------
-      
-         Find distances**2 from a given atom (Simbios)
-      
-         @param atomCoordinates     atom coordinates
-         @param atomIndex           atom index to find distances from
-         @param numberOfAtoms       number of atoms
-         @param distances           array of distances squared on @return; array size must be at least
-                                    numberOfAtoms
-         @param log                 if set, then print error messages to log file
-      
-         @return distances
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int getDistanceSquaredFromSpecifiedAtom( RealOpenMM** atomCoordinates, int atomIndex,
-                                                      int numberOfAtoms, RealOpenMM* distances,
-                                                      FILE* log );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Find distances**2 from a given point (Simbios)
-      
-         @param atomCoordinates     atom coordinates
-         @param point               point to find distances from
-         @param numberOfAtoms       number of atoms
-         @param distances           array of distances squared on @return; array size must be at least
-                                    numberOfAtoms
-         @param log                 if set, then print error messages to log file
-      
-         @return distances
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int getDistanceSquaredFromSpecifiedPoint( RealOpenMM** atomCoordinates, RealOpenMM* point, 
-                                                       int numberOfAtoms, RealOpenMM* distances,
-                                                       FILE* log );
       
       /**---------------------------------------------------------------------------------------
       
@@ -146,11 +108,9 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
          @param array2D              array (if null on entry allocated)
          @param idString             id string
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      static int freeOneDRealOpenMMArray( RealOpenMM* array1D,
+      static void freeOneDRealOpenMMArray( RealOpenMM* array1D,
                                           const std::string& idString = std::string( "1DArray" ) );
       
       /* ---------------------------------------------------------------------------------------
@@ -162,11 +122,9 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
          @param array2D              array (if null on entry allocated)
          @param idString             id string
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      static int freeTwoDRealOpenMMArray( RealOpenMM** array2D,
+      static void freeTwoDRealOpenMMArray( RealOpenMM** array2D,
                                           const std::string& idString = std::string( "2DArray" ) );
       
       /**---------------------------------------------------------------------------------------
@@ -180,11 +138,9 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
          @param array2D              array (if null on entry allocated)
          @param initialValue         intitial value
       
-         @return array
-      
          --------------------------------------------------------------------------------------- */
       
-      static int initialize2DRealOpenMMArray( int iSize, int jSize,
+      static void initialize2DRealOpenMMArray( int iSize, int jSize,
                                               RealOpenMM** array2D, RealOpenMM initialValue );
 
       /**---------------------------------------------------------------------------------------
@@ -238,8 +194,6 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
          Set random number seed
       
          @param seed    new seed value
-      
-         @return DefaultReturn
       
          --------------------------------------------------------------------------------------- */
       

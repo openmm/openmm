@@ -61,8 +61,8 @@ public:
          @param atomCoordinatesP atom coordinates prime
          @param inverseMasses    1/mass
 
-         @return ReferenceDynamics::DefaultReturn if converge; else
-          return ReferenceDynamics::ErrorReturn
+         @return SimTKOpenMMCommon::DefaultReturn if converge; else
+          return SimTKOpenMMCommon::ErrorReturn
 
          --------------------------------------------------------------------------------------- */
 

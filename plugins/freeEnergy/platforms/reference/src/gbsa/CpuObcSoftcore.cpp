@@ -116,11 +116,9 @@ ObcSoftcoreParameters* CpuObcSoftcore::getObcSoftcoreParameters( void ) const {
 
    @param ObcSoftcoreParameters reference
 
-   @return SimTKOpenMMCommon::DefaultReturn;
-
    --------------------------------------------------------------------------------------- */
 
-int CpuObcSoftcore::setObcSoftcoreParameters(  ObcSoftcoreParameters* obcSoftcoreParameters ){
+void CpuObcSoftcore::setObcSoftcoreParameters(  ObcSoftcoreParameters* obcSoftcoreParameters ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -129,7 +127,6 @@ int CpuObcSoftcore::setObcSoftcoreParameters(  ObcSoftcoreParameters* obcSoftcor
    // ---------------------------------------------------------------------------------------
 
    _obcSoftcoreParameters = obcSoftcoreParameters;
-   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -207,11 +204,9 @@ vector<RealOpenMM>& CpuObcSoftcore::getObcChainTemp( void ){
    @param atomCoordinates     atomic coordinates
    @param bornRadii           output array of Born radii
 
-   @return array of Born radii
-
    --------------------------------------------------------------------------------------- */
 
-int CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii ){
+void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -333,9 +328,6 @@ if( logFile ){
       (void) fclose( logFile );
 }
 #endif
-
-   return 0;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -348,11 +340,9 @@ if( logFile ){
    @param energy                    energy (output): value is incremented from input value 
    @param forces                    forces: values are incremented from input values
 
-   @return 0
-
    --------------------------------------------------------------------------------------- */
 
-int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSoftcoreParameters,
+void CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSoftcoreParameters,
                                              const vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
                                              vector<RealOpenMM>& forces ) const {
 
@@ -398,9 +388,6 @@ int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSof
          forces[atomI]          += minusSix*saTerm/bornRadii[atomI]; 
       }
    }
-
-   return 0;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -413,13 +400,11 @@ int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSof
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return 0
-
    The array bornRadii is also updated and the obcEnergy
 
    --------------------------------------------------------------------------------------- */
 
-int CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
+void CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                              const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
    // ---------------------------------------------------------------------------------------
@@ -720,9 +705,6 @@ int CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vect
    bornRadii = bornRadiiTemp;
    obcChain = obcChainTemp;
 
-	free( (char*) block );
-	free( (char*) forces );
-
-   return 0;
-
+    free( (char*) block );
+    free( (char*) forces );
 }

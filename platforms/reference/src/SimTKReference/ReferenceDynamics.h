@@ -44,17 +44,6 @@ Main method (virtual) is update()
 
 class OPENMM_EXPORT ReferenceDynamics {
 
-   public:
-
-      /**---------------------------------------------------------------------------------------
-      
-         Fixed static variables
-      
-         --------------------------------------------------------------------------------------- */
-
-       static const int DefaultReturn;
-       static const int ErrorReturn;
-
    private:
 
       int _numberOfAtoms;
@@ -154,11 +143,9 @@ class OPENMM_EXPORT ReferenceDynamics {
          @param masses             masses
          @param velocities         velocities
       
-         @return ReferenceDynamics::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses, std::vector<OpenMM::RealVec>& velocities ) const;
+      void removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses, std::vector<OpenMM::RealVec>& velocities ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -170,11 +157,9 @@ class OPENMM_EXPORT ReferenceDynamics {
          @param forces              forces
          @param masses              atom masses
       
-         @return ReferenceDynamics::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      virtual int update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      virtual void update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                           std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
 
       /**---------------------------------------------------------------------------------------
@@ -193,11 +178,9 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          @param referenceConstraint  referenceConstraint object
       
-         @return ReferenceDynamics::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint );
+      void setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint );
 };
 
 // ---------------------------------------------------------------------------------------

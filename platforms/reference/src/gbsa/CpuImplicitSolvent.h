@@ -108,11 +108,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
 
          @param energy new energy
       
-         ireturn SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-		int setEnergy( RealOpenMM energy );
+      void setEnergy( RealOpenMM energy );
 
    public:
 
@@ -151,11 +149,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          Set static member _cpuImplicitSolvent
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
 
-      static int setCpuImplicitSolvent( CpuImplicitSolvent* cpuImplicitSolvent );
+      static void setCpuImplicitSolvent( CpuImplicitSolvent* cpuImplicitSolvent );
 
       /**---------------------------------------------------------------------------------------
       
@@ -203,11 +199,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          @param ImplicitSolventParameters
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
       
-      int setImplicitSolventParameters( ImplicitSolventParameters* implicitSolventParameters );
+      void setImplicitSolventParameters( ImplicitSolventParameters* implicitSolventParameters );
  
       /**---------------------------------------------------------------------------------------
       
@@ -225,11 +219,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          @param includeAceApproximation new includeAceApproximation value
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
       
-      int setIncludeAceApproximation( int includeAceApproximation );
+      void setIncludeAceApproximation( int includeAceApproximation );
 
       /**---------------------------------------------------------------------------------------
       
@@ -247,11 +239,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          @param ForceConversionFactor (units conversion)
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
       
-      int setForceConversionFactor(  RealOpenMM forceConversionFactor  );
+      void setForceConversionFactor(  RealOpenMM forceConversionFactor  );
 
       /**---------------------------------------------------------------------------------------
       
@@ -273,7 +263,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      int setEnergyConversionFactor( RealOpenMM energyConversionFactor );
+      void setEnergyConversionFactor( RealOpenMM energyConversionFactor );
 
       /**---------------------------------------------------------------------------------------
       
@@ -326,11 +316,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
          @param updateBornRadii   if set, then Born radii are updated for current configuration; 
                                   otherwise radii correspond to configuration from previous iteration
       
-         @return SimTKOpenMMCommon::DefaultReturn 
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeImplicitSolventForces( std::vector<OpenMM::RealVec>& atomCoordinates,
+      void computeImplicitSolventForces( std::vector<OpenMM::RealVec>& atomCoordinates,
                                                const RealOpenMM* partialCharges,
                                                std::vector<OpenMM::RealVec>& forces, int updateBornRadii = 0 );
       
@@ -346,7 +334,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+      virtual void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -361,7 +349,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      virtual void computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                            const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
       
       /**---------------------------------------------------------------------------------------
@@ -373,11 +361,9 @@ class OPENMM_EXPORT CpuImplicitSolvent {
          @param energy                    energy (output): value is incremented from input value 
          @param forces                    forces: values are incremented from input values
       
-         @return SimTKOpenMMCommon::DefaultReturn
-      
          --------------------------------------------------------------------------------------- */
       
-      int computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
+      void computeAceNonPolarForce( const ImplicitSolventParameters* implicitSolventParameters,
                                    const std::vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
                                    std::vector<RealOpenMM>& forces ) const;
 

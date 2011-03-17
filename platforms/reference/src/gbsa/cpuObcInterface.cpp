@@ -143,11 +143,9 @@ cpuSetObcParameters( int numberOfAtoms, RealOpenMM* atomicRadii, RealOpenMM* obc
 
    Function calls a static method in CpuImplicitSolvent class to calculate forces/energy
 
-   @return result from CpuImplicitSolvent::computeImplicitSolventForces
-
    --------------------------------------------------------------------------------------- */
 
-extern "C" int
+extern "C" void
 cpuCalculateImplicitSolventForces( vector<RealVec>& atomCoordinates,
                                    const RealOpenMM* partialCharges,
                                    vector<RealVec>& forces, RealOpenMM* energy,
@@ -159,14 +157,11 @@ cpuCalculateImplicitSolventForces( vector<RealVec>& atomCoordinates,
 
    // ---------------------------------------------------------------------------------------
 
-   int status = CpuImplicitSolvent::getCpuImplicitSolvent()->computeImplicitSolventForces( atomCoordinates, partialCharges,
+   CpuImplicitSolvent::getCpuImplicitSolvent()->computeImplicitSolventForces( atomCoordinates, partialCharges,
                                                                   forces, updateBornRadii );
 
    *energy = CpuImplicitSolvent::getCpuImplicitSolvent()->getEnergy(); 
    // printf( "\ncpuCalculateImplicitSolventForcesE=%.5e", *energy );
-
-   return status;
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -213,11 +208,9 @@ extern "C" int cpuDeleteObcParameters( void ){
    @param masses        input masses 
    @param scaleFactors  output atomic numbers
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-extern "C" int getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealOpenMM* masses,
+extern "C" void getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealOpenMM* masses,
                                                   RealOpenMM* scaleFactors ){
 
    // ---------------------------------------------------------------------------------------
@@ -252,8 +245,6 @@ extern "C" int getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealO
 
       scaleFactors[atomI] = (RealOpenMM) scaleFactor;
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -264,11 +255,9 @@ extern "C" int getObcScaleFactorsGivenAtomMasses( int numberOfAtoms, const RealO
    @param atomicNumber  input atomic number for each atom
    @param scaleFactors  output atomic numbers
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-extern "C" int getObcScaleFactors( int numberOfAtoms, const int* atomicNumber, RealOpenMM* scaleFactors ){
+extern "C" void getObcScaleFactors( int numberOfAtoms, const int* atomicNumber, RealOpenMM* scaleFactors ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -324,8 +313,6 @@ extern "C" int getObcScaleFactors( int numberOfAtoms, const int* atomicNumber, R
 
       scaleFactors[atomI] = (RealOpenMM) scaleFactor;
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -346,11 +333,9 @@ extern "C" int getObcScaleFactors( int numberOfAtoms, const int* atomicNumber, R
 
    @param gbsaRadii                 output GBSA radii
 
-   @return SimTKOpenMMCommon::DefaultReturn
-
    --------------------------------------------------------------------------------------- */
 
-extern "C" int getGbsaRadii( int numberOfAtoms, const int* atomicNumber, 
+extern "C" void getGbsaRadii( int numberOfAtoms, const int* atomicNumber,
                              const int* numberOfCovalentPartners, 
                              const int* indexOfCovalentPartner,
                              RealOpenMM* gbsaRadii ){
@@ -488,6 +473,4 @@ extern "C" int getGbsaRadii( int numberOfAtoms, const int* atomicNumber,
          
       gbsaRadii[atomI] = (RealOpenMM) radius;
    }
-
-   return SimTKOpenMMCommon::DefaultReturn;
 }
