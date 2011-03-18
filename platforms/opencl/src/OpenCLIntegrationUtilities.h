@@ -49,7 +49,8 @@ public:
         return *posDelta;
     }
     /**
-     * Get the array which contains random values.
+     * Get the array which contains random values.  Each element is a float4, whose components
+     * are independent, normally distributed random numbers with mean 0 and variance 1.
      */
     OpenCLArray<mm_float4>& getRandom() {
         return *random;

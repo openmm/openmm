@@ -168,13 +168,13 @@ public:
         return queue;
     }
     /**
-     * Get the array which contains the position and charge of each atom.
+     * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
     OpenCLArray<mm_float4>& getPosq() {
         return *posq;
     }
     /**
-     * Get the array which contains the velocity and inverse mass of each atom.
+     * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
      */
     OpenCLArray<mm_float4>& getVelm() {
         return *velm;

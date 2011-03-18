@@ -51,13 +51,13 @@ namespace OpenMM {
  * 1. Data structures (e.g. neighbor lists) are calculated to allow nonbonded interactions to be evaluated
  * quickly.
  *
- * 2. calcForces() or calcEnergy() is called on each ForceImpl in the System.
+ * 2. calcForcesAndEnergy() is called on each ForceImpl in the System.
  *
  * 3. Finally, the default interaction kernel is invoked to calculate all interactions that were added
  * to it.
  *
  * This sequence means that the default interaction kernel may depend on quantities that were calculated
- * by ForceImpls during calcForces() or calcEnergy().
+ * by ForceImpls during calcForcesAndEnergy().
  */
 
 class OPENMM_EXPORT OpenCLNonbondedUtilities {
