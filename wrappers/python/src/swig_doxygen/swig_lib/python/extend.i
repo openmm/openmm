@@ -147,5 +147,14 @@
 }
 
 
+%extend OpenMM::System {
+  %pythoncode {
+    def __getstate__(self):
+        serializationString = XmlSerializer.serializeSystem(self)
+        return serializationString
 
-
+    def __setstate__(self, serializationString):
+        system = XmlSerializer.deserializeSystem(serializationString)
+        self.this = system.this
+  }
+}

@@ -162,7 +162,7 @@ if(OPENMM_PYTHON_BUILD_SWIG)
             "${SWIG_OPENMM_DIR}/swigInputConfig.py"
             "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
             "${SWIG_OPENMM_DIR}/OpenMM_headers.xml"
-        COMMENT "Creating PyOpenMM reference platform swig input files..."
+        COMMENT "Creating OpenMM Python swig input files..."
     )
     
     #~ swig -python -c++ \
@@ -183,7 +183,7 @@ if(OPENMM_PYTHON_BUILD_SWIG)
             "${SWIG_OPENMM_DIR}/OpenMM.i"
             ${SWIG_INPUT_FILES_REF}
             ${SWIG_INPUT_FILES2}
-        COMMENT "Creating PyOpenMM module sources with swig..."
+        COMMENT "Creating OpenMM Python module sources with swig..."
     )
     add_custom_target(RunSwig DEPENDS 
         "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx"
@@ -230,7 +230,7 @@ add_custom_command(
         ${SHARED_TARGET}
         ${STAGING_OUTPUT_FILES}
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Building PyOpenMM binary module..."
+    COMMENT "Building OpenMM Python binary module..."
 )
 add_custom_target(BuildModule ALL DEPENDS ${STAGING_OUTPUT_FILES})
 
@@ -271,6 +271,6 @@ add_custom_target(PythonInstall
         -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake"
     DEPENDS ${STAGING_OUTPUT_FILES} ${OPENMM_PYTHON_STAGING_DIR}/build "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake"
     WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
-    COMMENT "Installing PyOpenMM binary module..."
+    COMMENT "Installing OpenMM Python binary module..."
 )
 
