@@ -23,6 +23,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <sstream>
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"

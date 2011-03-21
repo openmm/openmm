@@ -24,6 +24,7 @@
 
 #include <math.h>
 #include <sstream>
+#include <string.h>
 
 #include "GBVIParameters.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"

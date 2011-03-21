@@ -23,6 +23,7 @@
  */
 
 #include "SimTKOpenMMLog.h"
+#include <stdlib.h>
 
 // static settings
 

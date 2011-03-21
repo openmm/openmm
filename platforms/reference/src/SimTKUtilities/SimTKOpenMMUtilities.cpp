@@ -32,6 +32,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <string.h>
 
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;

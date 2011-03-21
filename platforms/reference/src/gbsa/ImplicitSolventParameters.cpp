@@ -27,6 +27,7 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ImplicitSolventParameters.h"
 #include <sstream>
+#include <string.h>
 
 /**---------------------------------------------------------------------------------------
 
