@@ -23,6 +23,7 @@
  */
 
 #include <math.h>
+#include <string.h>
 #include <sstream>
 
 #include "ObcSoftcoreParameters.h"
