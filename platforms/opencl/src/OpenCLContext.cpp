@@ -260,7 +260,6 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter)
         options << " -D" << iter->first << "=" << iter->second;
     try {
-        std::cout << options.str()<< std::endl;
         program.build(vector<cl::Device>(1, device), options.str().c_str());
     } catch (cl::Error err) {
         throw OpenMMException("Error compiling kernel: "+program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
