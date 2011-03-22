@@ -230,14 +230,21 @@ public:
     std::string replaceStrings(const std::string& input, const std::map<std::string, std::string>& replacements) const;
     /**
      * Create an OpenCL Program from source code.
+     *
+     * @param source             the source code of the program
+     * @param optimizationFlags  the optimization flags to pass to the OpenCL compiler.  If this is
+     *                           omitted, a default set of options will be used
      */
-    cl::Program createProgram(const std::string source);
+    cl::Program createProgram(const std::string source, const char* optimizationFlags = NULL);
     /**
      * Create an OpenCL Program from source code.
      *
-     * @param defines    a set of preprocessor definitions (name, value) to define when compiling the program
+     * @param source             the source code of the program
+     * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
+     * @param optimizationFlags  the optimization flags to pass to the OpenCL compiler.  If this is
+     *                           omitted, a default set of options will be used
      */
-    cl::Program createProgram(const std::string source, const std::map<std::string, std::string>& defines);
+    cl::Program createProgram(const std::string source, const std::map<std::string, std::string>& defines, const char* optimizationFlags = NULL);
     /**
      * Execute a kernel.
      *
@@ -406,7 +413,7 @@ private:
     int simdWidth;
     mm_float4 periodicBoxSize;
     mm_float4 invPeriodicBoxSize;
-    std::string compilationOptions;
+    std::string compilationOptions, defaultOptimizationOptions;
     cl::Context context;
     cl::Device device;
     cl::CommandQueue queue;

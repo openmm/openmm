@@ -3236,7 +3236,7 @@ OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 
 void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
     cl.initialize(system);
-    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     prevStepSize = -1.0;
@@ -3296,7 +3296,7 @@ void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const L
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-    cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines, "");
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     params = new OpenCLArray<cl_float>(cl, 3, "langevinParams");
@@ -3369,7 +3369,7 @@ void OpenCLIntegrateBrownianStepKernel::initialize(const System& system, const B
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-    cl::Program program = cl.createProgram(OpenCLKernelSources::brownian, defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::brownian, defines, "");
     kernel1 = cl::Kernel(program, "integrateBrownianPart1");
     kernel2 = cl::Kernel(program, "integrateBrownianPart2");
     prevStepSize = -1.0;
@@ -3425,7 +3425,7 @@ OpenCLIntegrateVariableVerletStepKernel::~OpenCLIntegrateVariableVerletStepKerne
 
 void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
     cl.initialize(system);
-    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     selectSizeKernel = cl::Kernel(program, "selectVerletStepSize");
@@ -3496,7 +3496,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-    cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines, "");
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     selectSizeKernel = cl::Kernel(program, "selectLangevinStepSize");

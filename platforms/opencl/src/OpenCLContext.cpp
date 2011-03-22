@@ -86,7 +86,8 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         this->deviceIndex = deviceIndex;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-        compilationOptions = "-cl-fast-relaxed-math -DWORK_GROUP_SIZE="+OpenCLExpressionUtilities::intToString(ThreadBlockSize);
+        compilationOptions = "-DWORK_GROUP_SIZE="+OpenCLExpressionUtilities::intToString(ThreadBlockSize);
+        defaultOptimizationOptions = "-cl-fast-relaxed-math";
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationOptions += " -DWARPS_ARE_ATOMIC";
@@ -243,18 +244,24 @@ string OpenCLContext::replaceStrings(const string& input, const std::map<std::st
     return result;
 }
 
-cl::Program OpenCLContext::createProgram(const string source) {
-    return createProgram(source, map<string, string>());
+cl::Program OpenCLContext::createProgram(const string source, const char* optimizationFlags) {
+    return createProgram(source, map<string, string>(), optimizationFlags);
 }
 
-cl::Program OpenCLContext::createProgram(const string source, const map<string, string>& defines) {
+cl::Program OpenCLContext::createProgram(const string source, const map<string, string>& defines, const char* optimizationFlags) {
     cl::Program::Sources sources(1, make_pair(source.c_str(), source.size()));
     cl::Program program(context, sources);
-    string options = compilationOptions;
+    stringstream options;
+    options << compilationOptions;
+    if (optimizationFlags == NULL)
+        options << " " << defaultOptimizationOptions;
+    else
+        options << " " << optimizationFlags;
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter)
-        options += " -D"+iter->first+"="+iter->second;
+        options << " -D" << iter->first << "=" << iter->second;
     try {
-        program.build(vector<cl::Device>(1, device), options.c_str());
+        std::cout << options.str()<< std::endl;
+        program.build(vector<cl::Device>(1, device), options.str().c_str());
     } catch (cl::Error err) {
         throw OpenMMException("Error compiling kernel: "+program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
     }
