@@ -69,6 +69,7 @@ protected:
     std::vector<std::string> getKernelNames();
 private:
     ContextImpl* context;
+    Context* owner;
     Kernel kernel;
 };
 

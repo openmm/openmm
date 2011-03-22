@@ -96,22 +96,22 @@ void testTorsions() {
     init_gen_rand(0, sfmt);
 
     vector<Vec3> positions(5);
-    VerletIntegrator integrator1(0.01);
-    VerletIntegrator integrator2(0.01);
     for (int i = 0; i < 10; i++) {
         for (int j = 0; j < (int) positions.size(); j++)
             positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
         double energy1, energy2;
         vector<Vec3> forces1, forces2;
         {
-            Context c(customSystem, integrator1, platform);
+            VerletIntegrator integrator(0.01);
+            Context c(customSystem, integrator, platform);
             c.setPositions(positions);
             State s = c.getState(State::Forces | State::Energy);
             energy1 = s.getPotentialEnergy();
             forces1 = s.getForces();
         }
         {
-            Context c(harmonicSystem, integrator1, platform);
+            VerletIntegrator integrator(0.01);
+            Context c(harmonicSystem, integrator, platform);
             c.setPositions(positions);
             State s = c.getState(State::Forces | State::Energy);
             energy2 = s.getPotentialEnergy();

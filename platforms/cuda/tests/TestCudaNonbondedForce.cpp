@@ -105,7 +105,6 @@ void testLJ() {
 void testExclusionsAnd14() {
     CudaPlatform platform;
     System system;
-    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < 5; ++i) {
         system.addParticle(1.0);
@@ -146,6 +145,7 @@ void testExclusionsAnd14() {
         // The following is in its own block, because CUDA can't deal with multiple Contexts
         // existing on the same thread at the same time.
         {
+            LangevinIntegrator integrator(0.0, 0.1, 0.01);
             Context context(system, integrator, platform);
             context.setPositions(positions);
             State state = context.getState(State::Forces | State::Energy);
@@ -174,6 +174,7 @@ void testExclusionsAnd14() {
             nonbonded->setParticleParameters(i, 2, 1.5, 0);
             nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
             nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
+            LangevinIntegrator integrator(0.0, 0.1, 0.01);
             Context context(system, integrator, platform);
             context.setPositions(positions);
             State state = context.getState(State::Forces | State::Energy);
@@ -375,7 +376,6 @@ void testLargeSystem() {
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     HarmonicBondForce* bonds = new HarmonicBondForce();
     vector<Vec3> positions(numParticles);
@@ -407,8 +407,10 @@ void testLargeSystem() {
     nonbonded->setCutoffDistance(cutoff);
     system.addForce(nonbonded);
     system.addForce(bonds);
-    Context cudaContext(system, integrator, cuda);
-    Context referenceContext(system, integrator, reference);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context cudaContext(system, integrator1, cuda);
+    Context referenceContext(system, integrator2, reference);
     cudaContext.setPositions(positions);
     cudaContext.setVelocities(velocities);
     referenceContext.setPositions(positions);

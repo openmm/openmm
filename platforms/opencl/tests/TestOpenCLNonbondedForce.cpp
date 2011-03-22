@@ -106,7 +106,6 @@ void testLJ() {
 void testExclusionsAnd14() {
     OpenCLPlatform platform;
     System system;
-    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < 5; ++i) {
         system.addParticle(1.0);
@@ -144,6 +143,7 @@ void testExclusionsAnd14() {
         nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
         positions[i] = Vec3(r, 0, 0);
+        LangevinIntegrator integrator(0.0, 0.1, 0.01);
         Context context(system, integrator, platform);
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
@@ -170,7 +170,8 @@ void testExclusionsAnd14() {
         nonbonded->setParticleParameters(i, 2, 1.5, 0);
         nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
-        Context context2(system, integrator, platform);
+        LangevinIntegrator integrator2(0.0, 0.1, 0.01);
+        Context context2(system, integrator2, platform);
         context2.setPositions(positions);
         state = context2.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
@@ -370,7 +371,6 @@ void testLargeSystem() {
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     HarmonicBondForce* bonds = new HarmonicBondForce();
     vector<Vec3> positions(numParticles);
@@ -402,8 +402,10 @@ void testLargeSystem() {
     nonbonded->setCutoffDistance(cutoff);
     system.addForce(nonbonded);
     system.addForce(bonds);
-    Context clContext(system, integrator, cl);
-    Context referenceContext(system, integrator, reference);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context clContext(system, integrator1, cl);
+    Context referenceContext(system, integrator2, reference);
     clContext.setPositions(positions);
     clContext.setVelocities(velocities);
     referenceContext.setPositions(positions);

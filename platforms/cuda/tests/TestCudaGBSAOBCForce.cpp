@@ -136,7 +136,6 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     CudaPlatform cuda;
     ReferencePlatform reference;
     System system;
-    LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* gbsa = new GBSAOBCForce();
     NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -156,8 +155,10 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     }
     system.addForce(gbsa);
     system.addForce(nonbonded);
-    Context context(system, integrator, cuda);
-    Context refContext(system, integrator, reference);
+    LangevinIntegrator integrator1(0, 0.1, 0.01);
+    LangevinIntegrator integrator2(0, 0.1, 0.01);
+    Context context(system, integrator1, cuda);
+    Context refContext(system, integrator2, reference);
     
     // Set random (but uniformly distributed) positions for all the particles.
     

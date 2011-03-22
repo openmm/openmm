@@ -65,7 +65,6 @@ void testEwaldPME(bool includeExceptions) {
     CudaPlatform cuda;
     ReferencePlatform reference;
     System system;
-    VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     nonbonded->setCutoffDistance(cutoff);
@@ -96,8 +95,10 @@ void testEwaldPME(bool includeExceptions) {
 
 //    (1)  Check whether the Reference and Cuda platforms agree when using Ewald Method 
  
-    Context cudaContext(system, integrator, cuda);
-    Context referenceContext(system, integrator, reference);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context cudaContext(system, integrator1, cuda);
+    Context referenceContext(system, integrator2, reference);
     cudaContext.setPositions(positions);
     referenceContext.setPositions(positions);
     State cudaState = cudaContext.getState(State::Forces | State::Energy);

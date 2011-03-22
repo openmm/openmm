@@ -64,7 +64,6 @@ void testEwaldPME(bool includeExceptions) {
     OpenCLPlatform cl;
     ReferencePlatform reference;
     System system;
-    VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     nonbonded->setCutoffDistance(cutoff);
@@ -95,8 +94,10 @@ void testEwaldPME(bool includeExceptions) {
 
 //    (1)  Check whether the Reference and OpenCL platforms agree when using Ewald Method
 
-    Context clContext(system, integrator, cl);
-    Context referenceContext(system, integrator, reference);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context clContext(system, integrator1, cl);
+    Context referenceContext(system, integrator2, reference);
     clContext.setPositions(positions);
     referenceContext.setPositions(positions);
     State clState = clContext.getState(State::Forces | State::Energy);
@@ -124,7 +125,8 @@ void testEwaldPME(bool includeExceptions) {
         Vec3 f = clState.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
-    Context clContext2(system, integrator, cl);
+    VerletIntegrator integrator3(0.01);
+    Context clContext2(system, integrator3, cl);
     clContext2.setPositions(positions);
 
     tol = 1e-2;
@@ -162,7 +164,8 @@ void testEwaldPME(bool includeExceptions) {
         Vec3 f = clState.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
-    Context clContext3(system, integrator, cl);
+    VerletIntegrator integrator4(0.01);
+    Context clContext3(system, integrator4, cl);
     clContext3.setPositions(positions);
 
     tol = 1e-2;

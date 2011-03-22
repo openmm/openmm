@@ -31,6 +31,7 @@
 
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/Context.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <limits>
@@ -40,12 +41,15 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VariableVerletIntegrator::VariableVerletIntegrator(double errorTol) : errorTol(errorTol) {
+VariableVerletIntegrator::VariableVerletIntegrator(double errorTol) : errorTol(errorTol), owner(NULL) {
     setConstraintTolerance(1e-4);
 }
 
 void VariableVerletIntegrator::initialize(ContextImpl& contextRef) {
+    if (owner != NULL && &contextRef.getOwner() != owner)
+        throw OpenMMException("This Integrator is already bound to a context");
     context = &contextRef;
+    owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateVariableVerletStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
 }

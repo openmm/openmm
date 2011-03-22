@@ -109,9 +109,9 @@ void testHbond() {
     init_gen_rand(0, sfmt);
 
     vector<Vec3> positions(5);
-    VerletIntegrator integrator1(0.01);
-    VerletIntegrator integrator2(0.01);
     for (int i = 0; i < 10; i++) {
+        VerletIntegrator integrator1(0.01);
+        VerletIntegrator integrator2(0.01);
         Context c1(customSystem, integrator1, platform);
         Context c2(standardSystem, integrator2, platform);
         for (int j = 0; j < (int) positions.size(); j++)

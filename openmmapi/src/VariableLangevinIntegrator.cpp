@@ -31,6 +31,7 @@
 
 #include "openmm/VariableLangevinIntegrator.h"
 #include "openmm/Context.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <limits>
@@ -41,7 +42,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, double frictionCoeff, double errorTol) {
+VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, double frictionCoeff, double errorTol) : owner(NULL) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setErrorTolerance(errorTol);
@@ -50,7 +51,10 @@ VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, doubl
 }
 
 void VariableLangevinIntegrator::initialize(ContextImpl& contextRef) {
+    if (owner != NULL && &contextRef.getOwner() != owner)
+        throw OpenMMException("This Integrator is already bound to a context");
     context = &contextRef;
+    owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateVariableLangevinStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
 }

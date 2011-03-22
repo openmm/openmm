@@ -107,6 +107,7 @@ protected:
 private:
     double errorTol;
     ContextImpl* context;
+    Context* owner;
     Kernel kernel;
 };
 

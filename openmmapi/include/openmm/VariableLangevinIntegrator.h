@@ -155,6 +155,7 @@ private:
     double temperature, friction, errorTol;
     int randomNumberSeed;
     ContextImpl* context;
+    Context* owner;
     Kernel kernel;
 };
 

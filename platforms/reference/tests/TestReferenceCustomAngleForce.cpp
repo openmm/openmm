@@ -79,7 +79,6 @@ void testAngles() {
     harmonicSystem.addParticle(1.0);
     harmonicSystem.addParticle(1.0);
     harmonicSystem.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
     HarmonicAngleForce* harmonic = new HarmonicAngleForce();
     harmonic->addAngle(0, 1, 2, 1.5, 0.8);
     harmonic->addAngle(1, 2, 3, 2.0, 0.5);
@@ -91,9 +90,9 @@ void testAngles() {
     init_gen_rand(0, sfmt);
 
     vector<Vec3> positions(4);
-    VerletIntegrator integrator1(0.01);
-    VerletIntegrator integrator2(0.01);
     for (int i = 0; i < 10; i++) {
+        VerletIntegrator integrator1(0.01);
+        VerletIntegrator integrator2(0.01);
         Context c1(customSystem, integrator1, platform);
         Context c2(harmonicSystem, integrator2, platform);
         for (int j = 0; j < (int) positions.size(); j++)
