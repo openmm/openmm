@@ -257,7 +257,7 @@ private:
 class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicAngleForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL) {
     }
     ~OpenCLCalcHarmonicAngleForceKernel();
     /**
@@ -570,7 +570,8 @@ private:
  */
 class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
-    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl), hasCreatedKernels(false) {
+    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl),
+            hasCreatedKernels(false), params(NULL), bornSum(NULL), bornRadii(NULL), bornForce(NULL), obcChain(NULL) {
     }
     ~OpenCLCalcGBSAOBCForceKernel();
     /**
@@ -862,7 +863,7 @@ private:
 class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
     OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
+            hasInitializedKernels(false), params(NULL) {
     }
     ~OpenCLIntegrateVariableLangevinStepKernel();
     /**
