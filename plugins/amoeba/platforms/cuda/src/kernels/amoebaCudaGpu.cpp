@@ -1646,8 +1646,8 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         amoebaGpu->amoebaSim.dielec               = 1.0f;
     }
 
-    static const int maxAxisType = 5;
-    int axisTypeCount[maxAxisType+1] = { 0, 0, 0, 0, 0, 0 };
+    static const int maxAxisType = 6;
+    int axisTypeCount[maxAxisType+1] = { 0, 0, 0, 0, 0, 0, 0 };
     for( int ii = 0; ii < static_cast<int>(charges.size()); ii++ ){
 
         // axis type & multipole particles ids
@@ -1666,19 +1666,23 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         // and need test system
 
         int axisParticleIndex                                                     = multipoleParticleZ[ii];
-        if( maxIndices[axisParticleIndex] < ii ){
-            maxIndices[axisParticleIndex] = ii;
-        }
-        if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
-            amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
+        if( axisParticleIndex > -1 ){
+            if( maxIndices[axisParticleIndex] < ii ){
+                maxIndices[axisParticleIndex] = ii;
+            }
+            if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
+                amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
+            }
         }
 
         axisParticleIndex                                                         = multipoleParticleX[ii];
-        if( maxIndices[axisParticleIndex] < ii ){
-            maxIndices[axisParticleIndex] = ii;
-        }
-        if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
-            amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
+        if( axisParticleIndex > -1 ){
+            if( maxIndices[axisParticleIndex] < ii ){
+                maxIndices[axisParticleIndex] = ii;
+            }
+            if( amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] > ii ){
+                amoebaGpu->psMultipoleAxisOffset->_pSysData[axisParticleIndex] = ii;
+            }
         }
 
         axisParticleIndex                                                         = multipoleParticleY[ii];
@@ -1692,7 +1696,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         }
 
         if( 0 && amoebaGpu->log )
-            fprintf( amoebaGpu->log, "Z1 %4d [%4d %4d] %4d %4d %4d %4d   %d %d\n", ii,
+            fprintf( amoebaGpu->log, "Z1 %4d %d [%4d %4d] %4d %4d %4d %4d   %d %d\n", ii,  axisType[ii],
                      multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii],
                      amoebaGpu->psMultipoleAxisOffset->_pSysData[multipoleParticleZ[ii]],
                      maxIndices[multipoleParticleZ[ii]],
@@ -1931,7 +1935,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     }
 
     if( amoebaGpu->log ){
-        std::string axisLabel[maxAxisType+1] = {  "ZThenX", "Bisector", "ZBisect", "ThreeFold", "ZOnly", "Unknown"};
+        std::string axisLabel[maxAxisType+1] = {  "ZThenX", "Bisector", "ZBisect", "ThreeFold", "ZOnly", "NoAxisType", "Unknown"};
         for( unsigned int kk = 0; kk < (maxAxisType+1); kk++ ){
             (void) fprintf( amoebaGpu->log, "%2u %10s atom count=%d\n", kk, axisLabel[kk].c_str(), axisTypeCount[kk] );
         }
@@ -1969,6 +1973,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
         int diff = maxIndices[ii] - amoebaGpu->psMultipoleAxisOffset->_pSysData[ii];
         if( diff > amoebaGpu->maxMapTorqueDifference ){
+            //fprintf( stderr, "maxMapTorqueDifference %d maxInd=%d off=%d diff=%d\n", ii, maxIndices[ii], amoebaGpu->psMultipoleAxisOffset->_pSysData[ii], diff );
             amoebaGpu->maxMapTorqueDifference = diff;
         }
     }

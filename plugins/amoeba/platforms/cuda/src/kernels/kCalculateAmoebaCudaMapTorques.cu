@@ -101,6 +101,18 @@ void amoebaMapTorqueToForce_kernel( float* torque, int maxDiff, float* tempElecF
     int axisAtom                  = multiPoleAtoms[threadId].z;
     int axisType                  = multiPoleAtoms[threadId].w;
 
+    // NoAxisType
+
+    if( axisType == 5 )
+    { 
+       int min                       = multiPoleAtomOffset[threadId];
+       int offset                    = 3*(threadId*(maxDiff + 1)-min); 
+       tempElecForce[offset  ]       = 0.0f;
+       tempElecForce[offset+1]       = 0.0f;
+       tempElecForce[offset+2]       = 0.0f;
+       return;
+    }
+
     vector[U][0]                  = atomCoord[threadId].x - atomCoord[axisAtom].x;
     vector[U][1]                  = atomCoord[threadId].y - atomCoord[axisAtom].y;
     vector[U][2]                  = atomCoord[threadId].z - atomCoord[axisAtom].z;
@@ -689,7 +701,7 @@ void cudaComputeAmoebaMapTorques( amoebaGpuContext amoebaGpu, CUDAStream<float>*
     // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
 
     if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
-        (void) fprintf( amoebaGpu->log, "block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMapTorques: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
                         BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference );
         exit(-1);  
     }
@@ -859,7 +871,7 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext amoebaGpu,
     // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
 
     if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
-        (void) fprintf( amoebaGpu->log, "block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMapTorquesAndAddTotalForce: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
                         BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference );
         exit(-1);  
     }
@@ -1061,7 +1073,7 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext amoebaGpu,
     // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
 
     if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
-        (void) fprintf( amoebaGpu->log, "block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMapTorquesAndAddTotalForce2: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
                         BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference );
         exit(-1);
     }

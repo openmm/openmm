@@ -53,10 +53,12 @@ __device__ static float normVector3( float* vector )
 
 #undef AMOEBA_DEBUG
 
-// ZThenX    == 0
-// Bisector  == 1
-// ZBisect   == 2
-// ThreeFold == 3
+// ZThenX     == 0
+// Bisector   == 1
+// ZBisect    == 2
+// ThreeFold  == 3
+// ZOnly      == 4
+// NoAxisType == 5
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
@@ -293,7 +295,7 @@ void kCudaComputeLabFrameMoments_kernel( void )
             sum                 = normVector3( vectorZ );
         }
  
-    } else if( axisType == 4 ){ 
+    } else if( axisType >= 4 ){ 
 
         vectorX[0]             = 0.1f;
         vectorX[1]             = 0.1f;
