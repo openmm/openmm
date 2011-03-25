@@ -64,15 +64,16 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
        // only 'Z-then-X', 'Bisector', Z-Bisect, ThreeFold  currently handled
 
-        if( axisType != AmoebaMultipoleForce::ZThenX  && axisType != AmoebaMultipoleForce::Bisector &&
-            axisType != AmoebaMultipoleForce::ZBisect && axisType != AmoebaMultipoleForce::ThreeFold &&
-            axisType != AmoebaMultipoleForce::ZOnly ) {
+        if( axisType != AmoebaMultipoleForce::ZThenX     && axisType != AmoebaMultipoleForce::Bisector &&
+            axisType != AmoebaMultipoleForce::ZBisect    && axisType != AmoebaMultipoleForce::ThreeFold &&
+            axisType != AmoebaMultipoleForce::ZOnly      && axisType != AmoebaMultipoleForce::NoAxisType ) {
              std::stringstream buffer;
              buffer << "AmoebaMultipoleForce: axis type=" << axisType;
              buffer << " not currently handled - only axisTypes[ ";
-             buffer << AmoebaMultipoleForce::ZThenX   << ", " << AmoebaMultipoleForce::Bisector << ", ";
-             buffer << AmoebaMultipoleForce::ZBisect  << ", " << AmoebaMultipoleForce::ThreeFold;
-             buffer << "] (ZThenX, Bisector, Z-Bisect, ThreeFold) currently handled .";
+             buffer << AmoebaMultipoleForce::ZThenX   << ", " << AmoebaMultipoleForce::Bisector  << ", ";
+             buffer << AmoebaMultipoleForce::ZBisect  << ", " << AmoebaMultipoleForce::ThreeFold << ", ";
+             buffer << AmoebaMultipoleForce::NoAxisType;
+             buffer << "] (ZThenX, Bisector, Z-Bisect, ThreeFold, NoAxisType) currently handled .";
              throw OpenMMException(buffer.str());
         }
     }
