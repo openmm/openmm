@@ -33,7 +33,10 @@
 
 using namespace OpenMM;
 
-extern "C" void OPENMMCUDA_EXPORT registerKernelFactories() {
+extern "C" void registerPlatforms() {
+}
+
+extern "C" void registerKernelFactories() {
 //fprintf( stderr,"In registerKernelFactories AmoebaCudaKernelFactory\n" ); fflush( stderr );
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);

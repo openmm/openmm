@@ -33,6 +33,9 @@
 
 using namespace OpenMM;
 
+extern "C" void registerPlatforms() {
+}
+
 extern "C" void registerKernelFactories() {
     // (void) fprintf( stderr, "initOpenMMCudaFreeEnergyPlugin called\n");
     if ( gpuIsAvailableSoftcore() ){

@@ -33,6 +33,9 @@
 
 using namespace OpenMM;
 
+extern "C" void registerPlatforms() {
+}
+
 #if defined(WIN32)
     #include <windows.h>
     extern "C" void registerKernelFactories();
