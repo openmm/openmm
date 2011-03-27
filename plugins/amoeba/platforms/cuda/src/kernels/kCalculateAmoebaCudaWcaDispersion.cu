@@ -434,10 +434,10 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
         (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
                         methodName, amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(WcaDispersionParticle), sizeof(WcaDispersionParticle)*threadsPerBlock,
-                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 

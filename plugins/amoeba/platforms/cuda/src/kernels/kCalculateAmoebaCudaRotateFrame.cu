@@ -434,6 +434,7 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
                              amoebaGpu->psMolecularDipole->_pSysData[mIndex],
                              amoebaGpu->psMolecularDipole->_pSysData[mIndex+1],
                              amoebaGpu->psMolecularDipole->_pSysData[mIndex+2] );
+              if( ii == 30 )ii = gpu->natoms - 30;
         }
     }
 //    int64 kernelTime = AmoebaTiming::getTimeOfDay();
@@ -459,7 +460,7 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
         amoebaGpu->psLabFrameQuadrupole->Download();
         (void) fprintf( amoebaGpu->log, "psLabFrameQpole completed\n" );  (void) fflush( amoebaGpu->log );
 
-        int maxPrint = 10;
+        int maxPrint = 20;
         for( int ii = 0; ii < amoebaGpu->paddedNumberOfAtoms; ii++ ){
 
              int dipoleOffset     = 3*ii;

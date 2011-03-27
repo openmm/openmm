@@ -1895,10 +1895,10 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
         if( amoebaGpu->log ){
 
-            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu Ebuf=%u ixnCt=%lu workUnits=%u\n",
+            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
                             amoebaGpu->nonbondBlocks, threadsPerBlock, maxThreads, amoebaGpu->bOutputBufferPerWarp,
                             sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
-                            amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                            (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
             (void) fflush( amoebaGpu->log );
         }
     }
@@ -1917,10 +1917,10 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     } else {
 
 #ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
-                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 

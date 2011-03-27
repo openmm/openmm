@@ -777,9 +777,9 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
 
     if (gpu->bOutputBufferPerWarp){
 
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu Ebuf=%u ixnCt=%lu workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits ); (void) fflush( amoebaGpu->log );
+                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits ); (void) fflush( amoebaGpu->log );
 
 
         kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
@@ -800,9 +800,9 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
     } else {
 
 #ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u xnCt=%u workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 

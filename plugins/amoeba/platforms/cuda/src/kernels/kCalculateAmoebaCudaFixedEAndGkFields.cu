@@ -430,9 +430,9 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
         (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 
@@ -472,9 +472,9 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
         gpu->psInteractionCount->Download();
-        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 
         amoebaGpu->psWorkArray_3_1->Download();

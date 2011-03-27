@@ -123,6 +123,7 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
                 fieldPolarSum[2]       += mask ? ijField[2].z : 0.0f;
 
 #ifdef AMOEBA_DEBUG
+/*
 if( atomI == targetAtom || (y+j) == targetAtom ){
             unsigned int index                 = atomI == targetAtom ? (y+j) : atomI;
             unsigned int pullBackIndex         = 0;
@@ -190,6 +191,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
             debugArray[index].w                = + 10.0f;
 
 }
+*/
 #endif
 
             }

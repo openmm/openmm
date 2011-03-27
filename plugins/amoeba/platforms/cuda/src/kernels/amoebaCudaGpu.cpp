@@ -195,13 +195,16 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     sm_version                         %u\n",      gpu->sm_version );
     (void) fprintf( log, "     device                             %u\n",      gpu->device );
     (void) fprintf( log, "     sharedMemoryPerBlock               %u\n",      gpu->sharedMemoryPerBlock );
-    (void) fprintf( log, "     bOutputBufferPerWarp               %d\n",      amoebaGpu->bOutputBufferPerWarp );
+    (void) fprintf( log, "     amoebaBOutputBufferPerWarp         %d\n",      amoebaGpu->bOutputBufferPerWarp );
+    (void) fprintf( log, "     bOutputBufferPerWarp               %d\n",      gpu->bOutputBufferPerWarp );
+    //`amoebaGpu->nonbondOutputBuffers           = (amoebaGpu->nonbondBlocks*amoebaGpu->nonbondThreadsPerBlock)/GRID;
     (void) fprintf( log, "     paddedNumberOfAtoms                %u\n",      amoebaGpu->paddedNumberOfAtoms );
-    (void) fprintf( log, "     nonbondBlocks                      %u\n",      amoebaGpu->nonbondBlocks );
-    (void) fprintf( log, "     nonbondThreadsPerBlock             %u\n",      amoebaGpu->nonbondThreadsPerBlock );
-    (void) fprintf( log, "     nonbondElectrostaticThreadsPerBlock%u\n",      amoebaGpu->nonbondElectrostaticThreadsPerBlock );
-    (void) fprintf( log, "     nonbondOutputBuffers               %u\n",      amoebaGpu->nonbondOutputBuffers );
-    (void) fprintf( log, "     energyOutputBuffers                %u\n",      amoebaGpu->energyOutputBuffers );
+    (void) fprintf( log, "     amoebaNonbondBlocks                %u\n",      amoebaGpu->nonbondBlocks );
+    (void) fprintf( log, "     nonbondBlocks                      %u\n",      gpu->sim.nonbond_blocks );
+    (void) fprintf( log, "     amoebaNonbondThreadsPerBlock       %u\n",      amoebaGpu->nonbondThreadsPerBlock );
+    (void) fprintf( log, "     nonbondThreadsPerBlock             %u\n",      gpu->sim.nonbond_threads_per_block);
+    (void) fprintf( log, "     amoebaNonbondOutputBuffers         %u\n",      amoebaGpu->nonbondOutputBuffers );
+    (void) fprintf( log, "     nonbondOutputBuffers               %u\n",      gpu->sim.nonbondOutputBuffers );
     (void) fprintf( log, "     threadsPerBlock                    %u\n",      amoebaGpu->threadsPerBlock );
     (void) fprintf( log, "     fieldReduceThreadsPerBlock         %u\n",      amoebaGpu->fieldReduceThreadsPerBlock );
     (void) fprintf( log, "     outputBuffers                      %u\n",      amoebaGpu->outputBuffers );
@@ -2902,11 +2905,7 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu )
     
     amoebaGpu->nonbondBlocks                        = amoebaGpu->gpuContext->sim.blocks;
     amoebaGpu->threadsPerBlock                      = amoebaGpu->gpuContext->sim.threads_per_block;
-
-    // nonbondThreadsPerBlock & nonbondElectrostaticThreadsPerBlock need to be multiples of 32
-
-    amoebaGpu->nonbondThreadsPerBlock               = 192;
-    amoebaGpu->nonbondElectrostaticThreadsPerBlock  = 128;
+    amoebaGpu->nonbondThreadsPerBlock               = amoebaGpu->gpuContext->sim.nonbond_threads_per_block;
 
     amoebaGpu->fieldReduceThreadsPerBlock           = (amoebaGpu->paddedNumberOfAtoms*3 + amoebaGpu->gpuContext->natoms + amoebaGpu->nonbondBlocks - 1) / amoebaGpu->nonbondBlocks;
     amoebaGpu->fieldReduceThreadsPerBlock           = ((amoebaGpu->fieldReduceThreadsPerBlock + (amoebaGpu->gpuContext->grid - 1)) /  amoebaGpu->gpuContext->grid) *  amoebaGpu->gpuContext->grid;
@@ -2927,16 +2926,13 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu )
         amoebaGpu->nonbondOutputBuffers           = paddedNumberOfAtoms/GRID;
     }
     amoebaGpu->outputBuffers           = amoebaGpu->nonbondOutputBuffers;
-    //amoebaGpu->energyOutputBuffers     = max(amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->sim.localForces_threads_per_block)*amoebaGpu->sim.blocks;
-    amoebaGpu->energyOutputBuffers     = amoebaGpu->nonbondThreadsPerBlock*amoebaGpu->nonbondBlocks;
  
     if( amoebaGpu->log ){
         (void) fprintf(  amoebaGpu->log, "amoebaGpuBuildOutputBuffers: bOutputBufferPerWarp=%u nonbondBuffers=%u "
-                         "outputBuffers=%u energyBuffers=%d nonbondBlocks=%u fieldReduceThreadsPerBlock=%u\n",
+                         "outputBuffers=%u onbondBlocks=%u fieldReduceThreadsPerBlock=%u\n",
                          amoebaGpu->bOutputBufferPerWarp,
                          amoebaGpu->nonbondOutputBuffers,
                          amoebaGpu->outputBuffers,
-                         amoebaGpu->energyOutputBuffers,
                          amoebaGpu->nonbondBlocks,
                          amoebaGpu->fieldReduceThreadsPerBlock ); 
         (void) fflush( amoebaGpu->log );

@@ -1238,10 +1238,10 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                     threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)),
                     sizeof(PmeDirectElectrostaticParticle) );
 
-      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Obuf=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
+      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
                       amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                       sizeof(PmeDirectElectrostaticParticle), (sizeof(PmeDirectElectrostaticParticle))*threadsPerBlock,
-                      amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sim.nonbond_threads_per_block );
+                      (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sim.nonbond_threads_per_block );
       (void) fflush( amoebaGpu->log );
 #endif
 
@@ -1314,18 +1314,6 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
             }
         }
         (void) fflush( amoebaGpu->log );
-/*
-        gpu->psEnergy->Download();
-        double energy = 0.0;
-        for( unsigned int ii = 0; ii < gpu->sim.energyOutputBuffers; ii++ ){
-            if( (*gpu->psEnergy)[ii] !=  (*gpu->psEnergy)[ii] || (*gpu->psEnergy)[ii] == std::numeric_limits<double>::infinity() || (*gpu->psEnergy)[ii] == -std::numeric_limits<double>::infinity() ){
-                (void) fprintf( amoebaGpu->log,"Energy nan at index=%d\n", ii );
-            } else {
-               energy += (*gpu->psEnergy)[ii];
-            }
-        }
-        (void) fprintf( amoebaGpu->log,"Force sums: [%16.9e %16.9e %16.9e] Energy=%16.9e\n", forceSum[0], forceSum[1], forceSum[2], energy );
-*/
 
         if( 0 ){
             (void) fprintf( amoebaGpu->log,"DebugElec\n" );

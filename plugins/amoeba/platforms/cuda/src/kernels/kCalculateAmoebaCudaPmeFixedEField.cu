@@ -468,9 +468,9 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaPmeDirectFixedEField:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u shrd=%u\n", 
                         threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)+sizeof(float3)),
                         (sizeof(FixedFieldParticle)+sizeof(float3)), (sizeof(FixedFieldParticle)+sizeof(float3))*threadsPerBlock );
-        (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u warp=%d\n",
+        (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u warp=%d\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->energyOutputBuffers, 
+                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->bOutputBufferPerWarp );
         (void) fflush( amoebaGpu->log );
 /*

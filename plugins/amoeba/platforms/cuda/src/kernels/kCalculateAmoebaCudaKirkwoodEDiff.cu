@@ -1064,10 +1064,10 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log && timestep == 1 ){
         (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces: blocks=%u threads=%u bffr/Warp=%u atm=%lu shrd=%lu"
-                                        " Ebuf=%u ixnCt=%lu workUnits=%u sm=%d device=%d sharedMemoryPerBlock=%u\n",
+                                        " ixnCt=%lu workUnits=%u sm=%d device=%d sharedMemoryPerBlock=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
-                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sm_version, gpu->device, gpu->sharedMemoryPerBlock );
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sm_version, gpu->device, gpu->sharedMemoryPerBlock );
         (void) fflush( amoebaGpu->log );
     }   
 #endif

@@ -56,9 +56,7 @@ struct _amoebaGpuContext {
     unsigned int paddedNumberOfAtoms;
     unsigned int nonbondBlocks;
     unsigned int nonbondThreadsPerBlock;
-    unsigned int nonbondElectrostaticThreadsPerBlock;
     unsigned int nonbondOutputBuffers;
-    unsigned int energyOutputBuffers;
     unsigned int threadsPerBlock;
     unsigned int fieldReduceThreadsPerBlock;
     unsigned int outputBuffers; 

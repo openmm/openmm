@@ -544,10 +544,10 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
 
 #ifdef AMOEBA_DEBUG
         (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
-                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 

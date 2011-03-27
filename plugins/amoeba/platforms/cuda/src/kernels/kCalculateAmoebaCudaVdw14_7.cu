@@ -525,10 +525,10 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 
 #ifdef AMOEBA_DEBUG_PRINT
     (void) fprintf( amoebaGpu->log, "Apply cutoff=%d warp=%d\n", applyCutoff, gpu->bOutputBufferPerWarp );
-    (void) fprintf( amoebaGpu->log, "numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+    (void) fprintf( amoebaGpu->log, "numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
                     amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                     sizeof(Vdw14_7Particle), sizeof(Vdw14_7Particle)*threadsPerBlock,
-                    amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                    (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
     if( 0 ){  
         gpu->psInteractionCount->Download();
         amoebaGpu->psVdwWorkUnit->Download();
