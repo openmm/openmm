@@ -51,6 +51,10 @@ __device__ void zeroVdw14_7SharedForce( struct Vdw14_7Particle* sA )
     sA->force[1]              = 0.0f;
     sA->force[2]              = 0.0f;
 
+    sA->tempForce[0]          = 0.0f;
+    sA->tempForce[1]          = 0.0f;
+    sA->tempForce[2]          = 0.0f;
+
 }
 
 __device__ void loadVdw14_7Shared( struct Vdw14_7Particle* sA, unsigned int atomI,
@@ -115,6 +119,14 @@ __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float c
     float r2                                     = force[0]*force[0] + force[1]*force[1] + force[2]*force[2];
     if( r2 > cAmoebaSim.vdwCutoff2 ){
         *energy = force[0] = force[1] = force[2] = 0.0f;
+#ifdef AMOEBA_DEBUG
+        float rI                                     =  rsqrtf( r2 );
+        float r                                      =  1.0f/rI;
+        debugArray[0].x = r;
+        debugArray[0].y = debugArray[0].z = debugArray[0].w = 0.0f;
+        debugArray[1].x = debugArray[1].y = debugArray[1].z = 0.0f;
+        debugArray[1].w = r;
+#endif
         return;
     }
     float rI                                     =  rsqrtf( r2 );
@@ -498,10 +510,11 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
     }   
 #ifdef AMOEBA_DEBUG
     int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
+    int maxSlots                               = 10;
+    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(maxSlots*paddedNumberOfAtoms, 1, "DebugArray");
+    memset( debugArray->_pSysData,      0, sizeof( float )*4*maxSlots*paddedNumberOfAtoms);
     debugArray->Upload();
-    int targetAtom                             = 342;
+    int targetAtom                             = 1;
 #endif
 #endif
 
@@ -706,12 +719,12 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
     kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
     kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
 
-    if( 0 ){
+    if( 1 ){
         int paddedNumberOfAtoms             = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
         CUDAStream<float4>* psTempForce     = new CUDAStream<float4>(paddedNumberOfAtoms, 1, "psTempForce");
         kClearFloat4( amoebaGpu, paddedNumberOfAtoms, psTempForce );
-        kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, psTempForce );
-        //kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, psTempForce );
+        //kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, psTempForce );
+        kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, psTempForce );
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;

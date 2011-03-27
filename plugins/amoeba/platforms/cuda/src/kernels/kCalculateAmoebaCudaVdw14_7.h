@@ -209,6 +209,8 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
 #ifdef USE_CUTOFF
             unsigned int flags = cSim.pInteractionFlag[pos];
+// this should be removed once problem w/ calmodulin is resolved
+flags = 0xFFFFFFFF;
             if (flags == 0) {
             } else {
 #endif
