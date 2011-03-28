@@ -1797,7 +1797,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
         gpu->sim.max_shake_threads_per_block        = GT2XX_SHAKE_THREADS_PER_BLOCK;
         gpu->sim.max_update_threads_per_block       = GT2XX_UPDATE_THREADS_PER_BLOCK;
         gpu->sim.max_localForces_threads_per_block  = GT2XX_LOCALFORCES_THREADS_PER_BLOCK;
-        gpu->sim.threads_per_block                  = GT2XX_NONBOND_THREADS_PER_BLOCK;
+        gpu->sim.threads_per_block                  = GT2XX_THREADS_PER_BLOCK;
         gpu->sim.random_threads_per_block           = GT2XX_RANDOM_THREADS_PER_BLOCK;
         gpu->blocksPerSM                            = GT2XX_BLOCKS_PER_SM;
     }
@@ -1808,7 +1808,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
         gpu->sim.max_shake_threads_per_block        = GF1XX_SHAKE_THREADS_PER_BLOCK;
         gpu->sim.max_update_threads_per_block       = GF1XX_UPDATE_THREADS_PER_BLOCK;
         gpu->sim.max_localForces_threads_per_block  = GF1XX_LOCALFORCES_THREADS_PER_BLOCK;
-        gpu->sim.threads_per_block                  = GF1XX_NONBOND_THREADS_PER_BLOCK;
+        gpu->sim.threads_per_block                  = GF1XX_THREADS_PER_BLOCK;
         gpu->sim.random_threads_per_block           = GF1XX_RANDOM_THREADS_PER_BLOCK;
         gpu->blocksPerSM                            = GF1XX_BLOCKS_PER_SM;
     }
