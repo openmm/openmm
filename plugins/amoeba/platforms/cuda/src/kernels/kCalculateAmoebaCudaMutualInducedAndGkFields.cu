@@ -915,7 +915,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
-    if( amoebaGpu->log ){
+    if( 0 && amoebaGpu->log ){
         trackMutualInducedIterations( amoebaGpu, iteration );
     }
 

@@ -542,7 +542,7 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
            amoebaGpu->psCurrentEpsilon->_pDevData );
         LAUNCHERROR("kReduceMutualInducedFieldDelta");
 
-        if( amoebaGpu->log ){
+        if( 0 && amoebaGpu->log ){
             trackMutualInducedIterations( amoebaGpu, iteration);
         }
 

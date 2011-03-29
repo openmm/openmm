@@ -686,7 +686,7 @@ void) fflush( amoebaGpu->log );
            amoebaGpu->psCurrentEpsilon->_pDevData );
         LAUNCHERROR("kReducePmeMutualInducedFieldDelta");
 
-        if( amoebaGpu->log ){
+        if( 0 && amoebaGpu->log ){
             trackMutualInducedIterations( amoebaGpu, iteration);
         }
 
@@ -770,8 +770,10 @@ void) fflush( amoebaGpu->log );
                         amoebaGpu->psCurrentEpsilon->_pSysData[2], done );
         (void) fflush( amoebaGpu->log );
 #endif
+
         // exit if nan
-        if( amoebaGpu->mutualInducedCurrentEpsilon != amoebaGpu->mutualInducedCurrentEpsilon ){
+
+        if( 0 && amoebaGpu->mutualInducedCurrentEpsilon != amoebaGpu->mutualInducedCurrentEpsilon ){
             (void) fprintf( amoebaGpu->log, "PME MI iteration=%3d eps is nan -- exiting.\n", iteration );
             exit(0);
         }
@@ -791,6 +793,12 @@ void) fflush( amoebaGpu->log );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeMI", fileId, outputVector );
+     }
+
+    if( 0 ){
+        static int iteration = 0;
+        checkForNans( gpu->natoms,  3, amoebaGpu->psInducedDipole, gpu->psAtomIndex->_pSysData,    ++iteration, "CudaPmeMI", stderr );
+        checkForNans( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, gpu->psAtomIndex->_pSysData, iteration, "CudaPmeMIPolar", stderr );
      }
 
    // ---------------------------------------------------------------------------------------

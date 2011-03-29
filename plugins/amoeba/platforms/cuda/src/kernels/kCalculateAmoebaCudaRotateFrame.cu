@@ -553,6 +553,17 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     // compute lab frame moments
 
+    if( 0 ){
+        static int iteration = 0;
+        gpuContext gpu       = amoebaGpu->gpuContext;
+        checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, ++iteration, "MultipoleForcesPreLabCoord", stderr );
+     }   
+    if( 0 ){
+        static int iteration = 0;
+        gpuContext gpu       = amoebaGpu->gpuContext;
+        checkForNansFloat4( gpu->natoms, gpu->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "MultipoleForcesPreForce", stderr );
+     }   
+
     cudaComputeAmoebaLabFrameMoments( amoebaGpu );
 
     if( 0 ){
@@ -622,6 +633,12 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );
     }
+    if( 0 ){
+        static int iteration = 0;
+        gpuContext gpu       = amoebaGpu->gpuContext;
+        checkForNansFloat4( gpu->natoms, gpu->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "MultipoleForcesPstForce", stderr );
+     }   
+
 }
 
 #undef AMOEBA_DEBUG

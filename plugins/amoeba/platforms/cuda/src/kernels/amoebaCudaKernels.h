@@ -152,6 +152,10 @@ extern void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerPartic
 extern void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array, VectorOfDoubleVectors& outputVector, int* order, float conversion );
 extern void cudaWriteVectorOfDoubleVectorsToFile( char* fname, std::vector<int>& fileId, VectorOfDoubleVectors& outputVector );
 extern void initializeCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDAStream<float>* array, float initValue );
+extern void checkForNans( int numberOfParticles, int entriesPerParticle,
+                          CUDAStream<float>* array, int* order, int iteration, std::string idString, FILE* log );
+extern void checkForNansFloat4( int numberOfParticles, CUDAStream<float4>* array, int* order, int iteration, std::string idString, FILE* log );
+
 
 
 extern void kClearFloat( amoebaGpuContext amoebaGpu, unsigned int entries, CUDAStream<float>* fieldToClear );

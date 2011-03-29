@@ -3977,6 +3977,141 @@ void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle,
 
 /**---------------------------------------------------------------------------------------
 
+   Check for nans in Cuda array
+
+      (1) download data from gpu
+      (2) check for nans and large values (> 1.0e+08) in array, and report if any found and exit
+      (3) report largest entry in absolute value, if no problems detected 
+      (4) also by editing 'targetParticle', can track values around that index
+
+   @param numberOfParticles    number of entries in array
+   @param entriesPerParticle   entries/particles in array
+   @param array                Cuda<float> array to check
+   @param order                particle order index array
+   @param iteration            tracking iteration 
+   @param idString             id string for check
+   @param log                  loggin file references
+
+   --------------------------------------------------------------------------------------- */
+
+void checkForNans( int numberOfParticles, int entriesPerParticle,
+                   CUDAStream<float>* array, int* order, int iteration, std::string idString, FILE* log )
+{
+    // ---------------------------------------------------------------------------------------
+
+    array->Download();
+
+    int orderIndex     = 0;
+    int errors         = 0; 
+    float maxValue     = 0.0;
+    int maxIndex       = 0;
+    int targetParticle = -9782;
+    for( int ii = 0; ii < numberOfParticles; ii++ ){ 
+        if( order ){
+            orderIndex = order[ii];
+        } else {
+            orderIndex = ii;
+        }
+        int newLine = 0;
+        for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
+            if( array->_pSysData[entriesPerParticle*ii+jj] != array->_pSysData[entriesPerParticle*ii+jj] ||
+                fabs( array->_pSysData[entriesPerParticle*ii+jj] ) > 1.0e+8 || abs( ii - targetParticle ) < 3 ){
+                if( newLine == 0 )(void) fprintf( log, "%s %6d %6d ", idString.c_str(), iteration, ii );
+                (void) fprintf( log, "[%6d %6d %15.7e] ",
+                                jj, orderIndex, array->_pSysData[entriesPerParticle*ii+jj] );
+                newLine++;
+                if( array->_pSysData[entriesPerParticle*ii+jj] != array->_pSysData[entriesPerParticle*ii+jj] ||
+                    fabs( array->_pSysData[entriesPerParticle*ii+jj] ) > 1.0e+8 ){
+                    errors += 1;
+                }
+            }
+            if( fabs( array->_pSysData[entriesPerParticle*ii+jj] ) > fabs( maxValue ) ){
+                maxValue = array->_pSysData[entriesPerParticle*ii+jj];
+                maxIndex = ii;
+            }
+        }
+        if( newLine ) fprintf( log, "\n" );
+    }
+    if( errors == 0 ){
+        (void) fprintf( log, "%s %6d no errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
+    } else {
+        (void) fprintf( log, "%s %6d errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
+        exit(-1);
+    }
+
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Check for nans in Cuda<float4> array
+
+      (1) download data from gpu
+      (2) check for nans and large values (> 1.0e+08) in array, and report if any found and exit
+      (3) report largest entry in absolute value, if no problems detected 
+      (4) also by editing 'targetParticle', can track values around that index
+
+   @param numberOfParticles    number of entries in array
+   @param array                Cuda<float4> array to check
+   @param order                particle order index array
+   @param iteration            tracking iteration 
+   @param idString             id string for check
+   @param log                  loggin file references
+
+   --------------------------------------------------------------------------------------- */
+
+void checkForNansFloat4( int numberOfParticles, CUDAStream<float4>* array, int* order, int iteration, std::string idString, FILE* log )
+{
+    // ---------------------------------------------------------------------------------------
+
+    array->Download();
+
+    int orderIndex          = 0;
+    int errors              = 0; 
+    float maxValue          = 0.0;
+    int maxIndex            = 0;
+    int entriesPerParticle  = 4;
+    int targetParticle      = -9782;
+    float values[4];
+    for( int ii = 0; ii < numberOfParticles; ii++ ){ 
+        if( order ){
+            orderIndex = order[ii];
+        } else {
+            orderIndex = ii;
+        }
+
+        values[0] = array->_pSysData[ii].x;
+        values[1] = array->_pSysData[ii].y;
+        values[2] = array->_pSysData[ii].z;
+        values[3] = array->_pSysData[ii].w;
+
+        int newLine = 0;
+        for( int jj = 0; jj < entriesPerParticle; jj++ ) { 
+            if( values[jj] != values[jj] || fabs( values[jj] ) > 1.0e+8 || abs( ii - targetParticle ) < 3 ){
+                if( newLine == 0 )(void) fprintf( log, "%s %6d %6d ", idString.c_str(), iteration, ii );
+                newLine++;
+                (void) fprintf( log, "[%6d  %6d %15.7e] ", jj, orderIndex, values[jj] );
+                if( values[jj] != values[jj] || fabs( values[jj] ) > 1.0e+8 ){
+                    errors += 1;
+                }
+            }
+            if( fabs( values[jj] ) > fabs( maxValue ) ){
+                maxValue = values[jj];
+                maxIndex = ii;
+            }
+        }
+        if( newLine ) fprintf( log, "\n" );
+        
+    }
+    if( errors == 0 ){
+        (void) fprintf( log, "%s %6d no errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
+    } else {
+        (void) fprintf( log, "%s %6d errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
+        exit(-1);
+    }
+}
+
+/**---------------------------------------------------------------------------------------
+
    Load contents of arrays into vector
 
    @param numberOfParticles    number of particles

@@ -533,6 +533,11 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(Vdw14_7Particle)), maxThreads);
     }    
 
+    if( 0 ){
+        static int iteration = 0;
+        checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, ++iteration, "\n\nzCoordPreCopyVdw", stderr );
+     }   
+
     kCalculateAmoebaVdw14_7CopyCoordinates( amoebaGpu, gpu->psPosq4, amoebaGpu->psAmoebaVdwCoordinates );
     kCalculateAmoebaVdw14_7CoordinateReduction( amoebaGpu, amoebaGpu->psAmoebaVdwCoordinates, amoebaGpu->psAmoebaVdwCoordinates );
 
@@ -669,8 +674,8 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 
 #ifdef AMOEBA_DEBUG_PRINT
     if( amoebaGpu->log ){
-
-        (void) fprintf( amoebaGpu->log, "Finished 14-7 kernel execution\n" );
+        static int iteration = 0;
+        (void) fprintf( amoebaGpu->log, "Finished 14-7 kernel execution step=%d\n", ++iteration );
         (void) fflush( amoebaGpu->log );
 
 #ifdef AMOEBA_DEBUG
@@ -694,7 +699,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
             (void) fprintf( amoebaGpu->log,"\n" );
         }
 #endif
-
+/*
         amoebaGpu->psWorkArray_3_2->Download();
         amoebaGpu->psWorkArray_3_1->Download();
         //for( int jj = 0; jj < 3*gpu->natoms; jj += 3 )
@@ -711,15 +716,28 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                                 amoebaGpu->psWorkArray_3_2->_pSysStream[kk][jj+2] );
             }
         }
+*/
 
     }
 #endif
 
+    if( 0 ){
+        static int iteration = 0;
+        checkForNansFloat4( gpu->natoms, amoebaGpu->gpuContext->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "PreVdw", stderr );
+        checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, iteration, "zCoordPreVdw", stderr );
+     }   
+
     kReduceVdw14_7( amoebaGpu, amoebaGpu->psWorkArray_3_2 );
+
+    if( 0 ){
+        static int iteration = 0;
+        checkForNans( gpu->natoms, 3, amoebaGpu->psWorkArray_3_2, gpu->psAtomIndex->_pSysData, ++iteration, "Vdw32", stderr );
+     }   
+
     kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
     kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
 
-    if( 1 ){
+    if( 0 ){
         int paddedNumberOfAtoms             = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
         CUDAStream<float4>* psTempForce     = new CUDAStream<float4>(paddedNumberOfAtoms, 1, "psTempForce");
         kClearFloat4( amoebaGpu, paddedNumberOfAtoms, psTempForce );
@@ -734,6 +752,11 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         delete psTempForce;
         //exit(0);
      }
+
+    if( 0 ){
+        static int iteration = 0;
+        checkForNansFloat4( gpu->natoms, amoebaGpu->gpuContext->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "VdwForce", stderr );
+     }   
 
 #ifdef AMOEBA_DEBUG
     delete debugArray;
