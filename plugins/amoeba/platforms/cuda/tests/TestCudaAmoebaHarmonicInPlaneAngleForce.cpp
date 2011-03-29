@@ -398,6 +398,7 @@ int main( int numberOfArguments, char* argv[] ) {
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;
     }
-    std::cout << "PASS - Test succeeded." << std::endl;
+    //std::cout << "PASS - Test succeeded." << std::endl;
+    std::cout << "Done" << std::endl;
     return 0;
 }
