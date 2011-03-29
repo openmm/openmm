@@ -48,14 +48,17 @@ namespace OpenMM {
  */
 
 class OPENMM_EXPORT AmoebaMultipoleForce : public Force {
+
 public:
  
     enum AmoebaNonbondedMethod {
+
         /** 
          * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
          * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
          */
         NoCutoff = 0,
+
         /**
          * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
          * with all periodic copies of every other particle.
@@ -88,12 +91,12 @@ public:
     }
 
     /**
-     * Get the method used for handling long range nonbonded interactions.
+     * Get the method used for handling long-range nonbonded interactions.
      */
     AmoebaNonbondedMethod getNonbondedMethod( void ) const;
 
     /**
-     * Set the method used for handling long range nonbonded interactions.
+     * Set the method used for handling long-range nonbonded interactions.
      */
     void setNonbondedMethod(AmoebaNonbondedMethod method);
 

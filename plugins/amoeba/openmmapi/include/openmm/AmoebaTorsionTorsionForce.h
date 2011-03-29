@@ -33,9 +33,10 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
+#include "openmm/internal/windowsExport.h"
+
 #include <vector>
 #include <cmath>
-#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -158,7 +159,9 @@ private:
 };
 
 class AmoebaTorsionTorsionForce::TorsionTorsionInfo {
+
 public:
+
     int particle1, particle2, particle3, particle4, particle5;
     int chiralCheckAtomIndex;
     int gridIndex;

@@ -34,9 +34,10 @@
 
 #include "openmm/Force.h"
 #include "openmm/Vec3.h"
+#include "openmm/internal/windowsExport.h"
+
 #include <map>
 #include <vector>
-#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -46,8 +47,10 @@ namespace OpenMM {
  * a bond has been added, you can modify its force field parameters by calling setUreyBradleyParameters().
  */
 
- class OPENMM_EXPORT AmoebaUreyBradleyForce : public Force {
+class OPENMM_EXPORT AmoebaUreyBradleyForce : public Force {
+
 public:
+
     /**
      * Create a Amoeba UreyBradleyForce.
      */

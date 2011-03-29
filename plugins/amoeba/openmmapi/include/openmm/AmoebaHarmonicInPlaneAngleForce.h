@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include <vector>
 #include "openmm/internal/windowsExport.h"
+#include <vector>
 
 namespace OpenMM {
 
@@ -45,8 +45,10 @@ namespace OpenMM {
  * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
 
- class OPENMM_EXPORT AmoebaHarmonicInPlaneAngleForce : public Force {
+class OPENMM_EXPORT AmoebaHarmonicInPlaneAngleForce : public Force {
+
 public:
+
     /**
      * Create a Amoeba HarmonicAngleForce.
      */

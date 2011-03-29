@@ -47,12 +47,16 @@ namespace OpenMM {
  * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaHarmonicBondForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaHarmonicBondForce";
     }
+
     CalcAmoebaHarmonicBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -60,6 +64,7 @@ public:
      * @param force      the AmoebaHarmonicBondForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaHarmonicBondForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -69,16 +74,20 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+
 };
 
 class CalcAmoebaUreyBradleyForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaUreyBradleyForce";
     }
 
     CalcAmoebaUreyBradleyForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -86,6 +95,7 @@ public:
      * @param force      the AmoebaUreyBradleyForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaUreyBradleyForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -95,18 +105,23 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+
 };
 
 /**
  * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaHarmonicAngleForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaHarmonicAngleForce";
     }
+
     CalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -114,6 +129,7 @@ public:
      * @param force      the HarmonicAngleForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaHarmonicAngleForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -129,12 +145,16 @@ public:
  * This kernel is invoked by AmoebaHarmonicInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaHarmonicInPlaneAngleForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaHarmonicInPlaneAngleForce";
     }
+
     CalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -142,6 +162,7 @@ public:
      * @param force      the HarmonicInPlaneAngleForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -157,12 +178,16 @@ public:
  * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaTorsionForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaTorsionForce";
     }
+
     CalcAmoebaTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -170,6 +195,7 @@ public:
      * @param force      the TorsionForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaTorsionForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -185,12 +211,16 @@ public:
  * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaPiTorsionForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaPiTorsionForce";
     }
+
     CalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -198,6 +228,7 @@ public:
      * @param force      the PiTorsionForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaPiTorsionForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -213,12 +244,16 @@ public:
  * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaStretchBendForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaStretchBendForce";
     }
+
     CalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -226,6 +261,7 @@ public:
      * @param force      the StretchBendForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaStretchBendForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -241,12 +277,16 @@ public:
  * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaOutOfPlaneBendForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaOutOfPlaneBendForce";
     }
+
     CalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -254,6 +294,7 @@ public:
      * @param force      the OutOfPlaneBendForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -269,12 +310,16 @@ public:
  * This kernel is invoked by AmoebaTorsionTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaTorsionTorsionForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaTorsionTorsionForce";
     }
+
     CalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -282,6 +327,7 @@ public:
      * @param force      the TorsionTorsionForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaTorsionTorsionForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -297,12 +343,16 @@ public:
  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaMultipoleForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaMultipoleForce";
     }
+
     CalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+
     /**
      * Initialize the kernel.
      * 
@@ -310,6 +360,7 @@ public:
      * @param force      the MultipoleForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaMultipoleForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -325,10 +376,13 @@ public:
  * This kernel is invoked by AmoebaGeneralizedKirkwoodForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcAmoebaGeneralizedKirkwoodForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaGeneralizedKirkwoodForce";
     }
+
     CalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
 
@@ -339,6 +393,7 @@ public:
      * @param force      the GBSAOBCForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -356,9 +411,11 @@ public:
  */
 class CalcAmoebaVdwForceKernel : public KernelImpl {
 public:
+
     static std::string Name() {
         return "CalcAmoebaVdwForce";
     }
+
     CalcAmoebaVdwForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
 
@@ -369,6 +426,7 @@ public:
      * @param force      the GBSAOBCForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaVdwForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -384,10 +442,13 @@ public:
  * This kernel is invoked by AmoebaWcaDispersionForce to calculate the WCA dispersion forces acting on the system and the WCA dispersion energy of the system.
  */
 class CalcAmoebaWcaDispersionForceKernel : public KernelImpl {
+
 public:
+
     static std::string Name() {
         return "CalcAmoebaWcaDispersionForce";
     }
+
     CalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
 
@@ -398,6 +459,7 @@ public:
      * @param force      the GBSAOBCForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaWcaDispersionForce& force) = 0;
+
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *

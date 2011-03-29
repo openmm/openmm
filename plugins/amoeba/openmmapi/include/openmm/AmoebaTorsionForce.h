@@ -47,6 +47,7 @@ namespace OpenMM {
  */
 
 class OPENMM_EXPORT AmoebaTorsionForce : public Force {
+
 public:
 
     static const unsigned int ParametersPerTorsion  = 2;

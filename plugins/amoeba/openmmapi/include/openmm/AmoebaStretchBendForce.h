@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include <vector>
 #include "openmm/internal/windowsExport.h"
+#include <vector>
 
 namespace OpenMM {
 
@@ -44,8 +44,10 @@ namespace OpenMM {
  * a stretchBend has been added, you can modify its force field parameters by calling setStretchBendParameters().
  */
 
- class OPENMM_EXPORT AmoebaStretchBendForce : public Force {
+class OPENMM_EXPORT AmoebaStretchBendForce : public Force {
+
 public:
+
     /**
      * Create a Amoeba StretchBendForce.
      */

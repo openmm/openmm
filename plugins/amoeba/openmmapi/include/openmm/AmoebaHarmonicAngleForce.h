@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include <vector>
 #include "openmm/internal/windowsExport.h"
+#include <vector>
 
 namespace OpenMM {
 
@@ -44,8 +44,10 @@ namespace OpenMM {
  * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
 
- class OPENMM_EXPORT AmoebaHarmonicAngleForce : public Force {
+class OPENMM_EXPORT AmoebaHarmonicAngleForce : public Force {
+
 public:
+
     /**
      * Create a Amoeba HarmonicAngleForce.
      */
@@ -124,8 +126,7 @@ public:
      * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
      * @return the index of the angle that was added
      */
-    int addAngle(int particle1, int particle2, int particle3, double length, 
-                 double quadraticK );
+    int addAngle(int particle1, int particle2, int particle3, double length, double quadraticK );
 
     /**
      * Get the force field parameters for a angle term.
@@ -137,8 +138,7 @@ public:
      * @param length        the equilibrium angle, measured in radians
      * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
      */
-    void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length,
-                            double& quadraticK ) const;
+    void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length, double& quadraticK ) const;
 
     /**
      * Set the force field parameters for a angle term.
