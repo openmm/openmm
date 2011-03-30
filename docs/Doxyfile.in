@@ -78,7 +78,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = "@CMAKE_SOURCE_DIR@/openmmapi" "@CMAKE_SOURCE_DIR@/olla"
+INPUT                  = "@CMAKE_SOURCE_DIR@/openmmapi" "@CMAKE_SOURCE_DIR@/olla" "@CMAKE_SOURCE_DIR@/serialization/include/openmm/serialization/XmlSerializer.h"
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = 
 RECURSIVE              = YES
