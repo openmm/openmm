@@ -1,6 +1,5 @@
 ----------------------------------------------------------------
-OpenMM(tm) Example programs for OpenMM Preview Release 4, 
-August, 2009.
+OpenMM(tm) Example programs for OpenMM 3.0, March 2011.
 
 See https://simtk.org/home/openmm.
 For help go to the Advanced/Public Forums tab and post to the
@@ -17,8 +16,8 @@ OpenMM is developed under the supervision of Simbios P.I. Vijay
 Pande at Stanford. Any work that uses OpenMM should cite the 
 following paper: M. S. Friedrichs, P. Eastman, V. Vaidyanathan, 
 M. Houston, S. LeGrand, A. L. Beberg, D. L. Ensign, C. M. Bruns, 
-V. S. Pande. “Accelerating Molecular Dynamic Simulation on 
-Graphics Processing Units.” J. Comp. Chem., (2009), 30(6):864-872.
+V. S. Pande. ï¿½Accelerating Molecular Dynamic Simulation on 
+Graphics Processing Units.ï¿½ J. Comp. Chem., (2009), 30(6):864-872.
 
 These simple "hello world" examples were developed by
 Christopher Bruns and Michael Sherman.
