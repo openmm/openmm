@@ -470,7 +470,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
                         (sizeof(FixedFieldParticle)+sizeof(float3)), (sizeof(FixedFieldParticle)+sizeof(float3))*threadsPerBlock );
         (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u warp=%d\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock,
+                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->bOutputBufferPerWarp );
         (void) fflush( amoebaGpu->log );
 /*

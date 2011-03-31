@@ -542,30 +542,31 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
     kCalculateAmoebaVdw14_7CoordinateReduction( amoebaGpu, amoebaGpu->psAmoebaVdwCoordinates, amoebaGpu->psAmoebaVdwCoordinates );
 
 #ifdef AMOEBA_DEBUG_PRINT
-    (void) fprintf( amoebaGpu->log, "Apply cutoff=%d warp=%d\n", applyCutoff, gpu->bOutputBufferPerWarp );
-    (void) fprintf( amoebaGpu->log, "numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                    amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                    sizeof(Vdw14_7Particle), sizeof(Vdw14_7Particle)*threadsPerBlock,
-                    (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-    if( 0 ){  
-        gpu->psInteractionCount->Download();
-        amoebaGpu->psVdwWorkUnit->Download();
-        unsigned int totalWarps  = (amoebaGpu->nonbondBlocks*threadsPerBlock)/GRID;
-        float        ratiof     = (float)totalWarps/(float)amoebaGpu->psVdwWorkUnit->_length;
-        (void) fprintf( amoebaGpu->log, "Ixn warps=%u count=%u\n", totalWarps, gpu->psInteractionCount->_pSysData[0] );
-        for( unsigned int ii = 0; ii < amoebaGpu->psVdwWorkUnit->_length; ii++ ){
-    
-            unsigned int x          = amoebaGpu->psVdwWorkUnit->_pSysData[ii];
-            unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-            unsigned int exclusions = (x & 0x1);
-                         x          = (x >> 17) << GRIDBITS;
-            float        warp       = (float)(ii)*ratiof; 
-            (void) fprintf( amoebaGpu->log, "GpuCell %8u  [%5u %5u %1u] %10u warp=%15.6f\n", ii, x,y,exclusions, warp );
-    
-        }           
+    if( 1 && amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "Apply cutoff=%d warp=%d\n", applyCutoff, gpu->bOutputBufferPerWarp );
+        (void) fprintf( amoebaGpu->log, "numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(Vdw14_7Particle), sizeof(Vdw14_7Particle)*threadsPerBlock,
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+        if( 0 ){  
+            gpu->psInteractionCount->Download();
+            amoebaGpu->psVdwWorkUnit->Download();
+            unsigned int totalWarps  = (amoebaGpu->nonbondBlocks*threadsPerBlock)/GRID;
+            float        ratiof     = (float)totalWarps/(float)amoebaGpu->psVdwWorkUnit->_length;
+            (void) fprintf( amoebaGpu->log, "Ixn warps=%u count=%u\n", totalWarps, gpu->psInteractionCount->_pSysData[0] );
+            for( unsigned int ii = 0; ii < amoebaGpu->psVdwWorkUnit->_length; ii++ ){
+        
+                unsigned int x          = amoebaGpu->psVdwWorkUnit->_pSysData[ii];
+                unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
+                unsigned int exclusions = (x & 0x1);
+                             x          = (x >> 17) << GRIDBITS;
+                float        warp       = (float)(ii)*ratiof; 
+                (void) fprintf( amoebaGpu->log, "GpuCell %8u  [%5u %5u %1u] %10u warp=%15.6f\n", ii, x,y,exclusions, warp );
+        
+            }           
+        }
+        (void) fflush( amoebaGpu->log );
     }
-    
-    (void) fflush( amoebaGpu->log );
 #endif
 
     // clear output arrays
@@ -584,7 +585,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         LAUNCHERROR("kFindInteractionsWithinBlocksVdwPeriodic");
 
 #ifdef AMOEBA_DEBUG
-        if( 0 ){  
+        if( 0 && amoebaGpu->log ){  
             gpu->psInteractionCount->Download();
             gpu->psInteractingWorkUnit->Download();
             gpu->psInteractionFlag->Download();

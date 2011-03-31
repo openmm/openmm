@@ -1192,7 +1192,9 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
     StringVectorVector fileContents;
     readFile( fileName, fileContents );
     unsigned int offset  = 0;
-    (void) fprintf( amoebaGpu->log, "Read file: %s %u\n", fileName.c_str(), fileContents.size() ); fflush(  amoebaGpu->log );
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "Read file: %s %u\n", fileName.c_str(), fileContents.size() ); fflush(  amoebaGpu->log );
+    }
     for( unsigned int ii = 1; ii < fileContents.size()-1; ii++ ){
 
         StringVector lineTokens     = fileContents[ii];
@@ -1234,15 +1236,17 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
     kClearFields_3( amoebaGpu, 2 );
 
 #ifdef AMOEBA_DEBUG
-    (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u\n", 
-                    threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)),
-                    sizeof(PmeDirectElectrostaticParticle) );
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u\n", 
+                        threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(PmeDirectElectrostaticParticle)),
+                        sizeof(PmeDirectElectrostaticParticle) );
 
-      (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
+           (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
                       amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                       sizeof(PmeDirectElectrostaticParticle), (sizeof(PmeDirectElectrostaticParticle))*threadsPerBlock,
                       (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sim.nonbond_threads_per_block );
-      (void) fflush( amoebaGpu->log );
+         (void) fflush( amoebaGpu->log );
+    }   
 #endif
 
     if (gpu->bOutputBufferPerWarp){

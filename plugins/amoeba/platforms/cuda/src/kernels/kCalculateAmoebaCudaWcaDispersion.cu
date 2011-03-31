@@ -414,6 +414,16 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
        threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(WcaDispersionParticle)), maxThreads);
     }
 
+#ifdef AMOEBA_DEBUG
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
+                        methodName, amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(WcaDispersionParticle), sizeof(WcaDispersionParticle)*threadsPerBlock,
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+        (void) fflush( amoebaGpu->log );
+    }
+#endif
+
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaWcaDispersionN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevData,
@@ -427,15 +437,6 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 #endif
 
     } else {
-
-#ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        methodName, amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(WcaDispersionParticle), sizeof(WcaDispersionParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-#endif
 
         kCalculateAmoebaWcaDispersionN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevData,
@@ -609,7 +610,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
     kReduceWcaDispersionToFloat4( amoebaGpu, gpu->psForce4 );
 
 #ifdef AMOEBA_DEBUG
-    if( 0 ){
+    if( 0 && amoebaGpu->log ){
         gpu->psEnergy->Download();
         double sum = 0.0;
         for (int i = 0; i < gpu->sim.energyOutputBuffers; i++){

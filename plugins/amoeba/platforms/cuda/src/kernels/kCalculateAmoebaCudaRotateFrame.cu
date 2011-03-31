@@ -163,7 +163,6 @@ void kCudaComputeLabFrameMoments_kernel( void )
     float vectorZ[3];
  
     int numOfAtoms               = cSim.atoms;
-    //float* rotationMatrix        = cAmoebaSim.pRotationMatrix;
     float4* atomCoord            = cSim.pPosq;
     int4* multiPoleAtoms         = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
     float* labFrameDipole        = cAmoebaSim.pLabFrameDipole;
@@ -183,12 +182,6 @@ void kCudaComputeLabFrameMoments_kernel( void )
  
     // code common to ZThenX and Bisector
     
- /*
-    vectorX                          = &(rotationMatrix[atomIndex*9]);
-    vectorY                          = &(rotationMatrix[atomIndex*9+ 3]);
-    vectorZ                          = &(rotationMatrix[atomIndex*9+ 6]);
- */
- 
     float4 coordinatesThisAtom       = atomCoord[atomIndex];
  
     int multipoleAtomIndex           = multiPoleAtoms[atomIndex].z;
@@ -523,16 +516,6 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
 #endif
 
     if( 0 ){
-//        int particles = particles;
-        int particles = amoebaGpu->paddedNumberOfAtoms;
-        std::vector<int> fileId;
-        //fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( particles, 3, gpu->psPosq4,                     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( particles,  9, amoebaGpu->psRotationMatrix,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaRotationMatrices", fileId, outputVector );
-    }
-    if( 0 ){
 
         int particles = amoebaGpu->paddedNumberOfAtoms;
         std::vector<int> fileId;
@@ -557,7 +540,8 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
         static int iteration = 0;
         gpuContext gpu       = amoebaGpu->gpuContext;
         checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, ++iteration, "MultipoleForcesPreLabCoord", stderr );
-     }   
+    }   
+
     if( 0 ){
         static int iteration = 0;
         gpuContext gpu       = amoebaGpu->gpuContext;
@@ -633,6 +617,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );
     }
+
     if( 0 ){
         static int iteration = 0;
         gpuContext gpu       = amoebaGpu->gpuContext;

@@ -240,7 +240,13 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
                                                                CUDAStream<float>* outputArray, CUDAStream<float>* outputPolarArray )
 {
   
-  gpuContext gpu    = amoebaGpu->gpuContext;
+   // ---------------------------------------------------------------------------------------
+
+    static unsigned int threadsPerBlock = 0;
+
+   // ---------------------------------------------------------------------------------------
+  
+    gpuContext gpu    = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
     int targetAtom    = 1231;
@@ -258,8 +264,27 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
 
     kClearFields_3( amoebaGpu, 2 );
 
+    if( threadsPerBlock == 0 ){  
+        unsigned int maxThreads;
+        if (gpu->sm_version >= SM_20)
+            maxThreads = 512; 
+        else if (gpu->sm_version >= SM_12)
+            maxThreads = 128; 
+        else 
+            maxThreads = 64; 
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(MutualInducedParticle)), maxThreads);
+    }   
+
+#ifdef AMOEBA_DEBUG
+        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n", methodName,
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+        (void) fflush( amoebaGpu->log );
+#endif
+
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaMutualInducedFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
+        kCalculateAmoebaMutualInducedFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  amoebaGpu->psWorkUnit->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
@@ -271,15 +296,7 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
 
     } else {
 
-#ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-#endif
-        kCalculateAmoebaMutualInducedFieldN2_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, sizeof(MutualInducedParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
+        kCalculateAmoebaMutualInducedFieldN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  amoebaGpu->psWorkUnit->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
@@ -542,7 +559,7 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
            amoebaGpu->psCurrentEpsilon->_pDevData );
         LAUNCHERROR("kReduceMutualInducedFieldDelta");
 
-        if( 0 && amoebaGpu->log ){
+        if( 0 && amoebaGpu->log ){ // trackMutualInducedIterations
             trackMutualInducedIterations( amoebaGpu, iteration);
         }
 

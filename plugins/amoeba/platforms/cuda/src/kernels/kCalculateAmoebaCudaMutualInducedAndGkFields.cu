@@ -528,6 +528,16 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
         threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(MutualInducedParticle)), maxThreads);
     }
     
+#ifdef AMOEBA_DEBUG
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
+                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+        (void) fflush( amoebaGpu->log );
+    }
+#endif
+
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  amoebaGpu->psWorkUnit->_pDevData,
@@ -541,15 +551,6 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
                                                                  amoebaGpu->psWorkArray_3_4->_pDevData );
 #endif
     } else {
-
-#ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
-        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-#endif
 
         kCalculateAmoebaMutualInducedAndGkFieldsN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevData,
