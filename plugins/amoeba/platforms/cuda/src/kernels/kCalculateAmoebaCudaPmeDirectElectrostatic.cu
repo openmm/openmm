@@ -1392,6 +1392,7 @@ extern double kReduceEnergy(  gpuContext gpu);
 void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
 {
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         gpuContext gpu = amoebaGpu->gpuContext;
         std::vector<int> fileId;
@@ -1441,7 +1442,9 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         //zeroForce( amoebaGpu );
         exit(0);
     }
+#endif
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         gpuContext gpu = amoebaGpu->gpuContext;
         std::vector<int> fileId;
@@ -1476,6 +1479,7 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPrePmeForce", fileId, outputVector );
     }
+#endif
 
     cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpu );
     kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );

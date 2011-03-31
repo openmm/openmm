@@ -434,7 +434,7 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
                              amoebaGpu->psMolecularDipole->_pSysData[mIndex],
                              amoebaGpu->psMolecularDipole->_pSysData[mIndex+1],
                              amoebaGpu->psMolecularDipole->_pSysData[mIndex+2] );
-              if( ii == 30 )ii = gpu->natoms - 30;
+            if( ii == 30 )ii = gpu->natoms - 30;
         }
     }
 //    int64 kernelTime = AmoebaTiming::getTimeOfDay();
@@ -605,8 +605,8 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     // check if induce dipole calculation converged -- abort if it did not
 
     if( amoebaGpu->mutualInducedDone == 0 ){
-       (void) fprintf( amoebaGpu->log, "%s induced dipole calculation did not converge -- aborting!\n", methodName.c_str() );
-       (void) fflush( amoebaGpu->log );
+       (void) fprintf( stderr, "%s induced dipole calculation did not converge -- aborting!\n", methodName.c_str() );
+       (void) fflush( stderr );
        exit(-1);
     }
 

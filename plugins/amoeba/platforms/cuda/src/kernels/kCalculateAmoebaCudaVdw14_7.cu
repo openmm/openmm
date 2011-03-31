@@ -583,6 +583,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
         LAUNCHERROR("kFindInteractionsWithinBlocksVdwPeriodic");
 
+#ifdef AMOEBA_DEBUG
         if( 0 ){  
             gpu->psInteractionCount->Download();
             gpu->psInteractingWorkUnit->Download();
@@ -605,6 +606,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
             }    
                 (void) fflush( amoebaGpu->log );
         }
+#endif
 
         if (gpu->bOutputBufferPerWarp){
             kCalculateAmoebaVdw14_7CutoffByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(

@@ -701,7 +701,7 @@ void cudaComputeAmoebaMapTorques( amoebaGpuContext amoebaGpu, CUDAStream<float>*
     // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
 
     if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
-        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMapTorques: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n"
+        (void) fprintf( stderr, "cudaComputeAmoebaMapTorques: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n"
                         "This is likely due to the presence of disulfide bond or other bond between atoms whose indices is greater than %d; this limitation will be removed w/ the next software update.\n",
                         BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference, BLOCK_SIZE );
         exit(-1);  
@@ -872,7 +872,7 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext amoebaGpu,
     // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
 
     if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
-        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMapTorquesAndAddTotalForce: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n"
+        (void) fprintf( stderr, "cudaComputeAmoebaMapTorquesAndAddTotalForce: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n"
                         "This is likely due to the presence of disulfide bond or other bond between atoms whose indices is greater than %d; this limitation will be removed w/ the next software update.\n",
                         BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference, BLOCK_SIZE );
         exit(-1);  
@@ -1075,7 +1075,7 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext amoebaGpu,
     // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
 
     if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
-        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMapTorquesAndAddTotalForce2: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n"
+        (void) fprintf( stderr, "cudaComputeAmoebaMapTorquesAndAddTotalForce2: block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n"
                         "This is likely due to the presence of disulfide bond or other bond between atoms whose indices is greater than %d; this limitation will be removed w/ the next software update.\n",
                         BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference, BLOCK_SIZE );
         exit(-1);

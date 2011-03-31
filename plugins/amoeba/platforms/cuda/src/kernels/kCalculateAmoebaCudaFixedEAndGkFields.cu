@@ -411,7 +411,6 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
     kClearFields_3( amoebaGpu, 3 );
 
     if (gpu->bOutputBufferPerWarp){
-        (void) fprintf( amoebaGpu->log, "N2 warp\n" );
         kCalculateAmoebaFixedEAndGkFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevData,
                                                                            gpu->psPosq4->_pDevData,

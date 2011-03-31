@@ -769,15 +769,15 @@ void) fflush( amoebaGpu->log );
                         amoebaGpu->psCurrentEpsilon->_pSysData[1], 
                         amoebaGpu->psCurrentEpsilon->_pSysData[2], done );
         (void) fflush( amoebaGpu->log );
+
 #endif
 
         // exit if nan
 
         if( 0 && amoebaGpu->mutualInducedCurrentEpsilon != amoebaGpu->mutualInducedCurrentEpsilon ){
-            (void) fprintf( amoebaGpu->log, "PME MI iteration=%3d eps is nan -- exiting.\n", iteration );
+            (void) fprintf( stderr, "PME MI iteration=%3d eps is nan -- exiting.\n", iteration );
             exit(0);
         }
-
 
         iteration++;
     }

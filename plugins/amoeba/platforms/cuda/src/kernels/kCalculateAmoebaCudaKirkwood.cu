@@ -1893,14 +1893,16 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
         //unsigned int eDiffhreadsPerBlock            = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle));
         //unsigned int maxThreadsPerBlock             = threadsPerBlock> eDiffhreadsPerBlock ? threadsPerBlock : eDiffhreadsPerBlock;
 
+#ifdef AMOEBA_DEBUG
         if( amoebaGpu->log ){
-
             (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
                             amoebaGpu->nonbondBlocks, threadsPerBlock, maxThreads, amoebaGpu->bOutputBufferPerWarp,
                             sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
                             (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
             (void) fflush( amoebaGpu->log );
         }
+#endif
+
     }
 
     kClearFields_1( amoebaGpu );

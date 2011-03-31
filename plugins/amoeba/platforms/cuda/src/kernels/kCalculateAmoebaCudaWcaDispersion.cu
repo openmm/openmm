@@ -30,10 +30,6 @@ void GetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext amoebaGpu)
     cudaError_t status;
     gpuContext gpu = amoebaGpu->gpuContext;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));    
-
-    fprintf( stderr, "In GetCalculateAmoebaCudaWcaDispersionSim: %p %lu %u\n", 
-             gpu->psInteractionCount->_pSysData, gpu->psInteractionCount->_pSysData[0], gpu->sim.workUnits );
-
     RTERROR(status, "GetCalculateAmoebaCudaWcaDispersionSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
     status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));    
     RTERROR(status, "GetCalculateAmoebaCudaWcaDispersionSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
@@ -612,6 +608,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 
     kReduceWcaDispersionToFloat4( amoebaGpu, gpu->psForce4 );
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         gpu->psEnergy->Download();
         double sum = 0.0;
@@ -622,6 +619,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
         }   
         (void) fprintf( amoebaGpu->log,"%14.7e QQ SUM\n", sum );
     }
+#endif
 
     if( 0 ){
         int paddedNumberOfAtoms             = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
