@@ -50,6 +50,7 @@ enum CudaAmoebaNonbondedMethod
 static const int AMOEBA_PME_ORDER = 5;
 
 struct cudaAmoebaGmxSimulation {
+
     // Constants
 
     unsigned int    amoebaBonds;                    // Number of bonds
@@ -132,19 +133,20 @@ struct cudaAmoebaGmxSimulation {
     float           amoebaUreyBradleyQuarticicParameter; // quartic parameter
     unsigned int    amoebaUreyBradley_offset;       // Offset to end of bonds
 
-    unsigned int numberOfAtoms;                     // number of atoms
-    unsigned int paddedNumberOfAtoms;               // padded number of atoms
-    //float cutoffDistance2;                          // cutoff distance squared for PME
     float sqrtPi;                                   // sqrt(PI)
     float scalingDistanceCutoff;                    // scaling cutoff
     float2*         pDampingFactorAndThole;         // Thole & damping factors
 
     int4*  pMultipoleParticlesIdsAndAxisType; 
-    int*   pMultipoleAxisOffset; 
+    int4*  pMultipoleParticlesTorqueBufferIndices; 
+    float4* pTorqueMapForce4;
+
     float* pMolecularDipole; 
     float* pMolecularQuadrupole; 
+
     float* pLabFrameDipole;
     float* pLabFrameQuadrupole;
+
     float* pInducedDipole;
     float* pInducedDipolePolar;
 
@@ -171,6 +173,7 @@ struct cudaAmoebaGmxSimulation {
     int* pVdwExclusionIndices;
 
     // WCA constants
+
     float epso;
     float epsh;
     float rmino;
@@ -180,7 +183,8 @@ struct cudaAmoebaGmxSimulation {
     float dispoff;
  
     float totalMaxWcaDispersionEnergy;
-                                                    // scaling indices
+
+                    // scaling indices
     int*            pScaleIndicesIndex;
     int*            pD_ScaleIndices;
     int2*           pP_ScaleIndices;

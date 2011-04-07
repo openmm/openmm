@@ -449,8 +449,9 @@ static void kCalculateAmoebaVdw14_7NonReduction(amoebaGpuContext amoebaGpu, CUDA
 
 static void kReduceVdw14_7(amoebaGpuContext amoebaGpu, CUDAStream<float>* outputArray )
 {
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                           amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    gpuContext gpu = amoebaGpu->gpuContext;
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                           gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                            amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
     LAUNCHERROR("kReduceVdw14_7");
 }
@@ -545,13 +546,13 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
     if( 1 && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "Apply cutoff=%d warp=%d\n", applyCutoff, gpu->bOutputBufferPerWarp );
         (void) fprintf( amoebaGpu->log, "numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        gpu->sim.nonbond_blocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(Vdw14_7Particle), sizeof(Vdw14_7Particle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         if( 0 ){  
             gpu->psInteractionCount->Download();
             amoebaGpu->psVdwWorkUnit->Download();
-            unsigned int totalWarps  = (amoebaGpu->nonbondBlocks*threadsPerBlock)/GRID;
+            unsigned int totalWarps  = (gpu->sim.nonbond_blocks*threadsPerBlock)/GRID;
             float        ratiof     = (float)totalWarps/(float)amoebaGpu->psVdwWorkUnit->_length;
             (void) fprintf( amoebaGpu->log, "Ixn warps=%u count=%u\n", totalWarps, gpu->psInteractionCount->_pSysData[0] );
             for( unsigned int ii = 0; ii < amoebaGpu->psVdwWorkUnit->_length; ii++ ){
@@ -610,7 +611,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 #endif
 
         if (gpu->bOutputBufferPerWarp){
-            kCalculateAmoebaVdw14_7CutoffByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
+            kCalculateAmoebaVdw14_7CutoffByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
                                                                 gpu->sim.pInteractingWorkUnit,
                                                                 amoebaGpu->psAmoebaVdwCoordinates->_pDevData,
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
@@ -624,7 +625,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 #endif
         } else {
 
-            kCalculateAmoebaVdw14_7Cutoff_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
+            kCalculateAmoebaVdw14_7Cutoff_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
                                                                 gpu->sim.pInteractingWorkUnit,
                                                                 amoebaGpu->psAmoebaVdwCoordinates->_pDevData,
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
@@ -644,7 +645,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 
         if (gpu->bOutputBufferPerWarp){
 
-            kCalculateAmoebaVdw14_7N2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
+            kCalculateAmoebaVdw14_7N2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
                                                                 amoebaGpu->psVdwWorkUnit->_pDevData,
                                                                 amoebaGpu->psAmoebaVdwCoordinates->_pDevData,
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
@@ -658,7 +659,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 #endif
         } else {
 
-            kCalculateAmoebaVdw14_7N2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
+            kCalculateAmoebaVdw14_7N2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
                                                                 amoebaGpu->psVdwWorkUnit->_pDevData,
                                                                 amoebaGpu->psAmoebaVdwCoordinates->_pDevData,
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
@@ -707,7 +708,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         amoebaGpu->psWorkArray_3_1->Download();
         //for( int jj = 0; jj < 3*gpu->natoms; jj += 3 )
         for( int jj = 0; jj < 3*gpu->natoms; jj += 3 ){
-            for( int kk = 0; kk < amoebaGpu->outputBuffers; kk++ ){
+            for( int kk = 0; kk < gpu->sim.outputBuffers; kk++ ){
                 float delta = fabs(amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj+2] + 1.0f);
                 if( delta < 5.0e-06 || isNanOrInfinity( (double) amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj] ) || isNanOrInfinity( (double) amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj+2] )  )
                 (void) fprintf( amoebaGpu->log,"%6d %6d [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n", jj, kk,

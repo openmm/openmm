@@ -101,12 +101,45 @@ __device__ static void load3dArrayBufferPerWarp( unsigned int offset, float* for
 
 }
 
+__device__ static void add3dArrayToFloat4( unsigned int offset, float* forceSum, float4* outputForce )
+{
+
+    float4 of; 
+    of                                  = outputForce[offset];
+    of.x                               += forceSum[0];
+    of.y                               += forceSum[1];
+    of.z                               += forceSum[2];
+    outputForce[offset]                 = of;  
+
+}
+
+__device__ static void load3dArrayToFloat4( unsigned int offset, float* forceSum, float4* outputForce )
+{
+
+    float4 of; 
+    of.x                                = forceSum[0];
+    of.y                                = forceSum[1];
+    of.z                                = forceSum[2];
+    of.w                                = 0.0f;
+    outputForce[offset]                 = of;  
+
+}
+
 __device__ static void load3dArray( unsigned int offset, float* forceSum, float* outputForce )
 {
 
     outputForce[offset]                 = forceSum[0];  
     outputForce[offset+1]               = forceSum[1];  
     outputForce[offset+2]               = forceSum[2];  
+
+}
+
+__device__ static void add3dArray( unsigned int offset, float* forceSum, float* outputForce )
+{
+
+    outputForce[offset]                += forceSum[0];  
+    outputForce[offset+1]              += forceSum[1];  
+    outputForce[offset+2]              += forceSum[2];  
 
 }
 

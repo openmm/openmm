@@ -1626,7 +1626,7 @@ void kCalculateAmoebaLocalForces_kernel()
 void kCalculateAmoebaLocalForces(amoebaGpuContext gpu)
 {
    
-#ifdef AMOEBA_DEBUG
+#ifdef AMOEBA_DEBUG 
     if( gpu->log ){
         static int call = 1;
         if( call == 0 ){

@@ -43,7 +43,6 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
                             float* inducedDipolePolar,
                             float* inducedDipoleS,
                             float* inducedDipolePolarS,
-                            float* outputForce,
                             float* outputTorque
 #ifdef AMOEBA_DEBUG
                            , float4* debugArray, unsigned int targetAtom
@@ -138,7 +137,7 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
 #endif
                                             );
 
-                    unsigned int mask       =  ( (atomI >= cAmoebaSim.numberOfAtoms) || (atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                    unsigned int mask       =  ( (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
 
                     // torques include i == j contribution
 
@@ -166,12 +165,12 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             debugArray[index].x                = (float) atomI;
             debugArray[index].y                = (float) atomJ;
-            mask                               =  ( (atomI >= cAmoebaSim.numberOfAtoms) || (atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+            mask                               =  ( (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
             debugArray[index].z                = mask ? tinker_f*energy : 0.0f;
 
             index = debugAccumulate( index, debugArray, force,          mask, 1.0f );
 
-            mask  =  ( (atomI >= cAmoebaSim.numberOfAtoms) || (atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+            mask  =  ( (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
             index = debugAccumulate( index, debugArray, torqueIPtr, mask, 2.0f );
             index = debugAccumulate( index, debugArray, torqueJPtr, mask, 3.0f );
 }
@@ -181,7 +180,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             else // bExclusion
             {
                 unsigned int xi       = x >> GRIDBITS;
-                unsigned int cell     = xi + xi*cAmoebaSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int cell     = xi + xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 int  dScaleMask       = cAmoebaSim.pD_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
                 int2 pScaleMask       = cAmoebaSim.pP_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
 
@@ -203,7 +202,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 #endif
                                             );
 
-                    unsigned int mask       =  ( (atomI == atomJ) || (atomI >= cAmoebaSim.numberOfAtoms) || (atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                    unsigned int mask       =  ( (atomI == atomJ) || (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
 
                     // torques include i == j contribution
 
@@ -233,7 +232,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             index = debugAccumulate( index, debugArray, force,          mask, 1.0f );
 
-            //mask  =  ( (atomI >= cAmoebaSim.numberOfAtoms) || (atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+            //mask  =  ( (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
             index = debugAccumulate( index, debugArray, torqueIPtr, mask, 2.0f );
             index = debugAccumulate( index, debugArray, torqueJPtr, mask, 3.0f );
 }
@@ -249,15 +248,15 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             scale3dArray( tinker_f, localParticle.torque );
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
 
-            load3dArrayBufferPerWarp( offset, localParticle.force,  outputForce );
-            load3dArrayBufferPerWarp( offset, localParticle.torque, outputTorque );
+            add3dArrayToFloat4(         offset, localParticle.force,  cSim.pForce4 );
+            load3dArrayBufferPerWarp( 3*offset, localParticle.torque, outputTorque );
 
 #else
-            unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
-            load3dArray( offset, localParticle.force,  outputForce );
-            load3dArray( offset, localParticle.torque, outputTorque );
+            unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+            load3dArray(      3*offset, localParticle.torque, outputTorque );
 
 #endif
 
@@ -304,7 +303,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                                             );
 
 
-                    unsigned int mask    =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ( atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                    unsigned int mask    =  ( (atomI >= cSim.atoms) || ( atomJ >= cSim.atoms) ) ? 0 : 1;
 
                     // add force and torque to atom I due atom J
 
@@ -355,7 +354,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                 unsigned int xi   = x >> GRIDBITS;
                 unsigned int yi   = y >> GRIDBITS;
-                unsigned int cell = xi+yi*cAmoebaSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
+                unsigned int cell = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
                 int  dScaleMask   = cAmoebaSim.pD_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
                 int2 pScaleMask   = cAmoebaSim.pP_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
 
@@ -378,7 +377,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                                             );
 
 
-                    unsigned int mask    =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ( atomJ >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                    unsigned int mask    =  ( (atomI >= cSim.atoms) || ( atomJ >= cSim.atoms) ) ? 0 : 1;
 
                     // add force and torque to atom I due atom J
 
@@ -435,26 +434,26 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
 
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
 
-            load3dArrayBufferPerWarp( offset, localParticle.force,  outputForce );
-            load3dArrayBufferPerWarp( offset, localParticle.torque, outputTorque );
+            add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+            load3dArrayBufferPerWarp( 3*offset, localParticle.torque, outputTorque );
 
-            offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = y + tgx + warp*cSim.paddedNumberOfAtoms;
 
-            load3dArrayBufferPerWarp( offset, sA[threadIdx.x].force,  outputForce );
-            load3dArrayBufferPerWarp( offset, sA[threadIdx.x].torque, outputTorque );
+            add3dArrayToFloat4(         offset, sA[threadIdx.x].force,  cSim.pForce4 );
+            load3dArrayBufferPerWarp( 3*offset, sA[threadIdx.x].torque, outputTorque );
 #else
-            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms;
 
-            load3dArray( offset, localParticle.force,  outputForce );
-            load3dArray( offset, localParticle.torque, outputTorque );
+            add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+            load3dArray(      3*offset, localParticle.torque, outputTorque );
 
 
-            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
 
-            load3dArray( offset, sA[threadIdx.x].force,  outputForce );
-            load3dArray( offset, sA[threadIdx.x].torque, outputTorque );
+            add3dArrayToFloat4( offset, sA[threadIdx.x].force,  cSim.pForce4 );
+            load3dArray(      3*offset, sA[threadIdx.x].torque, outputTorque );
 
 #endif
             lasty = y;

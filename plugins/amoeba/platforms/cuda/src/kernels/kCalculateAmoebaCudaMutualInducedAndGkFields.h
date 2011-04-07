@@ -118,7 +118,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
 #endif
 );
 
-                unsigned int mask       =  ( (atomI == (y + j)) || (atomI >= cAmoebaSim.numberOfAtoms) || ((y+j) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                unsigned int mask       =  ( (atomI == (y + j)) || (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
 
                 // add to field at atomI the field due atomJ's dipole
 
@@ -162,7 +162,7 @@ if( atomI == targetAtom ){
 
                 // atomI == atomJ contribution included
 
-                mask                    =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+j) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                mask                    =  ( (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
                 fieldSumS[0]           += mask ? ijField[0][0] : 0.0f;
                 fieldSumS[1]           += mask ? ijField[0][1] : 0.0f;
                 fieldSumS[2]           += mask ? ijField[0][2] : 0.0f;
@@ -181,7 +181,7 @@ if( atomI == targetAtom ){
         index                              = debugAccumulate( index, debugArray, jDipoleS, 1, 7.0f );
         index                              = debugAccumulate( index, debugArray, jDipolePolarS, 1, 8.0f );
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = bornRadii[atomI];
         debugArray[index].y                = jBornRadius;
         debugArray[index].w                = 9.0f;
@@ -195,7 +195,7 @@ if( atomI == targetAtom ){
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
 
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
 
             load3dArrayBufferPerWarp( offset, fieldSum,       outputField );
             load3dArrayBufferPerWarp( offset, fieldPolarSum,  outputFieldPolar );
@@ -204,7 +204,7 @@ if( atomI == targetAtom ){
             load3dArrayBufferPerWarp( offset, fieldPolarSumS, outputFieldPolarS );
 
 #else
-            unsigned int offset                   = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                   = 3*(x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
 
             load3dArray( offset, fieldSum,        outputField );
             load3dArray( offset, fieldPolarSum,   outputFieldPolar);
@@ -241,7 +241,7 @@ if( atomI == targetAtom ){
 #endif
    );
 
-                if( (atomI < cAmoebaSim.numberOfAtoms) && ((y+tj) < cAmoebaSim.numberOfAtoms) ){
+                if( (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
            
                     // add to field at atomI the field due atomJ's dipole
     
@@ -294,7 +294,7 @@ if( atomI == targetAtom ){
 unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
 if( atomI == targetAtom  || (y + tj) == targetAtom ){
         unsigned int indexI                = (atomI == targetAtom) ? 0 : 2;
-        unsigned int maskD                 = (atomI < cAmoebaSim.numberOfAtoms) && ((y+tj) < cAmoebaSim.numberOfAtoms);
+        unsigned int maskD                 = (atomI < cSim.atoms) && ((y+tj) < cSim.atoms);
 
         debugArray[index].x                = (float) atomI;
         debugArray[index].y                = (float) (y + tj);
@@ -314,7 +314,7 @@ if( atomI == targetAtom  || (y + tj) == targetAtom ){
 );
 
 
-                if( (atomI < cAmoebaSim.numberOfAtoms) && ((y+tj) < cAmoebaSim.numberOfAtoms) ){
+                if( (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
 
                     fieldSumS[0]           += ijField[0][0];
                     fieldSumS[1]           += ijField[0][1];
@@ -341,14 +341,14 @@ if( atomI == targetAtom  || (y + tj) == targetAtom ){
 #if 0
 if( atomI == targetAtom  || (y + tj) == targetAtom ){
         unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-        unsigned int maskD                 = (atomI < cAmoebaSim.numberOfAtoms) && ((y+tj) < cAmoebaSim.numberOfAtoms);
+        unsigned int maskD                 = (atomI < cSim.atoms) && ((y+tj) < cSim.atoms);
 
         index                              = debugAccumulate( index, debugArray, ijField[indexI],   maskD, -5.0f );
         index                              = debugAccumulate( index, debugArray, ijField[indexI+2], maskD, -6.0f );
         index                              = debugAccumulate( index, debugArray, jDipoleS, 1, -7.0f );
         index                              = debugAccumulate( index, debugArray, jDipolePolarS, 1, -8.0f );
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = bornRadii[atomI];
         debugArray[index].y                = jBornRadius;
         debugArray[index].w                = -9.0f;
@@ -362,13 +362,13 @@ if( atomI == targetAtom  || (y + tj) == targetAtom ){
             // Write results
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
             load3dArrayBufferPerWarp( offset, fieldSum,       outputField );
             load3dArrayBufferPerWarp( offset, fieldPolarSum,  outputFieldPolar);
             load3dArrayBufferPerWarp( offset, fieldSumS,      outputFieldS );
             load3dArrayBufferPerWarp( offset, fieldPolarSumS, outputFieldPolarS );
 
-            offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = 3*(y + tgx + warp*cSim.paddedNumberOfAtoms);
 
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].field,       outputField );
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].fieldPolar,  outputFieldPolar);
@@ -376,13 +376,13 @@ if( atomI == targetAtom  || (y + tj) == targetAtom ){
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].fieldPolarS, outputFieldPolarS);
 
 #else
-            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, fieldSum,       outputField );
             load3dArray( offset, fieldPolarSum,  outputFieldPolar);
             load3dArray( offset, fieldSumS,      outputFieldS );
             load3dArray( offset, fieldPolarSumS, outputFieldPolarS);
 
-            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, sA[threadIdx.x].field,       outputField );
             load3dArray( offset, sA[threadIdx.x].fieldPolar,  outputFieldPolar);
             load3dArray( offset, sA[threadIdx.x].fieldS,      outputFieldS );

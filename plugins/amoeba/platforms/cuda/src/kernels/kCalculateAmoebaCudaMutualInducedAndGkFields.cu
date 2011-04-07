@@ -33,8 +33,8 @@ void GetCalculateAmoebaCudaMutualInducedAndGkFieldsSim(amoebaGpuContext amoebaGp
     RTERROR(status, "GetCalculateAmoebaCudaMutualInducedAndGkFieldSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
+#define AMOEBA_DEBUG
+//#undef AMOEBA_DEBUG
 
 #define GK
 #include "kCalculateAmoebaCudaMutualInducedParticle.h"
@@ -216,7 +216,7 @@ __device__ void calculateMutualInducedAndGkFieldsGkPairIxn_kernel( MutualInduced
 #ifdef AMOEBA_DEBUG
 __device__ static int debugAccumulate( int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
 {
-    index                             += cAmoebaSim.paddedNumberOfAtoms;
+    index                             += cSim.paddedNumberOfAtoms;
     debugArray[index].x                = addMask ? field[0] : 0.0f;
     debugArray[index].y                = addMask ? field[1] : 0.0f;
     debugArray[index].z                = addMask ? field[2] : 0.0f;
@@ -256,7 +256,7 @@ void kInitializeMutualInducedAndGkField_kernel(
 {
 
     int threadId = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if( threadId >= 3*cAmoebaSim.numberOfAtoms )return;
+    if( threadId >= 3*cSim.atoms )return;
 
     fixedEField[threadId]          *= polarizability[threadId];
     inducedDipole[threadId]         = fixedEField[threadId];
@@ -292,7 +292,7 @@ void kReduceMutualInducedAndGkFieldDelta_kernel( float* arrayOfDeltas1, float* a
 
     // load deltas
 
-    while( pos < 3*cAmoebaSim.numberOfAtoms )
+    while( pos < 3*cSim.atoms )
     {   
         delta[threadIdx.x].x  += arrayOfDeltas1[pos];
         delta[threadIdx.x].y  += arrayOfDeltas2[pos];
@@ -324,12 +324,12 @@ void kReduceMutualInducedAndGkFieldDelta_kernel( float* arrayOfDeltas1, float* a
         epsilon[0]  = epsilon[0] < delta[0].y ? delta[0].y : epsilon[0];
         epsilon[0]  = epsilon[0] < delta[0].z ? delta[0].z : epsilon[0];
         epsilon[0]  = epsilon[0] < delta[0].w ? delta[0].w : epsilon[0];
-        epsilon[0]  = 48.033324f*sqrtf( epsilon[0]/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[0]  = 48.033324f*sqrtf( epsilon[0]/( (float) cSim.atoms ) );
 #ifdef AMOEBA_DEBUG
-        epsilon[1]  = 48.033324f*sqrtf( delta[0].x/( (float) cAmoebaSim.numberOfAtoms ) );
-        epsilon[2]  = 48.033324f*sqrtf( delta[0].y/( (float) cAmoebaSim.numberOfAtoms ) );
-        epsilon[3]  = 48.033324f*sqrtf( delta[0].z/( (float) cAmoebaSim.numberOfAtoms ) );
-        epsilon[4]  = 48.033324f*sqrtf( delta[0].w/( (float) cAmoebaSim.numberOfAtoms ) );
+        epsilon[1]  = 48.033324f*sqrtf( delta[0].x/( (float) cSim.atoms ) );
+        epsilon[2]  = 48.033324f*sqrtf( delta[0].y/( (float) cSim.atoms ) );
+        epsilon[3]  = 48.033324f*sqrtf( delta[0].z/( (float) cSim.atoms ) );
+        epsilon[4]  = 48.033324f*sqrtf( delta[0].w/( (float) cSim.atoms ) );
 #endif
     }   
 }
@@ -356,7 +356,7 @@ void kSorUpdateMutualInducedAndGkField_kernel(
 
     float polarSOR = 0.70f;
     int threadId   = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if( threadId  >= 3*cAmoebaSim.numberOfAtoms)return;
+    if( threadId  >= 3*cSim.atoms)return;
 
     float previousDipole                = inducedDipole[threadId];
     float previousDipoleP               = inducedDipoleP[threadId];
@@ -390,7 +390,7 @@ void kSorUpdateMutualInducedAndGkFieldS_kernel(
 
     float polarSOR = 0.70f;
     int threadId   = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if( threadId  >= 3*cAmoebaSim.numberOfAtoms)return;
+    if( threadId  >= 3*cSim.atoms)return;
 
     float previousDipole                = inducedDipole[threadId];
     float previousDipoleP               = inducedDipoleP[threadId];
@@ -415,23 +415,24 @@ static void kReduceMutualInducedAndGkFields(amoebaGpuContext amoebaGpu,
                                             CUDAStream<float>* outputArray,  CUDAStream<float>* outputPolarArray,
                                             CUDAStream<float>* outputArrayS, CUDAStream<float>* outputPolarArrayS )
 {
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    gpuContext gpu = amoebaGpu->gpuContext;
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields1");
 
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_2->_pDevData, outputPolarArray->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields2");
 
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_3->_pDevData, outputArrayS->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields3");
 
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_4->_pDevData, outputPolarArrayS->_pDevData );
     LAUNCHERROR("kReduceMutualInducedAndGkFields4");
 }
@@ -441,12 +442,12 @@ static void kReduceMutualInducedAndGkFields(amoebaGpuContext amoebaGpu,
 static void printMiFieldBuffer( amoebaGpuContext amoebaGpu, unsigned int bufferIndex )
 {
     (void) fprintf( amoebaGpu->log, "MI Field Buffer %u\n", bufferIndex );
-    unsigned int start = bufferIndex*3*amoebaGpu->paddedNumberOfAtoms;
-    unsigned int stop  = (bufferIndex+1)*3*amoebaGpu->paddedNumberOfAtoms;
+    unsigned int start = bufferIndex*3*gpu->sim.paddedNumberOfAtoms;
+    unsigned int stop  = (bufferIndex+1)*3*gpu->sim.paddedNumberOfAtoms;
     for( unsigned int ii = start; ii < stop; ii += 3 ){
         unsigned int ii3Index      = ii/3;
-        unsigned int bufferIndex   = ii3Index/(amoebaGpu->paddedNumberOfAtoms);
-        unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
+        unsigned int bufferIndex   = ii3Index/(gpu->sim.paddedNumberOfAtoms);
+        unsigned int particleIndex = ii3Index - bufferIndex*(gpu->sim.paddedNumberOfAtoms);
         (void) fprintf( amoebaGpu->log, "   %6u %3u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
                             ii/3,  bufferIndex, particleIndex,
                             amoebaGpu->psWorkArray_3_1->_pSysData[ii],
@@ -461,8 +462,8 @@ static void printMiFieldBuffer( amoebaGpuContext amoebaGpu, unsigned int bufferI
 static void printMiFieldAtomBuffers( amoebaGpuContext amoebaGpu, unsigned int targetAtom )
 {
     (void) fprintf( amoebaGpu->log, "MI Field atom %u\n", targetAtom );
-    for( unsigned int ii = 0; ii < amoebaGpu->outputBuffers; ii++ ){
-        unsigned int particleIndex = 3*(targetAtom + ii*amoebaGpu->paddedNumberOfAtoms);
+    for( unsigned int ii = 0; ii < gpu->sim.outputBuffers; ii++ ){
+        unsigned int particleIndex = 3*(targetAtom + ii*gpu->sim.paddedNumberOfAtoms);
         (void) fprintf( amoebaGpu->log, " %2u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
                         ii, particleIndex,
                         amoebaGpu->psWorkArray_3_1->_pSysData[particleIndex],
@@ -530,8 +531,8 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
     
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%lu ixnCt=%lu workUnits=%lu\n",
+                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
@@ -539,7 +540,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
 #endif
 
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  amoebaGpu->psWorkUnit->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_2->_pDevData,
@@ -552,7 +553,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
 #endif
     } else {
 
-        kCalculateAmoebaMutualInducedAndGkFieldsN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaMutualInducedAndGkFieldsN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevData,
                                                             amoebaGpu->psWorkArray_3_1->_pDevData,
                                                             amoebaGpu->psWorkArray_3_2->_pDevData,
@@ -709,7 +710,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     int done;
     int iteration;
 
-    gpuContext gpu    = amoebaGpu->gpuContext;
+    gpuContext gpu     = amoebaGpu->gpuContext;
     int numOfElems     = gpu->natoms*3;
     int numThreads     = min( THREADS_PER_BLOCK, numOfElems );
     int numBlocks      = numOfElems/numThreads;
@@ -745,6 +746,8 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
 
+        (void) fprintf( amoebaGpu->log, "%s Initial setup for matrix multiply\n", methodName ); fflush( amoebaGpu->log );
+
         amoebaGpu->psE_Field->Download();
         amoebaGpu->psE_FieldPolar->Download();
         amoebaGpu->psInducedDipole->Download(),
@@ -753,7 +756,6 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         amoebaGpu->psInducedDipolePolarS->Download();
         amoebaGpu->psPolarizability->Download();
 
-        (void) fprintf( amoebaGpu->log, "%s Initial setup for matrix multiply\n", methodName );
         int offset   = 0;
         int maxPrint = 10;
         for( int ii = 0; ii < gpu->natoms; ii++ ){
@@ -921,7 +923,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     }
 
 #ifdef AMOEBA_DEBUG
-    if( 0 ){
+    if( 1 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;

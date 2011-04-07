@@ -99,7 +99,7 @@ extern void GetCalculateAmoebaCudaMutualInducedAndGkFieldsSim(amoebaGpuContext a
 extern void cudaComputeAmoebaMutualInducedAndGkField( amoebaGpuContext gpu);
 
 extern void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu );
-extern void cudaWriteFloat4AndFloat1ArraysToFile( int numberOfAtoms, char* fname, int timestep, int entriesPerAtom1, CUDAStream<float4>* array1, 
+extern void cudaWriteFloat4AndFloat1ArraysToFile( int numberOfAtoms, const std::string& fname, int timestep, int entriesPerAtom1, CUDAStream<float4>* array1, 
                                                   int entriesPerAtom2, CUDAStream<float>* array2 );
 
 extern void SetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
@@ -112,9 +112,7 @@ extern void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu );
 
 extern void SetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
-extern void cudaComputeAmoebaMapTorques( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float>* psForce);
-extern void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float>* psForce, CUDAStream<float4>* psOutputForce);
-extern void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float4>* psOutputForce);
+extern void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext gpu, CUDAStream<float>* psTorque );
 
 extern void SetCalculateAmoebaKirkwoodSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaKirkwoodSim( amoebaGpuContext amoebaGpu );
@@ -143,14 +141,14 @@ extern void  cudaReduceN2ToN( float *N2Array, int N, float *NArray, int includeD
 extern float cudaGetSum( int numberOfElements, CUDAStream<float>* array );
 extern float cudaGetNorm2( int numberOfElements, CUDAStream<float>* array );
 extern int   checkForNansAndInfinities( int numberOfElements, CUDAStream<float>* array );
-extern void cudaWriteFloat1AndFloat1ArraysToFile( int numberOfAtoms, char* fname, std::vector<int>& fileId, int entriesPerAtom1, CUDAStream<float>* array1, 
+extern void cudaWriteFloat1AndFloat1ArraysToFile( int numberOfAtoms, const std::string& fname, std::vector<int>& fileId, int entriesPerAtom1, CUDAStream<float>* array1, 
                                                   int entriesPerAtom2, CUDAStream<float>* array2 );
 extern void readFile( std::string fileName, StringVectorVector& fileContents );
  
-extern void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDAStream<float>* array, VectorOfDoubleVectors& outputVector, int* order, float conversion );
-extern void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float2>* array, VectorOfDoubleVectors& outputVector, float conversion );
+extern void cudaLoadCudaFloatArray(  int numberOfParticles, int entriesPerParticle, CUDAStream<float>*  array, VectorOfDoubleVectors& outputVector, int* order, float conversion );
+extern void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float2>* array, VectorOfDoubleVectors& outputVector, int* order, float conversion );
 extern void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array, VectorOfDoubleVectors& outputVector, int* order, float conversion );
-extern void cudaWriteVectorOfDoubleVectorsToFile( char* fname, std::vector<int>& fileId, VectorOfDoubleVectors& outputVector );
+extern void cudaWriteVectorOfDoubleVectorsToFile( const std::string& fname, std::vector<int>& fileId, VectorOfDoubleVectors& outputVector );
 extern void initializeCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDAStream<float>* array, float initValue );
 extern void checkForNans( int numberOfParticles, int entriesPerParticle,
                           CUDAStream<float>* array, int* order, int iteration, std::string idString, FILE* log );
@@ -166,6 +164,8 @@ extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int
 
 //extern int isNanOrInfinity( double number );
 extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration);
+extern void zeroCUDAStreamFloat4( CUDAStream<float4>* streamToCopy );
+extern void reduceAndCopyCUDAStreamFloat4( CUDAStream<float4>* streamToCopy, CUDAStream<float>*  outputStream, float conversion );
 
 // PME
 

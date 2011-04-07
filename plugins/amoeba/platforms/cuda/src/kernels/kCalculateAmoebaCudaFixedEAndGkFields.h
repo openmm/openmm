@@ -36,10 +36,6 @@ __launch_bounds__(64, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
                             unsigned int* workUnit,
-                            float4* atomCoord,
-                            float* labFrameDipole,
-                            float* labFrameQuadrupole,
-                            float* bornRadii,
                             float* outputEField,
                             float* outputEFieldPolar,
                             float* outputGkField
@@ -60,6 +56,11 @@ void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
     unsigned int pos             = warp*numWorkUnits/totalWarps;
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
+
+    float4* atomCoord            = cSim.pPosq;
+    float* labFrameDipole        = cAmoebaSim.pLabFrameDipole;
+    float* labFrameQuadrupole    = cAmoebaSim.pLabFrameQuadrupole;
+    float* bornRadii             = cSim.pBornRadii;
 
     float4 jCoord;
     float  jBornRadius;
@@ -165,7 +166,7 @@ void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
             else  // bExclusion
             {
                 unsigned int xi       = x >> GRIDBITS;
-                unsigned int cell     = xi + xi*cAmoebaSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int cell     = xi + xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 int  dScaleMask       = cAmoebaSim.pD_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
                 int2 pScaleMask       = cAmoebaSim.pP_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
 
@@ -219,40 +220,40 @@ if( 0 && atomI == targetAtom ){
             debugArray[index].w                = pScaleVal;
             pullBackIndex                     += 2;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex].x;
             debugArray[index].y                = pullBack[pullBackIndex].y;
             debugArray[index].z                = pullBack[pullBackIndex].z;
             pullBackIndex++;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex].x;
             debugArray[index].y                = pullBack[pullBackIndex].y;
             debugArray[index].z                = pullBack[pullBackIndex].z;
             pullBackIndex++;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexI][0];
             debugArray[index].y                = ijField[indexI][1];
             debugArray[index].z                = ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexJ][0];
             debugArray[index].y                = ijField[indexJ][1];
             debugArray[index].z                = ijField[indexJ][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = match ? 0.0f : dScaleVal*ijField[indexI][0];
             debugArray[index].y                = match ? 0.0f : dScaleVal*ijField[indexI][1];
             debugArray[index].z                = match ? 0.0f : dScaleVal*ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = match ? 0.0f : pScaleVal*ijField[indexI][0];
             debugArray[index].y                = match ? 0.0f : pScaleVal*ijField[indexI][1];
             debugArray[index].z                = match ? 0.0f : pScaleVal*ijField[indexI][2];
 
 /*
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             unsigned int mask                  = 1 << j;
             unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
             pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
@@ -261,12 +262,12 @@ if( 0 && atomI == targetAtom ){
             debugArray[index].y                = scaleMask.x & mask ? 1.0f : -1.0f;
             debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
             debugArray[index].w                = pScaleVal + 10.0f;
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = jCoord.x;
             debugArray[index].y                = jCoord.y;
             debugArray[index].z                = jCoord.z;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = iCoord.x;
             debugArray[index].y                = iCoord.y;
             debugArray[index].z                = iCoord.z;
@@ -285,7 +286,7 @@ if( 0 && atomI == targetAtom ){
 #endif
                     );
 
-                    match                   = (atomI >= cAmoebaSim.numberOfAtoms) || ((y+tj) >= cAmoebaSim.numberOfAtoms) ? 1 : 0;
+                    match                   = (atomI >= cSim.atoms) || ((y+tj) >= cSim.atoms) ? 1 : 0;
                     gkFieldSum[0]          += match ? 0.0f : ijField[0][0];
                     gkFieldSum[1]          += match ? 0.0f : ijField[0][1];
                     gkFieldSum[2]          += match ? 0.0f : ijField[0][2];
@@ -306,24 +307,24 @@ if( atomI == targetAtom ){
 
 /*
             pullBackIndex                     += 2;
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex].x;
             debugArray[index].y                = pullBack[pullBackIndex].y;
             debugArray[index].z                = pullBack[pullBackIndex].z;
             pullBackIndex++;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex].x;
             debugArray[index].y                = pullBack[pullBackIndex].y;
             debugArray[index].z                = pullBack[pullBackIndex].z;
             pullBackIndex++;
 */
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                =  match ? 0.0f :  ijField[indexI][0];
             debugArray[index].y                =  match ? 0.0f :  ijField[indexI][1];
             debugArray[index].z                =  match ? 0.0f :  ijField[indexI][2];
 
-            index                             +=  match ? 0.0f :  cAmoebaSim.paddedNumberOfAtoms;
+            index                             +=  match ? 0.0f :  cSim.paddedNumberOfAtoms;
             debugArray[index].x                =  match ? 0.0f :  ijField[indexJ][0];
             debugArray[index].y                =  match ? 0.0f :  ijField[indexJ][1];
             debugArray[index].z                =  match ? 0.0f :  ijField[indexJ][2];
@@ -336,13 +337,13 @@ if( atomI == targetAtom ){
             // Write results
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
             load3dArrayBufferPerWarp( offset, eFieldSum,       outputEField );
             load3dArrayBufferPerWarp( offset, eFieldPolarSum,  outputEFieldPolar );
             load3dArrayBufferPerWarp( offset, gkFieldSum,      outputGkField );
 
 #else
-            unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, eFieldSum,       outputEField );
             load3dArray( offset, eFieldPolarSum,  outputEFieldPolar );
             load3dArray( offset, gkFieldSum,      outputGkField );
@@ -416,49 +417,49 @@ if( 0 && (atomI == targetAtom  || (y + tj) == targetAtom) ){
             debugArray[index].z                = pullBack[pullBackIndex++];
             debugArray[index].w                = pullBack[pullBackIndex++];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 */
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexI][0];
             debugArray[index].y                = ijField[indexI][1];
             debugArray[index].z                = ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexJ][0];
             debugArray[index].y                = ijField[indexJ][1];
             debugArray[index].z                = ijField[indexJ][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexI][0];
             debugArray[index].y                = ijField[indexI][1];
             debugArray[index].z                = ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexI][0];
             debugArray[index].y                = ijField[indexI][1];
             debugArray[index].z                = ijField[indexI][2];
 
 #if 0
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = jCoord.x;
             debugArray[index].y                = jCoord.y;
             debugArray[index].z                = jCoord.z;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = iCoord.x;
             debugArray[index].y                = iCoord.y;
             debugArray[index].z                = iCoord.z;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             unsigned int mask                  = 1 << j;
             unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
             pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
@@ -506,19 +507,19 @@ if( (atomI == targetAtom  || (y + tj) == targetAtom) ){
             debugArray[index].z                = pullBack[pullBackIndex++];
             debugArray[index].w                = pullBack[pullBackIndex++];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 
 */
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexI][0];
             debugArray[index].y                = ijField[indexI][1];
             debugArray[index].z                = ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexJ][0];
             debugArray[index].y                = ijField[indexJ][1];
             debugArray[index].z                = ijField[indexJ][2];
@@ -535,7 +536,7 @@ if( (atomI == targetAtom  || (y + tj) == targetAtom) ){
                 // Read fixed atom data into registers and GRF
                 unsigned int xi   = x >> GRIDBITS;
                 unsigned int yi   = y >> GRIDBITS;
-                unsigned int cell = xi+yi*cAmoebaSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
+                unsigned int cell = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
                 int  dScaleMask   = cAmoebaSim.pD_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
                 int2 pScaleMask   = cAmoebaSim.pP_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
 
@@ -593,38 +594,38 @@ if( 0 && (atomI == targetAtom || (y + tj) == targetAtom) ){
 //            pullBackIndex                     += 2;
 
 /*
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexI][0];
             debugArray[index].y                = ijField[indexI][1];
             debugArray[index].z                = ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = ijField[indexJ][0];
             debugArray[index].y                = ijField[indexJ][1];
             debugArray[index].z                = ijField[indexJ][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = dScaleVal*ijField[indexI][0];
             debugArray[index].y                = dScaleVal*ijField[indexI][1];
             debugArray[index].z                = dScaleVal*ijField[indexI][2];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pScaleVal*ijField[indexI][0];
             debugArray[index].y                = pScaleVal*ijField[indexI][1];
             debugArray[index].z                = pScaleVal*ijField[indexI][2];
 */
 /*
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             unsigned int mask                  = 1 << j;
             unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
             pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
@@ -634,12 +635,12 @@ if( 0 && (atomI == targetAtom || (y + tj) == targetAtom) ){
             debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
             debugArray[index].w                = pScaleVal + 10.0f;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = jCoord.x;
             debugArray[index].y                = jCoord.y;
             debugArray[index].z                = jCoord.z;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = iCoord.x;
             debugArray[index].y                = iCoord.y;
             debugArray[index].z                = iCoord.z;
@@ -658,7 +659,7 @@ if( 0 && (atomI == targetAtom || (y + tj) == targetAtom) ){
 #endif
                     );
 
-                    if( (atomI < cAmoebaSim.numberOfAtoms) && ((y+tj) < cAmoebaSim.numberOfAtoms) ){
+                    if( (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
                         gkFieldSum[0]        += ijField[0][0];
                         gkFieldSum[1]        += ijField[0][1];
                         gkFieldSum[2]        += ijField[0][2];
@@ -684,34 +685,34 @@ if( (atomI == targetAtom || (y + tj) == targetAtom) ){
 //            pullBackIndex                     += 2;
 
 /*
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = pullBack[pullBackIndex++];
             debugArray[index].y                = pullBack[pullBackIndex++];
             debugArray[index].z                = pullBack[pullBackIndex++];
 
 */
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = (atomI == targetAtom || (y + tj) == targetAtom) ?  ijField[indexI][0] : 0.0f;
             debugArray[index].y                = (atomI == targetAtom || (y + tj) == targetAtom) ?  ijField[indexI][1] : 0.0f;
             debugArray[index].z                = (atomI == targetAtom || (y + tj) == targetAtom) ?  ijField[indexI][2] : 0.0f;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = (atomI == targetAtom || (y + tj) == targetAtom) ?  ijField[indexJ][0] : 0.0f;
             debugArray[index].y                = (atomI == targetAtom || (y + tj) == targetAtom) ?  ijField[indexJ][1] : 0.0f;
             debugArray[index].z                = (atomI == targetAtom || (y + tj) == targetAtom) ?  ijField[indexJ][2] : 0.0f;
 
 /*
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = jCoord.x;
             debugArray[index].y                = jCoord.y;
             debugArray[index].z                = jCoord.z;
 
-            index                             += cAmoebaSim.paddedNumberOfAtoms;
+            index                             += cSim.paddedNumberOfAtoms;
             debugArray[index].x                = iCoord.x;
             debugArray[index].y                = iCoord.y;
             debugArray[index].z                = iCoord.z;
@@ -730,24 +731,24 @@ if( (atomI == targetAtom || (y + tj) == targetAtom) ){
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
 
-            unsigned int offset                 = 3*(x + tgx + warp * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + warp * cSim.paddedNumberOfAtoms);
             load3dArrayBufferPerWarp( offset, eFieldSum,       outputEField );
             load3dArrayBufferPerWarp( offset, eFieldPolarSum,  outputEFieldPolar );
             load3dArrayBufferPerWarp( offset, gkFieldSum,      outputGkField );
 
 
-            offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = 3*(y + tgx + warp*cSim.paddedNumberOfAtoms);
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].eField,  outputEField );
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].eFieldP, outputEFieldPolar );
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].gkField, outputGkField );
 
 #else
-            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, eFieldSum,       outputEField );
             load3dArray( offset, eFieldPolarSum,  outputEFieldPolar );
             load3dArray( offset, gkFieldSum,      outputGkField );
 
-            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, sA[threadIdx.x].eField,  outputEField );
             load3dArray( offset, sA[threadIdx.x].eFieldP, outputEFieldPolar );
             load3dArray( offset, sA[threadIdx.x].gkField, outputGkField );

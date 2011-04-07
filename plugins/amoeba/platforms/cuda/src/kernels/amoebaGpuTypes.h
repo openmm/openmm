@@ -33,33 +33,31 @@
 #define THREADS_PER_BLOCK 256
 
 #include <map>
-//using namespace std;
 typedef std::map<int,float> MapIntFloat;
-//typedef MapIntFloat::iterator MapIntFloatI;
 typedef MapIntFloat::const_iterator MapIntFloatCI;
 
 
-/* Pointer to this structure will be given 
- * to gromacs functions*/
+/* 
+ * Remove
+ * pMapArray, dMapArray, paddedNumberOfAtoms, nonbondBlocks, nonbondThreadsPerBlock, nonbondOutputBuffers
+ * allocation of torqueMapForce psCovalentDegree psPolarizationDegree
+ * 
+   THREADS_PER_BLOCK
+ */
 struct _amoebaGpuContext {
     
     _gpuContext* gpuContext;
  
     FILE* log;
 
-    // diagnostic arrays
-
-    MapIntFloat** pMapArray;
-    MapIntFloat** dMapArray;
-
-    bool bOutputBufferPerWarp;
-    unsigned int paddedNumberOfAtoms;
-    unsigned int nonbondBlocks;
-    unsigned int nonbondThreadsPerBlock;
-    unsigned int nonbondOutputBuffers;
-    unsigned int threadsPerBlock;
-    unsigned int fieldReduceThreadsPerBlock;
-    unsigned int outputBuffers; 
+    //bool bOutputBufferPerWarp;
+    //unsigned int paddedNumberOfAtoms;
+    //unsigned int nonbondBlocks;
+    //unsigned int nonbondThreadsPerBlock;
+    //unsigned int nonbondOutputBuffers;
+    //unsigned int threadsPerBlock;
+    //unsigned int fieldReduceThreadsPerBlock;
+    //unsigned int outputBuffers; 
     unsigned int workUnits; 
 
     // workspace arrays
@@ -120,14 +118,19 @@ struct _amoebaGpuContext {
 
     float solventDielectric;
 
-    // rotation matrix
-
-    CUDAStream<float>* psRotationMatrix;
-
     // multipole parameters
 
     CUDAStream<int4>* psMultipoleParticlesIdsAndAxisType;
     CUDAStream<int>* psMultipoleAxisOffset;
+
+    // buffer indices used for mapping torques onto forces 
+
+    int maxTorqueBufferIndex;
+    int useNewTorqueMapScheme;
+    int torqueMapForce4Delete;
+    CUDAStream<int4>* psMultipoleParticlesTorqueBufferIndices;
+    CUDAStream<float4>*  psTorqueMapForce4; 
+
     CUDAStream<float>* psMolecularDipole;
     CUDAStream<float>* psMolecularQuadrupole;
 
@@ -175,11 +178,7 @@ struct _amoebaGpuContext {
 
     // electrostatic
 
-    CUDAStream<float>*  psForce; 
     CUDAStream<float>*  psTorque; 
-    CUDAStream<float>*  torqueMapForce; 
-    int maxMapTorqueDifference; 
-    int maxMapTorqueDifferencePow2;
 
     // Kirkwood fields
 
@@ -188,8 +187,6 @@ struct _amoebaGpuContext {
     CUDAStream<float>*  psInducedDipolePolarS; 
     CUDAStream<float>*  psBorn; 
     CUDAStream<float>*  psBornPolar; 
-    CUDAStream<float>*  psKirkwoodForce; 
-    CUDAStream<float>*  psKirkwoodEDiffForce; 
 
     int includeObcCavityTerm;
 
@@ -208,6 +205,7 @@ struct _amoebaGpuContext {
 
     int vdwSigmaCombiningRule;
     int vdwEpsilonCombiningRule;
+    std::vector< std::vector<int> > vdwExclusions;
 
     // Wca dispersion fields
 
@@ -239,7 +237,7 @@ extern "C"
 void amoebaGpuShutDown(amoebaGpuContext gpu);
 
 extern "C"
-void amoebaGpuBuildOutputBuffers( amoebaGpuContext gpu );
+void amoebaGpuBuildOutputBuffers( amoebaGpuContext gpu, int hasKirkwood );
 
 extern "C"
 int amoebaGpuBuildThreadBlockWorkList( amoebaGpuContext gpu );
@@ -327,7 +325,7 @@ extern "C"
 void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ);
 
 extern "C"
-void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vector< std::vector<int> >& exclusions );
+void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu );
 
 extern "C"
 void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,

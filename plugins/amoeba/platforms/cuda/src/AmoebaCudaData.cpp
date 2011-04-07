@@ -112,8 +112,15 @@ void AmoebaCudaData::initializeGpu( void ) {
         if( getHasAmoebaGeneralizedKirkwood() && !getHasAmoebaMultipole() ){
             throw OpenMMException("GK force requires Multipole force\n");
         }
+
+        amoebaGpuBuildOutputBuffers( amoebaGpu, getHasAmoebaGeneralizedKirkwood() );
+        amoebaGpuBuildThreadBlockWorkList( amoebaGpu );
+        amoebaGpuBuildVdwExclusionList( amoebaGpu );
+        amoebaGpuBuildScalingList( amoebaGpu );
         amoebaGpuSetConstants( amoebaGpu );
+
         gpuInitialized = true;
+
         if( log ){
             gpuPrintCudaAmoebaGmxSimulation( amoebaGpu, getLog() );
             (void) fprintf( log, "Gpu initialized\n" );

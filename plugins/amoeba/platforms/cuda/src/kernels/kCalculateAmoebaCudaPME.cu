@@ -3,6 +3,7 @@
 //-----------------------------------------------------------------------------------------
 
 #include "amoebaGpuTypes.h"
+#include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 #include "bbsort.h"
 
@@ -982,7 +983,7 @@ void kRecordInducedDipoleField_kernel(float* output, float* outputPolar)
     }
 }
 
-extern void cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float4>* psOutputForce);
+extern void cudaComputeAmoebaMapTorqueAndAddToForce(amoebaGpuContext gpu, CUDAStream<float>* psTorque);
 
 /**
  * Compute the potential and forces due to the reciprocal space PME calculation for fixed multipoles.
@@ -1014,7 +1015,21 @@ void kCalculateAmoebaPMEFixedMultipoles(amoebaGpuContext amoebaGpu)
     LAUNCHERROR("kRecordFixedMultipoleField");
     kComputeFixedMultipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeFixedMultipoleForceAndEnergy");
-    cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
+
+    if( 0 ){
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        kReduceForces( gpu );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psForce4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipForceOnlyFixed", fileId, outputVector );
+        kClearForces( gpu );
+    }   
+
+    cudaComputeAmoebaMapTorqueAndAddToForce(amoebaGpu, amoebaGpu->psTorque);
+
 }
 
 /**
@@ -1047,6 +1062,5 @@ void kCalculateAmoebaPMEInducedDipoleForces(amoebaGpuContext amoebaGpu)
     kComputeInducedDipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeInducedDipoleForceAndEnergy");
 
-    cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
-    LAUNCHERROR("cudaComputeAmoebaMapTorquesAndAddTotalForce2_kCalculateAmoebaPMEInducedDipoleForces");
+    cudaComputeAmoebaMapTorqueAndAddToForce(amoebaGpu, amoebaGpu->psTorque );
 }

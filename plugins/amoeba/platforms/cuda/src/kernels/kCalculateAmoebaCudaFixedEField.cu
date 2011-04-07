@@ -36,13 +36,14 @@ void GetCalculateAmoebaCudaFixedEFieldSim(amoebaGpuContext amoebaGpu)
 
 static void kReduceE_Fields_kernel(amoebaGpuContext amoebaGpu )
 {
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    gpuContext gpu = amoebaGpu->gpuContext;
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psE_Field->_pDevData );
     LAUNCHERROR("kReduceE_Fields1");
 
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData );
     LAUNCHERROR("kReduceE_Fields2");
 }
@@ -73,12 +74,6 @@ static void kReduceE_Fields_kernel(amoebaGpuContext amoebaGpu )
 void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 {
   
-   // ---------------------------------------------------------------------------------------
-
-    static unsigned int threadsPerBlock = 0;
-
-   // ---------------------------------------------------------------------------------------
-
     gpuContext gpu    = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
@@ -104,6 +99,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 
     kClearFields_3( amoebaGpu, 2 );
 
+    static unsigned int threadsPerBlock = 0;
     if( threadsPerBlock == 0 ){ 
         unsigned int maxThreads;
         if (gpu->sm_version >= SM_20)
@@ -118,15 +114,14 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%lu ixnCt=%lu workUnits=%lu\n", methodName,
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
     }
 #endif
 
     if (gpu->bOutputBufferPerWarp){
-
-        kCalculateAmoebaFixedE_FieldN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaFixedE_FieldN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevData,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
@@ -137,7 +132,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 #endif
     } else {
 
-        kCalculateAmoebaFixedE_FieldN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaFixedE_FieldN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevData,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
@@ -151,7 +146,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
     LAUNCHERROR("kCalculateAmoebaFixedE_FieldN2Forces_kernel");
 
 #if 0
-        for( unsigned int ii = 0; ii < amoebaGpu->outputBuffers; ii++ ){
+        for( unsigned int ii = 0; ii < gpu->sim.outputBuffers; ii++ ){
             //float index = 1.0f;
             float index = (float) ii;
             for( unsigned int jj = 0; jj < 3*amoebaGpu->paddedNumberOfAtoms; jj += 3 ){
@@ -170,7 +165,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
     if( amoebaGpu->log ){
         gpu->psInteractionCount->Download();
         (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%lu ixnCt=%lu workUnits=%lu\n",
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
         amoebaGpu->psWorkArray_3_1->Download();
@@ -204,14 +199,6 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
            }
         }
         (void) fflush( amoebaGpu->log );
-
-        //printEFieldAtomBuffers( amoebaGpu, (targetAtom + 0) );
-        //printEFieldAtomBuffers( amoebaGpu, (targetAtom + 1) );
-        //printEFieldAtomBuffers( amoebaGpu, 100 );
-        //printEFieldBuffer( amoebaGpu, 0 );
-        //printEFieldBuffer( amoebaGpu, 1 );
-        //printEFieldBuffer( amoebaGpu, 37 );
-        //printEFieldBuffer( amoebaGpu, 38 );
 
         (void) fprintf( amoebaGpu->log, "EFields End\n" );
         (void) fprintf( amoebaGpu->log, "DebugQ\n" );

@@ -3,6 +3,7 @@
 
 //-----------------------------------------------------------------------------------------
 
+#include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 
@@ -135,17 +136,19 @@ static void kReducePmeEField_kernel( unsigned int fieldComponents, unsigned int 
 static void kReducePmeDirectE_Fields(amoebaGpuContext amoebaGpu )
 {
 
+    gpuContext gpu = amoebaGpu->gpuContext;
+
     // E_FieldPolar = E_Field (reciprocal) + E_FieldPolar (direct) + self
 
-    kReducePmeEFieldPolar_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                                   amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    kReducePmeEFieldPolar_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                                   gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                    amoebaGpu->psE_Field->_pDevData, amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData );
     LAUNCHERROR("kReducePmeE_Fields1");
 
     // E_Field = E_Field (reciprocal) + E_Field (direct) + self
 
-    kReducePmeEField_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                              amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    kReducePmeEField_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                              gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                               amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psE_Field->_pDevData );
     LAUNCHERROR("kReducePmeE_Fields2");
 }
@@ -362,7 +365,6 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 static int isNanOrInfinity( double number ){
     return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0; 
 }
-#endif
 
 static void bubbleSort( std::vector<int>& array, std::vector<int>& track, int length)
 {
@@ -390,7 +392,8 @@ static void bubbleSort( std::vector<int>& array, std::vector<int>& track, int le
     if(test==0) break; /*will exit if the list is sorted!*/
   } /*end for i*/
       
-}/*end bubbleSort*/
+}
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -438,7 +441,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     }    
 
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaPmeDirectFixedE_FieldCutoffByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaPmeDirectFixedE_FieldCutoffByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
@@ -448,7 +451,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
                                                                            amoebaGpu->psWorkArray_3_2->_pDevData );
 #endif
     } else {
-        kCalculateAmoebaPmeDirectFixedE_FieldCutoff_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaPmeDirectFixedE_FieldCutoff_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->sim.pInteractingWorkUnit,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
@@ -469,15 +472,15 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
                         threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)+sizeof(float3)),
                         (sizeof(FixedFieldParticle)+sizeof(float3)), (sizeof(FixedFieldParticle)+sizeof(float3))*threadsPerBlock );
         (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u warp=%d\n",
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->bOutputBufferPerWarp );
         (void) fflush( amoebaGpu->log );
 /*
-        (void) fprintf( amoebaGpu->log, "Out WorkArray_3_[1,2]  paddedNumberOfAtoms=%d\n",  amoebaGpu->paddedNumberOfAtoms, amoebaGpu->outputBuffers );
+        (void) fprintf( amoebaGpu->log, "Out WorkArray_3_[1,2]  paddedNumberOfAtoms=%d\n",  gpu->sim.paddedNumberOfAtoms, gpu->sim.outputBuffers );
         amoebaGpu->psWorkArray_3_1->Download();
         amoebaGpu->psWorkArray_3_2->Download();
-        for( int ii = 0; ii < amoebaGpu->paddedNumberOfAtoms; ii++ ){
+        for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
            (void) fprintf( amoebaGpu->log, "%5d ", ii); 
 
             int indexOffset     = ii*3;
@@ -624,33 +627,13 @@ void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
         fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
         //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        kReduceForces( gpu );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psForce4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipEField", fileId, outputVector );
-        //exit(0);
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipForceTorqueFixed", fileId, outputVector );
+        //cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipEField", fileId, outputVector );
+        exit(0);
     }
 
-    if( 0 ){
-        gpuContext gpu                       = amoebaGpu->gpuContext;
-        std::vector<int> fileId;
-        fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
-    }
-
-
-    if( 0 ){
-        cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
-        gpuContext gpu                       = amoebaGpu->gpuContext;
-        std::vector<int> fileId;
-        //fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaDirectEField", fileId, outputVector );
-    }
 }

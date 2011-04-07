@@ -357,8 +357,9 @@ __device__ void calculateWcaDispersionPairIxn_kernel( float4 atomCoordinatesI, f
 
 static void kReduceWcaDispersion(amoebaGpuContext amoebaGpu, CUDAStream<float>* outputArray )
 {
-    kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                               amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    gpuContext gpu = amoebaGpu->gpuContext;
+    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
     LAUNCHERROR("kReduceWcaDispersion");
 }
@@ -367,8 +368,9 @@ static void kReduceWcaDispersion(amoebaGpuContext amoebaGpu, CUDAStream<float>* 
 
 static void kReduceWcaDispersionToFloat4(amoebaGpuContext amoebaGpu, CUDAStream<float4>* outputArray )
 {
-    kReduceFieldsToFloat4_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
-                                   amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
+    gpuContext gpu = amoebaGpu->gpuContext;
+    kReduceFieldsToFloat4_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
+                                   gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
                                    amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
     LAUNCHERROR("kReduceWcaDispersion");
 }
@@ -417,7 +419,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        methodName, amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        methodName, gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(WcaDispersionParticle), sizeof(WcaDispersionParticle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
@@ -425,7 +427,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 #endif
 
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaWcaDispersionN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaWcaDispersionN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevData,
                                                             gpu->psPosq4->_pDevData,
                                                             amoebaGpu->psWcaDispersionRadiusEpsilon->_pDevData,
@@ -438,7 +440,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 
     } else {
 
-        kCalculateAmoebaWcaDispersionN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
+        kCalculateAmoebaWcaDispersionN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
                                                             amoebaGpu->psWorkUnit->_pDevData,
                                                             gpu->psPosq4->_pDevData,
                                                             amoebaGpu->psWcaDispersionRadiusEpsilon->_pDevData,

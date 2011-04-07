@@ -95,7 +95,7 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
 
             if( bExclusionFlag ){
                 unsigned int xi              = x >> GRIDBITS;
-                unsigned int cell            = xi + xi*cAmoebaSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int cell            = xi + xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 exclusionIndex               = cAmoebaSim.pVdwExclusionIndicesIndex[cell]+tgx;
                 exclusionMask                = cAmoebaSim.pVdwExclusionIndices[exclusionIndex];
             }
@@ -136,7 +136,7 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
 );
                 // mask out excluded ixns
 
-                unsigned int mask  =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+j) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                unsigned int mask  =  ( (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
                 if( mask && bExclusionFlag ){
                     unsigned int maskIndex  = 1 << j;
                     mask = (exclusionMask & maskIndex) ? 0 : 1;
@@ -158,25 +158,25 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
         debugArray[index].z                = -1.0f;
         debugArray[index].w                = (float) (mask + 1); 
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = (float) x;
         debugArray[index].y                = (float) y;
         debugArray[index].z                = (float) tgx;
         debugArray[index].w                = energy;
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullDebug[0].x;
         debugArray[index].y                = pullDebug[0].y;
         debugArray[index].z                = pullDebug[0].z;
         debugArray[index].w                = pullDebug[0].w;
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullDebug[1].x;
         debugArray[index].y                = pullDebug[1].y;
         debugArray[index].z                = pullDebug[1].z;
         debugArray[index].w                = pullDebug[1].w;
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = mask ? ijForce[0] : 0.0f;
         debugArray[index].y                = mask ? ijForce[1] : 0.0f;
         debugArray[index].z                = mask ? ijForce[2] : 0.0f;
@@ -189,11 +189,11 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
 
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
             load3dArrayBufferPerWarp( offset, forceSum, outputForce );
 
 #else
-            unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, forceSum, outputForce );
 #endif
 
@@ -268,7 +268,7 @@ flags = 0xFFFFFFFF;
             
                         // mask out excluded ixns
         
-                        unsigned int mask       =  ( (atomI >= cAmoebaSim.numberOfAtoms) || ((y+jIdx) >= cAmoebaSim.numberOfAtoms) ) ? 0 : 1;
+                        unsigned int mask       =  ( (atomI >= cSim.atoms) || ((y+jIdx) >= cSim.atoms) ) ? 0 : 1;
                         if( mask && bExclusionFlag ){
                             unsigned int maskIndex  = 1 << jIdx;
                             mask =  (exclusionMask & maskIndex) ? 0 : 1;
@@ -337,25 +337,25 @@ if( atomI == targetAtom || (y+jIdx) == targetAtom ){
         debugArray[index].z                = -3.0;
         debugArray[index].w                = (float) (mask + 1); 
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = (float) x;
         debugArray[index].y                = (float) y;
         debugArray[index].z                = (float) tgx;
         debugArray[index].w                = energy;
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullDebug[0].x;
         debugArray[index].y                = pullDebug[0].y;
         debugArray[index].z                = pullDebug[0].z;
         debugArray[index].w                = pullDebug[0].w;
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = pullDebug[1].x;
         debugArray[index].y                = pullDebug[1].y;
         debugArray[index].z                = pullDebug[1].z;
         debugArray[index].w                = pullDebug[1].w;
 
-        index                             += cAmoebaSim.paddedNumberOfAtoms;
+        index                             += cSim.paddedNumberOfAtoms;
         debugArray[index].x                = mask ? ijForce[0] : 0.0f;
         debugArray[index].y                = mask ? ijForce[1] : 0.0f;
         debugArray[index].z                = mask ? ijForce[2] : 0.0f;
@@ -375,17 +375,17 @@ if( atomI == targetAtom || (y+jIdx) == targetAtom ){
             // Write results
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
             load3dArrayBufferPerWarp( offset, forceSum,       outputForce );
 
-            offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = 3*(y + tgx + warp*cSim.paddedNumberOfAtoms);
 
             load3dArrayBufferPerWarp( offset, sA[threadIdx.x].force,       outputForce );
 #else
-            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, forceSum,       outputForce );
 
-            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
+            offset                              = 3*(y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray( offset, sA[threadIdx.x].force,       outputForce );
 
 #endif
