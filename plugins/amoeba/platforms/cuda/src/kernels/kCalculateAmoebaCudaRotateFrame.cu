@@ -147,7 +147,6 @@ void kCudaComputeLabFrameMoments_kernel( void )
     float vectorZ[3];
  
     int particleIndex            = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    int numberOfParticles        = cSim.atoms;
 
     float4* particleCoord        = cSim.pPosq;
     int4* multiPoleParticles     = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
@@ -162,7 +161,7 @@ void kCudaComputeLabFrameMoments_kernel( void )
  
     // code common to ZThenX and Bisector
     
-    while( particleIndex < numberOfParticles )
+    while( particleIndex < cSim.atoms )
     {
 
         if( multiPoleParticles[particleIndex].x >= 0 && multiPoleParticles[particleIndex].z >= 0 )

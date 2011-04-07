@@ -1089,8 +1089,8 @@ static void kReduceTorque(amoebaGpuContext amoebaGpu )
 {
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
-                             gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                             amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData );
+                           gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
+                           amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData );
     LAUNCHERROR("kReducePmeDirectElectrostaticTorque");
 }
 
