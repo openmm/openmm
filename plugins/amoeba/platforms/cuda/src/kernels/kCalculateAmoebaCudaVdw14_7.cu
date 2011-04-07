@@ -452,7 +452,7 @@ static void kReduceVdw14_7(amoebaGpuContext amoebaGpu, CUDAStream<float>* output
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                            gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                           amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
+                           amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData, 0 );
     LAUNCHERROR("kReduceVdw14_7");
 }
 

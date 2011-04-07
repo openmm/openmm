@@ -705,7 +705,7 @@ static void kReduceTorque(amoebaGpuContext amoebaGpu )
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData );
+                               amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData, 0 );
     LAUNCHERROR("kReduceElectrostaticTorque");
 }
 
@@ -718,7 +718,7 @@ static void kReduceTorque(amoebaGpuContext amoebaGpu )
 
    --------------------------------------------------------------------------------------- */
 
-void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
+void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueToForce )
 {
   
    // ---------------------------------------------------------------------------------------
@@ -768,7 +768,6 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
     }
 
     kClearFields_3( amoebaGpu, 1 );
-    LAUNCHERROR("kClearFields_3 kCalculateAmoebaCudaElectrostatic");
 
 #ifdef AMOEBA_DEBUG
         if( amoebaGpu->log ){
@@ -812,117 +811,10 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
     }
     LAUNCHERROR("kCalculateAmoebaCudaElectrostaticN2Forces");
 
-    kReduceTorque( amoebaGpu );
-    LAUNCHERROR("kReduceForceTorque");
-
-    cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-
-        amoebaGpu->psTorque->Download();
-        debugArray->Download();
-
-        (void) fprintf( amoebaGpu->log, "Finished Electrostatic kernel execution\n" ); (void) fflush( amoebaGpu->log );
-
-        int maxPrint        = 1400;
-        for( int ii = 0; ii < gpu->natoms; ii++ ){
-           (void) fprintf( amoebaGpu->log, "%5d ", ii); 
-
-            int indexOffset     = ii*3;
-    
-           // torque
-
-           (void) fprintf( amoebaGpu->log,"ElectrostaticT [%16.9e %16.9e %16.9e] ",
-                           amoebaGpu->psTorque->_pSysData[indexOffset],
-                           amoebaGpu->psTorque->_pSysData[indexOffset+1],
-                           amoebaGpu->psTorque->_pSysData[indexOffset+2] );
-
-           (void) fprintf( amoebaGpu->log,"\n" );
-           if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
-                ii = gpu->natoms - maxPrint;
-           }
-        }
-        if( 1 ){
-            (void) fprintf( amoebaGpu->log,"DebugElec\n" );
-            int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-            for( int jj = 0; jj < gpu->natoms; jj++ ){
-                int debugIndex = jj;
-                for( int kk = 0; kk < 8; kk++ ){
-                    float conversion = kk >= 1 && kk <= 8 ? 1.0f/4.184f : 1.0;
-                    (void) fprintf( amoebaGpu->log,"%5d %5d [%16.9e %16.9e %16.9e %16.9e] E11\n", targetAtom, jj,
-                                    conversion*debugArray->_pSysData[debugIndex].x, conversion*debugArray->_pSysData[debugIndex].y,
-                                    conversion*debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
-                    debugIndex += paddedNumberOfAtoms;
-                }
-                (void) fprintf( amoebaGpu->log,"\n" );
-            }
-        }
-        if( 1 ){
-            (void) fprintf( amoebaGpu->log,"DebugElec\n" );
-            int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-            for( int jj = 0; jj < gpu->natoms; jj++ ){
-                int debugIndex1 = jj + paddedNumberOfAtoms;
-                int debugIndex2 = jj + 5*paddedNumberOfAtoms;
-                int debugIndex3 = jj + 6*paddedNumberOfAtoms;
-                int debugIndex4 = jj + 4*paddedNumberOfAtoms;
-                int debugIndex5 = jj + 7*paddedNumberOfAtoms;
-                float conversion = 1.0f/4.184f;
-                int i1,i2;
-                if( jj < targetAtom ){
-                    i1 = jj;
-                    i2 = targetAtom;
-                } else {
-                    i1 = targetAtom;
-                    i2 = jj;
-                }
-                (void) fprintf( amoebaGpu->log,"%5d %5d %16.9e %16.9e %16.9e    %16.9e %16.9e %16.9e   %16.9e %16.9e %16.9e %16.9e %16.9e %16.9e F11\n", i1,i2,
-                                conversion*debugArray->_pSysData[debugIndex1].x,
-                                conversion*debugArray->_pSysData[debugIndex1].y,
-                                conversion*debugArray->_pSysData[debugIndex1].z, 
-                                conversion*debugArray->_pSysData[debugIndex2].x,
-                                conversion*debugArray->_pSysData[debugIndex2].y,
-                                conversion*debugArray->_pSysData[debugIndex2].z, 
-                                conversion*debugArray->_pSysData[debugIndex3].x,
-                                conversion*debugArray->_pSysData[debugIndex3].y,
-                                conversion*debugArray->_pSysData[debugIndex3].z,
-                                conversion*debugArray->_pSysData[debugIndex5].x,
-                                conversion*debugArray->_pSysData[debugIndex5].y,
-                                conversion*debugArray->_pSysData[debugIndex5].z );
-            }
-        }
-        (void) fflush( amoebaGpu->log );
-
-        if( 0 ){
-            (void) fprintf( amoebaGpu->log, "%s Tiled F & T\n", methodName ); fflush( amoebaGpu->log );
-            int maxPrint = 12;
-            for( int ii = 0; ii < gpu->natoms; ii++ ){
-    
-                // print cpu & gpu reductions
-    
-                int offset  = 3*ii;
-    
-                (void) fprintf( amoebaGpu->log,"%6d T[%16.7e %16.7e %16.7e]\n", ii,
-                                amoebaGpu->psTorque->_pSysData[offset],
-                                amoebaGpu->psTorque->_pSysData[offset+1],
-                                amoebaGpu->psTorque->_pSysData[offset+2] );
-                if( (ii == maxPrint) && (ii < (gpu->natoms - maxPrint)) )ii = gpu->natoms - maxPrint; 
-            }   
-        }   
-
-        if( 1 ){
-            std::vector<int> fileId;
-            //fileId.push_back( 0 );
-            VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
-            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector, NULL, 1.0f );
-            cudaWriteVectorOfDoubleVectorsToFile( "CudaTorque", fileId, outputVector );
-         }
-
-    }   
-    delete debugArray;
-
-#endif
+    if( addTorqueToForce ){
+        kReduceTorque( amoebaGpu );
+        cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
+    }
 
     if( 0 ){
         std::vector<int> fileId;

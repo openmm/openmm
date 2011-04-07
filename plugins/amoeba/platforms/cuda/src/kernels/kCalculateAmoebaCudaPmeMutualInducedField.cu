@@ -357,12 +357,12 @@ static void kReduceMutualInducedFields(amoebaGpuContext amoebaGpu, CUDAStream<fl
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
+                               amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData, 0 );
     LAUNCHERROR("kReducePmeMI_Fields1");
 
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_2->_pDevData, outputPolarArray->_pDevData );
+                               amoebaGpu->psWorkArray_3_2->_pDevData, outputPolarArray->_pDevData, 0 );
     LAUNCHERROR("kReducePmeMI_Fields2");
 }
 

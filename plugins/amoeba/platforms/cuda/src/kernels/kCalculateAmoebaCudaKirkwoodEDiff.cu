@@ -936,7 +936,7 @@ static void kReduceTorque( amoebaGpuContext amoebaGpu )
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                            gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                           amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData );
+                           amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData, 0 );
 
     LAUNCHERROR("kReduceForceTorqueKirkwoodEDiff");
 }
@@ -984,9 +984,6 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     debugArray->Upload();
     unsigned int targetAtom           = 0;
 #endif
-
-    kClearFields_3( amoebaGpu, 6 );
-    LAUNCHERROR("kClearFields_3_kCalculateAmoebaCudaKirkwoodEDiff");
 
     static unsigned int threadsPerBlock = 0;
     if( threadsPerBlock == 0 ){
@@ -1047,14 +1044,11 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData );
 #endif
     }
-
     LAUNCHERROR("kCalculateAmoebaCudaKirkwoodEDiffN2Forces");
 
+    // reduce and map torques to forces
+
     kReduceTorque( amoebaGpu );
-    LAUNCHERROR("kReduceForceTorque_kCalculateAmoebaCudaKirkwoodEDiff");
-
-    // map torques to forces
-
     cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
 
 

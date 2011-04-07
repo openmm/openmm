@@ -793,16 +793,11 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     if( data.getHasAmoebaGeneralizedKirkwood() ){
         kCalculateObcGbsaBornSum(gpu->gpuContext);
         kReduceObcGbsaBornSum(gpu->gpuContext);
-        //initializeCudaFloatArray( gpu->gpuContext->natoms, 1, gpu->gpuContext->psBornRadii, 0.1 );
-        //initializeCudaFloatArray( gpu->gpuContext->natoms, 1, gpu->gpuContext->psObcChain,  0.0 );
     }   
 
     // multipoles
 
     kCalculateAmoebaMultipoleForces(gpu, data.getHasAmoebaGeneralizedKirkwood() );
-
-//kClearForces(gpu->gpuContext);
-//kClearEnergy(gpu->gpuContext);
 
     // GK
 

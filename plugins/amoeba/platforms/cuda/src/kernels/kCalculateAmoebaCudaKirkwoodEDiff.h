@@ -251,12 +251,12 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
 
             add3dArrayToFloat4(         offset, localParticle.force,  cSim.pForce4 );
-            load3dArrayBufferPerWarp( 3*offset, localParticle.torque, outputTorque );
+            add3dArray(               3*offset, localParticle.torque, outputTorque );
 
 #else
             unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
             add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
-            load3dArray(      3*offset, localParticle.torque, outputTorque );
+            add3dArray(       3*offset, localParticle.torque, outputTorque );
 
 #endif
 
@@ -437,23 +437,22 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
 
             add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
-            load3dArrayBufferPerWarp( 3*offset, localParticle.torque, outputTorque );
+            add3dArray(       3*offset, localParticle.torque, outputTorque );
 
             offset                              = y + tgx + warp*cSim.paddedNumberOfAtoms;
 
-            add3dArrayToFloat4(         offset, sA[threadIdx.x].force,  cSim.pForce4 );
-            load3dArrayBufferPerWarp( 3*offset, sA[threadIdx.x].torque, outputTorque );
+            add3dArrayToFloat4( offset, sA[threadIdx.x].force,  cSim.pForce4 );
+            add3dArray(       3*offset, sA[threadIdx.x].torque, outputTorque );
 #else
             unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms;
 
             add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
-            load3dArray(      3*offset, localParticle.torque, outputTorque );
-
+            add3dArray(       3*offset, localParticle.torque, outputTorque );
 
             offset                              = y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
 
             add3dArrayToFloat4( offset, sA[threadIdx.x].force,  cSim.pForce4 );
-            load3dArray(      3*offset, sA[threadIdx.x].torque, outputTorque );
+            add3dArray(       3*offset, sA[threadIdx.x].torque, outputTorque );
 
 #endif
             lasty = y;

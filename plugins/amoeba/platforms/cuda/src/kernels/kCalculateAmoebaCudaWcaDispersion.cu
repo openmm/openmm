@@ -360,7 +360,7 @@ static void kReduceWcaDispersion(amoebaGpuContext amoebaGpu, CUDAStream<float>* 
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
+                               amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData, 0 );
     LAUNCHERROR("kReduceWcaDispersion");
 }
 

@@ -166,7 +166,7 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
-void kReduceFields_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn, float* fieldOut )
+void kReduceFields_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn, float* fieldOut, int addTo )
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -174,7 +174,7 @@ void kReduceFields_kernel( unsigned int fieldComponents, unsigned int outputBuff
 
     while (pos < fieldComponents)
     {   
-        float totalField = 0.0f;
+        float totalField = addTo ? fieldOut[pos] : 0.0f;
         float* pFt       = fieldIn + pos;
         unsigned int i   = outputBuffers;
         while (i >= 4)

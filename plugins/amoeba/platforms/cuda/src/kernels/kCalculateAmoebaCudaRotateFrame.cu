@@ -487,7 +487,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     // calculate electrostatic forces
 
     if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
-        cudaComputeAmoebaElectrostatic( amoebaGpu );
+        cudaComputeAmoebaElectrostatic( amoebaGpu, (hasAmoebaGeneralizedKirkwood ? 0 : 1) );
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );
     }

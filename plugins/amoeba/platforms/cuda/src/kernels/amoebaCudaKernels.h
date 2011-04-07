@@ -104,7 +104,7 @@ extern void cudaWriteFloat4AndFloat1ArraysToFile( int numberOfAtoms, const std::
 
 extern void SetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
-extern void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu );
+extern void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueToForce );
 
 extern void SetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpuContext amoebaGpu );

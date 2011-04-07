@@ -41,17 +41,17 @@ static void kReduceEAndGkFields(amoebaGpuContext amoebaGpu )
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psE_Field->_pDevData );
+                               amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psE_Field->_pDevData, 0 );
 
     LAUNCHERROR("kReduceEAndGK_Fields1");
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData );
+                               amoebaGpu->psWorkArray_3_2->_pDevData, amoebaGpu->psE_FieldPolar->_pDevData, 0 );
     LAUNCHERROR("kReduceEAndGK_Fields2");
 
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_3->_pDevData, amoebaGpu->psGk_Field->_pDevData );
+                               amoebaGpu->psWorkArray_3_3->_pDevData, amoebaGpu->psGk_Field->_pDevData, 0 );
     LAUNCHERROR("kReduceEAndGK_Fields3");
 }
 

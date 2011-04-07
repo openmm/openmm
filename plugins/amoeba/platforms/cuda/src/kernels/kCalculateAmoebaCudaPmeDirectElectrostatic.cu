@@ -1090,7 +1090,7 @@ static void kReduceTorque(amoebaGpuContext amoebaGpu )
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                            gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                           amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData );
+                           amoebaGpu->psWorkArray_3_1->_pDevData, amoebaGpu->psTorque->_pDevData, 1 );
     LAUNCHERROR("kReducePmeDirectElectrostaticTorque");
 }
 
@@ -1185,7 +1185,6 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
     LAUNCHERROR("kCalculateAmoebaPmeDirectElectrostaticCutoffForces");
 
     kReduceTorque( amoebaGpu );
-    cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
 
 }
 
@@ -1201,5 +1200,6 @@ void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
 {
     cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpu );
     kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
+    cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
 }
 

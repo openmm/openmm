@@ -867,15 +867,15 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+2];
         multipole[9] = 2*cAmoebaSim.pLabFrameQuadrupole[i*9+5];
         float* phidp = &cAmoebaSim.pPhidp[20*i];
-        cAmoebaSim.pTorque[3*i] = 0.5f*cAmoebaSim.electric*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
+        cAmoebaSim.pTorque[3*i] += 0.5f*cAmoebaSim.electric*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
                       + 2.0f*(multipole[6]-multipole[5])*zscale*zscale*phidp[9]
                       + multipole[8]*yscale*yscale*phidp[7] + multipole[9]*xscale*yscale*phidp[5]
                       - multipole[7]*yscale*zscale*phidp[8] - multipole[9]*xscale*zscale*phidp[6]);
-        cAmoebaSim.pTorque[3*i+1] = 0.5f*cAmoebaSim.electric*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
+        cAmoebaSim.pTorque[3*i+1] += 0.5f*cAmoebaSim.electric*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
                       + 2.0f*(multipole[4]-multipole[6])*zscale*zscale*phidp[8]
                       + multipole[7]*zscale*zscale*phidp[9] + multipole[8]*xscale*zscale*phidp[6]
                       - multipole[8]*xscale*xscale*phidp[4] - multipole[9]*yscale*yscale*phidp[7]);
-        cAmoebaSim.pTorque[3*i+2] = 0.5f*cAmoebaSim.electric*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
+        cAmoebaSim.pTorque[3*i+2] += 0.5f*cAmoebaSim.electric*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
                       + 2.0f*(multipole[5]-multipole[4])*yscale*yscale*phidp[7]
                       + multipole[7]*xscale*xscale*phidp[4] + multipole[9]*yscale*zscale*phidp[8]
                       - multipole[7]*xscale*yscale*phidp[5] - multipole[8]*zscale*zscale*phidp[9]);
@@ -1016,20 +1016,6 @@ void kCalculateAmoebaPMEFixedMultipoles(amoebaGpuContext amoebaGpu)
     kComputeFixedMultipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeFixedMultipoleForceAndEnergy");
 
-    if( 0 ){
-        gpuContext gpu                       = amoebaGpu->gpuContext;
-        std::vector<int> fileId;
-        fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        kReduceForces( gpu );
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psForce4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipForceOnlyFixed", fileId, outputVector );
-        kClearForces( gpu );
-    }   
-
-    cudaComputeAmoebaMapTorqueAndAddToForce(amoebaGpu, amoebaGpu->psTorque);
-
 }
 
 /**
@@ -1062,5 +1048,4 @@ void kCalculateAmoebaPMEInducedDipoleForces(amoebaGpuContext amoebaGpu)
     kComputeInducedDipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kComputeInducedDipoleForceAndEnergy");
 
-    cudaComputeAmoebaMapTorqueAndAddToForce(amoebaGpu, amoebaGpu->psTorque );
 }
