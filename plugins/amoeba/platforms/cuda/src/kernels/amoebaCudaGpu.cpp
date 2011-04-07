@@ -86,13 +86,14 @@ amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
 extern "C"
 void gpuPrintCudaStream( std::string name,
                          unsigned int length, unsigned int subStreams, unsigned int stride,
+                         unsigned int memoryFootprint,
                          void*  pSysStream, void* pDevStream,
                          void*  pSysData,   void* pDevData, FILE* log)
 {
    
-    (void) fprintf( log, "     %-35s [%8u %5u %8u] Stream[%p %p] Data[%16p %16p]\n",
+    (void) fprintf( log, "     %-35s [%8u %5u %8u %8u] Stream[%p %p] Data[%16p %16p]\n",
                     name.c_str(), length, subStreams,
-                    stride, pSysStream, pDevStream, pSysData, pDevData );
+                    stride, memoryFootprint, pSysStream, pDevStream, pSysData, pDevData );
 }
 
 extern "C"
@@ -102,6 +103,7 @@ void gpuPrintCudaStreamFloat( CUDAStream<float>* cUDAStream, FILE* log )
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( float ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -113,6 +115,7 @@ void gpuPrintCudaStreamFloat2( CUDAStream<float2>* cUDAStream, FILE* log )
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( float2 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -124,6 +127,7 @@ void gpuPrintCudaStreamFloat4( CUDAStream<float4>* cUDAStream, FILE* log )
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( float4 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -135,6 +139,7 @@ void gpuPrintCudaStreamUnsignedInt( CUDAStream<unsigned int>* cUDAStream, FILE* 
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( unsigned int ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -146,6 +151,7 @@ void gpuPrintCudaStreamInt( CUDAStream<int>* cUDAStream, FILE* log )
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( int ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -157,6 +163,7 @@ void gpuPrintCudaStreamInt2( CUDAStream<int2>* cUDAStream, FILE* log )
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( int2 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -168,6 +175,7 @@ void gpuPrintCudaStreamInt4( CUDAStream<int4>* cUDAStream, FILE* log )
     if( cUDAStream == NULL )return;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
+                        cUDAStream->_length*cUDAStream->_subStreams*sizeof( int4 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
 }
@@ -1277,15 +1285,6 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
    
     int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
 
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log,"%s: paddedNumberOfAtoms=%d\n",
-                        methodName.c_str(), paddedNumberOfAtoms ); (void) fflush( amoebaGpu->log );
-    }
-#endif
-
-    // work space
- 
     // parameters
  
     amoebaGpu->psMultipoleParticlesIdsAndAxisType                      = new CUDAStream<int4>(paddedNumberOfAtoms,    1, "MultipoleParticlesIdsAndAxisType");
@@ -1296,9 +1295,11 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
 
     amoebaGpu->psMolecularDipole                                       = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "MolecularDipole");
     amoebaGpu->amoebaSim.pMolecularDipole                              = amoebaGpu->psMolecularDipole->_pDevData;
+    memset( amoebaGpu->psMolecularDipole->_pSysData,      0, sizeof(float)*3*paddedNumberOfAtoms );
 
     amoebaGpu->psMolecularQuadrupole                                   = new CUDAStream<float>(9*paddedNumberOfAtoms, 1, "MolecularQuadrupole");
     amoebaGpu->amoebaSim.pMolecularQuadrupole                          = amoebaGpu->psMolecularQuadrupole->_pDevData;
+    memset( amoebaGpu->psMolecularQuadrupole->_pSysData,      0, sizeof(float)*9*paddedNumberOfAtoms );
  
     // output
  

@@ -47,37 +47,9 @@ typedef MapIntFloat::const_iterator MapIntFloatCI;
 struct _amoebaGpuContext {
     
     _gpuContext* gpuContext;
+    cudaAmoebaGmxSimulation amoebaSim;
  
     FILE* log;
-
-    //bool bOutputBufferPerWarp;
-    //unsigned int paddedNumberOfAtoms;
-    //unsigned int nonbondBlocks;
-    //unsigned int nonbondThreadsPerBlock;
-    //unsigned int nonbondOutputBuffers;
-    //unsigned int threadsPerBlock;
-    //unsigned int fieldReduceThreadsPerBlock;
-    //unsigned int outputBuffers; 
-    unsigned int workUnits; 
-
-    // workspace arrays
-
-    CUDAStream<float>*  psWorkArray_3_1; 
-    CUDAStream<float>*  psWorkArray_3_2; 
-    CUDAStream<float>*  psWorkArray_3_3; 
-    CUDAStream<float>*  psWorkArray_3_4; 
-
-    CUDAStream<float>*  psWorkArray_1_1; 
-    CUDAStream<float>*  psWorkArray_1_2; 
-
-    CUDAStream<unsigned int>*  psWorkUnit; 
-    CUDAStream<int>*  psScalingIndicesIndex; 
-    CUDAStream<int>*  ps_D_ScaleIndices; 
-    CUDAStream<int2>* ps_P_ScaleIndices; 
-    CUDAStream<int2>* ps_M_ScaleIndices; 
-
-    cudaAmoebaGmxSimulation amoebaSim;
-    int maxCovalentDegreeSz;
 
     CUDAStream<int4>*   psAmoebaBondID;
     CUDAStream<float2>* psAmoebaBondParameter;
@@ -116,6 +88,25 @@ struct _amoebaGpuContext {
     CUDAStream<int4>*   psAmoebaTorsionTorsionID3;
     CUDAStream<float4>* psAmoebaTorsionTorsionGrids;
 
+    unsigned int workUnits; 
+
+    // workspace arrays
+
+    CUDAStream<float>*  psWorkArray_3_1; 
+    CUDAStream<float>*  psWorkArray_3_2; 
+    CUDAStream<float>*  psWorkArray_3_3; 
+    CUDAStream<float>*  psWorkArray_3_4; 
+
+    CUDAStream<float>*  psWorkArray_1_1; 
+    CUDAStream<float>*  psWorkArray_1_2; 
+
+    CUDAStream<unsigned int>*  psWorkUnit; 
+    CUDAStream<int>*  psScalingIndicesIndex; 
+    CUDAStream<int>*  ps_D_ScaleIndices; 
+    CUDAStream<int2>* ps_P_ScaleIndices; 
+    CUDAStream<int2>* ps_M_ScaleIndices; 
+
+    int maxCovalentDegreeSz;
     float solventDielectric;
 
     // multipole parameters
@@ -126,7 +117,6 @@ struct _amoebaGpuContext {
     // buffer indices used for mapping torques onto forces 
 
     int maxTorqueBufferIndex;
-    int useNewTorqueMapScheme;
     int torqueMapForce4Delete;
     CUDAStream<int4>* psMultipoleParticlesTorqueBufferIndices;
     CUDAStream<float4>*  psTorqueMapForce4; 

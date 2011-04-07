@@ -6,7 +6,8 @@
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 
-#define AMOEBA_DEBUG
+//#define AMOEBA_DEBUG
+#undef AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -480,7 +481,7 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
 
         // write results to file
 
-        if( 1 ){
+        if( 0 ){
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;

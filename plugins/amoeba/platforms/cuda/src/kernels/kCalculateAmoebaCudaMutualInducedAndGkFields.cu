@@ -33,8 +33,8 @@ void GetCalculateAmoebaCudaMutualInducedAndGkFieldsSim(amoebaGpuContext amoebaGp
     RTERROR(status, "GetCalculateAmoebaCudaMutualInducedAndGkFieldSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
-#define AMOEBA_DEBUG
-//#undef AMOEBA_DEBUG
+//#define AMOEBA_DEBUG
+#undef AMOEBA_DEBUG
 
 #define GK
 #include "kCalculateAmoebaCudaMutualInducedParticle.h"
@@ -923,7 +923,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     }
 
 #ifdef AMOEBA_DEBUG
-    if( 1 ){
+    if( 0 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;

@@ -1730,7 +1730,7 @@ static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
     }
     LAUNCHERROR("kReduceToBornForcePrefactor");
 
-#define AMOEBA_DEBUG
+//#define AMOEBA_DEBUG
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
 
@@ -1748,7 +1748,7 @@ static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
         }
         (void) fflush( amoebaGpu->log );
 */
-        if( 1 ){
+        if( 0 ){
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
@@ -1943,7 +1943,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
 
-    if( 1 ){
+    if( 0 ){
         std::vector<int> fileId;
         VectorOfDoubleVectors outputVector;
         //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
@@ -1956,7 +1956,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     kCalculateObcGbsaForces2( amoebaGpu->gpuContext );
 
-    if( 1 ){
+    if( 0 ){
         std::vector<int> fileId;
         VectorOfDoubleVectors outputVector;
         //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );

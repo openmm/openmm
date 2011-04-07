@@ -90,8 +90,8 @@ void kCudaComputeCheckChiral_kernel( void )
     { 
         // skip z-then-x
     
-        int axisType                     = multiPoleParticles[particleIndex].w; 
-        if( axisType != 0 && multiPoleParticles[particleIndex].y >= 0 )
+        int axisType             = multiPoleParticles[particleIndex].w; 
+        if( axisType != 0 && multiPoleParticles[particleIndex].x >= 0 && multiPoleParticles[particleIndex].y >=0 && multiPoleParticles[particleIndex].z >= 0 )
         {
      
             // ---------------------------------------------------------------------------------------
@@ -164,204 +164,213 @@ void kCudaComputeLabFrameMoments_kernel( void )
     
     while( particleIndex < numberOfParticles )
     {
-        float4 coordinatesThisParticle   = particleCoord[particleIndex];
-     
-        int multipoleParticleIndex       = multiPoleParticles[particleIndex].z;
-        float4 coordinatesAxisParticle   = particleCoord[multipoleParticleIndex];
-     
-        vectorZ[0]                       = coordinatesAxisParticle.x - coordinatesThisParticle.x;
-        vectorZ[1]                       = coordinatesAxisParticle.y - coordinatesThisParticle.y;
-        vectorZ[2]                       = coordinatesAxisParticle.z - coordinatesThisParticle.z;
-          
-        multipoleParticleIndex           = multiPoleParticles[particleIndex].x; 
-        coordinatesAxisParticle          = particleCoord[multipoleParticleIndex];
-     
-        vectorX[0]                       = coordinatesAxisParticle.x - coordinatesThisParticle.x;
-        vectorX[1]                       = coordinatesAxisParticle.y - coordinatesThisParticle.y;
-        vectorX[2]                       = coordinatesAxisParticle.z - coordinatesThisParticle.z;
-     
-        int axisType                     = multiPoleParticles[particleIndex].w; 
-          
-        /*
-            z-only
-               (1) norm z
-               (2) select random x
-               (3) x = x - (x.z)z
-               (4) norm x
-    
-            z-then-x
-               (1) norm z
-               (2) norm x (not needed)
-               (3) x = x - (x.z)z
-               (4) norm x
-    
-            bisector
-               (1) norm z
-               (2) norm x 
-               (3) z = x + z
-               (4) norm z
-               (5) x = x - (x.z)z 
-               (6) norm x 
-    
-            z-bisect
-               (1) norm z
-               (2) norm x 
-               (3) norm y 
-               (3) x = x + y
-               (4) norm x
-               (5) x = x - (x.z)z 
-               (6) norm x 
-    
-            3-fold
-               (1) norm z
-               (2) norm x 
-               (3) norm y 
-               (4) z = x + y + z
-               (5) norm z
-               (6) x = x - (x.z)z 
-               (7) norm x 
-    
-        */
-    
-        // branch based on axis type
+
+        if( multiPoleParticles[particleIndex].x >= 0 && multiPoleParticles[particleIndex].z >= 0 )
+        {
+            float4 coordinatesThisParticle   = particleCoord[particleIndex];
          
-        float sum                        = normVector3( vectorZ );
+            int multipoleParticleIndex       = multiPoleParticles[particleIndex].z;
+            float4 coordinatesAxisParticle   = particleCoord[multipoleParticleIndex];
+         
+            vectorZ[0]                       = coordinatesAxisParticle.x - coordinatesThisParticle.x;
+            vectorZ[1]                       = coordinatesAxisParticle.y - coordinatesThisParticle.y;
+            vectorZ[2]                       = coordinatesAxisParticle.z - coordinatesThisParticle.z;
+              
+            multipoleParticleIndex           = multiPoleParticles[particleIndex].x; 
+            coordinatesAxisParticle          = particleCoord[multipoleParticleIndex];
+         
+            vectorX[0]                       = coordinatesAxisParticle.x - coordinatesThisParticle.x;
+            vectorX[1]                       = coordinatesAxisParticle.y - coordinatesThisParticle.y;
+            vectorX[2]                       = coordinatesAxisParticle.z - coordinatesThisParticle.z;
+         
+            int axisType                     = multiPoleParticles[particleIndex].w; 
     
-        if( axisType == 1 ){
-    
-            // bisector
-            
-            sum                     = normVector3( vectorX );
-            
-            vectorZ[0]             += vectorX[0];
-            vectorZ[1]             += vectorX[1];
-            vectorZ[2]             += vectorX[2];
-       
-            sum                     = normVector3( vectorZ );
-    
-        } else if( axisType == 2 || axisType == 3 ){ 
-     
-            // z-bisect
-    
-            multipoleParticleIndex  = multiPoleParticles[particleIndex].y; 
-            coordinatesAxisParticle = particleCoord[multipoleParticleIndex];
-            vectorY[0]              = coordinatesAxisParticle.x - coordinatesThisParticle.x;
-            vectorY[1]              = coordinatesAxisParticle.y - coordinatesThisParticle.y;
-            vectorY[2]              = coordinatesAxisParticle.z - coordinatesThisParticle.z;
-    
-            sum                     = normVector3( vectorY );
-            sum                     = normVector3( vectorX );
-    
-            if( axisType == 2 ){
-    
-                vectorX[0]         += vectorY[0];
-                vectorX[1]         += vectorY[1];
-                vectorX[2]         += vectorY[2];
-                sum                 = normVector3( vectorX );
-     
-            } else { 
-     
-                // 3-fold
+            /*
+                z-only
+                   (1) norm z
+                   (2) select random x
+                   (3) x = x - (x.z)z
+                   (4) norm x
         
-                vectorZ[0]         += vectorX[0] + vectorY[0];
-                vectorZ[1]         += vectorX[1] + vectorY[1];
-                vectorZ[2]         += vectorX[2] + vectorY[2];
-                sum                 = normVector3( vectorZ );
+                z-then-x
+                   (1) norm z
+                   (2) norm x (not needed)
+                   (3) x = x - (x.z)z
+                   (4) norm x
+        
+                bisector
+                   (1) norm z
+                   (2) norm x 
+                   (3) z = x + z
+                   (4) norm z
+                   (5) x = x - (x.z)z 
+                   (6) norm x 
+        
+                z-bisect
+                   (1) norm z
+                   (2) norm x 
+                   (3) norm y 
+                   (3) x = x + y
+                   (4) norm x
+                   (5) x = x - (x.z)z 
+                   (6) norm x 
+        
+                3-fold
+                   (1) norm z
+                   (2) norm x 
+                   (3) norm y 
+                   (4) z = x + y + z
+                   (5) norm z
+                   (6) x = x - (x.z)z 
+                   (7) norm x 
+        
+            */
+        
+            // branch based on axis type
+             
+            float sum                   = normVector3( vectorZ );
+        
+            if( axisType == 1 ){
+        
+                // bisector
+                
+                sum                     = normVector3( vectorX );
+                
+                vectorZ[0]             += vectorX[0];
+                vectorZ[1]             += vectorX[1];
+                vectorZ[2]             += vectorX[2];
+           
+                sum                     = normVector3( vectorZ );
+        
+            } else if( axisType == 2 || axisType == 3 ){ 
+         
+                // z-bisect
+        
+                multipoleParticleIndex  = multiPoleParticles[particleIndex].y; 
+                if( multipoleParticleIndex >= 0 && multipoleParticleIndex < cSim.atoms ){
+                    coordinatesAxisParticle = particleCoord[multipoleParticleIndex];
+                    vectorY[0]              = coordinatesAxisParticle.x - coordinatesThisParticle.x;
+                    vectorY[1]              = coordinatesAxisParticle.y - coordinatesThisParticle.y;
+                    vectorY[2]              = coordinatesAxisParticle.z - coordinatesThisParticle.z;
+            
+                    sum                     = normVector3( vectorY );
+                    sum                     = normVector3( vectorX );
+            
+                    if( axisType == 2 ){
+            
+                        vectorX[0]         += vectorY[0];
+                        vectorX[1]         += vectorY[1];
+                        vectorX[2]         += vectorY[2];
+                        sum                 = normVector3( vectorX );
+             
+                    } else { 
+             
+                        // 3-fold
+                
+                        vectorZ[0]         += vectorX[0] + vectorY[0];
+                        vectorZ[1]         += vectorX[1] + vectorY[1];
+                        vectorZ[2]         += vectorX[2] + vectorY[2];
+                        sum                 = normVector3( vectorZ );
+                    }
+                }
+         
+            } else if( axisType >= 4 ){ 
+        
+                vectorX[0]             = 0.1f;
+                vectorX[1]             = 0.1f;
+                vectorX[2]             = 0.1f;
             }
-     
-        } else if( axisType >= 4 ){ 
-    
-            vectorX[0]             = 0.1f;
-            vectorX[1]             = 0.1f;
-            vectorX[2]             = 0.1f;
-        }
-        
-        // x = x - (x.z)z
-    
-        float dot         = vectorZ[0]*vectorX[0] + vectorZ[1]*vectorX[1] + vectorZ[2]*vectorX[2];
             
-        vectorX[0]       -= dot*vectorZ[0];
-        vectorX[1]       -= dot*vectorZ[1];
-        vectorX[2]       -= dot*vectorZ[2];
+            // x = x - (x.z)z
+        
+            float dot         = vectorZ[0]*vectorX[0] + vectorZ[1]*vectorX[1] + vectorZ[2]*vectorX[2];
+                
+            vectorX[0]       -= dot*vectorZ[0];
+            vectorX[1]       -= dot*vectorZ[1];
+            vectorX[2]       -= dot*vectorZ[2];
+             
+            sum               = normVector3( vectorX );
+        
+            vectorY[0]        = (vectorZ[1]*vectorX[2]) - (vectorZ[2]*vectorX[1]);
+            vectorY[1]        = (vectorZ[2]*vectorX[0]) - (vectorZ[0]*vectorX[2]);
+            vectorY[2]        = (vectorZ[0]*vectorX[1]) - (vectorZ[1]*vectorX[0]);
          
-        sum               = normVector3( vectorX );
+            // use identity rotation matrix for unrecognized axis types
+        
+            if( axisType < 0 || axisType > 4 ){
+        
+                vectorX[0] = 1.0f;
+                vectorX[1] = 0.0f;
+                vectorX[2] = 0.0f;
+        
+                vectorY[0] = 0.0f;
+                vectorY[1] = 1.0f;
+                vectorY[2] = 0.0f;
+        
+                vectorZ[0] = 0.0f;
+                vectorZ[1] = 0.0f;
+                vectorZ[2] = 1.0f;
+            }
+        
+            unsigned int offset           = 3*particleIndex;
     
-        vectorY[0]        = (vectorZ[1]*vectorX[2]) - (vectorZ[2]*vectorX[1]);
-        vectorY[1]        = (vectorZ[2]*vectorX[0]) - (vectorZ[0]*vectorX[2]);
-        vectorY[2]        = (vectorZ[0]*vectorX[1]) - (vectorZ[1]*vectorX[0]);
+            float molDipole[3];
+            molDipole[0]                  = labFrameDipole[offset];
+            molDipole[1]                  = labFrameDipole[offset+1];
+            molDipole[2]                  = labFrameDipole[offset+2];
+            
+            // set out-of-range elements to 0.0f
+         
+            labFrameDipole[offset]        = molDipole[0]*vectorX[0] + molDipole[1]*vectorY[0] + molDipole[2]*vectorZ[0];
+            labFrameDipole[offset+1]      = molDipole[0]*vectorX[1] + molDipole[1]*vectorY[1] + molDipole[2]*vectorZ[1];
+            labFrameDipole[offset+2]      = molDipole[0]*vectorX[2] + molDipole[1]*vectorY[2] + molDipole[2]*vectorZ[2];
+            
+            // ---------------------------------------------------------------------------------------
+            
+            float mPole[3][3];
+            offset                        = 9*particleIndex;
+            
+            mPole[0][0]                   = labFrameQuadrupole[offset];
+            mPole[0][1]                   = labFrameQuadrupole[offset+1];
+            mPole[0][2]                   = labFrameQuadrupole[offset+2];
+        
+            mPole[1][0]                   = labFrameQuadrupole[offset+3];
+            mPole[1][1]                   = labFrameQuadrupole[offset+4];
+            mPole[1][2]                   = labFrameQuadrupole[offset+5];
+        
+            mPole[2][0]                   = labFrameQuadrupole[offset+6];
+            mPole[2][1]                   = labFrameQuadrupole[offset+7];
+            mPole[2][2]                   = labFrameQuadrupole[offset+8];
+        
+            labFrameQuadrupole[offset+8]  = vectorX[2]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
+            labFrameQuadrupole[offset+8] += vectorY[2]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
+            labFrameQuadrupole[offset+8] += vectorZ[2]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
+    
+            labFrameQuadrupole[offset+4]  = vectorX[1]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
+            labFrameQuadrupole[offset+4] += vectorY[1]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
+            labFrameQuadrupole[offset+4] += vectorZ[1]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
+    
+            labFrameQuadrupole[offset+5]  = vectorX[1]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
+            labFrameQuadrupole[offset+5] += vectorY[1]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
+            labFrameQuadrupole[offset+5] += vectorZ[1]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
+    
+            labFrameQuadrupole[offset]    = vectorX[0]*(vectorX[0]*mPole[0][0] + vectorY[0]*mPole[0][1] + vectorZ[0]*mPole[0][2]);
+            labFrameQuadrupole[offset]   += vectorY[0]*(vectorX[0]*mPole[1][0] + vectorY[0]*mPole[1][1] + vectorZ[0]*mPole[1][2]);
+            labFrameQuadrupole[offset]   += vectorZ[0]*(vectorX[0]*mPole[2][0] + vectorY[0]*mPole[2][1] + vectorZ[0]*mPole[2][2]);
+    
+            labFrameQuadrupole[offset+1]  = vectorX[0]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
+            labFrameQuadrupole[offset+1] += vectorY[0]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
+            labFrameQuadrupole[offset+1] += vectorZ[0]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
+    
+            labFrameQuadrupole[offset+2]  = vectorX[0]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
+            labFrameQuadrupole[offset+2] += vectorY[0]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
+            labFrameQuadrupole[offset+2] += vectorZ[0]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
      
-        // use identity rotation matrix for unrecognized axis types
+            labFrameQuadrupole[offset+3]  = labFrameQuadrupole[offset+1];
+            labFrameQuadrupole[offset+6]  = labFrameQuadrupole[offset+2];
+            labFrameQuadrupole[offset+7]  = labFrameQuadrupole[offset+5];
     
-        if( axisType < 0 || axisType > 4 ){
-    
-            vectorX[0] = 1.0f;
-            vectorX[1] = 0.0f;
-            vectorX[2] = 0.0f;
-    
-            vectorY[0] = 0.0f;
-            vectorY[1] = 1.0f;
-            vectorY[2] = 0.0f;
-    
-            vectorZ[0] = 0.0f;
-            vectorZ[1] = 0.0f;
-            vectorZ[2] = 1.0f;
         }
-    
-        float molDipole[3];
-        molDipole[0]                            = labFrameDipole[particleIndex*3];
-        molDipole[1]                            = labFrameDipole[particleIndex*3+1];
-        molDipole[2]                            = labFrameDipole[particleIndex*3+2];
-        
-        // set out-of-range elements to 0.0f
-     
-        labFrameDipole[particleIndex*3]         = molDipole[0]*vectorX[0] + molDipole[1]*vectorY[0] + molDipole[2]*vectorZ[0];
-        labFrameDipole[particleIndex*3+1]       = molDipole[0]*vectorX[1] + molDipole[1]*vectorY[1] + molDipole[2]*vectorZ[1];
-        labFrameDipole[particleIndex*3+2]       = molDipole[0]*vectorX[2] + molDipole[1]*vectorY[2] + molDipole[2]*vectorZ[2];
-        
-        // ---------------------------------------------------------------------------------------
-        
-        float mPole[3][3];
-        unsigned int offset           = particleIndex*9;
-        
-        mPole[0][0]                   = labFrameQuadrupole[offset];
-        mPole[0][1]                   = labFrameQuadrupole[offset+1];
-        mPole[0][2]                   = labFrameQuadrupole[offset+2];
-    
-        mPole[1][0]                   = labFrameQuadrupole[offset+3];
-        mPole[1][1]                   = labFrameQuadrupole[offset+4];
-        mPole[1][2]                   = labFrameQuadrupole[offset+5];
-    
-        mPole[2][0]                   = labFrameQuadrupole[offset+6];
-        mPole[2][1]                   = labFrameQuadrupole[offset+7];
-        mPole[2][2]                   = labFrameQuadrupole[offset+8];
-    
-        labFrameQuadrupole[offset+8]  = vectorX[2]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
-        labFrameQuadrupole[offset+8] += vectorY[2]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
-        labFrameQuadrupole[offset+8] += vectorZ[2]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
-
-        labFrameQuadrupole[offset+4]  = vectorX[1]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
-        labFrameQuadrupole[offset+4] += vectorY[1]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
-        labFrameQuadrupole[offset+4] += vectorZ[1]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
-
-        labFrameQuadrupole[offset+5]  = vectorX[1]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
-        labFrameQuadrupole[offset+5] += vectorY[1]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
-        labFrameQuadrupole[offset+5] += vectorZ[1]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
-
-        labFrameQuadrupole[offset]    = vectorX[0]*(vectorX[0]*mPole[0][0] + vectorY[0]*mPole[0][1] + vectorZ[0]*mPole[0][2]);
-        labFrameQuadrupole[offset]   += vectorY[0]*(vectorX[0]*mPole[1][0] + vectorY[0]*mPole[1][1] + vectorZ[0]*mPole[1][2]);
-        labFrameQuadrupole[offset]   += vectorZ[0]*(vectorX[0]*mPole[2][0] + vectorY[0]*mPole[2][1] + vectorZ[0]*mPole[2][2]);
-
-        labFrameQuadrupole[offset+1]  = vectorX[0]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
-        labFrameQuadrupole[offset+1] += vectorY[0]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
-        labFrameQuadrupole[offset+1] += vectorZ[0]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
-
-        labFrameQuadrupole[offset+2]  = vectorX[0]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
-        labFrameQuadrupole[offset+2] += vectorY[0]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
-        labFrameQuadrupole[offset+2] += vectorZ[0]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
- 
-        labFrameQuadrupole[offset+3]  = labFrameQuadrupole[offset+1];
-        labFrameQuadrupole[offset+6]  = labFrameQuadrupole[offset+2];
-        labFrameQuadrupole[offset+7]  = labFrameQuadrupole[offset+5];
 
         particleIndex                += gridDim.x*blockDim.x;
     }
@@ -384,28 +393,24 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
 
 //#define AMOEBA_DEBUG  
 #ifdef AMOEBA_DEBUG
-    if( 0 && amoebaGpu->log ){
+    if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s: numBlocks/atoms=%d\n", methodName, numBlocks ); (void) fflush( amoebaGpu->log );
         amoebaGpu->psMultipoleParticlesIdsAndAxisType->Download();
         amoebaGpu->psMolecularDipole->Download();
         gpu->psPosq4->Download();
         for( int ii = 0; ii < gpu->natoms; ii++ ){
             int mIndex = 3*ii;
-             (void) fprintf( amoebaGpu->log,"%6d [%6d %6d %6d] x[%16.9e %16.9e %16.9e] dpl[%16.9e %16.9e %16.9e]\nRot[%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n\n", ii,
+             (void) fprintf( amoebaGpu->log,"%6d [%6d %6d %6d %6d] x[%16.9e %16.9e %16.9e] %s\n", ii,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y,
+                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].z,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w,
                              gpu->psPosq4->_pSysData[ii].x,
                              gpu->psPosq4->_pSysData[ii].y,
-                             gpu->psPosq4->_pSysData[ii].z,
-                             amoebaGpu->psMolecularDipole->_pSysData[mIndex],
-                             amoebaGpu->psMolecularDipole->_pSysData[mIndex+1],
-                             amoebaGpu->psMolecularDipole->_pSysData[mIndex+2] );
-            if( ii == 30 )ii = gpu->natoms - 30;
+                             gpu->psPosq4->_pSysData[ii].z, (amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w > 1 ? " XXX" : "") );
+            //if( ii == 30 )ii = gpu->natoms - 30;
         }
     }
-//    int64 kernelTime = AmoebaTiming::getTimeOfDay();
-    double kernelTime = 0.0;
 #endif
 
     // copy molecular moments to lab frame moment arrays
@@ -431,7 +436,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     cudaComputeAmoebaLabFrameMoments( amoebaGpu );
 
-    if( 1 ){
+    if( 0 ){
         gpuContext gpu                       = amoebaGpu->gpuContext;
         std::vector<int> fileId;
         //fileId.push_back( 0 );
