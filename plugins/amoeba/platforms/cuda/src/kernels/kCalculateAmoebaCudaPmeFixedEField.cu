@@ -621,6 +621,7 @@ void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
     kCalculateAmoebaPMEFixedMultipoles( amoebaGpu );
     cudaComputeAmoebaPmeDirectFixedEField( amoebaGpu );
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         gpuContext gpu                       = amoebaGpu->gpuContext;
         std::vector<int> fileId;
@@ -635,5 +636,6 @@ void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext amoebaGpu )
         //cudaWriteVectorOfDoubleVectorsToFile( "CudaRecipEField", fileId, outputVector );
         exit(0);
     }
+#endif
 
 }
