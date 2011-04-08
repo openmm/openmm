@@ -249,8 +249,6 @@ void kInitializeMutualInducedAndGkField_kernel(
                    float* fixedEFieldPolar,
                    float* fixedGkField,
                    float* polarizability,
-                   float* inducedDipole,
-                   float* inducedDipolePolar,
                    float* inducedDipoleS,
                    float* inducedDipolePolarS )
 {
@@ -260,12 +258,9 @@ void kInitializeMutualInducedAndGkField_kernel(
     {
 
         fixedEField[pos]          *= polarizability[pos];
-        inducedDipole[pos]         = fixedEField[pos];
-    
         fixedEFieldPolar[pos]     *= polarizability[pos];
-        inducedDipolePolar[pos]    = fixedEFieldPolar[pos];
-    
         fixedGkField[pos]         *= polarizability[pos];
+
         inducedDipoleS[pos]        = fixedEField[pos]       + fixedGkField[pos];
         inducedDipolePolarS[pos]   = fixedEFieldPolar[pos]  + fixedGkField[pos];
    
@@ -683,11 +678,12 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
          amoebaGpu->psE_FieldPolar->_pDevData,
          amoebaGpu->psGk_Field->_pDevData,
          amoebaGpu->psPolarizability->_pDevData,
-         amoebaGpu->psInducedDipole->_pDevData,
-         amoebaGpu->psInducedDipolePolar->_pDevData,
          amoebaGpu->psInducedDipoleS->_pDevData,
          amoebaGpu->psInducedDipolePolarS->_pDevData );
     LAUNCHERROR("kInitializeMutualInducedAndGkField");  
+
+    cudaMemcpy( amoebaGpu->psInducedDipole->_pDevData,        amoebaGpu->psE_Field->_pDevData,       3*gpu->sim.paddedNumberOfAtoms*sizeof( float ), cudaMemcpyDeviceToDevice );
+    cudaMemcpy( amoebaGpu->psInducedDipolePolar->_pDevData,   amoebaGpu->psE_FieldPolar->_pDevData,  3*gpu->sim.paddedNumberOfAtoms*sizeof( float ), cudaMemcpyDeviceToDevice );
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
