@@ -97,87 +97,94 @@ void gpuPrintCudaStream( std::string name,
 }
 
 extern "C"
-void gpuPrintCudaStreamFloat( CUDAStream<float>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamFloat( CUDAStream<float>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( float ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*sizeof( float );
 }
 
 extern "C"
-void gpuPrintCudaStreamFloat2( CUDAStream<float2>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamFloat2( CUDAStream<float2>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( float2 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*2*sizeof( float );
 }
 
 extern "C"
-void gpuPrintCudaStreamFloat4( CUDAStream<float4>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamFloat4( CUDAStream<float4>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( float4 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*4*sizeof( float );
 }
 
 extern "C"
-void gpuPrintCudaStreamUnsignedInt( CUDAStream<unsigned int>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamUnsignedInt( CUDAStream<unsigned int>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( unsigned int ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*sizeof( unsigned int );
 }
 
 extern "C"
-void gpuPrintCudaStreamInt( CUDAStream<int>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamInt( CUDAStream<int>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( int ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*sizeof( int );
 }
 
 extern "C"
-void gpuPrintCudaStreamInt2( CUDAStream<int2>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamInt2( CUDAStream<int2>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( int2 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*2*sizeof( int );
 }
 
 extern "C"
-void gpuPrintCudaStreamInt4( CUDAStream<int4>* cUDAStream, FILE* log )
+int gpuPrintCudaStreamInt4( CUDAStream<int4>* cUDAStream, FILE* log )
 {
    
-    if( cUDAStream == NULL )return;
+    if( cUDAStream == NULL )return 0;
     gpuPrintCudaStream( cUDAStream->_name.c_str(),
                         cUDAStream->_length, cUDAStream->_subStreams, cUDAStream->_stride,
                         cUDAStream->_length*cUDAStream->_subStreams*sizeof( int4 ),
                         static_cast<void*>(cUDAStream->_pSysStream), static_cast<void*>(cUDAStream->_pDevStream),
                         static_cast<void*>(cUDAStream->_pSysData), static_cast<void*>(cUDAStream->_pDevData), log );
+    return cUDAStream->_length*cUDAStream->_subStreams*4*sizeof( int );
 }
 
 extern "C"
@@ -186,6 +193,8 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     if( log == NULL )return;
 
     _gpuContext* gpu                            = amoebaGpu->gpuContext;
+    int totalMemory                             = 0;
+
     (void) fprintf( log, "cudaAmoebaGmxSimulation:\n\n" );
 
     (void) fprintf( log, "\n" );
@@ -206,32 +215,32 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     outputBuffers                      %u\n",      gpu->sim.outputBuffers );
     (void) fprintf( log, "     workUnits                          %u\n",      amoebaGpu->workUnits );
 
-    gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psEnergy,    log );
-    gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psForce4,    log );
-    gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psPosq4,     log );
-    gpuPrintCudaStreamFloat2( amoebaGpu->gpuContext->psObcData,   log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psBornForce, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psEnergy,    log );
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psForce4,    log );
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psPosq4,     log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->gpuContext->psObcData,   log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psBornForce, log );
     (void) fprintf( log, "\n\n" );
     (void) fprintf( log, "     amoebaBonds                       %u\n",      amoebaGpu->amoebaSim.amoebaBonds );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_1, log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_2, log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_3, log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_4, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_1, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_2, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_3, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_4, log );
 
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_1_1, log );
-    gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_1_2, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_1_1, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_1_2, log );
     
     (void) fprintf( log, "\n\n" );
 
-    gpuPrintCudaStreamUnsignedInt( amoebaGpu->psWorkUnit, log );
-    gpuPrintCudaStreamInt(  amoebaGpu->psScalingIndicesIndex, log );
-    gpuPrintCudaStreamInt(  amoebaGpu->ps_D_ScaleIndices, log );
-    gpuPrintCudaStreamInt2( amoebaGpu->ps_P_ScaleIndices, log );
-    gpuPrintCudaStreamInt2( amoebaGpu->ps_M_ScaleIndices, log );
+    totalMemory += gpuPrintCudaStreamUnsignedInt( amoebaGpu->psWorkUnit, log );
+    totalMemory += gpuPrintCudaStreamInt(  amoebaGpu->psScalingIndicesIndex, log );
+    totalMemory += gpuPrintCudaStreamInt(  amoebaGpu->ps_D_ScaleIndices, log );
+    totalMemory += gpuPrintCudaStreamInt2( amoebaGpu->ps_P_ScaleIndices, log );
+    totalMemory += gpuPrintCudaStreamInt2( amoebaGpu->ps_M_ScaleIndices, log );
 
     if( amoebaGpu->psAmoebaBondParameter)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaBondID, log );
-    gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaBondParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaBondID, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaBondParameter, log );
     (void) fprintf( log, "     amoebaBonds                       %u\n",      amoebaGpu->amoebaSim.amoebaBonds );
     (void) fprintf( log, "     amoebaBond_offset                 %u\n",      amoebaGpu->amoebaSim.amoebaBond_offset );
     (void) fprintf( log, "     cubic                             %15.7e\n",  amoebaGpu->amoebaSim.amoebaBondCubicParameter);
@@ -239,9 +248,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaBondID                     %p\n",      amoebaGpu->amoebaSim.pAmoebaBondID );
     (void) fprintf( log, "     pAmoebaBondParameter              %p\n",      amoebaGpu->amoebaSim.pAmoebaBondParameter );
     
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaAngleID1, log );
-    gpuPrintCudaStreamInt2( amoebaGpu->psAmoebaAngleID2, log );
-    gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaAngleParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaAngleID1, log );
+    totalMemory += gpuPrintCudaStreamInt2( amoebaGpu->psAmoebaAngleID2, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaAngleParameter, log );
     (void) fprintf( log, "\n" );
     (void) fprintf( log, "     amoebaAngles                      %u\n",      amoebaGpu->amoebaSim.amoebaAngles );
     (void) fprintf( log, "     amoebaAngle_offset                %u\n",      amoebaGpu->amoebaSim.amoebaAngle_offset );
@@ -254,9 +263,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaAngleParameter             %p\n",      amoebaGpu->amoebaSim.pAmoebaAngleParameter );
     
     if( amoebaGpu->psAmoebaInPlaneAngleID1 )(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaInPlaneAngleID1, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaInPlaneAngleID2, log );
-    gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaInPlaneAngleParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaInPlaneAngleID1, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaInPlaneAngleID2, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaInPlaneAngleParameter, log );
     (void) fprintf( log, "\n" );
     (void) fprintf( log, "     amoebaInPlaneAngles               %u\n",      amoebaGpu->amoebaSim.amoebaInPlaneAngles );
     (void) fprintf( log, "     amoebaInPlaneAngle_offset         %u\n",      amoebaGpu->amoebaSim.amoebaInPlaneAngle_offset );
@@ -270,10 +279,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
 
     
     if( amoebaGpu->psAmoebaTorsionID1)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionID1, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionID2, log );
-    gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaTorsionParameter1, log );
-    gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaTorsionParameter2, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionID1, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionID2, log );
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaTorsionParameter1, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaTorsionParameter2, log );
     (void) fprintf( log, "     amoebaTorsions                    %u\n",      amoebaGpu->amoebaSim.amoebaTorsions );
     (void) fprintf( log, "     amoebaTorsion_offset              %u\n",      amoebaGpu->amoebaSim.amoebaTorsion_offset );
     (void) fprintf( log, "     pAmoebaTorsionID1                 %p\n",      amoebaGpu->amoebaSim.pAmoebaTorsionID1 );
@@ -282,10 +291,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaTorsionParameter2          %p\n",      amoebaGpu->amoebaSim.pAmoebaTorsionParameter2 );
     
     if( amoebaGpu->psAmoebaPiTorsionID1)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaPiTorsionID1, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaPiTorsionID2, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaPiTorsionID3, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaPiTorsionParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaPiTorsionID1, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaPiTorsionID2, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaPiTorsionID3, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaPiTorsionParameter, log );
 
     (void) fprintf( log, "     amoebaPiTorsions                  %u\n",      amoebaGpu->amoebaSim.amoebaPiTorsions );
     (void) fprintf( log, "     amoebaPiTorsion_offset            %u\n",      amoebaGpu->amoebaSim.amoebaPiTorsion_offset );
@@ -295,9 +304,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaPiTorsionParameter         %p\n",      amoebaGpu->amoebaSim.pAmoebaPiTorsionParameter );
     
     if( amoebaGpu->psAmoebaStretchBendID1)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaStretchBendID1, log );
-    gpuPrintCudaStreamInt2( amoebaGpu->psAmoebaStretchBendID2, log );
-    gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaStretchBendParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaStretchBendID1, log );
+    totalMemory += gpuPrintCudaStreamInt2( amoebaGpu->psAmoebaStretchBendID2, log );
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaStretchBendParameter, log );
     (void) fprintf( log, "     amoebaStretchBend                  %u\n",      amoebaGpu->amoebaSim.amoebaStretchBends );
     (void) fprintf( log, "     amoebaStretchBend_offset           %u\n",      amoebaGpu->amoebaSim.amoebaStretchBend_offset );
     (void) fprintf( log, "     pAmoebaStretchBendID1              %p\n",      amoebaGpu->amoebaSim.pAmoebaStretchBendID1 );
@@ -305,9 +314,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaStretchBendParameter        %p\n",      amoebaGpu->amoebaSim.pAmoebaStretchBendParameter );
 
     if( amoebaGpu->psAmoebaOutOfPlaneBendID1)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaOutOfPlaneBendID1, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaOutOfPlaneBendID2, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaOutOfPlaneBendParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaOutOfPlaneBendID1, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaOutOfPlaneBendID2, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaOutOfPlaneBendParameter, log );
     (void) fprintf( log, "     amoebaOutOfPlaneBend               %u\n",      amoebaGpu->amoebaSim.amoebaOutOfPlaneBends );
     (void) fprintf( log, "     amoebaOutOfPlaneBend_offset        %u\n",      amoebaGpu->amoebaSim.amoebaOutOfPlaneBend_offset );
     (void) fprintf( log, "     amoebaOutOfPlaneBendCubicK         %15.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendCubicK );
@@ -319,10 +328,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaOutOfPlaneBendParameter     %p\n",      amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendParameter );
     
     if( amoebaGpu->psAmoebaTorsionTorsionID1)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionTorsionID1, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionTorsionID2, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionTorsionID3, log );
-    gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaTorsionTorsionGrids, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionTorsionID1, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionTorsionID2, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaTorsionTorsionID3, log );
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaTorsionTorsionGrids, log );
     (void) fprintf( log, "\n" );
     (void) fprintf( log, "     amoebaTorsionTorsions              %u\n",      amoebaGpu->amoebaSim.amoebaTorsionTorsions );
     (void) fprintf( log, "     amoebaTorsionTorsion_offset        %u\n",      amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset );
@@ -333,8 +342,8 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pOutputBufferCounter               %p\n",      amoebaGpu->gpuContext->pOutputBufferCounter );
 
     if( amoebaGpu->psAmoebaUreyBradleyParameter)(void) fprintf( log, "\n" );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaUreyBradleyID, log );
-    gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaUreyBradleyParameter, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaUreyBradleyID, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaUreyBradleyParameter, log );
     (void) fprintf( log, "     amoebaUreyBradleys                 %u\n",      amoebaGpu->amoebaSim.amoebaUreyBradleys );
     (void) fprintf( log, "     amoebaUreyBradley_offset           %u\n",      amoebaGpu->amoebaSim.amoebaUreyBradley_offset );
     (void) fprintf( log, "     cubic                              %15.7e\n",  amoebaGpu->amoebaSim.amoebaUreyBradleyCubicParameter);
@@ -343,20 +352,26 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pAmoebaUreyBradleyParameter        %p\n",      amoebaGpu->amoebaSim.pAmoebaUreyBradleyParameter );
     (void) fprintf( log, "\n\n" );
     
-    gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesIdsAndAxisType, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesIdsAndAxisType, log );
     (void) fprintf( log, "     pMultipoleParticlesIdsAndAxisType  %p\n",      amoebaGpu->amoebaSim.pMultipoleParticlesIdsAndAxisType);
 
     (void) fprintf( log, "     maxTorqueBufferIndex            %d\n",      amoebaGpu->maxTorqueBufferIndex );
-    gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesTorqueBufferIndices, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesTorqueBufferIndices, log );
+
+    int memory   = gpuPrintCudaStreamFloat4( amoebaGpu->psTorqueMapForce4, log );
+    if( amoebaGpu->torqueMapForce4Delete )totalMemory += memory;
+
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psTorque, log );
+
     (void) fprintf( log, "     psMultipoleParticlesTorqueBufferIndices %p\n",      amoebaGpu->amoebaSim.pMultipoleParticlesTorqueBufferIndices);
 
-    gpuPrintCudaStreamFloat( amoebaGpu->psMolecularDipole, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psMolecularDipole, log );
     (void) fprintf( log, "     pMolecularDipole                   %p\n",      amoebaGpu->amoebaSim.pMolecularDipole);
-    gpuPrintCudaStreamFloat( amoebaGpu->psMolecularQuadrupole, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psMolecularQuadrupole, log );
     (void) fprintf( log, "     pMolecularQuadrupole               %p\n",      amoebaGpu->amoebaSim.pMolecularQuadrupole );
     
-    gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameDipole, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameQuadrupole, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameDipole, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameQuadrupole, log );
     
     (void) fprintf( log, "     polarizationType                   %d\n",      amoebaGpu->amoebaSim.polarizationType );
     (void) fprintf( log, "     maxCovalentDegreeSz                %d\n",      amoebaGpu->maxCovalentDegreeSz );
@@ -380,15 +395,11 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     fd                                 %15.7e\n",  amoebaGpu->amoebaSim.fd );
     (void) fprintf( log, "     fq                                 %15.7e\n",  amoebaGpu->amoebaSim.fq );
 
-    gpuPrintCudaStreamFloat2( amoebaGpu->psDampingFactorAndThole, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psDampingFactorAndThole, log );
 
-    gpuPrintCudaStreamInt( amoebaGpu->psCovalentDegree, log );
-    gpuPrintCudaStreamInt( amoebaGpu->psPolarizationDegree, log );
-
-    gpuPrintCudaStreamFloat( amoebaGpu->psE_Field, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psE_FieldPolar, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psPolarizability, log );
-
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psE_Field, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psE_FieldPolar, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psPolarizability, log );
 
     (void) fprintf( log, "     mutualInducedIterativeMethod       %d\n",  amoebaGpu->mutualInducedIterativeMethod);
     (void) fprintf( log, "     mutualInducedMaxIterations         %d\n",  amoebaGpu->mutualInducedMaxIterations);
@@ -396,19 +407,22 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     mutualInducedTargetEpsilon         %10.3e\n",  amoebaGpu->mutualInducedTargetEpsilon);
     (void) fprintf( log, "     mutualInducedCurrentEpsilon        %10.3e\n",  amoebaGpu->mutualInducedCurrentEpsilon );
 
-    gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipole, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipolePolar, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psCurrentEpsilon, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipole, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipolePolar, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psCurrentEpsilon, log );
 
     (void) fprintf( log, "     numberOfSorWorkVectors             %u\n",  amoebaGpu->numberOfSorWorkVectors);
-    gpuPrintCudaStreamFloat( amoebaGpu->psWorkVector[0], log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psTorque, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psWorkVector[0], log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psWorkVector[1], log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psWorkVector[2], log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psWorkVector[3], log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psTorque, log );
 
-    gpuPrintCudaStreamFloat( amoebaGpu->psGk_Field, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipoleS, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipolePolarS, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psBorn, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psBornPolar, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psGk_Field, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipoleS, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psInducedDipolePolarS, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psBorn, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psBornPolar, log );
     (void) fprintf( log, "     includeObcCavityTerm               %d\n",      amoebaGpu->includeObcCavityTerm );
     (void) fprintf( log, "     dielectricOffset                   %15.7e\n",  gpu->sim.dielectricOffset );
     (void) fprintf( log, "     probeRadius                        %15.7e\n",  gpu->sim.probeRadius );
@@ -420,14 +434,14 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     vdwEpsilonCombiningRule            %d\n",      amoebaGpu->vdwEpsilonCombiningRule);
     (void) fprintf( log, "     vdwUsePBC                          %d\n",      amoebaGpu->amoebaSim.vdwUsePBC);
     (void) fprintf( log, "     vdwCutoff2                         %15.7e\n",  amoebaGpu->amoebaSim.vdwCutoff2);
-    gpuPrintCudaStreamFloat2( amoebaGpu->psVdwSigmaEpsilon, log );
-    gpuPrintCudaStreamInt( amoebaGpu->psAmoebaVdwNonReductionID, log );
-    gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaVdwReductionID, log );
-    gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaVdwReduction, log );
-    gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaVdwCoordinates, log );
-    gpuPrintCudaStreamUnsignedInt( amoebaGpu->psVdwWorkUnit, log );
-    gpuPrintCudaStreamInt( amoebaGpu->psVdwExclusionIndicesIndex, log );
-    gpuPrintCudaStreamInt( amoebaGpu->psVdwExclusionIndices, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psVdwSigmaEpsilon, log );
+    totalMemory += gpuPrintCudaStreamInt( amoebaGpu->psAmoebaVdwNonReductionID, log );
+    totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaVdwReductionID, log );
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaVdwReduction, log );
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->psAmoebaVdwCoordinates, log );
+    totalMemory += gpuPrintCudaStreamUnsignedInt( amoebaGpu->psVdwWorkUnit, log );
+    totalMemory += gpuPrintCudaStreamInt( amoebaGpu->psVdwExclusionIndicesIndex, log );
+    totalMemory += gpuPrintCudaStreamInt( amoebaGpu->psVdwExclusionIndices, log );
     (void) fprintf( log, "     amoebaVdwNonReductions             %u\n",      amoebaGpu->amoebaSim.amoebaVdwNonReductions );
     (void) fprintf( log, "     pAmoebaVdwNonReductionID           %p\n",      amoebaGpu->amoebaSim.pAmoebaVdwNonReductionID );
     (void) fprintf( log, "     amoebaVdwReductions                %u\n",      amoebaGpu->amoebaSim.amoebaVdwReductions );
@@ -436,7 +450,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pVdwExclusionIndicesIndex          %p\n",      amoebaGpu->amoebaSim.pVdwExclusionIndicesIndex);
     (void) fprintf( log, "     pVdwExclusionIndices               %p\n",      amoebaGpu->amoebaSim.pVdwExclusionIndices);
 
-    gpuPrintCudaStreamFloat2( amoebaGpu->psWcaDispersionRadiusEpsilon, log );
+    totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psWcaDispersionRadiusEpsilon, log );
     (void) fprintf( log, "\n" );
     (void) fprintf( log, "     epso                               %15.7e\n",  amoebaGpu->amoebaSim.epso );
     (void) fprintf( log, "     epsh                               %15.7e\n",  amoebaGpu->amoebaSim.epsh );
@@ -446,6 +460,8 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     shctd                              %15.7e\n",  amoebaGpu->amoebaSim.shctd );
     (void) fprintf( log, "     dispoff                            %15.7e\n",  amoebaGpu->amoebaSim.dispoff );
     (void) fprintf( log, "     totalMaxWcaDispersionEnergy        %15.7e\n",  amoebaGpu->amoebaSim.totalMaxWcaDispersionEnergy );
+
+    (void) fprintf( log, "     total array memory                     %d\n",  totalMemory );
 
     (void) fflush( log );
 
@@ -1349,19 +1365,13 @@ static void gpuFixedEFieldAllocate( amoebaGpuContext amoebaGpu )
     amoebaGpu->psDampingFactorAndThole               = new CUDAStream<float2>(paddedNumberOfAtoms, 1, "DampingFactorAndThole");
     amoebaGpu->amoebaSim.pDampingFactorAndThole      = amoebaGpu->psDampingFactorAndThole->_pDevData;
 
-    amoebaGpu->psCovalentDegree                      = new CUDAStream<int>(amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms, 1, "CovalentDegree");
-    amoebaGpu->psPolarizationDegree                  = new CUDAStream<int>(amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms, 1, "PolarizationDegree");
+    amoebaGpu->covalentDegree.resize(      amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms, 0 );
+    amoebaGpu->polarizationDegree.resize( amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms, 0 );
     
     unsigned int offset                              = paddedNumberOfAtoms*sizeof( float );
     memset( amoebaGpu->psDampingFactorAndThole->_pSysData,              0,2*offset );
     //memset( amoebaGpu->psE_Field->_pSysData,            0, offset*3 );
     //memset( amoebaGpu->psE_FieldPolar->_pSysData,       0, offset*3 );
-
-    // should be removed XXXXX
-
-    offset                                           = amoebaGpu->maxCovalentDegreeSz*paddedNumberOfAtoms*sizeof( int );
-    memset( amoebaGpu->psCovalentDegree->_pSysData,     0, offset );
-    memset( amoebaGpu->psPolarizationDegree->_pSysData, 0, offset );
 
 }
 
@@ -1664,9 +1674,9 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
  
         // psCovalentDegree & psPolarizationDegree are arrays of size maxCovalentDegreeSz*paddedNumberOfAtoms
 
-        const int particlesOffset                                             = ii*amoebaGpu->maxCovalentDegreeSz;
-        const int minCovalentIndex                                            = minCovalentIndices[ii];
-        amoebaGpu->psCovalentDegree->_pSysData[particlesOffset]          = minCovalentIndex;
+        const int particlesOffset                                        = ii*amoebaGpu->maxCovalentDegreeSz;
+        const int minCovalentIndex                                       = minCovalentIndices[ii];
+        amoebaGpu->covalentDegree[particlesOffset]                       = minCovalentIndex;
 
         // covalent info
 
@@ -1680,7 +1690,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                ") is out of range -- maxCovalentDegreeSz needs to be increased." << std::endl;
                     errorCount++;
                 } else {
-                    amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
+                    amoebaGpu->covalentDegree[particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
                 }
             }
         }
@@ -1688,7 +1698,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         // polarization covalent info
 
         const int minCovalentPolarizationIndex                                = minCovalentPolarizationIndices[ii];
-        amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset]      = minCovalentPolarizationIndex;
+        amoebaGpu->polarizationDegree[particlesOffset]      = minCovalentPolarizationIndex;
 
         for( unsigned int jj = 4; jj < covalentInfo.size(); jj++ ){
             const std::vector<int> covalentList = covalentInfo[jj];
@@ -1699,7 +1709,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                ") is out of range -- maxCovalentDegreeSz needs to be increased." << std::endl;
                     errorCount++;
                 } else {
-                    amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
+                    amoebaGpu->polarizationDegree[particlesOffset+covalentIndex] = covalentDegree[jj] + 1;
                 }
             }
         }
@@ -1739,7 +1749,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // covalent/polarization degree
 
             (void) fprintf( amoebaGpu->log,"%3d covalent/polarization degree: minIdx[%6d %6d] Thole=%12.5f dampingFactor=%12.5f\n", ii,
-                            amoebaGpu->psCovalentDegree->_pSysData[particlesOffset],  amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset],
+                            amoebaGpu->covalentDegree[particlesOffset],  amoebaGpu->polarizationDegree[particlesOffset],
                             amoebaGpu->psDampingFactorAndThole->_pSysData[ii].y, amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x );
 
             // covalent
@@ -1752,20 +1762,20 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
                 int count = 0;
                 for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                    if( amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj] == kk ){ 
+                    if( amoebaGpu->covalentDegree[particlesOffset+jj] == kk ){ 
                         if( count == 0 ){
                             (void) fprintf( amoebaGpu->log,"%d [", kk );
                         }
                         float pScale        = polarScale[kk-1];
-                        int particle2Index  = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset] + jj - 1;
-                        if( kk == 4 && particle2Index >= amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] ){
-                            int particle2Offset = particle2Index - amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] + 1;
-                            if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+particle2Offset] == 1 ){
+                        int particle2Index  = amoebaGpu->covalentDegree[particlesOffset] + jj - 1;
+                        if( kk == 4 && particle2Index >= amoebaGpu->polarizationDegree[particlesOffset] ){
+                            int particle2Offset = particle2Index - amoebaGpu->polarizationDegree[particlesOffset] + 1;
+                            if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->polarizationDegree[particlesOffset+particle2Offset] == 1 ){
                                 pScale *= 0.5;
                             }
                         }
                         (void) fprintf( amoebaGpu->log,"%5d %5.1f   ",
-                                        amoebaGpu->psCovalentDegree->_pSysData[particlesOffset] + jj - 1, pScale );
+                                        amoebaGpu->covalentDegree[particlesOffset] + jj - 1, pScale );
                         count++;
                    }
                 }
@@ -1782,11 +1792,11 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
                 int count = 0;
                 for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                    if( amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj] == kk ){ 
+                    if( amoebaGpu->polarizationDegree[particlesOffset+jj] == kk ){ 
                         if( count == 0 ){
                             (void) fprintf( amoebaGpu->log,"%d [", kk );
                         }
-                        (void) fprintf( amoebaGpu->log,"%5d ", amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] + jj - 1 );
+                        (void) fprintf( amoebaGpu->log,"%5d ", amoebaGpu->polarizationDegree[particlesOffset] + jj - 1 );
                         count++;
                     }
                 }
@@ -1818,19 +1828,19 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // print entries w/ degree=kk
 
             for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                if( amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj] ){ 
-                    int index           = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj];
+                if( amoebaGpu->covalentDegree[particlesOffset+jj] ){ 
+                    int index           = amoebaGpu->covalentDegree[particlesOffset+jj];
                     float pScale        = polarScale[index-1];
                     float mScale        = mpoleScale[index-1];
-                    int particle2Index  = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset] + jj - 1;
-                    if( index == 4 && particle2Index >= amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] ){
-                        int particle2Offset = particle2Index - amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset] + 1;
-                        if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+particle2Offset] == 1 ){
+                    int particle2Index  = amoebaGpu->covalentDegree[particlesOffset] + jj - 1;
+                    if( index == 4 && particle2Index >= amoebaGpu->polarizationDegree[particlesOffset] ){
+                        int particle2Offset = particle2Index - amoebaGpu->polarizationDegree[particlesOffset] + 1;
+                        if( particle2Offset < amoebaGpu->maxCovalentDegreeSz && amoebaGpu->polarizationDegree[particlesOffset+particle2Offset] == 1 ){
                             pScale *= 0.5;
                         }
                     }
                     pScaleCheckSum[ii] += (pScale - 1.0f);
-                    int covIndex        = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset];
+                    int covIndex        = amoebaGpu->covalentDegree[particlesOffset];
                     if( pScale != 1.0f ){
                         MapIntFloat* pMap = amoebaGpu->pMapArray[ii];
                         (*pMap)[covIndex+jj-1] = pScale;
@@ -1841,10 +1851,10 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             // polarization
 
             for( int jj = 1; jj < amoebaGpu->maxCovalentDegreeSz; jj++ ){
-                if( amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj] ){ 
-                    int index    = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj];
+                if( amoebaGpu->polarizationDegree[particlesOffset+jj] ){ 
+                    int index    = amoebaGpu->polarizationDegree[particlesOffset+jj];
                     dScaleCheckSum[ii] += (directScale[index-1] - 1.0f);
-                    int covIndex        = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset];
+                    int covIndex        = amoebaGpu->polarizationDegree[particlesOffset];
                     if( directScale[index-1] != 1.0f ){
                         MapIntFloat* dMap      = amoebaGpu->dMapArray[ii];
                         (*dMap)[covIndex+jj-1] = directScale[index-1];
@@ -1872,8 +1882,6 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     amoebaGpu->psMultipoleParticlesTorqueBufferIndices->Upload();
     amoebaGpu->psMolecularDipole->Upload();
     amoebaGpu->psMolecularQuadrupole->Upload();
-    amoebaGpu->psCovalentDegree->Upload();
-    amoebaGpu->psPolarizationDegree->Upload();
     amoebaGpu->psDampingFactorAndThole->Upload();
     amoebaGpu->psPolarizability->Upload();
     amoebaGpu->gpuContext->psPosq4->Upload();
@@ -2652,21 +2660,27 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
 
     delete gpu->psMolecularDipole;
     delete gpu->psMolecularQuadrupole;
+
     delete gpu->psLabFrameDipole;
     delete gpu->psLabFrameQuadrupole;
+
     delete gpu->psDampingFactorAndThole;
-    delete gpu->psCovalentDegree;
-    delete gpu->psPolarizationDegree;
+
     delete gpu->psE_Field;
     delete gpu->psE_FieldPolar;
+
     delete gpu->psInducedDipole;
     delete gpu->psInducedDipolePolar;
+
     delete gpu->psPolarizability;
+
     delete gpu->psCurrentEpsilon;
+
     delete gpu->psWorkVector[0];
     delete gpu->psWorkVector[1];
     delete gpu->psWorkVector[2];
     delete gpu->psWorkVector[3];
+
     delete gpu->psTorque;
 
     delete gpu->psGk_Field;
@@ -2773,6 +2787,7 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu, int hasAmoebaGener
     amoebaGpu->amoebaSim.pWorkArray_3_2         = amoebaGpu->psWorkArray_3_2->_pDevData;
 
     // used in GK calculations
+
     if( hasAmoebaGeneralizedKirkwood )
     {
         if( amoebaGpu->psWorkArray_3_3 )
@@ -2810,19 +2825,19 @@ static void getScalingDegrees( amoebaGpuContext amoebaGpu, unsigned int particle
 {
     int particlesOffset                        = particleI*amoebaGpu->maxCovalentDegreeSz;
 
-    unsigned int minCovalentIndex              = static_cast<unsigned int>(amoebaGpu->psCovalentDegree->_pSysData[particlesOffset]);
-    unsigned int minCovalentPolarizationIndex  = static_cast<unsigned int>(amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset]);
+    unsigned int minCovalentIndex              = static_cast<unsigned int>(amoebaGpu->covalentDegree[particlesOffset]);
+    unsigned int minCovalentPolarizationIndex  = static_cast<unsigned int>(amoebaGpu->polarizationDegree[particlesOffset]);
 
     if( particleJ < minCovalentIndex || particleJ >= (minCovalentIndex + amoebaGpu->maxCovalentDegreeSz-1) ){
         *covalentDegree     = 0;
     } else {
-        *covalentDegree     = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset + (particleJ-minCovalentIndex) + 1];
+        *covalentDegree     = amoebaGpu->covalentDegree[particlesOffset + (particleJ-minCovalentIndex) + 1];
     }
 
     if( particleJ < minCovalentPolarizationIndex || particleJ >= (minCovalentPolarizationIndex + amoebaGpu->maxCovalentDegreeSz-1) ){
         *polarizationDegree = 0;
     } else {
-        *polarizationDegree = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset + (particleJ-minCovalentPolarizationIndex) + 1];
+        *polarizationDegree = amoebaGpu->polarizationDegree[particlesOffset + (particleJ-minCovalentPolarizationIndex) + 1];
     }
 
 /* if( *covalentDegree > 5 || *polarizationDegree > 5 ){
@@ -2886,9 +2901,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
 
     // ---------------------------------------------------------------------------------------
 
-    if( amoebaGpu->psCovalentDegree == NULL ){
-        return;
-    }    
+    if( amoebaGpu->covalentDegree.size() < 1 )return;
 
     const unsigned int paddedAtoms     = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     const unsigned int actualAtoms     = amoebaGpu->gpuContext->natoms;
@@ -2914,18 +2927,18 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
     {
         int x                  = atom1/grid;
         int particlesOffset    = atom1*amoebaGpu->maxCovalentDegreeSz;
-        int minCovalentIndex   = amoebaGpu->psCovalentDegree->_pSysData[particlesOffset];
-        int minPolarCovIndex   = amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset];
+        int minCovalentIndex   = amoebaGpu->covalentDegree[particlesOffset];
+        int minPolarCovIndex   = amoebaGpu->polarizationDegree[particlesOffset];
         int maxCIndex          = 0;
         int maxPIndex          = 0;
         for (int jj = amoebaGpu->maxCovalentDegreeSz - 1; jj >= 1 && (maxPIndex == 0 || maxCIndex == 0); jj-- )
         {
-            if( amoebaGpu->psCovalentDegree->_pSysData[particlesOffset+jj] && maxCellIndex[x] < (minCovalentIndex+jj) )
+            if( amoebaGpu->covalentDegree[particlesOffset+jj] && maxCellIndex[x] < (minCovalentIndex+jj) )
             { 
                 maxCellIndex[x] =  minCovalentIndex + jj;
                 maxCIndex++; 
             }
-            if( amoebaGpu->psPolarizationDegree->_pSysData[particlesOffset+jj] && maxCellIndex[x] < (minPolarCovIndex+jj) )
+            if( amoebaGpu->polarizationDegree[particlesOffset+jj] && maxCellIndex[x] < (minPolarCovIndex+jj) )
             { 
                 maxCellIndex[x] =  minPolarCovIndex + jj;
                 maxPIndex++; 

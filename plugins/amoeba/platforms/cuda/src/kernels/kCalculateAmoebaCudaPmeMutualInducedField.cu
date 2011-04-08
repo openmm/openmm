@@ -242,14 +242,16 @@ static void kInitializeMutualInducedField_kernel(
                    float* inducedDipolePolar )
 {
 
-    int threadId = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if( threadId >= 3*numberOfAtoms )return;
-
-    fixedEField[threadId]         *= polarizability[threadId];
-    inducedDipole[threadId]        = fixedEField[threadId];
-
-    fixedEFieldPolar[threadId]    *= polarizability[threadId];
-    inducedDipolePolar[threadId]   = fixedEFieldPolar[threadId];
+    int pos = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    while( pos < 3*cSim.atoms )
+    {   
+        fixedEField[pos]         *= polarizability[pos];
+        inducedDipole[pos]        = fixedEField[pos];
+    
+        fixedEFieldPolar[pos]    *= polarizability[pos];
+        inducedDipolePolar[pos]   = fixedEFieldPolar[pos];
+        pos                      += blockDim.x*gridDim.x;
+    }
 
 }
 
@@ -325,27 +327,31 @@ static void kSorUpdateMutualInducedField_kernel(
                    float* matrixProduct, float* matrixProductP )
 {
 
-    int threadId                        = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
-    if( threadId  >= 3*numberOfEntries )return;
+    int pos = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    while( pos < 3*cSim.atoms )
+    {   
 
-    float previousDipole                = inducedDipole[threadId];
-    float previousDipoleP               = inducedDipoleP[threadId];
+        float previousDipole           = inducedDipole[pos];
+        float previousDipoleP          = inducedDipoleP[pos];
+    
+        // add self terms to fields
+    
+        const float term               = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
+        matrixProduct[pos]            +=  term*previousDipole;
+        matrixProductP[pos]           +=  term*previousDipoleP;
+    
+        inducedDipole[pos]             = fixedEField[pos]     + polarizability[pos]*matrixProduct[pos];
+        inducedDipoleP[pos]            = fixedEFieldP[pos]    + polarizability[pos]*matrixProductP[pos];
+    
+        const float polarSOR           = 0.70f;
+        inducedDipole[pos]             = previousDipole   + polarSOR*( inducedDipole[pos]   - previousDipole  );   
+        inducedDipoleP[pos]            = previousDipoleP  + polarSOR*( inducedDipoleP[pos]  - previousDipoleP );
+    
+        matrixProduct[pos]             = ( inducedDipole[pos]  - previousDipole  )*( inducedDipole[pos]  - previousDipole  );
+        matrixProductP[pos]            = ( inducedDipoleP[pos] - previousDipoleP )*( inducedDipoleP[pos] - previousDipoleP );
 
-    // add self terms to fields
-
-    const float term                    = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
-    matrixProduct[threadId]            +=  term*previousDipole;
-    matrixProductP[threadId]           +=  term*previousDipoleP;
-
-    inducedDipole[threadId]             = fixedEField[threadId]     + polarizability[threadId]*matrixProduct[threadId];
-    inducedDipoleP[threadId]            = fixedEFieldP[threadId]    + polarizability[threadId]*matrixProductP[threadId];
-
-    const float polarSOR                = 0.70f;
-    inducedDipole[threadId]             = previousDipole   + polarSOR*( inducedDipole[threadId]   - previousDipole  );   
-    inducedDipoleP[threadId]            = previousDipoleP  + polarSOR*( inducedDipoleP[threadId]  - previousDipoleP );
-
-    matrixProduct[threadId]             = ( inducedDipole[threadId]  - previousDipole  )*( inducedDipole[threadId]  - previousDipole  );
-    matrixProductP[threadId]            = ( inducedDipoleP[threadId] - previousDipoleP )*( inducedDipoleP[threadId] - previousDipoleP );
+        pos                           += blockDim.x*gridDim.x;
+    }
 
 }
 
@@ -539,28 +545,13 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
     int iteration;
 
      gpuContext gpu    = amoebaGpu->gpuContext;
-    int numOfElems     = gpu->natoms*3;
-    int numThreads     = min( THREADS_PER_BLOCK, numOfElems );
-    int numBlocks      = numOfElems/numThreads;
-
-    if( (numOfElems % numThreads) != 0 )numBlocks++;
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d numOfElems=%d numThreads=%d numBlocks=%d "
-                        "maxIterations=%d targetEpsilon=%.3e\n", 
-                        methodName, gpu->natoms, numOfElems, numThreads, numBlocks,
-                        amoebaGpu->mutualInducedMaxIterations, amoebaGpu->mutualInducedTargetEpsilon);
-        (void) fflush( amoebaGpu->log );
-    }   
-#endif
 
    // ---------------------------------------------------------------------------------------
 
     // set  E_Field & E_FieldPolar] to [ E_Field & E_FieldPolar]*Polarizability
     // initialize [ InducedDipole & InducedDipolePolar ] to [ E_Field & E_FieldPolar]*Polarizability
 
-    kInitializeMutualInducedField_kernel<<< numBlocks, numThreads >>>(
+    kInitializeMutualInducedField_kernel<<< gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block >>>(
          gpu->natoms,
          amoebaGpu->psE_Field->_pDevData,
          amoebaGpu->psE_FieldPolar->_pDevData,
@@ -607,7 +598,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
 
         // post matrix multiply
 
-        kSorUpdateMutualInducedField_kernel<<< numBlocks, numThreads >>>(
+        kSorUpdateMutualInducedField_kernel<<< gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block >>>(
            gpu->natoms, amoebaGpu->psPolarizability->_pDevData,
            amoebaGpu->psInducedDipole->_pDevData, amoebaGpu->psInducedDipolePolar->_pDevData,
            amoebaGpu->psE_Field->_pDevData,       amoebaGpu->psE_FieldPolar->_pDevData,

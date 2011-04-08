@@ -30,20 +30,10 @@
 #include "kernels/gputypes.h"
 #include "amoebaCudaTypes.h"
 
-#define THREADS_PER_BLOCK 256
-
 #include <map>
 typedef std::map<int,float> MapIntFloat;
 typedef MapIntFloat::const_iterator MapIntFloatCI;
 
-
-/* 
- * Remove
- * pMapArray, dMapArray, paddedNumberOfAtoms, nonbondBlocks, nonbondThreadsPerBlock, nonbondOutputBuffers
- * allocation of torqueMapForce psCovalentDegree psPolarizationDegree
- * 
-   THREADS_PER_BLOCK
- */
 struct _amoebaGpuContext {
     
     _gpuContext* gpuContext;
@@ -112,7 +102,6 @@ struct _amoebaGpuContext {
     // multipole parameters
 
     CUDAStream<int4>* psMultipoleParticlesIdsAndAxisType;
-    CUDAStream<int>* psMultipoleAxisOffset;
 
     // buffer indices used for mapping torques onto forces 
 
@@ -133,10 +122,10 @@ struct _amoebaGpuContext {
 
     CUDAStream<float2>*  psDampingFactorAndThole;
 
-    // slated for removal -- no longer used
+    // used to setup scaling constants
 
-    CUDAStream<int>*    psCovalentDegree;
-    CUDAStream<int>*    psPolarizationDegree;
+    std::vector<int>    covalentDegree;
+    std::vector<int>    polarizationDegree;
 
     // fixed-E field
 
