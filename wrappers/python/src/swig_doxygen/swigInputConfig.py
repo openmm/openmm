@@ -247,6 +247,7 @@ UNITS = {
 
 ("AmoebaMultipoleForce",                 "getNumMultipoles")                              :  ( None,()),
 ("AmoebaMultipoleForce",                 "getNonbondedMethod")                            :  ( None,()),
+("AmoebaMultipoleForce",                 "getPolarizationType")                           :  ( None,()),
 ("AmoebaMultipoleForce",                 "getCutoffDistance")                             :  (  'unit.nanometer',()),
 ("AmoebaMultipoleForce",                 "getAEwald")                                     :  (  '1/unit.nanometer',()),
 ("AmoebaMultipoleForce",                 "getPmeBSplineOrder")                            :  ( None,()),

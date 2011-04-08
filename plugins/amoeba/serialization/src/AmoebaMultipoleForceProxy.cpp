@@ -70,10 +70,11 @@ void loadCovalentMap( const SerializationNode& map, std::vector< int >& covalent
 }
 
 void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const AmoebaMultipoleForce& force = *reinterpret_cast<const AmoebaMultipoleForce*>(object);
 
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
+    node.setIntProperty("polarizationType",                 force.getPolarizationType());
     node.setIntProperty("pmeBSplineOrder",                  force.getPmeBSplineOrder());
     node.setIntProperty("mutualInducedIterationMethod",     force.getMutualInducedIterationMethod());
     node.setIntProperty("mutualInducedMaxIterations",       force.getMutualInducedMaxIterations());
@@ -125,13 +126,16 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
 }
 
 void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    if (node.getIntProperty("version") > 2)
         throw OpenMMException("Unsupported version number");
     AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
 
     try {
 
         force->setNonbondedMethod( static_cast<AmoebaMultipoleForce::AmoebaNonbondedMethod>(node.getIntProperty( "nonbondedMethod" )) );
+        if( node.getIntProperty("version") == 2 ){
+            force->setPolarizationType( static_cast<AmoebaMultipoleForce::AmoebaPolarizationType>(node.getIntProperty( "polarizationType" )) );
+        }
         force->setPmeBSplineOrder( node.getIntProperty( "pmeBSplineOrder" ) );
         force->setMutualInducedIterationMethod( static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty( "mutualInducedIterationMethod" ) ) );
         force->setMutualInducedMaxIterations( node.getIntProperty( "mutualInducedMaxIterations" ) );
