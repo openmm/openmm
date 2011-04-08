@@ -66,6 +66,19 @@ public:
         PME = 1 
     };  
 
+    enum AmoebaPolarizationType {
+
+        /** 
+         * Mutual polarization
+         */
+        Mutual = 0,
+
+        /**
+         * Direct polarization 
+         */
+        Direct = 1 
+    };  
+
     enum MultipoleAxisTypes { ZThenX = 0, Bisector = 1, ZBisect = 2, ThreeFold = 3, ZOnly = 4, NoAxisType = 5, LastAxisTypeIndex = 6 };
 
     // Algorithm used to converge mutual induced dipoles:
@@ -99,6 +112,16 @@ public:
      * Set the method used for handling long-range nonbonded interactions.
      */
     void setNonbondedMethod(AmoebaNonbondedMethod method);
+
+    /**
+     * Get polarization type
+     */
+    AmoebaPolarizationType getPolarizationType( void ) const;
+
+    /**
+     * Set the polarization type
+     */
+    void setPolarizationType(AmoebaPolarizationType type );
 
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
@@ -326,6 +349,7 @@ protected:
 private:
 
     AmoebaNonbondedMethod nonbondedMethod;
+    AmoebaPolarizationType polarizationType;
     double cutoffDistance;
     double aewald;
     int pmeBSplineOrder;
@@ -353,7 +377,7 @@ public:
 
     MultipoleInfo() {
         axisType = multipoleAtomZ = multipoleAtomX = multipoleAtomY = -1;
-        charge   = thole            = dampingFactor    = 0.0;
+        charge   = thole          = dampingFactor  = 0.0;
 
         molecularDipole.resize( 3 );
         molecularQuadrupole.resize( 9 );

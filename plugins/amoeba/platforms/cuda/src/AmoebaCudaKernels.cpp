@@ -940,8 +940,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         }
     }
 
+    int polarizationType = static_cast<int>(force.getPolarizationType());
     int iterativeMethod = static_cast<int>(force.getMutualInducedIterationMethod());
-    if( iterativeMethod != 0 ){
+    if( iterativeMethod != 0 && polarizationType == 0 ){
          throw OpenMMException("Iterative method for mutual induced dipoles not recognized.\n");
     }
 
@@ -950,13 +951,17 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
          throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
     }
 
+    if( polarizationType != 0 && polarizationType != 1 ){
+         throw OpenMMException("AmoebaMultipoleForce polarization type not recognized.\n");
+    }
+
     gpuSetAmoebaMultipoleParameters(data.getAmoebaGpu(), charges, dipoles, quadrupoles, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
                                     tholes, scalingDistanceCutoff, dampingFactors, polarity,
                                     multipoleAtomCovalentInfo, covalentDegree, minCovalentIndices, minCovalentPolarizationIndices, (maxCovalentRange+2),
                                     static_cast<int>(force.getMutualInducedIterationMethod()),
                                     force.getMutualInducedMaxIterations(),
                                     static_cast<float>( force.getMutualInducedTargetEpsilon()),
-                                    nonbondedMethod,
+                                    nonbondedMethod, polarizationType,
                                     static_cast<float>( force.getCutoffDistance()),
                                     static_cast<float>( force.getAEwald()),
                                     static_cast<float>( force.getElectricConstant()) );

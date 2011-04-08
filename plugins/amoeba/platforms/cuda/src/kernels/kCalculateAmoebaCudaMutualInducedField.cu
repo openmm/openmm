@@ -532,6 +532,15 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
     }   
 #endif
 
+    // if polarization type is direct, set flags signalling done and return
+
+    if( amoebaGpu->amoebaSim.polarizationType )
+    {   
+        amoebaGpu->mutualInducedDone          = 1;
+        amoebaGpu->mutualInducedConverged     = 1;
+        return;
+    }   
+
     // ---------------------------------------------------------------------------------------
  
     done      = 0;

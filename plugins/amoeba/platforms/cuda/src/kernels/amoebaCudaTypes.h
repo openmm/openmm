@@ -136,6 +136,7 @@ struct cudaAmoebaGmxSimulation {
     float sqrtPi;                                   // sqrt(PI)
     float scalingDistanceCutoff;                    // scaling cutoff
     float2*         pDampingFactorAndThole;         // Thole & damping factors
+    int polarizationType;                           // polarization type (0=Mutual, 1=Direct)
 
     int4*  pMultipoleParticlesIdsAndAxisType; 
     int4*  pMultipoleParticlesTorqueBufferIndices; 
@@ -181,8 +182,8 @@ struct cudaAmoebaGmxSimulation {
     float awater;
     float shctd;
     float dispoff;
- 
     float totalMaxWcaDispersionEnergy;
+    float2* pWcaDispersionRadiusEpsilon;
 
                     // scaling indices
     int*            pScaleIndicesIndex;

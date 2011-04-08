@@ -171,7 +171,7 @@ __device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& ato
         float ratio                   = distanceIJ/(atomI.damp*atomJ.damp);
         float pGamma                  = atomJ.thole > atomI.thole ? atomI.thole : atomJ.thole;
 
-        float damp                          = ratio*ratio*ratio*pGamma;
+        float damp                    = ratio*ratio*ratio*pGamma;
         float dampExp                 = expf( -damp );
         float damp1                   = damp + one;
         float damp2                   = damp*damp;
@@ -388,23 +388,6 @@ if( 1 ){
     amatrixProductVector3(atomJ.labFrameQuadrupole,      atomI.inducedDipole,    temp5);
     amatrixProductVector3(atomI.labFrameQuadrupole,      atomJ.inducedDipole ,     qIuJ);//MK
 
-/*
-               ftm2i(1) = gfi(1)*xr + 0.5d0*
-     &           (- rr3*ck*(uind(1,i)*psc3+uinp(1,i)*dsc3)
-     &            + rr5*sc(4)*(uind(1,i)*psc5+uinp(1,i)*dsc5)
-     &            - rr7*sc(6)*(uind(1,i)*psc7+uinp(1,i)*dsc7))
-     &            + (rr3*ci*(uind(1,k)*psc3+uinp(1,k)*dsc3)
-     &            + rr5*sc(3)*(uind(1,k)*psc5+uinp(1,k)*dsc5)
-     &            + rr7*sc(5)*(uind(1,k)*psc7+uinp(1,k)*dsc7))*0.5d0
-     &            + rr5*scale5i*(sci(4)*uinp(1,i)+scip(4)*uind(1,i)
-     &            + sci(3)*uinp(1,k)+scip(3)*uind(1,k))*0.5d0
-     &            + 0.5d0*(sci(4)*psc5+scip(4)*dsc5)*rr5*di(1)
-     &            + 0.5d0*(sci(3)*psc5+scip(3)*dsc5)*rr5*dk(1)
-     &            + 0.5d0*gfi(4)*((qkui(1)-qiuk(1))*psc5
-     &            + (qkuip(1)-qiukp(1))*dsc5)
-     &            + gfi(5)*qir(1) + gfi(6)*qkr(1)
-*/
-
     float ftm2i_0 = gfi1*deltaR[0] +
                     0.5f*(-rr3*atomJ.q*(atomI.inducedDipole[0]*psc0 + atomI.inducedDipoleP[0]*dsc0) +
                     rr5*sc4*(atomI.inducedDipole[0]*psc1 + atomI.inducedDipoleP[0]*dsc1) -
@@ -460,6 +443,18 @@ if( 1 ){
     ftm2i_1 -= (fridmp_1 + findmp_1);
     ftm2i_2 -= (fridmp_2 + findmp_2);
     
+    if( cAmoebaSim.polarizationType )
+    {
+        float gfd     = 0.5*(rr5*scip2*scaleI0 - rr7*(scip3*sci4+sci3*scip4)*scaleI1);
+        float temp5   = 0.5*rr5*scaleI1;
+        float fdir_0  = gfd*deltaR[0] + temp5*(sci4*atomI.inducedDipoleP[0] + scip4*atomI.inducedDipole[0] + sci3*atomJ.inducedDipoleP[0] + scip3*atomJ.inducedDipole[0]);
+        float fdir_1  = gfd*deltaR[1] + temp5*(sci4*atomI.inducedDipoleP[1] + scip4*atomI.inducedDipole[1] + sci3*atomJ.inducedDipoleP[1] + scip3*atomJ.inducedDipole[1]);
+        float fdir_2  = gfd*deltaR[2] + temp5*(sci4*atomI.inducedDipoleP[2] + scip4*atomI.inducedDipole[2] + sci3*atomJ.inducedDipoleP[2] + scip3*atomJ.inducedDipole[2]);
+        ftm2i_0      -= fdir_0 - findmp_0;
+        ftm2i_1      -= fdir_1 - findmp_1;
+        ftm2i_2      -= fdir_2 - findmp_2;
+
+    }
     // now perform the torque calculation;
     // intermediate terms for torque between multipoles i and j;
     

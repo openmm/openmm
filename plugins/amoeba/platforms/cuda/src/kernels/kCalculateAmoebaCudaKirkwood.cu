@@ -1311,7 +1311,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
 
     // mutual polarization electrostatic solvation free energy gradient
 
-//   if (poltyp .eq. 'MUTUAL'){
+    if( cAmoebaSim.polarizationType == 0 ){
 
         dpdx = dpdx - 0.5f *
                            (atomI.inducedDipole[0]*(atomJ.inducedDipoleP[0]*gux5+atomJ.inducedDipoleP[1]*gux6+atomJ.inducedDipoleP[2]*gux7)
@@ -1345,7 +1345,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
                             + atomJ.inducedDipole[2]*(atomI.inducedDipoleP[0]*guz22+atomI.inducedDipoleP[1]*guz23+atomI.inducedDipoleP[2]*guz24);
         dpbi = dpbi - 0.5f*atomJ.bornRadius*duvdr;
         dpbk = dpbk - 0.5f*atomI.bornRadius*duvdr;
-//    }
+    }
 
     // torque due to induced reaction field on permanent dipoles
 

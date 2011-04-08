@@ -32,15 +32,8 @@ __launch_bounds__(192, 1)
 #else
 __launch_bounds__(64, 1)
 #endif
-void METHOD_NAME(kCalculateAmoebaWcaDispersion, _kernel)(
-                            unsigned int* workUnit,
-                            float4* atomCoord,
-                            float2*  wcaDispersionParameters,
-                            float* outputForce
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
+
+void METHOD_NAME(kCalculateAmoebaWcaDispersion, _kernel)( unsigned int* workUnit ){
 
     extern __shared__ WcaDispersionParticle sA[];
 
@@ -56,9 +49,6 @@ void METHOD_NAME(kCalculateAmoebaWcaDispersion, _kernel)(
     float jEpsilon;
     float totalEnergy            = 0.0f;
 
-#ifdef AMOEBA_DEBUG
-    float4 pullDebug[3];
-#endif
     while (pos < end)
     {
 
@@ -76,9 +66,9 @@ void METHOD_NAME(kCalculateAmoebaWcaDispersion, _kernel)(
 
         WcaDispersionParticle*  psA      = &sA[tbx];
         unsigned int atomI               = x + tgx;
-        float4 iCoord                    = atomCoord[atomI];
-        float iRadius                    = wcaDispersionParameters[atomI].x;
-        float iEpsilon                   = wcaDispersionParameters[atomI].y;
+        float4 iCoord                    = cSim.pPosq[atomI];
+        float iRadius                    = cAmoebaSim.pWcaDispersionRadiusEpsilon[atomI].x;
+        float iEpsilon                   = cAmoebaSim.pWcaDispersionRadiusEpsilon[atomI].y;
 
         float forceSum[3];
 
@@ -100,7 +90,7 @@ void METHOD_NAME(kCalculateAmoebaWcaDispersion, _kernel)(
 
         if (lasty != y)
         {
-            loadWcaDispersionShared( &(sA[threadIdx.x]), (y+tgx), atomCoord, wcaDispersionParameters );
+            loadWcaDispersionShared( &(sA[threadIdx.x]), (y+tgx), cSim.pPosq, cAmoebaSim.pWcaDispersionRadiusEpsilon );
 
         }
 
@@ -124,66 +114,8 @@ void METHOD_NAME(kCalculateAmoebaWcaDispersion, _kernel)(
                                                   iRadius,jRadius,
                                                   rmixo,  rmixh,
                                                   emixo,  emixh,
-                                                  ijForce, &energy
-#ifdef AMOEBA_DEBUG
-,  pullDebug
-#endif
-   );
+                                                  ijForce, &energy);
 
-#ifdef AMOEBA_DEBUG
-if( (atomI == targetAtom) || ( (y+tj) == targetAtom ) ){
-
-unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-
-debugArray[index].x                = (float) atomI;
-debugArray[index].y                = (float) (y + tj); 
-//debugArray[index].z                = (float) cSim.atoms;
-debugArray[index].z                = atomI == (y+tj) ? 0.0f : energy;
-energy                             = ( (atomI != (y+tj)) && (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) )  ? (energy) : 0.0f;
-debugArray[index].w                = energy+totalEnergy;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = iCoord.x;
-debugArray[index].y                = iCoord.y;
-debugArray[index].z                = iCoord.z;
-debugArray[index].w                = (float) (blockIdx.x * blockDim.x + threadIdx.x);
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = jCoord.x;
-debugArray[index].y                = jCoord.y;
-debugArray[index].z                = jCoord.z;
-debugArray[index].w                = -4.0f;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = emixo;
-debugArray[index].y                = emixh;
-debugArray[index].z                = rmixo;
-debugArray[index].w                = rmixh;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = pullDebug[0].x;
-debugArray[index].y                = pullDebug[0].y;
-debugArray[index].z                = pullDebug[0].z;
-debugArray[index].w                = pullDebug[0].w;
-
-#if 0
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = pullDebug[1].x;
-debugArray[index].y                = pullDebug[1].y;
-debugArray[index].z                = pullDebug[1].z;
-debugArray[index].w                = pullDebug[1].w;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = pullDebug[2].x;
-debugArray[index].y                = pullDebug[2].y;
-debugArray[index].z                = pullDebug[2].z;
-debugArray[index].w                = pullDebug[2].w;
-#endif
-
-} else {
-//    energy = 0.0f;
-}
-#endif
             if( (atomI != (y+tj)) && (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
        
                 // add to field at atomI the field due atomJ's dipole
@@ -209,54 +141,8 @@ debugArray[index].w                = pullDebug[2].w;
                                                   jRadius,iRadius,
                                                   rmjxo,  rmjxh,
                                                   emjxo,  emjxh,
-                                                  ijForce, &energy
-#ifdef AMOEBA_DEBUG
-,  pullDebug
-#endif
-   );
+                                                  ijForce, &energy);
 
-#ifdef AMOEBA_DEBUG
-if( (atomI == targetAtom) || ( (y+tj) == targetAtom ) ){
-
-unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-index                             += 2*cSim.paddedNumberOfAtoms;
-
-debugArray[index].x                = (float) atomI;
-debugArray[index].y                = (float) (y + tj); 
-debugArray[index].z                = atomI == (y+tj) ? 0.0f : energy;
-energy                             = ( (atomI != (y+tj)) && (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) )  ? (energy) : 0.0f;
-debugArray[index].w                = energy+totalEnergy;
-//debugArray[index].w                = -2.0f;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = emjxo;
-debugArray[index].y                = emjxh;
-debugArray[index].z                = rmjxo;
-debugArray[index].w                = rmjxh;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = pullDebug[0].x;
-debugArray[index].y                = pullDebug[0].y;
-debugArray[index].z                = pullDebug[0].z;
-debugArray[index].w                = pullDebug[0].w;
-#if 0
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = pullDebug[1].x;
-debugArray[index].y                = pullDebug[1].y;
-debugArray[index].z                = pullDebug[1].z;
-debugArray[index].w                = pullDebug[1].w;
-
-index                             += cSim.paddedNumberOfAtoms;
-debugArray[index].x                = pullDebug[2].x;
-debugArray[index].y                = pullDebug[2].y;
-debugArray[index].z                = pullDebug[2].z;
-debugArray[index].w                = pullDebug[2].w;
-#endif
-
-} else {
-    //energy = 0.0f;
-}
-#endif
             if( (atomI != (y+tj)) && (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
        
                 // add to field at atomI the field due atomJ's dipole
@@ -281,24 +167,32 @@ debugArray[index].w                = pullDebug[2].w;
         // Write results
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-        unsigned int offset                 = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
-        load3dArrayBufferPerWarp( offset, forceSum,       outputForce );
+        unsigned int offset                 = (x + tgx + warp*cSim.paddedNumberOfAtoms);
+        add3dArrayToFloat4( offset, forceSum,  cSim.pForce4);
 
-        offset                              = 3*(y + tgx + warp*cSim.paddedNumberOfAtoms);
+        // include diagonal only once
 
-        load3dArrayBufferPerWarp( offset, sA[threadIdx.x].force,       outputForce );
+        if( x != y ){
+            offset                              = (y + tgx + warp*cSim.paddedNumberOfAtoms);
+            add3dArrayToFloat4( offset, sA[threadIdx.x].force, cSim.pForce4);
+        }
 
 #else
-        unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms);
-        load3dArray( offset, forceSum,       outputForce );
+        unsigned int offset                 = (x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms);
+        add3dArrayToFloat4( offset, forceSum,    cSim.pForce4);
 
-        offset                              = 3*(y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
-        load3dArray( offset, sA[threadIdx.x].force,       outputForce );
+        // include diagonal only once
+
+        if( x != y ){
+            offset                              = (y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
+            add3dArrayToFloat4( offset, sA[threadIdx.x].force,    cSim.pForce4 );
+        }
 
 #endif
         lasty = y;
         pos++;
     }
+
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] -= cAmoebaSim.awater*totalEnergy;
     if( (blockIdx.x*blockDim.x + threadIdx.x) == 0 ){
         cSim.pEnergy[0] += cAmoebaSim.totalMaxWcaDispersionEnergy;

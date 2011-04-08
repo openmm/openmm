@@ -911,9 +911,16 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
             int j2 = deriv2[k+1];
             int j3 = deriv3[k+1];
 
-            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1] + inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1];
-            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2] + inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
-            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3] + inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3];
+            f.x += (inducedDipole[k]+inducedDipolePolar[k])*phi[j1];
+            f.y += (inducedDipole[k]+inducedDipolePolar[k])*phi[j2];
+            f.z += (inducedDipole[k]+inducedDipolePolar[k])*phi[j3];
+ 
+            if( cAmoebaSim.polarizationType == 0 )
+            {
+                f.x += inducedDipole[k]*phip[j1] + inducedDipolePolar[k]*phid[j1];
+                f.y += inducedDipole[k]*phip[j2] + inducedDipolePolar[k]*phid[j2];
+                f.z += inducedDipole[k]*phip[j3] + inducedDipolePolar[k]*phid[j3];
+            }
 
         }
 

@@ -704,44 +704,30 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
         // correction to convert mutual to direct polarization force
 
-/*
-        if (poltyp .eq. 'DIRECT') {
-           gfd = 0.5f * (bn2*scip2;
-&                     - bn3*(scip3*sci4+sci3*scip4));
-           gfdr = 0.5f * (rr5*scip2*usc3;
-&                     - rr7*(scip3*sci4;
-&                           +sci3*scip4)*usc5);
-           ftm2i1 = ftm2i1 - gfd*xr - 0.5f*bn2*;
-&                          (sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0];
-&                          +sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
-           ftm2i2 = ftm2i2 - gfd*yr - 0.5f*bn2*;
-&                          (sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1];
-&                          +sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
-           ftm2i3 = ftm2i3 - gfd*zr - 0.5f*bn2*;
-&                          (sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2];
-&                          +sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
-           fdir1 = gfdr*xr + 0.5f*usc5*rr5*;
-&                         (sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0];
-&                        + sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
-           fdir2 = gfdr*yr + 0.5f*usc5*rr5*;
-&                         (sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1];
-&                        + sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
-           fdir3 = gfdr*zr + 0.5f*usc5*rr5*;
-&                         (sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2];
-&                        + sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
-           ftm2i1 = ftm2i1 + fdir1 + findmp1;
-           ftm2i2 = ftm2i2 + fdir2 + findmp2;
-           ftm2i3 = ftm2i3 + fdir3 + findmp3;
+        if( cAmoebaSim.polarizationType ){
+
+           float gfd     = 0.5f * (bn2*scip2 - bn3*(scip3*sci4+sci3*scip4));
+           ftm2i1       -= gfd*xr + 0.5f*bn2*(sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0]+sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
+           ftm2i2       -= gfd*yr + 0.5f*bn2*(sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1]+sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
+           ftm2i3       -= gfd*zr + 0.5f*bn2*(sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2]+sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
+
+           float gfdr    = 0.5f * (rr5*scip2*usc3 - rr7*(scip3*sci4 +sci3*scip4)*usc5);
+           float fdir1   = gfdr*xr + 0.5f*usc5*rr5*(sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0] + sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
+           float fdir2   = gfdr*yr + 0.5f*usc5*rr5*(sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1] + sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
+           float fdir3   = gfdr*zr + 0.5f*usc5*rr5*(sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2] + sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
+
+           ftm2i1       += fdir1 + findmp1;
+           ftm2i2       += fdir2 + findmp2;
+           ftm2i3       += fdir3 + findmp3;
         }
-*/
 
         // intermediate variables for induced torque terms
 
-        float gti2 = 0.5f * bn2 * (sci4+scip4);
-        float gti3 = 0.5f * bn2 * (sci3+scip3);
-        float gti4 = gfi4;
-        float gti5 = gfi5;
-        float gti6 = gfi6;
+        float gti2  = 0.5f * bn2 * (sci4+scip4);
+        float gti3  = 0.5f * bn2 * (sci3+scip3);
+        float gti4  = gfi4;
+        float gti5  = gfi5;
+        float gti6  = gfi6;
         float gtri2 = 0.5f * rr5 * (sci4*psc5+scip4*dsc5);
         float gtri3 = 0.5f * rr5 * (sci3*psc5+scip3*dsc5);
         float gtri4 = gfri4;
@@ -1198,6 +1184,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
 void cudaComputeAmoebaPmeElectrostatic( amoebaGpuContext amoebaGpu )
 {
+
     cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpu );
     kCalculateAmoebaPMEInducedDipoleForces( amoebaGpu );
     cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );

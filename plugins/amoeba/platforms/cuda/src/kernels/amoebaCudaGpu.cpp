@@ -358,6 +358,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameDipole, log );
     gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameQuadrupole, log );
     
+    (void) fprintf( log, "     polarizationType                   %d\n",      amoebaGpu->amoebaSim.polarizationType );
     (void) fprintf( log, "     maxCovalentDegreeSz                %d\n",      amoebaGpu->maxCovalentDegreeSz );
     (void) fprintf( log, "     solventDielectric                  %10.3f\n",  amoebaGpu->solventDielectric);
     (void) fprintf( log, "     scalingDistanceCutoff              %15.7e\n",  amoebaGpu->amoebaSim.scalingDistanceCutoff );
@@ -1519,7 +1520,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange, 
                                      int mutualInducedIterativeMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, float cutoffDistance, float alphaEwald, float electricConstant ) {
+                                     int nonbondedMethod, int polarizationType, float cutoffDistance, float alphaEwald, float electricConstant ) {
 
 // ---------------------------------------------------------------------------------------
 
@@ -1545,9 +1546,10 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     // allocate memory
 
     amoebaGpu->mutualInducedIterativeMethod = mutualInducedIterativeMethod;
+    amoebaGpu->amoebaSim.polarizationType   = polarizationType;
     gpuMutualInducedFieldAllocate( amoebaGpu );
-    amoebaGpu->mutualInducedMaxIterations = mutualInducedMaxIterations;
-    amoebaGpu->mutualInducedTargetEpsilon = mutualInducedTargetEpsilon;
+    amoebaGpu->mutualInducedMaxIterations   = mutualInducedMaxIterations;
+    amoebaGpu->mutualInducedTargetEpsilon   = mutualInducedTargetEpsilon;
 
     unsigned int dipoleIndex                                                  = 0;
     unsigned int quadrupoleIndex                                              = 0;
@@ -1562,9 +1564,9 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     }
 
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log,"%s Nonbonded method=%d %d [NoCutoff=%d PME=%d]\n",
+        (void) fprintf( amoebaGpu->log,"%s Nonbonded method=%d %d [NoCutoff=%d PME=%d] polarizationType=%d (0=mutual/1=direct)\n",
                         methodName.c_str(), nonbondedMethod, amoebaGpu->multipoleNonbondedMethod,
-                        AMOEBA_NO_CUTOFF, AMOEBA_PARTICLE_MESH_EWALD );
+                        AMOEBA_NO_CUTOFF, AMOEBA_PARTICLE_MESH_EWALD, polarizationType );
         (void) fflush( amoebaGpu->log );
     }
     amoebaGpu->amoebaSim.sqrtPi                      = std::sqrt( 3.14159265358f );
@@ -2549,11 +2551,12 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
 
    // ---------------------------------------------------------------------------------------
 
-    gpuContext gpu                           = amoebaGpu->gpuContext;
-    int paddedNumberOfAtoms                  = gpu->sim.paddedNumberOfAtoms;
-    unsigned int particles                   = radii.size();
+    gpuContext gpu                                   = amoebaGpu->gpuContext;
+    int paddedNumberOfAtoms                          = gpu->sim.paddedNumberOfAtoms;
+    unsigned int particles                           = radii.size();
     
-    amoebaGpu->psWcaDispersionRadiusEpsilon  = new CUDAStream<float2>(paddedNumberOfAtoms,   1, "WcaDispersionRadiusEpsilon");
+    amoebaGpu->psWcaDispersionRadiusEpsilon          = new CUDAStream<float2>(paddedNumberOfAtoms,   1, "WcaDispersionRadiusEpsilon");
+    amoebaGpu->amoebaSim.pWcaDispersionRadiusEpsilon = amoebaGpu->psWcaDispersionRadiusEpsilon->_pDevData;
     for (unsigned int ii = 0; ii < particles; ii++) 
     {    
         amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].x    = radii[ii];

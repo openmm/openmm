@@ -353,28 +353,6 @@ __device__ void calculateWcaDispersionPairIxn_kernel( float4 atomCoordinatesI, f
 #define METHOD_NAME(a, b) a##N2ByWarp##b
 #include "kCalculateAmoebaCudaWcaDispersion.h"
 
-// reduce psWorkArray_3_1 -> outputArray
-
-static void kReduceWcaDispersion(amoebaGpuContext amoebaGpu, CUDAStream<float>* outputArray )
-{
-    gpuContext gpu = amoebaGpu->gpuContext;
-    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
-                               gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                               amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData, 0 );
-    LAUNCHERROR("kReduceWcaDispersion");
-}
-
-// reduce psWorkArray_3_1 -> outputArray
-
-static void kReduceWcaDispersionToFloat4(amoebaGpuContext amoebaGpu, CUDAStream<float4>* outputArray )
-{
-    gpuContext gpu = amoebaGpu->gpuContext;
-    kReduceFieldsToFloat4_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
-                                   gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
-                                   amoebaGpu->psWorkArray_3_1->_pDevData, outputArray->_pDevData );
-    LAUNCHERROR("kReduceWcaDispersion");
-}
-
 /**---------------------------------------------------------------------------------------
 
    Compute WCA dispersion
@@ -393,15 +371,6 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
    // ---------------------------------------------------------------------------------------
 
      gpuContext gpu    = amoebaGpu->gpuContext;
-
-#ifdef AMOEBA_DEBUG
-    static const char* methodName = "kCalculateAmoebaWcaDispersionForces";
-    int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
-    debugArray->Upload();
-    int targetAtom                             = 3;
-#endif
 
     // set threads/block first time through
 
@@ -427,222 +396,17 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
 #endif
 
     if (gpu->bOutputBufferPerWarp){
+
         kCalculateAmoebaWcaDispersionN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
-                                                            amoebaGpu->psWorkUnit->_pDevData,
-                                                            gpu->psPosq4->_pDevData,
-                                                            amoebaGpu->psWcaDispersionRadiusEpsilon->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                            debugArray->_pDevData, targetAtom );
-#else
-                                                            amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
+                                                            amoebaGpu->psWorkUnit->_pDevData );
 
     } else {
 
         kCalculateAmoebaWcaDispersionN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(WcaDispersionParticle)*threadsPerBlock>>>(
-                                                            amoebaGpu->psWorkUnit->_pDevData,
-                                                            gpu->psPosq4->_pDevData,
-                                                            amoebaGpu->psWcaDispersionRadiusEpsilon->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                            debugArray->_pDevData, targetAtom );
-#else
-                                                            amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
+                                                            amoebaGpu->psWorkUnit->_pDevData );
 
     }
     LAUNCHERROR("kCalculateAmoebaWcaDispersion");  
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-
-        amoebaGpu->psWorkArray_3_1->Download();
-        debugArray->Download();
-
-        (void) fprintf( amoebaGpu->log,"\n" );
-        int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        double sum = 0.0;
-        double sums[8] = { 0.0, 0.0, 0.0, 0.0,0.0, 0.0, 0.0, 0.0 };
-        std::map<int,double> buffers;
-        std::vector< std::vector<double> > trackD;
-        std::vector< std::vector<double> > trackT;
-        std::vector<double> maxD;
-        std::vector< std::vector<int> > trackI;
-        trackD.resize( gpu->natoms );
-        trackT.resize( gpu->natoms );
-        maxD.resize( gpu->natoms );
-        trackI.resize( gpu->natoms );
-        for( int jj = 0; jj < gpu->natoms; jj++ ){
-            unsigned int debugIndex = jj;
-            (void) fprintf( amoebaGpu->log,"%5d %5d DebugWca\n", targetAtom, jj );
-            int block = -1;
-
-            for( int kk = 0; kk < -3; kk++ ){
-                if( kk == 1 ){
-                    block =  static_cast<int>(debugArray->_pSysData[debugIndex].w + 1.0e-04); 
-                    if( buffers.find(block) == buffers.end() ){
-                        buffers[block] = 0.0;
-                    }
-                }
-                if( kk == 1  && jj != targetAtom ){
-                    sums[0] += debugArray->_pSysData[debugIndex].y;
-                    sums[1] += debugArray->_pSysData[debugIndex].z;
-                    sums[2] += debugArray->_pSysData[debugIndex].w;
-                    double x4 = debugArray->_pSysData[debugIndex].x - (debugArray->_pSysData[debugIndex].y + debugArray->_pSysData[debugIndex].z + debugArray->_pSysData[debugIndex].w);
-                    sums[3] += x4;
-                    //sum     += debugArray->_pSysData[debugIndex].x;
-                    sum     += debugArray->_pSysData[debugIndex].z;
-                    buffers[block] += debugArray->_pSysData[debugIndex].z; 
-                    (void) fprintf( amoebaGpu->log," %16.9e [%16.9e %16.9e %16.9e %16.9e]\n",
-                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w, x4);
-         
-                } else if( kk == 2 &&  jj != targetAtom){
-                    //sum     += debugArray->_pSysData[debugIndex].x;
-                    sum     += debugArray->_pSysData[debugIndex].z;
-                    sums[4] += debugArray->_pSysData[debugIndex].y;
-                    sums[5] += debugArray->_pSysData[debugIndex].z;
-                    sums[6] += debugArray->_pSysData[debugIndex].w;
-                    double x4 = debugArray->_pSysData[debugIndex].x - (debugArray->_pSysData[debugIndex].y + debugArray->_pSysData[debugIndex].z + debugArray->_pSysData[debugIndex].w);
-                    sums[7] += x4;
-                    buffers[block] += debugArray->_pSysData[debugIndex].z; 
-                    (void) fprintf( amoebaGpu->log," %16.9e [%16.9e %16.9e %16.9e %16.9e]\n",
-                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w, x4);
-                } else {
-                    (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e] %7u\n",
-                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w, debugIndex );
-                }
-                if( kk == 5 )(void) fprintf( amoebaGpu->log,"\n" );
-                debugIndex += paddedNumberOfAtoms;
-            }
-
-            block =  static_cast<int>(debugArray->_pSysData[debugIndex+paddedNumberOfAtoms].w + 1.0e-04); 
-            if( buffers.find(block) == buffers.end() ){
-                buffers[block] = 0.0;
-                maxD[block]    = 0.0;
-            }
-            for( int kk = 0; kk < 3; kk++ ){
-                if( kk == 0 && jj != targetAtom ){
-                    sum            += debugArray->_pSysData[debugIndex].z;
-                    buffers[block] += debugArray->_pSysData[debugIndex].z; 
-                    trackI[block].push_back( jj );
-                    trackD[block].push_back( debugArray->_pSysData[debugIndex].z );
-                    trackT[block].push_back( debugArray->_pSysData[debugIndex].w );
-                    if( fabs( debugArray->_pSysData[debugIndex].w ) > maxD[block] ){
-                        maxD[block] = fabs( debugArray->_pSysData[debugIndex].w );
-                    }
-                    (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w);
-         
-                } else if( kk == 2 &&  jj != targetAtom){
-                    sum             += debugArray->_pSysData[debugIndex].z;
-                    buffers[block]  += debugArray->_pSysData[debugIndex].z; 
-                    trackI[block].push_back( jj );
-                    trackD[block].push_back( debugArray->_pSysData[debugIndex].z );
-                    trackT[block].push_back( debugArray->_pSysData[debugIndex].w );
-                    if( fabs( debugArray->_pSysData[debugIndex].w ) > maxD[block] ){
-                        maxD[block] = fabs( debugArray->_pSysData[debugIndex].w );
-                    }
-                    (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w);
-                } else {
-                    (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e] %7u\n",
-                                    debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                    debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w, debugIndex );
-                }
-                if( kk == 5 )(void) fprintf( amoebaGpu->log,"\n" );
-                debugIndex += paddedNumberOfAtoms;
-            }
-            (void) fprintf( amoebaGpu->log,"\n" );
-        }
-        (void) fprintf( amoebaGpu->log,"Total sum=%14.7e\n", sum );
-        (void) fprintf( amoebaGpu->log,"DeWW\n" );
-        sum = 0.0;
-        for( int jj = 0; jj < 4; jj++ ){
-            sum += sums[jj] + sums[jj+4];
-            (void) fprintf( amoebaGpu->log,"[%14.7e %14.7e] %14.7e\n", sums[jj], sums[jj+4], sums[jj] + sums[jj+4] );
-        }
-        (void) fprintf( amoebaGpu->log,"Total sum8=%14.7e\n", sum );
-
-        (void) fprintf( amoebaGpu->log,"Buffers\n", sum );
-        sum = 0.0;
-        for( std::map<int,double>::const_iterator jj = buffers.begin(); jj != buffers.end(); jj++ ){
-
-            (void) fprintf( amoebaGpu->log,"%5d %14.7e", jj->first, jj->second );
-            sum += jj->second;
-
-            int block       = jj->first;
-            double sumBlock = 0.0;
-
-            for( unsigned int kk = 0; kk < trackI[block].size(); kk++ ){
-                 sumBlock +=  trackD[block][kk];
-            }
-            (void) fprintf( amoebaGpu->log," %5u Total=%14.7e MaxD=%14.7e\n", trackI[block].size(), sumBlock, maxD[block]);
-            for( unsigned int kk = 0; kk < trackI[block].size(); kk++ ){
-                 (void) fprintf( amoebaGpu->log,"[%5d %14.7e  %14.7e] ", trackI[block][kk], trackD[block][kk], trackT[block][kk]);
-                 if( ((kk+1)%3) == 0 )(void) fprintf( amoebaGpu->log,"\n" );
-            }
-            (void) fprintf( amoebaGpu->log,"\n\n\n" );
-
-        }
-        (void) fprintf( amoebaGpu->log,"Total buffer sum=%14.7e\n", sum );
-/*
-        for( int jj = 0; jj < gpu->natoms; jj++ ){
-            int debugIndex   = jj;
-            int debugIndex4  = debugIndex + 4*paddedNumberOfAtoms;
-            int debugIndex5  = debugIndex + 5*paddedNumberOfAtoms;
-            int debugIndex9  = debugIndex + 9*paddedNumberOfAtoms;
-            int debugIndex10 = debugIndex + 10*paddedNumberOfAtoms;
-            (void) fprintf( amoebaGpu->log,"%6d %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e \n", jj,
-                                       debugArray->_pSysData[debugIndex4].x*debugArray->_pSysData[debugIndex4].x,  // r2
-                                       debugArray->_pSysData[debugIndex4].y, debugArray->_pSysData[debugIndex9].y, // de
-                                       debugArray->_pSysData[debugIndex5].x, debugArray->_pSysData[debugIndex10].x, // dll
-                                       debugArray->_pSysData[debugIndex5].y, debugArray->_pSysData[debugIndex10].y, // duu
-                                       debugArray->_pSysData[debugIndex4].z, debugArray->_pSysData[debugIndex9].z ); // emxio
-        }
-*/
-    }
-#endif
-
-    kReduceWcaDispersionToFloat4( amoebaGpu, gpu->psForce4 );
-
-#ifdef AMOEBA_DEBUG
-    if( 0 && amoebaGpu->log ){
-        gpu->psEnergy->Download();
-        double sum = 0.0;
-        for (int i = 0; i < gpu->sim.energyOutputBuffers; i++){
-            sum  += gpu->psEnergy->_pSysData[i];
-            if( fabsf( (*gpu->psEnergy)[i]) > 0.0 )
-                (void) fprintf( amoebaGpu->log,"SumQQ %6d %14.7e QQ SUM\n", i, (*gpu->psEnergy)[i] );
-        }   
-        (void) fprintf( amoebaGpu->log,"%14.7e QQ SUM\n", sum );
-    }
-#endif
-
-    if( 0 ){
-        int paddedNumberOfAtoms             = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        CUDAStream<float>* psTempForce      = new CUDAStream<float>(4*paddedNumberOfAtoms, 1, "psTempForce");
-        kClearFloat( amoebaGpu, 4*paddedNumberOfAtoms, psTempForce );
-        kReduceWcaDispersion( amoebaGpu, psTempForce );
-        std::vector<int> fileId;
-        //fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,   outputVector, NULL, 1.0f );
-        cudaLoadCudaFloatArray(  gpu->natoms, 3, psTempForce,    outputVector, NULL, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaWca", fileId, outputVector );
-        delete psTempForce;
-        //exit(0);
-     }
-
-#ifdef AMOEBA_DEBUG
-    delete debugArray;
-    //exit(0);
-#endif
 
    // ---------------------------------------------------------------------------------------
 }

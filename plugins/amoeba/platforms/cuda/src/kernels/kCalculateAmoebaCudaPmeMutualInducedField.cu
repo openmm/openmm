@@ -572,44 +572,25 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
 
-        gpuContext gpu = amoebaGpu->gpuContext;
         std::vector<int> fileId;
         VectorOfDoubleVectors outputVector;
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field,            outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar,       outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaEFieldPolarity", fileId, outputVector );
-/*
-        amoebaGpu->psE_FieldPolar->Download();
-        amoebaGpu->psInducedDipole->Download(),
-        amoebaGpu->psInducedDipolePolar->Download();
-        amoebaGpu->psPolarizability->Download();
-        (void) fprintf( amoebaGpu->log, "%s Initial setup for matrix multiply\n", methodName );
-        int offset   = 0;
-        int maxPrint = 10;
-        for( int ii = 0; ii < gpu->natoms; ii++ ){
-            (void) fprintf( amoebaGpu->log, "%4d pol=%12.4e ", ii, 
-                            amoebaGpu->psPolarizability->_pSysData[offset] );
-            if( amoebaGpu->psPolarizability->_pSysData[offset] != amoebaGpu->psPolarizability->_pSysData[offset+1] ||
-                amoebaGpu->psPolarizability->_pSysData[offset] != amoebaGpu->psPolarizability->_pSysData[offset+2] ){
-                (void) fprintf( amoebaGpu->log, "PolX!!! %12.4e %12.4e ", amoebaGpu->psPolarizability->_pSysData[offset+1], amoebaGpu->psPolarizability->_pSysData[offset+2] ); 
-            }
-
-            (void) fprintf( amoebaGpu->log," E[%14.6e %14.6e %14.6e] Mi[%14.6e %14.6e %14.6e] ",
-                            amoebaGpu->psE_Field->_pSysData[offset],       amoebaGpu->psE_Field->_pSysData[offset+1],       amoebaGpu->psE_Field->_pSysData[offset+2],
-                            amoebaGpu->psInducedDipole->_pSysData[offset], amoebaGpu->psInducedDipole->_pSysData[offset+1], amoebaGpu->psInducedDipole->_pSysData[offset+2] );
-            (void) fprintf( amoebaGpu->log,"Ep[%14.6e %14.6e %14.6e] Mip[%14.6e %14.6e %14.6e]\n",
-                            amoebaGpu->psE_FieldPolar->_pSysData[offset],       amoebaGpu->psE_FieldPolar->_pSysData[offset+1],       amoebaGpu->psE_FieldPolar->_pSysData[offset+2],
-                            amoebaGpu->psInducedDipolePolar->_pSysData[offset], amoebaGpu->psInducedDipolePolar->_pSysData[offset+1], amoebaGpu->psInducedDipolePolar->_pSysData[offset+2] );
-            offset += 3;
-            if( ii == maxPrint && (ii < (gpu->natoms - maxPrint) ) )ii =  (gpu->natoms - maxPrint);
-        }   
-        
-void) fflush( amoebaGpu->log );
-*/
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeEFieldPolarity", fileId, outputVector );
     }   
 #endif
+
+    // if polarization type is direct, set flags signalling done and return
+
+    if( amoebaGpu->amoebaSim.polarizationType )
+    {
+        amoebaGpu->mutualInducedDone          = 1;
+        amoebaGpu->mutualInducedConverged     = 1;
+        kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
+        return;
+    }
 
     // ---------------------------------------------------------------------------------------
  
@@ -623,35 +604,6 @@ void) fflush( amoebaGpu->log );
         cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpu, amoebaGpu->psWorkVector[0],  amoebaGpu->psWorkVector[1] );
         kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
         LAUNCHERROR("cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply Loop\n");  
-
-#ifdef GET_EFIELD_FROM_FILE
-{
-    std::string fileName = "waterInduceRecip.txt";
-    StringVectorVector fileContents;
-    readFile( fileName, fileContents );
-    unsigned int offset  = 0;
-    amoebaGpu->psWorkVector[0]->Download();
-    amoebaGpu->psWorkVector[1]->Download();
-    if( amoebaGpu->log )(void) fprintf( amoebaGpu->log, "Read file: %s %u\n", fileName.c_str(), fileContents.size() ); fflush(  amoebaGpu->log );
-    float conversion = 100.0f;
-    for( unsigned int ii = 1; ii < fileContents.size()-1; ii++ ){
-
-        StringVector lineTokens     = fileContents[ii];
-        unsigned int lineTokenIndex = 1;
-
-        // (void) fprintf( amoebaGpu->log, "   %u %s %s\n", ii, lineTokens[0].c_str(), lineTokens[lineTokenIndex].c_str() ); fflush(  amoebaGpu->log );
-        amoebaGpu->psWorkVector[0]->_pSysData[offset++]       += conversion*static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psWorkVector[0]->_pSysData[offset++]       += conversion*static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psWorkVector[0]->_pSysData[offset++]       += conversion*static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str())); 
-        offset                                                     -= 3;        
-        amoebaGpu->psWorkVector[1]->_pSysData[offset++]       += conversion*static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psWorkVector[1]->_pSysData[offset++]       += conversion*static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-        amoebaGpu->psWorkVector[1]->_pSysData[offset++]       += conversion*static_cast<float>(atof(lineTokens[lineTokenIndex++].c_str()));
-    }
-    amoebaGpu->psWorkVector[0]->Upload();
-    amoebaGpu->psWorkVector[1]->Upload();
-}
-#endif
 
         // post matrix multiply
 

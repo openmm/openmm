@@ -515,24 +515,16 @@ __device__ void calculateKirkwoodEDiffPairIxn_kernel( KirkwoodEDiffParticle& ato
 
     // correction to convert mutual to direct polarization force
 
-#if 0
-               if (poltyp .eq. 'DIRECT') then;
-                  gfd             = 0.5f * (rr5*scip2*scale3i;
-     &                  - rr7*(scip3*sci4+sci3*scip4)*scale5i);
-                  fdir1             = gfd*xr + 0.5f*rr5*scale5i;
-     &                         * (sci4*atomI.inducedDipolePS[0]+scip4*atomI.inducedDipoleS[0];
-     &                           +sci3*atomJ.inducedDipolePS[0]+scip3*atomJ.inducedDipoleS[0]);
-                  fdir2             = gfd*yr + 0.5f*rr5*scale5i;
-     &                         * (sci4*atomI.inducedDipolePS[1]+scip4*atomI.inducedDipoleS[1];
-     &                           +sci3*atomJ.inducedDipolePS[1]+scip3*atomJ.inducedDipoleS[1]);
-                  fdir3             = gfd*zr + 0.5f*rr5*scale5i;
-     &                         * (sci4*atomI.inducedDipolePS[2]+scip4*atomI.inducedDipoleS[2];
-     &                           +sci3*atomJ.inducedDipolePS[2]+scip3*atomJ.inducedDipoleS[2]);
-                  ftm2i1             = ftm2i1 - fdir1 + findmp1;
-                  ftm2i2             = ftm2i2 - fdir2 + findmp2;
-                  ftm2i3             = ftm2i3 - fdir3 + findmp3;
-               end if;
-#endif
+    if ( cAmoebaSim.polarizationType ){
+        float gfd      = 0.5f * (rr5*scip2*scale3i - rr7*(scip3*sci4+sci3*scip4)*scale5i);
+        float fdir1    = gfd*xr + 0.5f*rr5*scale5i* (sci4*atomI.inducedDipolePS[0]+scip4*atomI.inducedDipoleS[0] + sci3*atomJ.inducedDipolePS[0]+scip3*atomJ.inducedDipoleS[0]);
+        float fdir2    = gfd*yr + 0.5f*rr5*scale5i* (sci4*atomI.inducedDipolePS[1]+scip4*atomI.inducedDipoleS[1] + sci3*atomJ.inducedDipolePS[1]+scip3*atomJ.inducedDipoleS[1]);
+        float fdir3    = gfd*zr + 0.5f*rr5*scale5i* (sci4*atomI.inducedDipolePS[2]+scip4*atomI.inducedDipoleS[2] + sci3*atomJ.inducedDipolePS[2]+scip3*atomJ.inducedDipoleS[2]);
+        ftm2i1        -= fdir1 - findmp1;
+        ftm2i2        -= fdir2 - findmp2;
+        ftm2i3        -= fdir3 - findmp3;
+     
+    }
 
     // now perform the torque calculation
     // intermediate terms for torque between multipoles i and k
@@ -803,24 +795,16 @@ __device__ void calculateKirkwoodEDiffPairIxn_kernel( KirkwoodEDiffParticle& ato
 
     // correction to convert mutual to direct polarization force;
 
-#if 0
-               if (poltyp .eq. 'DIRECT') then;
-                  gfd = 0.5f * (rr5*scip2*scale3i;
-     &                  - rr7*(scip3*sci4+sci3*scip4)*scale5i);
-                  fdir1 = gfd*xr + 0.5f*rr5*scale5i;
-     &                         * (sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0];
-     &                           +sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
-                  fdir2 = gfd*yr + 0.5f*rr5*scale5i;
-     &                         * (sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1];
-     &                           +sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
-                  fdir3 = gfd*zr + 0.5f*rr5*scale5i;
-     &                         * (sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2];
-     &                           +sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
-                  ftm2i1 = ftm2i1 - fdir1 + findmp1;
-                  ftm2i2 = ftm2i2 - fdir2 + findmp2;
-                  ftm2i3 = ftm2i3 - fdir3 + findmp3;
-               end if;
-#endif
+    if ( cAmoebaSim.polarizationType ){
+
+        float gfd    = 0.5f * (rr5*scip2*scale3i- rr7*(scip3*sci4+sci3*scip4)*scale5i);
+        float fdir1  = gfd*xr + 0.5f*rr5*scale5i* (sci4*atomI.inducedDipoleP[0]+scip4*atomI.inducedDipole[0] + sci3*atomJ.inducedDipoleP[0]+scip3*atomJ.inducedDipole[0]);
+        float fdir2  = gfd*yr + 0.5f*rr5*scale5i* (sci4*atomI.inducedDipoleP[1]+scip4*atomI.inducedDipole[1] + sci3*atomJ.inducedDipoleP[1]+scip3*atomJ.inducedDipole[1]);
+        float fdir3  = gfd*zr + 0.5f*rr5*scale5i* (sci4*atomI.inducedDipoleP[2]+scip4*atomI.inducedDipole[2] + sci3*atomJ.inducedDipoleP[2]+scip3*atomJ.inducedDipole[2]);
+        ftm2i1      -= fdir1 - findmp1;
+        ftm2i2      -= fdir2 - findmp2;
+        ftm2i3      -= fdir3 - findmp3;
+    }
 
     // now perform the torque calculation
     // intermediate terms for torque between multipoles i and k
