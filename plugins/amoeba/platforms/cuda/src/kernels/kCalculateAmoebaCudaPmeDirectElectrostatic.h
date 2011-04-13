@@ -58,6 +58,7 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectElectrostatic, Forces_kernel)(
     float4 forceTorqueEnergy[3];
 
     float scalingFactors[LastScalingIndex];
+    float conversionFactor       = (-cAmoebaSim.electric/cAmoebaSim.dielec);
 
     while (pos < end)
     {
@@ -202,6 +203,14 @@ if( atomI == targetAtom || atomJ == targetAtom ){
                 calculatePmeSelfEnergyElectrostaticPairIxn_kernel( localParticle, &energy );
                 totalEnergy += energy;
             }
+
+            localParticle.force[0]  *= conversionFactor;
+            localParticle.force[1]  *= conversionFactor;
+            localParticle.force[2]  *= conversionFactor;
+
+            localParticle.torque[0] *= -conversionFactor;
+            localParticle.torque[1] *= -conversionFactor;
+            localParticle.torque[2] *= -conversionFactor;
 
             // Write results
 
@@ -386,6 +395,22 @@ if( atomI == targetAtom || atomJ == targetAtom ){
 
                 } // end of j-loop
 
+                localParticle.force[0]    *=  conversionFactor;
+                localParticle.force[1]    *=  conversionFactor;
+                localParticle.force[2]    *=  conversionFactor;
+    
+                localParticle.torque[0]   *= -conversionFactor;
+                localParticle.torque[1]   *= -conversionFactor;
+                localParticle.torque[2]   *= -conversionFactor;
+    
+                sA[threadIdx.x].force[0]  *=  conversionFactor;
+                sA[threadIdx.x].force[1]  *=  conversionFactor;
+                sA[threadIdx.x].force[2]  *=  conversionFactor;
+    
+                sA[threadIdx.x].torque[0] *= -conversionFactor;
+                sA[threadIdx.x].torque[1] *= -conversionFactor;
+                sA[threadIdx.x].torque[2] *= -conversionFactor;
+    
                 // Write results
     
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
@@ -415,5 +440,5 @@ if( atomI == targetAtom || atomJ == targetAtom ){
         }
         pos++;
     }
-    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += totalEnergy;
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] -= conversionFactor*totalEnergy;
 }

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------------------
+///-----------------------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ __device__ static void debugSetup( unsigned int atomI, unsigned int atomJ,
 __device__ static void calculatePmeSelfEnergyElectrostaticPairIxn_kernel( PmeDirectElectrostaticParticle& atomI, float* energy)
 {
     float term   = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
-    float fterm  = -(cAmoebaSim.electric/cAmoebaSim.dielec)*cSim.alphaEwald/cAmoebaSim.sqrtPi;
+    float fterm  = -cSim.alphaEwald/cAmoebaSim.sqrtPi;
 
     float cii    = atomI.q*atomI.q;
 
@@ -141,7 +141,7 @@ __device__ static void calculatePmeSelfEnergyElectrostaticPairIxn_kernel( PmeDir
 
 __device__ static void calculatePmeSelfTorqueElectrostaticPairIxn_kernel( PmeDirectElectrostaticParticle& atomI)
 {
-    float term       = (4.0f/3.0f)*(cAmoebaSim.electric/cAmoebaSim.dielec)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
+    float term       = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
 
     float uix        = 0.5f*(atomI.inducedDipole[0] + atomI.inducedDipoleP[0]);
     float uiy        = 0.5f*(atomI.inducedDipole[1] + atomI.inducedDipoleP[1]);
@@ -175,8 +175,6 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float r      = sqrt(r2);
         float ck     = atomJ.q;
 
-        float conversionFactor   = (-cAmoebaSim.electric/cAmoebaSim.dielec);
-
         // set the permanent multipole and induced dipole values;
 
         float ci    = atomI.q;
@@ -209,7 +207,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         float qk8  = atomJ.labFrameQuadrupole[7];
         float qk9  = atomJ.labFrameQuadrupole[8];
 
-        // calculate the real space error function terms;
+        // calculate the real space error function terms
 
         float ralpha = cSim.alphaEwald*r;
         float bn0    = erfc(ralpha)/r;
@@ -236,7 +234,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         alsq2n      *= alsq2;
         float bn5    = (9.0f*bn4+alsq2n*exp2a)/r2;
 
-        // apply Thole polarization damping to scale factors;
+        // apply Thole polarization damping to scale factors
 
         float rr1    = 1.0f/r;
         float rr3    = rr1 / r2;
@@ -511,7 +509,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
         e                   = e - (1.0f-scalingFactors[MScaleIndex])*erl;
         ei                  = ei - erli;
 
-        forceTorqueEnergy[0].w = -conversionFactor*(e + ei);
+        forceTorqueEnergy[0].w = (e + ei);
 
         // increment the total intramolecular energy; assumes;
         // intramolecular distances are less than half of cell;
@@ -843,18 +841,17 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
         // increment gradient due to force and torque on first site;
 
-        forceTorqueEnergy[0].x       = conversionFactor*(ftm21 + ftm2i1);
-        forceTorqueEnergy[0].y       = conversionFactor*(ftm22 + ftm2i2);
-        forceTorqueEnergy[0].z       = conversionFactor*(ftm23 + ftm2i3);
+        forceTorqueEnergy[0].x       = (ftm21 + ftm2i1);
+        forceTorqueEnergy[0].y       = (ftm22 + ftm2i2);
+        forceTorqueEnergy[0].z       = (ftm23 + ftm2i3);
 
-        conversionFactor            *= -1.0;
-        forceTorqueEnergy[1].x       =  conversionFactor*(ttm21 + ttm2i1);
-        forceTorqueEnergy[1].y       =  conversionFactor*(ttm22 + ttm2i2);
-        forceTorqueEnergy[1].z       =  conversionFactor*(ttm23 + ttm2i3);
+        forceTorqueEnergy[1].x       =  (ttm21 + ttm2i1);
+        forceTorqueEnergy[1].y       =  (ttm22 + ttm2i2);
+        forceTorqueEnergy[1].z       =  (ttm23 + ttm2i3);
 
-        forceTorqueEnergy[2].x       =  conversionFactor*(ttm31 + ttm3i1);
-        forceTorqueEnergy[2].y       =  conversionFactor*(ttm32 + ttm3i2);
-        forceTorqueEnergy[2].z       =  conversionFactor*(ttm33 + ttm3i3);
+        forceTorqueEnergy[2].x       =  (ttm31 + ttm3i1);
+        forceTorqueEnergy[2].y       =  (ttm32 + ttm3i2);
+        forceTorqueEnergy[2].z       =  (ttm33 + ttm3i3);
 
 #ifdef AMOEBA_DEBUG
     int debugIndex               = 0;
@@ -1138,7 +1135,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u gpu->nonbond_threads_per_block=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u gpu->nonbond_threads_per_block=%u\n",
                         gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(PmeDirectElectrostaticParticle), (sizeof(PmeDirectElectrostaticParticle))*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sim.nonbond_threads_per_block );
@@ -1158,6 +1155,12 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 #endif
 
     } else {
+
+/*
+        if (gpu->sm_version >= SM_20)
+            cudaFuncSetCacheConfig(kCalculateAmoebaPmeDirectElectrostaticCutoffForces_kernel, cudaFuncCachePreferL1 );
+            //cudaFuncSetCacheConfig(kCalculateAmoebaPmeDirectElectrostaticCutoffForces_kernel, cudaFuncCachePreferShared );
+*/
 
         kCalculateAmoebaPmeDirectElectrostaticCutoffForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                     gpu->sim.pInteractingWorkUnit,

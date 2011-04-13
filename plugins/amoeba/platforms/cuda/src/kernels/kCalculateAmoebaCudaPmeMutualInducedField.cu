@@ -82,12 +82,12 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
 
         float ralpha      = cSim.alphaEwald*r;
 
-        float bn0             = erfc(ralpha)/r;
+        float bn0         = erfc(ralpha)/r;
         float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
         float exp2a       = exp(-(ralpha*ralpha));
         alsq2n           *= alsq2;
-        float bn1             = (bn0+alsq2n*exp2a)/r2;
+        float bn1         = (bn0+alsq2n*exp2a)/r2;
 
         alsq2n           *= alsq2;
         float bn2         = (3.0f*bn1+alsq2n*exp2a)/r2;
@@ -116,66 +116,41 @@ __device__ void calculatePmeDirectMutualInducedFieldPairIxn_kernel( MutualInduce
         float r3          = (r*r2);
         float r5          = (r3*r2);
         float rr3         = (1.0f-dsc3)/r3;
-        float rr5         = 3.0f * (1.0f-dsc5)/r5;
+        float rr5         = 3.0f*(1.0f-dsc5)/r5;
+
+        float preFactor1  = rr3 - bn1;
+        float preFactor2  = bn2 - rr5;
+
+        float dukr        = atomJ.inducedDipole[0]*xr      + atomJ.inducedDipole[1]*yr      + atomJ.inducedDipole[2]*zr;
+        float preFactor3  = preFactor2*dukr;
+
+        fields[0].x       = preFactor3*xr + preFactor1*atomJ.inducedDipole[0];
+        fields[1].x       = preFactor3*yr + preFactor1*atomJ.inducedDipole[1];
+        fields[2].x       = preFactor3*zr + preFactor1*atomJ.inducedDipole[2];
+
 
         float duir        = atomI.inducedDipole[0]*xr      + atomI.inducedDipole[1]*yr      + atomI.inducedDipole[2]*zr;
-        float dukr        = atomJ.inducedDipole[0]*xr      + atomJ.inducedDipole[1]*yr      + atomJ.inducedDipole[2]*zr;
+        preFactor3        = preFactor2*duir;
+
+        fields[0].y       = preFactor3*xr + preFactor1*atomI.inducedDipole[0];
+        fields[1].y       = preFactor3*yr + preFactor1*atomI.inducedDipole[1];
+        fields[2].y       = preFactor3*zr + preFactor1*atomI.inducedDipole[2];
+
+
+        float pukr        = atomJ.inducedDipolePolar[0]*xr + atomJ.inducedDipolePolar[1]*yr + atomJ.inducedDipolePolar[2]*zr;
+        preFactor3        = preFactor2*pukr;
+
+        fields[0].z       = preFactor3*xr + preFactor1*atomJ.inducedDipolePolar[0];
+        fields[1].z       = preFactor3*yr + preFactor1*atomJ.inducedDipolePolar[1];
+        fields[2].z       = preFactor3*zr + preFactor1*atomJ.inducedDipolePolar[2];
+
 
         float puir        = atomI.inducedDipolePolar[0]*xr + atomI.inducedDipolePolar[1]*yr + atomI.inducedDipolePolar[2]*zr;
-        float pukr        = atomJ.inducedDipolePolar[0]*xr + atomJ.inducedDipolePolar[1]*yr + atomJ.inducedDipolePolar[2]*zr;
+        preFactor3        = preFactor2*puir;
+        fields[0].w       = preFactor3*xr + preFactor1*atomI.inducedDipolePolar[0];
+        fields[1].w       = preFactor3*yr + preFactor1*atomI.inducedDipolePolar[1];
+        fields[2].w       = preFactor3*zr + preFactor1*atomI.inducedDipolePolar[2];
 
-        bn1              *= -1.0f;
-
-        float fimd0       = bn1*atomJ.inducedDipole[0]      + bn2*dukr*xr;
-        float fimd1       = bn1*atomJ.inducedDipole[1]      + bn2*dukr*yr;
-        float fimd2       = bn1*atomJ.inducedDipole[2]      + bn2*dukr*zr;
-
-        float fkmd0       = bn1*atomI.inducedDipole[0]      + bn2*duir*xr;
-        float fkmd1       = bn1*atomI.inducedDipole[1]      + bn2*duir*yr;
-        float fkmd2       = bn1*atomI.inducedDipole[2]      + bn2*duir*zr;
-
-        float fimp0       = bn1*atomJ.inducedDipolePolar[0] + bn2*pukr*xr;
-        float fimp1       = bn1*atomJ.inducedDipolePolar[1] + bn2*pukr*yr;
-        float fimp2       = bn1*atomJ.inducedDipolePolar[2] + bn2*pukr*zr;
-
-        float fkmp0       = bn1*atomI.inducedDipolePolar[0] + bn2*puir*xr;
-        float fkmp1       = bn1*atomI.inducedDipolePolar[1] + bn2*puir*yr;
-        float fkmp2       = bn1*atomI.inducedDipolePolar[2] + bn2*puir*zr;
-
-        rr3              *= -1.0f;
-        float fid0        = rr3*atomJ.inducedDipole[0]      + rr5*dukr*xr;
-        float fid1        = rr3*atomJ.inducedDipole[1]      + rr5*dukr*yr;
-        float fid2        = rr3*atomJ.inducedDipole[2]      + rr5*dukr*zr;
-
-        float fkd0        = rr3*atomI.inducedDipole[0]      + rr5*duir*xr;
-        float fkd1        = rr3*atomI.inducedDipole[1]      + rr5*duir*yr;
-        float fkd2        = rr3*atomI.inducedDipole[2]      + rr5*duir*zr;
-
-        float fip0        = rr3*atomJ.inducedDipolePolar[0] + rr5*pukr*xr;
-        float fip1        = rr3*atomJ.inducedDipolePolar[1] + rr5*pukr*yr;
-        float fip2        = rr3*atomJ.inducedDipolePolar[2] + rr5*pukr*zr;
-
-        float fkp0        = rr3*atomI.inducedDipolePolar[0] + rr5*puir*xr;
-        float fkp1        = rr3*atomI.inducedDipolePolar[1] + rr5*puir*yr;
-        float fkp2        = rr3*atomI.inducedDipolePolar[2] + rr5*puir*zr;
-
-        // increment the field at each site due to this interaction
-
-        fields[0].x       = fimd0 - fid0;
-        fields[0].y       = fkmd0 - fkd0;
-        fields[0].z       = fimp0 - fip0;
-        fields[0].w       = fkmp0 - fkp0;
-    
-        fields[1].x       = fimd1 - fid1;
-        fields[1].y       = fkmd1 - fkd1;
-        fields[1].z       = fimp1 - fip1;
-        fields[1].w       = fkmp1 - fkp1;
-    
-        fields[2].x       = fimd2 - fid2;
-        fields[2].y       = fkmd2 - fkd2;
-        fields[2].z       = fimp2 - fip2;
-        fields[2].w       = fkmp2 - fkp2;
- 
     } else {
 
         fields[0].x       = 0.0f;
@@ -240,7 +215,7 @@ static void kInitializeMutualInducedField_kernel(
                    float* polarizability )
 {
 
-    int pos = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {   
         fixedEField[pos]         *= polarizability[pos];
@@ -323,7 +298,7 @@ static void kSorUpdateMutualInducedField_kernel(
                    float* matrixProduct, float* matrixProductP )
 {
 
-    int pos = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {   
 
@@ -415,9 +390,8 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Cutoff -- use warp\n" );
-        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        methodName, gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply: numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
+                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(MutualInducedParticle), sizeof(MutualInducedParticle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
@@ -426,8 +400,6 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
 
     if (gpu->bOutputBufferPerWarp){
 
-                                                                 //gpu->sim.pInteractingWorkUnit,
-                                                                 //amoebaGpu->psWorkUnit->_pDevData,
         kCalculateAmoebaPmeMutualInducedFieldCutoffByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
@@ -591,7 +563,6 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
 
         cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpu, amoebaGpu->psWorkVector[0],  amoebaGpu->psWorkVector[1] );
         kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
-        LAUNCHERROR("cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply Loop\n");  
 
         // post matrix multiply
 
