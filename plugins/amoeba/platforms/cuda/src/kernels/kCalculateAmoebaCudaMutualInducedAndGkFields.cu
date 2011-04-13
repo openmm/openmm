@@ -253,7 +253,7 @@ void kInitializeMutualInducedAndGkField_kernel(
                    float* inducedDipolePolarS )
 {
 
-    int pos = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
 
@@ -354,7 +354,7 @@ void kSorUpdateMutualInducedAndGkField_kernel(
 {
 
     float polarSOR = 0.70f;
-    int pos        = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos        = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
 
@@ -391,7 +391,7 @@ void kSorUpdateMutualInducedAndGkFieldS_kernel(
 {
 
     float polarSOR = 0.70f;
-    int pos        = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos        = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
         float previousDipole      = inducedDipole[pos];

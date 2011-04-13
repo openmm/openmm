@@ -81,7 +81,7 @@ void amoebaMapTorqueToForce_kernel( float* torque )
   // ---------------------------------------------------------------------------------------
   
     int ii;
-    int particleIndex            = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int particleIndex            = blockIdx.x*blockDim.x + threadIdx.x;
     float4* atomCoord            = cSim.pPosq;
     int4* multiPoleAtoms         = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
   

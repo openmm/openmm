@@ -84,7 +84,7 @@ void kCudaComputeCheckChiral_kernel( void )
  
     // ---------------------------------------------------------------------------------------
  
-    int particleIndex            = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int particleIndex            = blockIdx.x*blockDim.x + threadIdx.x;
     int numberOfParticles        = cSim.atoms;
     while( particleIndex < numberOfParticles )
     { 
@@ -146,7 +146,7 @@ void kCudaComputeLabFrameMoments_kernel( void )
     float vectorY[3];
     float vectorZ[3];
  
-    int particleIndex            = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int particleIndex            = blockIdx.x*blockDim.x + threadIdx.x;
 
     float4* particleCoord        = cSim.pPosq;
     int4* multiPoleParticles     = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;

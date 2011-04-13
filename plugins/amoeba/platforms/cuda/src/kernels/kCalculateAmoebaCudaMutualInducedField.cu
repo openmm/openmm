@@ -118,7 +118,7 @@ void kInitializeMutualInducedField_kernel(
                    float* polarizability )
 {
 
-    int pos = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
 
@@ -194,7 +194,7 @@ void kSorUpdateMutualInducedField_kernel(
 {
 
     float polarSOR = 0.70f;
-    int pos        = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    int pos        = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
 
