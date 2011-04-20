@@ -276,7 +276,7 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
             maxThreads = 128; 
         else 
             maxThreads = 64; 
-        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(MutualInducedParticle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(MutualInducedParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }   
 
 #ifdef AMOEBA_DEBUG

@@ -531,7 +531,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
             maxThreads = 192; 
         else
             maxThreads = 128;
-        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(Vdw14_7Particle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(Vdw14_7Particle), gpu->sharedMemoryPerBlock ), maxThreads);
     }    
 
     if( 0 ){

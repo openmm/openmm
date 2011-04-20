@@ -978,7 +978,7 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
             maxThreads = 96;
         else
             maxThreads = 32;
-        threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }   
     
 #ifdef AMOEBA_DEBUG

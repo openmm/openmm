@@ -382,7 +382,7 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
             maxThreads = 192;
         else
             maxThreads = 64;
-       threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(WcaDispersionParticle)), maxThreads);
+       threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(WcaDispersionParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }
 
 #ifdef AMOEBA_DEBUG

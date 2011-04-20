@@ -3449,19 +3449,20 @@ tgx     = 0;
 
    Get threads/block
 
-   @param amoebaGpu        amoebaGpuContext
-   @param sharedMemoryPerThread shared memory/thread
+   @param amoebaGpu              amoebaGpuContext
+   @param sharedMemoryPerThread  shared memory/thread
+   @param sharedMemoryPerBlock   shared memory/block
 
    @return threadsPerBlock
 
    --------------------------------------------------------------------------------------- */
 
-unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread )
+unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread, unsigned int sharedMemoryPerBlock )
 {
     unsigned int grid               = amoebaGpu->gpuContext->grid;
-    unsigned int threadsPerBlock    = (amoebaGpu->gpuContext->sharedMemoryPerBlock + grid -1)/(grid*sharedMemoryPerThread);
+    unsigned int threadsPerBlock    = (sharedMemoryPerBlock + grid -1)/(grid*sharedMemoryPerThread);
     threadsPerBlock                 = threadsPerBlock < 1 ? 1 : threadsPerBlock;
-    threadsPerBlock                 *= grid;
+    threadsPerBlock                *= grid;
 
    return threadsPerBlock;
 }

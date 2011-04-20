@@ -4,7 +4,6 @@ struct MutualInducedParticle {
     float x;
     float y;
     float z;
-    float q;
 
     float inducedDipole[3];
     float inducedDipolePolar[3];
@@ -41,7 +40,6 @@ __device__ static void loadMutualInducedShared( MutualInducedParticle* sA, unsig
     sA->x                        = posq.x;
     sA->y                        = posq.y;
     sA->z                        = posq.z;
-    sA->q                        = posq.w;
 
     // dipole
 

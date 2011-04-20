@@ -100,99 +100,17 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
             for (unsigned int j = 0; j < GRID; j++)
             {
 
-                float4 ijField[3];
-
                 // load coords, charge, ...
 
-                calculatePmeDirectMutualInducedFieldPairIxn_kernel( localParticle, psA[j], uscale, ijField
-#ifdef AMOEBA_DEBUG
-, pullBack 
-#endif
-);
-
-                unsigned int mask       =  ( (atomI == (y + j)) || (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
-
-                // add to field at atomI the field due atomJ's dipole
-
-                fieldSum[0]            += mask ? ijField[0].x : 0.0f;
-                fieldSum[1]            += mask ? ijField[1].x : 0.0f;
-                fieldSum[2]            += mask ? ijField[2].x : 0.0f;
-
-                fieldPolarSum[0]       += mask ? ijField[0].z : 0.0f;
-                fieldPolarSum[1]       += mask ? ijField[1].z : 0.0f;
-                fieldPolarSum[2]       += mask ? ijField[2].z : 0.0f;
-
-#ifdef AMOEBA_DEBUG
-/*
-if( atomI == targetAtom || (y+j) == targetAtom ){
-            unsigned int index                 = atomI == targetAtom ? (y+j) : atomI;
-            unsigned int pullBackIndex         = 0;
-            unsigned int indexI                = 0;
-            unsigned int indexJ                = indexI ? 0 : 2;
-
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) (y + j);
-            debugArray[index].z                = cSim.nonbondedCutoffSqr;
-            debugArray[index].w                = 6.0f;
-
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex].x;
-            debugArray[index].y                = pullBack[pullBackIndex].y;
-            debugArray[index].z                = pullBack[pullBackIndex].z;
-            debugArray[index].w                = pullBack[pullBackIndex].w;
-
-            pullBackIndex++;
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex].x;
-            debugArray[index].y                = pullBack[pullBackIndex].y;
-            debugArray[index].z                = pullBack[pullBackIndex].z;
-            debugArray[index].w                = pullBack[pullBackIndex].w;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            float flag                         = 6.0f;
-            debugArray[index].x                = ijField[0].x;
-            debugArray[index].y                = ijField[1].x;
-            debugArray[index].z                = ijField[2].x;
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[0].x;
-            debugArray[index].y                = ijField[1].x;
-            debugArray[index].z                = ijField[2].x;
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[0].z;
-            debugArray[index].y                = ijField[1].z;
-            debugArray[index].z                = ijField[2].z;
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[0].z;
-            debugArray[index].y                = ijField[1].z;
-            debugArray[index].z                = ijField[2].z;
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = match ? 0.0f : ijField[0].x;
-            debugArray[index].y                = match ? 0.0f : ijField[1].x;
-            debugArray[index].z                = match ? 0.0f : ijField[2].x;
-            index                             += cSim.paddedNumberOfAtoms;
-            unsigned int mask                  = 1 << j;
-            unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
-            pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
-            debugArray[index].x                = (float) pScaleIndex;
-
-            debugArray[index].y                = scaleMask.x & mask ? 1.0f : -1.0f;
-            debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
-            debugArray[index].w                = + 10.0f;
-
-}
-*/
-#endif
+                float4 delta;
+                float prefactor2;
+                if(  ( (atomI == (y + j)) || (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ){
+                    delta.w = prefactor2 = 0.0f;
+                } else {
+                    setupMutualInducedFieldPairIxn_kernel( localParticle, psA[j], uscale, &delta, &prefactor2 );
+                }
+                calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipole,      delta, prefactor2, fieldSum );
+                calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipolePolar, delta, prefactor2, fieldPolarSum );
 
             }
 
@@ -226,6 +144,10 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
                 // No interactions in this block.
             } else {
 
+#ifndef INCLUDE_MI_FIELD_BUFFERS
+                flags = 0xFFFFFFFF;
+#endif
+
                // zero shared fields
     
                 zeroMutualInducedParticleSharedField(  &(sA[threadIdx.x]) );
@@ -235,53 +157,25 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
                     if ((flags&(1<<j)) != 0)
                     {
                         unsigned int jIdx = (flags == 0xFFFFFFFF) ? tj : j;
-                        float4 ijField[3];
-
-                        // load coords, charge, ...
-
-                        calculatePmeDirectMutualInducedFieldPairIxn_kernel( localParticle, psA[jIdx], uscale, ijField
-    #ifdef AMOEBA_DEBUG
-        , pullBack
-    #endif
-           );
-
-                        unsigned int mask   =  ( (atomI >= cSim.atoms) || ((y+jIdx) >= cSim.atoms) ) ? 0 : 1;
-
-                        // add to field at atomI the field due atomJ's dipole
-
-                        fieldSum[0]              += mask ? ijField[0].x : 0.0f;
-                        fieldSum[1]              += mask ? ijField[1].x : 0.0f;
-                        fieldSum[2]              += mask ? ijField[2].x : 0.0f;
-
-                        // add to polar field at atomI the field due atomJ's dipole
-
-                        fieldPolarSum[0]         += mask ? ijField[0].z : 0.0f;
-                        fieldPolarSum[1]         += mask ? ijField[1].z : 0.0f;
-                        fieldPolarSum[2]         += mask ? ijField[2].z : 0.0f;
-
-                        // add to field at atomJ the field due atomI's dipole
-
-                        if( flags == 0xFFFFFFFF ){
-
-                            psA[jIdx].field[0]             += mask ? ijField[0].y : 0.0f;
-                            psA[jIdx].field[1]             += mask ? ijField[1].y : 0.0f;
-                            psA[jIdx].field[2]             += mask ? ijField[2].y : 0.0f;
-
-                            // add to polar field at atomJ the field due atomI's dipole
-
-                            psA[jIdx].fieldPolar[0]        += mask ? ijField[0].w : 0.0f;
-                            psA[jIdx].fieldPolar[1]        += mask ? ijField[1].w : 0.0f;
-                            psA[jIdx].fieldPolar[2]        += mask ? ijField[2].w : 0.0f;
-
+                        float4 delta;
+                        float prefactor2;
+                        if( (atomI >= cSim.atoms) || ((y+jIdx) >= cSim.atoms) ){
+                            delta.w = prefactor2 = 0.0f;
                         } else {
-
-                            sA[threadIdx.x].tempBuffer[0]  = mask ? ijField[0].y : 0.0;
-                            sA[threadIdx.x].tempBuffer[1]  = mask ? ijField[1].y : 0.0;
-                            sA[threadIdx.x].tempBuffer[2]  = mask ? ijField[2].y : 0.0;
-
-                            sA[threadIdx.x].tempBufferP[0] = mask ? ijField[0].w : 0.0;
-                            sA[threadIdx.x].tempBufferP[1] = mask ? ijField[1].w : 0.0;
-                            sA[threadIdx.x].tempBufferP[2] = mask ? ijField[2].w : 0.0;
+                            setupMutualInducedFieldPairIxn_kernel( localParticle, psA[jIdx], uscale, &delta, &prefactor2 );
+                        }
+                        calculateMutualInducedFieldPairIxn_kernel(  psA[jIdx].inducedDipole,          delta, prefactor2, fieldSum );
+                        calculateMutualInducedFieldPairIxn_kernel(  psA[jIdx].inducedDipolePolar,     delta, prefactor2, fieldPolarSum );
+#ifndef INCLUDE_MI_FIELD_BUFFERS
+                        calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipole,      delta, prefactor2, psA[jIdx].field );
+                        calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipolePolar, delta, prefactor2, psA[jIdx].fieldPolar );
+#else
+                        if( flags == 0xFFFFFFFF ){
+                            calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipole,      delta, prefactor2, psA[jIdx].field );
+                            calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipolePolar, delta, prefactor2, psA[jIdx].fieldPolar );
+                        } else {
+                            calculateMutualInducedFieldPairIxnNoAdd_kernel(  localParticle.inducedDipole,      delta, prefactor2,  sA[threadIdx.x].tempBuffer );
+                            calculateMutualInducedFieldPairIxnNoAdd_kernel(  localParticle.inducedDipolePolar, delta, prefactor2,  sA[threadIdx.x].tempBufferP );
 
                             if( tgx % 2 == 0 ){
                                 sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
@@ -308,61 +202,8 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
                             }
 
                         }
-    
-/*
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || (y+jIdx) == targetAtom ){
-            unsigned int index                 = atomI == targetAtom ? (y+jIdx) : atomI;
-            unsigned int pullBackIndex         = 0;
-            unsigned int indexI                = 0;
-            unsigned int indexJ                = indexI ? 0 : 2;
-
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) (y + jIdx);
-            debugArray[index].z                = cSim.nonbondedCutoffSqr;
-            debugArray[index].w                = 7.0f;
-
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex].x;
-            debugArray[index].y                = pullBack[pullBackIndex].y;
-            debugArray[index].z                = pullBack[pullBackIndex].z;
-            debugArray[index].w                = pullBack[pullBackIndex].w;
-
-            pullBackIndex++;
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex].x;
-            debugArray[index].y                = pullBack[pullBackIndex].y;
-            debugArray[index].z                = pullBack[pullBackIndex].z;
-            debugArray[index].w                = pullBack[pullBackIndex].w;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            float flag                         = 7.0f;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ][0];
-            debugArray[index].y                = ijField[indexJ][1];
-            debugArray[index].z                = ijField[indexJ][2];
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI+1][0];
-            debugArray[index].y                = ijField[indexI+1][1];
-            debugArray[index].z                = ijField[indexI+1][2];
-            debugArray[index].w                = flag;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ+1][0];
-            debugArray[index].y                = ijField[indexJ+1][1];
-            debugArray[index].z                = ijField[indexJ+1][2];
-            debugArray[index].w                = flag;
-}
 #endif
-*/
+    
                     }
     
                     tj                  = (tj + 1) & (GRID - 1);

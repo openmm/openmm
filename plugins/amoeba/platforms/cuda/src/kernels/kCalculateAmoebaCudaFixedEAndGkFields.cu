@@ -362,7 +362,7 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
             maxThreads = 128;
         else
             maxThreads = 64;
-        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }
 
     kClearFields_3( amoebaGpu, 3 );

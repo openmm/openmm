@@ -37,10 +37,9 @@ void GetCalculateAmoebaCudaPmeMutualInducedFieldSim(amoebaGpuContext amoebaGpu)
 #undef AMOEBA_DEBUG
 
 #undef INCLUDE_MI_FIELD_BUFFERS
-#define INCLUDE_MI_FIELD_BUFFERS 
+//#define INCLUDE_MI_FIELD_BUFFERS 
 #include "kCalculateAmoebaCudaMutualInducedParticle.h"
-#undef INCLUDE_MI_FIELD_BUFFERS
-
+#ifdef INCLUDE_MI_FIELD_BUFFERS
 __device__ void sumTempBuffer( MutualInducedParticle& atomI, MutualInducedParticle& atomJ ){
 
     atomI.tempBuffer[0]  += atomJ.tempBuffer[0];
@@ -50,6 +49,93 @@ __device__ void sumTempBuffer( MutualInducedParticle& atomI, MutualInducedPartic
     atomI.tempBufferP[0] += atomJ.tempBufferP[0];
     atomI.tempBufferP[1] += atomJ.tempBufferP[1];
     atomI.tempBufferP[2] += atomJ.tempBufferP[2];
+}
+#endif
+
+// file includes FixedFieldParticle struct definition/load/unload struct and body kernel for fixed E-field
+
+__device__ void setupMutualInducedFieldPairIxn_kernel( const MutualInducedParticle& atomI, const MutualInducedParticle& atomJ,
+                                                       const float uscale, float4* delta, float* preFactor2 ) {
+
+    // compute thedelta->xeal space portion of the Ewald summation
+  
+    delta->x                = atomJ.x - atomI.x;
+    delta->y                = atomJ.y - atomI.y;
+    delta->z                = atomJ.z - atomI.z;
+
+    // pdelta->xiodic boundary conditions
+
+    delta->x               -= floor(delta->x*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+    delta->y               -= floor(delta->y*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+    delta->z               -= floor(delta->z*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+
+    float r2                = (delta->x*delta->x) + (delta->y*delta->y) + (delta->z*delta->z); 
+    if( r2 <= cSim.nonbondedCutoffSqr ){
+        float r           = sqrtf(r2);
+
+        // calculate the error function damping terms
+
+        float ralpha      = cSim.alphaEwald*r;
+
+        float bn0         = erfc(ralpha)/r;
+        float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
+        float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
+        float exp2a       = exp(-(ralpha*ralpha));
+        alsq2n           *= alsq2;
+        float bn1         = (bn0+alsq2n*exp2a)/r2;
+
+        alsq2n           *= alsq2;
+        float bn2         = (3.0f*bn1+alsq2n*exp2a)/r2;
+
+        // compute the error function scaled and unscaled terms
+
+        float scale3      = 1.0f;
+        float scale5      = 1.0f;
+        float damp        = atomI.damp*atomJ.damp;
+        if( damp != 0.0f ){
+
+            float ratio  = (r/damp);
+                  ratio  = ratio*ratio*ratio;
+            float pgamma = atomI.thole < atomJ.thole ? atomI.thole : atomJ.thole;
+                  damp   = -pgamma*ratio;
+
+            if( damp > -50.0f) {
+                float expdamp = exp(damp);
+                scale3        = 1.0f - expdamp;
+                scale5        = 1.0f - expdamp*(1.0f-damp);
+            }
+        }
+        float dsc3        = uscale*scale3;
+        float dsc5        = uscale*scale5;
+
+        float r3          = (r*r2);
+        float r5          = (r3*r2);
+        float rr3         = (1.0f-dsc3)/r3;
+        float rr5         = 3.0f*(1.0f-dsc5)/r5;
+
+        delta->w          = rr3 - bn1;
+        *preFactor2       = bn2 - rr5;
+    } else {
+        delta->w = *preFactor2 = 0.0f;
+    }
+}
+
+__device__ void calculateMutualInducedFieldPairIxn_kernel( const float inducedDipole[3], const float4 delta, const float preFactor2, float fieldSum[3] ) {
+
+    float preFactor3  = preFactor2*(inducedDipole[0]*delta.x   + inducedDipole[1]*delta.y  + inducedDipole[2]*delta.z);
+
+    fieldSum[0]      += preFactor3*delta.x + delta.w*inducedDipole[0];
+    fieldSum[1]      += preFactor3*delta.y + delta.w*inducedDipole[1];
+    fieldSum[2]      += preFactor3*delta.z + delta.w*inducedDipole[2];
+}
+
+__device__ void calculateMutualInducedFieldPairIxnNoAdd_kernel( const float inducedDipole[3], const float4 delta, const float preFactor2, float fieldSum[3] ) {
+
+    float preFactor3  = preFactor2*(inducedDipole[0]*delta.x   + inducedDipole[1]*delta.y  + inducedDipole[2]*delta.z);
+
+    fieldSum[0]       = preFactor3*delta.x + delta.w*inducedDipole[0];
+    fieldSum[1]       = preFactor3*delta.y + delta.w*inducedDipole[1];
+    fieldSum[2]       = preFactor3*delta.z + delta.w*inducedDipole[2];
 }
 
 // file includes FixedFieldParticle struct definition/load/unload struct and body kernel for fixed E-field
@@ -385,7 +471,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
             maxThreads = 128; 
         else
             maxThreads = 64; 
-        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(MutualInducedParticle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(MutualInducedParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }    
 
 #ifdef AMOEBA_DEBUG
@@ -573,17 +659,17 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
            amoebaGpu->psWorkVector[0]->_pDevData, amoebaGpu->psWorkVector[1]->_pDevData );
         LAUNCHERROR("kSorUpdatePmeMutualInducedField");  
 
-            if( 0 ){
-                gpuContext gpu = amoebaGpu->gpuContext;
-                std::vector<int> fileId;
-                fileId.push_back( iteration );
-                VectorOfDoubleVectors outputVector;
-//                cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field, outputVector, gpu->psAtomIndex->_pSysData );
-//                cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
-                cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-                cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-                cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectMI", fileId, outputVector );
-            }
+        if( 0 ){
+            gpuContext gpu = amoebaGpu->gpuContext;
+            std::vector<int> fileId;
+            fileId.push_back( iteration );
+            VectorOfDoubleVectors outputVector;
+//          cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field, outputVector, gpu->psAtomIndex->_pSysData );
+//          cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectMI", fileId, outputVector );
+        }
 
         // get total epsilon -- performing sums on gpu
 

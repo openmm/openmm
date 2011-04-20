@@ -160,7 +160,7 @@ extern void kClearFloat( amoebaGpuContext amoebaGpu, unsigned int entries, CUDAS
 extern void kClearFloat4( amoebaGpuContext amoebaGpu, unsigned int entries, CUDAStream<float4>* fieldToClear );
 extern void kClearFields_1( amoebaGpuContext amoebaGpu );
 extern void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear );
-extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread );
+extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread, unsigned int sharedMemoryPerBlock );
 
 //extern int isNanOrInfinity( double number );
 extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration);

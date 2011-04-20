@@ -437,7 +437,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
             maxThreads = 192;
         else
             maxThreads = 64;
-        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }    
 
     if (gpu->bOutputBufferPerWarp){
@@ -469,7 +469,7 @@ static void cudaComputeAmoebaPmeDirectFixedEField( amoebaGpuContext amoebaGpu )
     if( amoebaGpu->log ){
         gpu->psInteractionCount->Download();
         (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaPmeDirectFixedEField:  threadsPerBlock=%u getThreadsPerBlock=%d sizeof=%u shrd=%u\n", 
-                        threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)+sizeof(float3)),
+                        threadsPerBlock, getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)+sizeof(float3), gpu->sharedMemoryPerBlock),
                         (sizeof(FixedFieldParticle)+sizeof(float3)), (sizeof(FixedFieldParticle)+sizeof(float3))*threadsPerBlock );
         (void) fprintf( amoebaGpu->log, "AmoebaCutoffForces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u warp=%d\n",
                         gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,

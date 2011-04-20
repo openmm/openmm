@@ -239,6 +239,9 @@ if( atomI == targetAtom || atomJ == targetAtom ){
                 // No interactions in this block.
             } else {
 
+#ifdef CALCULATE_FULL_TILE
+                flags = 0xFFFFFFFF;
+#endif
                 sA[threadIdx.x].force[0]     = 0.0f;
                 sA[threadIdx.x].force[1]     = 0.0f;
                 sA[threadIdx.x].force[2]     = 0.0f;
@@ -311,7 +314,8 @@ if( atomI == targetAtom || atomJ == targetAtom ){
                                 psA[jIdx].torque[0]        += forceTorqueEnergy[2].x;
                                 psA[jIdx].torque[1]        += forceTorqueEnergy[2].y;
                                 psA[jIdx].torque[2]        += forceTorqueEnergy[2].z;
-    
+
+#ifndef CALCULATE_FULL_TILE
                             } else {
     
                                 sA[threadIdx.x].tempForce[0]  = forceTorqueEnergy[0].x;
@@ -345,6 +349,7 @@ if( atomI == targetAtom || atomJ == targetAtom ){
                                     psA[jIdx].torque[1] += sA[threadIdx.x].tempTorque[1] + sA[threadIdx.x+16].tempTorque[1];
                                     psA[jIdx].torque[2] += sA[threadIdx.x].tempTorque[2] + sA[threadIdx.x+16].tempTorque[2];
                                 }
+#endif
                             }
                         } // end of atoms out-of-bounds
                     } // end of flags&(1<<j block
