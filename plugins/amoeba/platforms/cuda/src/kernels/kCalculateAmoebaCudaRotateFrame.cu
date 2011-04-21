@@ -388,7 +388,7 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
     gpuContext gpu    = amoebaGpu->gpuContext;
 
     int numBlocks     = gpu->sim.blocks;
-    int numThreads    = gpu->sim.update_threads_per_block;
+    int numThreads    = gpu->sim.threads_per_block;
 
 //#define AMOEBA_DEBUG  
 #ifdef AMOEBA_DEBUG

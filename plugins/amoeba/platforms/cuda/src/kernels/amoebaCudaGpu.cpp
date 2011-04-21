@@ -209,6 +209,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     device                             %u\n",      gpu->device );
     (void) fprintf( log, "     sharedMemoryPerBlock               %u\n",      gpu->sharedMemoryPerBlock );
     (void) fprintf( log, "     bOutputBufferPerWarp               %d\n",      gpu->bOutputBufferPerWarp );
+    (void) fprintf( log, "     blocks                             %u\n",      gpu->sim.blocks );
+    (void) fprintf( log, "     threads_per_block                  %u\n",      gpu->sim.threads_per_block);
+    (void) fprintf( log, "     update_threads_per_block           %u\n",      gpu->sim.update_threads_per_block);
     (void) fprintf( log, "     nonbondBlocks                      %u\n",      gpu->sim.nonbond_blocks );
     (void) fprintf( log, "     nonbondThreadsPerBlock             %u\n",      gpu->sim.nonbond_threads_per_block);
     (void) fprintf( log, "     nonbondOutputBuffers               %u\n",      gpu->sim.nonbondOutputBuffers );

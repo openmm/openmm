@@ -1965,7 +1965,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
     kClearFields_3( amoebaGpu, 1 );
 
-//#ifdef AMOEBA_DEBUG
+#ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces: numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u maxL1=%d\n",
                         gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
@@ -1973,7 +1973,7 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits, maxL1 );
         (void) fflush( amoebaGpu->log );
     }   
-//#endif
+#endif
 
     if (gpu->bOutputBufferPerWarp){
 

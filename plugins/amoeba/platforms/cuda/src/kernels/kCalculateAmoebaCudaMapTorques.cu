@@ -359,7 +359,7 @@ void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext amoebaGpu, CUDASt
 {
   
     gpuContext gpu    = amoebaGpu->gpuContext;
-    amoebaMapTorqueToForce_kernel<<< gpu->sim.blocks, gpu->sim.update_threads_per_block>>> ( psTorque->_pDevData );
+    amoebaMapTorqueToForce_kernel<<< gpu->sim.blocks, gpu->sim.threads_per_block>>> ( psTorque->_pDevData );
     LAUNCHERROR("amoebaMapTorqueToForce");
 
 }
