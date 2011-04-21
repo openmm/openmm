@@ -25,7 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLKernelFactory.h"
-#include "OpenCLKernels.h"
+#include "OpenCLParallelKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -33,7 +33,15 @@ using namespace OpenMM;
 
 KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData());
-    OpenCLContext& cl = *data.context;
+    if (data.contexts.size() > 0) {
+        // We are running in parallel on multiple devices, so we may want to create a parallel kernel.
+        
+        if (name == CalcForcesAndEnergyKernel::Name())
+            return new OpenCLParallelCalcForcesAndEnergyKernel(name, platform, data);
+        if (name == CalcHarmonicBondForceKernel::Name())
+            return new OpenCLParallelCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
+    }
+    OpenCLContext& cl = *data.contexts[0];
     if (name == CalcForcesAndEnergyKernel::Name())
         return new OpenCLCalcForcesAndEnergyKernel(name, platform, cl);
     if (name == UpdateStateDataKernel::Name())

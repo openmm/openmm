@@ -52,9 +52,11 @@ using namespace std;
 const int OpenCLContext::ThreadBlockSize = 64;
 const int OpenCLContext::TileSize = 32;
 
-OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
+OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
         forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL) {
     try {
+        contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
         cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[0](), 0};

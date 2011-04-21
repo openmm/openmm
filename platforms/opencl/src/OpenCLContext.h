@@ -36,6 +36,7 @@
 #endif
 #include <cl.hpp>
 #include "openmm/internal/windowsExport.h"
+#include "OpenCLPlatform.h"
 
 namespace OpenMM {
 
@@ -125,14 +126,17 @@ struct mm_int16 {
 };
 
 /**
- * This class contains the information associated with a Context by the OpenCL Platform.
+ * This class contains the information associated with a Context by the OpenCL Platform.  Each OpenCLContext is
+ * specific to a particular device, and manages data structures and kernels for that device.  When running a simulation
+ * in parallel on multiple devices, there is a separate OpenCLContext for each one.  The list of all contexts is
+ * stored in the OpenCLPlatform::PlatformData.
  */
 
 class OPENMM_EXPORT OpenCLContext {
 public:
     static const int ThreadBlockSize;
     static const int TileSize;
-    OpenCLContext(int numParticles, int deviceIndex);
+    OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -160,6 +164,18 @@ public:
      */
     int getDeviceIndex() {
         return deviceIndex;
+    }
+    /**
+     * Get the PlatformData object this context is part of.
+     */
+    OpenCLPlatform::PlatformData& getPlatformData() {
+        return platformData;
+    }
+    /**
+     * Get the index of this context in the list stored in the PlatformData.
+     */
+    int getContextIndex() const {
+        return contextIndex;
     }
     /**
      * Get the cl::CommandQueue associated with this object.
@@ -402,7 +418,9 @@ private:
     void findMoleculeGroups(const System& system);
     static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
     double time;
+    OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;
+    int contextIndex;
     int stepCount;
     int computeForceCount;
     int numAtoms;

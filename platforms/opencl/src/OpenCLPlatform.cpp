@@ -106,12 +106,18 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(int numParticles, int deviceIndex) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
-    context = new OpenCLContext(numParticles, deviceIndex);
+    contexts.push_back(new OpenCLContext(numParticles, deviceIndex, *this));
     stringstream device;
-    device << context->getDeviceIndex();
+    device << contexts[0]->getDeviceIndex();
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
 }
 
 OpenCLPlatform::PlatformData::~PlatformData() {
-    delete context;
+    for (int i = 0; i < (int) contexts.size(); i++)
+        delete contexts[i];
+}
+
+void OpenCLPlatform::PlatformData::initializeContexts(const System& system) {
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->initialize(system);
 }

@@ -103,7 +103,9 @@ double OpenCLUpdateStateDataKernel::getTime(const ContextImpl& context) const {
 }
 
 void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
-    cl.setTime(time);
+    vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->setTime(time);
 }
 
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
@@ -186,7 +188,9 @@ void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Ve
 }
 
 void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
-    cl.setPeriodicBoxSize(a[0], b[1], c[2]);
+    vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->setPeriodicBoxSize(a[0], b[1], c[2]);
 }
 
 void OpenCLApplyConstraintsKernel::initialize(const System& system) {
@@ -230,7 +234,10 @@ OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
 }
 
 void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
-    numBonds = force.getNumBonds();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    numBonds = endIndex-startIndex;
     if (numBonds == 0)
         return;
     params = new OpenCLArray<mm_float2>(cl, numBonds, "bondParams");
@@ -241,7 +248,7 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     for (int i = 0; i < numBonds; i++) {
         int particle1, particle2;
         double length, k;
-        force.getBondParameters(i, particle1, particle2, length, k);
+        force.getBondParameters(startIndex+i, particle1, particle2, length, k);
         paramVector[i] = mm_float2((cl_float) length, (cl_float) k);
         indicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
     }
@@ -3235,7 +3242,7 @@ OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 }
 
 void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    cl.initialize(system);
+    cl.getPlatformData().initializeContexts(system);
     cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
@@ -3291,7 +3298,7 @@ OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
 }
 
 void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    cl.initialize(system);
+    cl.getPlatformData().initializeContexts(system);
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
@@ -3365,7 +3372,7 @@ OpenCLIntegrateBrownianStepKernel::~OpenCLIntegrateBrownianStepKernel() {
 }
 
 void OpenCLIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-    cl.initialize(system);
+    cl.getPlatformData().initializeContexts(system);
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
@@ -3424,7 +3431,7 @@ OpenCLIntegrateVariableVerletStepKernel::~OpenCLIntegrateVariableVerletStepKerne
 }
 
 void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
-    cl.initialize(system);
+    cl.getPlatformData().initializeContexts(system);
     cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
@@ -3491,7 +3498,7 @@ OpenCLIntegrateVariableLangevinStepKernel::~OpenCLIntegrateVariableLangevinStepK
 }
 
 void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
-    cl.initialize(system);
+    cl.getPlatformData().initializeContexts(system);
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());

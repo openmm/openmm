@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Platform.h"
+#include "openmm/System.h"
 
 namespace OpenMM {
     
@@ -66,7 +67,8 @@ class OpenCLPlatform::PlatformData {
 public:
     PlatformData(int numParticles, int deviceIndex);
     ~PlatformData();
-    OpenCLContext* context;
+    void initializeContexts(const System& system);
+    std::vector<OpenCLContext*> contexts;
     bool removeCM;
     int cmMotionFrequency;
     int stepCount, computeForceCount;

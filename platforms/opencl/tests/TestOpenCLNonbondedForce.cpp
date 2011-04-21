@@ -468,7 +468,7 @@ void testBlockInteractions(bool periodic) {
     context.setPositions(positions);
     ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(contextImpl->getPlatformData());
-    OpenCLContext& clcontext = *data.context;
+    OpenCLContext& clcontext = *data.contexts[0];
     OpenCLNonbondedUtilities& nb = clcontext.getNonbondedUtilities();
     State state = context.getState(State::Positions | State::Velocities | State::Forces);
     nb.updateNeighborListSize();

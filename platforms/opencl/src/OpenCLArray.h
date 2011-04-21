@@ -127,8 +127,14 @@ public:
      * Copy the values in a vector to the Buffer.
      */
     void upload(std::vector<T>& data) {
+        upload(&data[0]);
+    }
+    /**
+     * Copy the values in an array to the Buffer.
+     */
+    void upload(T* data) {
         try {
-            context.getQueue().enqueueWriteBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
+            context.getQueue().enqueueWriteBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), data);
         }
         catch (cl::Error err) {
             std::stringstream str;
