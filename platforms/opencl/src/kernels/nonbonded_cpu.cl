@@ -21,11 +21,11 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         PARAMETER_ARGUMENTS) {
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    unsigned int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int pos = (numTiles > maxTiles ? START_TILE_INDEX+get_group_id(0)*(END_TILE_INDEX-START_TILE_INDEX)/get_num_groups(0) : get_group_id(0)*numTiles/get_num_groups(0));
+    unsigned int end = (numTiles > maxTiles ? START_TILE_INDEX+(get_group_id(0)+1)*(END_TILE_INDEX-START_TILE_INDEX)/get_num_groups(0) : (get_group_id(0)+1)*numTiles/get_num_groups(0));
 #else
-    unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
-    unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
+    unsigned int pos = START_TILE_INDEX+get_group_id(0)*numTiles/get_num_groups(0);
+    unsigned int end = START_TILE_INDEX+(get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;

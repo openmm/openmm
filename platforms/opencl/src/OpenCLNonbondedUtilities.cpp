@@ -126,7 +126,11 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     // Create the list of tiles.
 
     int numAtomBlocks = context.getNumAtomBlocks();
-    int numTiles = numAtomBlocks*(numAtomBlocks+1)/2;
+    int totalTiles = numAtomBlocks*(numAtomBlocks+1)/2;
+    int numContexts = context.getPlatformData().contexts.size();
+    startTileIndex = context.getContextIndex()*totalTiles/numContexts;
+    int endTileIndex = (context.getContextIndex()+1)*totalTiles/numContexts;
+    numTiles = endTileIndex-startTileIndex;
 
     // Build a list of indices for the tiles with exclusions.
 
@@ -210,10 +214,10 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
         mm_float4 boxSize = context.getPeriodicBoxSize();
         int maxInteractingTiles = (int) (numTiles*(cutoff/boxSize.x+cutoff/boxSize.y+cutoff/boxSize.z));
-        if (maxInteractingTiles < 1)
-            maxInteractingTiles = 1;
         if (maxInteractingTiles > numTiles)
             maxInteractingTiles = numTiles;
+        if (maxInteractingTiles < 1)
+            maxInteractingTiles = 1;
         interactingTiles = new OpenCLArray<mm_ushort2>(context, maxInteractingTiles, "interactingTiles");
         interactionFlags = new OpenCLArray<cl_uint>(context, context.getSIMDWidth() == 32 ? maxInteractingTiles : (deviceIsCpu ? 2*maxInteractingTiles : 1), "interactionFlags");
         interactionCount = new OpenCLArray<cl_uint>(context, 1, "interactionCount", true);
@@ -229,6 +233,8 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     if (useCutoff) {
         map<string, string> defines;
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+        defines["START_TILE_INDEX"] = OpenCLExpressionUtilities::intToString(startTileIndex);
+        defines["END_TILE_INDEX"] = OpenCLExpressionUtilities::intToString(startTileIndex+numTiles);
         if (forceBufferPerAtomBlock)
             defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
         if (usePeriodic)
@@ -441,6 +447,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+    defines["START_TILE_INDEX"] = OpenCLExpressionUtilities::intToString(startTileIndex);
+    defines["END_TILE_INDEX"] = OpenCLExpressionUtilities::intToString(startTileIndex+numTiles);
     string file;
     if (deviceIsCpu)
         file = OpenCLKernelSources::nonbonded_cpu;
@@ -470,7 +478,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         kernel.setArg<cl::Buffer>(index++, interactionFlags->getDeviceBuffer());
     }
     else {
-        kernel.setArg<cl_uint>(index++, context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2);
+        kernel.setArg<cl_uint>(index++, numTiles);
     }
     for (int i = 0; i < (int) params.size(); i++) {
         kernel.setArg<cl::Memory>(index++, params[i].getMemory());

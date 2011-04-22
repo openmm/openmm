@@ -179,6 +179,18 @@ public:
         return *exclusionRowIndices;
     }
     /**
+     * Get the index of the first tile this context is responsible for processing.
+     */
+    int getStartTileIndex() const {
+        return startTileIndex;
+    }
+    /**
+     * Get the total number of tiles this context is responsible for processing.
+     */
+    int getNumTiles() const {
+        return numTiles;
+    }
+    /**
      * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
      * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
      * the same neighbor list.
@@ -212,7 +224,7 @@ private:
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
     bool useCutoff, usePeriodic, forceBufferPerAtomBlock, deviceIsCpu;
-    int numForceBuffers;
+    int numForceBuffers, startTileIndex, numTiles;
 };
 
 /**

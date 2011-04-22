@@ -318,7 +318,10 @@ OpenCLCalcCustomBondForceKernel::~OpenCLCalcCustomBondForceKernel() {
 }
 
 void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
-    numBonds = force.getNumBonds();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    numBonds = endIndex-startIndex;
     if (numBonds == 0)
         return;
     params = new OpenCLParameterSet(cl, force.getNumPerBondParameters(), numBonds, "customBondParams");
@@ -334,7 +337,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     for (int i = 0; i < numBonds; i++) {
         int particle1, particle2;
         vector<double> parameters;
-        force.getBondParameters(i, particle1, particle2, parameters);
+        force.getBondParameters(startIndex+i, particle1, particle2, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
@@ -460,7 +463,10 @@ OpenCLCalcHarmonicAngleForceKernel::~OpenCLCalcHarmonicAngleForceKernel() {
 }
 
 void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
-    numAngles = force.getNumAngles();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    numAngles = endIndex-startIndex;
     if (numAngles == 0)
         return;
     params = new OpenCLArray<mm_float2>(cl, numAngles, "angleParams");
@@ -471,7 +477,7 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     for (int i = 0; i < numAngles; i++) {
         int particle1, particle2, particle3;
         double angle, k;
-        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        force.getAngleParameters(startIndex+i, particle1, particle2, particle3, angle, k);
         paramVector[i] = mm_float2((cl_float) angle, (cl_float) k);
         indicesVector[i] = mm_int8(particle1, particle2, particle3,
                 forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0);
@@ -544,7 +550,10 @@ OpenCLCalcCustomAngleForceKernel::~OpenCLCalcCustomAngleForceKernel() {
 }
 
 void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
-    numAngles = force.getNumAngles();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    numAngles = endIndex-startIndex;
     if (numAngles == 0)
         return;
     params = new OpenCLParameterSet(cl, force.getNumPerAngleParameters(), numAngles, "customAngleParams");
@@ -560,7 +569,7 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
     for (int i = 0; i < numAngles; i++) {
         int particle1, particle2, particle3;
         vector<double> parameters;
-        force.getAngleParameters(i, particle1, particle2, particle3, parameters);
+        force.getAngleParameters(startIndex+i, particle1, particle2, particle3, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
@@ -688,7 +697,10 @@ OpenCLCalcPeriodicTorsionForceKernel::~OpenCLCalcPeriodicTorsionForceKernel() {
 }
 
 void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
-    numTorsions = force.getNumTorsions();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
     if (numTorsions == 0)
         return;
     params = new OpenCLArray<mm_float4>(cl, numTorsions, "periodicTorsionParams");
@@ -699,7 +711,7 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     for (int i = 0; i < numTorsions; i++) {
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
-        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        force.getTorsionParameters(startIndex+i, particle1, particle2, particle3, particle4, periodicity, phase, k);
         paramVector[i] = mm_float4((cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f);
         indicesVector[i] = mm_int8(particle1, particle2, particle3, particle4,
                 forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++);
@@ -768,7 +780,10 @@ OpenCLCalcRBTorsionForceKernel::~OpenCLCalcRBTorsionForceKernel() {
 }
 
 void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
-    numTorsions = force.getNumTorsions();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
     if (numTorsions == 0)
         return;
     params = new OpenCLArray<mm_float8>(cl, numTorsions, "rbTorsionParams");
@@ -779,7 +794,7 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     for (int i = 0; i < numTorsions; i++) {
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
-        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        force.getTorsionParameters(startIndex+i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
         paramVector[i] = mm_float8((cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f);
         indicesVector[i] = mm_int8(particle1, particle2, particle3, particle4,
                 forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++);
@@ -854,7 +869,10 @@ OpenCLCalcCMAPTorsionForceKernel::~OpenCLCalcCMAPTorsionForceKernel() {
 }
 
 void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
-    numTorsions = force.getNumTorsions();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
     if (numTorsions == 0)
         return;
     int numMaps = force.getNumMaps();
@@ -881,7 +899,7 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
     vector<mm_int16> torsionIndicesVec(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
         mm_int16& ind = torsionIndicesVec[i];
-        force.getTorsionParameters(i, torsionMapsVec[i], ind.s0, ind.s1, ind.s2, ind.s3, ind.s4, ind.s5, ind.s6, ind.s7);
+        force.getTorsionParameters(startIndex+i, torsionMapsVec[i], ind.s0, ind.s1, ind.s2, ind.s3, ind.s4, ind.s5, ind.s6, ind.s7);
         ind.s8 = forceBufferCounter[ind.s0]++;
         ind.s9 = forceBufferCounter[ind.s1]++;
         ind.s10 = forceBufferCounter[ind.s2]++;
@@ -967,7 +985,10 @@ OpenCLCalcCustomTorsionForceKernel::~OpenCLCalcCustomTorsionForceKernel() {
 }
 
 void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
-    numTorsions = force.getNumTorsions();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
     if (numTorsions == 0)
         return;
     params = new OpenCLParameterSet(cl, force.getNumPerTorsionParameters(), numTorsions, "customTorsionParams");
@@ -983,7 +1004,7 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
     for (int i = 0; i < numTorsions; i++) {
         int particle1, particle2, particle3, particle4;
         vector<double> parameters;
-        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, parameters);
+        force.getTorsionParameters(startIndex+i, particle1, particle2, particle3, particle4, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
@@ -1197,7 +1218,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["REACTION_FIELD_K"] = doubleToString(reactionFieldK);
         defines["REACTION_FIELD_C"] = doubleToString(reactionFieldC);
     }
-    if (force.getUseDispersionCorrection())
+    if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0)
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
@@ -1210,7 +1231,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI);
+        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI) : 0.0);
 
         // Create the reciprocal space kernels.
 
@@ -1236,7 +1257,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI);
+        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI) : 0.0);
         pmeDefines["PME_ORDER"] = intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = intToString(numParticles);
         pmeDefines["RECIP_EXP_FACTOR"] = doubleToString(M_PI*M_PI/(alpha*alpha));
@@ -1343,7 +1364,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
     // Initialize the exceptions.
 
-    int numExceptions = exceptions.size();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*exceptions.size()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
+    int numExceptions = endIndex-startIndex;
     int maxBuffers = cl.getNonbondedUtilities().getNumForceBuffers();
     if (numExceptions > 0) {
         exceptionParams = new OpenCLArray<mm_float4>(cl, numExceptions, "exceptionParams");
@@ -1354,7 +1378,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         for (int i = 0; i < numExceptions; i++) {
             int particle1, particle2;
             double chargeProd, sigma, epsilon;
-            force.getExceptionParameters(exceptions[i], particle1, particle2, chargeProd, sigma, epsilon);
+            force.getExceptionParameters(exceptions[startIndex+i], particle1, particle2, chargeProd, sigma, epsilon);
             exceptionParamsVector[i] = mm_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
             exceptionIndicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
         }
@@ -1425,7 +1449,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     }
     if (exceptionIndices != NULL)
         cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
-    if (cosSinSums != NULL) {
+    if (cosSinSums != NULL && cl.getContextIndex() == 0) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         mm_float4 recipBoxSize = mm_float4((float) (2*M_PI/boxSize.x), (float) (2*M_PI/boxSize.y), (float) (2*M_PI/boxSize.z), 0);
         float recipCoefficient = ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z);
@@ -1436,7 +1460,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         ewaldForcesKernel.setArg<cl_float>(4, recipCoefficient);
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
-    if (pmeGrid != NULL) {
+    if (pmeGrid != NULL && cl.getContextIndex() == 0) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         mm_float4 invBoxSize = cl.getInvPeriodicBoxSize();
         pmeUpdateBsplinesKernel.setArg<mm_float4>(5, boxSize);

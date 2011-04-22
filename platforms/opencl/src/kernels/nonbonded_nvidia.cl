@@ -24,11 +24,11 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = warp*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
-    unsigned int end = (warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int pos = (numTiles > maxTiles ? START_TILE_INDEX+warp*(END_TILE_INDEX-START_TILE_INDEX)/totalWarps : warp*numTiles/totalWarps);
+    unsigned int end = (numTiles > maxTiles ? START_TILE_INDEX+(warp+1)*(END_TILE_INDEX-START_TILE_INDEX)/totalWarps : (warp+1)*numTiles/totalWarps);
 #else
-    unsigned int pos = warp*numTiles/totalWarps;
-    unsigned int end = (warp+1)*numTiles/totalWarps;
+    unsigned int pos = START_TILE_INDEX+warp*numTiles/totalWarps;
+    unsigned int end = START_TILE_INDEX+(warp+1)*numTiles/totalWarps;
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;

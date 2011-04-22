@@ -126,9 +126,9 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
         __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles) {
     ushort2 buffer[BUFFER_SIZE];
     int valuesInBuffer = 0;
-    const int numTiles = (NUM_BLOCKS*(NUM_BLOCKS+1))/2;
-    unsigned int start = get_group_id(0)*numTiles/get_num_groups(0);
-    unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
+    const int numTiles = END_TILE_INDEX-START_TILE_INDEX;
+    unsigned int start = START_TILE_INDEX+get_group_id(0)*numTiles/get_num_groups(0);
+    unsigned int end = START_TILE_INDEX+(get_group_id(0)+1)*numTiles/get_num_groups(0);
     for (int index = start; index < end; index++) {
         // Identify the pair of blocks to compare.
 

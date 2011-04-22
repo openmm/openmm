@@ -111,10 +111,10 @@ private:
  */
 class OpenCLParallelCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    OpenCLParallelCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomBondForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCustomBondForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCustomBondForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -133,6 +133,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -140,10 +141,10 @@ private:
  */
 class OpenCLParallelCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    OpenCLParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcHarmonicAngleForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcHarmonicAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -162,6 +163,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -169,10 +171,10 @@ private:
  */
 class OpenCLParallelCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    OpenCLParallelCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomAngleForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCustomAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCustomAngleForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -191,6 +193,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -198,10 +201,10 @@ private:
  */
 class OpenCLParallelCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    OpenCLParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcPeriodicTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -220,6 +223,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -227,10 +231,10 @@ private:
  */
 class OpenCLParallelCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    OpenCLParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcRBTorsionForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcRBTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcRBTorsionForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -249,6 +253,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -256,10 +261,10 @@ private:
  */
 class OpenCLParallelCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
-    OpenCLParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCMAPTorsionForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCMAPTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcCMAPTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -278,6 +283,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -285,10 +291,10 @@ private:
  */
 class OpenCLParallelCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    OpenCLParallelCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomTorsionForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCustomTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCustomTorsionForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -307,6 +313,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -314,10 +321,10 @@ private:
  */
 class OpenCLParallelCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    OpenCLParallelCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcNonbondedForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcNonbondedForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcNonbondedForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -336,6 +343,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**

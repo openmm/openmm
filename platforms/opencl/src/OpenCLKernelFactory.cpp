@@ -40,6 +40,22 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
             return new OpenCLParallelCalcForcesAndEnergyKernel(name, platform, data);
         if (name == CalcHarmonicBondForceKernel::Name())
             return new OpenCLParallelCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomBondForceKernel::Name())
+            return new OpenCLParallelCalcCustomBondForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcHarmonicAngleForceKernel::Name())
+            return new OpenCLParallelCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomAngleForceKernel::Name())
+            return new OpenCLParallelCalcCustomAngleForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcPeriodicTorsionForceKernel::Name())
+            return new OpenCLParallelCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcRBTorsionForceKernel::Name())
+            return new OpenCLParallelCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCMAPTorsionForceKernel::Name())
+            return new OpenCLParallelCalcCMAPTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomTorsionForceKernel::Name())
+            return new OpenCLParallelCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcNonbondedForceKernel::Name())
+            return new OpenCLParallelCalcNonbondedForceKernel(name, platform, data, context.getSystem());
     }
     OpenCLContext& cl = *data.contexts[0];
     if (name == CalcForcesAndEnergyKernel::Name())

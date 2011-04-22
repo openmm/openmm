@@ -172,12 +172,11 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
     for (int i = 0; i < BUFFER_GROUPS; ++i)
         valid[i*GROUP_SIZE+get_local_id(0)] = false;
     barrier(CLK_LOCAL_MEM_FENCE);
-    const int numTiles = (NUM_BLOCKS*(NUM_BLOCKS+1))/2;
-    for (int baseIndex = get_group_id(0)*get_local_size(0); baseIndex < numTiles; baseIndex += get_global_size(0)) {
+    for (int baseIndex = START_TILE_INDEX+get_group_id(0)*get_local_size(0); baseIndex < END_TILE_INDEX; baseIndex += get_global_size(0)) {
         // Identify the pair of blocks to compare.
 
         int index = baseIndex+get_local_id(0);
-        if (index < numTiles) {
+        if (index < END_TILE_INDEX) {
             unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*index));
             unsigned int x = (index-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
