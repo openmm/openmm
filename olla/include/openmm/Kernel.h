@@ -59,6 +59,12 @@ class OPENMM_EXPORT Kernel {
 public:
     Kernel();
     Kernel(const Kernel& copy);
+    /**
+     * Create a Kernel that wraps a KernelImpl.
+     * 
+     * @param name the name of the kernel to create
+     */
+    Kernel(KernelImpl* impl);
     ~Kernel();
     Kernel& operator=(const Kernel& copy);
     /**
@@ -74,13 +80,6 @@ public:
      */
     KernelImpl& getImpl();
 private:
-    friend class Platform;
-    /**
-     * Create a KernelImpl.
-     * 
-     * @param name the name of the kernel to create
-     */
-    Kernel(KernelImpl* impl);
     KernelImpl* impl;
 };
 
