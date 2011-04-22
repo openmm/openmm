@@ -23,7 +23,7 @@ struct MutualInducedParticle {
     float fieldS[3];
     float fieldPolarS[3];
 #else
-    float padding;
+//    float padding;
 #endif
 
 #ifdef INCLUDE_MI_FIELD_BUFFERS
