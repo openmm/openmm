@@ -1685,6 +1685,8 @@ OpenCLCalcGBSAOBCForceKernel::~OpenCLCalcGBSAOBCForceKernel() {
 }
 
 void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+    if (cl.getPlatformData().contexts.size() > 1)
+        throw OpenMMException("GBSAOBCForce does not support using multiple OpenCL devices");
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     params = new OpenCLArray<mm_float2>(cl, cl.getPaddedNumAtoms(), "gbsaObcParams");
     bornRadii = new OpenCLArray<cl_float>(cl, cl.getPaddedNumAtoms(), "bornRadii");
@@ -1868,6 +1870,8 @@ OpenCLCalcCustomGBForceKernel::~OpenCLCalcCustomGBForceKernel() {
 }
 
 void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
+    if (cl.getPlatformData().contexts.size() > 1)
+        throw OpenMMException("CustomGBForce does not support using multiple OpenCL devices");
     bool useExclusionsForValue = false;
     vector<string> computedValueNames(force.getNumComputedValues());
     vector<string> computedValueExpressions(force.getNumComputedValues());
@@ -2660,7 +2664,12 @@ OpenCLCalcCustomExternalForceKernel::~OpenCLCalcCustomExternalForceKernel() {
 }
 
 void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
-    numParticles = force.getNumParticles();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumParticles()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumParticles()/numContexts;
+    numParticles = endIndex-startIndex;
+    if (numParticles == 0)
+        return;
     params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customExternalParams");
     indices = new OpenCLArray<cl_int>(cl, numParticles, "customExternalIndices");
     string extraArguments;
@@ -2672,7 +2681,7 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     vector<cl_int> indicesVector(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
-        force.getParticleParameters(i, indicesVector[i], parameters);
+        force.getParticleParameters(startIndex+i, indicesVector[i], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
@@ -2732,6 +2741,8 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
 }
 
 double OpenCLCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (numParticles == 0)
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2879,8 +2890,13 @@ static void applyDonorAndAcceptorForces(stringstream& applyToDonor, stringstream
 void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
     // Record the lists of donors and acceptors, and the parameters for each one.
 
-    numDonors = force.getNumDonors();
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumDonors()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumDonors()/numContexts;
+    numDonors = endIndex-startIndex;
     numAcceptors = force.getNumAcceptors();
+    if (numDonors == 0 || numAcceptors == 0)
+        return;
     int numParticles = system.getNumParticles();
     donors = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondDonors");
     acceptors = new OpenCLArray<mm_int4>(cl, numAcceptors, "customHbondAcceptors");
@@ -2892,7 +2908,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     vector<mm_int4> donorVector(numDonors);
     for (int i = 0; i < numDonors; i++) {
         vector<double> parameters;
-        force.getDonorParameters(i, donorVector[i].x, donorVector[i].y, donorVector[i].z, parameters);
+        force.getDonorParameters(startIndex+i, donorVector[i].x, donorVector[i].y, donorVector[i].z, parameters);
         donorParamVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             donorParamVector[i][j] = (cl_float) parameters[j];
@@ -2943,6 +2959,9 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     for (int i = 0; i < force.getNumExclusions(); i++) {
         int donor, acceptor;
         force.getExclusionParticles(i, donor, acceptor);
+        if (donor < startIndex || donor >= endIndex)
+            continue;
+        donor -= startIndex;
         if (donorExclusionVector[donor].x == -1)
             donorExclusionVector[donor].x = acceptor;
         else if (donorExclusionVector[donor].y == -1)
@@ -3172,8 +3191,8 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
     map<string, string> defines;
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-    defines["NUM_DONORS"] = intToString(force.getNumDonors());
-    defines["NUM_ACCEPTORS"] = intToString(force.getNumAcceptors());
+    defines["NUM_DONORS"] = intToString(numDonors);
+    defines["NUM_ACCEPTORS"] = intToString(numAcceptors);
     defines["M_PI"] = doubleToString(M_PI);
     if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff) {
         defines["USE_CUTOFF"] = "1";
@@ -3189,6 +3208,8 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
 }
 
 double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (numDonors == 0 || numAcceptors == 0)
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {

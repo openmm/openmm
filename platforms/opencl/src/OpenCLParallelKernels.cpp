@@ -240,3 +240,39 @@ double OpenCLParallelCalcNonbondedForceKernel::execute(ContextImpl& context, boo
         energy += getKernel(i).execute(context, includeForces, includeEnergy);
     return energy;
 }
+
+OpenCLParallelCalcCustomExternalForceKernel::OpenCLParallelCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) :
+        CalcCustomExternalForceKernel(name, platform), data(data) {
+    for (int i = 0; i < (int) data.contexts.size(); i++)
+        kernels.push_back(Kernel(new OpenCLCalcCustomExternalForceKernel(name, platform, *data.contexts[i], system)));
+}
+
+void OpenCLParallelCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).initialize(system, force);
+}
+
+double OpenCLParallelCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    double energy = 0.0;
+    for (int i = 0; i < (int) kernels.size(); i++)
+        energy += getKernel(i).execute(context, includeForces, includeEnergy);
+    return energy;
+}
+
+OpenCLParallelCalcCustomHbondForceKernel::OpenCLParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) :
+        CalcCustomHbondForceKernel(name, platform), data(data) {
+    for (int i = 0; i < (int) data.contexts.size(); i++)
+        kernels.push_back(Kernel(new OpenCLCalcCustomHbondForceKernel(name, platform, *data.contexts[i], system)));
+}
+
+void OpenCLParallelCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).initialize(system, force);
+}
+
+double OpenCLParallelCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    double energy = 0.0;
+    for (int i = 0; i < (int) kernels.size(); i++)
+        energy += getKernel(i).execute(context, includeForces, includeEnergy);
+    return energy;
+}

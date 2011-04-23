@@ -347,101 +347,14 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
- */
-class OpenCLParallelCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
-public:
-    OpenCLParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            data(data) {
-    }
-    ~OpenCLParallelCalcCustomNonbondedForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomNonbondedForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomNonbondedForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    OpenCLPlatform::PlatformData& data;
-};
-
-/**
- * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
- */
-class OpenCLParallelCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
-public:
-    OpenCLParallelCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : CalcGBSAOBCForceKernel(name, platform),
-            data(data) {
-    }
-    ~OpenCLParallelCalcGBSAOBCForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the GBSAOBCForce this kernel will be used for
-     */
-    void initialize(const System& system, const GBSAOBCForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    OpenCLPlatform::PlatformData& data;
-};
-
-/**
- * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
- */
-class OpenCLParallelCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
-public:
-    OpenCLParallelCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomGBForceKernel(name, platform),
-            data(data) {
-    }
-    ~OpenCLParallelCalcCustomGBForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomGBForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomGBForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    OpenCLPlatform::PlatformData& data;
-};
-
-/**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
  */
 class OpenCLParallelCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    OpenCLParallelCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomExternalForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCustomExternalForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCustomExternalForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -460,6 +373,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 /**
@@ -467,10 +381,10 @@ private:
  */
 class OpenCLParallelCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    OpenCLParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomHbondForceKernel(name, platform),
-            data(data) {
+    OpenCLParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCustomHbondForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCustomHbondForceKernel&>(kernels[index].getImpl());
     }
-    ~OpenCLParallelCalcCustomHbondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -489,6 +403,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
 };
 
 } // namespace OpenMM

@@ -37,6 +37,7 @@ using namespace OpenMM;
 using std::map;
 using std::string;
 using std::stringstream;
+using std::vector;
 
 extern "C" OPENMM_EXPORT void registerPlatforms() {
     Platform::registerPlatform(new OpenCLPlatform());
@@ -91,13 +92,10 @@ void OpenCLPlatform::setPropertyValue(Context& context, const string& property, 
 }
 
 void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
-    unsigned int deviceIndex = -1;
     const string& devicePropValue = (properties.find(OpenCLDeviceIndex()) == properties.end() ?
             getPropertyDefaultValue(OpenCLDeviceIndex()) : properties.find(OpenCLDeviceIndex())->second);
-    if (devicePropValue.length() > 0)
-        stringstream(devicePropValue) >> deviceIndex;
     int numParticles = context.getSystem().getNumParticles();
-    context.setPlatformData(new PlatformData(numParticles, deviceIndex));
+    context.setPlatformData(new PlatformData(numParticles, devicePropValue));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -105,10 +103,29 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-OpenCLPlatform::PlatformData::PlatformData(int numParticles, int deviceIndex) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
-    contexts.push_back(new OpenCLContext(numParticles, deviceIndex, *this));
+OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& deviceIndexProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+    vector<string> devices;
+    size_t searchPos = 0, nextPos;
+    while ((nextPos = deviceIndexProperty.find(',', searchPos)) != string::npos) {
+        devices.push_back(deviceIndexProperty.substr(searchPos, nextPos-searchPos));
+        searchPos = nextPos+1;
+    }
+    devices.push_back(deviceIndexProperty.substr(searchPos));
+    for (int i = 0; i < (int) devices.size(); i++) {
+        if (devices[i].length() > 0) {
+            unsigned int deviceIndex;
+            stringstream(deviceIndexProperty) >> deviceIndex;
+            contexts.push_back(new OpenCLContext(numParticles, deviceIndex, *this));
+        }
+    }
+    if (contexts.size() == 0)
+        contexts.push_back(new OpenCLContext(numParticles, -1, *this));
     stringstream device;
-    device << contexts[0]->getDeviceIndex();
+    for (int i = 0; i < (int) contexts.size(); i++) {
+        if (i > 0)
+            device << ',';
+        device << contexts[i]->getDeviceIndex();
+    }
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
 }
 

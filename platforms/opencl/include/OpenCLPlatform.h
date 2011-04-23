@@ -55,7 +55,7 @@ public:
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void contextDestroyed(ContextImpl& context) const;
     /**
-     * This is the name of the parameter for selecting which OpenCL device to use.
+     * This is the name of the parameter for selecting which OpenCL device or devices to use.
      */
     static const std::string& OpenCLDeviceIndex() {
         static const std::string key = "OpenCLDeviceIndex";
@@ -65,7 +65,7 @@ public:
 
 class OpenCLPlatform::PlatformData {
 public:
-    PlatformData(int numParticles, int deviceIndex);
+    PlatformData(int numParticles, const std::string& deviceIndexProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     std::vector<OpenCLContext*> contexts;
