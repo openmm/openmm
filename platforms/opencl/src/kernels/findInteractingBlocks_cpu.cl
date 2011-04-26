@@ -123,12 +123,13 @@ void storeInteractionData(ushort2* buffer, int numValid, __global unsigned int* 
  */
 __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
         __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
-        __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles) {
+        __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles, unsigned int startTileIndex,
+        unsigned int endTileIndex) {
     ushort2 buffer[BUFFER_SIZE];
     int valuesInBuffer = 0;
-    const int numTiles = END_TILE_INDEX-START_TILE_INDEX;
-    unsigned int start = START_TILE_INDEX+get_group_id(0)*numTiles/get_num_groups(0);
-    unsigned int end = START_TILE_INDEX+(get_group_id(0)+1)*numTiles/get_num_groups(0);
+    const int numTiles = endTileIndex-startTileIndex;
+    unsigned int start = startTileIndex+get_group_id(0)*numTiles/get_num_groups(0);
+    unsigned int end = startTileIndex+(get_group_id(0)+1)*numTiles/get_num_groups(0);
     for (int index = start; index < end; index++) {
         // Identify the pair of blocks to compare.
 

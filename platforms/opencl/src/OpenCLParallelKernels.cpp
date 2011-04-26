@@ -29,6 +29,28 @@
 using namespace OpenMM;
 using namespace std;
 
+/**
+ * Get the current clock time, measured in microseconds.
+ */
+#ifdef _MSC_VER
+    #include <Windows.h>
+    static long getTime() {
+        FILETIME ft;
+        GetSystemTimeAsFileTime(&ft);	 // 100-nanoseconds since 1-1-1601
+        ULARGE_INTEGER result;
+        result.LowPart = ft.dwLowDateTime;
+        result.HighPart = ft.dwHighDateTime;
+        return result/10;
+    }
+#else
+    #include <sys/time.h> 
+    static long getTime() {
+        struct timeval tod;
+        gettimeofday(&tod, 0);
+        return 1000000*tod.tv_sec+tod.tv_usec;
+    }
+#endif
+
 class OpenCLParallelCalcForcesAndEnergyKernel::BeginComputationTask : public OpenCLContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
@@ -52,8 +74,8 @@ private:
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, double& energy) : context(context), cl(cl), kernel(kernel),
-            includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
+            bool includeForce, bool includeEnergy, double& energy, long& completionTime) : context(context), cl(cl), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), energy(energy), completionTime(completionTime) {
     }
     void execute() {
         // Execute the kernel, then download forces.
@@ -61,7 +83,7 @@ public:
         energy += kernel.finishComputation(context, includeForce, includeEnergy);
         if (includeForce)
             cl.getForce().download();
-        mm_float4 f = cl.getForce()[0];
+        completionTime = getTime();
     }
 private:
     ContextImpl& context;
@@ -69,10 +91,11 @@ private:
     OpenCLCalcForcesAndEnergyKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
+    long& completionTime;
 };
 
 OpenCLParallelCalcForcesAndEnergyKernel::OpenCLParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, OpenCLPlatform::PlatformData& data) :
-        CalcForcesAndEnergyKernel(name, platform), data(data) {
+        CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextTiles(data.contexts.size()) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new OpenCLCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
 }
@@ -98,7 +121,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         OpenCLContext& cl = *data.contexts[i];
         OpenCLContext::WorkThread& thread = cl.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, data.contextEnergy[i]));
+        thread.addTask(new FinishComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, data.contextEnergy[i], completionTimes[i]));
     }
     data.syncContexts();
     double energy = 0.0;
@@ -107,8 +130,6 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
     if (includeForce) {
         // Sum the forces from all devices.
         
-        for (int i = 0; i < (int) data.contexts.size(); i++)
-            data.contexts[i]->getForce().download();
         OpenCLArray<mm_float4>& forces = data.contexts[0]->getForce();
         for (int i = 1; i < (int) data.contexts.size(); i++) {
             OpenCLArray<mm_float4>& contextForces = data.contexts[i]->getForce();
@@ -121,6 +142,32 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
             }
         }
         forces.upload();
+        
+        // Balance work between the contexts by transferring a few nonbonded tiles from the context that
+        // finished last to the one that finished first.
+        
+        int firstIndex = 0, lastIndex = 0;
+        int totalTiles = 0;
+        for (int i = 0; i < (int) completionTimes.size(); i++) {
+            if (completionTimes[i] < completionTimes[firstIndex])
+                firstIndex = i;
+            if (completionTimes[i] > completionTimes[lastIndex])
+                lastIndex = i;
+            contextTiles[i] = data.contexts[i]->getNonbondedUtilities().getNumTiles();
+            totalTiles += contextTiles[i];
+        }
+        int tilesToTransfer = totalTiles/1000;
+        if (tilesToTransfer < 1)
+            tilesToTransfer = 1;
+        if (tilesToTransfer > contextTiles[lastIndex])
+            tilesToTransfer = contextTiles[lastIndex];
+        contextTiles[firstIndex] += tilesToTransfer;
+        contextTiles[lastIndex] -= tilesToTransfer;
+        int startIndex = 0;
+        for (int i = 0; i < (int) contextTiles.size(); i++) {
+            data.contexts[i]->getNonbondedUtilities().setTileRange(startIndex, contextTiles[i]);
+            startIndex += contextTiles[i];
+        }
     }
     return energy;
 }

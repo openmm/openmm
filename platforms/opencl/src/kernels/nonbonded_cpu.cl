@@ -13,6 +13,7 @@ typedef struct {
 
 __kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float4* tempBuffer,
+        unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
@@ -21,11 +22,11 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         PARAMETER_ARGUMENTS) {
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = (numTiles > maxTiles ? START_TILE_INDEX+get_group_id(0)*(END_TILE_INDEX-START_TILE_INDEX)/get_num_groups(0) : get_group_id(0)*numTiles/get_num_groups(0));
-    unsigned int end = (numTiles > maxTiles ? START_TILE_INDEX+(get_group_id(0)+1)*(END_TILE_INDEX-START_TILE_INDEX)/get_num_groups(0) : (get_group_id(0)+1)*numTiles/get_num_groups(0));
+    unsigned int pos = (numTiles > maxTiles ? startTileIndex+get_group_id(0)*(endTileIndex-startTileIndex)/get_num_groups(0) : get_group_id(0)*numTiles/get_num_groups(0));
+    unsigned int end = (numTiles > maxTiles ? startTileIndex+(get_group_id(0)+1)*(endTileIndex-startTileIndex)/get_num_groups(0) : (get_group_id(0)+1)*numTiles/get_num_groups(0));
 #else
-    unsigned int pos = START_TILE_INDEX+get_group_id(0)*numTiles/get_num_groups(0);
-    unsigned int end = START_TILE_INDEX+(get_group_id(0)+1)*numTiles/get_num_groups(0);
+    unsigned int pos = startTileIndex+get_group_id(0)*numTiles/get_num_groups(0);
+    unsigned int end = startTileIndex+(get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;

@@ -14,6 +14,7 @@ typedef struct {
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float* tempBuffer,
+        unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
@@ -24,11 +25,11 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = (numTiles > maxTiles ? START_TILE_INDEX+warp*(END_TILE_INDEX-START_TILE_INDEX)/totalWarps : warp*numTiles/totalWarps);
-    unsigned int end = (numTiles > maxTiles ? START_TILE_INDEX+(warp+1)*(END_TILE_INDEX-START_TILE_INDEX)/totalWarps : (warp+1)*numTiles/totalWarps);
+    unsigned int pos = (numTiles > maxTiles ? startTileIndex+warp*(endTileIndex-startTileIndex)/totalWarps : warp*numTiles/totalWarps);
+    unsigned int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*(endTileIndex-startTileIndex)/totalWarps : (warp+1)*numTiles/totalWarps);
 #else
-    unsigned int pos = START_TILE_INDEX+warp*numTiles/totalWarps;
-    unsigned int end = START_TILE_INDEX+(warp+1)*numTiles/totalWarps;
+    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
+    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;

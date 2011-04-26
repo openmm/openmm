@@ -76,6 +76,8 @@ private:
     class FinishComputationTask;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
+    std::vector<long> completionTimes;
+    std::vector<int> contextTiles;
 };
 
 /**

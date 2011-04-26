@@ -191,6 +191,10 @@ public:
         return numTiles;
     }
     /**
+     * Set the range of tiles that should be processed by this context.
+     */
+    void setTileRange(int startTileIndex, int numTiles);
+    /**
      * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
      * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
      * the same neighbor list.

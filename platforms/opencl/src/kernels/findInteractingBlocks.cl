@@ -159,7 +159,8 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
  */
 __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
         __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
-        __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles) {
+        __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles, unsigned int startTileIndex,
+        unsigned int endTileIndex) {
     __local ushort2 buffer[BUFFER_SIZE];
     __local int valid[BUFFER_SIZE];
     __local short sum[BUFFER_SIZE];
@@ -172,11 +173,11 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
     for (int i = 0; i < BUFFER_GROUPS; ++i)
         valid[i*GROUP_SIZE+get_local_id(0)] = false;
     barrier(CLK_LOCAL_MEM_FENCE);
-    for (int baseIndex = START_TILE_INDEX+get_group_id(0)*get_local_size(0); baseIndex < END_TILE_INDEX; baseIndex += get_global_size(0)) {
+    for (int baseIndex = startTileIndex+get_group_id(0)*get_local_size(0); baseIndex < endTileIndex; baseIndex += get_global_size(0)) {
         // Identify the pair of blocks to compare.
 
         int index = baseIndex+get_local_id(0);
-        if (index < END_TILE_INDEX) {
+        if (index < endTileIndex) {
             unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*index));
             unsigned int x = (index-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
