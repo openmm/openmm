@@ -68,7 +68,9 @@ public:
     PlatformData(int numParticles, const std::string& deviceIndexProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
+    void syncContexts();
     std::vector<OpenCLContext*> contexts;
+    std::vector<double> contextEnergy;
     bool removeCM;
     int cmMotionFrequency;
     int stepCount, computeForceCount;

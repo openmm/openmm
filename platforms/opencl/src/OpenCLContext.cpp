@@ -54,7 +54,7 @@ const int OpenCLContext::TileSize = 32;
 
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
-        forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL) {
+        forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL), thread(NULL) {
     try {
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
@@ -166,6 +166,10 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         compilationOptions += " -DLOG=native_log";
     else
         compilationOptions += " -DLOG=log";
+    
+    // Create the work thread used for parallelization when running on multiple devices.
+    
+    thread = new WorkThread();
 }
 
 OpenCLContext::~OpenCLContext() {
@@ -187,6 +191,8 @@ OpenCLContext::~OpenCLContext() {
         delete integration;
     if (nonbonded != NULL)
         delete nonbonded;
+    if (thread != NULL)
+        delete thread;
 }
 
 void OpenCLContext::initialize(const System& system) {
@@ -624,4 +630,87 @@ void OpenCLContext::reorderAtoms() {
     posq->upload();
     velm->upload();
     atomIndex->upload();
+}
+
+struct OpenCLContext::WorkThread::ThreadData {
+    ThreadData(std::queue<OpenCLContext::WorkTask*>& tasks, bool& waiting,  bool& finished,
+            pthread_mutex_t& queueLock, pthread_cond_t& waitForTaskCondition, pthread_cond_t& queueEmptyCondition) :
+        tasks(tasks), waiting(waiting), finished(finished), queueLock(queueLock),
+        waitForTaskCondition(waitForTaskCondition), queueEmptyCondition(queueEmptyCondition) {
+    }
+    std::queue<OpenCLContext::WorkTask*>& tasks;
+    bool& waiting;
+    bool& finished;
+    pthread_mutex_t& queueLock;
+    pthread_cond_t& waitForTaskCondition;
+    pthread_cond_t& queueEmptyCondition;
+};
+
+static void* threadBody(void* args) {
+    OpenCLContext::WorkThread::ThreadData& data = *reinterpret_cast<OpenCLContext::WorkThread::ThreadData*>(args);
+    while (!data.finished || data.tasks.size() > 0) {
+        pthread_mutex_lock(&data.queueLock);
+        while (data.tasks.empty() && !data.finished) {
+            data.waiting = true;
+            pthread_cond_signal(&data.queueEmptyCondition);
+            pthread_cond_wait(&data.waitForTaskCondition, &data.queueLock);
+        }
+        OpenCLContext::WorkTask* task = NULL;
+        if (!data.tasks.empty()) {
+            data.waiting = false;
+            task = data.tasks.front();
+            data.tasks.pop();
+        }
+        pthread_mutex_unlock(&data.queueLock);
+        if (task != NULL) {
+            task->execute();
+            delete task;
+        }
+    }
+    data.waiting = true;
+    pthread_cond_signal(&data.queueEmptyCondition);
+    delete &data;
+    return 0;
+}
+
+OpenCLContext::WorkThread::WorkThread() : waiting(true), finished(false) {
+    pthread_mutex_init(&queueLock, NULL);
+    pthread_cond_init(&waitForTaskCondition, NULL);
+    pthread_cond_init(&queueEmptyCondition, NULL);
+    ThreadData* data = new ThreadData(tasks, waiting, finished, queueLock, waitForTaskCondition, queueEmptyCondition);
+    pthread_create(&thread, NULL, threadBody, data);
+}
+
+OpenCLContext::WorkThread::~WorkThread() {
+    pthread_mutex_lock(&queueLock);
+    finished = true;
+    pthread_cond_broadcast(&waitForTaskCondition);
+    pthread_mutex_unlock(&queueLock);
+    pthread_join(thread, NULL);
+    pthread_mutex_destroy(&queueLock);
+    pthread_cond_destroy(&waitForTaskCondition);
+    pthread_cond_destroy(&queueEmptyCondition);
+}
+
+void OpenCLContext::WorkThread::addTask(OpenCLContext::WorkTask* task) {
+    pthread_mutex_lock(&queueLock);
+    tasks.push(task);
+    waiting = false;
+    pthread_cond_signal(&waitForTaskCondition);
+    pthread_mutex_unlock(&queueLock);
+}
+
+bool OpenCLContext::WorkThread::isWaiting() {
+    return waiting;
+}
+
+bool OpenCLContext::WorkThread::isFinished() {
+    return finished;
+}
+
+void OpenCLContext::WorkThread::flush() {
+    pthread_mutex_lock(&queueLock);
+    while (!waiting)
+       pthread_cond_wait(&queueEmptyCondition, &queueLock);
+    pthread_mutex_unlock(&queueLock);
 }

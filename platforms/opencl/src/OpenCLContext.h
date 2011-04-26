@@ -28,7 +28,9 @@
  * -------------------------------------------------------------------------- */
 
 #include <map>
+#include <queue>
 #include <string>
+#include <pthread.h>
 #define __CL_ENABLE_EXCEPTIONS
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
@@ -130,10 +132,16 @@ struct mm_int16 {
  * specific to a particular device, and manages data structures and kernels for that device.  When running a simulation
  * in parallel on multiple devices, there is a separate OpenCLContext for each one.  The list of all contexts is
  * stored in the OpenCLPlatform::PlatformData.
+ * <p>
+ * In addition, a worker thread is created for each OpenCLContext.  This is used for parallel computations, so that
+ * blocking calls to one device will not block other devices.  When only a single device is being used, the worker
+ * thread is not used and calculations are performed on the main application thread.
  */
 
 class OPENMM_EXPORT OpenCLContext {
 public:
+    class WorkTask;
+    class WorkThread;
     static const int ThreadBlockSize;
     static const int TileSize;
     OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
@@ -408,6 +416,12 @@ public:
         return *nonbonded;
     }
     /**
+     * Get the thread used by this context for executing parallel computations.
+     */
+    WorkThread& getWorkThread() {
+        return *thread;
+    }
+    /**
      * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
      * together in the arrays.
      */
@@ -454,11 +468,50 @@ private:
     std::vector<int> autoclearBufferSizes;
     OpenCLIntegrationUtilities* integration;
     OpenCLNonbondedUtilities* nonbonded;
+    WorkThread* thread;
 };
 
 struct OpenCLContext::MoleculeGroup {
     std::vector<int> atoms;
     std::vector<int> instances;
+};
+
+/**
+ * This abstract class defines a task to be executed on the worker thread.
+ */
+class OpenCLContext::WorkTask {
+public:
+    virtual void execute() = 0;
+};
+
+class OpenCLContext::WorkThread {
+public:
+    struct ThreadData;
+    WorkThread();
+    ~WorkThread();
+    /**
+     * Request that a task be executed on the worker thread.  The argument should have been allocated on the
+     * heap with the "new" operator.  After its execute() method finishes, the object will be deleted automatically.
+     */
+    void addTask(OpenCLContext::WorkTask* task);
+    /**
+     * Get whether the worker thread is idle, waiting for a task to be added.
+     */
+    bool isWaiting();
+    /**
+     * Get whether the worker thread has exited.
+     */
+    bool isFinished();
+    /**
+     * Block until all tasks have finished executing and the worker thread is idle.
+     */
+    void flush();
+private:
+    std::queue<OpenCLContext::WorkTask*> tasks;
+    bool waiting, finished;
+    pthread_mutex_t queueLock;
+    pthread_cond_t waitForTaskCondition, queueEmptyCondition;
+    pthread_t thread;
 };
 
 } // namespace OpenMM

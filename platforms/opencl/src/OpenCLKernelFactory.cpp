@@ -56,6 +56,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
             return new OpenCLParallelCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
         if (name == CalcNonbondedForceKernel::Name())
             return new OpenCLParallelCalcNonbondedForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomNonbondedForceKernel::Name())
+            return new OpenCLParallelCalcCustomNonbondedForceKernel(name, platform, data, context.getSystem());
         if (name == CalcCustomExternalForceKernel::Name())
             return new OpenCLParallelCalcCustomExternalForceKernel(name, platform, data, context.getSystem());
         if (name == CalcCustomHbondForceKernel::Name())

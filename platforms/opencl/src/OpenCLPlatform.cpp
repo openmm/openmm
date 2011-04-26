@@ -114,7 +114,7 @@ OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& devic
     for (int i = 0; i < (int) devices.size(); i++) {
         if (devices[i].length() > 0) {
             unsigned int deviceIndex;
-            stringstream(deviceIndexProperty) >> deviceIndex;
+            stringstream(devices[i]) >> deviceIndex;
             contexts.push_back(new OpenCLContext(numParticles, deviceIndex, *this));
         }
     }
@@ -127,6 +127,7 @@ OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& devic
         device << contexts[i]->getDeviceIndex();
     }
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
+    contextEnergy.resize(contexts.size());
 }
 
 OpenCLPlatform::PlatformData::~PlatformData() {
@@ -137,4 +138,9 @@ OpenCLPlatform::PlatformData::~PlatformData() {
 void OpenCLPlatform::PlatformData::initializeContexts(const System& system) {
     for (int i = 0; i < (int) contexts.size(); i++)
         contexts[i]->initialize(system);
+}
+
+void OpenCLPlatform::PlatformData::syncContexts() {
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->getWorkThread().flush();
 }

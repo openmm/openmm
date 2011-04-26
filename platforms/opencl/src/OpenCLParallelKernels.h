@@ -72,6 +72,8 @@ public:
      */
     double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy);
 private:
+    class BeginComputationTask;
+    class FinishComputationTask;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -102,6 +104,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -132,6 +135,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -162,6 +166,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -192,6 +197,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -221,6 +227,7 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    class Task;
 private:
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
@@ -252,6 +259,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -282,6 +290,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -312,6 +321,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -342,6 +352,38 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
+    OpenCLPlatform::PlatformData& data;
+    std::vector<Kernel> kernels;
+};
+
+/**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class OpenCLParallelCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    OpenCLParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system);
+    OpenCLCalcCustomNonbondedForceKernel& getKernel(int index) {
+        return dynamic_cast<OpenCLCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -372,6 +414,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
@@ -402,6 +445,7 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    class Task;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
