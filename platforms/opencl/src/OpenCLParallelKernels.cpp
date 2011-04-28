@@ -34,17 +34,17 @@ using namespace std;
  */
 #ifdef _MSC_VER
     #include <Windows.h>
-    static long getTime() {
+    static long long getTime() {
         FILETIME ft;
         GetSystemTimeAsFileTime(&ft);	 // 100-nanoseconds since 1-1-1601
         ULARGE_INTEGER result;
         result.LowPart = ft.dwLowDateTime;
         result.HighPart = ft.dwHighDateTime;
-        return result/10;
+        return result.QuadPart/10;
     }
 #else
     #include <sys/time.h> 
-    static long getTime() {
+    static long long getTime() {
         struct timeval tod;
         gettimeofday(&tod, 0);
         return 1000000*tod.tv_sec+tod.tv_usec;
@@ -74,7 +74,7 @@ private:
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, double& energy, long& completionTime) : context(context), cl(cl), kernel(kernel),
+            bool includeForce, bool includeEnergy, double& energy, long long& completionTime) : context(context), cl(cl), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy), completionTime(completionTime) {
     }
     void execute() {
@@ -91,7 +91,7 @@ private:
     OpenCLCalcForcesAndEnergyKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
-    long& completionTime;
+    long long& completionTime;
 };
 
 OpenCLParallelCalcForcesAndEnergyKernel::OpenCLParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, OpenCLPlatform::PlatformData& data) :

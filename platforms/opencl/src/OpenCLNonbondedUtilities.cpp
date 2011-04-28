@@ -313,7 +313,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return;
     interactionCount->download();
-    if (interactionCount->get(0) <= interactingTiles->getSize())
+    if (interactionCount->get(0) <= (unsigned int) interactingTiles->getSize())
         return;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent

@@ -75,6 +75,19 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs platforms/reference libraries/validate)
+IF(WIN32)
+    SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/pthreads)
+    ADD_CUSTOM_TARGET(PthreadsLibraries ALL)
+    FILE(GLOB PTHREADS_LIBRARIES libraries/pthreads/lib/*)
+    FOREACH(lib ${PTHREADS_LIBRARIES})
+        ADD_CUSTOM_COMMAND(TARGET PthreadsLibraries COMMAND ${CMAKE_COMMAND} ARGS -E copy ${lib} "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
+        INSTALL(FILES ${lib} DESTINATION "lib/")
+    ENDFOREACH(lib)
+    LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
+    SET(PTHREADS_LIB pthreadVC2)
+ELSE(WIN32)
+    SET(PTHREADS_LIB pthread)
+ENDIF(WIN32)
 
 # The build system will set ARCH64 for 64 bit builds, which require
 # use of the lib64/ library directories rather than lib/.

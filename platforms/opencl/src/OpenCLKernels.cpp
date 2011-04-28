@@ -888,10 +888,10 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
         mapPositionsVec[i] = mm_int2(currentPosition, size);
         currentPosition += 4*size*size;
         for (int j = 0; j < size*size; j++) {
-            coeffVec.push_back(mm_float4(c[j][0], c[j][1], c[j][2], c[j][3]));
-            coeffVec.push_back(mm_float4(c[j][4], c[j][5], c[j][6], c[j][7]));
-            coeffVec.push_back(mm_float4(c[j][8], c[j][9], c[j][10], c[j][11]));
-            coeffVec.push_back(mm_float4(c[j][12], c[j][13], c[j][14], c[j][15]));
+            coeffVec.push_back(mm_float4((float) c[j][0], (float) c[j][1], (float) c[j][2], (float) c[j][3]));
+            coeffVec.push_back(mm_float4((float) c[j][4], (float) c[j][5], (float) c[j][6], (float) c[j][7]));
+            coeffVec.push_back(mm_float4((float) c[j][8], (float) c[j][9], (float) c[j][10], (float) c[j][11]));
+            coeffVec.push_back(mm_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
         }
     }
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
@@ -1452,7 +1452,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     if (cosSinSums != NULL && cl.getContextIndex() == 0) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         mm_float4 recipBoxSize = mm_float4((float) (2*M_PI/boxSize.x), (float) (2*M_PI/boxSize.y), (float) (2*M_PI/boxSize.z), 0);
-        float recipCoefficient = ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z);
+        float recipCoefficient = (float) (ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z));
         ewaldSumsKernel.setArg<mm_float4>(3, recipBoxSize);
         ewaldSumsKernel.setArg<cl_float>(4, recipCoefficient);
         cl.executeKernel(ewaldSumsKernel, cosSinSums->getSize());
@@ -1581,7 +1581,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         string arrayName = prefix+"table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), values.size()-2);
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, min, max);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -1932,7 +1932,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         string arrayName = prefix+"table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), values.size()-2);
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, min, max);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -3003,7 +3003,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         string arrayName = "table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), values.size()-2);
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, min, max);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -3387,7 +3387,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         p[1] = (cl_float) fscale;
         p[2] = (cl_float) noisescale;
         params->upload(p);
-        integration.getStepSize()[0].y = stepSize;
+        integration.getStepSize()[0].y = (cl_float) stepSize;
         integration.getStepSize().upload();
         prevTemp = temperature;
         prevFriction = friction;

@@ -87,7 +87,7 @@ public:
         sortKernelSize = rangeKernelSize/2;
         if (rangeKernelSize > length)
             rangeKernelSize = length;
-        int maxLocalBuffer = (context.getDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()/sizeof(TYPE))/2;
+        int maxLocalBuffer = (int) ((context.getDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()/sizeof(TYPE))/2);
         if (sortKernelSize > maxLocalBuffer)
             sortKernelSize = maxLocalBuffer;
         int targetBucketSize = sortKernelSize/2;

@@ -466,7 +466,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
             int c = ccmaConstraints[index];
             atomsVec[i].x = atom1[c];
             atomsVec[i].y = atom2[c];
-            distanceVec[i].w = distance[c];
+            distanceVec[i].w = (float) distance[c];
             reducedMassVec[i] = (float) (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
             for (unsigned int j = 0; j < matrix[index].size(); j++) {
                 constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;

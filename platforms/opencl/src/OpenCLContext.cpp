@@ -126,10 +126,10 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
 
     cl::Kernel accuracyKernel(utilities, "determineNativeAccuracy");
     OpenCLArray<mm_float8> values(*this, 20, "values", true);
-    float nextValue = 1e-4;
+    float nextValue = 1e-4f;
     for (int i = 0; i < values.getSize(); ++i) {
         values[i].s0 = nextValue;
-        nextValue *= M_PI;
+        nextValue *= (float) M_PI;
     }
     values.upload();
     accuracyKernel.setArg<cl::Buffer>(0, values.getDeviceBuffer());
