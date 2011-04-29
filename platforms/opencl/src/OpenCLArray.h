@@ -130,6 +130,14 @@ public:
         upload(&data[0]);
     }
     /**
+     * Copy the values in the Buffer to a vector.
+     */
+    void download(std::vector<T>& data) const {
+        if (data.size() != size)
+            data.resize(size);
+        download(&data[0]);
+    }
+    /**
      * Copy the values in an array to the Buffer.
      */
     void upload(T* data) {
@@ -143,13 +151,11 @@ public:
         }
     }
     /**
-     * Copy the values in the Buffer to a vector.
+     * Copy the values in the Buffer to an array.
      */
-    void download(std::vector<T>& data) const {
-        if (data.size() != size)
-            data.resize(size);
+    void download(T* data) const {
         try {
-            context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
+            context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), data);
         }
         catch (cl::Error err) {
             std::stringstream str;

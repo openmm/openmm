@@ -41,6 +41,7 @@ namespace OpenMM {
 class OpenCLParallelCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
     OpenCLParallelCalcForcesAndEnergyKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data);
+    ~OpenCLParallelCalcForcesAndEnergyKernel();
     OpenCLCalcForcesAndEnergyKernel& getKernel(int index) {
         return dynamic_cast<OpenCLCalcForcesAndEnergyKernel&>(kernels[index].getImpl());
     }
@@ -78,6 +79,7 @@ private:
     std::vector<Kernel> kernels;
     std::vector<long long> completionTimes;
     std::vector<int> contextTiles;
+    OpenCLArray<mm_float4>* contextForces;
 };
 
 /**
