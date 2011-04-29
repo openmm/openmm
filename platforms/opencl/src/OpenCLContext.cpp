@@ -205,7 +205,7 @@ void OpenCLContext::initialize(const System& system) {
     forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
     addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
     force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
-    energyBuffer = new OpenCLArray<cl_float>(*this, numThreadBlocks*ThreadBlockSize, "energyBuffer", true);
+    energyBuffer = new OpenCLArray<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer", true);
     addAutoclearBuffer(energyBuffer->getDeviceBuffer(), energyBuffer->getSize());
     atomIndex = new OpenCLArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
     for (int i = 0; i < paddedNumAtoms; ++i)

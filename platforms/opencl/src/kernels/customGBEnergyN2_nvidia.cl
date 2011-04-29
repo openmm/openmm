@@ -1,15 +1,33 @@
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #define TILE_SIZE 32
 #define STORE_DERIVATIVE_1(INDEX) derivBuffers##INDEX[offset1] += deriv##INDEX##_1;
 #define STORE_DERIVATIVE_2(INDEX) derivBuffers##INDEX[offset2] += local_deriv##INDEX[get_local_id(0)];
 
 /**
+ * Mark that a block in the force buffer is in use.
+ */
+void reserveBuffer(unsigned int block, __global unsigned int* forceBufferFlags) {
+    if ((get_local_id(0)&(TILE_SIZE-1)) == 0)
+        while (atom_cmpxchg(&forceBufferFlags[block+NUM_BLOCKS*get_group_id(0)], 0, 1) != 0)
+            ;
+    mem_fence(CLK_GLOBAL_MEM_FENCE);
+}
+
+/**
+ * Mark that a block in the force buffer is no longer in use.
+ */
+void releaseBuffer(unsigned int block, __global unsigned int* forceBufferFlags) {
+    mem_fence(CLK_GLOBAL_MEM_FENCE);
+    if ((get_local_id(0)&(TILE_SIZE-1)) == 0)
+        forceBufferFlags[block+NUM_BLOCKS*get_group_id(0)] = 0;
+}
+
+/**
  * Compute a force based on pair interactions.
  */
-
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
+__kernel void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
 	__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions, __global unsigned int* exclusionIndices,
-        __global unsigned int* exclusionRowIndices, __local float4* tempBuffer,
+        __global unsigned int* exclusionRowIndices, __local float4* tempBuffer, __global unsigned int* forceBufferFlags,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
@@ -28,8 +46,8 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
-    __local unsigned int exclusionRange[4];
-    __local int exclusionIndex[2];
+    __local unsigned int exclusionRange[2*WARPS_PER_GROUP];
+    __local int exclusionIndex[WARPS_PER_GROUP];
 
     while (pos < end) {
         // Extract the coordinates of this tile
@@ -50,8 +68,9 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
         }
-        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
-        unsigned int tbx = get_local_id(0) - tgx;
+        const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
+        const unsigned int tbx = get_local_id(0) - tgx;
+        const unsigned int localGroupIndex = get_local_id(0)/TILE_SIZE;
         unsigned int atom1 = x*TILE_SIZE + tgx;
         float4 force = 0.0f;
         float4 posq1 = posq[atom1];
@@ -60,7 +79,6 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
         // Locate the exclusion data for this tile.
 
 #ifdef USE_EXCLUSIONS
-        int localGroupIndex = get_local_id(0)/TILE_SIZE;
         if (tgx < 2)
             exclusionRange[2*localGroupIndex+tgx] = exclusionRowIndices[x+tgx];
         if (tgx == 0)
@@ -118,13 +136,12 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
             }
 
             // Write results
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
-#else
-            unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-#endif
+
+            reserveBuffer(x, forceBufferFlags);
+            unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             forceBuffers[offset1].xyz += force.xyz;
             STORE_DERIVATIVES_1
+            releaseBuffer(x, forceBufferFlags);
         }
         else {
             // This is an off-diagonal tile.
@@ -194,17 +211,17 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
             }
 
             // Write results
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
-#else
-            unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-#endif
+
+            reserveBuffer(x, forceBufferFlags);
+            unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             forceBuffers[offset1].xyz += force.xyz;
-            forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
             STORE_DERIVATIVES_1
+            releaseBuffer(x, forceBufferFlags);
+            reserveBuffer(y, forceBufferFlags);
+            unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+            forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
             STORE_DERIVATIVES_2
+            releaseBuffer(y, forceBufferFlags);
         }
         lasty = y;
         pos++;

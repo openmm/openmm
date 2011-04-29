@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,15 +37,25 @@ using namespace std;
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false),
         numForceBuffers(0), exclusionIndices(NULL), exclusionRowIndices(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
-        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL) {
-    // Decide how many force buffers to use.
+        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), forceBufferFlags(NULL) {
+    // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     forceBufferPerAtomBlock = false;
-    if (deviceIsCpu)
-        numForceBuffers = context.getNumThreadBlocks();
+    if (deviceIsCpu) {
+        numForceThreadBlocks = context.getNumThreadBlocks();
+        forceThreadBlockSize = 1;
+        numForceBuffers = numForceThreadBlocks;
+    }
+    else if (context.getSIMDWidth() == 32) {
+        numForceThreadBlocks = 2*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        forceThreadBlockSize = 256;
+        numForceBuffers = numForceThreadBlocks;
+    }
     else {
-        numForceBuffers = context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize/OpenCLContext::TileSize;
+        numForceThreadBlocks = context.getNumThreadBlocks();
+        forceThreadBlockSize = OpenCLContext::ThreadBlockSize;
+        numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
         if (numForceBuffers >= context.getNumAtomBlocks()) {
             // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
 
@@ -72,6 +82,8 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete blockCenter;
     if (blockBoundingBox != NULL)
         delete blockBoundingBox;
+    if (forceBufferFlags != NULL)
+        delete forceBufferFlags;
 }
 
 void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel) {
@@ -227,6 +239,12 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         interactionCount->upload();
     }
 
+    // Create the flags for reserving force buffers.
+    
+    forceBufferFlags = new OpenCLArray<cl_uint>(context, numAtomBlocks*numForceThreadBlocks, "forceBufferFlags", false);
+    vector<cl_uint> forceBufferFlagsVec(forceBufferFlags->getSize(), 0);
+    forceBufferFlags->upload(forceBufferFlagsVec);
+
     // Create kernels.
 
     forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
@@ -302,10 +320,10 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 void OpenCLNonbondedUtilities::computeInteractions() {
     if (cutoff != -1.0) {
         if (useCutoff) {
-            forceKernel.setArg<mm_float4>(12, context.getPeriodicBoxSize());
-            forceKernel.setArg<mm_float4>(13, context.getInvPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(13, context.getPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(14, context.getInvPeriodicBoxSize());
         }
-        context.executeKernel(forceKernel, (context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2)*OpenCLContext::TileSize, deviceIsCpu ? 1 : -1);
+        context.executeKernel(forceKernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
 }
 
@@ -325,14 +343,14 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
         newSize = numTiles;
     delete interactingTiles;
     interactingTiles = new OpenCLArray<mm_ushort2>(context, newSize, "interactingTiles");
-    forceKernel.setArg<cl::Buffer>(10, interactingTiles->getDeviceBuffer());
-    forceKernel.setArg<cl_uint>(14, newSize);
+    forceKernel.setArg<cl::Buffer>(11, interactingTiles->getDeviceBuffer());
+    forceKernel.setArg<cl_uint>(15, newSize);
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(9, newSize);
     if (context.getSIMDWidth() == 32 || deviceIsCpu) {
         delete interactionFlags;
         interactionFlags = new OpenCLArray<cl_uint>(context, deviceIsCpu ? 2*newSize : newSize, "interactionFlags");
-        forceKernel.setArg<cl::Buffer>(15, interactionFlags->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(16, interactionFlags->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, interactingTiles->getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
@@ -456,6 +474,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
+    if (context.getSIMDWidth() == 32)
+        defines["WARPS_PER_GROUP"] = OpenCLExpressionUtilities::intToString(forceThreadBlockSize/OpenCLContext::TileSize);
     defines["CUTOFF_SQUARED"] = OpenCLExpressionUtilities::doubleToString(cutoff*cutoff);
     defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
@@ -479,10 +499,11 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionIndices->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionRowIndices->getDeviceBuffer());
-    kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize*localDataSize : OpenCLContext::ThreadBlockSize*localDataSize), NULL);
-    kernel.setArg(index++, 4*OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+    kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize*localDataSize : forceThreadBlockSize*localDataSize), NULL);
+    kernel.setArg(index++, 4*forceThreadBlockSize*sizeof(cl_float), NULL);
     kernel.setArg<cl_uint>(index++, startTileIndex);
     kernel.setArg<cl_uint>(index++, startTileIndex+numTiles);
+    kernel.setArg<cl::Buffer>(index++, forceBufferFlags->getDeviceBuffer());
     if (useCutoff) {
         kernel.setArg<cl::Buffer>(index++, interactingTiles->getDeviceBuffer());
         kernel.setArg<cl::Buffer>(index++, interactionCount->getDeviceBuffer());

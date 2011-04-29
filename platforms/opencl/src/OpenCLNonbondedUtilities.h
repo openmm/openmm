@@ -95,6 +95,12 @@ public:
         return numForceBuffers;
     }
     /**
+     * Get the number of energy buffers required for nonbonded forces.
+     */
+    int getNumEnergyBuffers() {
+        return numForceThreadBlocks*forceThreadBlockSize;
+    }
+    /**
      * Get whether a cutoff is being used.
      */
     bool getUseCutoff() {
@@ -111,6 +117,18 @@ public:
      */
     bool getForceBufferPerAtomBlock() {
         return forceBufferPerAtomBlock;
+    }
+    /**
+     * Get the number of work groups used for computing nonbonded forces.
+     */
+    int getNumForceThreadBlocks() {
+        return numForceThreadBlocks;
+    }
+    /**
+     * Get the size of each work group used for computing nonbonded forces.
+     */
+    int getForceThreadBlockSize() {
+        return forceThreadBlockSize;
     }
     /**
      * Get the cutoff distance.
@@ -179,6 +197,12 @@ public:
         return *exclusionRowIndices;
     }
     /**
+     * Get the array which contains flags for reserving force buffers.
+     */
+    OpenCLArray<cl_uint>& getForceBufferFlags() {
+        return *forceBufferFlags;
+    }
+    /**
      * Get the index of the first tile this context is responsible for processing.
      */
     int getStartTileIndex() const {
@@ -221,6 +245,7 @@ private:
     OpenCLArray<cl_uint>* interactionCount;
     OpenCLArray<mm_float4>* blockCenter;
     OpenCLArray<mm_float4>* blockBoundingBox;
+    OpenCLArray<cl_uint>* forceBufferFlags;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
@@ -228,7 +253,7 @@ private:
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
     bool useCutoff, usePeriodic, forceBufferPerAtomBlock, deviceIsCpu;
-    int numForceBuffers, startTileIndex, numTiles;
+    int numForceBuffers, startTileIndex, numTiles, numForceThreadBlocks, forceThreadBlockSize;
 };
 
 /**

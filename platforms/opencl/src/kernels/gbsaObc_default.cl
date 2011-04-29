@@ -15,7 +15,8 @@ typedef struct {
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
+void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params,
+        __local AtomData* localData, __local float* tempBuffer, __global unsigned int* forceBufferFlags,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
@@ -95,6 +96,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
             }
 
             // Sum the forces and write results.
+
 
             if (get_local_id(0) >= TILE_SIZE)
                 tempBuffer[get_local_id(0)] = bornSum;
@@ -200,8 +202,8 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
-        __global float4* posq, __global float* global_bornRadii,
-        __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
+        __global float4* posq, __global float* global_bornRadii, __global float* global_bornForce,
+        __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* forceBufferFlags,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else

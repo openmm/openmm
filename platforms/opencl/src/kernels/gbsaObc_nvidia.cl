@@ -1,3 +1,4 @@
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #define TILE_SIZE 32
 
 typedef struct {
@@ -11,11 +12,29 @@ typedef struct {
 } AtomData;
 
 /**
+ * Mark that a block in the force buffer is in use.
+ */
+void reserveBuffer(unsigned int block, __global unsigned int* forceBufferFlags) {
+    if ((get_local_id(0)&(TILE_SIZE-1)) == 0)
+        while (atom_cmpxchg(&forceBufferFlags[block+NUM_BLOCKS*get_group_id(0)], 0, 1) != 0)
+            ;
+    mem_fence(CLK_GLOBAL_MEM_FENCE);
+}
+
+/**
+ * Mark that a block in the force buffer is no longer in use.
+ */
+void releaseBuffer(unsigned int block, __global unsigned int* forceBufferFlags) {
+    mem_fence(CLK_GLOBAL_MEM_FENCE);
+    if ((get_local_id(0)&(TILE_SIZE-1)) == 0)
+        forceBufferFlags[block+NUM_BLOCKS*get_group_id(0)] = 0;
+}
+
+/**
  * Compute the Born sum.
  */
-
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
+__kernel void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params,
+        __local AtomData* localData, __local float* tempBuffer,  __global unsigned int* forceBufferFlags,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
 #else
@@ -52,8 +71,9 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
         }
-        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
-        unsigned int tbx = get_local_id(0) - tgx;
+        const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
+        const unsigned int tbx = get_local_id(0) - tgx;
+        const unsigned int localGroupIndex = get_local_id(0)/TILE_SIZE;
         unsigned int atom1 = x*TILE_SIZE + tgx;
         float bornSum = 0.0f;
         float4 posq1 = posq[atom1];
@@ -99,12 +119,11 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
             }
 
             // Write results
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
-#else
-            unsigned int offset = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-#endif
+
+            reserveBuffer(x, forceBufferFlags);
+            unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             global_bornSum[offset] += bornSum;
+            releaseBuffer(x, forceBufferFlags);
         }
         else {
             // This is an off-diagonal tile.
@@ -244,16 +263,15 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
             }
 
             // Write results
-            float4 of;
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
-#else
-            unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-#endif
+
+            reserveBuffer(x, forceBufferFlags);
+            unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             global_bornSum[offset1] += bornSum;
+            releaseBuffer(x, forceBufferFlags);
+            reserveBuffer(y, forceBufferFlags);
+            unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             global_bornSum[offset2] += localData[get_local_id(0)].bornSum;
+            releaseBuffer(y, forceBufferFlags);
         }
         lasty = y;
         pos++;
@@ -264,10 +282,9 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
  * First part of computing the GBSA interaction.
  */
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
-        __global float4* posq, __global float* global_bornRadii,
-        __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
+__kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
+        __global float4* posq, __global float* global_bornRadii, __global float* global_bornForce,
+        __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* forceBufferFlags,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
 #else
@@ -305,8 +322,9 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
         }
-        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
-        unsigned int tbx = get_local_id(0) - tgx;
+        const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
+        const unsigned int tbx = get_local_id(0) - tgx;
+        const unsigned int localGroupIndex = get_local_id(0)/TILE_SIZE;
         unsigned int atom1 = x*TILE_SIZE + tgx;
         float4 force = 0.0f;
         float4 posq1 = posq[atom1];
@@ -356,13 +374,12 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             }
 
             // Write results
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
-#else
-            unsigned int offset = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-#endif
+
+            reserveBuffer(x, forceBufferFlags);
+            unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             forceBuffers[offset].xyz += force.xyz;
             global_bornForce[offset] += force.w;
+            releaseBuffer(x, forceBufferFlags);
         }
         else {
             // This is an off-diagonal tile.
@@ -496,17 +513,17 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             }
 
             // Write results
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
-#else
-            unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-#endif
+
+            reserveBuffer(x, forceBufferFlags);
+            unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
             forceBuffers[offset1].xyz += force.xyz;
-            forceBuffers[offset2] += (float4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0);
             global_bornForce[offset1] += force.w;
+            releaseBuffer(x, forceBufferFlags);
+            reserveBuffer(y, forceBufferFlags);
+            unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+            forceBuffers[offset2] += (float4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0);
             global_bornForce[offset2] += localData[get_local_id(0)].fw;
+            releaseBuffer(y, forceBufferFlags);
         }
         lasty = y;
         pos++;
