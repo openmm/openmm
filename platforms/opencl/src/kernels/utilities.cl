@@ -63,7 +63,7 @@ __kernel void reduceFloat4Buffer(__global float4* buffer, int bufferSize, int nu
  */
 
 __kernel void determineNativeAccuracy(__global float8* values, int numValues) {
-    for (int i = 0; i < numValues; ++i) {
+    for (int i = get_global_id(0); i < numValues; i += get_global_size(0)) {
         float v = values[i].s0;
         values[i] = (float8) (v, native_sqrt(v), native_rsqrt(v), native_recip(v), native_exp(v), native_log(v), 0.0f, 0.0f);
     }

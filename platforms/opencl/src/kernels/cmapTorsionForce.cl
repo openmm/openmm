@@ -31,7 +31,7 @@ __kernel void computeCMAPTorsionForces(int numAtoms, int numTorsions, __global f
 
             float4 cross_prod = cross(cp0a, cp1a);
             float scale = dot(cp0a, cp0a)*dot(cp1a, cp1a);
-            angleA = asin(sqrt(dot(cross_prod, cross_prod)/scale));
+            angleA = asin(SQRT(dot(cross_prod, cross_prod)/scale));
             if (cosangle < 0.0f)
                 angleA = PI-angleA;
         }
@@ -54,7 +54,7 @@ __kernel void computeCMAPTorsionForces(int numAtoms, int numTorsions, __global f
 
             float4 cross_prod = cross(cp0b, cp1b);
             float scale = dot(cp0b, cp0b)*dot(cp1b, cp1b);
-            angleB = asin(sqrt(dot(cross_prod, cross_prod)/scale));
+            angleB = asin(SQRT(dot(cross_prod, cross_prod)/scale));
             if (cosangle < 0.0f)
                 angleB = PI-angleB;
         }
@@ -104,7 +104,7 @@ __kernel void computeCMAPTorsionForces(int numAtoms, int numTorsions, __global f
 
         float normCross1 = dot(cp0a, cp0a);
         float normSqrBC = dot(v1a, v1a);
-        float normBC = sqrt(normSqrBC);
+        float normBC = SQRT(normSqrBC);
         float normCross2 = dot(cp1a, cp1a);
         float dp = 1.0f/normSqrBC;
         float4 ff = (float4) ((-dEdA*normBC)/normCross1, dot(v0a, v1a)*dp, dot(v2a, v1a)*dp, (dEdA*normBC)/normCross2);
@@ -129,7 +129,7 @@ __kernel void computeCMAPTorsionForces(int numAtoms, int numTorsions, __global f
 
         normCross1 = dot(cp0b, cp0b);
         normSqrBC = dot(v1b, v1b);
-        normBC = sqrt(normSqrBC);
+        normBC = SQRT(normSqrBC);
         normCross2 = dot(cp1b, cp1b);
         dp = 1.0f/normSqrBC;
         ff = (float4) ((-dEdB*normBC)/normCross1, dot(v0b, v1b)*dp, dot(v2b, v1b)*dp, (dEdB*normBC)/normCross2);

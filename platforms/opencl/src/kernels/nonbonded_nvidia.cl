@@ -66,7 +66,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         else
 #endif
         {
-            y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
@@ -120,8 +120,8 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float r = sqrt(r2);
-                float invR = RECIP(r);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+j;
 #ifdef USE_SYMMETRIC
