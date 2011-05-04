@@ -126,8 +126,8 @@ public:
     /**
      * Copy the values in a vector to the Buffer.
      */
-    void upload(std::vector<T>& data) {
-        upload(&data[0]);
+    void upload(std::vector<T>& data, bool blocking = true) {
+        upload(&data[0], blocking);
     }
     /**
      * Copy the values in the Buffer to a vector.
@@ -140,9 +140,9 @@ public:
     /**
      * Copy the values in an array to the Buffer.
      */
-    void upload(T* data) {
+    void upload(T* data, bool blocking = true) {
         try {
-            context.getQueue().enqueueWriteBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), data);
+            context.getQueue().enqueueWriteBuffer(*buffer, blocking ? CL_TRUE : CL_FALSE, 0, size*sizeof(T), data);
         }
         catch (cl::Error err) {
             std::stringstream str;
@@ -166,10 +166,10 @@ public:
     /**
      * Copy the values in the host buffer to the OpenCL Buffer.
      */
-    void upload() {
+    void upload(bool blocking = true) {
         if (local.size() == 0)
             throw OpenMMException(name+": Called upload() on an OpenCLArray with no host buffer");
-        upload(local);
+        upload(local, blocking);
     }
     /**
      * Copy the values in the Buffer to the host buffer.

@@ -199,7 +199,7 @@ void OpenCLContext::initialize(const System& system) {
     for (int i = 0; i < numAtoms; i++)
         (*velm)[i].w = (float) (1.0/system.getParticleMass(i));
     velm->upload();
-    numForceBuffers = 1;
+    numForceBuffers = platformData.contexts.size();
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
     forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);

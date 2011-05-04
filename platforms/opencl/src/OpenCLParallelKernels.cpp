@@ -61,7 +61,7 @@ public:
         // Copy coordinates over to this device and execute the kernel.
 
         if (cl.getContextIndex() > 0)
-            cl.getPosq().upload(cl.getPlatformData().contexts[0]->getPosq().getHostBuffer());
+            cl.getPosq().upload(cl.getPlatformData().contexts[0]->getPosq().getHostBuffer(), false);
         kernel.beginComputation(context, includeForce, includeEnergy);
     }
 private:
@@ -82,7 +82,7 @@ public:
         // Execute the kernel, then download forces.
         
         energy += kernel.finishComputation(context, includeForce, includeEnergy);
-        if (includeForce)
+        if (includeForce && cl.getContextIndex() > 0)
             cl.getForce().download(&contextForces[cl.getContextIndex()*cl.getPaddedNumAtoms()]);
         completionTime = getTime();
     }
@@ -142,8 +142,11 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
     if (includeForce) {
         // Sum the forces from all devices.
         
-        contextForces->upload();
-        data.contexts[0]->reduceBuffer(*contextForces, data.contexts.size());
+        OpenCLContext& cl = *data.contexts[0];
+        int numAtoms = cl.getPaddedNumAtoms();
+        cl.getQueue().enqueueWriteBuffer(contextForces->getDeviceBuffer(), CL_FALSE, numAtoms*sizeof(mm_float4),
+                numAtoms*(data.contexts.size()-1)*sizeof(mm_float4), &(*contextForces)[numAtoms]);
+        cl.reduceBuffer(*contextForces, data.contexts.size());
         
         // Balance work between the contexts by transferring a few nonbonded tiles from the context that
         // finished last to the one that finished first.
