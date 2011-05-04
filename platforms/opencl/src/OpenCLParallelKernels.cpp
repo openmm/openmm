@@ -82,8 +82,12 @@ public:
         // Execute the kernel, then download forces.
         
         energy += kernel.finishComputation(context, includeForce, includeEnergy);
-        if (includeForce && cl.getContextIndex() > 0)
-            cl.getForce().download(&contextForces[cl.getContextIndex()*cl.getPaddedNumAtoms()]);
+        if (includeForce) {
+            if (cl.getContextIndex() > 0)
+                cl.getForce().download(&contextForces[cl.getContextIndex()*cl.getPaddedNumAtoms()]);
+            else
+                cl.getQueue().finish();
+        }
         completionTime = getTime();
     }
 private:
