@@ -95,6 +95,13 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
             compilationOptions += " -DWARPS_ARE_ATOMIC";
             simdWidth = 32;
         }
+        else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
+            // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around.
+            compilationOptions += " -DAMD_ATOMIC_WORK_AROUND";
+            // AMD has both 32 and 64 width SIMDs. To determine need to create a kernel to query.
+            // For now default to 1 which will use the default kernels.
+            simdWidth = 1;
+        }
         else
             simdWidth = 1;
         queue = cl::CommandQueue(context, device);

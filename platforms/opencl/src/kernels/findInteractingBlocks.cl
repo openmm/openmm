@@ -90,7 +90,7 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
     __local int* flag = sum;
     int lasty = -1;
     float4 center, boxSize, pos;
-    for (tile = 0; tile < numValid; tile++) {
+    for (tile = 0; tile < numValid; ) {
         int x = temp[tile].x;
         int y = temp[tile].y;
         if (x == y) {
@@ -167,6 +167,14 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
     __local ushort2 temp[BUFFER_SIZE];
     __local int bufferFull;
     __local int globalIndex;
+#ifdef AMD_ATOMIC_WORK_AROUND
+    // Do a byte write to force all memory accesses to interactionCount to use the complete path.
+    // This avoids the atomic access from causing all word accesses to other buffers from using the slow complete path.
+    // The IF actually causes the write to never be executed, its presence is all that is needed.
+    // AMD APP SDK 2.4 has this problem.
+    if (get_global_id(0) == get_local_id(0)+1)
+        ((__global char*)interactionCount)[sizeof(unsigned int)+1] = 0;
+#endif
     int valuesInBuffer = 0;
     if (get_local_id(0) == 0)
         bufferFull = false;

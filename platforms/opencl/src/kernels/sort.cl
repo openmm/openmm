@@ -47,6 +47,14 @@ __kernel void computeRange(__global TYPE* data, int length, __global float2* ran
  */
 __kernel void assignElementsToBuckets(__global TYPE* data, int length, int numBuckets, __global float2* range,
         __global int* bucketOffset, __global int* bucketOfElement, __global int* offsetInBucket) {
+#ifdef AMD_ATOMIC_WORK_AROUND
+    // Do a byte write to force all memory accesses to interactionCount to use the complete path.
+    // This avoids the atomic access from causing all word accesses to other buffers from using the slow complete path.
+    // The IF actually causes the write to never be executed, its presence is all that is needed.
+    // AMD APP SDK 2.4 has this problem.
+    if (get_global_id(0) == get_local_id(0)+1)
+        ((__global char*)bucketOffset)[sizeof(int)*numBuckets+1] = 0;
+#endif
     float2 dataRange = range[0];
     float minValue = dataRange.x;
     float maxValue = dataRange.y;
