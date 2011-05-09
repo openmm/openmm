@@ -197,12 +197,6 @@ public:
         return *exclusionRowIndices;
     }
     /**
-     * Get the array which contains flags for reserving force buffers.
-     */
-    OpenCLArray<cl_uint>& getForceBufferFlags() {
-        return *forceBufferFlags;
-    }
-    /**
      * Get the index of the first tile this context is responsible for processing.
      */
     int getStartTileIndex() const {
@@ -245,7 +239,6 @@ private:
     OpenCLArray<cl_uint>* interactionCount;
     OpenCLArray<mm_float4>* blockCenter;
     OpenCLArray<mm_float4>* blockBoundingBox;
-    OpenCLArray<cl_uint>* forceBufferFlags;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
