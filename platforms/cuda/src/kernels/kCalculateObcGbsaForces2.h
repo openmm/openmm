@@ -120,7 +120,7 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
 #elif defined USE_CUTOFF
                 if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
 #else
-                if (a.x >= rScaledRadiusJ)
+                if (a.x >= rScaledRadiusJ || i >= cSim.atoms || x+j >= cSim.atoms )
 #endif
                 {
                     dE              = 0.0f;
@@ -222,7 +222,7 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
 #elif defined USE_CUTOFF
                     if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
 #else
-                    if (a.x >= rScaledRadiusJ)
+                    if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+tj >= cSim.atoms )
 #endif
                     {
                         dE                  = 0.0f;
@@ -250,7 +250,7 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
 #elif defined USE_CUTOFF
                     if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
 #else
-                    if (rj >= rScaledRadiusI)
+                    if (rj >= rScaledRadiusI || i >= cSim.atoms || y+tj >= cSim.atoms )
 #endif
                     {
                         dE                  = 0.0f;
@@ -320,7 +320,7 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
     #elif defined USE_CUTOFF
                         if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
     #else
-                        if (a.x >= rScaledRadiusJ)
+                        if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+j >= cSim.atoms )
     #endif
                         {
                             dE                  = 0.0f;
