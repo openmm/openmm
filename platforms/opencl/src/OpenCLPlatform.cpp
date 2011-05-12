@@ -106,7 +106,7 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& deviceIndexProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
     vector<string> devices;
     size_t searchPos = 0, nextPos;
-    while ((nextPos = deviceIndexProperty.find(',', searchPos)) != string::npos) {
+    while ((nextPos = deviceIndexProperty.find_first_of(", ", searchPos)) != string::npos) {
         devices.push_back(deviceIndexProperty.substr(searchPos, nextPos-searchPos));
         searchPos = nextPos+1;
     }
