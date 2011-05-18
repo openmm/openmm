@@ -108,10 +108,10 @@ planck_temperature_base_unit.define_conversion_factor_to(kelvin_base_unit, 1.416
 ### CHARGE ###
 ##############
 
-elementary_charge_base_unit = BaseUnit(charge_dimension, "elementary charge", "q")
+elementary_charge_base_unit = BaseUnit(charge_dimension, "elementary charge", "e")
 elementary_charges = elementary_charge = Unit({elementary_charge_base_unit: 1.0})
 
-coulomb_base_unit = BaseUnit(charge_dimension, "elementary charge", "q")
+coulomb_base_unit = BaseUnit(charge_dimension, "elementary charge", "C")
 # Exact conversion factor
 coulomb_base_unit.define_conversion_factor_to(elementary_charge_base_unit, 6.24150962915265e18)
 coulombs = coulomb = Unit({coulomb_base_unit: 1.0})

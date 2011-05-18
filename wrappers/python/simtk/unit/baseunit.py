@@ -26,7 +26,7 @@ class BaseUnit(object):
          - self: The newly created BaseUnit.
          - base_dim: (BaseDimension) The dimension of the new unit, e.g. 'mass'
          - name: (string) Name of the unit, e.g. "kilogram"
-         - symbol: (string) Symbol for the unit, e.g. 'kg'.  This symobol will
+         - symbol: (string) Symbol for the unit, e.g. 'kg'.  This symbol will appear in
             Quantity string descriptions.
         """
         self.dimension = base_dim
