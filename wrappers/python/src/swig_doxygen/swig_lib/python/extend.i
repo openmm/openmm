@@ -60,8 +60,10 @@
       Py_INCREF(Py_None);
     }
     if (getParameters) {
-      pParameters = Py_None;
-      Py_INCREF(Py_None);
+      pParameters = PyDict_New();
+      const std::map<std::string, double>& params = state.getParameters();
+      for (std::map<std::string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter)
+          PyDict_SetItemString(pParameters, iter->first.c_str(), Py_BuildValue("d", iter->second));
     } else {
       pParameters = Py_None;
       Py_INCREF(Py_None);
