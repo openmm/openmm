@@ -133,7 +133,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
             macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
             if tuple(macVersion) < (10, 6):
                 os.environ['MACOSX_DEPLOYMENT_TARGET']='10.5'
-            extra_compile_args.append("-m32")
             extra_link_args.append('-Wl,-rpath,@loader_path/OpenMM')
 
 
