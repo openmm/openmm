@@ -266,3 +266,8 @@ def stripUnits(args):
         newArgList.append(arg)
     return tuple(newArgList)
 %}
+
+%pythonappend OpenMM::Context::Context %{
+    self._system = args[0]
+    self._integrator = args[1]
+%}
