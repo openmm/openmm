@@ -72,7 +72,7 @@ public:
     /**
      * Create a Vec3 from a RealVec.
      */
-    operator Vec3() {
+    operator Vec3() const {
         return Vec3(data[0], data[1], data[2]);
     }
     RealOpenMM operator[](int index) const {
