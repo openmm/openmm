@@ -37,6 +37,7 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
             data[PME_ORDER-j-1] = scale*((dr+(float4) j)*data[PME_ORDER-j-2] + (-dr+(float4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
         data[0] = scale*(-dr+1.0f)*data[0];
         for (int j = 0; j < PME_ORDER; j++) {
+            data[j].w = pos.w; // Storing the charge here improves cache coherency in the charge spreading kernel
             pmeBsplineTheta[i+j*NUM_ATOMS] = data[j];
             pmeBsplineDTheta[i+j*NUM_ATOMS] = ddata[j];
         }
@@ -108,7 +109,7 @@ __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGrid
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                    float atomCharge = posq[atomIndex].w;
+                    float atomCharge = pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].w;
                     result += atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
                 }
                 if (z1 > gridPoint.z)
@@ -123,7 +124,7 @@ __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGrid
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                        float atomCharge = posq[atomIndex].w;
+                        float atomCharge = pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].w;
                         result += atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
                     }
                 }

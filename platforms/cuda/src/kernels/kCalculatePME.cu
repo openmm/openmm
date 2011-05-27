@@ -171,6 +171,7 @@ void kUpdateBsplines_kernel()
 
         for (int j = 0; j < PME_ORDER; j++)
         {
+            data[j].w = posq.w; // Storing the charge here improves cache coherency in the charge spreading kernel
             cSim.pPmeBsplineTheta[i + j*cSim.atoms] =  data[j];
             cSim.pPmeBsplineDtheta[i + j*cSim.atoms] = ddata[j];
         }
@@ -256,7 +257,7 @@ void kGridSpreadCharge_kernel()
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                    float atomCharge = cSim.pPosq[atomIndex].w;
+                    float atomCharge = tex1Dfetch(bsplineThetaRef, atomIndex+ix*cSim.atoms).w;
                     result += atomCharge*tex1Dfetch(bsplineThetaRef, atomIndex+ix*cSim.atoms).x*tex1Dfetch(bsplineThetaRef, atomIndex+iy*cSim.atoms).y*tex1Dfetch(bsplineThetaRef, atomIndex+iz*cSim.atoms).z;
                 }
                 if (z1 > gridPoint.z)
@@ -271,7 +272,7 @@ void kGridSpreadCharge_kernel()
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
-                        float atomCharge = cSim.pPosq[atomIndex].w;
+                        float atomCharge = tex1Dfetch(bsplineThetaRef, atomIndex+ix*cSim.atoms).w;
                         result += atomCharge*tex1Dfetch(bsplineThetaRef, atomIndex+ix*cSim.atoms).x*tex1Dfetch(bsplineThetaRef, atomIndex+iy*cSim.atoms).y*tex1Dfetch(bsplineThetaRef, atomIndex+iz*cSim.atoms).z;
                     }
                 }
