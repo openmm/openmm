@@ -32,10 +32,34 @@ extern "C" {
 #endif
 
 
-typedef struct {
-	RealOpenMM re;
-	RealOpenMM im;
-} t_complex;
+class t_complex {
+public:
+    RealOpenMM re;
+    RealOpenMM im;
+    t_complex() : re(0.0), im(0.0) {
+    }
+    t_complex(RealOpenMM re, RealOpenMM im) : re(re), im(im) {
+    }
+    t_complex(const t_complex& c) : re(c.re), im(c.im) {
+    }
+    t_complex operator*(RealOpenMM r) {
+        return t_complex(re*r, im*r);
+    }
+    t_complex operator+(const t_complex& c) const {
+        return t_complex(re+c.re, im+c.im);
+    }
+    t_complex operator-(const t_complex& c) const {
+        return t_complex(re-c.re, im-c.im);
+    }
+    t_complex operator+=(const t_complex& c) {
+        re += c.re;
+        im += c.im;
+    }
+    t_complex operator-=(const t_complex& c) {
+        re -= c.re;
+        im -= c.im;
+    }
+};
 
 
 /*! \brief Datatype for FFT setup
