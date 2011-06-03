@@ -73,9 +73,11 @@ const map<string, double>& State::getParameters() const {
         throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
     return parameters;
 }
-State::State(double time, int numParticles, DataType types) : types(types), time(time), ke(0), pe(0),
+State::State(double time, int numParticles, int types) : types(types), time(time), ke(0), pe(0),
         positions( (types & Positions) == 0 ? 0 : numParticles), velocities( (types & Velocities) == 0 ? 0 : numParticles),
         forces( (types & Forces) == 0 ? 0 : numParticles) {
+}
+State::State() : types(0), time(0.0), ke(0), pe(0), positions(0), velocities(0), forces(0) {
 }
 vector<Vec3>& State::updPositions() {
     return positions;

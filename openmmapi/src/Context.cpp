@@ -78,7 +78,7 @@ Platform& Context::getPlatform() {
 }
 
 State Context::getState(int types) const {
-    State state(impl->getTime(), impl->getSystem().getNumParticles(), State::DataType(types));
+    State state(impl->getTime(), impl->getSystem().getNumParticles(), types);
     Vec3 periodicBoxSize[3];
     impl->getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
     state.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);

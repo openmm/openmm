@@ -58,6 +58,10 @@ public:
      */
     enum DataType {Positions=1, Velocities=2, Forces=4, Energy=8, Parameters=16};
     /**
+     * Construct an empty State containing no data.  This exists so State objects can be used in STL containers.
+     */
+    State();
+    /**
      * Get the time for which this State was created.
      */
     double getTime() const;
@@ -95,14 +99,14 @@ public:
     const std::map<std::string, double>& getParameters() const;
 private:
     friend class Context;
-    State(double time, int numParticles, DataType types);
+    State(double time, int numParticles, int types);
     std::vector<Vec3>& updPositions();
     std::vector<Vec3>& updVelocities();
     std::vector<Vec3>& updForces();
     std::map<std::string, double>& updParameters();
     void setEnergy(double ke, double pe);
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
-    DataType types;
+    int types;
     double time, ke, pe;
     std::vector<Vec3> positions;
     std::vector<Vec3> velocities;
