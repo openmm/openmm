@@ -445,9 +445,9 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
   gpuContext gpu                       = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
+    static int iteration          = 1;
     int targetAtom                = 546;
     static const char* methodName = "cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply";
-    static int iteration          = 1;
     if( 1 && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s\n", methodName );
         (void) fflush( amoebaGpu->log );
@@ -485,30 +485,17 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
 #endif
 
     if (gpu->bOutputBufferPerWarp){
-
         kCalculateAmoebaPmeMutualInducedFieldCutoffByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                                 amoebaGpu->psWorkArray_3_2->_pDevData,
-                                                                 debugArray->_pDevData, targetAtom );
-#else
                                                                  amoebaGpu->psWorkArray_3_2->_pDevData );
-#endif
 
     } else {
 
         kCalculateAmoebaPmeMutualInducedFieldCutoff_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
                                                                  gpu->sim.pInteractingWorkUnit,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                                 amoebaGpu->psWorkArray_3_2->_pDevData,
-                                                                 debugArray->_pDevData, targetAtom );
-#else
                                                                  amoebaGpu->psWorkArray_3_2->_pDevData );
-#endif
-
-
     }
     LAUNCHERROR("kCalculateAmoebaPmeMutualInducedField");
 
@@ -520,8 +507,8 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
                         iteration ); (void) fflush( amoebaGpu->log );
         outputArray->Download();
         outputPolarArray->Download();
-        debugArray->Download();
-        int maxPrint = 5;
+//        debugArray->Download();
+        int maxPrint = 5000000;
         for( int ii = 0; ii < gpu->natoms; ii++ ){
             (void) fprintf( amoebaGpu->log, "%5d ", ii); 
  
@@ -564,7 +551,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpuConte
         iteration++;
 
      }
-     delete debugArray;
+//     delete debugArray;
 #endif
 
 }
@@ -652,6 +639,18 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
 
         // post matrix multiply
 
+        if( 0 ){
+            gpuContext gpu = amoebaGpu->gpuContext;
+            std::vector<int> fileId;
+            fileId.push_back( iteration );
+            VectorOfDoubleVectors outputVector;
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psWorkVector[0], outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psWorkVector[1], outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectMIPre", fileId, outputVector );
+        }
+
         kSorUpdateMutualInducedField_kernel<<< gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block >>>(
            gpu->natoms, amoebaGpu->psPolarizability->_pDevData,
            amoebaGpu->psInducedDipole->_pDevData, amoebaGpu->psInducedDipolePolar->_pDevData,
@@ -664,11 +663,13 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
             std::vector<int> fileId;
             fileId.push_back( iteration );
             VectorOfDoubleVectors outputVector;
-//          cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field, outputVector, gpu->psAtomIndex->_pSysData );
-//          cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_Field, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psE_FieldPolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+            cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psPolarizability, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeDirectMI", fileId, outputVector );
+            //exit(0);
         }
 
         // get total epsilon -- performing sums on gpu
@@ -762,6 +763,14 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
                         amoebaGpu->psCurrentEpsilon->_pSysData[2], done );
         (void) fflush( amoebaGpu->log );
 
+
+        if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "MI iteration=%3d eps %14.6e [%14.6e %14.6e] done=%d\n",
+                        iteration, amoebaGpu->mutualInducedCurrentEpsilon,
+                        amoebaGpu->psCurrentEpsilon->_pSysData[1], 
+                        amoebaGpu->psCurrentEpsilon->_pSysData[2], done );
+        (void) fflush( amoebaGpu->log );
+        }
 #endif
 
         // exit if nan
@@ -781,7 +790,7 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, 1.0f );
+        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaPmeMI", fileId, outputVector );

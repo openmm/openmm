@@ -104,13 +104,12 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
 
                 float4 delta;
                 float prefactor2;
-                if(  ( (atomI == (y + j)) || (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ){
-                    delta.w = prefactor2 = 0.0f;
-                } else {
+                if(  ( (atomI != (y + j)) && (atomI < cSim.atoms) && ((y+j) < cSim.atoms) ) ){
                     setupMutualInducedFieldPairIxn_kernel( localParticle, psA[j], uscale, &delta, &prefactor2 );
+//delta.w = prefactor2 = 0.0f;
+                    calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipole,      delta, prefactor2, fieldSum );
+                    calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipolePolar, delta, prefactor2, fieldPolarSum );
                 }
-                calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipole,      delta, prefactor2, fieldSum );
-                calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipolePolar, delta, prefactor2, fieldPolarSum );
 
             }
 
@@ -118,24 +117,18 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset            = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
-            load3dArrayBufferPerWarp( offset, fieldSum,      outputField );
-            load3dArrayBufferPerWarp( offset, fieldPolarSum, outputFieldPolar);
-
 #else
             unsigned int offset            = 3*(x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
+#endif
             load3dArray( offset, fieldSum,      outputField );
             load3dArray( offset, fieldPolarSum, outputFieldPolar);
 
-#endif
 
         } else {
 
             if (lasty != y)
             {
                 unsigned int atomJ        = y + tgx;
-
-                // load coordinates, charge, ...
-
                 loadMutualInducedShared( &(sA[threadIdx.x]), atomJ );
             }
     
@@ -152,58 +145,53 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
     
                 zeroMutualInducedParticleSharedField(  &(sA[threadIdx.x]) );
     
-                for (unsigned int j = 0; j < GRID; j++)
-                {
-                    if ((flags&(1<<j)) != 0)
-                    {
+                for (unsigned int j = 0; j < GRID; j++){
+                    if ((flags&(1<<j)) != 0) {
                         unsigned int jIdx = (flags == 0xFFFFFFFF) ? tj : j;
                         float4 delta;
                         float prefactor2;
-                        if( (atomI >= cSim.atoms) || ((y+jIdx) >= cSim.atoms) ){
-                            delta.w = prefactor2 = 0.0f;
-                        } else {
+                        if( (atomI < cSim.atoms) && ((y+jIdx) < cSim.atoms) ){
                             setupMutualInducedFieldPairIxn_kernel( localParticle, psA[jIdx], uscale, &delta, &prefactor2 );
-                        }
-                        calculateMutualInducedFieldPairIxn_kernel(  psA[jIdx].inducedDipole,          delta, prefactor2, fieldSum );
-                        calculateMutualInducedFieldPairIxn_kernel(  psA[jIdx].inducedDipolePolar,     delta, prefactor2, fieldPolarSum );
+                            calculateMutualInducedFieldPairIxn_kernel(  psA[jIdx].inducedDipole,          delta, prefactor2, fieldSum );
+                            calculateMutualInducedFieldPairIxn_kernel(  psA[jIdx].inducedDipolePolar,     delta, prefactor2, fieldPolarSum );
 #ifndef INCLUDE_MI_FIELD_BUFFERS
-                        calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipole,      delta, prefactor2, psA[jIdx].field );
-                        calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipolePolar, delta, prefactor2, psA[jIdx].fieldPolar );
-#else
-                        if( flags == 0xFFFFFFFF ){
                             calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipole,      delta, prefactor2, psA[jIdx].field );
                             calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipolePolar, delta, prefactor2, psA[jIdx].fieldPolar );
-                        } else {
-                            calculateMutualInducedFieldPairIxnNoAdd_kernel(  localParticle.inducedDipole,      delta, prefactor2,  sA[threadIdx.x].tempBuffer );
-                            calculateMutualInducedFieldPairIxnNoAdd_kernel(  localParticle.inducedDipolePolar, delta, prefactor2,  sA[threadIdx.x].tempBufferP );
-
-                            if( tgx % 2 == 0 ){
-                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
-                            }
-                            if( tgx % 4 == 0 ){
-                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );
-                            }
-                            if( tgx % 8 == 0 ){
-                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );
-                            }
-                            if( tgx % 16 == 0 ){
-                                sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );
-                            }
-
-                            if (tgx == 0)
-                            {
-                                psA[jIdx].field[0]         += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
-                                psA[jIdx].field[1]         += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
-                                psA[jIdx].field[2]         += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
-
-                                psA[jIdx].fieldPolar[0]    += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
-                                psA[jIdx].fieldPolar[1]    += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
-                                psA[jIdx].fieldPolar[2]    += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
-                            }
-
-                        }
-#endif
+#else
+                            if( flags == 0xFFFFFFFF ){
+                                calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipole,      delta, prefactor2, psA[jIdx].field );
+                                calculateMutualInducedFieldPairIxn_kernel(  localParticle.inducedDipolePolar, delta, prefactor2, psA[jIdx].fieldPolar );
+                            } else {
+                                calculateMutualInducedFieldPairIxnNoAdd_kernel(  localParticle.inducedDipole,      delta, prefactor2,  sA[threadIdx.x].tempBuffer );
+                                calculateMutualInducedFieldPairIxnNoAdd_kernel(  localParticle.inducedDipolePolar, delta, prefactor2,  sA[threadIdx.x].tempBufferP );
     
+                                if( tgx % 2 == 0 ){
+                                    sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+1] );
+                                }
+                                if( tgx % 4 == 0 ){
+                                    sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+2] );
+                                }
+                                if( tgx % 8 == 0 ){
+                                    sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+4] );
+                                }
+                                if( tgx % 16 == 0 ){
+                                    sumTempBuffer( sA[threadIdx.x], sA[threadIdx.x+8] );
+                                }
+    
+                                if (tgx == 0)
+                                {
+                                    psA[jIdx].field[0]         += sA[threadIdx.x].tempBuffer[0]  + sA[threadIdx.x+16].tempBuffer[0];
+                                    psA[jIdx].field[1]         += sA[threadIdx.x].tempBuffer[1]  + sA[threadIdx.x+16].tempBuffer[1];
+                                    psA[jIdx].field[2]         += sA[threadIdx.x].tempBuffer[2]  + sA[threadIdx.x+16].tempBuffer[2];
+    
+                                    psA[jIdx].fieldPolar[0]    += sA[threadIdx.x].tempBufferP[0] + sA[threadIdx.x+16].tempBufferP[0];
+                                    psA[jIdx].fieldPolar[1]    += sA[threadIdx.x].tempBufferP[1] + sA[threadIdx.x+16].tempBufferP[1];
+                                    psA[jIdx].fieldPolar[2]    += sA[threadIdx.x].tempBufferP[2] + sA[threadIdx.x+16].tempBufferP[2];
+                                }
+    
+                            }
+#endif
+                        }
                     }
     
                     tj                  = (tj + 1) & (GRID - 1);
