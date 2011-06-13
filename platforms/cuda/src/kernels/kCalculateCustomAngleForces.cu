@@ -112,7 +112,7 @@ void kCalculateCustomAngleForces_kernel()
         float r21 = DOT3(v0, v0);
         float r23 = DOT3(v1, v1);
         float dot = DOT3(v0, v1);
-        float cosine = dot/sqrt(r21*r23);
+        float cosine = max(-1.0f, min(1.0f, dot/sqrt(r21*r23)));
         VARIABLE(0) = acos(cosine);
         VARIABLE(1) = params.x;
         VARIABLE(2) = params.y;

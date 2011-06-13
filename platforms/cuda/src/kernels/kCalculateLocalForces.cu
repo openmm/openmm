@@ -198,7 +198,7 @@ void kCalculateLocalForces_kernel()
             float r21               = DOT3(A->v0, A->v0); // dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
             float r23               = DOT3(A->v1, A->v1); // dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
             float dot               = DOT3(A->v0, A->v1); // dx1 * dx2 + dy1 * dy2 + dz1 * dz2;
-            float cosine            = dot / sqrt(r21 * r23);
+            float cosine            = max(-1.0f, min(1.0f, dot / sqrt(r21 * r23)));
 
             float angle_energy;
 /* E */     GETENERGYGIVENANGLECOSINE(cosine, bond_angle, angle_energy);

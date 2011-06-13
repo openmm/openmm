@@ -22,7 +22,7 @@ __kernel void computeCustomAngleForces(int numAtoms, int numAngles, __global flo
         float r21 = v0.x*v0.x + v0.y*v0.y + v0.z*v0.z;
         float r23 = v1.x*v1.x + v1.y*v1.y + v1.z*v1.z;
         float dot = v0.x*v1.x + v0.y*v1.y + v0.z*v1.z;
-        float cosine = dot/sqrt(r21*r23);
+        float cosine = clamp(dot/sqrt(r21*r23), -1.0f, 1.0f);
         float theta = acos(cosine);
         COMPUTE_FORCE
         float4 c21 = cross(v0, cp)*(dEdAngle/(r21*rp));
