@@ -148,7 +148,7 @@ IF(OPENMM_BUILD_STATIC_LIB)
     TARGET_LINK_LIBRARIES( ${STATIC_RPMD_TARGET} ${STATIC_TARGET} )
 ENDIF(OPENMM_BUILD_STATIC_LIB)
 
-#ADD_SUBDIRECTORY(platforms/reference/tests)
+ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 IF(CUDA_FOUND)

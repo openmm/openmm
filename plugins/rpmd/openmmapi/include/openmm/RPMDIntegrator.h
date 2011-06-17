@@ -41,7 +41,17 @@
 namespace OpenMM {
 
 /**
- * This is an Integrator which simulates a System using RPMD dynamics.
+ * This is an Integrator which simulates a System using ring polymer molecular dynamics (RPMD).
+ * It simulates many copies of the System, with successive copies connected by harmonic
+ * springs to form a ring.  This allows certain quantum mechanical effects to be efficiently
+ * simulated.
+ * 
+ * Because this Integrator simulates many copies of the System at once, it must be used
+ * differently from other Integrators.  Instead of setting positions and velocities by
+ * calling methods of the Context, you should use the corresponding methods of the Integrator
+ * to set them for specific copies of the System.  Similarly, you should retrieve state information
+ * for particular copies by calling getState() on the Integrator.  Do not query the Context for
+ * state information.
  */
 
 class OPENMM_EXPORT RPMDIntegrator : public Integrator {

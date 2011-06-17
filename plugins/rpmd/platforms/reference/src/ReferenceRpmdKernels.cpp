@@ -66,7 +66,7 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
         velocities[i].resize(numParticles);
         forces[i].resize(numParticles);
     }
-    fftpack_init_1d(&fft, numParticles);
+    fftpack_init_1d(&fft, numCopies);
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
 
@@ -115,7 +115,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     vector<t_complex> p(numCopies);
     vector<t_complex> q(numCopies);
     const RealOpenMM scale = 1.0/sqrt(numCopies);
-    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/1000;
+    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
     const RealOpenMM nkT = numCopies*BOLTZ*integrator.getTemperature();
     const RealOpenMM twown = 2.0*nkT/hbar;
     for (int particle = 0; particle < numParticles; particle++) {
@@ -132,7 +132,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
                 const RealOpenMM wt = wk*dt;
                 const RealOpenMM sinwt2 = sin(wt/2);
                 const RealOpenMM wm = wk*system.getParticleMass(particle);
-                const t_complex pprime = p[k] - q[k]*2.0*wm*sinwt2; // Advance momentum from t-dt/2 to t+dt/2
+                const t_complex pprime = p[k] - q[k]*(2.0*wm*sinwt2); // Advance momentum from t-dt/2 to t+dt/2
                 q[k] = p[k]*(2.0*sinwt2/wm) + q[k]*(1.0-4.0*sinwt2*sinwt2); // Advance position from t to t+dt
                 p[k] = pprime;
             }
@@ -150,7 +150,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     const RealOpenMM c1_0 = exp(-dt*integrator.getFriction());
     const RealOpenMM c2_0 = sqrt(1.0-c1_0*c1_0);
     for (int particle = 0; particle < numParticles; particle++) {
-        const RealOpenMM localc3 = c2_0*sqrt(system.getParticleMass(particle));
+        const RealOpenMM c3_0 = c2_0*sqrt(system.getParticleMass(particle)*nkT);
         for (int component = 0; component < 3; component++) {
             for (int k = 0; k < numCopies; k++)
                 p[k] = t_complex(scale*velocities[k][particle][component]*system.getParticleMass(particle), 0.0);
@@ -158,11 +158,11 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
             
             // Apply a local Langevin thermostat to the centroid mode.
 
-            p[0].re = p[0].re*c1_0 + localc3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+            p[0].re = p[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
 
             // Use critical damping white noise for the remaining modes.
             
-            for (int k = 1; k < numCopies/2; k++) {
+            for (int k = 1; k <= numCopies/2; k++) {
                 const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
                 const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
                 const RealOpenMM c1 = exp(-2.0*wk*dt);
