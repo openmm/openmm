@@ -32,6 +32,7 @@
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
+#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
@@ -77,7 +78,7 @@ Platform& Context::getPlatform() {
     return impl->getPlatform();
 }
 
-State Context::getState(int types) const {
+State Context::getState(int types, bool enforcePeriodicBox) const {
     State state(impl->getTime(), impl->getSystem().getNumParticles(), types);
     Vec3 periodicBoxSize[3];
     impl->getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
@@ -95,8 +96,39 @@ State Context::getState(int types) const {
         for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)
             state.updParameters()[iter->first] = iter->second;
     }
-    if (types&State::Positions)
+    if (types&State::Positions) {
         impl->getPositions(state.updPositions());
+        if (enforcePeriodicBox) {
+            const vector<vector<int> >& molecules = impl->getMolecules();
+            vector<Vec3>& positions = state.updPositions();
+            for (int i = 0; i < (int) molecules.size(); i++) {
+                // Find the molecule center.
+
+                Vec3 center;
+                for (int j = 0; j < (int) molecules[i].size(); j++)
+                    center += positions[molecules[i][j]];
+                center *= 1.0/molecules[i].size();
+
+                // Find the displacement to move it into the first periodic box.
+
+                int xcell = (int) floor(center[0]/periodicBoxSize[0][0]);
+                int ycell = (int) floor(center[1]/periodicBoxSize[1][1]);
+                int zcell = (int) floor(center[2]/periodicBoxSize[2][2]);
+                double dx = xcell*periodicBoxSize[0][0];
+                double dy = ycell*periodicBoxSize[1][1];
+                double dz = zcell*periodicBoxSize[2][2];
+
+                // Translate all the particles in the molecule.
+                
+                for (int j = 0; j < (int) molecules[i].size(); j++) {
+                    Vec3& pos = positions[molecules[i][j]];
+                    pos[0] -= dx;
+                    pos[1] -= dy;
+                    pos[2] -= dz;
+                }
+            }
+        }
+    }
     if (types&State::Velocities)
         impl->getVelocities(state.updVelocities());
     return state;

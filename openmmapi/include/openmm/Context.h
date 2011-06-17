@@ -120,8 +120,11 @@ public:
      * 
      * @param types the set of data types which should be stored in the State object.  This
      * should be a union of DataType values, e.g. (State::Positions | State::Velocities).
+     * @param enforcePeriodicBox if false, the position of each particle will be whatever position
+     * is stored in the Context, regardless of periodic boundary conditions.  If true, particle
+     * positions will be translated so the center of every molecule lies in the same periodic box.
      */
-    State getState(int types) const;
+    State getState(int types, bool enforcePeriodicBox=false) const;
     /**
      * Set the current time of the simulation (in picoseconds).
      */
