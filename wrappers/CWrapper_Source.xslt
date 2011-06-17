@@ -150,8 +150,8 @@ OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* a
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types) {
-    State result = reinterpret_cast&lt;const Context*&gt;(target)->getState(types);
+OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types, int enforcePeriodicBox) {
+    State result = reinterpret_cast&lt;const Context*&gt;(target)->getState(types, enforcePeriodicBox);
     return reinterpret_cast&lt;OpenMM_State*&gt;(new State(result));
 };
 OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {

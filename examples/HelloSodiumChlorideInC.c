@@ -289,7 +289,7 @@ myGetOpenMMState(MyOpenMMData* omm, int wantEnergy,
     /* Forces are also available (and cheap). */
 
     /* State object is created here and must be explicitly destroyed below. */
-    state = OpenMM_Context_getState(omm->context, infoMask);
+    state = OpenMM_Context_getState(omm->context, infoMask, 0);
     *timeInPs = OpenMM_State_getTime(state); /* OpenMM time is in ps already. */
 
     /* Positions are maintained as a Vec3Array inside the State. This will give

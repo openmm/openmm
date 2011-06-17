@@ -282,7 +282,7 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     ! Forces are also available (and cheap).
     
     ! Don't forget to destroy this State when you're done with it.
-    call OpenMM_Context_getState(context, infoMask, state) 
+    call OpenMM_Context_getState(context, infoMask, state, 0) 
     timeInPs = OpenMM_State_getTime(state) ! OpenMM time is in ps already.
     
     ! Positions are maintained as a Vec3Array inside the State. This will give

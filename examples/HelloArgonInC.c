@@ -68,7 +68,7 @@ void simulateArgon()
     /* Simulate. */
    for (frameNum=1; ;++frameNum) {
         /* Output current state information. */
-        OpenMM_State* state    = OpenMM_Context_getState(context, OpenMM_State_Positions);
+        OpenMM_State* state    = OpenMM_Context_getState(context, OpenMM_State_Positions, 0);
         const double  timeInPs = OpenMM_State_getTime(state);
         writePdbFrame(frameNum, state); /*output coordinates*/
         OpenMM_State_destroy(state);
