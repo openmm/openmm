@@ -3,7 +3,8 @@
                             int getVelocities=0,
                             int getForces=0,
                             int getEnergy=0,
-                            int getParameters=0) {
+                            int getParameters=0,
+                            int enforcePeriodic=0) {
     int types;
     double simTime;
     PyObject *pPeriodicBoxVectorsList;
@@ -20,7 +21,7 @@
     if (getForces) types |= State::Forces;
     if (getEnergy) types |= State::Energy;
     if (getParameters) types |= State::Parameters;
-    State state = self->getState(types);
+    State state = self->getState(types, enforcePeriodic);
 
     simTime=state.getTime();
 
@@ -84,14 +85,16 @@
                  getVelocities=False,
                  getForces=False,
                  getEnergy=False,
-                 getParameters=False):
+                 getParameters=False,
+                 enforcePeriodicBox=False):
         """
         getState(self,
                  getPositions = False,
                  getVelocities = False,
                  getForces = False,
-                 getEnergy=False,
-                 getParameters=False)
+                 getEnergy = False,
+                 getParameters = False
+                 enforcePeriodicBox = False)
               -> State
         """
         
@@ -105,10 +108,12 @@
         else: getE=0
         if getParameters: getPa=1
         else: getPa=0
+        if enforcePeriodicBox: enforcePeriodic=1
+        else: enforcePeriodic=0
 
         (simTime, periodicBoxVectorsList, energy, coordList, velList,
          forceList, paramMap) = \
-            self.getStateAsLists(getP, getV, getF, getE, getPa)
+            self.getStateAsLists(getP, getV, getF, getE, getPa, enforcePeriodic)
         
         state = State(simTime=simTime,
                       energy=energy,
