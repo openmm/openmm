@@ -97,7 +97,7 @@ void testSingleParticle() {
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
-void testEnergyEthane() {
+void testEnergyEthane( int applySwitch ) {
 
     //ReferencePlatform platform;
     CudaPlatform platform;
@@ -147,6 +147,11 @@ void testEnergyEthane() {
        (void) fprintf( stderr, "Applying GB/VI\n" );
     }
     GBVIForce* forceField = new GBVIForce();
+    if( applySwitch ){
+        forceField->setBornRadiusScalingMethod( GBVIForce::QuinticSpline );
+    } else {
+        forceField->setBornRadiusScalingMethod( GBVIForce::NoScaling );
+    }
     for( int i = 0; i < numParticles; i++ ){
        system.addParticle(1.0);
        forceField->addParticle( H_charge, H_radius, H_gamma);
@@ -258,7 +263,10 @@ void testEnergyEthane() {
 int main() {
     try {
         testSingleParticle();
-        testEnergyEthane();
+        int applySwitch = 0;
+        testEnergyEthane( applySwitch );
+        applySwitch = 1;
+        testEnergyEthane( applySwitch );
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

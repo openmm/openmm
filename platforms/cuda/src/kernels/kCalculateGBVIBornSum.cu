@@ -102,6 +102,102 @@ void GetCalculateGBVIBornSumSim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateGBVIBornSum.h"
 
+/**---------------------------------------------------------------------------------------
+
+   Compute quintic spline value and associated derviative
+
+   @param x                   value to compute spline at
+   @param rl                  lower cutoff value
+   @param ru                  upper cutoff value
+   @param outValue            value of spline at x
+   @param outDerivative       value of derivative of spline at x
+
+   --------------------------------------------------------------------------------------- */
+
+static __device__ void quinticSpline_kernel( float x, float rl, float ru,
+                                             float* outValue, float* outDerivative ){
+
+   // ---------------------------------------------------------------------------------------
+
+   const float one           =    1.0f;
+   const float minusSix      =   -6.0f;
+   const float minusTen      =  -10.0f;
+   const float minusThirty   =  -30.0f;
+   const float fifteen       =   15.0f;
+   const float sixty         =   60.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   float numerator    = x  - rl;
+   float denominator  = ru - rl;
+   float ratio        = numerator/denominator;
+   float ratio2       = ratio*ratio;
+   float ratio3       = ratio2*ratio;
+
+   *outValue               = one + ratio3*(minusTen + fifteen*ratio + minusSix*ratio2);
+   *outDerivative          = ratio2*(minusThirty + sixty*ratio + minusThirty*ratio2)/denominator;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Compute Born radii based on Eq. 3 of Labute paper [JCC 29 p. 1693-1698 2008])
+   and quintic splice switching function
+
+   @param atomicRadius3       atomic radius cubed
+   @param bornSum             Born sum (volume integral)
+   @param bornRadius          output Born radius
+   @param switchDeriviative   output switching function deriviative
+
+   --------------------------------------------------------------------------------------- */
+
+__device__ void computeBornRadiiUsingQuinticSpline( float atomicRadius3, float bornSum,
+                                                    float* bornRadius, float* switchDeriviative ){
+
+   // ---------------------------------------------------------------------------------------
+
+   const float zero          =   0.0f;
+   const float one           =   1.0f;
+   const float minusOneThird =  (-1.0f/3.0f);
+
+   // ---------------------------------------------------------------------------------------
+
+   // R                = [ S(V)*(A - V) ]**(-1/3)
+
+   // S(V)             = 1                                 V < L
+   // S(V)             = qSpline + U/(A-V)                 L < V < A
+   // S(V)             = U/(A-V)                           U < V 
+
+   // dR/dr            = (-1/3)*[ S(V)*(A - V) ]**(-4/3)*[ d{ S(V)*(A-V) }/dr
+
+   // d{ S(V)*(A-V) }/dr   = (dV/dr)*[ (A-V)*dS/dV - S(V) ]
+
+   //  (A - V)*dS/dV - S(V)  = 0 - 1                             V < L
+
+   //  (A - V)*dS/dV - S(V)  = (A-V)*d(qSpline) + (A-V)*U/(A-V)**2 - qSpline - U/(A-V) 
+
+	//                        = (A-V)*d(qSpline) - qSpline        L < V < A**(-3)
+
+   //  (A - V)*dS/dV - S(V)  = (A-V)*U*/(A-V)**2 - U/(A-V) = 0   U < V
+
+   float splineL          = cSim.gbviQuinticLowerLimitFactor*atomicRadius3;
+   float sum;
+   if( bornSum > splineL ){
+      if( bornSum < atomicRadius3 ){
+         float splineValue, splineDerivative;
+         quinticSpline_kernel( bornSum, splineL, atomicRadius3, &splineValue, &splineDerivative ); 
+         sum                 = (atomicRadius3 - bornSum)*splineValue + cSim.gbviQuinticUpperBornRadiusLimit;
+         *switchDeriviative  = splineValue - (atomicRadius3 - bornSum)*splineDerivative;
+      } else {   
+         sum                 = cSim.gbviQuinticUpperBornRadiusLimit;
+         *switchDeriviative  = zero;
+      }
+   } else {
+      sum                = atomicRadius3 - bornSum; 
+      *switchDeriviative = one;
+   }
+   *bornRadius = pow( sum, minusOneThird );
+}
+
 __global__ void kReduceGBVIBornSum_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
@@ -116,15 +212,24 @@ __global__ void kReduceGBVIBornSum_kernel()
         for (int i = 0; i < cSim.nonbondOutputBuffers; i++)
         {
             sum += *pSt;
-       //     printf("%4d %4d A: %9.4f\n", pos, i, *pSt);
             pSt += cSim.stride;
         }
         
         // Now calculate Born radius
 
         float Rinv           = 1.0f/atom.x;
-        sum                  = Rinv*Rinv*Rinv - sum; 
-        cSim.pBornRadii[pos] = pow( sum, (-1.0f/3.0f) ); 
+        Rinv                 = Rinv*Rinv*Rinv;
+        if( cSim.gbviBornRadiusScalingMethod == 0 ){
+            sum                             = Rinv - sum; 
+            cSim.pBornRadii[pos]            = pow( sum, (-1.0f/3.0f) ); 
+            cSim.pGBVISwitchDerivative[pos] = 1.0f; 
+        } else {
+            float bornRadius;
+            float switchDeriviative;
+            computeBornRadiiUsingQuinticSpline( Rinv, sum, &bornRadius, &switchDeriviative );
+            cSim.pBornRadii[pos]             = bornRadius; 
+            cSim.pGBVISwitchDerivative[pos]  = switchDeriviative; 
+        }
         pos += gridDim.x * blockDim.x;
     }   
 }

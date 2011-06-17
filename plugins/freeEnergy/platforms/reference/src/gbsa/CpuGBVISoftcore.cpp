@@ -192,7 +192,7 @@ RealOpenMM* CpuGBVISoftcore::getSwitchDeriviativeConst( void ) const {
 #define GBVISoftcoreDebug 0
 
 void CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
-                                    RealOpenMM* outValue, RealOpenMM* outDerivative ){
+                                     RealOpenMM* outValue, RealOpenMM* outDerivative ){
 
    // ---------------------------------------------------------------------------------------
 

@@ -79,13 +79,9 @@ public:
          */
         NoScaling          = 0,
         /**
-         * Use the method outlined in Proteins 55, 383-394 (2004), Eq. 6
-         */
-        Tanh               = 1,
-        /**
          * Use quintic spline scaling function
          */
-        QuinticSpline       = 2
+        QuinticSpline       = 1
     };  
 
     /*
