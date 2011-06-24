@@ -91,7 +91,7 @@ void testSingleParticle() {
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
-void testEnergyEthane() {
+void testEnergyEthane( int applyBornRadiiScaling ) {
 
     ReferencePlatform platform;
     const int numParticles = 8;
@@ -140,6 +140,11 @@ void testEnergyEthane() {
        (void) fprintf( stderr, "Applying GB/VI\n" );
     }
     GBVIForce* forceField = new GBVIForce();
+    if( applyBornRadiiScaling ){
+        forceField->setBornRadiusScalingMethod( GBVIForce::QuinticSpline );
+    } else {
+        forceField->setBornRadiusScalingMethod( GBVIForce::NoScaling );
+    }
     for( int i = 0; i < numParticles; i++ ){
        system.addParticle(1.0);
        forceField->addParticle( H_charge, H_radius, H_gamma);
@@ -251,7 +256,8 @@ void testEnergyEthane() {
 int main() {
     try {
         testSingleParticle();
-        testEnergyEthane();
+        testEnergyEthane( 0 );
+        testEnergyEthane( 1 );
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
