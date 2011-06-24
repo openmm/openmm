@@ -378,10 +378,11 @@ void kReduceGBVIBornForces_kernel()
     float energy = 0.0f;
     while (pos < cSim.atoms)
     {
-        float bornRadius  = cSim.pBornRadii[pos];
-        float4 gbviData   = cSim.pGBVIData[pos];
-        float totalForce  = 0.0f;
-        float* pFt        = cSim.pBornForce + pos;
+        float bornRadius   = cSim.pBornRadii[pos];
+        float4 gbviData    = cSim.pGBVIData[pos];
+        float  switchDeriv = cSim.pGBVISwitchDerivative[pos];
+        float totalForce   = 0.0f;
+        float* pFt         = cSim.pBornForce + pos;
 
         int i = cSim.nonbondOutputBuffers;
         while (i >= 4)
@@ -416,7 +417,7 @@ void kReduceGBVIBornForces_kernel()
         energy             -= gbviData.z*ratio3;
         totalForce         += (3.0f*gbviData.z*ratio3)/bornRadius; // 'cavity' term
         float br2           = bornRadius*bornRadius;
-        totalForce         *= (1.0f/3.0f)*br2*br2;
+        totalForce         *= (1.0f/3.0f)*br2*br2*switchDeriv;
 
         pFt = cSim.pBornForce + pos;
         *pFt = totalForce;
