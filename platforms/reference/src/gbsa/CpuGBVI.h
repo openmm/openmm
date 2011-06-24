@@ -39,6 +39,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       // GB/VI parameters
 
       GBVIParameters* _gbviParameters;
+      std::vector<RealOpenMM> _switchDeriviative;
 
       // initialize data members (more than
       // one constructor, so centralize intialization here)
@@ -295,6 +296,49 @@ class CpuGBVI : public CpuImplicitSolvent {
       
       static double dL_dxD( double r, double x, double S );
 
+    /**---------------------------------------------------------------------------------------
+    
+       Return OBC chain derivative: size = _obcParameters->getNumberOfAtoms()
+       On first call, memory for array is allocated if not set
+    
+       @return array
+    
+       --------------------------------------------------------------------------------------- */
+    
+      std::vector<RealOpenMM>& getSwitchDeriviative( void );
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Compute quintic spline value and associated derviative
+    
+       @param x                   value to compute spline at
+       @param rl                  lower cutoff value
+       @param ru                  upper cutoff value
+       @param outValue            value of spline at x
+       @param outDerivative       value of derivative of spline at x
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
+                        RealOpenMM* outValue, RealOpenMM* outDerivative );
+
+    /**---------------------------------------------------------------------------------------
+    
+       Compute Born radii based on Eq. 3 of Labute paper [JCC 29 p. 1693-1698 2008])
+       and quintic splice switching function
+    
+       @param atomicRadius3       atomic radius cubed
+       @param bornSum             Born sum (volume integral)
+       @param gbviParameters      Gbvi parameters (parameters used in spline
+                                  QuinticLowerLimitFactor & QuinticUpperBornRadiusLimit)
+       @param bornRadius          output Born radius
+       @param switchDeriviative   output switching function deriviative
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
+                                             GBVIParameters* gbviParameters,
+                                             RealOpenMM* bornRadius, RealOpenMM* switchDeriviative );
 };
 
 // ---------------------------------------------------------------------------------------

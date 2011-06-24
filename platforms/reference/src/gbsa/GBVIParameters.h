@@ -36,6 +36,24 @@ class GBVIParameters : public ImplicitSolventParameters {
 
        static const std::string ParameterFileName;
 
+    /** 
+     * This is an enumeration of the different methods that may be used for scaling of the Born radii.
+     */
+    enum BornRadiusScalingMethod {
+        /**
+         * No scaling method is applied.
+         */
+        NoScaling          = 0,
+        /**
+         * Use the method outlined in Proteins 55, 383-394 (2004), Eq. 6
+         */
+        Tanh               = 2,
+        /**
+         * Use quintic spline scaling function
+         */
+        QuinticSpline       = 1
+    };  
+
    private:
 
       // scaled radii
@@ -53,6 +71,10 @@ class GBVIParameters : public ImplicitSolventParameters {
       bool periodic;
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
+
+      int _bornRadiusScalingMethod;
+      RealOpenMM _quinticLowerLimitFactor;
+      RealOpenMM _quinticUpperBornRadiusLimit;
 
    public:
 
@@ -253,6 +275,65 @@ class GBVIParameters : public ImplicitSolventParameters {
       
       RealOpenMM getTau( void ) const;
       
+    /**---------------------------------------------------------------------------------------
+    
+       Get bornRadiusScalingMethod
+    
+       @return bornRadiusScalingMethod
+    
+       --------------------------------------------------------------------------------------- */
+    
+    int getBornRadiusScalingMethod( void ) const;
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Set bornRadiusScalingMethod 
+    
+       @param bornRadiusScalingMethod bornRadiusScalingMethod
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void setBornRadiusScalingMethod( int bornRadiusScalingMethod );
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Get quinticLowerLimitFactor
+    
+       @return quinticLowerLimitFactor
+    
+       --------------------------------------------------------------------------------------- */
+    
+    RealOpenMM getQuinticLowerLimitFactor( void ) const;
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Set quinticLowerLimitFactor 
+    
+       @param quinticLowerLimitFactor quinticLowerLimitFactor
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor );
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Get quinticUpperBornRadiusLimit
+    
+       @return quinticUpperBornRadiusLimit
+    
+       --------------------------------------------------------------------------------------- */
+    
+    RealOpenMM getQuinticUpperBornRadiusLimit( void ) const;
+    
+    /**---------------------------------------------------------------------------------------
+    
+       Set quinticUpperBornRadiusLimit 
+    
+       @param quinticUpperBornRadiusLimit quinticUpperBornRadiusLimit
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperSplineLimit );
 
 };
    

@@ -130,6 +130,166 @@ void CpuGBVI::setGBVIParameters(  GBVIParameters* gbviParameters ){
    // ---------------------------------------------------------------------------------------
 
    _gbviParameters = gbviParameters;
+   if( _switchDeriviative.size() <= 0 ){
+      _switchDeriviative.resize(_gbviParameters->getNumberOfAtoms());
+   }
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Return OBC chain derivative: size = _obcParameters->getNumberOfAtoms()
+   On first call, memory for array is allocated if not set
+
+   @return array
+
+   --------------------------------------------------------------------------------------- */
+
+std::vector<RealOpenMM>& CpuGBVI::getSwitchDeriviative( void ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName = "\nCpuGBVI::getSwitchDeriviative";
+
+   // ---------------------------------------------------------------------------------------
+
+   if( _switchDeriviative.size() <= 0 ){
+      _switchDeriviative.resize(_gbviParameters->getNumberOfAtoms());
+   }
+   return _switchDeriviative;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Return switching function derivative
+
+   @return array
+
+   --------------------------------------------------------------------------------------- */
+
+/*
+std::vector<RealOpenMM> CpuGBVI::getSwitchDeriviativeConst( void ) const {
+   return _switchDeriviative;
+}
+
+*/
+
+/**---------------------------------------------------------------------------------------
+
+   Compute quintic spline value and associated derviative
+
+   @param x                   value to compute spline at
+   @param rl                  lower cutoff value
+   @param ru                  upper cutoff value
+   @param outValue            value of spline at x
+   @param outDerivative       value of derivative of spline at x
+
+   --------------------------------------------------------------------------------------- */
+
+#define GBVIDebug 0
+
+void CpuGBVI::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
+                             RealOpenMM* outValue, RealOpenMM* outDerivative ){
+
+   // ---------------------------------------------------------------------------------------
+
+   static const RealOpenMM one           = (RealOpenMM)   1.0;
+   static const RealOpenMM minusSix      = (RealOpenMM)  -6.0;
+   static const RealOpenMM minusTen      = (RealOpenMM) -10.0;
+   static const RealOpenMM minusThirty   = (RealOpenMM) -30.0;
+   static const RealOpenMM fifteen       = (RealOpenMM)  15.0;
+   static const RealOpenMM sixty         = (RealOpenMM)  60.0;
+
+   // static const char* methodName         = "CpuGBVI::quinticSpline";
+
+   // ---------------------------------------------------------------------------------------
+
+   RealOpenMM numerator    = x  - rl;
+   RealOpenMM denominator  = ru - rl;
+   RealOpenMM ratio        = numerator/denominator;
+   RealOpenMM ratio2       = ratio*ratio;
+   RealOpenMM ratio3       = ratio2*ratio;
+
+   *outValue               = one + ratio3*(minusTen + fifteen*ratio + minusSix*ratio2);
+   *outDerivative          = ratio2*(minusThirty + sixty*ratio + minusThirty*ratio2)/denominator;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Compute Born radii based on Eq. 3 of Labute paper [JCC 29 p. 1693-1698 2008])
+   and quintic splice switching function
+
+   @param atomicRadius3       atomic radius cubed
+   @param bornSum             Born sum (volume integral)
+   @param gbviParameters      Gbvi parameters (parameters used in spline
+                              QuinticLowerLimitFactor & QuinticUpperBornRadiusLimit)
+   @param bornRadius          output Born radius
+   @param switchDeriviative   output switching function deriviative
+
+   --------------------------------------------------------------------------------------- */
+
+#define GBVIDebug 0
+
+void CpuGBVI::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, RealOpenMM bornSum,
+                                                  GBVIParameters* gbviParameters, 
+                                                  RealOpenMM* bornRadius, RealOpenMM* switchDeriviative ){
+
+   // ---------------------------------------------------------------------------------------
+
+   static const RealOpenMM zero          = (RealOpenMM)  0.0;
+   static const RealOpenMM one           = (RealOpenMM)  1.0;
+   static const RealOpenMM minusOne      = (RealOpenMM) -1.0;
+   static const RealOpenMM minusThree    = (RealOpenMM) -3.0;
+   static const RealOpenMM oneEighth     = (RealOpenMM)  0.125;
+   static const RealOpenMM minusOneThird = (RealOpenMM) (-1.0/3.0);
+   static const RealOpenMM three         = (RealOpenMM)  3.0;
+
+   static const char* methodName         = "CpuGBVI::computeBornRadiiUsingQuinticSpline";
+
+   // ---------------------------------------------------------------------------------------
+
+#if( GBVIDebug == 1 )
+   FILE* logFile                         = stderr;
+#endif
+
+   // R                = [ S(V)*(A - V) ]**(-1/3)
+
+   // S(V)             = 1                                 V < L
+   // S(V)             = qSpline + U/(A-V)                 L < V < A
+   // S(V)             = U/(A-V)                           U < V 
+
+   // dR/dr            = (-1/3)*[ S(V)*(A - V) ]**(-4/3)*[ d{ S(V)*(A-V) }/dr
+
+   // d{ S(V)*(A-V) }/dr   = (dV/dr)*[ (A-V)*dS/dV - S(V) ]
+
+   //  (A - V)*dS/dV - S(V)  = 0 - 1                             V < L
+
+   //  (A - V)*dS/dV - S(V)  = (A-V)*d(qSpline) + (A-V)*U/(A-V)**2 - qSpline - U/(A-V) 
+
+	//                        = (A-V)*d(qSpline) - qSpline        L < V < A**(-3)
+
+   //  (A - V)*dS/dV - S(V)  = (A-V)*U*/(A-V)**2 - U/(A-V) = 0   U < V
+
+   RealOpenMM splineL          = gbviParameters->getQuinticLowerLimitFactor()*atomicRadius3;
+   RealOpenMM sum;
+   if( bornSum > splineL ){
+      if( bornSum < atomicRadius3 ){
+         RealOpenMM splineValue, splineDerivative;
+         quinticSpline( bornSum, splineL, atomicRadius3, &splineValue, &splineDerivative ); 
+         sum                 = (atomicRadius3 - bornSum)*splineValue + gbviParameters->getQuinticUpperBornRadiusLimit();
+         *switchDeriviative  = splineValue - (atomicRadius3 - bornSum)*splineDerivative;
+#if( GBVIDebug == 1 )
+      (void) fprintf( logFile, " Qv=%14.6e splnDrvtv=%14.6e spline[%10.3e %10.3e] ", splineValue, splineDerivative,
+                      splineL, gbviParameters->getQuinticUpperBornRadiusLimit() );
+#endif
+      } else {   
+         sum                = gbviParameters->getQuinticUpperBornRadiusLimit();
+         *switchDeriviative = zero;
+      }
+   } else {
+      sum                = atomicRadius3 - bornSum; 
+      *switchDeriviative = one;
+   }
+   *bornRadius = POW( sum, minusOneThird );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -164,11 +324,14 @@ void CpuGBVI::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpe
    RealOpenMM* atomicRadii                          = gbviParameters->getAtomicRadii();
    const RealOpenMM* scaledRadii                    = gbviParameters->getScaledRadii();
 
+   std::vector<RealOpenMM>& switchDeriviatives      = getSwitchDeriviative();
+
    // ---------------------------------------------------------------------------------------
 
 #if( GBVIDebug == 1 )
    FILE* logFile                         = stderr;
-   (void) fprintf( logFile, "\n%s\n", methodName );
+   (void) fprintf( logFile, "\n%s scalingMethdd=%d\n", methodName,  _gbviParameters->getBornRadiusScalingMethod() );
+   (void) fprintf( logFile, "Lower=%14.6e Upper=%10.3e\n", gbviParameters->getQuinticLowerLimitFactor(), gbviParameters->getQuinticUpperBornRadiusLimit() );
 #endif
 
    // calculate Born radii
@@ -208,13 +371,25 @@ if( atomI == 1568 || atomJ == 1568 ){
       }
 
 #if( GBVIDebug == 1 )
-      (void) fprintf( logFile, "%d Born radius sum=%14.6e %14.6e %14.6e ", atomI, sum, POW( radiusI, minusThree ), (POW( radiusI, minusThree ) - sum) );
+      (void) fprintf( logFile, "%d Born radius sum=%14.6e %14.6e %14.6e q=%d ", 
+                      atomI, sum, POW( radiusI, minusThree ), (POW( radiusI, minusThree ) - sum), GBVIParameters::QuinticSpline );
 #endif
-      sum              = POW( radiusI, minusThree ) - sum;
-      bornRadii[atomI] = POW( sum, minusOneThird );
+
+      RealOpenMM atomicRadius3 = POW( radiusI, minusThree );
+      if( _gbviParameters->getBornRadiusScalingMethod() == GBVIParameters::QuinticSpline ){
+         sum                        = atomicRadius3 - sum; 
+         bornRadii[atomI]           = POW( sum, minusOneThird );
+         switchDeriviatives[atomI]  = one; 
+      } else {
+         RealOpenMM bornRadius, switchDeriviative;
+         computeBornRadiiUsingQuinticSpline( atomicRadius3, sum, gbviParameters, 
+                                             &bornRadius, &switchDeriviative );
+         bornRadii[atomI]           = bornRadius;
+         switchDeriviatives[atomI]  = switchDeriviative;
+      }    
 
 #if( GBVIDebug == 1 )
-      (void) fprintf( logFile, "br=%14.6e\n", atomI, bornRadii[atomI] );
+      (void) fprintf( logFile, " br=%14.6e swDeriv=%14.6e\n", atomI, bornRadii[atomI], switchDeriviatives[atomI] );
 #endif
 
    }
@@ -718,8 +893,9 @@ if( atomI == 0 ){
    (void) fflush( logFile );
 #endif
 
-   const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
-   RealOpenMM stupidFactor               = three;
+   const RealOpenMM* scaledRadii                 = gbviParameters->getScaledRadii();
+   std::vector<RealOpenMM>& switchDeriviative    = getSwitchDeriviative();
+   RealOpenMM stupidFactor                       = three;
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
       RealOpenMM R        = atomicRadii[atomI];
@@ -730,7 +906,7 @@ if( atomI == 0 ){
       bornForces[atomI]  += (stupidFactor*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
 
       RealOpenMM b2       = bornRadii[atomI]*bornRadii[atomI];
-      bornForces[atomI]  *= oneThird*b2*b2;
+      bornForces[atomI]  *= switchDeriviative[atomI]*oneThird*b2*b2;
 
       for( int atomJ = 0; atomJ < numberOfAtoms; atomJ++ ){
 

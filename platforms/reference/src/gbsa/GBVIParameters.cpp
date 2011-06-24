@@ -104,10 +104,13 @@ GBVIParameters::GBVIParameters( int numberOfAtoms ) : ImplicitSolventParameters(
    
    // ---------------------------------------------------------------------------------------
 
-   _ownScaledRadii       = 0;
-   _scaledRadii          = NULL;
-   _ownGammaParameters   = 0;
-   _gammaParameters      = NULL;
+   _ownScaledRadii                = 0;
+   _scaledRadii                   = NULL;
+   _ownGammaParameters            = 0;
+   _gammaParameters               = NULL;
+   _bornRadiusScalingMethod       = 0;
+   _quinticLowerLimitFactor       = 0.8f;
+   _quinticUpperBornRadiusLimit   = 5.0f;
 
 }
 
@@ -537,3 +540,76 @@ RealOpenMM GBVIParameters::getTau( void ) const {
 
    return tau;
 }
+
+/**---------------------------------------------------------------------------------------
+
+   Get bornRadiusScalingMethod
+
+   @return bornRadiusScalingMethod
+
+   --------------------------------------------------------------------------------------- */
+
+int GBVIParameters::getBornRadiusScalingMethod( void ) const {
+   return _bornRadiusScalingMethod;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set bornRadiusScalingMethod 
+
+   @param bornRadiusScalingMethod bornRadiusScalingMethod
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVIParameters::setBornRadiusScalingMethod( int bornRadiusScalingMethod ){
+   _bornRadiusScalingMethod    = bornRadiusScalingMethod;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get quinticLowerLimitFactor
+
+   @return quinticLowerLimitFactor
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM GBVIParameters::getQuinticLowerLimitFactor( void ) const {
+   return _quinticLowerLimitFactor;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set quinticLowerLimitFactor 
+
+   @param quinticLowerLimitFactor quinticLowerLimitFactor
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVIParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor ){
+   _quinticLowerLimitFactor    = quinticLowerLimitFactor;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get quinticUpperBornRadiusLimit
+
+   @return quinticUpperBornRadiusLimit
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM GBVIParameters::getQuinticUpperBornRadiusLimit( void ) const {
+   return _quinticUpperBornRadiusLimit;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set quinticUpperBornRadiusLimit 
+
+   @param quinticUpperBornRadiusLimit quinticUpperBornRadiusLimit
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVIParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperBornRadiusLimit ){
+   _quinticUpperBornRadiusLimit    = quinticUpperBornRadiusLimit;
+}
+
