@@ -36,6 +36,7 @@
 #include "openmm/kernels.h"
 #include "openmm/internal/ForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/State.h"
 #include <map>
 #include <utility>
 #include <vector>
@@ -104,6 +105,7 @@ void ContextImpl::getPositions(std::vector<Vec3>& positions) {
 
 void ContextImpl::setPositions(const std::vector<Vec3>& positions) {
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPositions(*this, positions);
+    integrator.stateChanged(State::Positions);
 }
 
 void ContextImpl::getVelocities(std::vector<Vec3>& velocities) {
@@ -112,6 +114,7 @@ void ContextImpl::getVelocities(std::vector<Vec3>& velocities) {
 
 void ContextImpl::setVelocities(const std::vector<Vec3>& velocities) {
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setVelocities(*this, velocities);
+    integrator.stateChanged(State::Velocities);
 }
 
 void ContextImpl::getForces(std::vector<Vec3>& forces) {
@@ -128,6 +131,7 @@ void ContextImpl::setParameter(std::string name, double value) {
     if (parameters.find(name) == parameters.end())
         throw OpenMMException("Called setParameter() with invalid parameter name");
     parameters[name] = value;
+    integrator.stateChanged(State::Parameters);
 }
 
 void ContextImpl::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) {

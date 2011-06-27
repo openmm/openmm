@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "State.h"
 #include "Vec3.h"
 #include <map>
 #include <vector>
@@ -102,6 +103,17 @@ protected:
      * Get the names of all Kernels used by this Integrator.
      */
     virtual std::vector<std::string> getKernelNames() = 0;
+    /**
+     * This will be called by the Context when the user modifies aspects of the context state, such
+     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
+     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
+     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
+     * method (unless the ForceImpl calls a Context method to perform the modification).
+     * 
+     * @param changed     this specifies what aspect of the Context was changed
+     */
+    virtual void stateChanged(State::DataType changed) {
+    }
 private:
     double stepSize, constraintTol;
 };
