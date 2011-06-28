@@ -118,7 +118,7 @@ void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear )
 {
 
     gpuContext gpu = amoebaGpu->gpuContext;
-    kClearFields_kernel<<<gpu->sim.nonbond_blocks, 384>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers, amoebaGpu->psWorkArray_3_1->_pDevData );
+    kClearFields_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers, amoebaGpu->psWorkArray_3_1->_pDevData );
     LAUNCHERROR("kClearFields_3_1");
 
     if( numberToClear > 1 ){

@@ -1,7 +1,10 @@
-//----------------------------------------------------------------------------------------- //----------------------------------------------------------------------------------------- #include "amoebaGpuTypes.h"
+//----------------------------------------------------------------------------------------- 
+//----------------------------------------------------------------------------------------- 
+//#include "amoebaGpuTypes.h"
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
+//#define INCLUDE_TORQUE
 #include "kCalculateAmoebaCudaKirkwoodParticle.h"
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
 
@@ -31,56 +34,51 @@ void GetCalculateAmoebaKirkwoodSim(amoebaGpuContext amoebaGpu)
     RTERROR(status, "GetCalculateAmoebaKirkwoodSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
-__device__ void loadKirkwoodShared( struct KirkwoodParticle* sA, unsigned int atomI,
-                                    float4* atomCoord, float* labDipole, float* labQuadrupole,
-                                    float* inducedDipole, float* inducedDipolePolar, float* bornRadii )
+__device__ void loadKirkwoodShared( struct KirkwoodParticle* sA, unsigned int atomI )
 {
     // coordinates & charge
 
-    sA->x                        = atomCoord[atomI].x;
-    sA->y                        = atomCoord[atomI].y;
-    sA->z                        = atomCoord[atomI].z;
-    sA->q                        = atomCoord[atomI].w;
+    sA->x                        = cSim.pPosq[atomI].x;
+    sA->y                        = cSim.pPosq[atomI].y;
+    sA->z                        = cSim.pPosq[atomI].z;
+    sA->q                        = cSim.pPosq[atomI].w;
 
     // lab dipole
 
-    sA->labFrameDipole[0]        = labDipole[atomI*3];
-    sA->labFrameDipole[1]        = labDipole[atomI*3+1];
-    sA->labFrameDipole[2]        = labDipole[atomI*3+2];
+    sA->labFrameDipole[0]        = cAmoebaSim.pLabFrameDipole[atomI*3];
+    sA->labFrameDipole[1]        = cAmoebaSim.pLabFrameDipole[atomI*3+1];
+    sA->labFrameDipole[2]        = cAmoebaSim.pLabFrameDipole[atomI*3+2];
 
     // lab quadrupole
 
-    sA->labFrameQuadrupole_XX    = labQuadrupole[atomI*9];
-    sA->labFrameQuadrupole_XY    = labQuadrupole[atomI*9+1];
-    sA->labFrameQuadrupole_XZ    = labQuadrupole[atomI*9+2];
-    sA->labFrameQuadrupole_YY    = labQuadrupole[atomI*9+4];
-    sA->labFrameQuadrupole_YZ    = labQuadrupole[atomI*9+5];
-    sA->labFrameQuadrupole_ZZ    = labQuadrupole[atomI*9+8];
+    sA->labFrameQuadrupole_XX    = cAmoebaSim.pLabFrameQuadrupole[atomI*9];
+    sA->labFrameQuadrupole_XY    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+1];
+    sA->labFrameQuadrupole_XZ    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+2];
+    sA->labFrameQuadrupole_YY    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+4];
+    sA->labFrameQuadrupole_YZ    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+5];
+    //sA->labFrameQuadrupole_ZZ    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+8];
+    sA->labFrameQuadrupole_ZZ    = -(sA->labFrameQuadrupole_XX + sA->labFrameQuadrupole_YY);
 
     // induced dipole
 
-    sA->inducedDipole[0]         = inducedDipole[atomI*3];
-    sA->inducedDipole[1]         = inducedDipole[atomI*3+1];
-    sA->inducedDipole[2]         = inducedDipole[atomI*3+2];
+    sA->inducedDipole[0]         = cAmoebaSim.pInducedDipoleS[atomI*3];
+    sA->inducedDipole[1]         = cAmoebaSim.pInducedDipoleS[atomI*3+1];
+    sA->inducedDipole[2]         = cAmoebaSim.pInducedDipoleS[atomI*3+2];
 
     // induced dipole polar
 
-    sA->inducedDipoleP[0]        = inducedDipolePolar[atomI*3];
-    sA->inducedDipoleP[1]        = inducedDipolePolar[atomI*3+1];
-    sA->inducedDipoleP[2]        = inducedDipolePolar[atomI*3+2];
+    sA->inducedDipoleP[0]        = cAmoebaSim.pInducedDipolePolarS[atomI*3];
+    sA->inducedDipoleP[1]        = cAmoebaSim.pInducedDipolePolarS[atomI*3+1];
+    sA->inducedDipoleP[2]        = cAmoebaSim.pInducedDipolePolarS[atomI*3+2];
 
-    sA->bornRadius               = bornRadii[atomI];
+    sA->bornRadius               = cSim.pBornRadii[atomI];
 
 }
 
-__device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       KirkwoodParticle& atomJ,
-                                                 unsigned int sameAtom,
+__device__ void calculateKirkwoodPairIxnOrig_kernel( KirkwoodParticle& atomI,       KirkwoodParticle& atomJ,
                                                  float*  outputForce,           float outputTorque[2][3],
                                                  float*  outputBorn,            float*  outputBornPolar,
                                                  float* outputEnergy
-#ifdef AMOEBA_DEBUG
-                                                 , float4* debugArray
-#endif
 
  ){
 
@@ -112,7 +110,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float dewidr,dewkdr;
     float dsymdr;
     float esymi,ewii,ewki;
-    float dpsymdx,dpwidx,dpwkdx;
+    float dpwidx,dpwkdx;
     float dpsymdy,dpwidy,dpwkdy;
     float dpsymdz,dpwidz,dpwkdz;
     float dwipdr,dwkpdr;
@@ -145,10 +143,12 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     sxk          = atomJ.inducedDipole[0] + atomJ.inducedDipoleP[0];
     syk          = atomJ.inducedDipole[1] + atomJ.inducedDipoleP[1];
     szk          = atomJ.inducedDipole[2] + atomJ.inducedDipoleP[2];
-    rb2          = atomI.bornRadius * atomJ.bornRadius;
+
+    rb2          = atomI.bornRadius*atomJ.bornRadius;
+
     expterm      = expf(-r2/(cAmoebaSim.gkc*rb2));
-    expc         = expterm / cAmoebaSim.gkc;
-    expcr        = r2*expterm / (cAmoebaSim.gkc*cAmoebaSim.gkc*rb2*rb2);
+    expc         = expterm/cAmoebaSim.gkc;
+    expcr        = r2*expterm/(cAmoebaSim.gkc*cAmoebaSim.gkc*rb2*rb2);
     dexpc        = -2.0f / (cAmoebaSim.gkc*rb2);
     dexpcr       = 2.0f / (cAmoebaSim.gkc*rb2*rb2);
     dgfdr        = 0.5f * expterm * (1.0f+r2/(rb2*cAmoebaSim.gkc));
@@ -179,7 +179,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
 
     // reaction potential gradient auxiliary terms;
 
-    expc1        = 1.0f - expc;
+    expc1          = 1.0f - expc;
     float a01      = expc1 * a10;
     float a11      = expc1 * a20;
     float a21      = expc1 * a30;
@@ -195,7 +195,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
 
     // 2nd reaction potential gradient auxiliary terms;
 
-    expcdexpc    = -expc * dexpc;
+    expcdexpc      = -expc * dexpc;
     float a02      = expc1*a11 + expcdexpc*a10;
     float a12      = expc1*a21 + expcdexpc*a20;
     float a22      = expc1*a31 + expcdexpc*a30;
@@ -213,65 +213,75 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
      float b22     = b31 - (expcr*(a31 + dexpc*a30)
                            +   expc*(b31 + dexpcr*a30+dexpc*b30));
 
-    // 3rd reaction potential gradient auxiliary terms;
+    // 3rd reaction potential gradient auxiliary terms
 
-    expcdexpc    = 2.0f * expcdexpc;
+    expcdexpc      = 2.0f * expcdexpc;
     float a03      = expc1*a12 + expcdexpc*a11;
     float a13      = expc1*a22 + expcdexpc*a21;
     float a23      = expc1*a32 + expcdexpc*a31;
 
-    //expcdexpc    = -expc * powf( dexpc, 2.0f );
-    expcdexpc    = -expc*dexpc*dexpc;
-    a03      = a03 + expcdexpc*a10;
-    a13      = a13 + expcdexpc*a20;
-    a23      = a23 + expcdexpc*a30;
+    expcdexpc      = -expc*dexpc*dexpc;
+    a03            = a03 + expcdexpc*a10;
+    a13            = a13 + expcdexpc*a20;
+    a23            = a23 + expcdexpc*a30;
 
     // multiply the auxillary terms by their dieletric functions;
 
-    a00      = fc * a00;
-    a01      = fc * a01;
-    a02      = fc * a02;
-    a03      = fc * a03;
-    b00      = fc * b00;
-    b01      = fc * b01;
-    b02      = fc * b02;
-    a10      = fd * a10;
-    a11      = fd * a11;
-    a12      = fd * a12;
-    a13      = fd * a13;
-    b10      = fd * b10;
-    b11      = fd * b11;
-    b12      = fd * b12;
-    a20      = fq * a20;
-    a21      = fq * a21;
-    a22      = fq * a22;
-    a23      = fq * a23;
-    b20      = fq * b20;
-    b21      = fq * b21;
-    b22      = fq * b22;
+    a00            *= fc;
+    a01            *= fc;
+    a02            *= fc;
+    a03            *= fc;
 
-    // unweighted reaction potential tensor;
+    b00            *= fc;
+    b01            *= fc;
+    b02            *= fc;
+
+    a10            *= fd;
+    a11            *= fd;
+    a12            *= fd;
+    a13            *= fd;
+
+    b10            *= fd;
+    b11            *= fd;
+    b12            *= fd;
+
+    a20            *= fq;
+    a21            *= fq;
+    a22            *= fq;
+    a23            *= fq;
+
+    b20            *= fq;
+    b21            *= fq;
+    b22            *= fq;
+
+    // unweighted reaction potential tensor
 
     float gc1        = a00;
+
     float gux1       = xr * a10;
     float guy1       = yr * a10;
     float guz1       = zr * a10;
+
     float gqxx1      = xr2 * a20;
     float gqyy1      = yr2 * a20;
     float gqzz1      = zr2 * a20;
+
     float gqxy1      = xr * yr * a20;
     float gqxz1      = xr * zr * a20;
     float gqyz1      = yr * zr * a20;
 
-    // Born radii derivs of unweighted reaction potential tensor;
+    // Born radii derivs of unweighted reaction potential tensor
 
     float gc21       = b00;
+
     float gux21      = xr * b10;
     float guy21      = yr * b10;
     float guz21      = zr * b10;
+
     float gqxx21     = xr2 * b20;
     float gqyy21     = yr2 * b20;
     float gqzz21     = zr2 * b20;
+
     float gqxy21     = xr * yr * b20;
     float gqxz21     = xr * zr * b20;
     float gqyz21     = yr * zr * b20;
@@ -281,6 +291,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float gc2        = xr * a01;
     float gc3        = yr * a01;
     float gc4        = zr * a01;
+
     float gux2       = a10 + xr2*a11;
     float gux3       = xr * yr * a11;
     float gux4       = xr * zr * a11;
@@ -310,7 +321,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float gqyz3      = zr * (a20+yr2*a21);
     float gqyz4      = yr * (a20+zr2*a21);
 
-    // Born derivs of the unweighted reaction potential gradient tensor;
+    // Born derivs of the unweighted reaction potential gradient tensor
 
     float gc22       = xr * b01;
     float gc23       = yr * b01;
@@ -523,6 +534,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float gqxx18     = zr * xr2 * (a22+yr2*a23);
     float gqxx19     = yr * xr2 * (a22+zr2*a23);
     float gqxx20     = zr * xr2 * (3.0f*a22+zr2*a23);
+
     float gqxy11     = yr * (3.0f*a21+xr2*(6.0f*a22 +xr2*a23));
     float gqxy12     = xr * (3.0f*(a21+yr2*a22) +xr2*(a22+yr2*a23));
     float gqxy13     = xr * yr * zr * (3.0f*a22+xr2*a23);
@@ -578,8 +590,8 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     // in their own GK reaction potential
 
     esym = atomI.q * atomJ.q * gc1 - (atomI.labFrameDipole[0]*(atomJ.labFrameDipole[0]*gux2+atomJ.labFrameDipole[1]*guy2+atomJ.labFrameDipole[2]*guz2)
-                           +  atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux3+atomJ.labFrameDipole[1]*guy3+atomJ.labFrameDipole[2]*guz3)
-                           +  atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux4+atomJ.labFrameDipole[1]*guy4+atomJ.labFrameDipole[2]*guz4));
+                                   +  atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux3+atomJ.labFrameDipole[1]*guy3+atomJ.labFrameDipole[2]*guz3)
+                                   +  atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux4+atomJ.labFrameDipole[1]*guy4+atomJ.labFrameDipole[2]*guz4));
 
     ewi =  atomI.q*(atomJ.labFrameDipole[0]*gc2+atomJ.labFrameDipole[1]*gc3+atomJ.labFrameDipole[2]*gc4)
           -atomJ.q*(atomI.labFrameDipole[0]*gux1+atomI.labFrameDipole[1]*guy1+atomI.labFrameDipole[2]*guz1)
@@ -930,7 +942,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float trq_k2 = 0.0f;
     float trq_k3 = 0.0f;
 
-    if ( sameAtom == 0 )
+    if ( xr != 0.0f || yr != 0.0f || zr != 0.0f )
     {
 
         float fid1 = atomJ.labFrameDipole[0]*gux2 + atomJ.labFrameDipole[1]*gux3 + atomJ.labFrameDipole[2]*gux4
@@ -1147,9 +1159,10 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     // electrostatic solvation free energy gradient of the permanent
     // multipoles in the reaction potential of the induced dipoles
 
-    dpsymdx = -atomI.labFrameDipole[0]*(sxk*gux5+syk*guy5+szk*guz5)
+    float dpsymdx =       - atomI.labFrameDipole[0]*(sxk*gux5+syk*guy5+szk*guz5)
                           - atomI.labFrameDipole[1]*(sxk*gux6+syk*guy6+szk*guz6)
                           - atomI.labFrameDipole[2]*(sxk*gux7+syk*guy7+szk*guz7)
+
                           - atomJ.labFrameDipole[0]*(sxi*gux5+syi*guy5+szi*guz5)
                           - atomJ.labFrameDipole[1]*(sxi*gux6+syi*guy6+szi*guz6)
                           - atomJ.labFrameDipole[2]*(sxi*gux7+syi*guy7+szi*guz7);
@@ -1264,9 +1277,9 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
 
     dpdz = 0.5f * (dpsymdz + 0.5f*(dpwidz + dpwkdz));
 
-    // effective radii chain rule terms for the;
-    // electrostatic solvation free energy gradient of the permanent;
-    // multipoles in the reaction potential of the induced dipoles;
+    // effective radii chain rule terms for the
+    // electrostatic solvation free energy gradient of the permanent
+    // multipoles in the reaction potential of the induced dipoles
 
     dsymdr = -atomI.labFrameDipole[0]*(sxk*gux22+syk*guy22+szk*guz22)
                           - atomI.labFrameDipole[1]*(sxk*gux23+syk*guy23+szk*guz23)
@@ -1343,6 +1356,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
                             + atomJ.inducedDipole[0]*(atomI.inducedDipoleP[0]*gux22+atomI.inducedDipoleP[1]*gux23+atomI.inducedDipoleP[2]*gux24)
                             + atomJ.inducedDipole[1]*(atomI.inducedDipoleP[0]*guy22+atomI.inducedDipoleP[1]*guy23+atomI.inducedDipoleP[2]*guy24)
                             + atomJ.inducedDipole[2]*(atomI.inducedDipoleP[0]*guz22+atomI.inducedDipoleP[1]*guz23+atomI.inducedDipoleP[2]*guz24);
+
         dpbi = dpbi - 0.5f*atomJ.bornRadius*duvdr;
         dpbk = dpbk - 0.5f*atomI.bornRadius*duvdr;
     }
@@ -1357,20 +1371,6 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float fkd3 = 0.5f * (sxi*gux4+syi*guy4+szi*guz4);
 
 
-    // the factor 0.5 appears to be included since trqi1[i] & trqi1[k]
-    // are identical in the Tinker code (inner loop starts at k = i
-    // factor not needed here since
-/*
-    if ( sameAtom )
-    {
-        fid1 = 0.5f * fid1;
-        fid2 = 0.5f * fid2;
-        fid3 = 0.5f * fid3;
-        fkd1 = 0.5f * fkd1;
-        fkd2 = 0.5f * fkd2;
-        fkd3 = 0.5f * fkd3;
-    }
-*/
     float trqi1   = atomI.labFrameDipole[1]*fid3 - atomI.labFrameDipole[2]*fid2;
     float trqi2   = atomI.labFrameDipole[2]*fid1 - atomI.labFrameDipole[0]*fid3;
     float trqi3   = atomI.labFrameDipole[0]*fid2 - atomI.labFrameDipole[1]*fid1;
@@ -1433,30 +1433,6 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
     float fkdg31 = fkdg13;
     float fkdg32 = fkdg23;
 
-/*
-    if ( sameAtom )
-    {
-        fidg11 = 0.5f * fidg11;
-        fidg12 = 0.5f * fidg12;
-        fidg13 = 0.5f * fidg13;
-        fidg21 = 0.5f * fidg21;
-        fidg22 = 0.5f * fidg22;
-        fidg23 = 0.5f * fidg23;
-        fidg31 = 0.5f * fidg31;
-        fidg32 = 0.5f * fidg32;
-        fidg33 = 0.5f * fidg33;
-        fkdg11 = 0.5f * fkdg11;
-        fkdg12 = 0.5f * fkdg12;
-        fkdg13 = 0.5f * fkdg13;
-        fkdg21 = 0.5f * fkdg21;
-        fkdg22 = 0.5f * fkdg22;
-        fkdg23 = 0.5f * fkdg23;
-        fkdg31 = 0.5f * fkdg31;
-        fkdg32 = 0.5f * fkdg32;
-        fkdg33 = 0.5f * fkdg33;
-     }
-*/
-
     trqi1 += 2.0f*(atomI.labFrameQuadrupole_XY*fidg13+atomI.labFrameQuadrupole_YY*fidg23+atomI.labFrameQuadrupole_YZ*fidg33
                         -atomI.labFrameQuadrupole_XZ*fidg12-atomI.labFrameQuadrupole_YZ*fidg22-atomI.labFrameQuadrupole_ZZ*fidg32);
     trqi2 += 2.0f*(atomI.labFrameQuadrupole_XZ*fidg11+atomI.labFrameQuadrupole_YZ*fidg21+atomI.labFrameQuadrupole_ZZ*fidg31
@@ -1477,7 +1453,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
                         (atomJ.labFrameQuadrupole_XX*fkdg12+atomJ.labFrameQuadrupole_XY*fkdg22+atomJ.labFrameQuadrupole_XZ*fkdg32
                         -atomJ.labFrameQuadrupole_XY*fkdg11-atomJ.labFrameQuadrupole_YY*fkdg21-atomJ.labFrameQuadrupole_YZ*fkdg31);
 
-    // total permanent and induced energies for this interaction;
+    // total permanent and induced energies for this interaction
 
     e                        = esym + 0.5f*(ewi+ewk);
     ei                       = 0.5f * (esymi + 0.5f*(ewii+ewki));
@@ -1504,6 +1480,132 @@ __device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       
 
 }
 
+#undef SUB_METHOD_NAME
+#undef F1
+#define SUB_METHOD_NAME(a, b) a##F1##b
+#define F1
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef F1
+#undef SUB_METHOD_NAME
+
+#undef F2
+#define SUB_METHOD_NAME(a, b) a##F2##b
+#define F2
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef F2
+#undef SUB_METHOD_NAME
+/*
+#undef F1
+#undef F2
+#define SUB_METHOD_NAME(a, b) a##F1F2##b
+#define F1
+#define F2
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef F1
+#undef F2
+#undef SUB_METHOD_NAME
+*/
+
+#undef SUB_METHOD_NAME
+#undef T1
+#define SUB_METHOD_NAME(a, b) a##T1##b
+#define T1
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef T1
+#undef SUB_METHOD_NAME
+
+#undef T2
+#define SUB_METHOD_NAME(a, b) a##T2##b
+#define T2
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef T2
+#undef SUB_METHOD_NAME
+
+#undef T1
+#undef T2
+#define SUB_METHOD_NAME(a, b) a##T1T2##b
+#define T1
+#define T2
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef T1
+#undef T2
+#undef SUB_METHOD_NAME
+
+#undef SUB_METHOD_NAME
+#undef B1
+#define SUB_METHOD_NAME(a, b) a##B1##b
+#define B1
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef B1
+#undef SUB_METHOD_NAME
+
+#undef B2
+#define SUB_METHOD_NAME(a, b) a##B2##b
+#define B2
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef B2
+#undef SUB_METHOD_NAME
+
+#undef B2
+#define SUB_METHOD_NAME(a, b) a##B1B2##b
+#define B1
+#define B2
+#include "kCalculateAmoebaCudaKirkwood_b.h"
+#undef B1
+#undef B2
+#undef SUB_METHOD_NAME
+
+#ifdef INCLUDE_TORQUE
+__device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI, KirkwoodParticle& atomJ, float forceFactor, float* outputEnergy  ){
+
+//#define Original
+#define New
+#ifdef Original
+    float outputBornPolar[2];
+    return calculateKirkwoodPairIxnOrig_kernel( atomI, atomJ,
+                                                outputForce, outputTorque, outputBornPolar, outputEnergy );
+#endif
+#ifdef New
+
+
+    float force[3];
+    float energy;
+    calculateKirkwoodPairIxnF1_kernel( atomI, atomJ, &energy, force);
+    calculateKirkwoodPairIxnF2_kernel( atomI, atomJ, &energy, force);
+
+    force[0]                *= 0.5f;
+    force[1]                *= 0.5f;
+    force[2]                *= 0.5f;
+
+    atomI.force[0]          += force[0];
+    atomI.force[1]          += force[1];
+    atomI.force[2]          += force[2];
+
+    *outputEnergy           += 0.5f*forceFactor*energy;
+    if( forceFactor == 1.0f ){
+        atomJ.force[0]      -= force[0];
+        atomJ.force[1]      -= force[1];
+        atomJ.force[2]      -= force[2];
+    }    
+
+    calculateKirkwoodPairIxnT1_kernel( atomI, atomJ );
+    calculateKirkwoodPairIxnT2_kernel( atomI, atomJ );
+
+    //calculateKirkwoodPairIxnT1T2_kernel( atomI, atomJ );
+    if( forceFactor == 1.0f ){
+        calculateKirkwoodPairIxnT1_kernel( atomJ, atomI );
+        calculateKirkwoodPairIxnT2_kernel( atomJ, atomI );
+        //calculateKirkwoodPairIxnT1T2_kernel( atomJ, atomI );
+    }
+
+
+    calculateKirkwoodPairIxnB1B2_kernel( atomI, atomJ );
+
+    return;
+#endif
+}
+#endif
+
 __device__ void zeroKirkwoodParticleSharedField( struct KirkwoodParticle* sA )
 {
     // zero shared fields
@@ -1512,9 +1614,11 @@ __device__ void zeroKirkwoodParticleSharedField( struct KirkwoodParticle* sA )
     sA->force[1]              = 0.0f;
     sA->force[2]              = 0.0f;
 
+#ifdef INCLUDE_TORQUE
     sA->torque[0]             = 0.0f;
     sA->torque[1]             = 0.0f;
     sA->torque[2]             = 0.0f;
+#endif
 
     sA->dBornRadius           = 0.0f;
     sA->dBornRadiusPolar      = 0.0f;
@@ -1808,6 +1912,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     if( threadsPerBlock == 0 ){
         unsigned int maxThreads;
         if (gpu->sm_version >= SM_20)
+            //maxThreads = 384;
             maxThreads = 512;
         else if (gpu->sm_version >= SM_12)
             maxThreads = 128;
@@ -1831,7 +1936,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodN2Forces%swarp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodN2Forces%swarp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
                         (gpu->bOutputBufferPerWarp ? " " : " no "), gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
                         (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
@@ -1859,32 +1964,25 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     }
     LAUNCHERROR("kCalculateAmoebaCudaKirkwoodN2Forces");
 
+    if( 0 ){
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        //cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psLabFrameDipole,     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        CUDAStream<float>* temp  = new CUDAStream<float>(3*gpu->sim.paddedNumberOfAtoms, 1, "Temp1");
+
+        reduceAndCopyCUDAStreamFloat( amoebaGpu->psWorkArray_3_1, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, gpu->psAtomIndex->_pSysData, 1.0f ); 
+        cudaWriteVectorOfDoubleVectorsToFile( "Torq", fileId, outputVector );
+        delete temp;
+    }   
     kReduceToBornForcePrefactor( amoebaGpu );
 
-    if( 0 ){
-        std::vector<int> fileId;
-        VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
-        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, amoebaGpu->psWorkArray_3_1, 1.0 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psWorkArray_3_1,      outputVector, NULL, 1.0f/4.184 );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodForceTorquePreObc", fileId, outputVector );
-    }   
-
-    // Tinker's Born1
+    // Tinker's Born1 && E-diff
 
     kCalculateObcGbsaForces2( amoebaGpu->gpuContext );
-
-    if( 0 ){
-        std::vector<int> fileId;
-        VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
-        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, amoebaGpu->psWorkArray_3_1, 1.0 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psWorkArray_3_1,      outputVector, NULL, 1.0f/4.184 );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodForceTorquePostObc", fileId, outputVector );
-    }   
-
-    // E-diff
-
     kCalculateAmoebaKirkwoodEDiff( amoebaGpu );
 
    // ---------------------------------------------------------------------------------------

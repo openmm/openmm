@@ -105,7 +105,6 @@ struct _amoebaGpuContext {
 
     // buffer indices used for mapping torques onto forces 
 
-    int maxTorqueBufferIndex;
     int torqueMapForce4Delete;
     CUDAStream<int4>* psMultipoleParticlesTorqueBufferIndices;
     CUDAStream<float4>*  psTorqueMapForce4; 

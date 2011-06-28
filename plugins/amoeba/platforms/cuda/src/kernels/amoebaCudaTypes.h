@@ -140,6 +140,7 @@ struct cudaAmoebaGmxSimulation {
 
     int4*  pMultipoleParticlesIdsAndAxisType; 
     int4*  pMultipoleParticlesTorqueBufferIndices; 
+    int maxTorqueBufferIndex;
     float4* pTorqueMapForce4;
 
     float* pMolecularDipole; 

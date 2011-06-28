@@ -85,12 +85,9 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 
     // N2 debug array
 
-    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
+    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(10*paddedNumberOfAtoms, 1, "DebugArray");
     memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
     debugArray->Upload();
-
-    (*gpu->psInteractionCount)[0]              = gpu->sim.workUnits;
-    gpu->psInteractionCount->Upload();
 
     // print intermediate results for the targetAtom 
 
@@ -201,6 +198,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
         (void) fflush( amoebaGpu->log );
 
         (void) fprintf( amoebaGpu->log, "EFields End\n" );
+/*
         (void) fprintf( amoebaGpu->log, "DebugQ\n" );
         debugArray->Download();
         if( 0 ){
@@ -256,23 +254,6 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
                    sum[1][1] += debugArray->_pSysData[debugIndex].y;
                    sum[1][2] += debugArray->_pSysData[debugIndex].z;
 
-/*
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"atmJ[%16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"atmJ[%16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-
-    
-                   debugIndex += gpu->natoms;
-                   (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
- */   
                }
                (void) fprintf( amoebaGpu->log,"SumQ [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n",
                                sum[0][0], sum[0][1], sum[0][2],
@@ -301,10 +282,11 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
                                 debugArray->_pSysData[ii].w );
             }
         }
+*/
 
         // write results to file
 
-        if( 1 ){
+        if( 0 ){
             std::vector<int> fileId;
             //fileId.push_back( 0 );
             VectorOfDoubleVectors outputVector;
@@ -314,7 +296,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
             cudaWriteVectorOfDoubleVectorsToFile( "CudaEField", fileId, outputVector );
 
          }
-         delete debugArray;
+         //delete debugArray;
     }
 #endif
 

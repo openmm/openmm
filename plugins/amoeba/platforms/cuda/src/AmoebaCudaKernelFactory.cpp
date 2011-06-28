@@ -57,6 +57,7 @@ extern "C" OPENMMCUDA_EXPORT void registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
+             platform.registerKernelFactory(CalcAmoebaForcesAndEnergyKernel::Name(), factory);
         }
     }
 }
@@ -137,6 +138,9 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
 
     if (name == CalcAmoebaUreyBradleyForceKernel::Name())
         return new CudaCalcAmoebaUreyBradleyForceKernel(name, platform, *amoebaCudaData, context.getSystem());
+
+    if (name == CalcAmoebaForcesAndEnergyKernel::Name())
+        return new CalcAmoebaForcesAndEnergyKernel(name, platform, *amoebaCudaData);
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

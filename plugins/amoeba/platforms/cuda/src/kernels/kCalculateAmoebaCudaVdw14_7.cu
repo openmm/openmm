@@ -534,10 +534,12 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(Vdw14_7Particle), gpu->sharedMemoryPerBlock ), maxThreads);
     }    
 
+#ifdef AMOEBA_DEBUG_PRINT
     if( 0 ){
         static int iteration = 0;
         checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, ++iteration, "\n\nzCoordPreCopyVdw", stderr );
      }   
+#endif
 
     kCalculateAmoebaVdw14_7CopyCoordinates( amoebaGpu, gpu->psPosq4, amoebaGpu->psAmoebaVdwCoordinates );
     kCalculateAmoebaVdw14_7CoordinateReduction( amoebaGpu, amoebaGpu->psAmoebaVdwCoordinates, amoebaGpu->psAmoebaVdwCoordinates );
@@ -725,22 +727,27 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
     }
 #endif
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         static int iteration = 0;
         checkForNansFloat4( gpu->natoms, amoebaGpu->gpuContext->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "PreVdw", stderr );
         checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, iteration, "zCoordPreVdw", stderr );
      }   
+#endif
 
     kReduceVdw14_7( amoebaGpu, amoebaGpu->psWorkArray_3_2 );
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         static int iteration = 0;
         checkForNans( gpu->natoms, 3, amoebaGpu->psWorkArray_3_2, gpu->psAtomIndex->_pSysData, ++iteration, "Vdw32", stderr );
      }   
+#endif
 
     kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
     kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
 
+#ifdef AMOEBA_DEBUG
     if( 0 ){
         int paddedNumberOfAtoms             = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
         CUDAStream<float4>* psTempForce     = new CUDAStream<float4>(paddedNumberOfAtoms, 1, "psTempForce");
@@ -761,6 +768,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         static int iteration = 0;
         checkForNansFloat4( gpu->natoms, amoebaGpu->gpuContext->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "VdwForce", stderr );
      }   
+#endif
 
 #ifdef AMOEBA_DEBUG
     delete debugArray;

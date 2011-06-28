@@ -72,292 +72,383 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
 
         decodeCell( workUnit[pos], &x, &y, &bExclusionFlag );
 
-        unsigned int tgx              = threadIdx.x & (GRID - 1);
-        unsigned int tbx              = threadIdx.x - tgx;
-        unsigned int tj               = tgx;
+        unsigned int tgx                         = threadIdx.x & (GRID - 1);
+        unsigned int tbx                         = threadIdx.x - tgx;
+        unsigned int tj                          = tgx;
 
-        KirkwoodParticle* psA         = &sA[tbx];
-
-        unsigned int atomI            = x + tgx;
+        KirkwoodParticle* psA                    = &sA[tbx];
+ 
+        unsigned int atomI                       = x + tgx;
         KirkwoodParticle localParticle;
-        loadKirkwoodShared(&localParticle, atomI,
-                           cSim.pPosq, cAmoebaSim.pLabFrameDipole, cAmoebaSim.pLabFrameQuadrupole,
-                           cAmoebaSim.pInducedDipoleS,  cAmoebaSim.pInducedDipolePolarS, cSim.pBornRadii );
+        loadKirkwoodShared(&localParticle, atomI );
 
-        float dBornSum;
-        float dBornPolarSum;
-
-        localParticle.force[0]                   = 0.0f;
-        localParticle.force[1]                   = 0.0f;
-        localParticle.force[2]                   = 0.0f;
-
-        localParticle.torque[0]                  = 0.0f;
-        localParticle.torque[1]                  = 0.0f;
-        localParticle.torque[2]                  = 0.0f;
-
-        dBornSum                      = 0.0f;
-        dBornPolarSum                 = 0.0f;
-
-        // handle diagonals uniquely at 50% efficiency
-
+        zeroKirkwoodParticleSharedField( &localParticle );
         if (x == y) 
         {
 
-            // load shared data
+            loadKirkwoodShared( &(sA[threadIdx.x]), atomI );
+            if( atomI < cSim.atoms ){
+                for (unsigned int j = 0; j < GRID && (y+j) < cSim.atoms; j++){
+                    //calculateKirkwoodPairIxn_kernel( localParticle, psA[j], 0.5f, &energySum);
+                    float force[3];
+                    float energy;
+                    calculateKirkwoodPairIxnF1_kernel( localParticle, psA[j], &energy, force);
+                    calculateKirkwoodPairIxnF2_kernel( localParticle, psA[j], &energy, force);
 
-            loadKirkwoodShared( &(sA[threadIdx.x]), atomI,
-                                cSim.pPosq, cAmoebaSim.pLabFrameDipole, cAmoebaSim.pLabFrameQuadrupole,
-                                cAmoebaSim.pInducedDipoleS,  cAmoebaSim.pInducedDipolePolarS, cSim.pBornRadii );
+                    localParticle.force[0]  += force[0];
+                    localParticle.force[1]  += force[1];
+                    localParticle.force[2]  += force[2];
+                
+                    energySum               += 0.5f*energy;
+                
+                }
+            }
 
-            // this branch is never exercised since it includes the
-            // interaction between atomI and itself which is always excluded
+            localParticle.force[0]  *= 0.5f;
+            localParticle.force[1]  *= 0.5f;
+            localParticle.force[2]  *= 0.5f;
 
-            for (unsigned int j = 0; j < GRID; j++)
-            {
+            // write results
 
-                float force[3];
-                float torque[2][3];
-                float dBorn[2];
-                float dBornPolar[2];
-                float energy;
-
-                unsigned int atomJ            = y + j;
-                unsigned int sameAtom         = atomI == atomJ ? 1 : 0;
-
-                calculateKirkwoodPairIxn_kernel( localParticle,                              psA[j],
-                                                 sameAtom,
-                                                 force, torque, dBorn, dBornPolar, &energy
-#ifdef AMOEBA_DEBUG
-                                          , pullBack
-#endif
-                                        );
-
-                unsigned int mask       =  ( (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
-
-                // torques include i == j contribution
-
-                localParticle.torque[0]           += mask ? torque[0][0]  : 0.0f;
-                localParticle.torque[1]           += mask ? torque[0][1]  : 0.0f;
-                localParticle.torque[2]           += mask ? torque[0][2]  : 0.0f;
-
-                dBornSum               += mask ? dBorn[0]      : 0.0f;
-                dBornPolarSum          += mask ? dBornPolar[0] : 0.0f;
-                energySum              += mask ? 0.5f*energy   : 0.0f;
-
-                // add to field at atomI the field due atomJ's charge/dipole/quadrupole
-
-                mask                    =  (atomI == atomJ) ? 0 : mask;
-
-                localParticle.force[0]            += mask ? force[0]      : 0.0f;
-                localParticle.force[1]            += mask ? force[1]      : 0.0f;
-                localParticle.force[2]            += mask ? force[2]      : 0.0f;
-
-
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom  || atomJ == targetAtom ){
-
-        unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
-        unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-        unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
-        //float forceSign                    = (atomI == targetAtom) ? 1.0f : -1.0f;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) atomJ;
-        debugArray[index].z                = (float) (mask + 1);
-        //debugArray[index].z                = cSim.pBornRadii[atomI];
-        //debugArray[index].z                = energy;
-        //debugArray[index].w                = (float) (blockIdx.x*blockDim.x+threadIdx.x);
-        debugArray[index].w                = jBornRadius;
-
-        index = debugAccumulate( index, debugArray, force,          mask, 1.0f );
-
-        mask  =  ( (atomI >= cSim.atoms) || (atomJ >= cSim.atoms) ) ? 0 : 1;
-        index = debugAccumulate( index, debugArray, torque[indexI], mask, 2.0f );
-        index = debugAccumulate( index, debugArray, torque[indexJ], mask, 3.0f );
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[0].x;
-        debugArray[index].y                = pullBack[0].y;
-        debugArray[index].z                = pullBack[0].z;
-        debugArray[index].w                = pullBack[0].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[1].x;
-        debugArray[index].y                = pullBack[1].y;
-        debugArray[index].z                = pullBack[1].z;
-        debugArray[index].w                = pullBack[1].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[2].x;
-        debugArray[index].y                = pullBack[2].y;
-        debugArray[index].z                = pullBack[2].z;
-        debugArray[index].w                = pullBack[2].w;
-/*
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = dBorn[0];
-        debugArray[index].y                = dBornPolar[0];
-        debugArray[index].z                = dBorn[1];
-        debugArray[index].w                = dBornPolar[1];
-*/
-}
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
+            unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4(   offset, localParticle.force,  cSim.pForce4 );
+#else
+            unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4(    offset, localParticle.force,  cSim.pForce4);
 #endif
 
-            } // end of j-loop
+            zeroKirkwoodParticleSharedField( &localParticle );
+            if( atomI < cSim.atoms ){
+                for (unsigned int j = 0; j < GRID && (y+j) < cSim.atoms; j++){
+                    //calculateKirkwoodPairIxn_kernel( localParticle, psA[j], 0.5f, &energySum);
+#ifdef INCLUDE_TORQUE
+
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[j] );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[j] );
+
+#else
+
+                    float torque[3];
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[j], torque );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[j], torque );
+                    localParticle.force[0]  += torque[0];
+                    localParticle.force[1]  += torque[1];
+                    localParticle.force[2]  += torque[2];
+
+#endif
+            //        calculateKirkwoodPairIxnB1B2_kernel( localParticle, psA[j] );
+                
+                }
+            }
 
             // write results
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             float  of;
-            unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
-
+            offset                              = x + tgx + warp*cSim.paddedNumberOfAtoms;
+/*
             of                                  = cAmoebaSim.pWorkArray_1_1[offset];
-            of                                 += dBornSum;
+            of                                 += localParticle.dBornRadius;
             cAmoebaSim.pWorkArray_1_1[offset]   = of;
 
             of                                  = cAmoebaSim.pWorkArray_1_2[offset];
-            of                                 += dBornPolarSum;
+            of                                 += 0.5f*localParticle.dBornRadiusPolar;
             cAmoebaSim.pWorkArray_1_2[offset]   = of;
-
-            add3dArrayToFloat4(   offset, localParticle.force,  cSim.pForce4 );
-            add3dArray( 3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
-
-#else
-            unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
-
-            cAmoebaSim.pWorkArray_1_1[offset]   = dBornSum;
-            cAmoebaSim.pWorkArray_1_2[offset]   = dBornPolarSum;
-
-            add3dArrayToFloat4(    offset, localParticle.force,  cSim.pForce4);
-            add3dArray( 3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
-#endif
-
-        }
-        else        // 100% utilization
-        {
-            // Read fixed atom data into registers and GRF
-
-            if (lasty != y)
-            {
-                // load shared data
-
-                loadKirkwoodShared( &(sA[threadIdx.x]), (y+tgx),
-                                    cSim.pPosq, cAmoebaSim.pLabFrameDipole, cAmoebaSim.pLabFrameQuadrupole,
-                                    cAmoebaSim.pInducedDipoleS, cAmoebaSim.pInducedDipolePolarS, cSim.pBornRadii);
-
-            }
-
-            // zero j-atom output fields
-
-            zeroKirkwoodParticleSharedField( &(sA[threadIdx.x]) );
-
-            for (unsigned int j = 0; j < GRID; j++)
-            {
-
-                float force[3];
-                float torque[2][3];
-
-                float dBorn[2];
-                float dBornPolar[2];
-                float energy;
-
-                unsigned int atomJ    = y + tj;
-                unsigned int sameAtom = 0;
-
-                calculateKirkwoodPairIxn_kernel( localParticle,                                psA[tj],
-                                                 sameAtom,
-                                                 force, torque, dBorn, dBornPolar, &energy
-#ifdef AMOEBA_DEBUG
-                                          , pullBack
-#endif
-                                        );
-
-                unsigned int mask          =  ( (atomI >= cSim.atoms) || ( atomJ >= cSim.atoms) ) ? 0 : 1;
-
-                // add force and torque to atom I due atom J
-
-                localParticle.force[0]               += mask ? force[0]      : 0.0f;
-                localParticle.force[1]               += mask ? force[1]      : 0.0f;
-                localParticle.force[2]               += mask ? force[2]      : 0.0f;
-
-                localParticle.torque[0]              += mask ? torque[0][0]  : 0.0f;
-                localParticle.torque[1]              += mask ? torque[0][1]  : 0.0f;
-                localParticle.torque[2]              += mask ? torque[0][2]  : 0.0f;
-
-                dBornSum                  += mask ? dBorn[0]      : 0.0f;
-                dBornPolarSum             += mask ? dBornPolar[0] : 0.0f;
-                energySum                 += mask ? energy        : 0.0f;
-
-                // add force and torque to atom J due atom I
-
-                psA[tj].force[0]          -= mask ? force[0]      : 0.0f;
-                psA[tj].force[1]          -= mask ? force[1]      : 0.0f;
-                psA[tj].force[2]          -= mask ? force[2]      : 0.0f;
-
-                psA[tj].torque[0]         += mask ? torque[1][0]  : 0.0f;
-                psA[tj].torque[1]         += mask ? torque[1][1]  : 0.0f;
-                psA[tj].torque[2]         += mask ? torque[1][2]  : 0.0f;
-
-                psA[tj].dBornRadius       += mask ? dBorn[1]      : 0.0f;
-                psA[tj].dBornRadiusPolar  += mask ? dBornPolar[1] : 0.0f;
-
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || atomJ == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? atomJ : atomI;
-        unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-        unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
-        // float forceSign                    = (atomI == targetAtom) ? 1.0f : -1.0f;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) atomJ;
-        debugArray[index].z                = (float) (mask+1);
-        //debugArray[index].z                = cSim.pBornRadii[atomI];
-        //debugArray[index].z                = energy;
-        debugArray[index].w                = (float) (blockIdx.x*blockDim.x+threadIdx.x);
-
-        index = debugAccumulate( index, debugArray, force,          mask, -1.0f );
-        index = debugAccumulate( index, debugArray, torque[indexI], mask, -2.0f );
-        index = debugAccumulate( index, debugArray, torque[indexJ], mask, -3.0f );
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[0].x;
-        debugArray[index].y                = pullBack[0].y;
-        debugArray[index].z                = pullBack[0].z;
-        debugArray[index].w                = -1.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[1].x;
-        debugArray[index].y                = pullBack[1].y;
-        debugArray[index].z                = pullBack[1].z;
-        debugArray[index].w                = pullBack[1].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[2].x;
-        debugArray[index].y                = pullBack[2].y;
-        debugArray[index].z                = pullBack[2].z;
-        debugArray[index].w                = pullBack[2].w;
-/*
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = dBorn[0];
-        debugArray[index].y                = dBornPolar[0];
-        debugArray[index].z                = dBorn[1];
-        debugArray[index].w                = dBornPolar[1];
 */
 
-}
-#endif
-//#ifdef AMOEBA_DEBUG
-#if 0
-if( mask || !mask ){
-        unsigned int index                 = atomJ + atomI*cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) atomJ;
-        debugArray[index].z                = energy;
-        debugArray[index].w                = jBornRadius;
-}
+#ifdef INCLUDE_TORQUE
+            add3dArray( 3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray( 3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
 #endif
 
-                tj                  = (tj + 1) & (GRID - 1);
 
+
+#else
+
+
+            offset                              = x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+
+/*
+            cAmoebaSim.pWorkArray_1_1[offset]   = localParticle.dBornRadius;
+            cAmoebaSim.pWorkArray_1_2[offset]   = 0.5f*localParticle.dBornRadiusPolar;
+*/
+#ifdef INCLUDE_TORQUE
+            add3dArray( 3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray( 3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+
+#endif
+            zeroKirkwoodParticleSharedField( &localParticle );
+            if( atomI < cSim.atoms ){
+                for (unsigned int j = 0; j < GRID && (y+j) < cSim.atoms; j++){
+                    //calculateKirkwoodPairIxn_kernel( localParticle, psA[j], 0.5f, &energySum);
+/*
+#ifdef INCLUDE_TORQUE
+
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[j] );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[j] );
+
+#else
+
+                    float torque[3];
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[j], torque );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[j], torque );
+                    localParticle.force[0]  += torque[0];
+                    localParticle.force[1]  += torque[1];
+                    localParticle.force[2]  += torque[2];
+
+#endif
+*/
+                    calculateKirkwoodPairIxnB1B2_kernel( localParticle, psA[j] );
+                
+                }
+            }
+
+            // write results
+
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
+            //float  of;
+            offset                              = x + tgx + warp*cSim.paddedNumberOfAtoms;
+
+            of                                  = cAmoebaSim.pWorkArray_1_1[offset];
+            of                                 += localParticle.dBornRadius;
+            cAmoebaSim.pWorkArray_1_1[offset]   = of;
+
+            of                                  = cAmoebaSim.pWorkArray_1_2[offset];
+            of                                 += 0.5f*localParticle.dBornRadiusPolar;
+            cAmoebaSim.pWorkArray_1_2[offset]   = of;
+/*
+#ifdef INCLUDE_TORQUE
+            add3dArray( 3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray( 3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+*/
+
+
+
+#else
+
+
+            offset                              = x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+
+            cAmoebaSim.pWorkArray_1_1[offset]   = localParticle.dBornRadius;
+            cAmoebaSim.pWorkArray_1_2[offset]   = 0.5f*localParticle.dBornRadiusPolar;
+/*
+#ifdef INCLUDE_TORQUE
+            add3dArray( 3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray( 3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+*/
+
+#endif
+
+        } else {
+
+            if (lasty != y){
+                loadKirkwoodShared( &(sA[threadIdx.x]), (y+tgx) );
+
+            }
+            zeroKirkwoodParticleSharedField( &(sA[threadIdx.x]) );
+
+            for (unsigned int j = 0; j < GRID; j++){
+                if( atomI < cSim.atoms && (y+tj) < cSim.atoms ){
+                    //calculateKirkwoodPairIxn_kernel( localParticle, psA[tj], 1.0f, &energySum);
+                    float force[3];
+                    float energy;
+                    calculateKirkwoodPairIxnF1_kernel( localParticle, psA[tj], &energy, force);
+                    calculateKirkwoodPairIxnF2_kernel( localParticle, psA[tj], &energy, force);
+
+                    localParticle.force[0]  += force[0];
+                    localParticle.force[1]  += force[1];
+                    localParticle.force[2]  += force[2];
+                
+                    psA[tj].force[0]        -= force[0];
+                    psA[tj].force[1]        -= force[1];
+                    psA[tj].force[2]        -= force[2];
+                
+                    energySum               += energy;
+                
+                }
+                tj  = (tj + 1) & (GRID - 1);
+            }
+
+            localParticle.force[0]    *= 0.5f;
+            localParticle.force[1]    *= 0.5f;
+            localParticle.force[2]    *= 0.5f;
+
+            sA[threadIdx.x].force[0]  *= 0.5f;
+            sA[threadIdx.x].force[1]  *= 0.5f;
+            sA[threadIdx.x].force[2]  *= 0.5f;
+
+            // Write results
+
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
+
+            unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+
+            offset                              = y + tgx + warp*cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4(   offset, sA[threadIdx.x].force,  cSim.pForce4 );
+#else
+            unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4(   offset, localParticle.force,  cSim.pForce4 );
+
+            offset                              = y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+            add3dArrayToFloat4( offset,    sA[threadIdx.x].force,  cSim.pForce4 );
+
+#endif
+
+#ifndef INCLUDE_TORQUE
+            zeroKirkwoodParticleSharedField( &localParticle );
+            zeroKirkwoodParticleSharedField( &(sA[threadIdx.x]) );
+#endif
+            for (unsigned int j = 0; j < GRID; j++){
+                if( atomI < cSim.atoms && (y+tj) < cSim.atoms ){
+                    //calculateKirkwoodPairIxn_kernel( localParticle, psA[tj], 1.0f, &energySum);
+#ifdef INCLUDE_TORQUE
+
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[tj] );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[tj] );
+                    calculateKirkwoodPairIxnT1_kernel( psA[tj], localParticle );
+                    calculateKirkwoodPairIxnT2_kernel( psA[tj], localParticle );
+#else
+
+                    float torque[3];
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[tj], torque );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[tj], torque );
+
+                    localParticle.force[0]  += torque[0];
+                    localParticle.force[1]  += torque[1];
+                    localParticle.force[2]  += torque[2];
+
+                    calculateKirkwoodPairIxnT1_kernel( psA[tj], localParticle, torque );
+                    calculateKirkwoodPairIxnT2_kernel( psA[tj], localParticle, torque );
+
+                    psA[tj].force[0]        += torque[0];
+                    psA[tj].force[1]        += torque[1];
+                    psA[tj].force[2]        += torque[2];
+
+#endif
+
+//                    calculateKirkwoodPairIxnB1B2_kernel( localParticle, psA[tj] );
+                
+                }
+                tj  = (tj + 1) & (GRID - 1);
+            }
+
+            // Write results
+
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
+
+            //float of;
+            offset                              = x + tgx + warp*cSim.paddedNumberOfAtoms;
+/*
+            of                                  = cAmoebaSim.pWorkArray_1_1[offset];
+            of                                 += localParticle.dBornRadius;
+            cAmoebaSim.pWorkArray_1_1[offset]   = of;
+
+            of                                  = cAmoebaSim.pWorkArray_1_2[offset];
+            of                                 += 0.5f*localParticle.dBornRadiusPolar;
+            cAmoebaSim.pWorkArray_1_2[offset]   = of;
+*/
+
+            //add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+#ifdef INCLUDE_TORQUE
+            add3dArray(       3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(       3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+
+            offset                              = y + tgx + warp*cSim.paddedNumberOfAtoms;
+/*
+            of                                  = cAmoebaSim.pWorkArray_1_1[offset];
+            of                                 += sA[threadIdx.x].dBornRadius;
+            cAmoebaSim.pWorkArray_1_1[offset]   = of;
+
+            of                                  = cAmoebaSim.pWorkArray_1_2[offset];
+            of                                 += 0.5f*sA[threadIdx.x].dBornRadiusPolar;
+            cAmoebaSim.pWorkArray_1_2[offset]   = of;
+*/
+
+            //add3dArrayToFloat4(   offset, sA[threadIdx.x].force,  cSim.pForce4 );
+#ifdef INCLUDE_TORQUE
+            add3dArray(         3*offset, sA[threadIdx.x].torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(         3*offset, sA[threadIdx.x].force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+
+#else
+            offset                              = x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+/*
+            cAmoebaSim.pWorkArray_1_1[offset]   = localParticle.dBornRadius;
+            cAmoebaSim.pWorkArray_1_2[offset]   = 0.5f*localParticle.dBornRadiusPolar;
+*/
+
+            //add3dArrayToFloat4(   offset, localParticle.force,  cSim.pForce4 );
+#ifdef INCLUDE_TORQUE
+            add3dArray(         3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(         3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+
+            offset                              = y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+/*
+            cAmoebaSim.pWorkArray_1_1[offset]   = sA[threadIdx.x].dBornRadius;
+            cAmoebaSim.pWorkArray_1_2[offset]   = 0.5f*sA[threadIdx.x].dBornRadiusPolar;
+*/
+
+            //add3dArrayToFloat4( offset,    sA[threadIdx.x].force,  cSim.pForce4 );
+#ifdef INCLUDE_TORQUE
+            add3dArray(       3*offset,    sA[threadIdx.x].torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(       3*offset,    sA[threadIdx.x].force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+
+#endif
+
+#ifndef INCLUDE_TORQUE
+            zeroKirkwoodParticleSharedField( &localParticle );
+            zeroKirkwoodParticleSharedField( &(sA[threadIdx.x]) );
+#endif
+            for (unsigned int j = 0; j < GRID; j++){
+                if( atomI < cSim.atoms && (y+tj) < cSim.atoms ){
+/*
+                    //calculateKirkwoodPairIxn_kernel( localParticle, psA[tj], 1.0f, &energySum);
+#ifdef INCLUDE_TORQUE
+
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[tj] );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[tj] );
+                    calculateKirkwoodPairIxnT1_kernel( psA[tj], localParticle );
+                    calculateKirkwoodPairIxnT2_kernel( psA[tj], localParticle );
+#else
+
+                    float torque[3];
+                    calculateKirkwoodPairIxnT1_kernel( localParticle, psA[tj], torque );
+                    calculateKirkwoodPairIxnT2_kernel( localParticle, psA[tj], torque );
+
+                    localParticle.force[0]  += torque[0];
+                    localParticle.force[1]  += torque[1];
+                    localParticle.force[2]  += torque[2];
+
+                    calculateKirkwoodPairIxnT1_kernel( psA[tj], localParticle, torque );
+                    calculateKirkwoodPairIxnT2_kernel( psA[tj], localParticle, torque );
+
+                    psA[tj].force[0]        += torque[0];
+                    psA[tj].force[1]        += torque[1];
+                    psA[tj].force[2]        += torque[2];
+
+#endif
+*/
+
+                    calculateKirkwoodPairIxnB1B2_kernel( localParticle, psA[tj] );
+                
+                }
+                tj  = (tj + 1) & (GRID - 1);
             }
 
             // Write results
@@ -365,52 +456,80 @@ if( mask || !mask ){
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
 
             float of;
-            unsigned int offset                 = x + tgx + warp*cSim.paddedNumberOfAtoms;
+            offset                              = x + tgx + warp*cSim.paddedNumberOfAtoms;
 
             of                                  = cAmoebaSim.pWorkArray_1_1[offset];
-            of                                 += dBornSum;
+            of                                 += localParticle.dBornRadius;
             cAmoebaSim.pWorkArray_1_1[offset]   = of;
 
             of                                  = cAmoebaSim.pWorkArray_1_2[offset];
-            of                                 += dBornPolarSum;
+            of                                 += 0.5f*localParticle.dBornRadiusPolar;
             cAmoebaSim.pWorkArray_1_2[offset]   = of;
 
-            add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+            //add3dArrayToFloat4( offset, localParticle.force,  cSim.pForce4 );
+/*         
+#ifdef INCLUDE_TORQUE
             add3dArray(       3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(       3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+*/
 
             offset                              = y + tgx + warp*cSim.paddedNumberOfAtoms;
 
             of                                  = cAmoebaSim.pWorkArray_1_1[offset];
-            of                                 += dBornSum;
+            of                                 += sA[threadIdx.x].dBornRadius;
             cAmoebaSim.pWorkArray_1_1[offset]   = of;
 
             of                                  = cAmoebaSim.pWorkArray_1_2[offset];
-            of                                 += dBornPolarSum;
+            of                                 += 0.5f*sA[threadIdx.x].dBornRadiusPolar;
             cAmoebaSim.pWorkArray_1_2[offset]   = of;
 
-            add3dArrayToFloat4(   offset, sA[threadIdx.x].force,  cSim.pForce4 );
+            //add3dArrayToFloat4(   offset, sA[threadIdx.x].force,  cSim.pForce4 );
+/*
+#ifdef INCLUDE_TORQUE
             add3dArray(         3*offset, sA[threadIdx.x].torque, cAmoebaSim.pWorkArray_3_1 );
 #else
-            unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+            add3dArray(         3*offset, sA[threadIdx.x].force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+*/
 
-            cAmoebaSim.pWorkArray_1_1[offset]   = dBornSum;
-            cAmoebaSim.pWorkArray_1_2[offset]   = dBornPolarSum;
+#else
 
-            add3dArrayToFloat4(   offset, localParticle.force,  cSim.pForce4 );
+            offset                              = x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms;
+
+            cAmoebaSim.pWorkArray_1_1[offset]   = localParticle.dBornRadius;
+            cAmoebaSim.pWorkArray_1_2[offset]   = 0.5f*localParticle.dBornRadiusPolar;
+
+/*
+            //add3dArrayToFloat4(   offset, localParticle.force,  cSim.pForce4 );
+#ifdef INCLUDE_TORQUE
             add3dArray(         3*offset, localParticle.torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(         3*offset, localParticle.force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+*/
 
             offset                              = y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms;
 
             cAmoebaSim.pWorkArray_1_1[offset]   = sA[threadIdx.x].dBornRadius;
-            cAmoebaSim.pWorkArray_1_2[offset]   = sA[threadIdx.x].dBornRadiusPolar;
+            cAmoebaSim.pWorkArray_1_2[offset]   = 0.5f*sA[threadIdx.x].dBornRadiusPolar;
 
-            add3dArrayToFloat4( offset,    sA[threadIdx.x].force,  cSim.pForce4 );
+            //add3dArrayToFloat4( offset,    sA[threadIdx.x].force,  cSim.pForce4 );
+/*            
+#ifdef INCLUDE_TORQUE
             add3dArray(       3*offset,    sA[threadIdx.x].torque, cAmoebaSim.pWorkArray_3_1 );
+#else
+            add3dArray(       3*offset,    sA[threadIdx.x].force, cAmoebaSim.pWorkArray_3_1 );
+#endif
+*/
 
 #endif
+
+
             lasty = y;
         }
         pos++;
     }
-    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += energySum;
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energySum;
 }

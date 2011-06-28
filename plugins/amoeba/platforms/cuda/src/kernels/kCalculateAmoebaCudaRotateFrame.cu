@@ -396,17 +396,22 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "%s: numBlocks/atoms=%d\n", methodName, numBlocks ); (void) fflush( amoebaGpu->log );
         amoebaGpu->psMultipoleParticlesIdsAndAxisType->Download();
         amoebaGpu->psMolecularDipole->Download();
+        amoebaGpu->psMultipoleParticlesTorqueBufferIndices->Download();
         gpu->psPosq4->Download();
         for( int ii = 0; ii < gpu->natoms; ii++ ){
             int mIndex = 3*ii;
-             (void) fprintf( amoebaGpu->log,"%6d [%6d %6d %6d %6d] x[%16.9e %16.9e %16.9e] %s\n", ii,
+             (void) fprintf( amoebaGpu->log,"%6d [%6d %6d %6d %6d] x[%16.9e %16.9e %16.9e] %s [%6d %6d %6d %6d]\n", ii,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].z,
                              amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w,
                              gpu->psPosq4->_pSysData[ii].x,
                              gpu->psPosq4->_pSysData[ii].y,
-                             gpu->psPosq4->_pSysData[ii].z, (amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w > 1 ? " XXX" : "") );
+                             gpu->psPosq4->_pSysData[ii].z, (amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w > 1 ? " XXX" : ""),
+                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].x,
+                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].y,
+                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].z,
+                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].w );
             //if( ii == 30 )ii = gpu->natoms - 30;
         }
     }
@@ -491,6 +496,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );
     }
+
 }
 
 #undef AMOEBA_DEBUG

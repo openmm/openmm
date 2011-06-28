@@ -166,6 +166,7 @@ extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int
 extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration);
 extern void zeroCUDAStreamFloat4( CUDAStream<float4>* streamToCopy );
 extern void reduceAndCopyCUDAStreamFloat4( CUDAStream<float4>* streamToCopy, CUDAStream<float>*  outputStream, float conversion );
+extern void reduceAndCopyCUDAStreamFloat( CUDAStream<float>* streamToCopy, CUDAStream<float>*  outputStream, float conversion );
 
 // PME
 

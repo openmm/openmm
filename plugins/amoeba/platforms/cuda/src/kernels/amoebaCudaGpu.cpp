@@ -358,15 +358,14 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesIdsAndAxisType, log );
     (void) fprintf( log, "     pMultipoleParticlesIdsAndAxisType  %p\n",      amoebaGpu->amoebaSim.pMultipoleParticlesIdsAndAxisType);
 
-    (void) fprintf( log, "     maxTorqueBufferIndex            %d\n",      amoebaGpu->maxTorqueBufferIndex );
+    (void) fprintf( log, "     maxTorqueBufferIndex               %d\n",      amoebaGpu->amoebaSim.maxTorqueBufferIndex );
     totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psMultipoleParticlesTorqueBufferIndices, log );
 
     int memory   = gpuPrintCudaStreamFloat4( amoebaGpu->psTorqueMapForce4, log );
+    (void) fprintf( log, "     torqueMapForce4Delete              %d\n",      amoebaGpu->torqueMapForce4Delete );
     if( amoebaGpu->torqueMapForce4Delete )totalMemory += memory;
 
     totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psTorque, log );
-
-    (void) fprintf( log, "     psMultipoleParticlesTorqueBufferIndices %p\n",      amoebaGpu->amoebaSim.pMultipoleParticlesTorqueBufferIndices);
 
     totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psMolecularDipole, log );
     (void) fprintf( log, "     pMolecularDipole                   %p\n",      amoebaGpu->amoebaSim.pMolecularDipole);
@@ -1341,7 +1340,6 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
 static void gpuFixedEFieldAllocate( amoebaGpuContext amoebaGpu )
 {
     // ---------------------------------------------------------------------------------------
-
     static const std::string methodName = "gpuFixedEFieldAllocate";
 
     // ---------------------------------------------------------------------------------------
@@ -1869,7 +1867,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
     }
 
-    amoebaGpu->maxTorqueBufferIndex = maxTorqueBufferIndex;
+    amoebaGpu->amoebaSim.maxTorqueBufferIndex = maxTorqueBufferIndex;
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "Max axis count=%d\n", maxTorqueBufferIndex );
         std::string axisLabel[maxAxisType+1] = {  "ZThenX", "Bisector", "ZBisect", "ThreeFold", "ZOnly", "NoAxisType", "Unknown"};
@@ -2812,14 +2810,14 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu, int hasAmoebaGener
 
     // use the Cuda force output buffers for mapping torques onto forces, if max torque buffer count < number of buffers
 
-    if( amoebaGpu->maxTorqueBufferIndex > outputBuffers ){
-        amoebaGpu->psTorqueMapForce4            = new CUDAStream<float4>(paddedNumberOfAtoms*amoebaGpu->maxTorqueBufferIndex, 1, "torqueMapForce");
+    if( amoebaGpu->amoebaSim.maxTorqueBufferIndex > outputBuffers ){
+        amoebaGpu->psTorqueMapForce4            = new CUDAStream<float4>(paddedNumberOfAtoms, amoebaGpu->amoebaSim.maxTorqueBufferIndex, "torqueMapForce");
         amoebaGpu->torqueMapForce4Delete        = 1;
     } else {
         amoebaGpu->psTorqueMapForce4            = amoebaGpu->gpuContext->psForce4;
         amoebaGpu->torqueMapForce4Delete        = 0;
     }
-    amoebaGpu->amoebaSim.pTorqueMapForce4 = amoebaGpu->psTorqueMapForce4->_pDevData;
+    amoebaGpu->amoebaSim.pTorqueMapForce4      = amoebaGpu->psTorqueMapForce4->_pDevData;
 
     return;
 }
@@ -3013,16 +3011,19 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
         (void) fflush( amoebaGpu->log );
     }
 #else
-    if( debugOn && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d cells w/ exclusions\n",
-                                        methodName.c_str(), numWithScalingIndices );
-        for (unsigned int ii = 0; ii < cells; ii++)
-        {
-            unsigned int x, y, exclusion;
-            decodeCell( pWorkList[ii], &x, &y, &exclusion );
-            if( exclusion ){
-                (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u indexInToIndices=%8d\n", ii, x, y, exclusion, pWorkList[ii],
-                                psScalingIndicesIndex->_pSysData[ii] );
+    if( amoebaGpu->log ){
+    //if( debugOn && amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "%s %d cells w/ exclusions out of %d\n",
+                                        methodName.c_str(), numWithScalingIndices, cells );
+        if( debugOn ){
+            for (unsigned int ii = 0; ii < cells; ii++)
+            {
+                unsigned int x, y, exclusion;
+                decodeCell( pWorkList[ii], &x, &y, &exclusion );
+                if( exclusion ){
+                    (void) fprintf( amoebaGpu->log, "%6d [%6u %6u] %8u %8u indexInToIndices=%8d\n", ii, x, y, exclusion, pWorkList[ii],
+                                    psScalingIndicesIndex->_pSysData[ii] );
+                }
             }
         }
         (void) fflush( amoebaGpu->log );
@@ -4467,6 +4468,35 @@ void reduceAndCopyCUDAStreamFloat4( CUDAStream<float4>* streamToCopy, CUDAStream
         outputStream->_pSysData[indexOffset+2]  *= conversion;
 
         indexOffset                             += 3;
+    }
+    outputStream->Upload();
+}
+
+/**----------------------------------------------------------------------------------------
+
+   Reduce and copy  CUDAStream<float> stream to  CUDAStream<float> with reduction
+
+   @param streamToCopy     float4 stream to copy
+   @param outputStream     output stream
+   @param conversion       conversion factor
+
+   --------------------------------------------------------------------------------------- */
+
+void reduceAndCopyCUDAStreamFloat( CUDAStream<float>* streamToCopy, CUDAStream<float>*  outputStream, float conversion )
+{
+    streamToCopy->Download();
+
+    for( unsigned int ii = 0; ii < streamToCopy->_stride; ii++ ){
+        outputStream->_pSysData[ii]    = streamToCopy->_pSysStream[0][ii];
+if( ii == 0 )(void) fprintf( stderr, "reduceAndCopyCUDAStreamFloat:%u %15.7e %u %u\n", ii, streamToCopy->_pSysStream[0][ii], streamToCopy->_stride, streamToCopy->_subStreams );
+        for( int jj = 1; jj < streamToCopy->_subStreams; jj++ ){
+            if(  streamToCopy->_pSysStream[jj][ii] !=  streamToCopy->_pSysStream[jj][ii] ){
+                (void) fprintf( stderr, "Nan at particle=%d stream=%d\n", ii, jj );
+            }
+            outputStream->_pSysData[ii]   += streamToCopy->_pSysStream[jj][ii];
+if( ii == 0 )(void) fprintf( stderr, "reduceAndCopyCUDAStreamFloat:%u %d %15.7e %15.7e\n", ii, jj, streamToCopy->_pSysStream[jj][ii], outputStream->_pSysData[ii] );
+        }
+        outputStream->_pSysData[ii]    *= conversion;
     }
     outputStream->Upload();
 }

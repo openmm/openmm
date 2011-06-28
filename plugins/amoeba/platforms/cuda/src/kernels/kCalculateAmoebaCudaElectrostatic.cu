@@ -35,62 +35,7 @@ static int const PScaleIndex            =  0;
 static int const DScaleIndex            =  1; 
 static int const UScaleIndex            =  2; 
 static int const MScaleIndex            =  3;
-static int const Scale3Index            =  4;
-static int const Scale5Index            =  5;
-static int const Scale7Index            =  6;
-static int const Scale9Index            =  7;
-static int const Ddsc30Index            =  8;
-//static int const Ddsc31Index            =  9;
-//static int const Ddsc32Index            = 10; 
-static int const Ddsc50Index            = 11;
-//static int const Ddsc51Index            = 12;
-//static int const Ddsc52Index            = 13; 
-static int const Ddsc70Index            = 14;
-//static int const Ddsc71Index            = 15;
-//static int const Ddsc72Index            = 16;
-static int const LastScalingIndex       = 17;
-
-#define DOT3_4(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
-
-#define MATRIXDOT31(u,v) u[0]*v[0] + u[1]*v[1] + u[2]*v[2] + \
-  u[3]*v[3] + u[4]*v[4] + u[5]*v[5] + \
-  u[6]*v[6] + u[7]*v[7] + u[8]*v[8]
-
-#define DOT31(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
-
-#define i35 0.257142857f
-#define one 1.0f
-
-__device__ void acrossProductVector3(   float* vectorX, float* vectorY, float* vectorZ ){
-    vectorZ[0]  = vectorX[1]*vectorY[2] - vectorX[2]*vectorY[1];
-    vectorZ[1]  = vectorX[2]*vectorY[0] - vectorX[0]*vectorY[2];
-    vectorZ[2]  = vectorX[0]*vectorY[1] - vectorX[1]*vectorY[0];
-}
-
-__device__ void amatrixProductVector3(   float* matrixX, float* vectorY, float* vectorZ ){
-    vectorZ[0]  = matrixX[0]*vectorY[0] + matrixX[3]*vectorY[1] + matrixX[6]*vectorY[2];
-    vectorZ[1]  = matrixX[1]*vectorY[0] + matrixX[4]*vectorY[1] + matrixX[7]*vectorY[2];
-    vectorZ[2]  = matrixX[2]*vectorY[0] + matrixX[5]*vectorY[1] + matrixX[8]*vectorY[2];
-}
-
-__device__ void amatrixCrossProductMatrix3( float* matrixX, float* matrixY, float* vectorZ ){
-  
-    float* xPtr[3];
-    float* yPtr[3];
-        
-    xPtr[0]    = matrixX;
-    xPtr[1]    = matrixX + 3;
-    xPtr[2]    = matrixX + 6;
-    
-    yPtr[0]    = matrixY;
-    yPtr[1]    = matrixY + 3;
-    yPtr[2]    = matrixY + 6;
-          
-    vectorZ[0] = DOT31( xPtr[1], yPtr[2] ) - DOT31( xPtr[2], yPtr[1] );
-    vectorZ[1] = DOT31( xPtr[2], yPtr[0] ) - DOT31( xPtr[0], yPtr[2] );
-    vectorZ[2] = DOT31( xPtr[0], yPtr[1] ) - DOT31( xPtr[1], yPtr[0] );
-  
-}
+static int const LastScalingIndex       =  4;
 
 struct ElectrostaticParticle {
 
@@ -124,17 +69,26 @@ struct ElectrostaticParticle {
 
     float force[3];
 
-    float torque[3];
-    float padding;
+    //float torque[3];
+    //float padding;
 
 };
 
-__device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& atomI,   ElectrostaticParticle& atomJ,
-                                                      float* scalingFactors, float4*  outputForce, float4  outputTorque[2]
-#ifdef AMOEBA_DEBUG
-                                                      ,float4* debugArray 
-#endif
- ){
+#ifdef Original
+
+#define i35 0.257142857f
+#define DOT3_4(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
+
+#define MATRIXDOT31(u,v) u[0]*v[0] + u[1]*v[1] + u[2]*v[2] + \
+  u[3]*v[3] + u[4]*v[4] + u[5]*v[5] + \
+  u[6]*v[6] + u[7]*v[7] + u[8]*v[8]
+
+#define DOT31(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
+
+#define one 1.0f
+
+__device__ void calculateElectrostaticPairIxnOrig_kernel( ElectrostaticParticle& atomI,   ElectrostaticParticle& atomJ,
+                                                      float* scalingFactors, float4*  outputForce, float4  outputTorque[2]){
   
     float deltaR[3];
     
@@ -293,37 +247,6 @@ __device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& ato
     float ei                 = 0.5f*(rr3*(gli1+gli6)*psc0 + rr5*(gli2+gli7)*psc1 + rr7*gli3*psc2);
     outputForce->w           = em+ei;
     
-#ifdef AMOEBA_DEBUG
-#if 0
-if( 1 ){
-    int debugIndex           = 0;
-    debugArray[debugIndex].x = em;
-    debugArray[debugIndex].y = ei;
-    debugArray[debugIndex].z = rr1;
-    debugArray[debugIndex].w = rr3;
-
-    debugIndex++;
-    debugArray[debugIndex].x = gl0;
-    debugArray[debugIndex].y = gl1;
-    debugArray[debugIndex].z = gl6;
-    debugArray[debugIndex].w = gl2;
-
-    debugIndex++;
-    debugArray[debugIndex].x = gli1;
-    debugArray[debugIndex].y = gli3;
-    debugArray[debugIndex].z = gli2;
-    debugArray[debugIndex].w = gli7;
-
-    debugIndex++;
-    debugArray[debugIndex].x = psc0;
-    debugArray[debugIndex].y = psc1;
-    debugArray[debugIndex].z = psc2;
-    debugArray[debugIndex].w = scalingFactors[MScaleIndex];
-
-}
-#endif
-#endif
-
     float temp1[3],temp2[3],temp3[3];
     float qIqJr[3], qJqIr[3], qIdJ[3], qJdI[3];
     amatrixProductVector3( atomI.labFrameQuadrupole,      atomJ.labFrameDipole,     qIdJ );//MK
@@ -528,99 +451,6 @@ if( 1 ){
     
     }
 
-
-#ifdef AMOEBA_DEBUG
-if( 0 ){
-int debugIndex               = 0;
-    debugArray[debugIndex].x = scalingFactors[DScaleIndex];
-    debugArray[debugIndex].y = scalingFactors[PScaleIndex];
-    debugArray[debugIndex].z = scalingFactors[MScaleIndex];
-    debugArray[debugIndex].w = scalingFactors[UScaleIndex];
-
-    debugIndex++;
-    debugArray[debugIndex].x = ftm2i_0 + (fridmp_0 + findmp_0);
-    debugArray[debugIndex].y = ftm2i_1 + (fridmp_1 + findmp_1);
-    debugArray[debugIndex].z = ftm2i_2 + (fridmp_2 + findmp_2);
-    debugArray[debugIndex].w = 1.5;
-
-/*
-    debugIndex++;
-    debugArray[debugIndex].x = temp2[0];
-    debugArray[debugIndex].y = temp2[1];
-    debugArray[debugIndex].z = temp2[2];
-    debugArray[debugIndex].w = 2.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp3[0];
-    debugArray[debugIndex].y = temp3[1];
-    debugArray[debugIndex].z = temp3[2];
-    debugArray[debugIndex].w = 3.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp4[0];
-    debugArray[debugIndex].y = temp4[1];
-    debugArray[debugIndex].z = temp4[2];
-    debugArray[debugIndex].w = 4.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp5[0];
-    debugArray[debugIndex].y = temp5[1];
-    debugArray[debugIndex].z = temp5[2];
-    debugArray[debugIndex].w = 5.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp6[0];
-    debugArray[debugIndex].y = temp6[1];
-    debugArray[debugIndex].z = temp6[2];
-    debugArray[debugIndex].w = 6.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp14[0];
-    debugArray[debugIndex].y = temp14[1];
-    debugArray[debugIndex].z = temp14[2];
-    debugArray[debugIndex].w = 14.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp7[0];
-    debugArray[debugIndex].y = temp7[1];
-    debugArray[debugIndex].z = temp7[2];
-    debugArray[debugIndex].w = 7.0f;
-
-
-    debugIndex++;
-    debugArray[debugIndex].x = temp8[0];
-    debugArray[debugIndex].y = temp8[1];
-    debugArray[debugIndex].z = temp8[2];
-    debugArray[debugIndex].w = 8.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = rr3;
-    debugArray[debugIndex].y = gf3;
-    debugArray[debugIndex].z = gf6;
-    debugArray[debugIndex].w = 20.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = gf4;
-    debugArray[debugIndex].y = gf7;
-    debugArray[debugIndex].z = 0.0f;
-    debugArray[debugIndex].w = 21.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = atomJ.labFrameDipole[0];
-    debugArray[debugIndex].y = atomJ.labFrameDipole[1];
-    debugArray[debugIndex].z = atomJ.labFrameDipole[2];
-    debugArray[debugIndex].w = 22.0f;
-
-    debugIndex++;
-    debugArray[debugIndex].x = deltaR[0];
-    debugArray[debugIndex].y = deltaR[1];
-    debugArray[debugIndex].z = deltaR[2];
-    debugArray[debugIndex].w = 23.0f;
-*/
-
-}
-#endif
-
     outputForce->x       = -(ftm2_0 + ftm2i_0);
     outputForce->y       = -(ftm2_1 + ftm2i_1);
     outputForce->z       = -(ftm2_2 + ftm2i_2);
@@ -636,50 +466,124 @@ int debugIndex               = 0;
     return;
 
 }
+#endif
 
-__device__ void loadElectrostaticShared( struct ElectrostaticParticle* sA, unsigned int atomI,
-                                         float4* atomCoord, float* labFrameDipoleJ, float* labQuadrupole,
-                                         float* inducedDipole, float* inducedDipolePolar, float2* dampingFactorAndThole )
-{
+static __device__ void loadElectrostaticParticle( struct ElectrostaticParticle* sA, unsigned int atomI ){
+
     // coordinates & charge
 
-    sA->x                        = atomCoord[atomI].x;
-    sA->y                        = atomCoord[atomI].y;
-    sA->z                        = atomCoord[atomI].z;
-    sA->q                        = atomCoord[atomI].w;
+    sA->x                        = cSim.pPosq[atomI].x;
+    sA->y                        = cSim.pPosq[atomI].y;
+    sA->z                        = cSim.pPosq[atomI].z;
+    sA->q                        = cSim.pPosq[atomI].w;
 
     // lab dipole
 
-    sA->labFrameDipole[0]         = labFrameDipoleJ[atomI*3];
-    sA->labFrameDipole[1]         = labFrameDipoleJ[atomI*3+1];
-    sA->labFrameDipole[2]         = labFrameDipoleJ[atomI*3+2];
+    sA->labFrameDipole[0]        = cAmoebaSim.pLabFrameDipole[atomI*3];
+    sA->labFrameDipole[1]        = cAmoebaSim.pLabFrameDipole[atomI*3+1];
+    sA->labFrameDipole[2]        = cAmoebaSim.pLabFrameDipole[atomI*3+2];
 
     // lab quadrupole
 
-    sA->labFrameQuadrupole[0]    = labQuadrupole[atomI*9];
-    sA->labFrameQuadrupole[1]    = labQuadrupole[atomI*9+1];
-    sA->labFrameQuadrupole[2]    = labQuadrupole[atomI*9+2];
-    sA->labFrameQuadrupole[3]    = labQuadrupole[atomI*9+3];
-    sA->labFrameQuadrupole[4]    = labQuadrupole[atomI*9+4];
-    sA->labFrameQuadrupole[5]    = labQuadrupole[atomI*9+5];
-    sA->labFrameQuadrupole[6]    = labQuadrupole[atomI*9+6];
-    sA->labFrameQuadrupole[7]    = labQuadrupole[atomI*9+7];
-    sA->labFrameQuadrupole[8]    = labQuadrupole[atomI*9+8];
+    sA->labFrameQuadrupole[0]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9];
+    sA->labFrameQuadrupole[1]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+1];
+    sA->labFrameQuadrupole[2]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+2];
+    sA->labFrameQuadrupole[3]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+3];
+    sA->labFrameQuadrupole[4]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+4];
+    sA->labFrameQuadrupole[5]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+5];
+    sA->labFrameQuadrupole[6]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+6];
+    sA->labFrameQuadrupole[7]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+7];
+    sA->labFrameQuadrupole[8]    = cAmoebaSim.pLabFrameQuadrupole[atomI*9+8];
 
     // induced dipole
 
-    sA->inducedDipole[0]          = inducedDipole[atomI*3];
-    sA->inducedDipole[1]          = inducedDipole[atomI*3+1];
-    sA->inducedDipole[2]          = inducedDipole[atomI*3+2];
+    sA->inducedDipole[0]         = cAmoebaSim.pInducedDipole[atomI*3];
+    sA->inducedDipole[1]         = cAmoebaSim.pInducedDipole[atomI*3+1];
+    sA->inducedDipole[2]         = cAmoebaSim.pInducedDipole[atomI*3+2];
 
     // induced dipole polar
 
-    sA->inducedDipoleP[0]         = inducedDipolePolar[atomI*3];
-    sA->inducedDipoleP[1]         = inducedDipolePolar[atomI*3+1];
-    sA->inducedDipoleP[2]         = inducedDipolePolar[atomI*3+2];
+    sA->inducedDipoleP[0]        = cAmoebaSim.pInducedDipolePolar[atomI*3];
+    sA->inducedDipoleP[1]        = cAmoebaSim.pInducedDipolePolar[atomI*3+1];
+    sA->inducedDipoleP[2]        = cAmoebaSim.pInducedDipolePolar[atomI*3+2];
 
-    sA->damp                     = dampingFactorAndThole[atomI].x;
-    sA->thole                    = dampingFactorAndThole[atomI].y;
+    sA->damp                     = cAmoebaSim.pDampingFactorAndThole[atomI].x;
+    sA->thole                    = cAmoebaSim.pDampingFactorAndThole[atomI].y;
+
+}
+
+static __device__ void zeroElectrostaticParticle( struct ElectrostaticParticle* sA ){
+
+    // coordinates & charge
+
+    sA->force[0]                 = 0.0f;
+    sA->force[1]                 = 0.0f;
+    sA->force[2]                 = 0.0f;
+/*
+    sA->torque[0]                = 0.0f;
+    sA->torque[1]                = 0.0f;
+    sA->torque[2]                = 0.0f;
+*/
+}
+
+#undef SUB_METHOD_NAME
+#undef F1
+#define SUB_METHOD_NAME(a, b) a##F1##b
+#define F1
+#include "kCalculateAmoebaCudaElectrostatic_b.h"
+#undef F1
+#undef SUB_METHOD_NAME
+
+#undef SUB_METHOD_NAME
+#undef F2
+#define SUB_METHOD_NAME(a, b) a##F2##b
+#define F2
+//#include "kCalculateAmoebaCudaElectrostatic_b.h"
+#undef F2
+#undef SUB_METHOD_NAME
+
+#undef SUB_METHOD_NAME
+#undef T1
+#define SUB_METHOD_NAME(a, b) a##T1##b
+#define T1
+#include "kCalculateAmoebaCudaElectrostatic_b.h"
+#undef T1
+#undef SUB_METHOD_NAME
+
+#undef SUB_METHOD_NAME
+#undef T3
+#define SUB_METHOD_NAME(a, b) a##T3##b
+#define T3
+#include "kCalculateAmoebaCudaElectrostatic_b.h"
+#undef T3
+#undef SUB_METHOD_NAME
+
+__device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& atomI,   ElectrostaticParticle& atomJ,
+                                                      float* scalingFactors, float4*  outputForce, float4 outputTorque[2], float forceFactor){
+#ifdef Orig
+    return calculateElectrostaticPairIxn_kernel( atomI, atomJ, scalingFactors, outputForce, outputTorque);
+#else
+
+    float force[3];
+    float energy;
+    calculateElectrostaticPairIxnF1_kernel( atomI,  atomJ, scalingFactors, &energy, force);
+    outputForce->x = force[0];
+    outputForce->y = force[1];
+    outputForce->z = force[2];
+    outputForce->w = energy;
+
+    calculateElectrostaticPairIxnT1_kernel( atomI,  atomJ, scalingFactors, force);
+    outputTorque[0].x = force[0];
+    outputTorque[0].y = force[1];
+    outputTorque[0].z = force[2];
+
+    calculateElectrostaticPairIxnT3_kernel( atomI,  atomJ, scalingFactors, force);
+    outputTorque[1].x = force[0];
+    outputTorque[1].y = force[1];
+    outputTorque[1].z = force[2];
+
+    return;
+#endif
 
 }
 
@@ -754,7 +658,8 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueTo
     if( threadsPerBlock == 0 ){
         unsigned int maxThreads;
         if (gpu->sm_version >= SM_20)
-            maxThreads = 384;
+            //maxThreads = 384;
+            maxThreads = 512;
         else if (gpu->sm_version >= SM_12)
             maxThreads = 128;
         else
@@ -773,53 +678,39 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueTo
 #endif
 
     if (gpu->bOutputBufferPerWarp){
-
         kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData,
-                                                                           gpu->psPosq4->_pDevData,
-                                                                           amoebaGpu->psLabFrameDipole->_pDevData,
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevData,
-                                                                           amoebaGpu->psInducedDipole->_pDevData,
-                                                                           amoebaGpu->psInducedDipolePolar->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                           debugArray->_pDevData, targetAtom );
-#else
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
-
+                                                                           amoebaGpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     } else {
-
         kCalculateAmoebaCudaElectrostaticN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData,
-                                                                           gpu->psPosq4->_pDevData,
-                                                                           amoebaGpu->psLabFrameDipole->_pDevData,
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevData,
-                                                                           amoebaGpu->psInducedDipole->_pDevData,
-                                                                           amoebaGpu->psInducedDipolePolar->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                           debugArray->_pDevData, targetAtom );
-#else
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
+                                                                           amoebaGpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     }
     LAUNCHERROR("kCalculateAmoebaCudaElectrostaticN2Forces");
+
+    if( 0 ){ 
+        VectorOfDoubleVectors outputVector;
+
+        std::vector<int> fileId;
+        static int call = 0; 
+        fileId.push_back( call++ );
+
+        int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "Temp1");
+
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
+        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+
+        reduceAndCopyCUDAStreamFloat( amoebaGpu->psWorkArray_3_1, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaElectrostaticTorque", fileId, outputVector );
+        delete temp;
+    }    
 
     if( addTorqueToForce ){
         kReduceTorque( amoebaGpu );
         cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpu, amoebaGpu->psTorque );
     }
-
-    if( 0 ){
-        std::vector<int> fileId;
-        //fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
-        //cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector, NULL, 1.0f/4.184 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector, NULL, 1.0f/4.184 );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaForceTorque", fileId, outputVector );
-     }
 
    // ---------------------------------------------------------------------------------------
 }

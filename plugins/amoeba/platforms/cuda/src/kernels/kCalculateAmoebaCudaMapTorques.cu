@@ -75,6 +75,80 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
+void amoebaAddMapTorqueForceToForce_kernel( void )
+{
+
+  // ---------------------------------------------------------------------------------------
+  
+    int pos                      = blockIdx.x*blockDim.x + threadIdx.x;
+  
+  // ---------------------------------------------------------------------------------------
+  
+    while (pos < cSim.stride4 )
+    {   
+        float totalForce = 0.0f;
+        float* pFt       = (float*)cAmoebaSim.pTorqueMapForce4 + pos;
+        int i            = cAmoebaSim.maxTorqueBufferIndex;
+        while (i >= 4)
+        {   
+            float f1    = *pFt;
+            pFt        += cSim.stride4;
+            float f2    = *pFt;
+            pFt        += cSim.stride4;
+            float f3    = *pFt;
+            pFt        += cSim.stride4;
+            float f4    = *pFt;
+            pFt        += cSim.stride4;
+            totalForce += f1 + f2 + f3 + f4; 
+            i -= 4;
+        }   
+        if (i >= 2)
+        {   
+            float f1    = *pFt;
+            pFt        += cSim.stride4;
+            float f2    = *pFt;
+            pFt        += cSim.stride4;
+            totalForce += f1 + f2; 
+            i -= 2;
+        }   
+        if (i > 0)
+        {   
+            totalForce += *pFt;
+        }   
+
+        pFt             = (float*)cSim.pForce4 + pos;
+        *pFt           += totalForce;
+        pos            += gridDim.x * blockDim.x;
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void amoebaClearMapTorqueForce_kernel( void )
+{
+
+    int pos                      = blockIdx.x*blockDim.x + threadIdx.x;
+    while (pos < cSim.stride4*cAmoebaSim.maxTorqueBufferIndex )
+    {   
+        cAmoebaSim.pTorqueMapForce4[pos]  = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        pos                              += gridDim.x * blockDim.x;
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
 void amoebaMapTorqueToForce_kernel( float* torque )
 {
 
@@ -359,7 +433,77 @@ void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext amoebaGpu, CUDASt
 {
   
     gpuContext gpu    = amoebaGpu->gpuContext;
+
+    if( amoebaGpu->amoebaSim.maxTorqueBufferIndex > amoebaGpu->gpuContext->sim.outputBuffers && amoebaGpu->psTorqueMapForce4 != amoebaGpu->gpuContext->psForce4 && amoebaGpu->psTorqueMapForce4 ){
+        amoebaClearMapTorqueForce_kernel<<< gpu->sim.blocks, gpu->sim.threads_per_block>>> ( );
+        LAUNCHERROR("amoebaClearMapTorqueForce");
+    }
+
+    if( 0 ){  
+        VectorOfDoubleVectors outputVector;
+
+        std::vector<int> fileId;
+        static int call = 0;  
+        fileId.push_back( call++ );
+
+        int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "Temp1");
+
+        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+
+        reduceAndCopyCUDAStreamFloat( psTorque, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+
+        reduceAndCopyCUDAStreamFloat4( amoebaGpu->psTorqueMapForce4, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaElectrostatiPreTorqueForce", fileId, outputVector );
+        delete temp;
+    }    
+
     amoebaMapTorqueToForce_kernel<<< gpu->sim.blocks, gpu->sim.threads_per_block>>> ( psTorque->_pDevData );
     LAUNCHERROR("amoebaMapTorqueToForce");
+
+    if( amoebaGpu->amoebaSim.maxTorqueBufferIndex > amoebaGpu->gpuContext->sim.outputBuffers && amoebaGpu->psTorqueMapForce4 != amoebaGpu->gpuContext->psForce4 && amoebaGpu->psTorqueMapForce4 ){
+        amoebaAddMapTorqueForceToForce_kernel<<< gpu->sim.blocks, gpu->sim.threads_per_block>>> ( );
+        LAUNCHERROR("amoebaAddMapTorqueForceToForce");
+    }
+
+#ifdef AMOEBA_DEBUG
+    if( 0 ){  
+        VectorOfDoubleVectors outputVector;
+
+        std::vector<int> fileId;
+        static int call = 0;  
+        fileId.push_back( call++ );
+
+        int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "Temp1");
+
+        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+
+        reduceAndCopyCUDAStreamFloat4( amoebaGpu->psTorqueMapForce4, temp, 1.0 );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
+        for( int pId = 0; pId < 5; pId++ ){
+        float sum[3] = { 0.0f,  0.0f,  0.0f };
+        (void) fprintf( stderr, "\n\nTorqueForceToForce for part=%d\n", pId );
+        for( int ii = 0; ii < amoebaGpu->amoebaSim.maxTorqueBufferIndex; ii++ ){
+            (void) fprintf( stderr, "%4d [%15.7e %15.7e %15.7e]\n", ii,
+                            amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].x,
+                            amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].y,
+                            amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].z );
+            sum[0] += amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].x;
+            sum[1] += amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].y;
+            sum[2] += amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].z;
+        }
+        (void) fprintf( stderr, "TorqueForceToForce for partcle=%d [%15.7e %15.7e %15.7e]  [%15.7e %15.7e %15.7e]\n", pId, sum[0], sum[1], sum[2], sum[0]/4.184f, sum[1]/4.184f, sum[2]/4.184f );
+        }
+
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaElectrostatiPostTorqueForce", fileId, outputVector );
+        delete temp;
+    }
+#endif
 
 }

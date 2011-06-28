@@ -1,7 +1,7 @@
 #ifndef AMOEBA_CUDA_KIRKWOOD_PARTICLE_H
 #define AMOEBA_CUDA_KIRKWOOD_PARTICLE_H
 
-struct KirkwoodParticle {
+struct KirkwoodEDiffParticle {
 
     // coordinates charge
 
@@ -10,6 +10,11 @@ struct KirkwoodParticle {
     float z;
     float q;
 
+    // scaling factor
+
+    float thole;
+    float damp;
+    
     // lab frame dipole
 
     float labFrameDipole[3]; 
@@ -23,26 +28,20 @@ struct KirkwoodParticle {
     float labFrameQuadrupole_YZ;
     float labFrameQuadrupole_ZZ;
 
-    // induced dipole
+    // induced dipole and polar counterpart
 
     float inducedDipole[3]; 
+    float inducedDipoleP[3]; 
 
-    // polar induced dipole
+    // solvent induced dipole and polar counterpart
 
-    float inducedDipoleP[3];
+    float inducedDipoleS[3]; 
+    float inducedDipolePS[3]; 
 
     // Born radii
 
-    float bornRadius;
-
     float force[3];
-#ifdef INCLUDE_TORQUE
-    float torque[3];
-#endif
-
-    float dBornRadius;
-    float dBornRadiusPolar;
-//    float padding;
+//    float torque[3];
 
 };
 
