@@ -49,6 +49,8 @@ using std::string;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
          owner(owner), system(system), integrator(integrator), hasInitializedForces(false), platform(platform), platformData(NULL) {
+    if (system.getNumParticles() == 0)
+        throw OpenMMException("Cannot create a Context for a System with no particles");
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());

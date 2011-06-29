@@ -53,6 +53,7 @@ void testChangingBoxSize() {
     ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 6));
+    system.addParticle(1.0);
     LangevinIntegrator integrator(300.0, 1.0, 0.01);
     Context context(system, integrator, platform);
     Vec3 x, y, z;
