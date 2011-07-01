@@ -90,23 +90,17 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
         fieldPolarSum[1]                 = 0.0f;
         fieldPolarSum[2]                 = 0.0f;
 
-        if (x == y) // Handle diagonals uniquely at 50% efficiency
-        {
+        if (x == y ){
 
             // load shared data
 
             loadMutualInducedShared( &(sA[threadIdx.x]), atomI );
 
-            for (unsigned int j = 0; j < GRID; j++)
-            {
-
-                // load coords, charge, ...
-
-                float4 delta;
-                float prefactor2;
+            for (unsigned int j = 0; j < GRID; j++) {
                 if(  ( (atomI != (y + j)) && (atomI < cSim.atoms) && ((y+j) < cSim.atoms) ) ){
+                    float4 delta;
+                    float prefactor2;
                     setupMutualInducedFieldPairIxn_kernel( localParticle, psA[j], uscale, &delta, &prefactor2 );
-//delta.w = prefactor2 = 0.0f;
                     calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipole,      delta, prefactor2, fieldSum );
                     calculateMutualInducedFieldPairIxn_kernel(  psA[j].inducedDipolePolar, delta, prefactor2, fieldPolarSum );
                 }
@@ -123,19 +117,15 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
             load3dArray( offset, fieldSum,      outputField );
             load3dArray( offset, fieldPolarSum, outputFieldPolar);
 
-
         } else {
 
-            if (lasty != y)
-            {
+            if( lasty != y ){
                 unsigned int atomJ        = y + tgx;
                 loadMutualInducedShared( &(sA[threadIdx.x]), atomJ );
             }
     
             unsigned int flags = cSim.pInteractionFlag[pos];
-            if (flags == 0) {
-                // No interactions in this block.
-            } else {
+            if( flags != 0 ){
 
 #ifndef INCLUDE_MI_FIELD_BUFFERS
                 flags = 0xFFFFFFFF;
@@ -194,7 +184,7 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
                         }
                     }
     
-                    tj                  = (tj + 1) & (GRID - 1);
+                    tj = (tj + 1) & (GRID - 1);
     
                 } // end of j-loop
     

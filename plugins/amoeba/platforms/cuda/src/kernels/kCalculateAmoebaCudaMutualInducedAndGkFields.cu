@@ -505,7 +505,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaMutualInducedAndGkFieldsN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
-                                                                 amoebaGpu->psWorkUnit->_pDevData,
+                                                                 gpu->psWorkUnit->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_2->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_3->_pDevData,
@@ -518,7 +518,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldMatrixMultiply( amoebaGpuCon
     } else {
 
         kCalculateAmoebaMutualInducedAndGkFieldsN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
-                                                            amoebaGpu->psWorkUnit->_pDevData,
+                                                            gpu->psWorkUnit->_pDevData,
                                                             amoebaGpu->psWorkArray_3_1->_pDevData,
                                                             amoebaGpu->psWorkArray_3_2->_pDevData,
                                                             amoebaGpu->psWorkArray_3_3->_pDevData,

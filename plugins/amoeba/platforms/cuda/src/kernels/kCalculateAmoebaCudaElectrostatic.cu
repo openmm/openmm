@@ -679,10 +679,10 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueTo
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
+                                                                           gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     } else {
         kCalculateAmoebaCudaElectrostaticN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
+                                                                           gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     }
     LAUNCHERROR("kCalculateAmoebaCudaElectrostaticN2Forces");
 

@@ -1946,7 +1946,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaCudaKirkwoodN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData
+                                                                           gpu->psWorkUnit->_pDevData
 #ifdef AMOEBA_DEBUG
                                                                            , debugArray->_pDevData, targetAtom );
 #else
@@ -1955,7 +1955,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     } else {
 
         kCalculateAmoebaCudaKirkwoodN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData
+                                                                           gpu->psWorkUnit->_pDevData
 #ifdef AMOEBA_DEBUG
                                                                            , debugArray->_pDevData, targetAtom );
 #else

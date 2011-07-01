@@ -10,6 +10,7 @@
 #include "amoebaScaleFactors.h"
 
 #include <stdio.h>
+
 extern int isNanOrInfinity( double number );
 
 using namespace std;
@@ -594,6 +595,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
             gpu->psInteractionFlag->Download();
             amoebaGpu->psVdwWorkUnit->Download();
             (void) fprintf( amoebaGpu->log, "Vdw Ixn count=%u\n", gpu->psInteractionCount->_pSysData[0] );
+
             for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
         
                 unsigned int x          = gpu->psInteractingWorkUnit->_pSysData[ii];
@@ -609,6 +611,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                 (void) fprintf( amoebaGpu->log, "   AmGpu %8u [%5u %5u %1u]\n", amoebaGpu->psWorkUnit->_pSysData[ii], x,y,exclusions );
             }    
                 (void) fflush( amoebaGpu->log );
+
         }
 #endif
 

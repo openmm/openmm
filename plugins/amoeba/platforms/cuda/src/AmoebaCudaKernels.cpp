@@ -55,6 +55,7 @@ void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
 
     if (data.cudaPlatformData.nonbondedMethod != NO_CUTOFF && data.cudaPlatformData.computeForceCount%100 == 0){
+        //fprintf( stderr, "In CalcAmoebaForcesAndEnergyKernel::beginComputation reordering atoms\n" ); fflush( stderr );
         gpuReorderAtoms(gpu);
     }
 
@@ -72,7 +73,6 @@ void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
 }
 
 double CalcAmoebaForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//fprintf( stderr, "IN CalcAmoebaForcesAndEnergyKernel::finishComputation\n" ); fflush( stderr );
     amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
     _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
 
@@ -865,14 +865,19 @@ public:
         vector<double> dipole1, dipole2, quadrupole1, quadrupole2;
         force.getMultipoleParameters(particle1, charge1, dipole1, quadrupole1, axis1, multipole11, multipole21, multipole31, thole1, damping1, polarity1);
         force.getMultipoleParameters(particle2, charge2, dipole2, quadrupole2, axis2, multipole12, multipole22, multipole32, thole2, damping2, polarity2);
-        if (charge1 != charge2 || thole1 != thole2 || damping1 != damping2 || polarity1 != polarity2 || axis1 != axis2)
+        if (charge1 != charge2 || thole1 != thole2 || damping1 != damping2 || polarity1 != polarity2 || axis1 != axis2){
             return false;
-        for (int i = 0; i < (int) dipole1.size(); ++i)
-            if (dipole1[i] != dipole2[i])
+        }
+        for (int i = 0; i < (int) dipole1.size(); ++i){
+            if (dipole1[i] != dipole2[i]){
                 return false;
-        for (int i = 0; i < (int) quadrupole1.size(); ++i)
-            if (quadrupole1[i] != quadrupole2[i])
+            }
+        }
+        for (int i = 0; i < (int) quadrupole1.size(); ++i){
+            if (quadrupole1[i] != quadrupole2[i]){
                 return false;
+            }
+        }
         return true;
     }
 private:
@@ -1142,7 +1147,7 @@ public:
         double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
         force.getParticleParameters(particle1, iv1, class1, sigma1, epsilon1, reduction1);
         force.getParticleParameters(particle2, iv2, class2, sigma2, epsilon2, reduction2);
-        return (iv1 == iv2 && class1 == class2 && sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
+        return (class1 == class2 && sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
     }
 private:
     const AmoebaVdwForce& force;

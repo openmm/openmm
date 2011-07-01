@@ -973,12 +973,12 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaCudaKirkwoodEDiffN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
+                                                                           gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
 
     } else {
 
         kCalculateAmoebaCudaKirkwoodEDiffN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
+                                                                           gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     }
     LAUNCHERROR("kCalculateAmoebaCudaKirkwoodEDiffN2Forces");
 

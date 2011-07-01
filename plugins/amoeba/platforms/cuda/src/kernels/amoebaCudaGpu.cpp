@@ -45,9 +45,11 @@ extern void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu);
 #include <limits>
 #include <cstring>
 #include <vector>
-
+#include <stdio.h>
 #ifdef WIN32
-//  #include <windows.h>
+#include <windows.h>
+#else
+#include <sys/time.h>
 #endif
 
 #define DUMP_PARAMETERS 0
@@ -235,7 +237,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     
     (void) fprintf( log, "\n\n" );
 
-    totalMemory += gpuPrintCudaStreamUnsignedInt( amoebaGpu->psWorkUnit, log );
+    totalMemory += gpuPrintCudaStreamUnsignedInt( amoebaGpu->gpuContext->psWorkUnit, log );
     totalMemory += gpuPrintCudaStreamInt(  amoebaGpu->psScalingIndicesIndex, log );
     totalMemory += gpuPrintCudaStreamInt(  amoebaGpu->ps_D_ScaleIndices, log );
     totalMemory += gpuPrintCudaStreamInt2( amoebaGpu->ps_P_ScaleIndices, log );
@@ -2709,7 +2711,6 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
     delete gpu->psWorkArray_1_1; 
     delete gpu->psWorkArray_1_2; 
 
-    delete gpu->psWorkUnit; 
     delete gpu->psScalingIndicesIndex; 
     delete gpu->ps_D_ScaleIndices; 
     delete gpu->ps_P_ScaleIndices; 
@@ -2852,7 +2853,7 @@ extern "C"
 int amoebaGpuBuildThreadBlockWorkList( amoebaGpuContext amoebaGpu )
 {
 
-    if( amoebaGpu->psWorkUnit != NULL ){
+    if( amoebaGpu->psVdwWorkUnit != NULL ){
         return 0;
     }
     const unsigned int atoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
@@ -2860,10 +2861,21 @@ int amoebaGpuBuildThreadBlockWorkList( amoebaGpuContext amoebaGpu )
     const unsigned int dim   = (atoms + (grid - 1)) / grid;
     const unsigned int cells = dim * (dim + 1) / 2;
 
-    CUDAStream<unsigned int>* psWorkUnit       = new CUDAStream<unsigned int>(cells, 1u, "WorkUnit");
+    CUDAStream<unsigned int>* psWorkUnit;
+    if( amoebaGpu->gpuContext->psWorkUnit == NULL ){
+        psWorkUnit                        = new CUDAStream<unsigned int>(cells, 1u, "WorkUnit");
+        amoebaGpu->gpuContext->psWorkUnit = psWorkUnit;
+    } else {
+        psWorkUnit                        = amoebaGpu->gpuContext->psWorkUnit;
+        if( psWorkUnit->_length < cells ){
+            delete psWorkUnit;
+            psWorkUnit                        = new CUDAStream<unsigned int>(cells, 1u, "WorkUnit");
+            amoebaGpu->gpuContext->psWorkUnit = psWorkUnit;
+        }
+    }
+        
     unsigned int* pWorkList                    = psWorkUnit->_pSysData;
-    amoebaGpu->psWorkUnit                      = psWorkUnit;
-    memset( amoebaGpu->psWorkUnit->_pSysData, 0, cells*sizeof( unsigned int) );
+    memset( psWorkUnit->_pSysData, 0, cells*sizeof( unsigned int) );
 
     CUDAStream<unsigned int>* psVdwWorkUnit    = new CUDAStream<unsigned int>(cells, 1u, "VdwWorkUnit");
     unsigned int* pVdwWorkList                 = psVdwWorkUnit->_pSysData;
@@ -2909,7 +2921,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
     const unsigned int grid            = amoebaGpu->gpuContext->grid;
     const unsigned int dim             = paddedAtoms/grid;
     const unsigned int cells           = dim * (dim + 1) / 2;
-    unsigned int* pWorkList            = amoebaGpu->psWorkUnit->_pSysData;
+    unsigned int* pWorkList            = amoebaGpu->gpuContext->psWorkUnit->_pSysData;
 
     // minCellIndex & maxCellIndex track min/max atom index for each cell
 
@@ -2981,7 +2993,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
         int xAtomMin = x*grid;
         int xAtomMax = xAtomMin + gridOffset;
         if( (maxCellIndex[y] >= xAtomMin && minCellIndex[y] <= xAtomMax) || (x == lastBlock || y == lastBlock) ){
-            pWorkList[ii]                              = encodeCellExclusion( pWorkList[ii] );
+            pWorkList[ii]                         = encodeCellExclusion( pWorkList[ii] );
             psScalingIndicesIndex->_pSysData[ii]  = numWithScalingIndices*grid;
             numWithScalingIndices++;
 //(void) fprintf( amoebaGpu->log, "%5d [%6d %6d] [%6d %6d] [%6d %6d] num=%5d last=%5d\n",
@@ -3446,7 +3458,7 @@ tgx     = 0;
     amoebaGpu->ps_P_ScaleIndices->Upload();
     amoebaGpu->ps_M_ScaleIndices->Upload();
     amoebaGpu->psScalingIndicesIndex->Upload();
-    amoebaGpu->psWorkUnit->Upload();
+    amoebaGpu->gpuContext->psWorkUnit->Upload();
 }
 
 /**---------------------------------------------------------------------------------------
@@ -4499,5 +4511,42 @@ if( ii == 0 )(void) fprintf( stderr, "reduceAndCopyCUDAStreamFloat:%u %d %15.7e 
         outputStream->_pSysData[ii]    *= conversion;
     }
     outputStream->Upload();
+}
+
+/** 
+ * Get time of day (implementation different for Linux/Windows
+ * 
+ * @return time
+ *
+ */
+
+double getTimeOfDay( void ){
+
+#ifdef WIN32
+    static double cycles_per_usec = 0;
+    LARGE_INTEGER counter;
+
+    if (cycles_per_usec == 0) {
+       static LARGE_INTEGER lFreq;
+       if (!QueryPerformanceFrequency(&lFreq)) {
+          fprintf(stderr, "Unable to read the performance counter frquency!\n");
+          return 0;
+       }
+
+       cycles_per_usec = 1000000 / ((double) lFreq.QuadPart);
+    }
+
+    if (!QueryPerformanceCounter(&counter)) {
+       fprintf(stderr,"Unable to read the performance counter!\n");
+       return 0;
+    }
+
+    double time = ((((double) counter.QuadPart) * cycles_per_usec));
+    return time*1.0e-06;
+#else
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    return static_cast<double>(tv.tv_sec) + 1.0e-06*static_cast<double>(tv.tv_usec);
+#endif
 }
 

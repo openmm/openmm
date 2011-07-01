@@ -90,7 +90,6 @@ struct _amoebaGpuContext {
     CUDAStream<float>*  psWorkArray_1_1; 
     CUDAStream<float>*  psWorkArray_1_2; 
 
-    CUDAStream<unsigned int>*  psWorkUnit; 
     CUDAStream<int>*  psScalingIndicesIndex; 
     CUDAStream<int>*  ps_D_ScaleIndices; 
     CUDAStream<int2>* ps_P_ScaleIndices; 

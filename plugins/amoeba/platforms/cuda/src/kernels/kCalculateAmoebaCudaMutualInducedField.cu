@@ -289,7 +289,7 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaMutualInducedFieldN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
-                                                                 amoebaGpu->psWorkUnit->_pDevData,
+                                                                 gpu->psWorkUnit->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
                                                                  amoebaGpu->psWorkArray_3_2->_pDevData,
@@ -301,7 +301,7 @@ static void cudaComputeAmoebaMutualInducedFieldMatrixMultiply( amoebaGpuContext 
     } else {
 
         kCalculateAmoebaMutualInducedFieldN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(MutualInducedParticle)*threadsPerBlock>>>(
-                                                                 amoebaGpu->psWorkUnit->_pDevData,
+                                                                 gpu->psWorkUnit->_pDevData,
                                                                  amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
                                                                  amoebaGpu->psWorkArray_3_2->_pDevData,

@@ -470,8 +470,15 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
             LAUNCHERROR("kFindBlockBoundsPeriodic");
             kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
             LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
-            //compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, amoebaGpu->psWorkUnit->_pDevData, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+
+            //compactStream( gpu->compactPlan, 
+            //               gpu->sim.pInteractingWorkUnit, unsigned int* dOut
+            //               amoebaGpu->psWorkUnit->_pDevData, const unsigned int* dIn
+            //               gpu->sim.pInteractionFlag,        const unsigned int* dValid
+            //               gpu->sim.workUnits,               gpu
+            //               gpu->sim.pInteractionCount);
             kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");

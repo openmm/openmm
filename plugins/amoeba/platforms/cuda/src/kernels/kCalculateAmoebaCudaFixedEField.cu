@@ -119,7 +119,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaFixedE_FieldN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData,
+                                                                           gpu->psWorkUnit->_pDevData,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
                                                                            amoebaGpu->psWorkArray_3_2->_pDevData,
@@ -130,7 +130,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
     } else {
 
         kCalculateAmoebaFixedE_FieldN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevData,
+                                                                           gpu->psWorkUnit->_pDevData,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
 #ifdef AMOEBA_DEBUG
                                                                            amoebaGpu->psWorkArray_3_2->_pDevData,
