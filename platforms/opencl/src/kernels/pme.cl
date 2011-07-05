@@ -78,6 +78,44 @@ __kernel void findAtomRangeForGrid(__global int2* pmeAtomGridIndex, __global int
     }
 }
 
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+
+__kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global long* pmeGrid, __global float4* pmeBsplineTheta, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+    int ix = get_local_id(0)/(PME_ORDER*PME_ORDER);
+    int remainder = get_local_id(0)-ix*PME_ORDER*PME_ORDER;
+    int iy = remainder/PME_ORDER;
+    int iz = remainder-iy*PME_ORDER;
+    if (ix < PME_ORDER) {
+        for (int atomIndex = get_group_id(0); atomIndex < NUM_ATOMS; atomIndex += get_num_groups(0)) {
+            float4 pos = posq[atomIndex];
+            float atomCharge = pos.w;
+            float add = atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
+            pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+            pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+            pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+            int x = (int) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X)+ix;
+            int y = (int) ((pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y)+iy;
+            int z = (int) ((pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z)+iz;
+            x -= (x >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            y -= (y >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+            z -= (z >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+            atom_add(&pmeGrid[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z], (long) (add*0xFFFFFFFF));
+        }
+    }
+}
+
+__kernel void finishSpreadCharge(__global long* pmeGrid) {
+    __global float2* floatGrid = (__global float2*) pmeGrid;
+    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+    float scale = EPSILON_FACTOR/(float) 0xFFFFFFFF;
+    for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
+        long value = pmeGrid[index];
+        float2 floatValue = (float2) ((float) (value*scale), 0.0f);
+        floatGrid[index] = floatValue;
+    }
+}
+#else
 __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float2* pmeGrid, __global float4* pmeBsplineTheta) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     for (int gridIndex = get_global_id(0); gridIndex < numGridPoints; gridIndex += get_global_size(0)) {
@@ -91,7 +129,7 @@ __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGrid
         float result = 0.0f;
 
         // Loop over all atoms that affect this grid point.
-        
+
         for (int ix = 0; ix < PME_ORDER; ++ix) {
             int x = gridPoint.x-ix+(gridPoint.x >= ix ? 0 : GRID_SIZE_X);
             for (int iy = 0; iy < PME_ORDER; ++iy) {
@@ -133,6 +171,7 @@ __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGrid
         pmeGrid[gridIndex] = (float2) (result*EPSILON_FACTOR, 0.0f);
     }
 }
+#endif
 
 __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* energyBuffer, __global float* pmeBsplineModuliX,
         __global float* pmeBsplineModuliY, __global float* pmeBsplineModuliZ, float4 invPeriodicBoxSize, float recipScaleFactor) {

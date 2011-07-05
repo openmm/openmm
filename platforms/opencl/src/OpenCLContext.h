@@ -400,6 +400,12 @@ public:
         return simdWidth;
     }
     /**
+     * Get whether the device being used supports 64 bit atomic operations on global memory.
+     */
+    bool getSupports64BitGlobalAtomics() {
+        return supports64BitGlobalAtomics;
+    }
+    /**
      * Get the size of the periodic box.
      */
     mm_float4 getPeriodicBoxSize() const {
@@ -458,6 +464,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
+    bool supports64BitGlobalAtomics;
     mm_float4 periodicBoxSize;
     mm_float4 invPeriodicBoxSize;
     std::string compilationOptions, defaultOptimizationOptions;

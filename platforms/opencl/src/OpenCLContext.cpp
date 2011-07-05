@@ -48,6 +48,9 @@ using namespace std;
 #ifndef CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV
   #define CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV 0x4000
 #endif
+#ifndef CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV
+  #define CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV 0x4001
+#endif
 
 const int OpenCLContext::ThreadBlockSize = 64;
 const int OpenCLContext::TileSize = 32;
@@ -90,10 +93,20 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationOptions = "-DWORK_GROUP_SIZE="+OpenCLExpressionUtilities::intToString(ThreadBlockSize);
         defaultOptimizationOptions = "-cl-fast-relaxed-math";
+        supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationOptions += " -DWARPS_ARE_ATOMIC";
             simdWidth = 32;
+
+            // Compute level 1.2 and later Nvidia GPUs support 64 bit atomics, even though they don't list the
+            // proper extension as supported.
+
+            cl_uint computeCapabilityMajor, computeCapabilityMinor;
+            clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
+            clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV, sizeof(cl_uint), &computeCapabilityMinor, NULL);
+            if (computeCapabilityMajor > 1 || computeCapabilityMinor > 1)
+                supports64BitGlobalAtomics = true;
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
             // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around.
@@ -104,6 +117,8 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         }
         else
             simdWidth = 1;
+        if (supports64BitGlobalAtomics)
+            compilationOptions += " -DSUPPORTS_64_BIT_ATOMICS";
         queue = cl::CommandQueue(context, device);
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);

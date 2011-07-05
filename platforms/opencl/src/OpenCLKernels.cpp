@@ -1445,6 +1445,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeBsplineTheta->getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(3, pmeBsplineDtheta->getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(4, pmeGrid->getDeviceBuffer());
+            if (cl.getSupports64BitGlobalAtomics()) {
+                pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
+                pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
+            }
        }
     }
     if (exceptionIndices != NULL)
@@ -1476,7 +1480,15 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeAtomRangeKernel.setArg<mm_float4>(3, boxSize);
             pmeAtomRangeKernel.setArg<mm_float4>(4, invBoxSize);
             cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
-            cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
+            if (cl.getSupports64BitGlobalAtomics()) {
+                cl.clearBuffer(pmeGrid->getDeviceBuffer(), pmeGrid->getSize()*2);
+                pmeSpreadChargeKernel.setArg<mm_float4>(5, boxSize);
+                pmeSpreadChargeKernel.setArg<mm_float4>(6, invBoxSize);
+                cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms(), PmeOrder*PmeOrder*PmeOrder);
+                cl.executeKernel(pmeFinishSpreadChargeKernel, pmeGrid->getSize());
+            }
+            else
+                cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
         }
         fft->execFFT(*pmeGrid, true);
         pmeConvolutionKernel.setArg<mm_float4>(5, invBoxSize);

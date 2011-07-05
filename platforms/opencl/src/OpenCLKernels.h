@@ -521,6 +521,7 @@ private:
     cl::Kernel pmeAtomRangeKernel;
     cl::Kernel pmeUpdateBsplinesKernel;
     cl::Kernel pmeSpreadChargeKernel;
+    cl::Kernel pmeFinishSpreadChargeKernel;
     cl::Kernel pmeConvolutionKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
