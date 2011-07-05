@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/amoebaKernels.h"
+#include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "AmoebaCudaData.h"
 
