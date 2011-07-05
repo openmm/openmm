@@ -98,15 +98,16 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationOptions += " -DWARPS_ARE_ATOMIC";
             simdWidth = 32;
+            if (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
+                // Compute level 1.2 and later Nvidia GPUs support 64 bit atomics, even though they don't list the
+                // proper extension as supported.
 
-            // Compute level 1.2 and later Nvidia GPUs support 64 bit atomics, even though they don't list the
-            // proper extension as supported.
-
-            cl_uint computeCapabilityMajor, computeCapabilityMinor;
-            clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
-            clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV, sizeof(cl_uint), &computeCapabilityMinor, NULL);
-            if (computeCapabilityMajor > 1 || computeCapabilityMinor > 1)
-                supports64BitGlobalAtomics = true;
+                cl_uint computeCapabilityMajor, computeCapabilityMinor;
+                clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
+                clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV, sizeof(cl_uint), &computeCapabilityMinor, NULL);
+                if (computeCapabilityMajor > 1 || computeCapabilityMinor > 1)
+                    supports64BitGlobalAtomics = true;
+            }
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
             // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around.
