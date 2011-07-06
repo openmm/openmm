@@ -147,7 +147,7 @@ public:
      * @param index          index of the bond for which to set parameters
      * @param particle1      index of first atom in bond
      * @param particle2      index of second atom in bond
-     * @param bondLength     bond length
+     * @param bondLength     bond length, measured in nm
      */
     void setBondParameters( int index, int particle1, int particle2, double bondLength);
     /** 
@@ -204,11 +204,11 @@ public:
      */
     void setCutoffDistance(double distance);
     /** 
-     * Get Born radius scalling method
+     * Get Born radius scaling method
      */
     GBVIForce::BornRadiusScalingMethod getBornRadiusScalingMethod( void ) const;
     /** 
-     * Set Born radius scalling method
+     * Set Born radius scaling method
      */
     void setBornRadiusScalingMethod( BornRadiusScalingMethod method);
     /** 
@@ -220,11 +220,11 @@ public:
      */
     void setQuinticLowerLimitFactor(double quinticLowerLimitFactor );
     /** 
-     * Get the upper limit  used in the quintic spline scaling method (typically 0.5-0.8)
+     * Get the upper limit  used in the quintic spline scaling method, measured in nm (~5.0)
      */
     double getQuinticUpperBornRadiusLimit( void ) const;
     /** 
-     * Set the upper limit used in the quintic spline scaling method (typically 0.008)
+     * Set the upper limit used in the quintic spline scaling method, measured in nm (~5.0)
      */
     void setQuinticUpperBornRadiusLimit(double quinticUpperBornRadiusLimit);
 protected:
