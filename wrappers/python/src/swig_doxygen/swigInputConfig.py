@@ -408,7 +408,7 @@ UNITS = {
 ("GBVIForce", "getNonbondedMethod") : (None, ()),
 ("GBVIForce", "getBornRadiusScalingMethod") : (None, ()),
 ("GBVIForce", "getQuinticLowerLimitFactor") : (None, ()),
-("GBVIForce", "getQuinticUpperBornRadiusLimit") : (None, ('unit.nanometer')),
+("GBVIForce", "getQuinticUpperBornRadiusLimit") : ('unit.nanometer', ()),
 ("GBVIForce", "getBondParameters")
  : (None, (None, None, 'unit.nanometer')),
 ("GBVIForce", "getParticleParameters")
@@ -427,7 +427,7 @@ UNITS = {
 ("GBVISoftcoreForce", "getNonbondedMethod") : (None, ()),
 ("GBVISoftcoreForce", "getBornRadiusScalingMethod") : (None, ()),
 ("GBVISoftcoreForce", "getQuinticLowerLimitFactor") : (None, ()),
-("GBVISoftcoreForce", "getQuinticUpperBornRadiusLimit") : (None, ('unit.nanometer')),
+("GBVISoftcoreForce", "getQuinticUpperBornRadiusLimit") : ('unit.nanometer',()),
 ("GBVISoftcoreForce", "getTanhParameters") : (None, ()),
 ("HarmonicAngleForce", "getAngleParameters")
  : (None, (None, None, None, 'unit.radian',
