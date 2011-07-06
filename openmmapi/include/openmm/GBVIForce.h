@@ -206,7 +206,7 @@ public:
     /** 
      * Get Born radius scaling method
      */
-    GBVIForce::BornRadiusScalingMethod getBornRadiusScalingMethod( void ) const;
+    BornRadiusScalingMethod getBornRadiusScalingMethod( void ) const;
     /** 
      * Set Born radius scaling method
      */
