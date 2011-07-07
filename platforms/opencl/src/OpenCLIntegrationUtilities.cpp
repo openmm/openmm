@@ -88,7 +88,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
-        hasInitializedConstraintKernels(false) {
+        ccmaConvergedBuffer(NULL), hasInitializedConstraintKernels(false) {
     // Create workspace arrays.
 
     posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
@@ -450,7 +450,9 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaNumAtomConstraints = new OpenCLArray<cl_int>(context, numAtoms, "CcmaAtomConstraintsIndex");
         ccmaDelta1 = new OpenCLArray<cl_float>(context, numCCMA, "CcmaDelta1");
         ccmaDelta2 = new OpenCLArray<cl_float>(context, numCCMA, "CcmaDelta2");
-        ccmaConverged = new OpenCLArray<cl_int>(context, 1, "CcmaConverged", true);
+        ccmaConverged = new OpenCLArray<cl_int>(context, 1, "CcmaConverged");
+        ccmaConvergedBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(cl_int));
+        ccmaConvergedMemory = (cl_int*) context.getQueue().enqueueMapBuffer(*ccmaConvergedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(cl_int));
         ccmaReducedMass = new OpenCLArray<cl_float>(context, numCCMA, "CcmaReducedMass");
         ccmaConstraintMatrixColumn = new OpenCLArray<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConstraintMatrixValue = new OpenCLArray<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
@@ -539,6 +541,8 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete ccmaDelta2;
     if (ccmaConverged != NULL)
         delete ccmaConverged;
+    if (ccmaConvergedBuffer != NULL)
+        delete ccmaConvergedBuffer;
 }
 
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {
@@ -595,20 +599,24 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol) {
         ccmaForceKernel.setArg<cl_float>(6, (cl_float) tol);
         context.executeKernel(ccmaDirectionsKernel, ccmaAtoms->getSize());
         const int checkInterval = 3;
+        cl::Event event;
         for (int i = 0; i < 150; i++) {
             if ((i+1)%checkInterval == 0) {
-                (*ccmaConverged)[0] = 1;
-                ccmaConverged->upload();
+                ccmaConvergedMemory[0] = 1;
+                context.getQueue().enqueueWriteBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, sizeof(cl_int), ccmaConvergedMemory);
             }
             context.executeKernel(ccmaForceKernel, ccmaAtoms->getSize());
             if ((i+1)%checkInterval == 0) {
-                ccmaConverged->download();
-                if ((*ccmaConverged)[0])
-                    break;
+                context.getQueue().enqueueReadBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, sizeof(cl_int), ccmaConvergedMemory, NULL, &event);
             }
             context.executeKernel(ccmaMultiplyKernel, ccmaAtoms->getSize());
             ccmaUpdateKernel.setArg<cl_int>(8, i);
             context.executeKernel(ccmaUpdateKernel, context.getNumAtoms());
+            if ((i+1)%checkInterval == 0) {
+                event.wait();
+                if (ccmaConvergedMemory[0])
+                    break;
+            }
         }
     }
     hasInitializedConstraintKernels = true;

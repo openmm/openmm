@@ -105,6 +105,8 @@ private:
     OpenCLArray<cl_float>* ccmaDelta1;
     OpenCLArray<cl_float>* ccmaDelta2;
     OpenCLArray<cl_int>* ccmaConverged;
+    cl::Buffer* ccmaConvergedBuffer;
+    cl_int* ccmaConvergedMemory;
     int randomPos;
     int lastSeed;
     bool hasInitializedConstraintKernels;
