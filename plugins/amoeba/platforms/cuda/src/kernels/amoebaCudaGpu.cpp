@@ -216,6 +216,7 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     update_threads_per_block           %u\n",      gpu->sim.update_threads_per_block);
     (void) fprintf( log, "     nonbondBlocks                      %u\n",      gpu->sim.nonbond_blocks );
     (void) fprintf( log, "     nonbondThreadsPerBlock             %u\n",      gpu->sim.nonbond_threads_per_block);
+    (void) fprintf( log, "     bsf_reduce_threads_per_block       %u\n",      gpu->sim.bsf_reduce_threads_per_block);
     (void) fprintf( log, "     nonbondOutputBuffers               %u\n",      gpu->sim.nonbondOutputBuffers );
     (void) fprintf( log, "     outputBuffers                      %u\n",      gpu->sim.outputBuffers );
     (void) fprintf( log, "     workUnits                          %u\n",      amoebaGpu->workUnits );
@@ -225,6 +226,8 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->gpuContext->psPosq4,     log );
     totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->gpuContext->psObcData,   log );
     totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psBornForce, log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psBornSum,   log );
+    totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->gpuContext->psBornRadii, log );
     (void) fprintf( log, "\n\n" );
     (void) fprintf( log, "     amoebaBonds                       %u\n",      amoebaGpu->amoebaSim.amoebaBonds );
     totalMemory += gpuPrintCudaStreamFloat(  amoebaGpu->psWorkArray_3_1, log );
@@ -429,6 +432,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psBornPolar, log );
     (void) fprintf( log, "     includeObcCavityTerm               %d\n",      amoebaGpu->includeObcCavityTerm );
     (void) fprintf( log, "     dielectricOffset                   %15.7e\n",  gpu->sim.dielectricOffset );
+    (void) fprintf( log, "     alpha                              %15.7e\n",  gpu->sim.alphaOBC);
+    (void) fprintf( log, "     beta                               %15.7e\n",  gpu->sim.betaOBC);
+    (void) fprintf( log, "     gamma                              %15.7e\n",  gpu->sim.gammaOBC);
     (void) fprintf( log, "     probeRadius                        %15.7e\n",  gpu->sim.probeRadius );
     (void) fprintf( log, "     surfaceAreaFactor                  %15.7e\n",  gpu->sim.surfaceAreaFactor );
     (void) fprintf( log, "\n" );
@@ -1901,6 +1907,7 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
     gpuContext gpu                         = amoebaGpu->gpuContext;
     int paddedNumberOfAtoms                = gpu->sim.paddedNumberOfAtoms;
     gpu->sim.dielectricOffset              = dielectricOffset;
+    //gpu->bIncludeGBSA                      = 1;
     amoebaGpu->includeObcCavityTerm        = includeCavityTerm;
     gpu->sim.probeRadius                   = probeRadius;
     gpu->sim.surfaceAreaFactor             = surfaceAreaFactor;
@@ -1939,7 +1946,7 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
 
     gpu->sim.preFactor               = -amoebaGpu->amoebaSim.electric*((1.0f/innerDielectric)-(1.0f/solventDielectric));
 
-    if( amoebaGpu->log ){
+    if( 0 && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log,"gpuSetAmoebaObcParameters: cavity=%d dielectricOffset=%15.7e probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
                         includeCavityTerm, dielectricOffset, probeRadius, surfaceAreaFactor );
         (void) fprintf( amoebaGpu->log,"                           gkc=%12.3f solventDielectric=%15.7e innerDielectric=%15.7e sim.preFactor=%15.7e\n", 

@@ -49,7 +49,7 @@ void CalcAmoebaForcesAndEnergyKernel::initialize(const System& system) {
 
 void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
 //fprintf( stderr, "In CalcAmoebaForcesAndEnergyKernel::beginComputation computeForceCount=%d inbMethod=%d GBSA=%d includeForces=%d includeEnergy=%d\n", 
-//         data.cudaPlatformData.computeForceCount, data.cudaPlatformData.nonbondedMethod,  data.getAmoebaGpu()->gpuContext->bIncludeGBSA, includeForces, includeEnergy ); fflush( stderr );
+//         data.cudaPlatformData.computeForceCount, data.cudaPlatformData.nonbondedMethod,  data.getHasAmoebaGeneralizedKirkwood(), includeForces, includeEnergy ); fflush( stderr );
 
     amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
     _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
@@ -61,7 +61,7 @@ void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
 
     data.cudaPlatformData.computeForceCount++;
 
-    if( gpu->bIncludeGBSA ){
+    if( data.getHasAmoebaGeneralizedKirkwood() ){
         kClearBornSumAndForces(gpu);
     } else if (includeForces){
         kClearForces(gpu);
@@ -826,7 +826,7 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     data.incrementMultipoleForceCount();
 
     if( 0 && data.getLog() ){
-        (void) fprintf( data.getLog(), "In computeAmoebaMultipoleForce\n" );
+        (void) fprintf( data.getLog(), "In computeAmoebaMultipoleForce hasAmoebaGeneralizedKirkwood=%d\n", data.getHasAmoebaGeneralizedKirkwood() );
         (void) fflush( data.getLog());
     }
 
