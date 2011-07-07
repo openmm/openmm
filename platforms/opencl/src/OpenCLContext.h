@@ -36,22 +36,7 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#if defined(__APPLE__) || defined(__MACOSX)
-    #include <OpenCL/opencl.h>
-#else
-    #include <CL/opencl.h>
-#endif
-#ifdef CL_VERSION_1_1
-    // OpenCL C++ bindings are included with OpenCL 1.1
-    #if defined(__APPLE__) || defined(__MACOSX)
-        #include <OpenCL/cl.hpp>
-    #else
-        #include <CL/cl.hpp>
-    #endif
-#else
-    // OpenCL C++ bindings are not included with OpenCL 1.0 so use a local copy.
-    #include <cl.hpp>
-#endif
+#include <cl.hpp>
 #include "openmm/internal/windowsExport.h"
 #include "OpenCLPlatform.h"
 
