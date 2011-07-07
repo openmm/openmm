@@ -357,6 +357,39 @@ void testCoulombLennardJones() {
     }
 }
 
+void testParallelComputation() {
+    OpenCLPlatform platform;
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    CustomNonbondedForce* force = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6); sigma=0.5; eps=1");
+    vector<double> params;
+    for (int i = 0; i < numParticles; i++)
+        force->addParticle(params);
+    system.addForce(force);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(5*genrand_real2(sfmt), 5*genrand_real2(sfmt), 5*genrand_real2(sfmt));
+    VerletIntegrator integrator1(0.01);
+    map<string, string> props1;
+    props1[OpenCLPlatform::OpenCLDeviceIndex()] = "0";
+    Context context1(system, integrator1, platform, props1);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    map<string, string> props2;
+    props2[OpenCLPlatform::OpenCLDeviceIndex()] = "0,0";
+    Context context2(system, integrator2, platform, props2);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
+
 int main() {
     try {
         testSimpleExpression();
@@ -367,6 +400,7 @@ int main() {
         testPeriodic();
         testTabulatedFunction();
         testCoulombLennardJones();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

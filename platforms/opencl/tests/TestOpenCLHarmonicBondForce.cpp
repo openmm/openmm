@@ -40,6 +40,7 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include <iostream>
+#include <map>
 #include <vector>
 
 using namespace OpenMM;
@@ -72,9 +73,40 @@ void testBonds() {
     ASSERT_EQUAL_TOL(0.5*0.8*0.5*0.5 + 0.5*0.7*0.2*0.2, state.getPotentialEnergy(), TOL);
 }
 
+void testParallelComputation() {
+    OpenCLPlatform platform;
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    HarmonicBondForce* force = new HarmonicBondForce();
+    for (int i = 1; i < numParticles; i++)
+        force->addBond(i-1, i, 1.1, i);
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(i, 0, 0);
+    VerletIntegrator integrator1(0.01);
+    map<string, string> props1;
+    props1[OpenCLPlatform::OpenCLDeviceIndex()] = "0";
+    Context context1(system, integrator1, platform, props1);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    map<string, string> props2;
+    props2[OpenCLPlatform::OpenCLDeviceIndex()] = "0,0";
+    Context context2(system, integrator2, platform, props2);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
+
 int main() {
     try {
         testBonds();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

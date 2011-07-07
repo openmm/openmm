@@ -85,9 +85,40 @@ void testRBTorsions() {
     ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
 }
 
+void testParallelComputation() {
+    OpenCLPlatform platform;
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    RBTorsionForce* force = new RBTorsionForce();
+    for (int i = 3; i < numParticles; i++)
+        force->addTorsion(i-3, i-2, i-1, i, 2, 0.1*i, 0.5*i, i, 1, 1);
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(i, i%2, i%3);
+    VerletIntegrator integrator1(0.01);
+    map<string, string> props1;
+    props1[OpenCLPlatform::OpenCLDeviceIndex()] = "0";
+    Context context1(system, integrator1, platform, props1);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    map<string, string> props2;
+    props2[OpenCLPlatform::OpenCLDeviceIndex()] = "0,0";
+    Context context2(system, integrator2, platform, props2);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
+
 int main() {
     try {
         testRBTorsions();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
