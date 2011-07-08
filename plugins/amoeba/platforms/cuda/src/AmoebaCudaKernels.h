@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/amoebaKernels.h"
+#include "CudaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "AmoebaCudaData.h"
@@ -42,6 +43,10 @@ namespace OpenMM {
 class CalcAmoebaForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
     CalcAmoebaForcesAndEnergyKernel(std::string name, const Platform& platform, AmoebaCudaData& data) : CalcForcesAndEnergyKernel(name, platform), data(data) {
+        cudaCalcForcesAndEnergyKernel = new CudaCalcForcesAndEnergyKernel( name, platform, data.cudaPlatformData );
+    }   
+    ~CalcAmoebaForcesAndEnergyKernel() {
+        delete cudaCalcForcesAndEnergyKernel;
     }   
     /*** 
      * Initialize the kernel.
@@ -75,6 +80,7 @@ public:
 
 private:
     AmoebaCudaData& data;
+    CudaCalcForcesAndEnergyKernel* cudaCalcForcesAndEnergyKernel;
 };
 
 /**

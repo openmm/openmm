@@ -56,7 +56,7 @@ extern "C" OPENMMCUDA_EXPORT void registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaForcesAndEnergyKernel::Name(), factory);
+//             platform.registerKernelFactory(CalcAmoebaForcesAndEnergyKernel::Name(), factory);
         }
     }
 }

@@ -53,7 +53,7 @@ void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
 
     amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
     _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
-
+/*
     if (data.cudaPlatformData.nonbondedMethod != NO_CUTOFF && data.cudaPlatformData.computeForceCount%100 == 0){
         //fprintf( stderr, "In CalcAmoebaForcesAndEnergyKernel::beginComputation reordering atoms\n" ); fflush( stderr );
         gpuReorderAtoms(gpu);
@@ -61,21 +61,32 @@ void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
 
     data.cudaPlatformData.computeForceCount++;
 
-    if( data.getHasAmoebaGeneralizedKirkwood() ){
-        kClearBornSumAndForces(gpu);
-    } else if (includeForces){
-        kClearForces(gpu);
+    if(includeForces){
+        if( data.getHasAmoebaGeneralizedKirkwood() ){
+            kClearBornSumAndForces(gpu);
+        } else {
+            kClearForces(gpu);
+        }
     }
 
     if (includeEnergy)
         kClearEnergy(gpu);
-
+*/
+    int originalIncludeGBSA = gpu->bIncludeGBSA;
+    if(includeForces && data.getHasAmoebaGeneralizedKirkwood() ){
+        gpu->bIncludeGBSA = 1;
+    }
+    cudaCalcForcesAndEnergyKernel->beginComputation( context, includeForces, includeEnergy);
+    gpu->bIncludeGBSA = originalIncludeGBSA;
 }
 
 double CalcAmoebaForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+
     amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
     _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
 
+    return cudaCalcForcesAndEnergyKernel->finishComputation( context, includeForces, includeEnergy);
+/*
     if( includeForces ){
         kReduceForces(gpu);
     }
@@ -85,6 +96,7 @@ double CalcAmoebaForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
         energy = kReduceEnergy(gpu);
     }    
     return energy;
+*/
 
 }
 
