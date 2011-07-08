@@ -61,6 +61,8 @@
 #include <typeinfo>
 #include <time.h>
 
+extern "C" void registerAmoebaCudaKernelFactories();
+
 // force enums
 
 #define MAX_PRINT 5

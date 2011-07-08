@@ -37,7 +37,6 @@ extern "C" void registerPlatforms() {
 }
 
 extern "C" OPENMMCUDA_EXPORT void registerKernelFactories() {
-//fprintf( stderr,"In registerKernelFactories AmoebaCudaKernelFactory\n" ); fflush( stderr );
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
         if( platform.getName() == "Cuda" ){
@@ -60,6 +59,22 @@ extern "C" OPENMMCUDA_EXPORT void registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaForcesAndEnergyKernel::Name(), factory);
         }
     }
+}
+
+extern "C" OPENMMCUDA_EXPORT void registerAmoebaCudaKernelFactories( void ) {
+    int hasCudaPlatform = 0;
+    for( int ii = 0; ii < Platform::getNumPlatforms() && hasCudaPlatform == 0; ii++ ){
+        Platform& platform = Platform::getPlatform(ii);
+        if( platform.getName() == "Cuda" ){
+            hasCudaPlatform = 1;
+        }
+    }
+    if( hasCudaPlatform == 0 ){
+        if (gpuIsAvailable() ){
+            Platform::registerPlatform(new CudaPlatform());
+        }
+    }
+    registerKernelFactories();
 }
 
 static std::map<ContextImpl*, AmoebaCudaData*> contextToAmoebaDataMap;

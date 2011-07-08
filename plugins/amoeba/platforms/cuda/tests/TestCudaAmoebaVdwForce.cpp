@@ -36,6 +36,7 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
+#include "AmoebaTinkerParameterFile.h"
 #include "openmm/System.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "openmm/LangevinIntegrator.h"
@@ -174,24 +175,15 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestCudaAmoebaVdwForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
+        registerAmoebaCudaKernelFactories();
 
         FILE* log = NULL;
-        //FILE* log = stderr;
-        //FILE* log = fopen( "AmoebaVdwForce1.log", "w" );;
         testVdw( log );
-#ifdef AMOEBA_DEBUG
-        if( log && log != stderr )
-            (void) fclose( log );
-#endif
-
-    }
-    catch(const std::exception& e) {
+    } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;
     }
-    //std::cout << "PASS - Test succeeded." << std::endl;
     std::cout << "Done" << std::endl;
     return 0;
 }

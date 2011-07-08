@@ -34,6 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
+#include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/AmoebaMultipoleForce.h"
@@ -123,14 +124,12 @@ void testPMEWater() {
 
 int main() {
     try {
-        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        registerAmoebaCudaKernelFactories();
         testPMEWater();
-    }
-    catch(const exception& e) {
+    } catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
         return 1;
     }
-    //cout << "Done" << endl;
     std::cout << "Done" << std::endl;
     return 0;
 }

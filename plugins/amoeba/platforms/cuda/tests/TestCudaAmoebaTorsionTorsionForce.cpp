@@ -34,11 +34,10 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-//#include "AmoebaTinkerParameterFile.h"
-const double DegreesToRadians = 3.14159265/180.0;
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
+#include "AmoebaTinkerParameterFile.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
@@ -2684,25 +2683,15 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestCudaAmoebaTorsionTorsionForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
+        registerAmoebaCudaKernelFactories();
 
         FILE* log = NULL;
-        //FILE* log = stderr;
-        //FILE* log = fopen( "AmoebaTorsionTorsionForce1.log", "w" );;
-//        testTorsionTorsion( log, 0 );
         testTorsionTorsion( log, 1 );
-#ifdef AMOEBA_DEBUG
-        if( log && log != stderr )
-            (void) fclose( log );
-#endif
-
-    }
-    catch(const std::exception& e) {
+    } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;
     }
-    //std::cout << "PASS - Test succeeded." << std::endl;
     std::cout << "Done" << std::endl;
     return 0;
 }

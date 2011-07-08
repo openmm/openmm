@@ -45,7 +45,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "Running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
+        registerAmoebaCudaKernelFactories();
         if( numberOfArguments > 1 ){
             MapStringString argumentMap;
             argumentMap[INCLUDE_OBC_CAVITY_TERM] = "0";

@@ -34,6 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
+#include "CudaPlatform.h"
 #include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
@@ -45,7 +46,6 @@
 using namespace OpenMM;
 
 const double TOL = 1e-5;
-
 static void computeAmoebaHarmonicBondForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaHarmonicBondForce& amoebaHarmonicBondForce,
                                            std::vector<Vec3>& forces, double* energy ) {
 
@@ -174,6 +174,7 @@ void testOneBond( FILE* log ) {
 void testTwoBond( FILE* log ) {
 
     System system;
+    registerAmoebaCudaKernelFactories();
 
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -194,6 +195,7 @@ void testTwoBond( FILE* log ) {
 
     system.addForce(amoebaHarmonicBondForce);
     Context context(system, integrator, Platform::getPlatformByName( "Cuda"));
+    //Context context(system, integrator, platform );
     std::vector<Vec3> positions(3);
 
     positions[0] = Vec3(0, 1, 0);
@@ -208,24 +210,14 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestCudaAmoebaHarmonicBondForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
+        registerAmoebaCudaKernelFactories();
         FILE* log = NULL;
-        //FILE* log = stderr;
-
-        //testOneBond( log );
         testTwoBond( log );
-#ifdef AMOEBA_DEBUG
-        if( log && log != stderr )
-            (void) fclose( log );
-#endif
-
-    }
-    catch(const std::exception& e) {
+    } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;
     }
-    //std::cout << "PASS - Test succeeded." << std::endl;
     std::cout << "Done" << std::endl;
     return 0;
 }
