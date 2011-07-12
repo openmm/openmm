@@ -76,8 +76,9 @@ void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     if(includeForces && data.getHasAmoebaGeneralizedKirkwood() ){
         gpu->bIncludeGBSA = 1;
     }
-    cudaCalcForcesAndEnergyKernel->beginComputation( context, includeForces, includeEnergy);
+    cudaCalcForcesAndEnergyKernel->beginComputation( context, 1, includeEnergy);
     gpu->bIncludeGBSA = originalIncludeGBSA;
+
 }
 
 double CalcAmoebaForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
