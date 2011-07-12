@@ -36,54 +36,6 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
- * Platform a chance to clear buffers and do other initialization at the beginning, and to do any
- * necessary work at the end to determine the final results.
- */
-class CalcAmoebaForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
-public:
-    CalcAmoebaForcesAndEnergyKernel(std::string name, const Platform& platform, AmoebaCudaData& data) : CalcForcesAndEnergyKernel(name, platform), data(data) {
-        cudaCalcForcesAndEnergyKernel = new CudaCalcForcesAndEnergyKernel( name, platform, data.cudaPlatformData );
-    }   
-    ~CalcAmoebaForcesAndEnergyKernel() {
-        delete cudaCalcForcesAndEnergyKernel;
-    }   
-    /*** 
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-
-    /** 
-     * This is called at the beginning of each force/energy computation, before calcForcesAndEnergy() has been called on
-     * any ForceImpl.
-     *
-     * @param context       the context in which to execute this kernel
-     * @param includeForce  true if forces should be computed
-     * @param includeEnergy true if potential energy should be computed
-     */
-    void beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy);
-
-    /** 
-     * This is called at the end of each force/energy computation, after calcForcesAndEnergy() has been called on
-     * every ForceImpl.
-     *
-     * @param context       the context in which to execute this kernel
-     * @param includeForce  true if forces should be computed
-     * @param includeEnergy true if potential energy should be computed
-     * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
-     * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
-     * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
-     */
-    double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy);
-
-private:
-    AmoebaCudaData& data;
-    CudaCalcForcesAndEnergyKernel* cudaCalcForcesAndEnergyKernel;
-};
-
-/**
  * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcAmoebaHarmonicBondForceKernel : public CalcAmoebaHarmonicBondForceKernel {

@@ -44,63 +44,6 @@ extern "C" int gpuSetConstants( gpuContext gpu );
 using namespace OpenMM;
 using namespace std;
 
-void CalcAmoebaForcesAndEnergyKernel::initialize(const System& system) {
-}
-
-void CalcAmoebaForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//fprintf( stderr, "In CalcAmoebaForcesAndEnergyKernel::beginComputation computeForceCount=%d inbMethod=%d GBSA=%d includeForces=%d includeEnergy=%d\n", 
-//         data.cudaPlatformData.computeForceCount, data.cudaPlatformData.nonbondedMethod,  data.getHasAmoebaGeneralizedKirkwood(), includeForces, includeEnergy ); fflush( stderr );
-
-    amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
-    _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
-/*
-    if (data.cudaPlatformData.nonbondedMethod != NO_CUTOFF && data.cudaPlatformData.computeForceCount%100 == 0){
-        //fprintf( stderr, "In CalcAmoebaForcesAndEnergyKernel::beginComputation reordering atoms\n" ); fflush( stderr );
-        gpuReorderAtoms(gpu);
-    }
-
-    data.cudaPlatformData.computeForceCount++;
-
-    if(includeForces){
-        if( data.getHasAmoebaGeneralizedKirkwood() ){
-            kClearBornSumAndForces(gpu);
-        } else {
-            kClearForces(gpu);
-        }
-    }
-
-    if (includeEnergy)
-        kClearEnergy(gpu);
-*/
-    int originalIncludeGBSA = gpu->bIncludeGBSA;
-    if(includeForces && data.getHasAmoebaGeneralizedKirkwood() ){
-        gpu->bIncludeGBSA = 1;
-    }
-    cudaCalcForcesAndEnergyKernel->beginComputation( context, 1, includeEnergy);
-    gpu->bIncludeGBSA = originalIncludeGBSA;
-
-}
-
-double CalcAmoebaForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
-
-    amoebaGpuContext amoebaGpu  = data.getAmoebaGpu();
-    _gpuContext* gpu            = data.getAmoebaGpu()->gpuContext;
-
-    return cudaCalcForcesAndEnergyKernel->finishComputation( context, includeForces, includeEnergy);
-/*
-    if( includeForces ){
-        kReduceForces(gpu);
-    }
-
-    double energy = 0.0; 
-    if( includeEnergy ){
-        energy = kReduceEnergy(gpu);
-    }    
-    return energy;
-*/
-
-}
-
 /* -------------------------------------------------------------------------- *
  *                           Calculates bonded forces                         *
  * -------------------------------------------------------------------------- */
@@ -848,6 +791,7 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     // calculate Born radii
 
     if( data.getHasAmoebaGeneralizedKirkwood() ){
+        kClearBornSum( gpu->gpuContext );
         kCalculateObcGbsaBornSum(gpu->gpuContext);
         kReduceObcGbsaBornSum(gpu->gpuContext);
     }   

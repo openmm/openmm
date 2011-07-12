@@ -64,6 +64,26 @@ void kClearFloat4_kernel( unsigned int bufferLength, float4* fieldToClear )
     }   
 }
 
+__global__ 
+__launch_bounds__(384, 1)
+void kClearBornSum_kernel()
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
+    {   
+        cSim.pBornSum[pos]   = 0.0f;
+        cSim.pBornForce[pos] = 0.0f;
+        pos += gridDim.x * blockDim.x;
+    }   
+}
+
+void kClearBornSum(gpuContext gpu)
+{
+  //  printf("kClearBornSum\n");
+      kClearBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+      LAUNCHERROR("kClearBornSum");
+}
+
 void kClearFloat4( amoebaGpuContext amoebaGpu, unsigned int entries, CUDAStream<float4>* fieldToClear )
 {
     kClearFloat4_kernel<<<amoebaGpu->gpuContext->blocksPerSM, 384>>>( entries, fieldToClear->_pDevData );
