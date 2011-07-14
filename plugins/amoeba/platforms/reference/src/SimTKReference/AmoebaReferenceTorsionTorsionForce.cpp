@@ -301,7 +301,7 @@ int AmoebaReferenceTorsionTorsionForce::checkTorsionSign(
     RealOpenMM volume = deltaR[CA][0]*( deltaR[CB][1]*deltaR[CD][2] - deltaR[CB][2]*deltaR[CD][1] ) +
                         deltaR[CB][0]*( deltaR[CD][1]*deltaR[CA][2] - deltaR[CD][2]*deltaR[CA][1] ) +
                         deltaR[CD][0]*( deltaR[CA][1]*deltaR[CB][2] - deltaR[CA][2]*deltaR[CB][1] );
- 
+
     return (volume >= zero ? one : -one);
  
  }
@@ -430,7 +430,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn( const
     } else {
         sign = one;
     }
- 
+
     // bicubic interpolation
  
     RealOpenMM corners[2][2];
@@ -575,7 +575,7 @@ RealOpenMM AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy( int numT
 
         RealVec forces[5];
         RealVec* chiralCheckAtom;
-        if( chiralCheckAtomIndex >= 0 ){
+        if( chiralCheckAtomIndex > -1 ){
             chiralCheckAtom = &posData[chiralCheckAtomIndex];
         } else {
             chiralCheckAtom = NULL;
