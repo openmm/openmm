@@ -2818,6 +2818,7 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu, int hasAmoebaGener
 
     // use the Cuda force output buffers for mapping torques onto forces, if max torque buffer count < number of buffers
 
+     amoebaGpu->amoebaSim.maxTorqueBufferIndex++;
     if( amoebaGpu->amoebaSim.maxTorqueBufferIndex > outputBuffers ){
         amoebaGpu->psTorqueMapForce4            = new CUDAStream<float4>(paddedNumberOfAtoms, amoebaGpu->amoebaSim.maxTorqueBufferIndex, "torqueMapForce");
         amoebaGpu->torqueMapForce4Delete        = 1;
