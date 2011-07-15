@@ -1300,7 +1300,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     for (map<int, ShakeCluster>::iterator iter = clusters.begin(); iter != clusters.end(); ++iter) {
         ShakeCluster& cluster = iter->second;
         if (cluster.valid) {
-            cluster.valid = !invalidForShake[cluster.centralID];
+            cluster.valid = !invalidForShake[cluster.centralID] && cluster.size == constraintCount[cluster.centralID];
             for (int i = 0; i < cluster.size; i++)
                 if (invalidForShake[cluster.peripheralID[i]])
                     cluster.valid = false;
