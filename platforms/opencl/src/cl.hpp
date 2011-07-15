@@ -180,6 +180,7 @@
 #endif // linux
 
 #include <cstring>
+#include <cstdlib>
 
 /*! \namespace cl
  *
