@@ -100,12 +100,12 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
             simdWidth = 32;
             if (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
                 // Compute level 1.2 and later Nvidia GPUs support 64 bit atomics, even though they don't list the
-                // proper extension as supported.
+                // proper extension as supported.  We only use them on compute level 2.0 or later, since they're very
+                // slow on earlier GPUs.
 
-                cl_uint computeCapabilityMajor, computeCapabilityMinor;
+                cl_uint computeCapabilityMajor;
                 clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
-                clGetDeviceInfo(device(), CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV, sizeof(cl_uint), &computeCapabilityMinor, NULL);
-                if (computeCapabilityMajor > 1 || computeCapabilityMinor > 1)
+                if (computeCapabilityMajor > 1)
                     supports64BitGlobalAtomics = true;
             }
         }
