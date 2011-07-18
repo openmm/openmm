@@ -80,8 +80,10 @@ private:
     std::vector<long long> completionTimes;
     std::vector<int> contextTiles;
     OpenCLArray<mm_float4>* contextForces;
-    cl::Buffer* pinnedBuffer;
-    mm_float4* pinnedMemory;
+    cl::Buffer* pinnedPositionBuffer;
+    cl::Buffer* pinnedForceBuffer;
+    mm_float4* pinnedPositionMemory;
+    mm_float4* pinnedForceMemory;
 };
 
 /**
