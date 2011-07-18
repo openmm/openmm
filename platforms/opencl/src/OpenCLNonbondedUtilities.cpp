@@ -55,7 +55,7 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = OpenCLContext::ThreadBlockSize;
-        numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
+        numForceBuffers = numForceThreadBlocks;
         if (numForceBuffers >= context.getNumAtomBlocks()) {
             // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
 
