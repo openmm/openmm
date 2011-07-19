@@ -51,13 +51,15 @@ public:
     t_complex operator-(const t_complex& c) const {
         return t_complex(re-c.re, im-c.im);
     }
-    t_complex operator+=(const t_complex& c) {
+    t_complex& operator+=(const t_complex& c) {
         re += c.re;
         im += c.im;
+        return *this;
     }
-    t_complex operator-=(const t_complex& c) {
+    t_complex& operator-=(const t_complex& c) {
         re -= c.re;
         im -= c.im;
+        return *this;
     }
 };
 
