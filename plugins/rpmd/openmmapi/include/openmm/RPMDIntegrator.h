@@ -158,12 +158,17 @@ protected:
      */
     void initialize(ContextImpl& context);
     /**
+     * When the user modifies the state, we need to mark that the forces need to be recalculated.
+     */
+    void stateChanged(State::DataType changed);
+    /**
      * Get the names of all Kernels used by this Integrator.
      */
     std::vector<std::string> getKernelNames();
 private:
     double temperature, friction;
     int numCopies, randomNumberSeed;
+    bool forcesAreValid;
     ContextImpl* context;
     Context* owner;
     Kernel kernel;

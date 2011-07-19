@@ -41,7 +41,8 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) : owner(NULL), numCopies(numCopies) {
+RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
+        owner(NULL), numCopies(numCopies), forcesAreValid(false) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
@@ -56,6 +57,10 @@ void RPMDIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateRPMDStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+}
+
+void RPMDIntegrator::stateChanged(State::DataType changed) {
+    forcesAreValid = false;
 }
 
 vector<string> RPMDIntegrator::getKernelNames() {
@@ -79,8 +84,7 @@ State RPMDIntegrator::getState(int copy, int types) {
 
 void RPMDIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
-        context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).execute(*context, *this);
+        dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).execute(*context, *this, forcesAreValid);
+        forcesAreValid = true;
     }
 }

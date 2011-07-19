@@ -40,6 +40,7 @@
 #include "openmm/System.h"
 #include "openmm/RPMDIntegrator.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -47,24 +48,29 @@ using namespace OpenMM;
 using namespace std;
 
 void testIntegration() {
-    const int numParticles = 5;
-    const int numCopies = 50;
+    const int numParticles = 1;
+    const int numCopies = 30;
     const double temperature = 300.0;
     System system;
-    vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = 0; i < numParticles; i++)
         system.addParticle(i+1);
-        positions[i] = Vec3(i, 0, 0);
-    }
     HarmonicBondForce* bonds = new HarmonicBondForce();
     system.addForce(bonds);
     for (int i = 0; i < numParticles-1; i++)
         bonds->addBond(i, i+1, 1.0, 100.0);
     RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
     Context context(system, integ);
-    context.setPositions(positions);
-    const int numSteps = 5000;
-    integ.step(1000);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numCopies; i++)
+    {
+        for (int j = 0; j < numParticles; j++)
+            positions[j] = Vec3(i+0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt));
+        integ.setPositions(i, positions);
+    }
+    const int numSteps = 100000;
+    integ.step(10000);
     vector<double> ke(numCopies, 0.0);
     vector<double> rg(numParticles, 0.0);
     const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
@@ -80,7 +86,7 @@ void testIntegration() {
         for (int j = 0; j < numCopies; j++) {
             totalEnergy += state[j].getKineticEnergy()+state[j].getPotentialEnergy();
             for (int k = 0; k < numParticles; k++) {
-                Vec3 delta = state[j].getPositions()[k]-state[j].getPositions()[j == 0 ? numCopies-1 : j-1];
+                Vec3 delta = state[j].getPositions()[k]-state[j == 0 ? numCopies-1 : j-1].getPositions()[k];
                 totalEnergy += 0.5*system.getParticleMass(k)*wn*wn*delta.dot(delta);
             }
         }

@@ -70,9 +70,12 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
 
-void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator) {
-    int numCopies = positions.size();
-    int numParticles = positions[0].size();
+void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
+    const int numCopies = positions.size();
+    const int numParticles = positions[0].size();
+    const RealOpenMM dt = integrator.getStepSize();
+    const RealOpenMM halfdt = 0.5*dt;
+    const System& system = context.getSystem();
     vector<RealVec>& pos = extractPositions(context);
     vector<RealVec>& vel = extractVelocities(context);
     vector<RealVec>& f = extractForces(context);
@@ -95,59 +98,24 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     
     // Loop over copies and compute the force on each one.
     
-    for (int i = 0; i < numCopies; i++) {
-        pos = positions[i];
-        vel = velocities[i];
-        context.calcForcesAndEnergy(true, false);
-        forces[i] = f;
-    }
-    
-    // Update velocities.
-    
-    const RealOpenMM dt = integrator.getStepSize();
-    const System& system = context.getSystem();
-    for (int i = 0; i < numCopies; i++)
-        for (int j = 0; j < numParticles; j++)
-            velocities[i][j] += forces[i][j]*(dt/system.getParticleMass(j));
-    
-    // Evolve the free ring polymer by transforming to the frequency domain.
-
-    vector<t_complex> p(numCopies);
-    vector<t_complex> q(numCopies);
-    const RealOpenMM scale = 1.0/sqrt(numCopies);
-    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
-    const RealOpenMM nkT = numCopies*BOLTZ*integrator.getTemperature();
-    const RealOpenMM twown = 2.0*nkT/hbar;
-    for (int particle = 0; particle < numParticles; particle++) {
-        for (int component = 0; component < 3; component++) {
-            for (int k = 0; k < numCopies; k++) {
-                q[k] = t_complex(scale*positions[k][particle][component], 0.0);
-                p[k] = t_complex(scale*velocities[k][particle][component]*system.getParticleMass(particle), 0.0);
-            }
-            fftpack_exec_1d(fft, FFTPACK_FORWARD, &q[0], &q[0]);
-            fftpack_exec_1d(fft, FFTPACK_FORWARD, &p[0], &p[0]);
-            q[0] += p[0]*(dt/system.getParticleMass(particle));
-            for (int k = 1; k < numCopies; k++) {
-                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
-                const RealOpenMM wt = wk*dt;
-                const RealOpenMM sinwt2 = sin(wt/2);
-                const RealOpenMM wm = wk*system.getParticleMass(particle);
-                const t_complex pprime = p[k] - q[k]*(2.0*wm*sinwt2); // Advance momentum from t-dt/2 to t+dt/2
-                q[k] = p[k]*(2.0*sinwt2/wm) + q[k]*(1.0-4.0*sinwt2*sinwt2); // Advance position from t to t+dt
-                p[k] = pprime;
-            }
-            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &q[0], &q[0]);
-            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &p[0], &p[0]);
-            for (int k = 0; k < numCopies; k++) {
-                positions[k][particle][component] = scale*q[k].re;
-                velocities[k][particle][component] = scale*p[k].re/system.getParticleMass(particle);
-            }
+    if (!forcesAreValid) {
+        for (int i = 0; i < numCopies; i++) {
+            pos = positions[i];
+            vel = velocities[i];
+            context.calcForcesAndEnergy(true, false);
+            forces[i] = f;
         }
     }
 
     // Apply the PILE-L thermostat.
     
-    const RealOpenMM c1_0 = exp(-dt*integrator.getFriction());
+    vector<t_complex> p(numCopies);
+    vector<t_complex> q(numCopies);
+    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    const RealOpenMM scale = 1.0/sqrt(numCopies);
+    const RealOpenMM nkT = numCopies*BOLTZ*integrator.getTemperature();
+    const RealOpenMM twown = 2.0*nkT/hbar;
+    const RealOpenMM c1_0 = exp(-halfdt*integrator.getFriction());
     const RealOpenMM c2_0 = sqrt(1.0-c1_0*c1_0);
     for (int particle = 0; particle < numParticles; particle++) {
         const RealOpenMM c3_0 = c2_0*sqrt(system.getParticleMass(particle)*nkT);
@@ -165,7 +133,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
             for (int k = 1; k <= numCopies/2; k++) {
                 const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
                 const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
-                const RealOpenMM c1 = exp(-2.0*wk*dt);
+                const RealOpenMM c1 = exp(-2.0*wk*halfdt);
                 const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
                 const RealOpenMM c3 = c2*sqrt(system.getParticleMass(particle)*nkT);
                 RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
@@ -179,7 +147,210 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
                 velocities[k][particle][component] = scale*p[k].re/system.getParticleMass(particle);
         }
     }
+
+    // Update velocities.
+    
+    for (int i = 0; i < numCopies; i++)
+        for (int j = 0; j < numParticles; j++)
+            velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
+    
+    // Evolve the free ring polymer by transforming to the frequency domain.
+
+    for (int particle = 0; particle < numParticles; particle++) {
+        for (int component = 0; component < 3; component++) {
+            for (int k = 0; k < numCopies; k++) {
+                q[k] = t_complex(scale*positions[k][particle][component], 0.0);
+                p[k] = t_complex(scale*velocities[k][particle][component]*system.getParticleMass(particle), 0.0);
+            }
+            fftpack_exec_1d(fft, FFTPACK_FORWARD, &q[0], &q[0]);
+            fftpack_exec_1d(fft, FFTPACK_FORWARD, &p[0], &p[0]);
+            q[0] += p[0]*(dt/system.getParticleMass(particle));
+            for (int k = 1; k < numCopies; k++) {
+                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
+                const RealOpenMM wt = wk*dt;
+                const RealOpenMM coswt = cos(wt);
+                const RealOpenMM sinwt = sin(wt);
+                const RealOpenMM wm = wk*system.getParticleMass(particle);
+                const t_complex pprime = p[k]*coswt - q[k]*(wm*sinwt); // Advance momentum from t to t+dt
+                q[k] = p[k]*(sinwt/wm) + q[k]*coswt; // Advance position from t to t+dt
+                p[k] = pprime;
+            }
+            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &q[0], &q[0]);
+            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &p[0], &p[0]);
+            for (int k = 0; k < numCopies; k++) {
+                positions[k][particle][component] = scale*q[k].re;
+                velocities[k][particle][component] = scale*p[k].re/system.getParticleMass(particle);
+            }
+        }
+    }
+    
+    // Calculate forces based on the updated positions.
+    
+    for (int i = 0; i < numCopies; i++) {
+        pos = positions[i];
+        vel = velocities[i];
+        context.updateContextState();
+        positions[i] = pos;
+        velocities[i] = vel;
+        context.calcForcesAndEnergy(true, false);
+        forces[i] = f;
+    }
+
+    // Update velocities.
+    
+    for (int i = 0; i < numCopies; i++)
+        for (int j = 0; j < numParticles; j++)
+            velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
+
+
+    // Apply the PILE-L thermostat again.
+    
+    for (int particle = 0; particle < numParticles; particle++) {
+        const RealOpenMM c3_0 = c2_0*sqrt(system.getParticleMass(particle)*nkT);
+        for (int component = 0; component < 3; component++) {
+            for (int k = 0; k < numCopies; k++)
+                p[k] = t_complex(scale*velocities[k][particle][component]*system.getParticleMass(particle), 0.0);
+            fftpack_exec_1d(fft, FFTPACK_FORWARD, &p[0], &p[0]);
+            
+            // Apply a local Langevin thermostat to the centroid mode.
+
+            p[0].re = p[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+
+            // Use critical damping white noise for the remaining modes.
+            
+            for (int k = 1; k <= numCopies/2; k++) {
+                const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
+                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
+                const RealOpenMM c1 = exp(-2.0*wk*halfdt);
+                const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
+                const RealOpenMM c3 = c2*sqrt(system.getParticleMass(particle)*nkT);
+                RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                RealOpenMM rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                p[k] = p[k]*c1 + t_complex(rand1, rand2);
+                if (k < numCopies-k)
+                    p[numCopies-k] = p[numCopies-k]*c1 + t_complex(rand1, -rand2);                
+            }
+            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &p[0], &p[0]);
+            for (int k = 0; k < numCopies; k++)
+                velocities[k][particle][component] = scale*p[k].re/system.getParticleMass(particle);
+        }
+    }
+    
+    // Update the time.
+    
+    context.setTime(context.getTime()+dt);
 }
+
+//void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
+//    int numCopies = positions.size();
+//    int numParticles = positions[0].size();
+//    vector<RealVec>& pos = extractPositions(context);
+//    vector<RealVec>& vel = extractVelocities(context);
+//    vector<RealVec>& f = extractForces(context);
+//    if (!hasSetPosition) {
+//        // Initialize the positions from the context.
+//        
+//        for (int i = 0; i < numCopies; i++)
+//            for (int j = 0; j < numParticles; j++)
+//                positions[i][j] = pos[j];
+//        hasSetPosition = true;
+//    }
+//    if (!hasSetVelocity) {
+//        // Initialize the velocities from the context.
+//        
+//        for (int i = 0; i < numCopies; i++)
+//            for (int j = 0; j < numParticles; j++)
+//                velocities[i][j] = vel[j];
+//        hasSetVelocity = true;
+//    }
+//    
+//    // Loop over copies and compute the force on each one.
+//    
+//    for (int i = 0; i < numCopies; i++) {
+//        pos = positions[i];
+//        vel = velocities[i];
+//        context.calcForcesAndEnergy(true, false);
+//        forces[i] = f;
+//    }
+//
+//    // Update velocities.
+//    
+//    const RealOpenMM dt = integrator.getStepSize();
+//    const System& system = context.getSystem();
+//    for (int i = 0; i < numCopies; i++)
+//        for (int j = 0; j < numParticles; j++)
+//            velocities[i][j] += forces[i][j]*(dt/system.getParticleMass(j));
+//    
+//    // Evolve the free ring polymer by transforming to the frequency domain.
+//
+//    vector<t_complex> p(numCopies);
+//    vector<t_complex> q(numCopies);
+//    const RealOpenMM scale = 1.0/sqrt(numCopies);
+//    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+//    const RealOpenMM nkT = numCopies*BOLTZ*integrator.getTemperature();
+//    const RealOpenMM twown = 2.0*nkT/hbar;
+//    for (int particle = 0; particle < numParticles; particle++) {
+//        for (int component = 0; component < 3; component++) {
+//            for (int k = 0; k < numCopies; k++) {
+//                q[k] = t_complex(scale*positions[k][particle][component], 0.0);
+//                p[k] = t_complex(scale*velocities[k][particle][component]*system.getParticleMass(particle), 0.0);
+//            }
+//            fftpack_exec_1d(fft, FFTPACK_FORWARD, &q[0], &q[0]);
+//            fftpack_exec_1d(fft, FFTPACK_FORWARD, &p[0], &p[0]);
+//            q[0] += p[0]*(dt/system.getParticleMass(particle));
+//            for (int k = 1; k < numCopies; k++) {
+//                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
+//                const RealOpenMM wt = wk*dt;
+//                const RealOpenMM sinwt2 = sin(wt/2);
+//                const RealOpenMM wm = wk*system.getParticleMass(particle);
+//                const t_complex pprime = p[k] - q[k]*(2.0*wm*sinwt2); // Advance momentum from t-dt/2 to t+dt/2
+//                q[k] = p[k]*(2.0*sinwt2/wm) + q[k]*(1.0-4.0*sinwt2*sinwt2); // Advance position from t to t+dt
+//                p[k] = pprime;
+//            }
+//            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &q[0], &q[0]);
+//            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &p[0], &p[0]);
+//            for (int k = 0; k < numCopies; k++) {
+//                positions[k][particle][component] = scale*q[k].re;
+//                velocities[k][particle][component] = scale*p[k].re/system.getParticleMass(particle);
+//            }
+//        }
+//    }
+//
+//    // Apply the PILE-L thermostat.
+//    
+//    const RealOpenMM c1_0 = exp(-dt*integrator.getFriction());
+//    const RealOpenMM c2_0 = sqrt(1.0-c1_0*c1_0);
+//    for (int particle = 0; particle < numParticles; particle++) {
+//        const RealOpenMM c3_0 = c2_0*sqrt(system.getParticleMass(particle)*nkT);
+//        for (int component = 0; component < 3; component++) {
+//            for (int k = 0; k < numCopies; k++)
+//                p[k] = t_complex(scale*velocities[k][particle][component]*system.getParticleMass(particle), 0.0);
+//            fftpack_exec_1d(fft, FFTPACK_FORWARD, &p[0], &p[0]);
+//            
+//            // Apply a local Langevin thermostat to the centroid mode.
+//
+//            p[0].re = p[0].re*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+//
+//            // Use critical damping white noise for the remaining modes.
+//            
+//            for (int k = 1; k <= numCopies/2; k++) {
+//                const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
+//                const RealOpenMM wk = twown*sin(k*M_PI/numCopies);
+//                const RealOpenMM c1 = exp(-2.0*wk*dt);
+//                const RealOpenMM c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
+//                const RealOpenMM c3 = c2*sqrt(system.getParticleMass(particle)*nkT);
+//                RealOpenMM rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+//                RealOpenMM rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+//                p[k] = p[k]*c1 + t_complex(rand1, rand2);
+//                if (k < numCopies-k)
+//                    p[numCopies-k] = p[numCopies-k]*c1 + t_complex(rand1, -rand2);                
+//            }
+//            fftpack_exec_1d(fft, FFTPACK_BACKWARD, &p[0], &p[0]);
+//            for (int k = 0; k < numCopies; k++)
+//                velocities[k][particle][component] = scale*p[k].re/system.getParticleMass(particle);
+//        }
+//    }
+//}
 
 void ReferenceIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {
     int numParticles = positions[copy].size();
