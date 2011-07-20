@@ -406,7 +406,7 @@ void AmoebaReferenceMultipoleForce::checkChiral( MultipoleParticleData& particle
     static const int BD                 = 1;
     static const int CD                 = 2;
     static const int C                  = 3;
-    double delta[4][3];
+    RealOpenMM delta[4][3];
  
     // ---------------------------------------------------------------------------------------
 
