@@ -109,7 +109,7 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     if( mapIterator == contextToAmoebaDataMap.end() ){
         amoebaCudaData                         = new AmoebaCudaData( cudaPlatformData );
         contextToAmoebaDataMap[&context]       = amoebaCudaData;
-        amoebaCudaData->setLog( stderr );
+        //amoebaCudaData->setLog( stderr );
         amoebaCudaData->setContextImpl( static_cast<void*>(&context) );
     } else {
         amoebaCudaData                         = mapIterator->second;
