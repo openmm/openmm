@@ -63,7 +63,7 @@ public:
     }
 };
 
-class OpenCLPlatform::PlatformData {
+class OPENMM_EXPORT OpenCLPlatform::PlatformData {
 public:
     PlatformData(int numParticles, const std::string& deviceIndexProperty);
     ~PlatformData();

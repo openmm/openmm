@@ -1735,7 +1735,7 @@ void gpuInitializeRandoms(gpuContext gpu)
 }
 
 extern "C"
-bool gpuIsAvailable()
+bool OPENMMCUDA_EXPORT gpuIsAvailable()
 {
     int deviceCount;
     cudaGetDeviceCount(&deviceCount);

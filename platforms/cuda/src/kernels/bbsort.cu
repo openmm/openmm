@@ -305,7 +305,7 @@ Also note that you need to use 1.3 capbility (use arch=sm_13 in your compile com
 *************************************************************************************/
 
 template<>
-void bbSort(int2* dData,int size,int listOrder)
+void OPENMMCUDA_EXPORT bbSort(int2* dData,int size,int listOrder)
 {
 
 	bbSortBody(dData,size,listOrder);

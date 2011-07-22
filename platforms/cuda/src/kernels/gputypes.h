@@ -190,7 +190,7 @@ typedef struct _gpuContext *gpuContext;
 
 // Function prototypes
 extern "C"
-bool gpuIsAvailable();
+bool OPENMMCUDA_EXPORT gpuIsAvailable();
 
 extern "C"
 void gpuSetBondParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& length, const std::vector<float>& k);
