@@ -54,6 +54,7 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
         unsigned int forceBufferOffset = (tgx < TILE_SIZE/2 ? 0 : TILE_SIZE);
         unsigned int atom1 = x*TILE_SIZE + tgx;
         float4 force = 0.0f;
+        DECLARE_ATOM1_DERIVATIVES
         float4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
 
