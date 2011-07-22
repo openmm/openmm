@@ -2248,7 +2248,8 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
             array[k-i] = ((x+i)*array[k-i-1] + ((k-i+1)-x)*array[k-i])*denom;
         array[0] = (1.0-x)*array[0]*denom;
     }
-    int maxSize = std::max(std::max(gridSize.x, gridSize.y), gridSize.z);
+	int maxSize = gridSize.x > gridSize.y ?  gridSize.x : gridSize.y;
+	    maxSize =    maxSize > gridSize.z ?     maxSize : gridSize.z;
     vector<double> bsarray(maxSize+1, 0.0);
     for (int i = 2; i <= AMOEBA_PME_ORDER+1; i++)
         bsarray[i] = array[i-2];
