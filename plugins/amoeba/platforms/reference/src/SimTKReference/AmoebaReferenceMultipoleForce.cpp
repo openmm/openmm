@@ -1598,14 +1598,18 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
     // get coordinates of this atom and the z & x axis atoms
     // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
     // this atom and the axis atom
- 
+
+    if( axisType == AmoebaMultipoleForce::NoAxisType ){
+        return;
+    }
+
     getDelta( particleI, particleU, vector[U] );
     norms[U]  = AmoebaReferenceForce::normalizeVector3( vector[U] );
 
     getDelta( particleI, particleV, vector[V] );
     norms[V]  = AmoebaReferenceForce::normalizeVector3( vector[V] );
 
-    if( axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold ){
+    if( particleW && (axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold) ){
          getDelta( particleI, *particleW, vector[W] );
     } else {
          AmoebaReferenceForce::getCrossProduct( vector[U], vector[V], vector[W] );
@@ -2006,10 +2010,10 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
     // map torques to forces
 
     for( unsigned int ii = 0; ii < particleData.size(); ii++ ){
-        mapTorqueToForce( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
-                          multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii], torques[ii], forces ); 
-        //mapTorqueToForceOld( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
-        //                  axisTypes[ii], torques[ii], forces ); 
+        if( axisTypes[ii] != AmoebaMultipoleForce::NoAxisType ){
+             mapTorqueToForce( particleData[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+                              multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL, axisTypes[ii], torques[ii], forces ); 
+        }
     }
 
     // diagnostics
@@ -2074,7 +2078,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
     // check for chiral centers that need multipoles inverted
 
     for( unsigned int ii = 0; ii < numParticles; ii++ ){
-        if( multipoleAtomYs[ii] ){
+        if( multipoleAtomYs[ii] > -1 ){
             checkChiral( particleData[ii], axisTypes[ii], particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]], particleData[multipoleAtomYs[ii]] );
         }
     }
