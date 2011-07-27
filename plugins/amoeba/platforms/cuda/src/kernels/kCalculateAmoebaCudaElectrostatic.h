@@ -42,10 +42,6 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 #endif
 ){
 
-#ifdef AMOEBA_DEBUG
-    float4 pullBack[20];
-#endif
-
     extern __shared__ ElectrostaticParticle sA[];
 
     unsigned int totalWarps      = gridDim.x*blockDim.x/GRID;
@@ -89,7 +85,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 
             // load shared data
 
-           loadElectrostaticParticle( &(sA[threadIdx.x]), atomI );
+            loadElectrostaticParticle( &(sA[threadIdx.x]), atomI );
             unsigned int xi       = x >> GRIDBITS;
             unsigned int cell     = xi + xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
             int  dScaleMask       = cAmoebaSim.pD_ScaleIndices[cAmoebaSim.pScaleIndicesIndex[cell]+tgx];
@@ -147,7 +143,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
                     localParticle.force[0]  += force[0];
                     localParticle.force[1]  += force[1];
                     localParticle.force[2]  += force[2];
-    
+
                 }
             }
 
@@ -163,7 +159,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
             load3dArray( 3*offset, localParticle.force, outputTorque );
 #endif
 
-        } else   {
+        } else {
 
             // Read fixed atom data into registers and GRF
 
@@ -210,6 +206,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
                     psA[tj].force[0]                  -= force[0];
                     psA[tj].force[1]                  -= force[1];
                     psA[tj].force[2]                  -= force[2];
+
                 }
 
                 tj = (tj + 1) & (GRID - 1);
@@ -243,6 +240,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 #endif
             zeroElectrostaticParticle( &(sA[threadIdx.x]) );
             zeroElectrostaticParticle( &localParticle );
+            tj = tgx;
             for (unsigned int j = 0; j < GRID; j++){
        
                 unsigned int atomJ = y + tj;
@@ -264,6 +262,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
                     psA[tj].force[0]                 += force[0];
                     psA[tj].force[1]                 += force[1];
                     psA[tj].force[2]                 += force[2];
+
                 }
 
                 tj = (tj + 1) & (GRID - 1);
@@ -298,5 +297,6 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 
         pos++;
     }
+
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += (conversionFactor*totalEnergy);
 }

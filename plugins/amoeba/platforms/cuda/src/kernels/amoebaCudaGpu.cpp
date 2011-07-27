@@ -1642,9 +1642,10 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             }
         }
 
-        if( 0 && amoebaGpu->log )
-            fprintf( amoebaGpu->log, "Z1 %4d %d [%4d %4d %4d]\n", ii,  axisType[ii],
-                     multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii] );
+        if( 0 && amoebaGpu->log ){
+            fprintf( amoebaGpu->log, "Z1 %4d %d [%4d %4d %4d] dmp/thole %15.7e %15.7e\n", ii,  axisType[ii],
+                     multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii], dampingFactors[ii], tholes[ii] );
+        }
 
         // charges
 

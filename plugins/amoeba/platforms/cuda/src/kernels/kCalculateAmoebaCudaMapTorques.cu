@@ -447,7 +447,7 @@ void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext amoebaGpu, CUDASt
         fileId.push_back( call++ );
 
         int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "Temp1");
+        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "Temp_MapTorqueAndAddToForce");
 
         reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
         cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
@@ -479,7 +479,7 @@ void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext amoebaGpu, CUDASt
         fileId.push_back( call++ );
 
         int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "Temp1");
+        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "TempMapTorqueAndAddToForce2");
 
         reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
         cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );

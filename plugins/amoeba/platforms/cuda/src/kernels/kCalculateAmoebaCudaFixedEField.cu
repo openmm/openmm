@@ -110,7 +110,7 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%lu ixnCt=%lu workUnits=%lu\n", methodName,
+        (void) fprintf( amoebaGpu->log, "cudaComputeAmoebaFixedEField numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%lu ixnCt=%lu workUnits=%lu\n",
                         gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
                         sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
@@ -121,23 +121,13 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
         kCalculateAmoebaFixedE_FieldN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->psWorkUnit->_pDevData,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevData,
-                                                                           debugArray->_pDevData, targetAtom );
-#else
                                                                            amoebaGpu->psWorkArray_3_2->_pDevData );
-#endif
     } else {
 
         kCalculateAmoebaFixedE_FieldN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            gpu->psWorkUnit->_pDevData,
                                                                            amoebaGpu->psWorkArray_3_1->_pDevData,
-#ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevData,
-                                                                           debugArray->_pDevData, targetAtom );
-#else
                                                                            amoebaGpu->psWorkArray_3_2->_pDevData );
-#endif
     }
 
     LAUNCHERROR("kCalculateAmoebaFixedE_FieldN2Forces_kernel");
@@ -198,91 +188,6 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
         (void) fflush( amoebaGpu->log );
 
         (void) fprintf( amoebaGpu->log, "EFields End\n" );
-/*
-        (void) fprintf( amoebaGpu->log, "DebugQ\n" );
-        debugArray->Download();
-        if( 0 ){
-               int ii = targetAtom;
-               float sum[2][3] = { { 0.0f, 0.0f, 0.0f },  { 0.0f, 0.0f, 0.0f } };
-
-               (void) fprintf( amoebaGpu->log,"\n" );
-               for( int jj = 0; jj < 1248; jj++ ){
-                   int debugIndex = jj;
-                   if( jj == ii )continue;
-                   (void) fprintf( amoebaGpu->log,"\n\n%4d %4d rrs\n[%16.9e %16.9e %16.9e %16.9e]\n",
-                                   ii, jj,
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
-    
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-    
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-    
-    
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-    
-    
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e]\n",
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"Y1 %5d %16.9e %16.9e %16.9e\n", jj,
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-
-                   sum[0][0] += debugArray->_pSysData[debugIndex].x;
-                   sum[0][1] += debugArray->_pSysData[debugIndex].y;
-                   sum[0][2] += debugArray->_pSysData[debugIndex].z;
-    
-                   debugIndex += amoebaGpu->paddedNumberOfAtoms;
-                   (void) fprintf( amoebaGpu->log,"Y2 %5d %16.9e %16.9e %16.9e\n", jj,
-                                   debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                   debugArray->_pSysData[debugIndex].z );
-
-                   sum[1][0] += debugArray->_pSysData[debugIndex].x;
-                   sum[1][1] += debugArray->_pSysData[debugIndex].y;
-                   sum[1][2] += debugArray->_pSysData[debugIndex].z;
-
-               }
-               (void) fprintf( amoebaGpu->log,"SumQ [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n",
-                               sum[0][0], sum[0][1], sum[0][2],
-                               sum[1][0], sum[1][1], sum[1][2] );
-           }
-        for( unsigned int ii = 0; ii < debugArray->_stride; ii++ ){
-           int print;
-           if( debugArray->_pSysData[ii].x  != 0.0f || debugArray->_pSysData[ii].y != 0.0f ||
-               debugArray->_pSysData[ii].y  != 0.0f || debugArray->_pSysData[ii].w != 0.0f ||
-               debugArray->_pSysData[ii].x  != debugArray->_pSysData[ii].x               ||
-               debugArray->_pSysData[ii].y  != debugArray->_pSysData[ii].y               ||
-               debugArray->_pSysData[ii].z  != debugArray->_pSysData[ii].z               ||
-               debugArray->_pSysData[ii].w  != debugArray->_pSysData[ii].w               ){
-               print = 0;
-           } else {
-               print = 0;
-           }
-           if( print ){
-                unsigned int atomI = ii/amoebaGpu->paddedNumberOfAtoms;
-                unsigned int atomJ = ii - atomI*amoebaGpu->paddedNumberOfAtoms;
-                (void) fprintf( amoebaGpu->log, "%5u [%5u %5u]  ", ii, atomI, atomJ);
-                (void) fprintf( amoebaGpu->log, "%14.6e %14.6e %14.6e %14.6e\n",
-                                debugArray->_pSysData[ii].x,
-                                debugArray->_pSysData[ii].y,
-                                debugArray->_pSysData[ii].z,
-                                debugArray->_pSysData[ii].w );
-            }
-        }
-*/
 
         // write results to file
 
