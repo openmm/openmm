@@ -310,6 +310,10 @@ void CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadiu
 
 #define GBVISoftcoreDebug 0
 
+void CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
+    return computeBornRadii( atomCoordinates, bornRadii, NULL );
+}
+
 void CpuGBVISoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii, RealOpenMM* switchDeriviative ){
 
    // ---------------------------------------------------------------------------------------

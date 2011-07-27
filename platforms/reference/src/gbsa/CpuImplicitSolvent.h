@@ -334,7 +334,7 @@ class OPENMM_EXPORT CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+      virtual void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii ) = 0;
       
       /**---------------------------------------------------------------------------------------
       

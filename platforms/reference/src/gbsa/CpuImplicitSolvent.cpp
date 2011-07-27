@@ -521,7 +521,7 @@ vector<RealOpenMM>& CpuImplicitSolvent::getBornRadiiTemp( void ){
    @param obcChain            output array of Obc chain derivatives
 
    --------------------------------------------------------------------------------------- */
-
+/*
 void CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
@@ -534,7 +534,7 @@ void CpuImplicitSolvent::computeBornRadii( vector<RealVec>& atomCoordinates, vec
    message << methodName;
    message << " Error: calling from base class.";
    SimTKOpenMMLog::printError( message );
-}
+} */
 
 /**---------------------------------------------------------------------------------------
 

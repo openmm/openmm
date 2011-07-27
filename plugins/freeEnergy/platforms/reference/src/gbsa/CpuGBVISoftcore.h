@@ -113,7 +113,8 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
       void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii,
                             RealOpenMM* switchDeriviative = NULL );
-      
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+
       /**---------------------------------------------------------------------------------------
       
          Get state 

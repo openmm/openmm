@@ -124,7 +124,7 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMM* bornRadii );
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates,  std::vector<RealOpenMM>& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       

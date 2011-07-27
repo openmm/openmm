@@ -207,7 +207,7 @@ vector<RealOpenMM>& CpuObcSoftcore::getObcChainTemp( void ){
 
    --------------------------------------------------------------------------------------- */
 
-void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates, RealOpenMM* bornRadii ){
+void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates,  std::vector<RealOpenMM>& bornRadii ){
 
    // ---------------------------------------------------------------------------------------
 
