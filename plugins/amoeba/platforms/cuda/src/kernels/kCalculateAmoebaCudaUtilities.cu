@@ -142,14 +142,14 @@ void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear )
     LAUNCHERROR("kClearFields_3_1");
 
     if( numberToClear > 1 ){
-        kClearFields_kernel<<<gpu->sim.nonbond_blocks, 384>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers, amoebaGpu->psWorkArray_3_2->_pDevData );
+        kClearFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.threads_per_block>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers, amoebaGpu->psWorkArray_3_2->_pDevData );
         LAUNCHERROR("kClearFields_3_2");
     } else {
         return;
     }
 
     if( numberToClear > 2 ){
-        kClearFields_kernel<<<gpu->sim.nonbond_blocks, 384>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers,
+        kClearFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.threads_per_block>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers,
                                                             amoebaGpu->psWorkArray_3_3->_pDevData );
         LAUNCHERROR("kClearFields_3_3");
     } else {
@@ -157,7 +157,7 @@ void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear )
     }
 
     if( numberToClear > 3 ){
-        kClearFields_kernel<<<gpu->sim.nonbond_blocks, 384>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers,
+        kClearFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.threads_per_block>>>( gpu->sim.paddedNumberOfAtoms*3*gpu->sim.outputBuffers,
                                                                 amoebaGpu->psWorkArray_3_4->_pDevData );
         LAUNCHERROR("kClearFields_3_4");
     }

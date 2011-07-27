@@ -1417,7 +1417,7 @@ void gpuMutualInducedFieldAllocate( amoebaGpuContext amoebaGpu )
     amoebaGpu->amoebaSim.pInducedDipolePolar   = amoebaGpu->psInducedDipolePolar->_pDevData;
 
     amoebaGpu->psCurrentEpsilon                = new CUDAStream<float>(5, 1, "CurrentEpsilon");
-    amoebaGpu->epsilonThreadsPerBlock          = 384;
+    amoebaGpu->epsilonThreadsPerBlock          =  amoebaGpu->gpuContext->sim.threads_per_block;
  
     amoebaGpu->psPolarizability                = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Polarizability");
     unsigned int offset                        = paddedNumberOfAtoms*3*sizeof( float );

@@ -416,7 +416,7 @@ void kCalculateAmoebaVdw14_7NonReduction_kernel( float* inputForce, float4* outp
 
 static void kCalculateAmoebaVdw14_7NonReduction(amoebaGpuContext amoebaGpu, CUDAStream<float>* vdwOutputArray, CUDAStream<float4>* forceOutputArray )
 {
-    kCalculateAmoebaVdw14_7NonReduction_kernel<<<amoebaGpu->gpuContext->sim.blocks, 384>>>(
+    kCalculateAmoebaVdw14_7NonReduction_kernel<<<amoebaGpu->gpuContext->sim.blocks, amoebaGpu->gpuContext->sim.threads_per_block>>>(
                                vdwOutputArray->_pDevData, forceOutputArray->_pDevData );
     LAUNCHERROR("kCalculateAmoebaVdw14_7MonReduction");
 }
@@ -480,7 +480,7 @@ void kCalculateAmoebaVdw14_7CopyCoordinates_kernel( unsigned int bufferLength, f
 
 void kCalculateAmoebaVdw14_7CopyCoordinates( amoebaGpuContext amoebaGpu, CUDAStream<float4>* toCopy, CUDAStream<float4>* copy )
 {
-    kCalculateAmoebaVdw14_7CopyCoordinates_kernel<<<amoebaGpu->gpuContext->blocksPerSM, 384>>>( amoebaGpu->gpuContext->sim.paddedNumberOfAtoms, 
+    kCalculateAmoebaVdw14_7CopyCoordinates_kernel<<<amoebaGpu->gpuContext->blocksPerSM, amoebaGpu->gpuContext->sim.threads_per_block>>>( amoebaGpu->gpuContext->sim.paddedNumberOfAtoms, 
                       toCopy->_pDevData, copy->_pDevData );
     LAUNCHERROR("kCalculateAmoebaVdw14_7CopyCoordinates");
 }
