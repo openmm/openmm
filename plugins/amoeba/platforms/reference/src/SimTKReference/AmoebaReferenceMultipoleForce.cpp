@@ -945,7 +945,7 @@ void AmoebaReferenceMultipoleForce::updateInducedDipole(  MultipoleParticleData&
     }
 }
 
-void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( std::vector<MultipoleParticleData>& particleData ){
+void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( int polarizationType, std::vector<MultipoleParticleData>& particleData ){
 
     // ---------------------------------------------------------------------------------------
 
@@ -982,6 +982,10 @@ void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( std::vector
         particleData[ii].inducedDipolePolar[0]     = particleData[ii].fieldPolar[0]; 
         particleData[ii].inducedDipolePolar[1]     = particleData[ii].fieldPolar[1]; 
         particleData[ii].inducedDipolePolar[2]     = particleData[ii].fieldPolar[2]; 
+    }
+
+    if( polarizationType == 1 ){
+        return;
     }
 
     std::vector<RealOpenMM> field( numParticles*3 );
@@ -1037,7 +1041,8 @@ void AmoebaReferenceMultipoleForce::calculateNoCutoffInducedDipoles( std::vector
     return;
 }
 
-RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn( const MultipoleParticleData& particleI,
+RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn( int polarizationType,
+                                                                                 const MultipoleParticleData& particleI,
                                                                                  const MultipoleParticleData& particleK,
                                                                                  RealOpenMM* scalingFactors, std::vector<RealVec>& forces,
                                                                                  std::vector<Vec3>& torque ) const {
@@ -1075,6 +1080,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn(
     RealOpenMM gl[9],gli[7],glip[7];
     RealOpenMM sc[10],sci[8],scip[8];
     RealOpenMM gf[7],gfi[6],gti[6];
+    RealOpenMM gfd, fdir[3];
  
     RealOpenMM delta[3];
     getDelta( particleI, particleK, delta );
@@ -1455,8 +1461,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn(
 
     // correction to convert mutual to direct polarization force
 
-/*
-    if( poltyp .eq. 'DIRECT'){
+    if( polarizationType == 1 ){
        gfd = 0.5 * (rr5*scip[1]*scale3i
              - rr7*(scip[2]*sci[3]+sci[2]*scip[3])*scale5i);
        temp5 = 0.5 * rr5 * scale5i;
@@ -1473,7 +1478,6 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostaticPairIxn(
        ftm2i[1] = ftm2i[1] - fdir[1] + findmp[1];
        ftm2i[2] = ftm2i[2] - fdir[2] + findmp[2];
     }
-*/
 
     // intermediate terms for induced torque on multipoles
 
@@ -1925,6 +1929,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
                                                                           const std::vector<int>& multipoleAtomZs,
                                                                           const std::vector<int>& multipoleAtomXs,
                                                                           const std::vector<int>& multipoleAtomYs,
+                                                                          int polarizationType,
                                                                           std::vector<RealVec>& forces ) const {
 
     // ---------------------------------------------------------------------------------------
@@ -1977,7 +1982,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffElectrostatic( std::v
                 getScaleFactors( ii, jj, scaleFactors);
             }
 
-            energy += calculateNoCutoffElectrostaticPairIxn( particleData[ii], particleData[jj], scaleFactors, forces, torques );
+            energy += calculateNoCutoffElectrostaticPairIxn( polarizationType, particleData[ii], particleData[jj], scaleFactors, forces, torques );
 
             if( jj <= _maxScaleIndex[ii] ){
                 for( unsigned int kk = 0; kk < LAST_SCALE_TYPE_INDEX; kk++ ){
@@ -2049,7 +2054,8 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
                                                                            const std::vector<int>& multipoleAtomZs,
                                                                            const std::vector<int>& multipoleAtomXs,
                                                                            const std::vector<int>& multipoleAtomYs,
-                                                                                 std::vector<RealVec>& forces ){
+                                                                           int polarizationType,
+                                                                           std::vector<RealVec>& forces ){
 
 
     // ---------------------------------------------------------------------------------------
@@ -2133,11 +2139,11 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
 
     // get induced dipoles
 
-    calculateNoCutoffInducedDipoles( particleData );
+    calculateNoCutoffInducedDipoles( polarizationType, particleData );
 
     // check if induced dipoles converged
 
-    if( !getMutualInducedDipoleConverged() ){
+    if( !getMutualInducedDipoleConverged() && polarizationType == 0 ){
         std::stringstream message;
         message << "Induced dipoles did not converge: ";
         message << " iterations="      << getMutualInducedDipoleIterations();
@@ -2145,7 +2151,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateNoCutoffForceAndEnergy( const
         throw OpenMMException(message.str());
     }
 
-    RealOpenMM energy = calculateNoCutoffElectrostatic( particleData, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, forces );
+    RealOpenMM energy = calculateNoCutoffElectrostatic( particleData, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, polarizationType, forces );
 
     return energy;
 
@@ -2164,6 +2170,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy(
                                                          const std::vector<int>& multipoleAtomXs,
                                                          const std::vector<int>& multipoleAtomYs,
                                                          const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo,
+                                                         int polarizationType,
                                                          std::vector<RealVec>& forces ){
 
     
@@ -2171,7 +2178,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy(
     if( getNonbondedMethod() == NoCutoff || 1 ){
 
         return calculateNoCutoffForceAndEnergy( particlePositions, charges, dipoles, quadrupoles, tholes, dampingFactors,
-                                                polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, forces );
+                                                polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, polarizationType, forces );
 
 
     }    

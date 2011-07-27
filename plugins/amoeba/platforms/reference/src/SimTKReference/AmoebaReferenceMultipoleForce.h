@@ -215,6 +215,7 @@ public:
                                         const std::vector<int>& multipoleAtomXs,
                                         const std::vector<int>& multipoleAtomYs,
                                         const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
+                                        int polarizationType,
                                         std::vector<OpenMM::RealVec>& forces );
 
 
@@ -456,13 +457,13 @@ private:
                               const std::vector<RealOpenMM>& fieldPolar,
                               RealOpenMM& epsilonD, RealOpenMM& epsilonP ) const;
 
-    void calculateNoCutoffInducedDipoles( std::vector<MultipoleParticleData>& particleData );
+    void calculateNoCutoffInducedDipoles( int polarizationType, std::vector<MultipoleParticleData>& particleData );
 
     void calculateInducedDipoleField( std::vector<MultipoleParticleData>& particleData,
                                       std::vector<RealOpenMM>& field,
                                       std::vector<RealOpenMM>& fieldPolar ) const;
 
-    RealOpenMM calculateNoCutoffElectrostaticPairIxn( const MultipoleParticleData& particleI,
+    RealOpenMM calculateNoCutoffElectrostaticPairIxn( int polarizationType, const MultipoleParticleData& particleI,
                                                       const MultipoleParticleData& particleK,
                                                       RealOpenMM* scalingFactors, std::vector<OpenMM::RealVec>& forces, std::vector<Vec3>& torque ) const;
 
@@ -495,6 +496,7 @@ private:
                                                const std::vector<int>& multipoleAtomZs,
                                                const std::vector<int>& multipoleAtomXs,
                                                const std::vector<int>& multipoleAtomYs,
+                                               int polarizationType,
                                                std::vector<OpenMM::RealVec>& forces ) const;
 
     /**---------------------------------------------------------------------------------------
@@ -526,6 +528,7 @@ private:
                                                 const std::vector<int>& multipoleAtomZs,
                                                 const std::vector<int>& multipoleAtomXs,
                                                 const std::vector<int>& multipoleAtomYs,
+                                                int polarizationType,
                                                 std::vector<OpenMM::RealVec>& forces );
 
 };

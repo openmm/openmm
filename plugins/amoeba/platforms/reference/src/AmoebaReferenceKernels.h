@@ -386,6 +386,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numMultipoles;
+    int polarizationType;
     std::vector<RealOpenMM> charges;
     std::vector<RealOpenMM> dipoles;
     std::vector<RealOpenMM> quadrupoles;

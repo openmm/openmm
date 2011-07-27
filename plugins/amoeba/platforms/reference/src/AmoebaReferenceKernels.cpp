@@ -445,6 +445,7 @@ double ReferenceCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& contex
 
 ReferenceCalcAmoebaMultipoleForceKernel::ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, System& system) : 
          CalcAmoebaMultipoleForceKernel(name, platform), system(system) {
+
 }
 
 ReferenceCalcAmoebaMultipoleForceKernel::~ReferenceCalcAmoebaMultipoleForceKernel() {
@@ -521,6 +522,12 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
          throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
     }
+
+    polarizationType = static_cast<int>(force.getPolarizationType());
+    if( polarizationType != 0 && polarizationType != 1 ){ 
+         throw OpenMMException("AmoebaMultipoleForce polarization type not recognized.\n");
+    }    
+
 }
 
 double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -535,7 +542,7 @@ double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bo
                                                                                     charges, dipoles, quadrupoles, tholes,
                                                                                     dampingFactors, polarity, axisTypes, 
                                                                                     multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-                                                                                    multipoleAtomCovalentInfo, forceData);
+                                                                                    multipoleAtomCovalentInfo, polarizationType, forceData);
 
     return static_cast<double>(energy);
 }
