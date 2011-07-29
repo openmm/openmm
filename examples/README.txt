@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
-OpenMM(tm) Example programs for OpenMM 3.0, March 2011.
+OpenMM(tm) Example programs for OpenMM 3.1, July 2011.
 
 See https://simtk.org/home/openmm.
 For help go to the Advanced/Public Forums tab and post to the
