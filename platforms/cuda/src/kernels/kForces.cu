@@ -300,11 +300,11 @@ double kReduceEnergy(gpuContext gpu)
 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
-__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
 void kReduceObcGbsaBornForces_kernel()
 {
@@ -366,11 +366,11 @@ void kReduceObcGbsaBornForces_kernel()
 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
-__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
 void kReduceGBVIBornForces_kernel()
 {
@@ -428,7 +428,8 @@ void kReduceGBVIBornForces_kernel()
 
 void kReduceObcGbsaBornForces(gpuContext gpu)
 {
-    //printf("kReduceObcGbsaBornForces\n");
+    //fprintf( stderr, "kReduceObcGbsaBornForces %u %u  %u %u %u\n", gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block, GF1XX_THREADS_PER_BLOCK,
+    //         GT2XX_THREADS_PER_BLOCK, G8X_THREADS_PER_BLOCK ); fflush( stderr );
     if( gpu->bIncludeGBSA ){
        kReduceObcGbsaBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
        LAUNCHERROR("kReduceObcGbsaBornForces");
