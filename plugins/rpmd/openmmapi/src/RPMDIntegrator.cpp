@@ -42,7 +42,7 @@ using std::string;
 using std::vector;
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
-        owner(NULL), numCopies(numCopies), forcesAreValid(false) {
+        owner(NULL), numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
@@ -71,10 +71,12 @@ vector<string> RPMDIntegrator::getKernelNames() {
 
 void RPMDIntegrator::setPositions(int copy, const vector<Vec3>& positions) {
     dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).setPositions(copy, positions);
+    hasSetPosition = true;
 }
 
 void RPMDIntegrator::setVelocities(int copy, const vector<Vec3>& velocities) {
     dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).setVelocities(copy, velocities);
+    hasSetVelocity = true;
 }
 
 State RPMDIntegrator::getState(int copy, int types) {
@@ -83,6 +85,20 @@ State RPMDIntegrator::getState(int copy, int types) {
 }
 
 void RPMDIntegrator::step(int steps) {
+    if (!hasSetPosition) {
+        // Initialize the positions from the context.
+        
+        State s = context->getOwner().getState(State::Positions);
+        for (int i = 0; i < numCopies; i++)
+            setPositions(i, s.getPositions());
+    }
+    if (!hasSetVelocity) {
+        // Initialize the velocities from the context.
+        
+        State s = context->getOwner().getState(State::Velocities);
+        for (int i = 0; i < numCopies; i++)
+            setVelocities(i, s.getVelocities());
+    }
     for (int i = 0; i < steps; ++i) {
         dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).execute(*context, *this, forcesAreValid);
         forcesAreValid = true;

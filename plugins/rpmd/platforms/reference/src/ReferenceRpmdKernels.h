@@ -46,7 +46,7 @@ namespace OpenMM {
 class ReferenceIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
     ReferenceIntegrateRPMDStepKernel(std::string name, const Platform& platform) :
-            IntegrateRPMDStepKernel(name, platform), fft(NULL), hasSetPosition(false), hasSetVelocity(false) {
+            IntegrateRPMDStepKernel(name, platform), fft(NULL) {
     }
     ~ReferenceIntegrateRPMDStepKernel();
     /**
@@ -82,7 +82,6 @@ private:
     std::vector<std::vector<RealVec> > velocities;
     std::vector<std::vector<RealVec> > forces;
     fftpack* fft;
-    bool hasSetPosition, hasSetVelocity;
 };
 
 } // namespace OpenMM
