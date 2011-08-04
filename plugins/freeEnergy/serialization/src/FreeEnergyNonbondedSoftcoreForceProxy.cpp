@@ -58,7 +58,7 @@ void NonbondedSoftcoreForceProxy::serialize(const void* object, SerializationNod
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon, softcoreLJLambda;
-        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda);
         exceptions.createChildNode("Exception").setIntProperty("p1", particle1).setIntProperty("p2", particle2).setDoubleProperty("q", chargeProd).setDoubleProperty("sig", sigma).setDoubleProperty("eps", epsilon).setDoubleProperty("lambda", softcoreLJLambda);
     }
 }
