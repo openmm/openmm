@@ -58,6 +58,7 @@ class State(_object):
                  paramMap=None):
         self._simTime=simTime
         self._periodicBoxVectorsList=periodicBoxVectorsList
+        self._periodicBoxVectorsListNumpy=None
         if energy:
             self._eK0=energy[0]
             self._eP0=energy[1]
