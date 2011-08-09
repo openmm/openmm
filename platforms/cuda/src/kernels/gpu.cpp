@@ -97,12 +97,15 @@ struct Constraint
 struct ConstraintOrderer : public binary_function<int, int, bool> {
     const vector<int>& atom1;
     const vector<int>& atom2;
-    ConstraintOrderer(const vector<int>& atom1, const vector<int>& atom2) : atom1(atom1), atom2(atom2) {
+    const vector<int>& constraints;
+    ConstraintOrderer(const vector<int>& atom1, const vector<int>& atom2, const vector<int>& constraints) : atom1(atom1), atom2(atom2), constraints(constraints) {
     }
     bool operator()(int x, int y) {
-        if (atom1[x] != atom1[y])
-            return atom1[x] < atom1[y];
-        return atom2[x] < atom2[y];
+        int ix = constraints[x];
+        int iy = constraints[y];
+        if (atom1[ix] != atom1[iy])
+            return atom1[ix] < atom1[iy];
+        return atom2[ix] < atom2[iy];
     }
 };
 
@@ -1431,7 +1434,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
                 // Look for a third constraint forming a triangle with these two.
 
                 bool foundConstraint = false;
-                for (int other = 0; other < numCCMA; other++) {
+                for (int m = 0; m < numCCMA; m++) {
+                    int other = ccmaConstraints[m];
                     if ((atom1[other] == atoma && atom2[other] == atomc) || (atom1[other] == atomc && atom2[other] == atoma)) {
                         double d1 = distance[cj];
                         double d2 = distance[ck];
@@ -1504,7 +1508,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     vector<int> constraintOrder(numCCMA);
     for (int i = 0; i < numCCMA; ++i)
         constraintOrder[i] = i;
-    sort(constraintOrder.begin(), constraintOrder.end(), ConstraintOrderer(atom1, atom2));
+    sort(constraintOrder.begin(), constraintOrder.end(), ConstraintOrderer(atom1, atom2, ccmaConstraints));
     vector<int> inverseOrder(numCCMA);
     for (int i = 0; i < numCCMA; ++i)
         inverseOrder[constraintOrder[i]] = i;
