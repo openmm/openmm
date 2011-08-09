@@ -241,7 +241,7 @@ void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates,  std::v
 
 //FILE* logFile = SimTKOpenMMLog::getSimTKOpenMMLogFile( );
 //FILE* logFile = NULL;
-//FILE* logFile = fopen( "bR", "w" );
+//FILE* logFile = fopen( "bRSoft", "w" );
 
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
      
@@ -290,22 +290,13 @@ void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates,  std::v
                   term += two*( radiusIInverse - l_ij);
                }
                sum += nonPolarScaleFactors[atomJ]*term;
-
-/*
-if( logFile && atomI == 0 ){
-   (void) fprintf( logFile, "\nRR %d %d r=%.4f rads[%.6f %.6f] scl=[%.3f %.3f] sum=%12.6e %12.6e %12.6e %12.6e",
-                   atomI, atomJ, r, offsetRadiusI, offsetRadiusJ, scaledRadiusFactor[atomI], scaledRadiusFactor[atomJ], 0.5f*sum,
-                   l_ij, u_ij, term );
-}
-*/
-
             }
          }
       }
  
       // OBC-specific code (Eqs. 6-8 in paper)
 
-      sum                  *= half*offsetRadiusI;
+      sum                  *= nonPolarScaleFactors[atomI]*half*offsetRadiusI;
       RealOpenMM sum2       = sum*sum;
       RealOpenMM sum3       = sum*sum2;
       RealOpenMM tanhSum    = TANH( alphaObc*sum - betaObc*sum2 + gammaObc*sum3 );
@@ -317,7 +308,7 @@ if( logFile && atomI == 0 ){
 
 #if 0
 if( logFile && atomI >= 0 ){
-   (void) fprintf( logFile, "\nRRQ %d sum %12.6e tanhS %12.6e radI %.5f %.5f born %18.10e obc %12.6e",
+   (void) fprintf( logFile, "RRQ %d sum %12.6e tanhS %12.6e radI %.5f %.5f born %18.10e obc %12.6e\n",
                    atomI, sum, tanhSum, radiusI, offsetRadiusI, bornRadii[atomI], obcChain[atomI] );
 }
 #endif
@@ -327,8 +318,15 @@ if( logFile && atomI >= 0 ){
 #if 0
 if( logFile ){
       (void) fclose( logFile );
+      logFile = fopen( "bRSoftJ", "w" );
+      for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+          (void) fprintf( logFile, "%6d %18.10e %18.10e\n",
+                          atomI, bornRadii[atomI], obcChain[atomI] );
+      }
+      (void) fclose( logFile );
 }
 #endif
+
 }
 
 /**---------------------------------------------------------------------------------------
@@ -476,6 +474,8 @@ void CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vec
       computeAceNonPolarForce( obcSoftcoreParameters, bornRadii, &obcEnergy, bornForces );
    }
  
+   const RealOpenMM* nonPolarScaleFactors   = obcSoftcoreParameters->getNonPolarScaleFactors();
+
    // ---------------------------------------------------------------------------------------
 
    // first main loop
@@ -492,32 +492,28 @@ void CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vec
              ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
          if (_obcSoftcoreParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcSoftcoreParameters->getCutoffDistance())
              continue;
-         RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
-         RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
-         RealOpenMM deltaY             = deltaR[ReferenceForce::YIndex];
-         RealOpenMM deltaZ             = deltaR[ReferenceForce::ZIndex];
+         RealOpenMM r2                     = deltaR[ReferenceForce::R2Index];
+         RealOpenMM deltaX                 = deltaR[ReferenceForce::XIndex];
+         RealOpenMM deltaY                 = deltaR[ReferenceForce::YIndex];
+         RealOpenMM deltaZ                 = deltaR[ReferenceForce::ZIndex];
 
-         // 3 FLOP
+         RealOpenMM alpha2_ij              = bornRadii[atomI]*bornRadii[atomJ];
+         RealOpenMM D_ij                   = r2/(four*alpha2_ij);
 
-         RealOpenMM alpha2_ij          = bornRadii[atomI]*bornRadii[atomJ];
-         RealOpenMM D_ij               = r2/(four*alpha2_ij);
+         RealOpenMM expTerm                = EXP( -D_ij );
+         RealOpenMM denominator2           = r2 + alpha2_ij*expTerm; 
+         RealOpenMM denominator            = SQRT( denominator2 ); 
 
-         // exp + 2 + sqrt FLOP 
+         // charges are assumed to be scaled on input so nonPolarScaleFactor is not needed
 
-         RealOpenMM expTerm            = EXP( -D_ij );
-         RealOpenMM denominator2       = r2 + alpha2_ij*expTerm; 
-         RealOpenMM denominator        = SQRT( denominator2 ); 
-         
-         // 6 FLOP
+         //RealOpenMM nonPolarScaleFactor    = atomI != atomJ ? nonPolarScaleFactors[atomI]*nonPolarScaleFactors[atomJ] : nonPolarScaleFactors[atomI];
 
-         RealOpenMM Gpol               = (partialChargeI*partialCharges[atomJ])/denominator; 
-         RealOpenMM dGpol_dr           = -Gpol*( one - fourth*expTerm )/denominator2;  
+         RealOpenMM Gpol                   = (partialChargeI*partialCharges[atomJ])/denominator; 
+         //           Gpol                  *= nonPolarScaleFactor;
 
-         // 5 FLOP
+         RealOpenMM dGpol_dalpha2_ij       = -half*Gpol*expTerm*( one + D_ij )/denominator2;
 
-         RealOpenMM dGpol_dalpha2_ij   = -half*Gpol*expTerm*( one + D_ij )/denominator2;
-
-         // 11 FLOP
+         RealOpenMM dGpol_dr               = -Gpol*( one - fourth*expTerm )/denominator2;  
 
          if( atomI != atomJ ){
 
@@ -546,8 +542,6 @@ void CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vec
 
       }
    }
-
-   //obcEnergy *= getEnergyConversionFactor();
 
    // ---------------------------------------------------------------------------------------
 
@@ -630,6 +624,7 @@ void CpuObcSoftcore::computeBornEnergyForces( vector<RealOpenMM>& bornRadii, vec
                RealOpenMM r2Inverse     = rInverse*rInverse;
 
                RealOpenMM t3            = eighth*(one + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + fourth*LN( u_ij/l_ij )*r2Inverse;
+                          t3           *= nonPolarScaleFactors[atomI]*nonPolarScaleFactors[atomJ];
 
                RealOpenMM de            = bornForces[atomI]*t3*rInverse;
 

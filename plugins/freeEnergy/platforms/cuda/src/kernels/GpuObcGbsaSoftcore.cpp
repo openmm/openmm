@@ -59,6 +59,7 @@ int GpuObcGbsaSoftcore::setNonPolarScalingFactors( unsigned int particleIndex, f
 int GpuObcGbsaSoftcore::upload( gpuContext gpu ){
     _psNonPolarScalingFactors->Upload();
     SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim( getGpuNonPolarScalingFactors() );
+    SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim( getGpuNonPolarScalingFactors() );
     return 0;
 }
 

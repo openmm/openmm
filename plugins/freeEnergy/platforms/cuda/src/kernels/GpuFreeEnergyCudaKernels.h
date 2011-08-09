@@ -153,6 +153,9 @@ void SetCalculateObcGbsaSoftcoreBornSumSim( gpuContext gpu );
 extern "C"
 void SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim( float* nonPolarScalingFactors );
 
+extern "C"
+void SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim( float* nonPolarScalingFactors );
+
 // this method and kCalculateObcGbsaSoftcoreForces2() are being
 // used until changes in OpenMM version are made 
 extern "C"

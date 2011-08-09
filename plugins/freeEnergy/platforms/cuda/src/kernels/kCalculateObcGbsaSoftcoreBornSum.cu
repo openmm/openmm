@@ -232,6 +232,7 @@ __global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
         
         // Now calculate Born radius and OBC term.
         sum                    *= 0.5f * atom.x;
+        sum                    *= gbsaSimDev.pNonPolarScalingFactors[pos];
         float sum2              = sum * sum;
         float sum3              = sum * sum2;
         float tanhSum           = tanh(cSim.alphaOBC * sum - cSim.betaOBC * sum2 + cSim.gammaOBC * sum3);

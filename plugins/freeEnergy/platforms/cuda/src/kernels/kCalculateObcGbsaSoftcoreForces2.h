@@ -55,6 +55,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
         float4 apos                     = cSim.pPosq[i];
         float2 a                        = cSim.pObcData[i];
         float fb                        = cSim.pBornForce[i];
+        float  nonPolarScaleDataI       = gbsaSimDev.pNonPolarScalingFactors[i];
         unsigned int tbx                = threadIdx.x - tgx;
         unsigned int tj                 = tgx;
         Atom* psA                       = &sA[tbx];
@@ -72,6 +73,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
             sA[threadIdx.x].r           = a.x;
             sA[threadIdx.x].sr          = a.y;
             sA[threadIdx.x].fb          = fb;
+            sA[threadIdx.x].npScale     = nonPolarScaleDataI;
 
             for (unsigned int j = (tgx+1)&(GRID-1); j != tgx; j = (j+1)&(GRID-1))
             {
@@ -105,6 +107,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                 float term          =  0.125f *
                                       (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3 +
                                        0.250f * t1 * r2Inverse;
+                term               *= psA[j].npScale*nonPolarScaleDataI;
                 float dE            = fb * term;
 
 #if defined USE_PERIODIC
@@ -151,6 +154,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                 float4 temp                 = cSim.pPosq[j];
                 float2 temp1                = cSim.pObcData[j];
                 sA[threadIdx.x].fb          = cSim.pBornForce[j];
+                sA[threadIdx.x].npScale     = gbsaSimDev.pNonPolarScalingFactors[j];
                 sA[threadIdx.x].x           = temp.x;
                 sA[threadIdx.x].y           = temp.y;
                 sA[threadIdx.x].z           = temp.z;
@@ -208,6 +212,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     float term              =  0.125f *
                                               (1.000f + psA[tj].sr * psA[tj].sr * r2Inverse) * t3J +
                                                0.250f * t1J * r2Inverse;
+                    term                   *= psA[tj].npScale*nonPolarScaleDataI;
                     float dE                = fb * term;
 
 #if defined USE_PERIODIC
@@ -235,6 +240,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     term                    =  0.125f *
                                               (1.000f + sr2 * r2Inverse) * t3I +
                                                0.250f * t1I * r2Inverse;
+                    term                   *= psA[tj].npScale*nonPolarScaleDataI;
                     dE                      = psA[tj].fb * term;
 
                     float rj = psA[tj].r;
@@ -306,6 +312,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                         float term              =  0.125f *
                                                   (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3J +
                                                    0.250f * t1J * r2Inverse;
+                        term                   *= psA[j].npScale*nonPolarScaleDataI;
                         float dE                = fb * term;
 
     #if defined USE_PERIODIC
@@ -333,6 +340,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                         term                    =  0.125f *
                                                   (1.000f + sr2 * r2Inverse) * t3I +
                                                    0.250f * t1I * r2Inverse;
+                        term                   *= psA[j].npScale*nonPolarScaleDataI;
                         dE                      = psA[j].fb * term;
 
                         float rj = psA[j].r;

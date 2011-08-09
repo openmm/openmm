@@ -34,6 +34,7 @@
 using namespace std;
 
 #include "gputypes.h"
+#include "GpuObcGbsaSoftcore.h"
 
 struct Atom {
     float x;
@@ -41,14 +42,20 @@ struct Atom {
     float z;
     float r;
     float sr;
+    float npScale;
     float fx;
     float fy;
     float fz;
     float fb;
 };
 
+struct cudaFreeEnergySimulationObcGbsaSoftcore {
+    float* pNonPolarScalingFactors;
+};
+struct cudaFreeEnergySimulationObcGbsaSoftcore gbsaSimObc2;
 
 static __constant__ cudaGmxSimulation cSim;
+static __constant__ cudaFreeEnergySimulationObcGbsaSoftcore gbsaSimDev;
 
 extern "C"
 void SetCalculateObcGbsaSoftcoreForces2Sim(gpuContext gpu)
@@ -56,6 +63,17 @@ void SetCalculateObcGbsaSoftcoreForces2Sim(gpuContext gpu)
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
+}
+
+extern "C" 
+void SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim( float* nonPolarScalingFactors )
+{
+    cudaError_t status;
+    gbsaSimObc2.pNonPolarScalingFactors = nonPolarScalingFactors;
+    status                              = cudaMemcpyToSymbol(gbsaSimDev, &gbsaSimObc2, sizeof(cudaFreeEnergySimulationObcGbsaSoftcore));
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim");
+
+    //(void) fprintf( stderr, "In SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim\n" );
 }
 
 void GetCalculateObcGbsaSoftcoreForces2Sim(gpuContext gpu)
