@@ -33,7 +33,7 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/RPMDKernels.h"
+#include "openmm/RpmdKernels.h"
 #include <ctime>
 #include <string>
 
