@@ -35,7 +35,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false),
+OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false),
         numForceBuffers(0), exclusionIndices(NULL), exclusionRowIndices(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL) {
     // Decide how many thread blocks and force buffers to use.
@@ -93,7 +93,7 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         if (cutoffDistance != cutoff)
             throw OpenMMException("All Forces must use the same cutoff distance");
     }
-    if (usesExclusions && atomExclusions.size() != 0) {
+    if (usesExclusions && anyExclusions) {
         bool sameExclusions = (exclusionList.size() == atomExclusions.size());
         for (int i = 0; i < (int) exclusionList.size() && sameExclusions; i++) {
             if (exclusionList[i].size() != atomExclusions[i].size())
@@ -109,8 +109,10 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
     usePeriodic = usesPeriodic;
     cutoff = cutoffDistance;
     kernelSource += kernel+"\n";
-    if (usesExclusions)
+    if (usesExclusions && !anyExclusions) {
         atomExclusions = exclusionList;
+        anyExclusions = true;
+    }
 }
 
 void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {

@@ -2136,15 +2136,14 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < force.getNumGlobalParameters(); i++)
             variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
         stringstream n2EnergySource;
-        bool anyExclusions = false;
+        bool anyExclusions = (force.getNumExclusions() > 0);
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
             string expression;
             CustomGBForce::ComputationType type;
             force.getEnergyTermParameters(i, expression, type);
             if (type == CustomGBForce::SingleParticle)
                 continue;
-            bool exclude = (type == CustomGBForce::ParticlePair);
-            anyExclusions |= exclude;
+            bool exclude = (anyExclusions && type == CustomGBForce::ParticlePair);
             map<string, Lepton::ParsedExpression> n2EnergyExpressions;
             n2EnergyExpressions["tempEnergy += "] = Lepton::Parser::parse(expression, functions).optimize();
             n2EnergyExpressions["dEdR += "] = Lepton::Parser::parse(expression, functions).differentiate("r").optimize();
