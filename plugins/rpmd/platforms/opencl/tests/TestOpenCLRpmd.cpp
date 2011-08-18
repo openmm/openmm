@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Reference implementation of RPMDIntegrator.
+ * This tests the OpenCL implementation of RPMDIntegrator.
  */
 
 #include "../../../tests/AssertionUtilities.h"
@@ -49,17 +49,19 @@ using namespace std;
 
 void testIntegration() {
     const int numParticles = 1;
-    const int numCopies = 30;
+    const int numCopies = 25;
     const double temperature = 300.0;
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(i+1);
-    HarmonicBondForce* bonds = new HarmonicBondForce();
-    system.addForce(bonds);
-    for (int i = 0; i < numParticles-1; i++)
-        bonds->addBond(i, i+1, 1.0, 100.0);
+    if (numParticles > 1) {
+        HarmonicBondForce* bonds = new HarmonicBondForce();
+        system.addForce(bonds);
+        for (int i = 0; i < numParticles-1; i++)
+            bonds->addBond(i, i+1, 1.0, 100.0);
+    }
     RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
-    Platform& platform = Platform::getPlatformByName("Reference");
+    Platform& platform = Platform::getPlatformByName("OpenCL");
     Context context(system, integ, platform);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -70,8 +72,8 @@ void testIntegration() {
             positions[j] = Vec3(j+0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt));
         integ.setPositions(i, positions);
     }
-    const int numSteps = 100000;
-    integ.step(10000);
+    const int numSteps = 1000;
+    integ.step(1000);
     vector<double> ke(numCopies, 0.0);
     vector<double> rg(numParticles, 0.0);
     const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);

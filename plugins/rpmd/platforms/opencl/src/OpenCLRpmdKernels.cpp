@@ -130,7 +130,7 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     // Apply the PILE-L thermostat.
     
     const double dt = integrator.getStepSize();
-    pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
+    pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
     pileKernel.setArg<cl_float>(6, dt);
     pileKernel.setArg<cl_float>(7, integrator.getTemperature()*BOLTZ);
     pileKernel.setArg<cl_float>(8, integrator.getFriction());
@@ -158,6 +158,7 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
     // Apply the PILE-L thermostat again.
 
+    pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
     cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
 
     // Update the time and step count.
@@ -203,6 +204,8 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     int L = size;
     int m = 1;
     string sign = (forward ? "1.0f" : "-1.0f");
+    string multReal = (forward ? "multiplyComplexRealPart" : "multiplyComplexRealPartConj");
+    string multImag = (forward ? "multiplyComplexImagPart" : "multiplyComplexImagPartConj");
 
     source<<"{\n";
     source<<"__local float4* real0 = "<<variable<<"real;\n";
@@ -257,14 +260,14 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"float4 d10i = "<<sign<<"*(d3r-"<<coeff<<"*d2r);\n";
             source<<"real"<<output<<"[i+4*j*"<<m<<"] = c0r+d4r;\n";
             source<<"imag"<<output<<"[i+4*j*"<<m<<"] = c0i+d4i;\n";
-            source<<"real"<<output<<"[i+(4*j+1)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<size<<"/"<<(5*L)<<"], d7r+d9r, d7i+d9i);\n";
-            source<<"imag"<<output<<"[i+(4*j+1)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<size<<"/"<<(5*L)<<"], d7r+d9r, d7i+d9i);\n";
-            source<<"real"<<output<<"[i+(4*j+2)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8r+d10r, d8i+d10i);\n";
-            source<<"imag"<<output<<"[i+(4*j+2)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8r+d10r, d8i+d10i);\n";
-            source<<"real"<<output<<"[i+(4*j+3)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8r-d10r, d8i-d10i);\n";
-            source<<"imag"<<output<<"[i+(4*j+3)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8r-d10r, d8i-d10i);\n";
-            source<<"real"<<output<<"[i+(4*j+4)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7r-d9r, d7i-d9i);\n";
-            source<<"imag"<<output<<"[i+(4*j+4)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7r-d9r, d7i-d9i);\n";
+            source<<"real"<<output<<"[i+(4*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(5*L)<<"], d7r+d9r, d7i+d9i);\n";
+            source<<"imag"<<output<<"[i+(4*j+1)*"<<m<<"] = "<<multImag<<"(w[j*"<<size<<"/"<<(5*L)<<"], d7r+d9r, d7i+d9i);\n";
+            source<<"real"<<output<<"[i+(4*j+2)*"<<m<<"] = "<<multReal<<"(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8r+d10r, d8i+d10i);\n";
+            source<<"imag"<<output<<"[i+(4*j+2)*"<<m<<"] = "<<multImag<<"(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8r+d10r, d8i+d10i);\n";
+            source<<"real"<<output<<"[i+(4*j+3)*"<<m<<"] = "<<multReal<<"(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8r-d10r, d8i-d10i);\n";
+            source<<"imag"<<output<<"[i+(4*j+3)*"<<m<<"] = "<<multImag<<"(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8r-d10r, d8i-d10i);\n";
+            source<<"real"<<output<<"[i+(4*j+4)*"<<m<<"] = "<<multReal<<"(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7r-d9r, d7i-d9i);\n";
+            source<<"imag"<<output<<"[i+(4*j+4)*"<<m<<"] = "<<multImag<<"(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7r-d9r, d7i-d9i);\n";
             source<<"}\n";
             m = m*5;
             unfactored /= 5;
@@ -293,12 +296,12 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"float4 d3i = "<<sign<<"*(c3r-c1r);\n";
             source<<"real"<<output<<"[i+3*j*"<<m<<"] = d0r+d2r;\n";
             source<<"imag"<<output<<"[i+3*j*"<<m<<"] = d0i+d2i;\n";
-            source<<"real"<<output<<"[i+(3*j+1)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<size<<"/"<<(4*L)<<"], d1r+d3r, d1i+d3i);\n";
-            source<<"imag"<<output<<"[i+(3*j+1)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<size<<"/"<<(4*L)<<"], d1r+d3r, d1i+d3i);\n";
-            source<<"real"<<output<<"[i+(3*j+2)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0r-d2r, d0i-d2i);\n";
-            source<<"imag"<<output<<"[i+(3*j+2)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0r-d2r, d0i-d2i);\n";
-            source<<"real"<<output<<"[i+(3*j+3)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1r-d3r, d1i-d3i);\n";
-            source<<"imag"<<output<<"[i+(3*j+3)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1r-d3r, d1i-d3i);\n";
+            source<<"real"<<output<<"[i+(3*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(4*L)<<"], d1r+d3r, d1i+d3i);\n";
+            source<<"imag"<<output<<"[i+(3*j+1)*"<<m<<"] = "<<multImag<<"(w[j*"<<size<<"/"<<(4*L)<<"], d1r+d3r, d1i+d3i);\n";
+            source<<"real"<<output<<"[i+(3*j+2)*"<<m<<"] = "<<multReal<<"(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0r-d2r, d0i-d2i);\n";
+            source<<"imag"<<output<<"[i+(3*j+2)*"<<m<<"] = "<<multImag<<"(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0r-d2r, d0i-d2i);\n";
+            source<<"real"<<output<<"[i+(3*j+3)*"<<m<<"] = "<<multReal<<"(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1r-d3r, d1i-d3i);\n";
+            source<<"imag"<<output<<"[i+(3*j+3)*"<<m<<"] = "<<multImag<<"(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1r-d3r, d1i-d3i);\n";
             source<<"}\n";
             m = m*4;
             unfactored /= 4;
@@ -323,10 +326,10 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"float4 d2i = "<<sign<<"*"<<OpenCLExpressionUtilities::doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
             source<<"real"<<output<<"[i+2*j*"<<m<<"] = c0r+d0r;\n";
             source<<"imag"<<output<<"[i+2*j*"<<m<<"] = c0i+d0i;\n";
-            source<<"real"<<output<<"[i+(2*j+1)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
-            source<<"imag"<<output<<"[i+(2*j+1)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
-            source<<"real"<<output<<"[i+(2*j+2)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1r-d2r, d1i-d2i);\n";
-            source<<"imag"<<output<<"[i+(2*j+2)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1r-d2r, d1i-d2i);\n";
+            source<<"real"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
+            source<<"imag"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multImag<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
+            source<<"real"<<output<<"[i+(2*j+2)*"<<m<<"] = "<<multReal<<"(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1r-d2r, d1i-d2i);\n";
+            source<<"imag"<<output<<"[i+(2*j+2)*"<<m<<"] = "<<multImag<<"(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1r-d2r, d1i-d2i);\n";
             source<<"}\n";
             m = m*3;
             unfactored /= 3;
@@ -343,8 +346,8 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"float4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
             source<<"real"<<output<<"[i+j*"<<m<<"] = c0r+c1r;\n";
             source<<"imag"<<output<<"[i+j*"<<m<<"] = c0i+c1i;\n";
-            source<<"real"<<output<<"[i+(j+1)*"<<m<<"] = multiplyComplexRealPart(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";
-            source<<"imag"<<output<<"[i+(j+1)*"<<m<<"] = multiplyComplexImagPart(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";
+            source<<"real"<<output<<"[i+(j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";
+            source<<"imag"<<output<<"[i+(j+1)*"<<m<<"] = "<<multImag<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";
             source<<"}\n";
             m = m*2;
             unfactored /= 2;
@@ -359,8 +362,8 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     // Create the kernel.
 
     if (stage%2 == 1) {
-        source<<variable<<"real[indexInBlock] = real1[indexInBlock];\n";
-        source<<variable<<"imag[indexInBlock] = imag1[indexInBlock];\n";
+        source<<"real0[indexInBlock] = real1[indexInBlock];\n";
+        source<<"imag0[indexInBlock] = imag1[indexInBlock];\n";
     }
     source<<"}\n";
     return source.str();

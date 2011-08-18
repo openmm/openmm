@@ -664,6 +664,10 @@ int OpenCLIntegrationUtilities::prepareRandomNumbers(int numValues) {
         randomPos += numValues;
         return oldPos;
     }
+    if (numValues > random->getSize()) {
+        delete random;
+        random = new OpenCLArray<mm_float4>(context, numValues, "random");
+    }
     randomKernel.setArg<cl_int>(0, random->getSize());
     randomKernel.setArg<cl::Buffer>(1, random->getDeviceBuffer());
     randomKernel.setArg<cl::Buffer>(2, randomSeed->getDeviceBuffer());

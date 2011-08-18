@@ -10,6 +10,14 @@ float4 multiplyComplexImagPart(float2 c1, float4 c2r, float4 c2i) {
     return c1.x*c2i+c1.y*c2r;
 }
 
+float4 multiplyComplexRealPartConj(float2 c1, float4 c2r, float4 c2i) {
+    return c1.x*c2r+c1.y*c2i;
+}
+
+float4 multiplyComplexImagPartConj(float2 c1, float4 c2r, float4 c2i) {
+    return c1.x*c2i-c1.y*c2r;
+}
+
 /**
  * Apply the PILE-L thermostat.
  */
@@ -25,8 +33,9 @@ __kernel void applyPileThermostat(__global float4* velm, __local float4* v, __lo
     __local float4* vreal = &v[blockStart];
     __local float4* vimag = &v[blockStart+get_local_size(0)];
     if (get_local_id(0) < NUM_COPIES)
-        w[get_local_id(0)] = (float2) (cos(get_local_id(0)*2*M_PI/NUM_COPIES), sin(-get_local_id(0)*2*M_PI/NUM_COPIES));
+        w[indexInBlock] = (float2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
     barrier(CLK_LOCAL_MEM_FENCE);
+    randomIndex += blockStart;
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         float4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
         float invMass = particleVelm.w;
@@ -66,7 +75,7 @@ __kernel void applyPileThermostat(__global float4* velm, __local float4* v, __lo
         
         FFT_V_BACKWARD
         velm[particle+indexInBlock*PADDED_NUM_ATOMS].xyz = SCALE*vreal[indexInBlock].xyz;
-        randomIndex += numBlocks*NUM_COPIES;
+        randomIndex += get_global_size(0);
     }
 }
 
@@ -97,7 +106,7 @@ __kernel void integrateStep(__global float4* posq, __global float4* velm, __glob
     __local float4* vreal = &v[blockStart];
     __local float4* vimag = &v[blockStart+get_local_size(0)];
     if (get_local_id(0) < NUM_COPIES)
-        w[get_local_id(0)] = (float2) (cos(get_local_id(0)*2*M_PI/NUM_COPIES), sin(-get_local_id(0)*2*M_PI/NUM_COPIES));
+        w[indexInBlock] = (float2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
     barrier(CLK_LOCAL_MEM_FENCE);
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         float4 particlePosq = posq[particle+indexInBlock*PADDED_NUM_ATOMS];
