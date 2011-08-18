@@ -452,7 +452,8 @@ private:
     bool supports64BitGlobalAtomics;
     mm_float4 periodicBoxSize;
     mm_float4 invPeriodicBoxSize;
-    std::string compilationOptions, defaultOptimizationOptions;
+    std::string defaultOptimizationOptions;
+    std::map<std::string, std::string> compilationDefines;
     cl::Context context;
     cl::Device device;
     cl::CommandQueue queue;

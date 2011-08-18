@@ -91,12 +91,12 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         this->deviceIndex = deviceIndex;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-        compilationOptions = "-DWORK_GROUP_SIZE="+OpenCLExpressionUtilities::intToString(ThreadBlockSize);
+        compilationDefines["WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(ThreadBlockSize);
         defaultOptimizationOptions = "-cl-fast-relaxed-math";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
-            compilationOptions += " -DWARPS_ARE_ATOMIC";
+            compilationDefines["WARPS_ARE_ATOMIC"] = "";
             simdWidth = 32;
             if (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
                 // Compute level 1.2 and later Nvidia GPUs support 64 bit atomics, even though they don't list the
@@ -111,7 +111,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
             // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around.
-            compilationOptions += " -DAMD_ATOMIC_WORK_AROUND";
+            compilationDefines["AMD_ATOMIC_WORK_AROUND"] = "";
             // AMD has both 32 and 64 width SIMDs. To determine need to create a kernel to query.
             // For now default to 1 which will use the default kernels.
             simdWidth = 1;
@@ -119,7 +119,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         else
             simdWidth = 1;
         if (supports64BitGlobalAtomics)
-            compilationOptions += " -DSUPPORTS_64_BIT_ATOMICS";
+            compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
         queue = cl::CommandQueue(context, device);
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
@@ -169,26 +169,11 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         maxExpError = max(maxExpError, fabs(exp(v)-values[i].s4)/values[i].s4);
         maxLogError = max(maxLogError, fabs(log(v)-values[i].s5)/values[i].s5);
     }
-    if (maxSqrtError < 1e-6)
-        compilationOptions += " -DSQRT=native_sqrt";
-    else
-        compilationOptions += " -DSQRT=sqrt";
-    if (maxRsqrtError < 1e-6)
-        compilationOptions += " -DRSQRT=native_rsqrt";
-    else
-        compilationOptions += " -DRSQRT=rsqrt";
-    if (maxRecipError < 1e-6)
-        compilationOptions += " -DRECIP=native_recip";
-    else
-        compilationOptions += " -DRECIP=1.0f/";
-    if (maxExpError < 1e-6)
-        compilationOptions += " -DEXP=native_exp";
-    else
-        compilationOptions += " -DEXP=exp";
-    if (maxLogError < 1e-6)
-        compilationOptions += " -DLOG=native_log";
-    else
-        compilationOptions += " -DLOG=log";
+    compilationDefines["SQRT"] = (maxSqrtError < 1e-6) ? "native_sqrt" : "sqrt";
+    compilationDefines["RSQRT"] = (maxRsqrtError < 1e-6) ? "native_rsqrt" : "rsqrt";
+    compilationDefines["RECIP"] = (maxRecipError < 1e-6) ? "native_recip" : "1.0f/";
+    compilationDefines["EXP"] = (maxExpError < 1e-6) ? "native_exp" : "exp";
+    compilationDefines["LOG"] = (maxLogError < 1e-6) ? "native_log" : "log";
     
     // Create the work thread used for parallelization when running on multiple devices.
     
@@ -280,18 +265,34 @@ cl::Program OpenCLContext::createProgram(const string source, const char* optimi
 }
 
 cl::Program OpenCLContext::createProgram(const string source, const map<string, string>& defines, const char* optimizationFlags) {
-    cl::Program::Sources sources(1, make_pair(source.c_str(), source.size()));
+    string options = (optimizationFlags == NULL ? defaultOptimizationOptions : optimizationFlags);
+    stringstream src;
+    if (!options.empty())
+        src << "// Compilation Options: " << options << endl << endl;
+    for (map<string, string>::const_iterator iter = compilationDefines.begin(); iter != compilationDefines.end(); ++iter) {
+        src << "#define " << iter->first;
+        if (!iter->second.empty())
+            src << " " << iter->second;
+        src << endl;
+    }
+    if (!compilationDefines.empty())
+        src << endl;
+    for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
+        src << "#define " << iter->first;
+        if (!iter->second.empty())
+            src << " " << iter->second;
+        src << endl;
+    }
+    if (!defines.empty())
+        src << endl;
+    src << source << endl;
+    // Get length before using c_str() to avoid length() call invalidating the c_str() value.
+    string src_string = src.str();
+    ::size_t src_length = src_string.length();
+    cl::Program::Sources sources(1, make_pair(src_string.c_str(), src_length));
     cl::Program program(context, sources);
-    stringstream options;
-    options << compilationOptions;
-    if (optimizationFlags == NULL)
-        options << " " << defaultOptimizationOptions;
-    else
-        options << " " << optimizationFlags;
-    for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter)
-        options << " -D" << iter->first << "=" << iter->second;
     try {
-        program.build(vector<cl::Device>(1, device), options.str().c_str());
+        program.build(vector<cl::Device>(1, device), options.c_str());
     } catch (cl::Error err) {
         throw OpenMMException("Error compiling kernel: "+program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
     }
