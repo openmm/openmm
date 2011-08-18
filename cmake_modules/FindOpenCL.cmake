@@ -1,20 +1,27 @@
 
 ### OPENCL_INCLUDE_DIR ###
 # Try OPENCL_DIR variable before looking elsewhere
-find_path(OPENCL_INCLUDE_DIR 
+find_path(OPENCL_INCLUDE_DIR
     NAMES OpenCL/opencl.h CL/opencl.h
-    PATHS "$ENV{OPENCL_DIR}"
+    PATHS $ENV{OPENCL_DIR}
     PATH_SUFFIXES "include"
     NO_DEFAULT_PATH
 )
-# As a last resort, look in default include areas and elsewhere
-find_path(OPENCL_INCLUDE_DIR 
+# Next look in environment variables set by OpenCL SDK installations
+find_path(OPENCL_INCLUDE_DIR
     NAMES OpenCL/opencl.h CL/opencl.h
     PATHS
-        "$ENV{CUDA_INC_PATH}"
+        $ENV{CUDA_PATH}
+        $ENV{AMDAPPSDKROOT}
+    PATH_SUFFIXES "include"
+    NO_DEFAULT_PATH
+)
+# As a last resort, look in default system areas followed by other possible locations
+find_path(OPENCL_INCLUDE_DIR
+    NAMES OpenCL/opencl.h CL/opencl.h
+    PATHS
         "C:/CUDA"
         "/usr/local/cuda"
-        "$ENV{AMDAPPSDKROOT}"
         "/usr/local/streamsdk"
         "/usr"
     PATH_SUFFIXES "include"
@@ -22,26 +29,44 @@ find_path(OPENCL_INCLUDE_DIR
 
 ### OPENCL_LIBRARY ###
 if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-    set(path_suffixes "lib/x86")
     if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
       set(path_suffixes "lib/x86_64")
+    else("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+      set(path_suffixes "lib/x86")
     endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+elseif(MSVC)
+    if(CMAKE_CL_64)
+      set(path_suffixes "lib/x64" "lib/x86_64")
+    else(CMAKE_CL_64)
+      set(path_suffixes "lib/Win32" "lib/x86")
+    endif(CMAKE_CL_64)
+else(MSVC)
+    set(path_suffixes "lib")
 endif("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-# First look in OPENCL_DIR variable location
-find_library(OPENCL_LIBRARY
-    NAMES OpenCL
-    PATHS $ENV{OPENCL_DIR} ${OPENCL_LIB_SEARCH_PATH} ""
-    PATH_SUFFIXES ${path_suffixes} "lib"
-    NO_DEFAULT_PATH
-)
-# If above fails, look in system default and other locations
+# Try OPENCL_DIR variable before looking elsewhere
 find_library(OPENCL_LIBRARY
     NAMES OpenCL
     PATHS
-        "$ENV{CUDA_LIB_PATH}"
+      $ENV{OPENCL_DIR}
+      ${OPENCL_LIB_SEARCH_PATH}
+    PATH_SUFFIXES ${path_suffixes}
+    NO_DEFAULT_PATH
+)
+# Next look in environment variables set by OpenCL SDK installations
+find_library(OPENCL_LIBRARY
+    NAMES OpenCL
+    PATHS
+      $ENV{CUDA_PATH}
+      $ENV{AMDAPPSDKROOT}
+    PATH_SUFFIXES ${path_suffixes}
+    NO_DEFAULT_PATH
+)
+# As a last resort, look in default system areas followed by other possible locations
+find_library(OPENCL_LIBRARY
+    NAMES OpenCL
+    PATHS
         "C:/CUDA"
         "/usr/local/cuda"
-        "$ENV{AMDAPPSDKROOT}"
         "/usr/local/streamsdk"
         "/usr"
     PATH_SUFFIXES ${path_suffixes} "lib"
