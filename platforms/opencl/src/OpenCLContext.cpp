@@ -343,7 +343,7 @@ void OpenCLContext::clearAutoclearBuffers() {
         clearFourBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
         clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
         clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base]+3));
+        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]));
         base += 4;
     }
     if (total-base == 3) {
