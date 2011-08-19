@@ -29,10 +29,18 @@
     OpenMM::Vec3 myVecB;
     OpenMM::Vec3 myVecC;
     state.getPeriodicBoxVectors(myVecA, myVecB, myVecC);
-    pPeriodicBoxVectorsList = Py_BuildValue("(d,d,d),(d,d,d), (d,d,d)",
-                                            myVecA[0], myVecA[1], myVecA[2],
-                                            myVecB[0], myVecB[1], myVecB[2],
-                                            myVecC[0], myVecC[1], myVecC[2]);
+    PyObject* mm = PyImport_AddModule("simtk.openmm");
+    PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
+    PyObject* args1 = Py_BuildValue("(d,d,d)", myVecA[0], myVecA[1], myVecA[2]);
+    PyObject* args2 = Py_BuildValue("(d,d,d)", myVecB[0], myVecB[1], myVecB[2]);
+    PyObject* args3 = Py_BuildValue("(d,d,d)", myVecC[0], myVecC[1], myVecC[2]);
+    PyObject* pyVec1 = PyObject_CallObject(vec3, args1);
+    PyObject* pyVec2 = PyObject_CallObject(vec3, args2);
+    PyObject* pyVec3 = PyObject_CallObject(vec3, args3);
+    Py_DECREF(args1);
+    Py_DECREF(args2);
+    Py_DECREF(args3);
+    pPeriodicBoxVectorsList = Py_BuildValue("N,N,N", pyVec1, pyVec2, pyVec3);
 
     if (getPositions) {
       pPositions = copyVVec3ToList(state.getPositions());

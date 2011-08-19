@@ -34,4 +34,5 @@ else:
 
 
 from simtk.openmm.openmm import *
+from simtk.openmm.vec3 import Vec3
 pluginLoadedLibNames = Platform.loadPluginsFromDirectory(Platform.getDefaultPluginsDirectory())

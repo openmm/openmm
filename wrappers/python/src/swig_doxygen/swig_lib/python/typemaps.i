@@ -74,11 +74,19 @@
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */
 %typemap(argout) (Vec3& a, Vec3& b, Vec3& c) {
   // %typemap(argout) (Vec3& a, Vec3& b, Vec3& c)
+  PyObject* mm = PyImport_AddModule("simtk.openmm");
+  PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
+  PyObject* args1 = Py_BuildValue("(d,d,d)", (*$1)[0], (*$1)[1], (*$1)[2]);
+  PyObject* args2 = Py_BuildValue("(d,d,d)", (*$2)[0], (*$2)[1], (*$2)[2]);
+  PyObject* args3 = Py_BuildValue("(d,d,d)", (*$3)[0], (*$3)[1], (*$3)[2]);
+  PyObject* pyVec1 = PyObject_CallObject(vec3, args1);
+  PyObject* pyVec2 = PyObject_CallObject(vec3, args2);
+  PyObject* pyVec3 = PyObject_CallObject(vec3, args3);
+  Py_DECREF(args1);
+  Py_DECREF(args2);
+  Py_DECREF(args3);
   PyObject *o, *o2, *o3;
-  o = Py_BuildValue("[N, N, N]",
-                    Py_BuildValue("(d, d, d)", (*$1)[0], (*$1)[1], (*$1)[2]),
-                    Py_BuildValue("(d, d, d)", (*$2)[0], (*$2)[1], (*$2)[2]),
-                    Py_BuildValue("(d, d, d)", (*$3)[0], (*$3)[1], (*$3)[2]));
+  o = Py_BuildValue("[N, N, N]", pyVec1, pyVec2, pyVec3);
   if ((!$result) || ($result == Py_None)) {
     $result = o;
   } else {
