@@ -85,6 +85,12 @@ public:
      */
     void addArgument(const ParameterInfo& parameter);
     /**
+     * Specify the list of exclusions that an interaction outside the default kernel will depend on.
+     * 
+     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
+     */
+    void requestExclusions(const std::vector<std::vector<int> >& exclusionList);
+    /**
      * Initialize this object in preparation for a simulation.
      */
     void initialize(const System& system);

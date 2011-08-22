@@ -93,7 +93,24 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         if (cutoffDistance != cutoff)
             throw OpenMMException("All Forces must use the same cutoff distance");
     }
-    if (usesExclusions && anyExclusions) {
+    if (usesExclusions)
+        requestExclusions(exclusionList);
+    useCutoff = usesCutoff;
+    usePeriodic = usesPeriodic;
+    cutoff = cutoffDistance;
+    kernelSource += kernel+"\n";
+}
+
+void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
+    parameters.push_back(parameter);
+}
+
+void OpenCLNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
+    arguments.push_back(parameter);
+}
+
+void OpenCLNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclusionList) {
+    if (anyExclusions) {
         bool sameExclusions = (exclusionList.size() == atomExclusions.size());
         for (int i = 0; i < (int) exclusionList.size() && sameExclusions; i++) {
             if (exclusionList[i].size() != atomExclusions[i].size())
@@ -105,22 +122,10 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         if (!sameExclusions)
             throw OpenMMException("All Forces must have identical exceptions");
     }
-    useCutoff = usesCutoff;
-    usePeriodic = usesPeriodic;
-    cutoff = cutoffDistance;
-    kernelSource += kernel+"\n";
-    if (usesExclusions && !anyExclusions) {
+    else {
         atomExclusions = exclusionList;
         anyExclusions = true;
     }
-}
-
-void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
-    parameters.push_back(parameter);
-}
-
-void OpenCLNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
-    arguments.push_back(parameter);
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {

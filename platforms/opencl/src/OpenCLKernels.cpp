@@ -2074,6 +2074,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             file = OpenCLKernelSources::customGBValueN2_default;
         cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairValueKernel = cl::Kernel(program, "computeN2Value");
+        if (useExclusionsForValue)
+            cl.getNonbondedUtilities().requestExclusions(exclusionList);
     }
     {
         // Create the kernel to reduce the N2 value and calculate other values.
