@@ -15,7 +15,7 @@
     PyObject *pyTuple;
     PyObject *pParameters;
 
-    types = State::Energy;
+    types = 0;
     if (getPositions) types |= State::Positions;
     if (getVelocities) types |= State::Velocities;
     if (getForces) types |= State::Forces;
