@@ -55,6 +55,10 @@ using namespace std;
 const int OpenCLContext::ThreadBlockSize = 64;
 const int OpenCLContext::TileSize = 32;
 
+static void errorCallback(const char* errinfo, const void* private_info, size_t cb, void* user_data) {
+    std::cerr << "OpenCL internal error: " << errinfo << std::endl;
+}
+
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
         forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL), thread(NULL) {
@@ -63,7 +67,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
         cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[0](), 0};
-        context = cl::Context(CL_DEVICE_TYPE_ALL, cprops);
+        context = cl::Context(CL_DEVICE_TYPE_ALL, cprops, errorCallback);
         vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
         const int minThreadBlockSize = 32;
         if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
