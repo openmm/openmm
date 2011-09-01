@@ -55,7 +55,7 @@ using namespace std;
 const int OpenCLContext::ThreadBlockSize = 64;
 const int OpenCLContext::TileSize = 32;
 
-static void errorCallback(const char* errinfo, const void* private_info, size_t cb, void* user_data) {
+static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_info, size_t cb, void* user_data) {
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
