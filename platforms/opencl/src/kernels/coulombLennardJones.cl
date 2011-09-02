@@ -1,36 +1,38 @@
 #if USE_EWALD
 bool needCorrection = isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
 if (!isExcluded || needCorrection) {
-    const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
-    float alphaR = EWALD_ALPHA*r;
-    float erfcAlphaR = 0.0f;
-    if (r2 < CUTOFF_SQUARED || needCorrection) {
-        // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
-        // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).
-
-        float t = 1.0f/(1.0f+0.47047f*alphaR);
-        erfcAlphaR = (t*(0.3480242f+t*(-0.0958798f+t*0.7478556f)))*exp(-alphaR*alphaR);
-    }
     float tempForce = 0.0f;
-    if (needCorrection) {
-        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
+    if (r2 < CUTOFF_SQUARED || needCorrection) {
+        const float alphaR = EWALD_ALPHA*r;
+        const float expAlphaRSqr = EXP(-alphaR*alphaR);
+        const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
 
-        tempForce = -prefactor*((1.0f-erfcAlphaR)-alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
-        tempEnergy += -prefactor*(1.0f-erfcAlphaR);
-    }
-    else if (r2 < CUTOFF_SQUARED) {
+        // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+        // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
+        // error of 2.5e-5.
+
+        const float t = 1.0f/(1.0f+0.47047f*alphaR);
+        const float erfcAlphaR = (t*(0.3480242f+t*(-0.0958798f+t*0.7478556f)))*expAlphaRSqr;
+        if (needCorrection) {
+            // Subtract off the part of this interaction that was included in the reciprocal space contribution.
+
+            tempForce = -prefactor*((1.0f-erfcAlphaR)-alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+            tempEnergy += -prefactor*(1.0f-erfcAlphaR);
+        }
+        else {
 #if HAS_LENNARD_JONES
-        float sig = sigmaEpsilon1.x + sigmaEpsilon2.x;
-        float sig2 = invR*sig;
-        sig2 *= sig2;
-        float sig6 = sig2*sig2*sig2;
-        float eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
-        tempForce = eps*(12.0f*sig6 - 6.0f)*sig6 + prefactor*(erfcAlphaR+alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
-        tempEnergy += eps*(sig6 - 1.0f)*sig6 + prefactor*erfcAlphaR;
+            float sig = sigmaEpsilon1.x + sigmaEpsilon2.x;
+            float sig2 = invR*sig;
+            sig2 *= sig2;
+            float sig6 = sig2*sig2*sig2;
+            float eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
+            tempForce = eps*(12.0f*sig6 - 6.0f)*sig6 + prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+            tempEnergy += eps*(sig6 - 1.0f)*sig6 + prefactor*erfcAlphaR;
 #else
-        tempForce = prefactor*(erfcAlphaR+alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
-        tempEnergy += prefactor*erfcAlphaR;
+            tempForce = prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+            tempEnergy += prefactor*erfcAlphaR;
 #endif
+        }
     }
     dEdR += tempForce*invR*invR;
 }
