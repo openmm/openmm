@@ -41,7 +41,6 @@
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "openmm/internal/MSVC_erfc.h"
 #include <cmath>
 #include <set>
 
@@ -1154,8 +1153,6 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete pmeAtomRange;
     if (pmeAtomGridIndex != NULL)
         delete pmeAtomGridIndex;
-    if (erfcTable != NULL)
-        delete erfcTable;
     if (sort != NULL)
         delete sort;
     if (fft != NULL)
@@ -1341,19 +1338,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     else
         ewaldSelfEnergy = 0.0;
-    
-    // Tabulate values of erfc().
-
-    if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-        const int tableSize = 2048;
-        defines["ERFC_TABLE_SCALE"] = doubleToString((tableSize-1)/(alpha*force.getCutoffDistance()));
-        erfcTable = new OpenCLArray<cl_float>(cl, tableSize, "ErfcTable", false, CL_MEM_READ_ONLY);
-        vector<cl_float> erfcVector(tableSize);
-        for (int i = 0; i < tableSize; ++i)
-            erfcVector[i] = (float) erfc(i*(alpha*force.getCutoffDistance())/(tableSize-1));
-        erfcTable->upload(erfcVector);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo("erfcTable", "float", 1, sizeof(cl_float), erfcTable->getDeviceBuffer()));
-    }
 
     // Add the interaction to the default nonbonded kernel.
     

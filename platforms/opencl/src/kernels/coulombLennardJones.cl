@@ -4,15 +4,13 @@ if (!isExcluded || needCorrection) {
     const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
     float alphaR = EWALD_ALPHA*r;
     float erfcAlphaR = 0.0f;
-    if (r2 < CUTOFF_SQUARED) {
-        float normalized = ERFC_TABLE_SCALE*alphaR;
-        int tableIndex = (int) normalized;
-        float fract2 = normalized-tableIndex;
-        float fract1 = 1.0f-fract2;
-        erfcAlphaR = fract1*erfcTable[tableIndex] + fract2*erfcTable[tableIndex+1];
+    if (r2 < CUTOFF_SQUARED || needCorrection) {
+        // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+        // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).
+
+        float t = 1.0f/(1.0f+0.47047f*alphaR);
+        erfcAlphaR = (t*(0.3480242f+t*(-0.0958798f+t*0.7478556f)))*exp(-alphaR*alphaR);
     }
-    else if (needCorrection)
-        erfcAlphaR = erfc(alphaR);
     float tempForce = 0.0f;
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
