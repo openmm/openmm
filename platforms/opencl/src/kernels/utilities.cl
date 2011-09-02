@@ -2,23 +2,23 @@
  * Fill a buffer with 0.
  */
 
-__kernel void clearBuffer(__global float* buffer, int size) {
+__kernel void clearBuffer(__global int* buffer, int size) {
     int index = get_global_id(0);
-    __global float4* buffer4 = (__global float4*) buffer;
+    __global int4* buffer4 = (__global int4*) buffer;
     int sizeDiv4 = size/4;
     while (index < sizeDiv4) {
-        buffer4[index] = (float4) (0.0f);
+        buffer4[index] = (int4) 0;
         index += get_global_size(0);
     }
     if (get_global_id(0) == 0)
         for (int i = sizeDiv4*4; i < size; i++)
-            buffer[i] = 0.0f;
+            buffer[i] = 0;
 }
 
 /**
  * Fill two buffers with 0.
  */
-__kernel void clearTwoBuffers(__global float* buffer1, int size1, __global float* buffer2, int size2) {
+__kernel void clearTwoBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
 }
@@ -26,7 +26,7 @@ __kernel void clearTwoBuffers(__global float* buffer1, int size1, __global float
 /**
  * Fill three buffers with 0.
  */
-__kernel void clearThreeBuffers(__global float* buffer1, int size1, __global float* buffer2, int size2, __global float* buffer3, int size3) {
+__kernel void clearThreeBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -35,7 +35,7 @@ __kernel void clearThreeBuffers(__global float* buffer1, int size1, __global flo
 /**
  * Fill four buffers with 0.
  */
-__kernel void clearFourBuffers(__global float* buffer1, int size1, __global float* buffer2, int size2, __global float* buffer3, int size3, __global float* buffer4, int size4) {
+__kernel void clearFourBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3, __global int* buffer4, int size4) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -55,6 +55,20 @@ __kernel void reduceFloat4Buffer(__global float4* buffer, int bufferSize, int nu
             sum += buffer[i];
         buffer[index] = sum;
         index += get_global_size(0);
+    }
+}
+
+/**
+ * Sum the various buffers containing forces.
+ */
+__kernel void reduceForces(__global long* longBuffer, __global float4* buffer, int bufferSize, int numBuffers) {
+    int totalSize = bufferSize*numBuffers;
+    float scale = 1.0f/(float) 0xFFFFFFFF;
+    for (int index = get_global_id(0); index < bufferSize; index += get_global_size(0)) {
+        float4 sum = (float4) (scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0.0f);
+        for (int i = index; i < totalSize; i += bufferSize)
+            sum += buffer[i];
+        buffer[index] = sum;
     }
 }
 

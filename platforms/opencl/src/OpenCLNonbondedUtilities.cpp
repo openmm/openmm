@@ -48,9 +48,16 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
         numForceBuffers = numForceThreadBlocks;
     }
     else if (context.getSIMDWidth() == 32) {
-        numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-        forceThreadBlockSize = 128;
-        numForceBuffers = numForceThreadBlocks;
+        if (context.getSupports64BitGlobalAtomics()) {
+            numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+            forceThreadBlockSize = 256;
+            numForceBuffers = 2;
+        }
+        else {
+            numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+            forceThreadBlockSize = 128;
+            numForceBuffers = numForceThreadBlocks;
+        }
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
@@ -282,7 +289,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(6, blockBoundingBox->getDeviceBuffer());
             findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
             findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(8, interactionCount->getDeviceBuffer());
-            findInteractionsWithinBlocksKernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_uint), NULL);
+            findInteractionsWithinBlocksKernel.setArg(9, 128*sizeof(cl_uint), NULL);
             findInteractionsWithinBlocksKernel.setArg<cl_uint>(10, interactingTiles->getSize());
         }
     }
@@ -312,7 +319,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     if (context.getSIMDWidth() == 32 && !deviceIsCpu) {
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
-        context.executeKernel(findInteractionsWithinBlocksKernel, context.getNumAtoms());
+        context.executeKernel(findInteractionsWithinBlocksKernel, context.getNumAtoms(), 128);
     }
 }
 
@@ -492,7 +499,10 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     // Set arguments to the Kernel.
 
     int index = 0;
-    kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
+    if (context.getSupports64BitGlobalAtomics())
+        kernel.setArg<cl::Memory>(index++, context.getLongForceBuffer().getDeviceBuffer());
+    else
+        kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());

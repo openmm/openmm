@@ -1,4 +1,7 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#endif
 #define TILE_SIZE 32
 
 typedef struct {
@@ -14,7 +17,13 @@ typedef struct {
 /**
  * Compute the Born sum.
  */
-__kernel void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params,
+__kernel void computeBornSum(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* global_bornSum,
+#else
+        __global float* global_bornSum,
+#endif
+        __global float4* posq, __global float2* global_params,
         __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
@@ -174,16 +183,10 @@ __kernel void computeBornSum(__global float* global_bornSum, __global float4* po
 
                                 // Sum the forces on atom j.
 
-                                if (tgx % 2 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1];
                                 if (tgx % 4 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+2];
-                                if (tgx % 8 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+4];
-                                if (tgx % 16 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+8];
+                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1]+tempBuffer[get_local_id(0)+2]+tempBuffer[get_local_id(0)+3];
                                 if (tgx == 0)
-                                    localData[tbx+j].bornSum += tempBuffer[get_local_id(0)] + tempBuffer[get_local_id(0)+16];
+                                    localData[tbx+j].bornSum += tempBuffer[get_local_id(0)]+tempBuffer[get_local_id(0)+4]+tempBuffer[get_local_id(0)+8]+tempBuffer[get_local_id(0)+12]+tempBuffer[get_local_id(0)+16]+tempBuffer[get_local_id(0)+20]+tempBuffer[get_local_id(0)+24]+tempBuffer[get_local_id(0)+28];
                             }
                         }
                     }
@@ -245,6 +248,16 @@ __kernel void computeBornSum(__global float* global_bornSum, __global float4* po
         // Write results.  We need to coordinate between warps to make sure no two of them
         // ever try to write to the same piece of memory at the same time.
         
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        if (pos < end) {
+            const unsigned int offset = x*TILE_SIZE + tgx;
+            atom_add(&global_bornSum[offset], (long) (bornSum*0xFFFFFFFF));
+        }
+        if (pos < end && x != y) {
+            const unsigned int offset = y*TILE_SIZE + tgx;
+            atom_add(&global_bornSum[offset], (long) (localData[get_local_id(0)].bornSum*0xFFFFFFFF));
+        }
+#else
         int writeX = (pos < end ? x : -1);
         int writeY = (pos < end && x != y ? y : -1);
         if (tgx == 0)
@@ -294,6 +307,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __global float4* po
                 }
             }
         }
+#endif
         lasty = y;
         pos++;
     } while (pos < end);
@@ -303,8 +317,13 @@ __kernel void computeBornSum(__global float* global_bornSum, __global float4* po
  * First part of computing the GBSA interaction.
  */
 
-__kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
-        __global float4* posq, __global float* global_bornRadii, __global float* global_bornForce,
+__kernel void computeGBSAForce1(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* forceBuffers, __global long* global_bornForce,
+#else
+        __global float4* forceBuffers, __global float* global_bornForce,
+#endif
+        __global float* energyBuffer, __global float4* posq, __global float* global_bornRadii,
         __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
@@ -460,16 +479,10 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
 
                                 // Sum the forces on atom j.
 
-                                if (tgx % 2 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1];
                                 if (tgx % 4 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+2];
-                                if (tgx % 8 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+4];
-                                if (tgx % 16 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+8];
+                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1]+tempBuffer[get_local_id(0)+2]+tempBuffer[get_local_id(0)+3];
                                 if (tgx == 0) {
-                                    float4 sum = tempBuffer[get_local_id(0)] + tempBuffer[get_local_id(0)+16];
+                                    float4 sum = tempBuffer[get_local_id(0)]+tempBuffer[get_local_id(0)+4]+tempBuffer[get_local_id(0)+8]+tempBuffer[get_local_id(0)+12]+tempBuffer[get_local_id(0)+16]+tempBuffer[get_local_id(0)+20]+tempBuffer[get_local_id(0)+24]+tempBuffer[get_local_id(0)+28];
                                     localData[tbx+j].fx += sum.x;
                                     localData[tbx+j].fy += sum.y;
                                     localData[tbx+j].fz += sum.z;
@@ -532,6 +545,22 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
         // Write results.  We need to coordinate between warps to make sure no two of them
         // ever try to write to the same piece of memory at the same time.
         
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        if (pos < end) {
+            const unsigned int offset = x*TILE_SIZE + tgx;
+            atom_add(&forceBuffers[offset], (long) (force.x*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0xFFFFFFFF));
+            atom_add(&global_bornForce[offset], (long) (force.w*0xFFFFFFFF));
+        }
+        if (pos < end && x != y) {
+            const unsigned int offset = y*TILE_SIZE + tgx;
+            atom_add(&forceBuffers[offset], (long) (localData[get_local_id(0)].fx*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0xFFFFFFFF));
+            atom_add(&global_bornForce[offset], (long) (localData[get_local_id(0)].fw*0xFFFFFFFF));
+        }
+#else
         int writeX = (pos < end ? x : -1);
         int writeY = (pos < end && x != y ? y : -1);
         if (tgx == 0)
@@ -583,6 +612,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                 }
             }
         }
+#endif
         lasty = y;
         pos++;
     } while (pos < end);

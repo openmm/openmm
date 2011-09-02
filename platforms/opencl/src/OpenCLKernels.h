@@ -572,7 +572,8 @@ private:
 class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
     OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl),
-            hasCreatedKernels(false), params(NULL), bornSum(NULL), bornRadii(NULL), bornForce(NULL), obcChain(NULL) {
+            hasCreatedKernels(false), params(NULL), bornSum(NULL), longBornSum(NULL), bornRadii(NULL), bornForce(NULL),
+            longBornForce(NULL), obcChain(NULL) {
     }
     ~OpenCLCalcGBSAOBCForceKernel();
     /**
@@ -598,8 +599,10 @@ private:
     OpenCLContext& cl;
     OpenCLArray<mm_float2>* params;
     OpenCLArray<cl_float>* bornSum;
+    OpenCLArray<cl_long>* longBornSum;
     OpenCLArray<cl_float>* bornRadii;
     OpenCLArray<cl_float>* bornForce;
+    OpenCLArray<cl_long>* longBornForce;
     OpenCLArray<cl_float>* obcChain;
     cl::Kernel computeBornSumKernel;
     cl::Kernel reduceBornSumKernel;
@@ -613,8 +616,8 @@ private:
 class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomGBForceKernel(name, platform),
-            hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), globals(NULL), valueBuffers(NULL),
-            tabulatedFunctionParams(NULL), system(system) {
+            hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
+            valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomGBForceKernel();
     /**
@@ -635,13 +638,15 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     bool hasInitializedKernels, needParameterGradient;
-    int maxTiles;
+    int maxTiles, numComputedValues;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
     OpenCLParameterSet* energyDerivs;
+    OpenCLArray<cl_long>* longEnergyDerivs;
     OpenCLArray<cl_float>* globals;
     OpenCLArray<cl_float>* valueBuffers;
+    OpenCLArray<cl_long>* longValueBuffers;
     OpenCLArray<mm_float4>* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;

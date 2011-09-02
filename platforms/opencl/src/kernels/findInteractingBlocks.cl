@@ -267,9 +267,9 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
 
             float4 delta = apos-center;
 #ifdef USE_PERIODIC
-            delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
             delta = max((float4) 0.0f, fabs(delta)-boxSize);
             int thread = get_local_id(0);
@@ -278,31 +278,16 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
             // Sum the flags.
 
 #ifdef WARPS_ARE_ATOMIC
-            if (index % 2 == 0)
-                flags[thread] += flags[thread+1];
             if (index % 4 == 0)
-                flags[thread] += flags[thread+2];
-            if (index % 8 == 0)
-                flags[thread] += flags[thread+4];
-            if (index % 16 == 0)
-                flags[thread] += flags[thread+8];
+                flags[thread] += flags[thread+1]+flags[thread+2]+flags[thread+3];
 #else
             barrier(CLK_LOCAL_MEM_FENCE);
-            if (index % 2 == 0)
-                flags[thread] += flags[thread+1];
-            barrier(CLK_LOCAL_MEM_FENCE);
             if (index % 4 == 0)
-                flags[thread] += flags[thread+2];
-            barrier(CLK_LOCAL_MEM_FENCE);
-            if (index % 8 == 0)
-                flags[thread] += flags[thread+4];
-            barrier(CLK_LOCAL_MEM_FENCE);
-            if (index % 16 == 0)
-                flags[thread] += flags[thread+8];
+                flags[thread] += flags[thread+1]+flags[thread+2]+flags[thread+3];
             barrier(CLK_LOCAL_MEM_FENCE);
 #endif
             if (index == 0) {
-                unsigned int allFlags = flags[thread] + flags[thread+16];
+                unsigned int allFlags = flags[thread]+flags[thread+4]+flags[thread+8]+flags[thread+12]+flags[thread+16]+flags[thread+20]+flags[thread+24]+flags[thread+28];
 
                 // Count how many flags are set, and based on that decide whether to compute all interactions
                 // or only a fraction of them.

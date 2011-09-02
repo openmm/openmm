@@ -1,4 +1,7 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#endif
 #define TILE_SIZE 32
 
 typedef struct {
@@ -11,7 +14,13 @@ typedef struct {
 /**
  * Compute nonbonded interactions.
  */
-__kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
+__kernel void computeNonbonded(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* forceBuffers,
+#else
+        __global float4* forceBuffers,
+#endif
+        __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float* tempBuffer,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
@@ -157,6 +166,14 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                             if ((flags&(1<<j)) != 0) {
                                 bool isExcluded = false;
                                 int atom2 = tbx+j;
+                                int bufferIndex = 3*get_local_id(0);
+#ifdef USE_SYMMETRIC
+                                float dEdR = 0.0f;
+#else
+                                float4 dEdR1 = (float4) 0.0f;
+                                float4 dEdR2 = (float4) 0.0f;
+#endif
+                                float tempEnergy = 0.0f;
                                 float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
@@ -165,20 +182,18 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                                float invR = RSQRT(r2);
-                                float r = RECIP(invR);
-                                LOAD_ATOM2_PARAMETERS
-                                atom2 = y*TILE_SIZE+j;
-#ifdef USE_SYMMETRIC
-                                float dEdR = 0.0f;
-#else
-                                float4 dEdR1 = (float4) 0.0f;
-                                float4 dEdR2 = (float4) 0.0f;
+#ifdef USE_CUTOFF
+                                if (r2 < CUTOFF_SQUARED) {
 #endif
-                                float tempEnergy = 0.0f;
-                                COMPUTE_INTERACTION
-                                energy += tempEnergy;
-                                int bufferIndex = 3*get_local_id(0);
+                                    float invR = RSQRT(r2);
+                                    float r = RECIP(invR);
+                                    LOAD_ATOM2_PARAMETERS
+                                    atom2 = y*TILE_SIZE+j;
+                                    COMPUTE_INTERACTION
+                                    energy += tempEnergy;
+#ifdef USE_CUTOFF
+                                }
+#endif
 #ifdef USE_SYMMETRIC
                                 delta.xyz *= dEdR;
                                 force.xyz -= delta.xyz;
@@ -194,30 +209,15 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 
                                 // Sum the forces on atom2.
 
-                                if (tgx % 2 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5];
-                                }
                                 if (tgx % 4 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+6];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+7];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+8];
-                                }
-                                if (tgx % 8 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+12];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+13];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+14];
-                                }
-                                if (tgx % 16 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+24];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+25];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+26];
+                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
                                 }
                                 if (tgx == 0) {
-                                    localData[tbx+j].fx += tempBuffer[bufferIndex] + tempBuffer[bufferIndex+48];
-                                    localData[tbx+j].fy += tempBuffer[bufferIndex+1] + tempBuffer[bufferIndex+49];
-                                    localData[tbx+j].fz += tempBuffer[bufferIndex+2] + tempBuffer[bufferIndex+50];
+                                    localData[tbx+j].fx += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                    localData[tbx+j].fy += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                    localData[tbx+j].fz += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
                                 }
                             }
                         }
@@ -246,30 +246,36 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                         float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                        float invR = RSQRT(r2);
-                        float r = RECIP(invR);
-                        LOAD_ATOM2_PARAMETERS
-                        atom2 = y*TILE_SIZE+tj;
-#ifdef USE_SYMMETRIC
-                        float dEdR = 0.0f;
-#else
-                        float4 dEdR1 = (float4) 0.0f;
-                        float4 dEdR2 = (float4) 0.0f;
+#ifdef USE_CUTOFF
+                        if (r2 < CUTOFF_SQUARED) {
 #endif
-                        float tempEnergy = 0.0f;
-                        COMPUTE_INTERACTION
-                        energy += tempEnergy;
+                            float invR = RSQRT(r2);
+                            float r = RECIP(invR);
+                            LOAD_ATOM2_PARAMETERS
+                            atom2 = y*TILE_SIZE+tj;
 #ifdef USE_SYMMETRIC
-                        delta.xyz *= dEdR;
-                        force.xyz -= delta.xyz;
-                        localData[tbx+tj].fx += delta.x;
-                        localData[tbx+tj].fy += delta.y;
-                        localData[tbx+tj].fz += delta.z;
+                            float dEdR = 0.0f;
 #else
-                        force.xyz -= dEdR1.xyz;
-                        localData[tbx+tj].fx += dEdR2.x;
-                        localData[tbx+tj].fy += dEdR2.y;
-                        localData[tbx+tj].fz += dEdR2.z;
+                            float4 dEdR1 = (float4) 0.0f;
+                            float4 dEdR2 = (float4) 0.0f;
+#endif
+                            float tempEnergy = 0.0f;
+                            COMPUTE_INTERACTION
+                            energy += tempEnergy;
+#ifdef USE_SYMMETRIC
+                            delta.xyz *= dEdR;
+                            force.xyz -= delta.xyz;
+                            localData[tbx+tj].fx += delta.x;
+                            localData[tbx+tj].fy += delta.y;
+                            localData[tbx+tj].fz += delta.z;
+#else
+                            force.xyz -= dEdR1.xyz;
+                            localData[tbx+tj].fx += dEdR2.x;
+                            localData[tbx+tj].fy += dEdR2.y;
+                            localData[tbx+tj].fz += dEdR2.z;
+#endif
+#ifdef USE_CUTOFF
+                        }
 #endif
 #ifdef USE_EXCLUSIONS
                         excl >>= 1;
@@ -283,6 +289,20 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         // Write results.  We need to coordinate between warps to make sure no two of them
         // ever try to write to the same piece of memory at the same time.
         
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        if (pos < end) {
+            const unsigned int offset = x*TILE_SIZE + tgx;
+            atom_add(&forceBuffers[offset], (long) (force.x*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0xFFFFFFFF));
+        }
+        if (pos < end && x != y) {
+            const unsigned int offset = y*TILE_SIZE + tgx;
+            atom_add(&forceBuffers[offset], (long) (localData[get_local_id(0)].fx*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0xFFFFFFFF));
+        }
+#else
         int writeX = (pos < end ? x : -1);
         int writeY = (pos < end && x != y ? y : -1);
         if (tgx == 0)
@@ -332,6 +352,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 }
             }
         }
+#endif
         lasty = y;
         pos++;
     } while (pos < end);

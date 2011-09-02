@@ -7,15 +7,24 @@
  */
 
 __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float beta, float gamma,
-            __global float* bornSum, __global float2* params, __global float* bornRadii, __global float* obcChain) {
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            __global long* bornSum,
+#else
+            __global float* bornSum,
+#endif
+            __global float2* params, __global float* bornRadii, __global float* obcChain) {
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Get summed Born data
 
         int totalSize = bufferSize*numBuffers;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        float sum = (1.0f/0xFFFFFFFF)*bornSum[index];
+#else
         float sum = bornSum[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             sum += bornSum[i];
+#endif
 
         // Now calculate Born radius and OBC term.
 
@@ -38,18 +47,24 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
  * Reduce the Born force.
  */
 
-__kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce, __global float* energyBuffer,
-            __global float2* params, __global float* bornRadii, __global float* obcChain) {
+__kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce,
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            __global long* bornForceIn,
+#endif
+            __global float* energyBuffer, __global float2* params, __global float* bornRadii, __global float* obcChain) {
     float energy = 0.0f;
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Sum the Born force
 
         int totalSize = bufferSize*numBuffers;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        float force = (1.0f/0xFFFFFFFF)*bornForceIn[index];
+#else
         float force = bornForce[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             force += bornForce[i];
-
+#endif
         // Now calculate the actual force
 
         float offsetRadius = params[index].x;

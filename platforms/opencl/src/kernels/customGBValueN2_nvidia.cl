@@ -1,12 +1,20 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#endif
 #define TILE_SIZE 32
 
 /**
  * Compute a value based on pair interactions.
  */
 __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __global float* global_value, __local float* local_value,
-        __local float* tempBuffer,
+        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices,
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* global_value,
+#else
+        __global float* global_value,
+#endif
+        __local float* local_value, __local float* tempBuffer,
 #ifdef USE_CUTOFF
         __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
@@ -164,16 +172,10 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
 
                                 // Sum the forces on atom2.
 
-                                if (tgx % 2 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1];
                                 if (tgx % 4 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+2];
-                                if (tgx % 8 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+4];
-                                if (tgx % 16 == 0)
-                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+8];
+                                    tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1]+tempBuffer[get_local_id(0)+2]+tempBuffer[get_local_id(0)+3];
                                 if (tgx == 0)
-                                    local_value[tbx+j] += tempBuffer[get_local_id(0)] + tempBuffer[get_local_id(0)+16];
+                                    local_value[tbx+j] += tempBuffer[get_local_id(0)]+tempBuffer[get_local_id(0)+4]+tempBuffer[get_local_id(0)+8]+tempBuffer[get_local_id(0)+12]+tempBuffer[get_local_id(0)+16]+tempBuffer[get_local_id(0)+20]+tempBuffer[get_local_id(0)+24]+tempBuffer[get_local_id(0)+28];
                             }
                         }
                     }
@@ -233,6 +235,16 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
         // Write results.  We need to coordinate between warps to make sure no two of them
         // ever try to write to the same piece of memory at the same time.
         
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        if (pos < end) {
+            const unsigned int offset = x*TILE_SIZE + tgx;
+            atom_add(&global_value[offset], (long) (value*0xFFFFFFFF));
+        }
+        if (pos < end && x != y) {
+            const unsigned int offset = y*TILE_SIZE + tgx;
+            atom_add(&global_value[offset], (long) (local_value[get_local_id(0)]*0xFFFFFFFF));
+        }
+#else
         int writeX = (pos < end ? x : -1);
         int writeY = (pos < end && x != y ? y : -1);
         if (tgx == 0)
@@ -282,6 +294,7 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
                 }
             }
         }
+#endif
         lasty = y;
         pos++;
     } while (pos < end);

@@ -61,7 +61,8 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
-        forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL), thread(NULL) {
+        forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
+        nonbonded(NULL), thread(NULL) {
     try {
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
@@ -148,6 +149,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
     clearThreeBuffersKernel = cl::Kernel(utilities, "clearThreeBuffers");
     clearFourBuffersKernel = cl::Kernel(utilities, "clearFourBuffers");
     reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
+    reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
@@ -195,6 +197,8 @@ OpenCLContext::~OpenCLContext() {
         delete force;
     if (forceBuffers != NULL)
         delete forceBuffers;
+    if (longForceBuffer != NULL)
+        delete longForceBuffer;
     if (energyBuffer != NULL)
         delete energyBuffer;
     if (atomIndex != NULL)
@@ -215,6 +219,14 @@ void OpenCLContext::initialize(const System& system) {
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
     forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
+    if (supports64BitGlobalAtomics) {
+        longForceBuffer = new OpenCLArray<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer", false);
+        reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer->getDeviceBuffer());
+        reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers->getDeviceBuffer());
+        reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
+        reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
+        addAutoclearBuffer(longForceBuffer->getDeviceBuffer(), longForceBuffer->getSize()*2);
+    }
     addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
     force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
     energyBuffer = new OpenCLArray<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer", true);
@@ -328,7 +340,7 @@ void OpenCLContext::clearBuffer(OpenCLArray<mm_float4>& array) {
 void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
     clearBufferKernel.setArg<cl::Memory>(0, memory);
     clearBufferKernel.setArg<cl_int>(1, size);
-    executeKernel(clearBufferKernel, size);
+    executeKernel(clearBufferKernel, size, 128);
 }
 
 void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {
@@ -348,7 +360,7 @@ void OpenCLContext::clearAutoclearBuffers() {
         clearFourBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
         clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
         clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]));
+        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), 128);
         base += 4;
     }
     if (total-base == 3) {
@@ -358,18 +370,25 @@ void OpenCLContext::clearAutoclearBuffers() {
         clearThreeBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
         clearThreeBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
         clearThreeBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-        executeKernel(clearThreeBuffersKernel, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]));
+        executeKernel(clearThreeBuffersKernel, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), 128);
     }
     else if (total-base == 2) {
         clearTwoBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
         clearTwoBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
         clearTwoBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
         clearTwoBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-        executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]));
+        executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
     }
     else if (total-base == 1) {
         clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]);
     }
+}
+
+void OpenCLContext::reduceForces() {
+    if (supports64BitGlobalAtomics)
+        executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
+    else
+        reduceBuffer(*forceBuffers, numForceBuffers);
 }
 
 void OpenCLContext::reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers) {
@@ -377,7 +396,7 @@ void OpenCLContext::reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers) 
     reduceFloat4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
     reduceFloat4Kernel.setArg<cl_int>(1, bufferSize);
     reduceFloat4Kernel.setArg<cl_int>(2, numBuffers);
-    executeKernel(reduceFloat4Kernel, bufferSize);
+    executeKernel(reduceFloat4Kernel, bufferSize, 128);
 }
 
 void OpenCLContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {

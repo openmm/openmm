@@ -1,12 +1,24 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#define TILE_SIZE 32
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#define STORE_DERIVATIVE_1(INDEX) atom_add(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (long) (deriv##INDEX##_1*0xFFFFFFFF));
+#define STORE_DERIVATIVE_2(INDEX) atom_add(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (long) (local_deriv##INDEX[get_local_id(0)]*0xFFFFFFFF));
+#else
 #define STORE_DERIVATIVE_1(INDEX) derivBuffers##INDEX[offset] += deriv##INDEX##_1;
 #define STORE_DERIVATIVE_2(INDEX) derivBuffers##INDEX[offset] += local_deriv##INDEX[get_local_id(0)];
+#endif
+#define TILE_SIZE 32
 
 /**
  * Compute a force based on pair interactions.
  */
-__kernel void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
+__kernel void computeN2Energy(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* forceBuffers,
+#else
+        __global float4* forceBuffers,
+#endif
+        __global float* energyBuffer, __local float4* local_force,
 	__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions, __global unsigned int* exclusionIndices,
         __global unsigned int* exclusionRowIndices, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
@@ -194,6 +206,22 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
         // Write results.  We need to coordinate between warps to make sure no two of them
         // ever try to write to the same piece of memory at the same time.
         
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        if (pos < end) {
+            const unsigned int offset = x*TILE_SIZE + tgx;
+            atom_add(&forceBuffers[offset], (long) (force.x*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0xFFFFFFFF));
+            STORE_DERIVATIVES_1
+        }
+        if (pos < end && x != y) {
+            const unsigned int offset = y*TILE_SIZE + tgx;
+            atom_add(&forceBuffers[offset], (long) (local_force[get_local_id(0)].x*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (local_force[get_local_id(0)].y*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (local_force[get_local_id(0)].z*0xFFFFFFFF));
+            STORE_DERIVATIVES_2
+        }
+#else
         int writeX = (pos < end ? x : -1);
         int writeY = (pos < end && x != y ? y : -1);
         if (tgx == 0)
@@ -245,6 +273,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 }
             }
         }
+#endif
         pos++;
     } while (pos < end);
     energyBuffer[get_global_id(0)] += energy;

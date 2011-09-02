@@ -691,6 +691,12 @@ void testParallelComputation() {
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; i++)
         positions[i] = Vec3(5*genrand_real2(sfmt), 5*genrand_real2(sfmt), 5*genrand_real2(sfmt));
+    for (int i = 0; i < numParticles; ++i)
+        for (int j = 0; j < i; ++j) {
+            Vec3 delta = positions[i]-positions[j];
+            if (delta.dot(delta) < 0.1)
+                force->addException(i, j, 0, 1, 0);
+        }
     VerletIntegrator integrator1(0.01);
     map<string, string> props1;
     props1[OpenCLPlatform::OpenCLDeviceIndex()] = "0";

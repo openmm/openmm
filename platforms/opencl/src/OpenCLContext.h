@@ -216,6 +216,12 @@ public:
         return *forceBuffers;
     }
     /**
+     * Get the array which contains a contribution to each force represented as 64 bit fixed point.
+     */
+    OpenCLArray<cl_long>& getLongForceBuffer() {
+        return *longForceBuffer;
+    }
+    /**
      * Get the array which contains the buffer in which energy is computed.
      */
     OpenCLArray<cl_float>& getEnergyBuffer() {
@@ -311,6 +317,10 @@ public:
      * @param numBuffers  the number of buffers packed into the array
      */
     void reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers);
+    /**
+     * Sum the buffesr containing forces.
+     */
+    void reduceForces();
     /**
      * Get the current simulation time.
      */
@@ -463,6 +473,7 @@ private:
     cl::Kernel clearThreeBuffersKernel;
     cl::Kernel clearFourBuffersKernel;
     cl::Kernel reduceFloat4Kernel;
+    cl::Kernel reduceForcesKernel;
     std::vector<OpenCLForceInfo*> forces;
     std::vector<MoleculeGroup> moleculeGroups;
     std::vector<mm_int4> posCellOffsets;
@@ -470,6 +481,7 @@ private:
     OpenCLArray<mm_float4>* velm;
     OpenCLArray<mm_float4>* force;
     OpenCLArray<mm_float4>* forceBuffers;
+    OpenCLArray<cl_long>* longForceBuffer;
     OpenCLArray<cl_float>* energyBuffer;
     OpenCLArray<cl_int>* atomIndex;
     std::vector<cl::Memory*> autoclearBuffers;
