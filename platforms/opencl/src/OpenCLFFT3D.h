@@ -64,12 +64,15 @@ public:
      */
     OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize);
     /**
-     * Perform an in-place Fourier transform.
+     * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
+     * arrays must be different.  Also, the input array is used as workspace, so its contents
+     * are destroyed.
      *
-     * @param data     the data to transform, ordered such that data[x*ysize*zsize + y*zsize + z] contains element (x, y, z)
+     * @param in       the data to transform, ordered such that in[x*ysize*zsize + y*zsize + z] contains element (x, y, z)
+     * @param out      on exit, this contains the transformed data
      * @param forward  true to perform a forward transform, false to perform an inverse transform
      */
-    void execFFT(OpenCLArray<mm_float2>& data, bool forward = true);
+    void execFFT(OpenCLArray<mm_float2>& in, OpenCLArray<mm_float2>& out, bool forward = true);
     /**
      * Get the smallest legal size for a dimension of the grid (that is, a size with no prime
      * factors other than 2, 3, and 5).
@@ -78,7 +81,7 @@ public:
      */
     static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int xsize, int ysize, int zsize, int xmult, int ymult, int zmult);
+    cl::Kernel createKernel(int xsize, int ysize, int zsize);
     int xsize, ysize, zsize;
     OpenCLContext& context;
     cl::Kernel xkernel, ykernel, zkernel;

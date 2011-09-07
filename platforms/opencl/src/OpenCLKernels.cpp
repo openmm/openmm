@@ -1139,6 +1139,8 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete cosSinSums;
     if (pmeGrid != NULL)
         delete pmeGrid;
+    if (pmeGrid2 != NULL)
+        delete pmeGrid2;
     if (pmeBsplineModuliX != NULL)
         delete pmeBsplineModuliX;
     if (pmeBsplineModuliY != NULL)
@@ -1266,6 +1268,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         // Create required data structures.
 
         pmeGrid = new OpenCLArray<mm_float2>(cl, gridSizeX*gridSizeY*gridSizeZ, "pmeGrid");
+        pmeGrid2 = new OpenCLArray<mm_float2>(cl, gridSizeX*gridSizeY*gridSizeZ, "pmeGrid2");
         pmeBsplineModuliX = new OpenCLArray<cl_float>(cl, gridSizeX, "pmeBsplineModuliX");
         pmeBsplineModuliY = new OpenCLArray<cl_float>(cl, gridSizeY, "pmeBsplineModuliY");
         pmeBsplineModuliZ = new OpenCLArray<cl_float>(cl, gridSizeZ, "pmeBsplineModuliZ");
@@ -1419,7 +1422,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
-            pmeConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
+            pmeConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid2->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
@@ -1474,11 +1477,11 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             else
                 cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
         }
-        fft->execFFT(*pmeGrid, true);
+        fft->execFFT(*pmeGrid, *pmeGrid2, true);
         pmeConvolutionKernel.setArg<mm_float4>(5, invBoxSize);
         pmeConvolutionKernel.setArg<cl_float>(6, (float) (1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z)));
         cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
-        fft->execFFT(*pmeGrid, false);
+        fft->execFFT(*pmeGrid2, *pmeGrid, false);
         pmeInterpolateForceKernel.setArg<mm_float4>(5, boxSize);
         pmeInterpolateForceKernel.setArg<mm_float4>(6, invBoxSize);
         cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
