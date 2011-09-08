@@ -475,8 +475,8 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL), pmeGrid(NULL), pmeGrid2(NULL),
-            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDtheta(NULL), pmeAtomRange(NULL),
+            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL), pmeGrid(NULL),
+            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeAtomRange(NULL),
             pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
@@ -509,7 +509,6 @@ private:
     OpenCLArray<cl_float>* pmeBsplineModuliY;
     OpenCLArray<cl_float>* pmeBsplineModuliZ;
     OpenCLArray<mm_float4>* pmeBsplineTheta;
-    OpenCLArray<mm_float4>* pmeBsplineDtheta;
     OpenCLArray<cl_int>* pmeAtomRange;
     OpenCLArray<mm_int2>* pmeAtomGridIndex;
     OpenCLSort<mm_int2>* sort;
