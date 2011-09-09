@@ -159,7 +159,7 @@ __kernel void computeNonbonded(
                     else {
                         // Compute only a subset of the interactions in this tile.
 
-                        for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                        for (j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 bool isExcluded = false;
                                 int atom2 = tbx+j;
@@ -230,7 +230,7 @@ __kernel void computeNonbonded(
                     excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
                     unsigned int tj = tgx;
-                    for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                    for (j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                         bool isExcluded = !(excl & 0x1);
 #endif
