@@ -25,9 +25,9 @@ if (!isExcluded || needCorrection) {
             float sig2 = invR*sig;
             sig2 *= sig2;
             float sig6 = sig2*sig2*sig2;
-            float eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
-            tempForce = eps*(12.0f*sig6 - 6.0f)*sig6 + prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-            tempEnergy += eps*(sig6 - 1.0f)*sig6 + prefactor*erfcAlphaR;
+            float epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
+            tempForce = epssig6*(12.0f*sig6 - 6.0f) + prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+            tempEnergy += epssig6*(sig6 - 1.0f) + prefactor*erfcAlphaR;
 #else
             tempForce = prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
             tempEnergy += prefactor*erfcAlphaR;
@@ -49,9 +49,9 @@ if (!isExcluded || needCorrection) {
     float sig2 = invR*sig;
     sig2 *= sig2;
     float sig6 = sig2*sig2*sig2;
-    float eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
-    tempForce = eps*(12.0f*sig6 - 6.0f)*sig6;
-    tempEnergy += select(0.0f, eps*(sig6 - 1.0f)*sig6, includeInteraction);
+    float epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
+    tempForce = epssig6*(12.0f*sig6 - 6.0f);
+    tempEnergy += select(0.0f, epssig6*(sig6 - 1.0f), includeInteraction);
   #endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF

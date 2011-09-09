@@ -71,52 +71,38 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
         for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
             sum[i] = temp[i].y;
     barrier(CLK_LOCAL_MEM_FENCE);
+    int numValid = sum[BUFFER_SIZE-1];
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     // Compact the buffer.
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
         if (valid[i]) {
             temp[sum[i]-1] = buffer[i];
+            sum[i] = valid[i];
             valid[i] = false;
+            buffer[i] = (ushort2) 1;
         }
     barrier(CLK_LOCAL_MEM_FENCE);
-    int numValid = sum[BUFFER_SIZE-1];
 
+#ifndef WARPS_ARE_ATOMIC
     // Filter the list of tiles by comparing the distance from each atom to the other bounding box.
+    // We only do this if we aren't already optimizing the computation using flags.
 
-    int tile;
     int index = get_local_id(0)&(TILE_SIZE-1);
     int group = get_local_id(0)/TILE_SIZE;
-    __local int* flag = sum;
-    int lasty = -1;
     float4 center, boxSize, pos;
-    for (tile = 0; tile < numValid; ) {
+    for (int tile = 0; tile < numValid; tile++) {
         int x = temp[tile].x;
         int y = temp[tile].y;
-        if (x == y) {
-            tile++;
+        if (x == y)
             continue;
-        }
-        if (index == 0)
-            flag[group] = true;
-        barrier(CLK_LOCAL_MEM_FENCE);
 
         // Load an atom position and the bounding box the other block.
 
-        if (group == 0) {
-            center = blockCenter[x];
-            boxSize = blockBoundingBox[x];
-            if (y != lasty)
-                pos = posq[y*TILE_SIZE+index];
-        }
-        else {
-            if (y != lasty) {
-                center = blockCenter[y];
-                boxSize = blockBoundingBox[y];
-            }
-            pos = posq[x*TILE_SIZE+index];
-        }
-        lasty = y;
+        center = blockCenter[(group == 0 ? x : y)];
+        boxSize = blockBoundingBox[(group == 0 ? x : y)];
+        pos = posq[(group == 0 ? y : x)*TILE_SIZE+index];
 
         // Find the distance of the atom from the bounding box.
 
@@ -127,6 +113,7 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
         delta = max((float4) 0.0f, fabs(delta)-boxSize);
+        __local ushort* flag = (__local ushort*) &buffer[tile];
         if (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < cutoffSquared)
             flag[group] = false;
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -136,11 +123,11 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
             numValid--;
             if (get_local_id(0) == 0)
                 temp[tile] = temp[numValid];
+            tile--;
         }
-        else
-            tile++;
         barrier(CLK_LOCAL_MEM_FENCE);
     }
+#endif
 
     // Store it to global memory.
 

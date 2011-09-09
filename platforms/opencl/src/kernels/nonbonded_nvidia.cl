@@ -40,7 +40,6 @@ __kernel void computeNonbonded(
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
 #endif
     float energy = 0.0f;
-    unsigned int lasty = 0xFFFFFFFF;
     __local unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __local int exclusionIndex[WARPS_PER_GROUP];
     __local int2* reservedBlocks = (__local int2*) exclusionRange;
@@ -141,15 +140,13 @@ __kernel void computeNonbonded(
                 // This is an off-diagonal tile.
 
                 const unsigned int localAtomIndex = get_local_id(0);
-                if (lasty != y) {
-                    unsigned int j = y*TILE_SIZE + tgx;
-                    float4 tempPosq = posq[j];
-                    localData[localAtomIndex].x = tempPosq.x;
-                    localData[localAtomIndex].y = tempPosq.y;
-                    localData[localAtomIndex].z = tempPosq.z;
-                    localData[localAtomIndex].q = tempPosq.w;
-                    LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-                }
+                unsigned int j = y*TILE_SIZE + tgx;
+                float4 tempPosq = posq[j];
+                localData[localAtomIndex].x = tempPosq.x;
+                localData[localAtomIndex].y = tempPosq.y;
+                localData[localAtomIndex].z = tempPosq.z;
+                localData[localAtomIndex].q = tempPosq.w;
+                LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
                 localData[localAtomIndex].fx = 0.0f;
                 localData[localAtomIndex].fy = 0.0f;
                 localData[localAtomIndex].fz = 0.0f;
@@ -353,7 +350,6 @@ __kernel void computeNonbonded(
             }
         }
 #endif
-        lasty = y;
         pos++;
     } while (pos < end);
     energyBuffer[get_global_id(0)] += energy;
