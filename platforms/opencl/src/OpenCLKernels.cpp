@@ -1423,10 +1423,11 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ->getDeviceBuffer());
+            interpolateForceThreads = (cl.getDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>() > 2*128*PmeOrder*sizeof(mm_float4) ? 128 : 64);
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
-            pmeInterpolateForceKernel.setArg(5, 2*128*PmeOrder*sizeof(mm_float4), NULL);
+            pmeInterpolateForceKernel.setArg(5, 2*interpolateForceThreads*PmeOrder*sizeof(mm_float4), NULL);
             if (cl.getSupports64BitGlobalAtomics()) {
                 pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
                 pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
@@ -1479,7 +1480,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         fft->execFFT(*pmeGrid2, *pmeGrid, false);
         pmeInterpolateForceKernel.setArg<mm_float4>(3, boxSize);
         pmeInterpolateForceKernel.setArg<mm_float4>(4, invBoxSize);
-        cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms(), 128);
+        cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms(), interpolateForceThreads);
     }
     double energy = ewaldSelfEnergy;
     if (dispersionCoefficient != 0.0) {

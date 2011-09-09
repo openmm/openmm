@@ -220,7 +220,6 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel __attribute__((reqd_work_group_size(128, 1, 1)))
 __kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float2* pmeGrid, float4 periodicBoxSize, float4 invPeriodicBoxSize, __local float4* bsplinesCache) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];

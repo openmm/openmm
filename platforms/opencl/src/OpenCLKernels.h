@@ -525,6 +525,7 @@ private:
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     double ewaldSelfEnergy, dispersionCoefficient;
+    int interpolateForceThreads;
     static const int PmeOrder = 5;
 };
 
