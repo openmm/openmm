@@ -472,6 +472,8 @@ private:
     cl::Kernel clearTwoBuffersKernel;
     cl::Kernel clearThreeBuffersKernel;
     cl::Kernel clearFourBuffersKernel;
+    cl::Kernel clearFiveBuffersKernel;
+    cl::Kernel clearSixBuffersKernel;
     cl::Kernel reduceFloat4Kernel;
     cl::Kernel reduceForcesKernel;
     std::vector<OpenCLForceInfo*> forces;

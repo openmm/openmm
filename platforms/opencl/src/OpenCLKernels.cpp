@@ -1266,6 +1266,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         // Create required data structures.
 
         pmeGrid = new OpenCLArray<mm_float2>(cl, gridSizeX*gridSizeY*gridSizeZ, "pmeGrid");
+        cl.addAutoclearBuffer(pmeGrid->getDeviceBuffer(), pmeGrid->getSize()*2);
         pmeGrid2 = new OpenCLArray<mm_float2>(cl, gridSizeX*gridSizeY*gridSizeZ, "pmeGrid2");
         pmeBsplineModuliX = new OpenCLArray<cl_float>(cl, gridSizeX, "pmeBsplineModuliX");
         pmeBsplineModuliY = new OpenCLArray<cl_float>(cl, gridSizeY, "pmeBsplineModuliY");
@@ -1464,7 +1465,6 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeAtomRangeKernel.setArg<mm_float4>(4, invBoxSize);
             cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
             if (cl.getSupports64BitGlobalAtomics()) {
-                cl.clearBuffer(pmeGrid->getDeviceBuffer(), pmeGrid->getSize()*2);
                 pmeSpreadChargeKernel.setArg<mm_float4>(5, boxSize);
                 pmeSpreadChargeKernel.setArg<mm_float4>(6, invBoxSize);
                 cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms(), PmeOrder*PmeOrder*PmeOrder);

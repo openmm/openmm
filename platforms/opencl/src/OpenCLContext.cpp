@@ -148,6 +148,8 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
     clearTwoBuffersKernel = cl::Kernel(utilities, "clearTwoBuffers");
     clearThreeBuffersKernel = cl::Kernel(utilities, "clearThreeBuffers");
     clearFourBuffersKernel = cl::Kernel(utilities, "clearFourBuffers");
+    clearFiveBuffersKernel = cl::Kernel(utilities, "clearFiveBuffers");
+    clearSixBuffersKernel = cl::Kernel(utilities, "clearSixBuffers");
     reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
     reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
 
@@ -351,7 +353,36 @@ void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {
 void OpenCLContext::clearAutoclearBuffers() {
     int base = 0;
     int total = autoclearBufferSizes.size();
-    while (total-base >= 4) {
+    while (total-base >= 6) {
+        clearSixBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
+        clearSixBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearSixBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
+        clearSixBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearSixBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
+        clearSixBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearSixBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
+        clearSixBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
+        clearSixBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
+        clearSixBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
+        clearSixBuffersKernel.setArg<cl::Memory>(10, *autoclearBuffers[base+5]);
+        clearSixBuffersKernel.setArg<cl_int>(11, autoclearBufferSizes[base+5]);
+        executeKernel(clearSixBuffersKernel, max(max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), autoclearBufferSizes[base+5]), 128);
+        base += 6;
+    }
+    if (total-base == 5) {
+        clearFiveBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
+        clearFiveBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearFiveBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
+        clearFiveBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearFiveBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
+        clearFiveBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearFiveBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
+        clearFiveBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
+        clearFiveBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
+        clearFiveBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
+        executeKernel(clearFiveBuffersKernel, max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), 128);
+    }
+    else if (total-base == 4) {
         clearFourBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
         clearFourBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
         clearFourBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
@@ -361,9 +392,8 @@ void OpenCLContext::clearAutoclearBuffers() {
         clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
         clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
         executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), 128);
-        base += 4;
     }
-    if (total-base == 3) {
+    else if (total-base == 3) {
         clearThreeBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
         clearThreeBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
         clearThreeBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);

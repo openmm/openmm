@@ -43,6 +43,29 @@ __kernel void clearFourBuffers(__global int* buffer1, int size1, __global int* b
 }
 
 /**
+ * Fill five buffers with 0.
+ */
+__kernel void clearFiveBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3, __global int* buffer4, int size4, __global int* buffer5, int size5) {
+    clearBuffer(buffer1, size1);
+    clearBuffer(buffer2, size2);
+    clearBuffer(buffer3, size3);
+    clearBuffer(buffer4, size4);
+    clearBuffer(buffer5, size5);
+}
+
+/**
+ * Fill six buffers with 0.
+ */
+__kernel void clearSixBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3, __global int* buffer4, int size4, __global int* buffer5, int size5, __global int* buffer6, int size6) {
+    clearBuffer(buffer1, size1);
+    clearBuffer(buffer2, size2);
+    clearBuffer(buffer3, size3);
+    clearBuffer(buffer4, size4);
+    clearBuffer(buffer5, size5);
+    clearBuffer(buffer6, size6);
+}
+
+/**
  * Sum a collection of buffers into the first one.
  */
 
