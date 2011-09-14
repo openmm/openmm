@@ -217,7 +217,7 @@ private:
 class OpenCLCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
     OpenCLCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomBondForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomBondForceKernel();
     /**
@@ -242,11 +242,9 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<mm_int4>* indices;
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    cl::Kernel kernel;
 };
 
 /**
@@ -288,7 +286,7 @@ private:
 class OpenCLCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
     OpenCLCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomAngleForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomAngleForceKernel();
     /**
@@ -313,11 +311,9 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<mm_int8>* indices;
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    cl::Kernel kernel;
 };
 
 /**
@@ -392,7 +388,7 @@ private:
 class OpenCLCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
     OpenCLCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCMAPTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), coefficients(NULL), mapPositions(NULL), torsionIndices(NULL), torsionMaps(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
     }
     ~OpenCLCalcCMAPTorsionForceKernel();
     /**
@@ -418,9 +414,7 @@ private:
     System& system;
     OpenCLArray<mm_float4>* coefficients;
     OpenCLArray<mm_int2>* mapPositions;
-    OpenCLArray<mm_int16>* torsionIndices;
     OpenCLArray<cl_int>* torsionMaps;
-    cl::Kernel kernel;
 };
 
 /**
@@ -429,7 +423,7 @@ private:
 class OpenCLCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
     OpenCLCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomTorsionForceKernel();
     /**
@@ -454,11 +448,9 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<mm_int8>* indices;
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    cl::Kernel kernel;
 };
 
 /**
@@ -651,7 +643,7 @@ private:
 class OpenCLCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
     OpenCLCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomExternalForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomExternalForceKernel();
     /**
@@ -676,11 +668,9 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_int>* indices;
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    cl::Kernel kernel;
 };
 
 /**

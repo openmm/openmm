@@ -290,8 +290,6 @@ private:
 OpenCLCalcCustomBondForceKernel::~OpenCLCalcCustomBondForceKernel() {
     if (params != NULL)
         delete params;
-    if (indices != NULL)
-        delete indices;
     if (globals != NULL)
         delete globals;
 }
@@ -303,31 +301,18 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     numBonds = endIndex-startIndex;
     if (numBonds == 0)
         return;
+    vector<vector<int> > atoms(numBonds, vector<int>(2));
     params = new OpenCLParameterSet(cl, force.getNumPerBondParameters(), numBonds, "customBondParams");
-    indices = new OpenCLArray<mm_int4>(cl, numBonds, "customBondIndices");
-    string extraArguments;
-    if (force.getNumGlobalParameters() > 0) {
-        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customBondGlobals", false, CL_MEM_READ_ONLY);
-        extraArguments += ", __constant float* globals";
-    }
-    vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<vector<cl_float> > paramVector(numBonds);
-    vector<mm_int4> indicesVector(numBonds);
     for (int i = 0; i < numBonds; i++) {
-        int particle1, particle2;
         vector<double> parameters;
-        force.getBondParameters(startIndex+i, particle1, particle2, parameters);
+        force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
-        indicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
     }
     params->setParameterValues(paramVector);
-    indices->upload(indicesVector);
-    int maxBuffers = 1;
-    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
-        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    cl.addForce(new OpenCLCustomBondForceInfo(maxBuffers, force));
+    cl.addForce(new OpenCLCustomBondForceInfo(0, force));
 
     // Record information for the expressions.
 
@@ -337,8 +322,6 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
     map<string, Lepton::ParsedExpression> expressions;
@@ -353,29 +336,30 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
         const string& name = force.getPerBondParameterName(i);
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        const string& name = force.getGlobalParameterName(i);
-        string value = "globals["+intToString(i)+"]";
-        variables[name] = value;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customBondGlobals", false, CL_MEM_READ_ONLY);
+        globals->upload(globalParamValues);
+        string argName = cl.getBondedUtilities().addArgument(globals->getDeviceBuffer(), "float");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = argName+"["+intToString(i)+"]";
+            variables[name] = value;
+        }
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
-        compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+        string argName = cl.getBondedUtilities().addArgument(buffer.getMemory(), buffer.getType());
+        compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     vector<pair<string, string> > functions;
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    replacements["EXTRA_ARGUMENTS"] = extraArguments;
-    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customBondForce, replacements));
-    kernel = cl::Kernel(program, "computeCustomBondForces");
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customBondForce, replacements));
 }
 
 double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (numBonds == 0)
-        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -387,23 +371,6 @@ double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool inclu
         if (changed)
             globals->upload(globalParamValues);
     }
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        kernel.setArg<cl_int>(1, numBonds);
-        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
-        int nextIndex = 6;
-        if (globals != NULL)
-            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            kernel.setArg<cl::Memory>(nextIndex++, buffer.getMemory());
-        }
-    }
-    cl.executeKernel(kernel, numBonds);
     return 0.0;
 }
 
@@ -499,8 +466,6 @@ private:
 OpenCLCalcCustomAngleForceKernel::~OpenCLCalcCustomAngleForceKernel() {
     if (params != NULL)
         delete params;
-    if (indices != NULL)
-        delete indices;
     if (globals != NULL)
         delete globals;
 }
@@ -512,32 +477,18 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
     numAngles = endIndex-startIndex;
     if (numAngles == 0)
         return;
+    vector<vector<int> > atoms(numAngles, vector<int>(3));
     params = new OpenCLParameterSet(cl, force.getNumPerAngleParameters(), numAngles, "customAngleParams");
-    indices = new OpenCLArray<mm_int8>(cl, numAngles, "customAngleIndices");
-    string extraArguments;
-    if (force.getNumGlobalParameters() > 0) {
-        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customAngleGlobals", false, CL_MEM_READ_ONLY);
-        extraArguments += ", __constant float* globals";
-    }
-    vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<vector<cl_float> > paramVector(numAngles);
-    vector<mm_int8> indicesVector(numAngles);
     for (int i = 0; i < numAngles; i++) {
-        int particle1, particle2, particle3;
         vector<double> parameters;
-        force.getAngleParameters(startIndex+i, particle1, particle2, particle3, parameters);
+        force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
-        indicesVector[i] = mm_int8(particle1, particle2, particle3, forceBufferCounter[particle1]++,
-                forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0);
     }
     params->setParameterValues(paramVector);
-    indices->upload(indicesVector);
-    int maxBuffers = 1;
-    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
-        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    cl.addForce(new OpenCLCustomAngleForceInfo(maxBuffers, force));
+    cl.addForce(new OpenCLCustomAngleForceInfo(0, force));
 
     // Record information for the expressions.
 
@@ -547,8 +498,6 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
     map<string, Lepton::ParsedExpression> expressions;
@@ -563,29 +512,30 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
         const string& name = force.getPerAngleParameterName(i);
         variables[name] = "angleParams"+params->getParameterSuffix(i);
     }
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        const string& name = force.getGlobalParameterName(i);
-        string value = "globals["+intToString(i)+"]";
-        variables[name] = value;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customAngleGlobals", false, CL_MEM_READ_ONLY);
+        globals->upload(globalParamValues);
+        string argName = cl.getBondedUtilities().addArgument(globals->getDeviceBuffer(), "float");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = argName+"["+intToString(i)+"]";
+            variables[name] = value;
+        }
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
-        compute<<buffer.getType()<<" angleParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+        string argName = cl.getBondedUtilities().addArgument(buffer.getMemory(), buffer.getType());
+        compute<<buffer.getType()<<" angleParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     vector<pair<string, string> > functions;
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    replacements["EXTRA_ARGUMENTS"] = extraArguments;
-    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customAngleForce, replacements));
-    kernel = cl::Kernel(program, "computeCustomAngleForces");
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customAngleForce, replacements));
 }
 
 double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (numAngles == 0)
-        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -597,23 +547,6 @@ double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool incl
         if (changed)
             globals->upload(globalParamValues);
     }
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        kernel.setArg<cl_int>(1, numAngles);
-        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
-        int nextIndex = 6;
-        if (globals != NULL)
-            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            kernel.setArg<cl::Memory>(nextIndex++, buffer.getMemory());
-        }
-    }
-    cl.executeKernel(kernel, numAngles);
     return 0.0;
 }
 
@@ -775,8 +708,6 @@ OpenCLCalcCMAPTorsionForceKernel::~OpenCLCalcCMAPTorsionForceKernel() {
         delete mapPositions;
     if (torsionMaps != NULL)
         delete torsionMaps;
-    if (torsionIndices != NULL)
-        delete torsionIndices;
 }
 
 void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
@@ -805,53 +736,25 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
             coeffVec.push_back(mm_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
         }
     }
-    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<vector<int> > atoms(numTorsions, vector<int>(8));
     vector<cl_int> torsionMapsVec(numTorsions);
-    vector<mm_int16> torsionIndicesVec(numTorsions);
-    for (int i = 0; i < numTorsions; i++) {
-        mm_int16& ind = torsionIndicesVec[i];
-        force.getTorsionParameters(startIndex+i, torsionMapsVec[i], ind.s0, ind.s1, ind.s2, ind.s3, ind.s4, ind.s5, ind.s6, ind.s7);
-        ind.s8 = forceBufferCounter[ind.s0]++;
-        ind.s9 = forceBufferCounter[ind.s1]++;
-        ind.s10 = forceBufferCounter[ind.s2]++;
-        ind.s11 = forceBufferCounter[ind.s3]++;
-        ind.s12 = forceBufferCounter[ind.s4]++;
-        ind.s13 = forceBufferCounter[ind.s5]++;
-        ind.s14 = forceBufferCounter[ind.s6]++;
-        ind.s15 = forceBufferCounter[ind.s7]++;
-    }
+    for (int i = 0; i < numTorsions; i++)
+        force.getTorsionParameters(startIndex+i, torsionMapsVec[i], atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], atoms[i][5], atoms[i][6], atoms[i][7]);
     coefficients = new OpenCLArray<mm_float4>(cl, coeffVec.size(), "cmapTorsionCoefficients");
     mapPositions = new OpenCLArray<mm_int2>(cl, numMaps, "cmapTorsionMapPositions");
     torsionMaps = new OpenCLArray<cl_int>(cl, numTorsions, "cmapTorsionMaps");
-    torsionIndices = new OpenCLArray<mm_int16>(cl, numTorsions, "cmapTorsionIndices");
     coefficients->upload(coeffVec);
     mapPositions->upload(mapPositionsVec);
     torsionMaps->upload(torsionMapsVec);
-    torsionIndices->upload(torsionIndicesVec);
-    int maxBuffers = 1;
-    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
-        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    cl.addForce(new OpenCLCMAPTorsionForceInfo(maxBuffers, force));
-    cl::Program program = cl.createProgram(OpenCLKernelSources::cmapTorsionForce);
-    kernel = cl::Kernel(program, "computeCMAPTorsionForces");
+    map<string, string> replacements;
+    replacements["COEFF"] = cl.getBondedUtilities().addArgument(coefficients->getDeviceBuffer(), "float4");
+    replacements["MAP_POS"] = cl.getBondedUtilities().addArgument(mapPositions->getDeviceBuffer(), "int2");
+    replacements["MAPS"] = cl.getBondedUtilities().addArgument(torsionMaps->getDeviceBuffer(), "int");
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::cmapTorsionForce, replacements));
+    cl.addForce(new OpenCLCMAPTorsionForceInfo(0, force));
 }
 
 double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (numTorsions == 0)
-        return 0.0;
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        kernel.setArg<cl_int>(1, numTorsions);
-        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, coefficients->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(6, mapPositions->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(7, torsionIndices->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(8, torsionMaps->getDeviceBuffer());
-    }
-    cl.executeKernel(kernel, numTorsions);
     return 0.0;
 }
 
@@ -889,8 +792,6 @@ private:
 OpenCLCalcCustomTorsionForceKernel::~OpenCLCalcCustomTorsionForceKernel() {
     if (params != NULL)
         delete params;
-    if (indices != NULL)
-        delete indices;
     if (globals != NULL)
         delete globals;
 }
@@ -902,32 +803,18 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
     numTorsions = endIndex-startIndex;
     if (numTorsions == 0)
         return;
+    vector<vector<int> > atoms(numTorsions, vector<int>(4));
     params = new OpenCLParameterSet(cl, force.getNumPerTorsionParameters(), numTorsions, "customTorsionParams");
-    indices = new OpenCLArray<mm_int8>(cl, numTorsions, "customTorsionIndices");
-    string extraArguments;
-    if (force.getNumGlobalParameters() > 0) {
-        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customTorsionGlobals", false, CL_MEM_READ_ONLY);
-        extraArguments += ", __constant float* globals";
-    }
-    vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<vector<cl_float> > paramVector(numTorsions);
-    vector<mm_int8> indicesVector(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
-        int particle1, particle2, particle3, particle4;
         vector<double> parameters;
-        force.getTorsionParameters(startIndex+i, particle1, particle2, particle3, particle4, parameters);
+        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
-        indicesVector[i] = mm_int8(particle1, particle2, particle3, particle4, forceBufferCounter[particle1]++,
-                forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++);
     }
     params->setParameterValues(paramVector);
-    indices->upload(indicesVector);
-    int maxBuffers = 1;
-    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
-        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    cl.addForce(new OpenCLCustomTorsionForceInfo(maxBuffers, force));
+    cl.addForce(new OpenCLCustomTorsionForceInfo(0, force));
 
     // Record information for the expressions.
 
@@ -937,8 +824,6 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
     map<string, Lepton::ParsedExpression> expressions;
@@ -953,30 +838,31 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
         const string& name = force.getPerTorsionParameterName(i);
         variables[name] = "torsionParams"+params->getParameterSuffix(i);
     }
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        const string& name = force.getGlobalParameterName(i);
-        string value = "globals["+intToString(i)+"]";
-        variables[name] = value;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customTorsionGlobals", false, CL_MEM_READ_ONLY);
+        globals->upload(globalParamValues);
+        string argName = cl.getBondedUtilities().addArgument(globals->getDeviceBuffer(), "float");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = argName+"["+intToString(i)+"]";
+            variables[name] = value;
+        }
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
-        compute<<buffer.getType()<<" torsionParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+        string argName = cl.getBondedUtilities().addArgument(buffer.getMemory(), buffer.getType());
+        compute<<buffer.getType()<<" torsionParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     vector<pair<string, string> > functions;
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    replacements["EXTRA_ARGUMENTS"] = extraArguments;
     replacements["M_PI"] = doubleToString(M_PI);
-    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customTorsionForce, replacements));
-    kernel = cl::Kernel(program, "computeCustomTorsionForces");
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customTorsionForce, replacements));
 }
 
 double OpenCLCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (numTorsions == 0)
-        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -988,23 +874,6 @@ double OpenCLCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool in
         if (changed)
             globals->upload(globalParamValues);
     }
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        kernel.setArg<cl_int>(1, numTorsions);
-        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
-        int nextIndex = 6;
-        if (globals != NULL)
-            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            kernel.setArg<cl::Memory>(nextIndex++, buffer.getMemory());
-        }
-    }
-    cl.executeKernel(kernel, numTorsions);
     return 0.0;
 }
 
@@ -2632,8 +2501,6 @@ private:
 OpenCLCalcCustomExternalForceKernel::~OpenCLCalcCustomExternalForceKernel() {
     if (params != NULL)
         delete params;
-    if (indices != NULL)
-        delete indices;
     if (globals != NULL)
         delete globals;
 }
@@ -2645,24 +2512,17 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     numParticles = endIndex-startIndex;
     if (numParticles == 0)
         return;
+    vector<vector<int> > atoms(numParticles, vector<int>(1));
     params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customExternalParams");
-    indices = new OpenCLArray<cl_int>(cl, numParticles, "customExternalIndices");
-    string extraArguments;
-    if (force.getNumGlobalParameters() > 0) {
-        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customExternalGlobals", false, CL_MEM_READ_ONLY);
-        extraArguments += ", __constant float* globals";
-    }
     vector<vector<cl_float> > paramVector(numParticles);
-    vector<cl_int> indicesVector(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
-        force.getParticleParameters(startIndex+i, indicesVector[i], parameters);
+        force.getParticleParameters(startIndex+i, atoms[i][0], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    indices->upload(indicesVector);
     cl.addForce(new OpenCLCustomExternalForceInfo(force, system.getNumParticles()));
 
     // Record information for the expressions.
@@ -2673,8 +2533,6 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals != NULL)
-        globals->upload(globalParamValues);
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x").optimize();
     Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y").optimize();
@@ -2688,36 +2546,37 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     // Create the kernels.
 
     map<string, string> variables;
-    variables["x"] = "pos.x";
-    variables["y"] = "pos.y";
-    variables["z"] = "pos.z";
+    variables["x"] = "pos1.x";
+    variables["y"] = "pos1.y";
+    variables["z"] = "pos1.z";
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         const string& name = force.getPerParticleParameterName(i);
         variables[name] = "particleParams"+params->getParameterSuffix(i);
     }
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        const string& name = force.getGlobalParameterName(i);
-        string value = "globals["+intToString(i)+"]";
-        variables[name] = value;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customExternalGlobals", false, CL_MEM_READ_ONLY);
+        globals->upload(globalParamValues);
+        string argName = cl.getBondedUtilities().addArgument(globals->getDeviceBuffer(), "float");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = argName+"["+intToString(i)+"]";
+            variables[name] = value;
+        }
     }
     stringstream compute;
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
-        compute<<buffer.getType()<<" particleParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+        string argName = cl.getBondedUtilities().addArgument(buffer.getMemory(), buffer.getType());
+        compute<<buffer.getType()<<" particleParams"<<(i+1)<<" = "<<argName<<"[index];\n";
     }
     vector<pair<string, string> > functions;
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    replacements["EXTRA_ARGUMENTS"] = extraArguments;
-    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customExternalForce, replacements));
-    kernel = cl::Kernel(program, "computeCustomExternalForces");
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customExternalForce, replacements));
 }
 
 double OpenCLCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (numParticles == 0)
-        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2729,22 +2588,6 @@ double OpenCLCalcCustomExternalForceKernel::execute(ContextImpl& context, bool i
         if (changed)
             globals->upload(globalParamValues);
     }
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        kernel.setArg<cl_int>(0, numParticles);
-        kernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(2, cl.getEnergyBuffer().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(4, indices->getDeviceBuffer());
-        int nextIndex = 5;
-        if (globals != NULL)
-            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
-        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            kernel.setArg<cl::Memory>(nextIndex++, buffer.getMemory());
-        }
-    }
-    cl.executeKernel(kernel, numParticles);
     return 0.0;
 }
 
