@@ -30,6 +30,7 @@
 #include <cmath>
 #include "OpenCLContext.h"
 #include "OpenCLArray.h"
+#include "OpenCLBondedUtilities.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLKernelSources.h"
@@ -62,7 +63,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
         forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
-        nonbonded(NULL), thread(NULL) {
+        bonded(NULL), nonbonded(NULL), thread(NULL) {
     try {
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
@@ -130,6 +131,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
         numThreadBlocks = 6*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        bonded = new OpenCLBondedUtilities(*this);
         nonbonded = new OpenCLNonbondedUtilities(*this);
         posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
         velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
@@ -207,6 +209,8 @@ OpenCLContext::~OpenCLContext() {
         delete atomIndex;
     if (integration != NULL)
         delete integration;
+    if (bonded != NULL)
+        delete bonded;
     if (nonbonded != NULL)
         delete nonbonded;
     if (thread != NULL)
@@ -217,7 +221,9 @@ void OpenCLContext::initialize(const System& system) {
     for (int i = 0; i < numAtoms; i++)
         (*velm)[i].w = (float) (1.0/system.getParticleMass(i));
     velm->upload();
+    bonded->initialize(system);
     numForceBuffers = platformData.contexts.size();
+    numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
     forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);

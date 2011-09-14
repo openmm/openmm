@@ -184,7 +184,7 @@ private:
 class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
     OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicBondForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcHarmonicBondForceKernel();
     /**
@@ -209,8 +209,6 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float2>* params;
-    OpenCLArray<mm_int4>* indices;
-    cl::Kernel kernel;
 };
 
 /**
@@ -257,7 +255,7 @@ private:
 class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicAngleForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcHarmonicAngleForceKernel();
     /**
@@ -282,8 +280,6 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float2>* params;
-    OpenCLArray<mm_int8>* indices;
-    cl::Kernel kernel;
 };
 
 /**
@@ -330,7 +326,7 @@ private:
 class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcPeriodicTorsionForceKernel();
     /**
@@ -355,8 +351,6 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float4>* params;
-    OpenCLArray<mm_int8>* indices;
-    cl::Kernel kernel;
 };
 
 /**
@@ -365,7 +359,7 @@ private:
 class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcRBTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL) {
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcRBTorsionForceKernel();
     /**
@@ -390,8 +384,6 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float8>* params;
-    OpenCLArray<mm_int8>* indices;
-    cl::Kernel kernel;
 };
 
 /**
@@ -475,7 +467,7 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL), pmeGrid(NULL),
+            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
             pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeAtomRange(NULL),
             pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
     }
@@ -501,7 +493,6 @@ private:
     bool hasInitializedKernel;
     OpenCLArray<mm_float2>* sigmaEpsilon;
     OpenCLArray<mm_float4>* exceptionParams;
-    OpenCLArray<mm_int4>* exceptionIndices;
     OpenCLArray<mm_float2>* cosSinSums;
     OpenCLArray<mm_float2>* pmeGrid;
     OpenCLArray<mm_float2>* pmeGrid2;
@@ -513,7 +504,6 @@ private:
     OpenCLArray<mm_int2>* pmeAtomGridIndex;
     OpenCLSort<mm_int2>* sort;
     OpenCLFFT3D* fft;
-    cl::Kernel exceptionsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeGridIndexKernel;

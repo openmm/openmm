@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,6 +46,7 @@ template <class T>
 class OpenCLArray;
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
+class OpenCLBondedUtilities;
 class OpenCLNonbondedUtilities;
 class System;
 
@@ -426,6 +427,12 @@ public:
         return *integration;
     }
     /**
+     * Get the OpenCLBondedUtilities for this context.
+     */
+    OpenCLBondedUtilities& getBondedUtilities() {
+        return *bonded;
+    }
+    /**
      * Get the OpenCLNonbondedUtilities for this context.
      */
     OpenCLNonbondedUtilities& getNonbondedUtilities() {
@@ -489,6 +496,7 @@ private:
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
     OpenCLIntegrationUtilities* integration;
+    OpenCLBondedUtilities* bonded;
     OpenCLNonbondedUtilities* nonbonded;
     WorkThread* thread;
 };

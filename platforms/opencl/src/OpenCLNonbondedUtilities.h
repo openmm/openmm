@@ -143,6 +143,12 @@ public:
         return cutoff;
     }
     /**
+     * Get whether any interactions have been added.
+     */
+    bool getHasInteractions() {
+        return cutoff != -1.0;
+    }
+    /**
      * Prepare to compute interactions.  This updates the neighbor list.
      */
     void prepareInteractions();
