@@ -1583,8 +1583,14 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<mm_float4>(10, cl.getInvPeriodicBoxSize());
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
-            computeBornSumKernel.setArg<cl_uint>(10, maxTiles);
+            computeBornSumKernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl_uint>(9, maxTiles);
+            force1Kernel.setArg<cl::Buffer>(7, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl_uint>(11, maxTiles);
+            if (cl.getSIMDWidth() == 32 || deviceIsCpu) {
+                computeBornSumKernel.setArg<cl::Buffer>(10, nb.getInteractionFlags().getDeviceBuffer());
+                force1Kernel.setArg<cl::Buffer>(12, nb.getInteractionFlags().getDeviceBuffer());
+            }
         }
     }
     cl.executeKernel(computeBornSumKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -2453,8 +2459,14 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg<mm_float4>(12, cl.getInvPeriodicBoxSize());
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
+            pairValueKernel.setArg<cl::Buffer>(8, nb.getInteractingTiles().getDeviceBuffer());
             pairValueKernel.setArg<cl_uint>(12, maxTiles);
+            pairEnergyKernel.setArg<cl::Buffer>(9, nb.getInteractingTiles().getDeviceBuffer());
             pairEnergyKernel.setArg<cl_uint>(13, maxTiles);
+            if (cl.getSIMDWidth() == 32 || deviceIsCpu) {
+                pairValueKernel.setArg<cl::Buffer>(13, nb.getInteractionFlags().getDeviceBuffer());
+                pairEnergyKernel.setArg<cl::Buffer>(14, nb.getInteractionFlags().getDeviceBuffer());
+            }
         }
     }
     cl.executeKernel(pairValueKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
