@@ -95,7 +95,8 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 #ifdef USE_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
-                    float r = SQRT(r2);
+                    float invR = RSQRT(r2);
+                    float r = RECIP(invR);
                     unsigned int atom2 = j;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
@@ -151,7 +152,8 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 #endif
                                 float r2 = dot(delta.xyz, delta.xyz);
                                 if (r2 < CUTOFF_SQUARED) {
-                                    float r = SQRT(r2);
+                                    float invR = RSQRT(r2);
+                                    float r = RECIP(invR);
                                     unsigned int atom2 = j;
                                     LOAD_ATOM2_PARAMETERS
                                     atom2 = y*TILE_SIZE+j;
@@ -204,7 +206,8 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 #ifdef USE_CUTOFF
                         if (r2 < CUTOFF_SQUARED) {
 #endif
-                        float r = SQRT(r2);
+                        float invR = RSQRT(r2);
+                        float r = RECIP(invR);
                         unsigned int atom2 = j;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = y*TILE_SIZE+j;

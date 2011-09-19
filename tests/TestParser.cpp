@@ -239,6 +239,9 @@ int main() {
         verifyDerivative("abs(3*x)", "step(3*x)*3+(1-step(3*x))*-3");
         testCustomFunction("custom(x, y)/2", "x*y");
         testCustomFunction("custom(x^2, 1)+custom(2, y-1)", "2*x^2+4*(y-1)");
+        cout << Parser::parse("x*x").optimize() << endl;
+        cout << Parser::parse("x*(x*x)").optimize() << endl;
+        cout << Parser::parse("(x*x)*x").optimize() << endl;
         cout << Parser::parse("2*3*x").optimize() << endl;
         cout << Parser::parse("1/(1+x)").optimize() << endl;
         cout << Parser::parse("x^(1/2)").optimize() << endl;

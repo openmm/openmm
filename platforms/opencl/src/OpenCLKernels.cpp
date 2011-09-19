@@ -38,6 +38,7 @@
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLKernelSources.h"
+#include "lepton/ExpressionTreeNode.h"
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
@@ -47,6 +48,8 @@
 
 using namespace OpenMM;
 using namespace std;
+using Lepton::ExpressionTreeNode;
+using Lepton::Operation;
 
 static string doubleToString(double value) {
     stringstream s;
@@ -66,6 +69,10 @@ static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
     if (op.getId() != Lepton::Operation::CONSTANT)
         return false;
     return (dynamic_cast<const Lepton::Operation::Constant&>(op).getValue() == 0.0);
+}
+
+static pair<ExpressionTreeNode, string> makeVariable(const string& name, const string& value) {
+    return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
 }
 
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
@@ -1368,17 +1375,20 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     // Create the kernels.
 
-    map<string, string> variables;
-    variables["r"] = "r";
+    vector<pair<ExpressionTreeNode, string> > variables;
+    ExpressionTreeNode rnode(new Operation::Variable("r"));
+    variables.push_back(make_pair(rnode, "r"));
+    variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
+    variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         const string& name = force.getPerParticleParameterName(i);
-        variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
-        variables[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
+        variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
+        variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
         string value = "globals["+intToString(i)+"]";
-        variables[name] = prefix+value;
+        variables.push_back(makeVariable(name, prefix+value));
     }
     stringstream compute;
     compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, prefix+"temp", prefix+"functionParams");
@@ -1787,20 +1797,23 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     {
         // Create the N2 value kernel.
 
-        map<string, string> variables;
+        vector<pair<ExpressionTreeNode, string> > variables;
         map<string, string> rename;
-        variables["r"] = "r";
+        ExpressionTreeNode rnode(new Operation::Variable("r"));
+        variables.push_back(make_pair(rnode, "r"));
+        variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
+        variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables[name+"1"] = "params"+params->getParameterSuffix(i, "1");
-            variables[name+"2"] = "params"+params->getParameterSuffix(i, "2");
+            variables.push_back(makeVariable(name+"1", "params"+params->getParameterSuffix(i, "1")));
+            variables.push_back(makeVariable(name+"2", "params"+params->getParameterSuffix(i, "2")));
             rename[name+"1"] = name+"2";
             rename[name+"2"] = name+"1";
         }
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = "globals["+intToString(i)+"]";
-            variables[name] = value;
+            variables.push_back(makeVariable(name, value));
         }
         map<string, Lepton::ParsedExpression> n2ValueExpressions;
         stringstream n2ValueSource;
@@ -1901,19 +1914,22 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     {
         // Create the N2 energy kernel.
 
-        map<string, string> variables;
-        variables["r"] = "r";
+        vector<pair<ExpressionTreeNode, string> > variables;
+        ExpressionTreeNode rnode(new Operation::Variable("r"));
+        variables.push_back(make_pair(rnode, "r"));
+        variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
+        variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables[name+"1"] = "params"+params->getParameterSuffix(i, "1");
-            variables[name+"2"] = "params"+params->getParameterSuffix(i, "2");
+            variables.push_back(makeVariable(name+"1", "params"+params->getParameterSuffix(i, "1")));
+            variables.push_back(makeVariable(name+"2", "params"+params->getParameterSuffix(i, "2")));
         }
         for (int i = 0; i < force.getNumComputedValues(); i++) {
-            variables[computedValueNames[i]+"1"] = "values"+computedValues->getParameterSuffix(i, "1");
-            variables[computedValueNames[i]+"2"] = "values"+computedValues->getParameterSuffix(i, "2");
+            variables.push_back(makeVariable(computedValueNames[i]+"1", "values"+computedValues->getParameterSuffix(i, "1")));
+            variables.push_back(makeVariable(computedValueNames[i]+"2", "values"+computedValues->getParameterSuffix(i, "2")));
         }
         for (int i = 0; i < force.getNumGlobalParameters(); i++)
-            variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
+            variables.push_back(makeVariable(force.getGlobalParameterName(i), "globals["+intToString(i)+"]"));
         stringstream n2EnergySource;
         bool anyExclusions = (force.getNumExclusions() > 0);
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
@@ -2182,19 +2198,22 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     {
         // Create the code to calculate chain rules terms as part of the default nonbonded kernel.
 
-        map<string, string> globalVariables;
+        vector<pair<ExpressionTreeNode, string> > globalVariables;
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = "globals["+intToString(i)+"]";
-            globalVariables[name] = prefix+value;
+            globalVariables.push_back(makeVariable(name, prefix+value));
         }
-        map<string, string> variables = globalVariables;
+        vector<pair<ExpressionTreeNode, string> > variables = globalVariables;
         map<string, string> rename;
-        variables["r"] = "r";
+        ExpressionTreeNode rnode(new Operation::Variable("r"));
+        variables.push_back(make_pair(rnode, "r"));
+        variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
+        variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
-            variables[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
+            variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
+            variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
             rename[name+"1"] =  name+"2";
             rename[name+"2"] =  name+"1";
         }
@@ -2213,12 +2232,12 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables = globalVariables;
         map<string, string> rename1;
         map<string, string> rename2;
-        variables["x1"] = "posq1.x";
-        variables["y1"] = "posq1.y";
-        variables["z1"] = "posq1.z";
-        variables["x2"] = "posq2.x";
-        variables["y2"] = "posq2.y";
-        variables["z2"] = "posq2.z";
+        variables.push_back(makeVariable("x1", "posq1.x"));
+        variables.push_back(makeVariable("y1", "posq1.y"));
+        variables.push_back(makeVariable("z1", "posq1.z"));
+        variables.push_back(makeVariable("x2", "posq2.x"));
+        variables.push_back(makeVariable("y2", "posq2.y"));
+        variables.push_back(makeVariable("z2", "posq2.z"));
         rename1["x"] = "x1";
         rename1["y"] = "y1";
         rename1["z"] = "z1";
@@ -2227,15 +2246,15 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         rename2["z"] = "z2";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
-            variables[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
+            variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
+            variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
             rename1[name] = name+"1";
             rename2[name] = name+"2";
         }
         for (int i = 0; i < force.getNumComputedValues(); i++) {
             const string& name = computedValueNames[i];
-            variables[name+"1"] = prefix+"values"+computedValues->getParameterSuffix(i, "1");
-            variables[name+"2"] = prefix+"values"+computedValues->getParameterSuffix(i, "2");
+            variables.push_back(makeVariable(name+"1", prefix+"values"+computedValues->getParameterSuffix(i, "1")));
+            variables.push_back(makeVariable(name+"2", prefix+"values"+computedValues->getParameterSuffix(i, "2")));
             rename1[name] = name+"1";
             rename2[name] = name+"2";
             if (i == 0)

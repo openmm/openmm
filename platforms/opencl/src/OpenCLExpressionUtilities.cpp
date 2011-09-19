@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,26 +48,33 @@ string OpenCLExpressionUtilities::intToString(int value) {
 
 string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
         const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams) {
+    vector<pair<ExpressionTreeNode, string> > variableNodes;
+    for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
+        variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
+    return createExpressions(expressions, variableNodes, functions, prefix, functionParams);
+}
+
+string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const vector<pair<ExpressionTreeNode, string> >& variables,
+        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams) {
     stringstream out;
     vector<ParsedExpression> allExpressions;
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter)
         allExpressions.push_back(iter->second);
-    vector<pair<ExpressionTreeNode, string> > temps;
+    vector<pair<ExpressionTreeNode, string> > temps = variables;
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter) {
-        processExpression(out, iter->second.getRootNode(), temps, variables, functions, prefix, functionParams, allExpressions);
+        processExpression(out, iter->second.getRootNode(), temps, functions, prefix, functionParams, allExpressions);
         out << iter->first << getTempName(iter->second.getRootNode(), temps) << ";\n";
     }
     return out.str();
 }
 
 void OpenCLExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
-        const map<string, string>& variables, const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams,
-        const vector<ParsedExpression>& allExpressions) {
+        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams, const vector<ParsedExpression>& allExpressions) {
     for (int i = 0; i < (int) temps.size(); i++)
         if (temps[i].first == node)
             return;
     for (int i = 0; i < (int) node.getChildren().size(); i++)
-        processExpression(out, node.getChildren()[i], temps, variables, functions, prefix, functionParams, allExpressions);
+        processExpression(out, node.getChildren()[i], temps, functions, prefix, functionParams, allExpressions);
     string name = prefix+intToString(temps.size());
     bool hasRecordedNode = false;
     
@@ -77,13 +84,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
             break;
         case Operation::VARIABLE:
-        {
-            map<string, string>::const_iterator iter = variables.find(node.getOperation().getName());
-            if (iter == variables.end())
-                throw OpenMMException("Unknown variable in expression: "+node.getOperation().getName());
-            out << iter->second;
-            break;
-        }
+            throw OpenMMException("Unknown variable in expression: "+node.getOperation().getName());
         case Operation::CUSTOM:
         {
             int i;
@@ -145,8 +146,17 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << getTempName(node.getChildren()[0], temps) << "*" << getTempName(node.getChildren()[1], temps);
             break;
         case Operation::DIVIDE:
-            out << getTempName(node.getChildren()[0], temps) << "/" << getTempName(node.getChildren()[1], temps);
+        {
+            bool haveReciprocal = false;
+            for (int i = 0; i < (int) temps.size(); i++)
+                if (temps[i].first.getOperation().getId() == Operation::RECIPROCAL && temps[i].first.getChildren()[0] == node.getChildren()[1]) {
+                    haveReciprocal = true;
+                    out << getTempName(node.getChildren()[0], temps) << "*" << temps[i].second;
+                }
+            if (!haveReciprocal)
+                out << getTempName(node.getChildren()[0], temps) << "/" << getTempName(node.getChildren()[1], temps);
             break;
+        }
         case Operation::POWER:
             out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
             break;

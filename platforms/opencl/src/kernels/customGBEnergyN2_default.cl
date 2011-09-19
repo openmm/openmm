@@ -98,7 +98,8 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = SQRT(r2);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+j;
                 float dEdR = 0.0f;
@@ -173,7 +174,8 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = SQRT(r2);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+tj;
                 float dEdR = 0.0f;

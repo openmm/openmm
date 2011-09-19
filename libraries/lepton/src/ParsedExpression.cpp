@@ -189,6 +189,12 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
                 return ExpressionTreeNode(new Operation::Divide(), children[0], children[1].getChildren()[0]);
             if (children[0].getOperation().getId() == Operation::RECIPROCAL) // (1/a)*b = b/a
                 return ExpressionTreeNode(new Operation::Divide(), children[1], children[0].getChildren()[0]);
+            if (children[0] == children[1])
+                return ExpressionTreeNode(new Operation::Square(), children[0]); // x*x = square(x)
+            if (children[0].getOperation().getId() == Operation::SQUARE && children[0].getChildren()[0] == children[1])
+                return ExpressionTreeNode(new Operation::Cube(), children[1]); // x*x*x = cube(x)
+            if (children[1].getOperation().getId() == Operation::SQUARE && children[1].getChildren()[0] == children[0])
+                return ExpressionTreeNode(new Operation::Cube(), children[0]); // x*x*x = cube(x)
             break;
         }
         case Operation::DIVIDE:

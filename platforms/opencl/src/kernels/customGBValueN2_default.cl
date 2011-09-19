@@ -94,7 +94,8 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = SQRT(r2);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+j;
                 float tempValue1 = 0.0f;
@@ -166,7 +167,8 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = SQRT(r2);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+tj;
                 float tempValue1 = 0.0f;

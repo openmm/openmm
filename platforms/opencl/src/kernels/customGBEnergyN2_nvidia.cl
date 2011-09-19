@@ -113,7 +113,8 @@ __kernel void computeN2Energy(
 #ifdef USE_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
-                    float r = SQRT(r2);
+                    float invR = RSQRT(r2);
+                    float r = RECIP(invR);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
                     float dEdR = 0.0f;
@@ -175,7 +176,8 @@ __kernel void computeN2Energy(
 #ifdef USE_CUTOFF
                         if (r2 < CUTOFF_SQUARED) {
 #endif
-                        float r = SQRT(r2);
+                        float invR = RSQRT(r2);
+                        float r = RECIP(invR);
                         LOAD_ATOM2_PARAMETERS
                         atom2 = y*TILE_SIZE+tj;
                         float dEdR = 0.0f;
