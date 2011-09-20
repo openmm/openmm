@@ -47,20 +47,15 @@
 using namespace OpenMM;
 using namespace std;
 
-void testIntegration() {
-    const int numParticles = 1;
-    const int numCopies = 25;
+void testFreeParticles() {
+    const int numParticles = 100;
+    const int numCopies = 30;
     const double temperature = 300.0;
+    const double mass = 1.0;
     System system;
     for (int i = 0; i < numParticles; i++)
-        system.addParticle(i+1);
-    if (numParticles > 1) {
-        HarmonicBondForce* bonds = new HarmonicBondForce();
-        system.addForce(bonds);
-        for (int i = 0; i < numParticles-1; i++)
-            bonds->addBond(i, i+1, 1.0, 100.0);
-    }
-    RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
+        system.addParticle(mass);
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
     Platform& platform = Platform::getPlatformByName("OpenCL");
     Context context(system, integ, platform);
     OpenMM_SFMT::SFMT sfmt;
@@ -69,7 +64,7 @@ void testIntegration() {
     for (int i = 0; i < numCopies; i++)
     {
         for (int j = 0; j < numParticles; j++)
-            positions[j] = Vec3(j+0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt), 0.01*genrand_real2(sfmt));
+            positions[j] = Vec3(0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt));
         integ.setPositions(i, positions);
     }
     const int numSteps = 1000;
@@ -82,43 +77,38 @@ void testIntegration() {
         integ.step(1);
         vector<State> state(numCopies);
         for (int j = 0; j < numCopies; j++)
-            state[j] = integ.getState(j, State::Positions | State::Velocities | State::Energy);
-        for (int j = 0; j < numCopies; j++)
-            ke[j] += state[j].getKineticEnergy();
-        double totalEnergy = 0.0;
-        for (int j = 0; j < numCopies; j++) {
-            totalEnergy += state[j].getKineticEnergy()+state[j].getPotentialEnergy();
-            for (int k = 0; k < numParticles; k++) {
-                Vec3 delta = state[j].getPositions()[k]-state[j == 0 ? numCopies-1 : j-1].getPositions()[k];
-                totalEnergy += 0.5*system.getParticleMass(k)*wn*wn*delta.dot(delta);
-            }
-        }
+            state[j] = integ.getState(j, State::Positions | State::Velocities);
         for (int j = 0; j < numParticles; j++) {
             double rg2 = 0.0;
-            for (int k = 0; k < numCopies; k++)
+            for (int k = 0; k < numCopies; k++) {
+                Vec3 v = state[k].getVelocities()[j];
+                ke[k] += 0.5*mass*v.dot(v);
                 for (int m = 0; m < numCopies; m++) {
                     Vec3 delta = state[k].getPositions()[j]-state[m].getPositions()[j];
                     rg2 += delta.dot(delta);
                 }
-            rg[j] += sqrt(rg2/(2*numCopies*numCopies));
+            }
+            rg[j] += rg2/(2*numCopies*numCopies);
         }
     }
-    for (int i = 0; i < numCopies; i++) {
-        double value = ke[i]/numSteps;
-        double expected = 0.5*numCopies*numParticles*3*BOLTZ*temperature;
-        printf("%d: %g %g %g\n", i, value, expected, value/expected);
-    }
-    for (int i = 0; i < numParticles; i++) {
-        double value = rg[i]/numSteps;
-        double expected = hbar/(2*sqrt(system.getParticleMass(i)*BOLTZ*temperature));
-        printf("%d: %g %g %g\n", i, value, expected, value/expected);
-    }
+    double meanKE = 0.0;
+    for (int i = 0; i < numCopies; i++)
+        meanKE += ke[i];
+    meanKE /= numSteps*numCopies;
+    double expectedKE = 0.5*numCopies*numParticles*3*BOLTZ*temperature;
+    ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 1e-2);
+    double meanRg2 = 0.0;
+    for (int i = 0; i < numParticles; i++)
+        meanRg2 += rg[i];
+    meanRg2 /= numSteps*numParticles;
+    double expectedRg = hbar/(2*sqrt(mass*BOLTZ*temperature));
+    ASSERT_USUALLY_EQUAL_TOL(expectedRg, sqrt(meanRg2), 1e-3);
 }
 
 int main() {
     try {
         Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
-        testIntegration();
+        testFreeParticles();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
