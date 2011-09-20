@@ -363,11 +363,9 @@ void kCalculateAmoebaLocalForces_kernel()
         {
             int4   atom1            = cAmoebaSim.pAmoebaAngleID1[pos1];  
 
-            /*
-               bond_angle1.x        ideal
-               bond_angle1.y        k
-            */
-
+            // bond_angle1.x        ideal
+            // bond_angle1.y        k
+            
             float2 bond_angle1      = cAmoebaSim.pAmoebaAngleParameter[pos1];
 
             float4 a1               = cSim.pPosq[atom1.x];
@@ -453,11 +451,9 @@ void kCalculateAmoebaLocalForces_kernel()
         {
             int4   atom1            = cAmoebaSim.pAmoebaInPlaneAngleID1[pos1];  
 
-            /*
-               bond_angle1.x        ideal
-               bond_angle1.y        k
-            */
-
+            // bond_angle1.x        ideal
+            // bond_angle1.y        k
+            
             float2 bond_angle1      = cAmoebaSim.pAmoebaInPlaneAngleParameter[pos1];
 
             float4 a1               = cSim.pPosq[atom1.x];
@@ -524,7 +520,6 @@ void kCalculateAmoebaLocalForces_kernel()
                                                                           cAmoebaSim.amoebaInPlaneAngleQuarticK*deltaIdeal2       +
                                                                           cAmoebaSim.amoebaInPlaneAnglePenticK*deltaIdeal3        +
                                                                           cAmoebaSim.amoebaInPlaneAngleSexticK*deltaIdeal4 );
-
 
             float dEdR              = bond_angle1.y*deltaIdeal*( 2.0f + 3.0f*cAmoebaSim.amoebaInPlaneAngleCubicK*deltaIdeal       + 
                                                                         4.0f*cAmoebaSim.amoebaInPlaneAngleQuarticK*deltaIdeal2    +
@@ -624,14 +619,12 @@ void kCalculateAmoebaLocalForces_kernel()
         {
             int4   atom1            = cAmoebaSim.pAmoebaTorsionID1[pos1];  
 
-            /*
-               torsionParam1.x      amplitude(1)
-               torsionParam1.y      phase(1)
-               torsionParam1.z      amplitude(2)
-               torsionParam1.w      phase(2)
-               torsionParam2.x      amplitude(3)
-               torsionParam2.y      phase(3)
-            */
+            // torsionParam1.x      amplitude(1)
+            // torsionParam1.y      phase(1)
+            // torsionParam1.z      amplitude(2)
+            // torsionParam1.w      phase(2)
+            // torsionParam2.x      amplitude(3)
+            // torsionParam2.y      phase(3)
 
             float4 torsionParam1    = cAmoebaSim.pAmoebaTorsionParameter1[pos1];
             float2 torsionParam2    = cAmoebaSim.pAmoebaTorsionParameter2[pos1];
@@ -699,30 +692,29 @@ void kCalculateAmoebaLocalForces_kernel()
             float    sine3            = cosine*sine2 + sine*cosine2;
 
             // not deleted since may be needed in future
-/*
-            float    cosine4          = cosine*cosine3 - sine*sine3;
-            float    sine4            = cosine*sine3 + sine*cosine3;
-            float    cosine5          = cosine*cosine4 - sine*sine4;
-            float    sine5            = cosine*sine4 + sine*cosine4;
-            float    cosine6          = cosine*cosine5 - sine*sine5;
-            float    sine6            = cosine*sine5 + sine*cosine5;
-*/
+
+            // float    cosine4          = cosine*cosine3 - sine*sine3;
+            // float    sine4            = cosine*sine3 + sine*cosine3;
+            // float    cosine5          = cosine*cosine4 - sine*sine4;
+            // float    sine5            = cosine*sine4 + sine*cosine4;
+            // float    cosine6          = cosine*cosine5 - sine*sine5;
+            // float    sine6            = cosine*sine5 + sine*cosine5;
+
             float    phi1             = 1.0f + (cosine*c1 + sine*s1);
             float    phi2             = 1.0f + (cosine2*c2 + sine2*s2);
             float    phi3             = 1.0f + (cosine3*c3 + sine3*s3);
-/*
-            float    phi4             = 1.0f + (cosine4*c4 + sine4*s4);
-            float    phi5             = 1.0f + (cosine5*c5 + sine5*s5);
-            float    phi6             = 1.0f + (cosine6*c6 + sine6*s6);
-*/
+
+            // float    phi4             = 1.0f + (cosine4*c4 + sine4*s4);
+            // float    phi5             = 1.0f + (cosine5*c5 + sine5*s5);
+            // float    phi6             = 1.0f + (cosine6*c6 + sine6*s6);
+
             float    dphi1            = (cosine*s1 - sine*c1);
             float    dphi2            = 2.0f * (cosine2*s2 - sine2*c2);
             float    dphi3            = 3.0f * (cosine3*s3 - sine3*c3);
-/*
-            float    dphi4            = 4.0f * (cosine4*s4 - sine4*c4);
-            float    dphi5            = 5.0f * (cosine5*s5 - sine5*c5);
-            float    dphi6            = 6.0f * (cosine6*s6 - sine6*c6);
-*/
+
+            // float    dphi4            = 4.0f * (cosine4*s4 - sine4*c4);
+            // float    dphi5            = 5.0f * (cosine5*s5 - sine5*c5);
+            // float    dphi6            = 6.0f * (cosine6*s6 - sine6*c6);
 
             // calculate torsional energy and master chain rule term
 
@@ -1002,12 +994,10 @@ void kCalculateAmoebaLocalForces_kernel()
         {
             int4   atom1            = cAmoebaSim.pAmoebaStretchBendID1[pos1];  
 
-            /*
-               parameters.x        length AB
-               parameters.y        length CB
-               parameters.z        angle (in radians)
-               parameters.w        k
-            */
+            // parameters.x        length AB
+            // parameters.y        length CB
+            // parameters.z        angle (in radians)
+            // parameters.w        k
 
             float4 a1               = cSim.pPosq[atom1.x];
             float4 a2               = cSim.pPosq[atom1.y];
@@ -1278,6 +1268,7 @@ void kCalculateAmoebaLocalForces_kernel()
         pos += blockDim.x * gridDim.x;
     }
 
+
     while (pos < cAmoebaSim.amoebaTorsionTorsion_offset)
     {
         unsigned int pos1   = pos - cAmoebaSim.amoebaOutOfPlaneBend_offset;
@@ -1511,24 +1502,24 @@ void kCalculateAmoebaLocalForces_kernel()
 
             // increment the torsion-torsion energy and gradient
 
-/*
-            float    ett = ett + e
-            float    dett(1,ia) = dett(1,ia) + dedxia 
-            float    dett(2,ia) = dett(2,ia) + dedyia 
-            float    dett(3,ia) = dett(3,ia) + dedzia
-            float    dett(1,ib) = dett(1,ib) + dedxib + dedxib2
-            float    dett(2,ib) = dett(2,ib) + dedyib + dedyib2
-            float    dett(3,ib) = dett(3,ib) + dedzib + dedzib2
-            float    dett(1,ic) = dett(1,ic) + dedxic + dedxic2
-            float    dett(2,ic) = dett(2,ic) + dedyic + dedyic2 
-            float    dett(3,ic) = dett(3,ic) + dedzic + dedzic2
-            float    dett(1,id) = dett(1,id) + dedxid + dedxid2
-            float    dett(2,id) = dett(2,id) + dedyid + dedyid2
-            float    dett(3,id) = dett(3,id) + dedzid + dedzid2
-            float    dett(1,ie) = dett(1,ie) + dedxie2 
-            float    dett(2,ie) = dett(2,ie) + dedyie2 
-            float    dett(3,ie) = dett(3,ie) + dedzie2
-*/
+
+            // float    ett = ett + e
+            // float    dett(1,ia) = dett(1,ia) + dedxia 
+            // float    dett(2,ia) = dett(2,ia) + dedyia 
+            // float    dett(3,ia) = dett(3,ia) + dedzia
+            // float    dett(1,ib) = dett(1,ib) + dedxib + dedxib2
+            // float    dett(2,ib) = dett(2,ib) + dedyib + dedyib2
+            // float    dett(3,ib) = dett(3,ib) + dedzib + dedzib2
+            // float    dett(1,ic) = dett(1,ic) + dedxic + dedxic2
+            // float    dett(2,ic) = dett(2,ic) + dedyic + dedyic2 
+            // float    dett(3,ic) = dett(3,ic) + dedzic + dedzic2
+            // float    dett(1,id) = dett(1,id) + dedxid + dedxid2
+            // float    dett(2,id) = dett(2,id) + dedyid + dedyid2
+            // float    dett(3,id) = dett(3,id) + dedzid + dedzid2
+            // float    dett(1,ie) = dett(1,ie) + dedxie2 
+            // float    dett(2,ie) = dett(2,ie) + dedyie2 
+            // float    dett(3,ie) = dett(3,ie) + dedzie2
+
             // increment the torsion-torsion gradient;
             int4   atom3            = cAmoebaSim.pAmoebaTorsionTorsionID3[pos1];  
 

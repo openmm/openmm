@@ -1002,6 +1002,17 @@ if( (i < DUMP_PARAMETERS || i > torsionTorsions - (DUMP_PARAMETERS + 1)) && amoe
     psTorsionTorsionID3->Upload();
 }
 
+/** 
+ * Used for testing whether grid values are set correctly.
+ * 
+ * @param amoebaGpu       amoebaGpu context pointer
+ * @param grids           array of grid values (all grids/all values)
+ * @param gridIndex       index of grid
+ * @param angle1          first angle
+ * @param angle2          second angle
+ * @param values          output values of grid
+ */
+
 static void testAmoebaTorsionTorsionGridLookup( amoebaGpuContext amoebaGpu, float* grids, int gridIndex, float angle1, float angle2, std::vector<float>& values )
 {
 
@@ -1024,20 +1035,31 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
 {
 
     _gpuContext* gpu                                     = amoebaGpu->gpuContext;
-    unsigned int torsionTorsionGrids                     = floatGrids.size();
-    unsigned int totalGridEntries                        = 0;
+
+    unsigned int torsionTorsionGrids                     = floatGrids.size(); // number of grids
+    unsigned int totalGridEntries                        = 0;                 // total number of entries over all grids
+                                                                              // used to allocate single memory buffer for grids 
+
     // 4 (grids) * (25 *25 grid)*(2 +4 a1, a2, f, f1,f2, f12) = 15000
+
+    // assumming uniform spacing of grid angle values, set offset in to memory, beginning angle, angle spacing (delta), 
+    // and number of y-angles
+
     for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
+
         amoebaGpu->amoebaSim.amoebaTorTorGridOffset[ii] = (totalGridEntries/4);
         amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii]  = floatGrids[ii][0][0][0];
         amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii]  = 360.0f/static_cast<float>(floatGrids[ii].size()-1);
         amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]     = floatGrids[ii].size();
+
         for (unsigned int jj = 0; jj < floatGrids[ii].size(); jj++) {
             for (unsigned int kk = 0; kk < floatGrids[ii][jj].size(); kk++) {
                 totalGridEntries += (floatGrids[ii][jj][kk].size() - 2);
             }
         }
     }
+
+    // allocate memory on device
 
     unsigned int totalEntries                            = totalGridEntries/4;
     CUDAStream<float4>* psTorsionTorsionGrids            = new CUDAStream<float4>(totalEntries, 1, "AmoebaTorsionTorsionGrids");
@@ -1051,6 +1073,8 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
                             amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii], amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii], amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]);
         }
     }
+
+    // load grid values into device memory buffer
 
     unsigned int index    = 0;
     for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
