@@ -37,6 +37,7 @@
 #include "openmm/Kernel.h"
 #include <utility>
 #include <set>
+#include <vector>
 #include <string>
 
 namespace OpenMM {
@@ -61,6 +62,8 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+
+    std::vector< std::pair<int, int> > getBondedParticles() const;
 private:
     AmoebaHarmonicBondForce& owner;
     Kernel kernel;
