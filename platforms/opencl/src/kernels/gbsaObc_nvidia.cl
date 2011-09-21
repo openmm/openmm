@@ -23,10 +23,11 @@ __kernel void computeBornSum(
         __global float4* posq, __global float2* global_params,
         __local AtomData1* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags,
 #else
-        unsigned int numTiles) {
+        unsigned int numTiles,
 #endif
+        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
@@ -39,6 +40,8 @@ __kernel void computeBornSum(
 #endif
     unsigned int lasty = 0xFFFFFFFF;
     __local int2 reservedBlocks[WARPS_PER_GROUP];
+    __local unsigned int* exclusionRange = (__local unsigned int*) reservedBlocks;
+    __local int exclusionIndex[WARPS_PER_GROUP];
     
     do {
         // Extract the coordinates of this tile
@@ -126,7 +129,18 @@ __kernel void computeBornSum(
                 localData[get_local_id(0)].bornSum = 0.0f;
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-                if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
+                bool computeSubset = false;
+                if (flags != 0xFFFFFFFF) {
+                    if (tgx < 2)
+                        exclusionRange[2*localGroupIndex+tgx] = exclusionRowIndices[x+tgx];
+                    if (tgx == 0)
+                        exclusionIndex[localGroupIndex] = -1;
+                    for (int i = exclusionRange[2*localGroupIndex]+tgx; i < exclusionRange[2*localGroupIndex+1]; i += TILE_SIZE)
+                        if (exclusionIndices[i] == y)
+                            exclusionIndex[localGroupIndex] = i*TILE_SIZE;
+                    computeSubset = (exclusionIndex[localGroupIndex] == -1);
+                }
+                if (computeSubset) {
                     if (flags == 0) {
                         // No interactions in this tile.
                     }
@@ -330,10 +344,11 @@ __kernel void computeGBSAForce1(
         __global float* energyBuffer, __global float4* posq, __global float* global_bornRadii,
         __local AtomData2* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags,
 #else
-        unsigned int numTiles) {
+        unsigned int numTiles,
 #endif
+        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
@@ -347,6 +362,8 @@ __kernel void computeGBSAForce1(
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
     __local int2 reservedBlocks[WARPS_PER_GROUP];
+    __local unsigned int* exclusionRange = (__local unsigned int*) reservedBlocks;
+    __local int exclusionIndex[WARPS_PER_GROUP];
     
     do {
         // Extract the coordinates of this tile
@@ -393,6 +410,9 @@ __kernel void computeGBSAForce1(
                         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                         float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                        if (r2 < CUTOFF_SQUARED) {
+#endif
                         float invR = RSQRT(r2);
                         float r = RECIP(invR);
                         float bornRadius2 = localData[tbx+j].bornRadius;
@@ -405,17 +425,13 @@ __kernel void computeGBSAForce1(
                         float Gpol = tempEnergy*RECIP(denominator2);
                         float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         float dEdR = Gpol*(1.0f - 0.25f*expTerm);
-#ifdef USE_CUTOFF
-                        if (r2 > CUTOFF_SQUARED) {
-                            dEdR = 0.0f;
-                            tempEnergy  = 0.0f;
-                            dGpol_dalpha2_ij = 0.0f;
-                        }
-#endif
                         force.w += dGpol_dalpha2_ij*bornRadius2;
                         energy += 0.5f*tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
+#ifdef USE_CUTOFF
+                        }
+#endif
                     }
                 }
             }
@@ -437,7 +453,18 @@ __kernel void computeGBSAForce1(
                 localData[get_local_id(0)].fw = 0.0f;
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-                if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
+                bool computeSubset = false;
+                if (flags != 0xFFFFFFFF) {
+                    if (tgx < 2)
+                        exclusionRange[2*localGroupIndex+tgx] = exclusionRowIndices[x+tgx];
+                    if (tgx == 0)
+                        exclusionIndex[localGroupIndex] = -1;
+                    for (int i = exclusionRange[2*localGroupIndex]+tgx; i < exclusionRange[2*localGroupIndex+1]; i += TILE_SIZE)
+                        if (exclusionIndices[i] == y)
+                            exclusionIndex[localGroupIndex] = i*TILE_SIZE;
+                    computeSubset = (exclusionIndex[localGroupIndex] == -1);
+                }
+                if (computeSubset) {
                     if (flags == 0) {
                         // No interactions in this tile.
                     }
@@ -454,6 +481,9 @@ __kernel void computeGBSAForce1(
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                                if (r2 < CUTOFF_SQUARED) {
+#endif
                                 float invR = RSQRT(r2);
                                 float r = RECIP(invR);
                                 float bornRadius2 = localData[tbx+j].bornRadius;
@@ -480,6 +510,11 @@ __kernel void computeGBSAForce1(
                                 delta.xyz *= dEdR;
                                 force.xyz -= delta.xyz;
                                 tempBuffer[get_local_id(0)] = (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius1);
+#ifdef USE_CUTOFF
+                                }
+                                else
+                                    tempBuffer[get_local_id(0)] = (float4) 0.0f;
+#endif
 
                                 // Sum the forces on atom j.
 
@@ -512,6 +547,9 @@ __kernel void computeGBSAForce1(
                             delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                            if (r2 < CUTOFF_SQUARED) {
+#endif
                             float invR = RSQRT(r2);
                             float r = RECIP(invR);
                             float bornRadius2 = localData[tbx+tj].bornRadius;
@@ -524,13 +562,6 @@ __kernel void computeGBSAForce1(
                             float Gpol = tempEnergy*RECIP(denominator2);
                             float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             float dEdR = Gpol*(1.0f - 0.25f*expTerm);
-#ifdef USE_CUTOFF
-                            if (r2 > CUTOFF_SQUARED) {
-                                dEdR = 0.0f;
-                                tempEnergy  = 0.0f;
-                                dGpol_dalpha2_ij = 0.0f;
-                            }
-#endif
                             force.w += dGpol_dalpha2_ij*bornRadius2;
                             energy += tempEnergy;
                             delta.xyz *= dEdR;
@@ -539,6 +570,9 @@ __kernel void computeGBSAForce1(
                             localData[tbx+tj].fy += delta.y;
                             localData[tbx+tj].fz += delta.z;
                             localData[tbx+tj].fw += dGpol_dalpha2_ij*bornRadius1;
+#ifdef USE_CUTOFF
+                            }
+#endif
                         }
                         tj = (tj + 1) & (TILE_SIZE - 1);
                     }

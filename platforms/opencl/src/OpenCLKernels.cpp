@@ -1544,6 +1544,8 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         }
         else
             computeBornSumKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
+        computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getExclusionIndices().getDeviceBuffer());
+        computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getExclusionRowIndices().getDeviceBuffer());
         force1Kernel = cl::Kernel(program, "computeGBSAForce1");
         index = 0;
         force1Kernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
@@ -1563,6 +1565,8 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         }
         else
             force1Kernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
+        force1Kernel.setArg<cl::Buffer>(index++, nb.getExclusionIndices().getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(index++, nb.getExclusionRowIndices().getDeviceBuffer());
         program = cl.createProgram(OpenCLKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
         reduceBornSumKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -2304,12 +2308,14 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             cl.getNonbondedUtilities().addArgument(arguments[i]);
     }
     cl.addForce(new OpenCLCustomGBForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
-    for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
-        const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
-        cl.addAutoclearBuffer(buffer.getMemory(), buffer.getSize()*energyDerivs->getNumObjects()/sizeof(cl_float));
-    }
     if (useLong)
         cl.addAutoclearBuffer(longEnergyDerivs->getDeviceBuffer(), 2*longEnergyDerivs->getSize());
+    else {
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+            cl.addAutoclearBuffer(buffer.getMemory(), buffer.getSize()*energyDerivs->getNumObjects()/sizeof(cl_float));
+        }
+    }
 }
 
 double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
