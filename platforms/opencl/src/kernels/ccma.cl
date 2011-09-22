@@ -20,8 +20,13 @@ __kernel void computeConstraintDirections(__global int2* constraintAtoms, __glob
  * Compute the force applied by each constraint.
  */
 __kernel void computeConstraintForce(__global int2* constraintAtoms, __global float4* constraintDistance, __global float4* atomPositions,
-        __global float* reducedMass, __global float* delta1, __global int* converged, float tol) {
+        __global float* reducedMass, __global float* delta1, __global int* converged, float tol, int iteration) {
     __local int groupConverged;
+    if (converged[1-iteration%2]) {
+        if (get_global_id(0) == 0)
+            converged[iteration%2] = 1;
+        return; // The constraint iteration has already converged.
+    }
     if (get_local_id(0) == 0)
         groupConverged = 1;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -45,7 +50,7 @@ __kernel void computeConstraintForce(__global int2* constraintAtoms, __global fl
 
         if (groupConverged && (rp2 < lowerTol*dist2 || rp2 > upperTol*dist2)) {
             groupConverged = 0;
-            converged[0] = 0;
+            converged[iteration%2] = 0;
         }
     }
 }
@@ -54,8 +59,8 @@ __kernel void computeConstraintForce(__global int2* constraintAtoms, __global fl
  * Multiply the vector of constraint forces by the constraint matrix.
  */
 __kernel void multiplyByConstraintMatrix(__global float* delta1, __global float* delta2, __global int* constraintMatrixColumn,
-        __global float* constraintMatrixValue, __global int* converged) {
-    if (converged[0])
+        __global float* constraintMatrixValue, __global int* converged, int iteration) {
+    if (converged[iteration%2])
         return; // The constraint iteration has already converged.
 
     // Multiply by the inverse constraint matrix.
@@ -78,7 +83,9 @@ __kernel void multiplyByConstraintMatrix(__global float* delta1, __global float*
  */
 __kernel void updateAtomPositions(__global int* numAtomConstraints, __global int* atomConstraints, __global float4* constraintDistance,
         __global float4* atomPositions, __global float4* velm, __global float* delta1, __global float* delta2, __global int* converged, int iteration) {
-    if (converged[0])
+    if (get_global_id(0) == 0)
+        converged[1-iteration%2] = 1;
+    if (converged[iteration%2])
         return; // The constraint iteration has already converged.
     float damping = (iteration < 2 ? 0.5f : 1.0f);
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
