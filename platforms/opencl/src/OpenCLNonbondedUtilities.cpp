@@ -49,7 +49,7 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     }
     else if (context.getSIMDWidth() == 32) {
         if (context.getSupports64BitGlobalAtomics()) {
-            numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+            numForceThreadBlocks = 2*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
             forceThreadBlockSize = 256;
             numForceBuffers = 2;
         }
