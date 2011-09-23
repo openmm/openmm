@@ -53,7 +53,7 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     numCopies = integrator.getNumCopies();
     numParticles = system.getNumParticles();
     workgroupSize = numCopies;
-    while (workgroupSize < 128-numCopies)
+    while (workgroupSize <= 128-numCopies)
         workgroupSize += numCopies;
     if (numCopies != OpenCLFFT3D::findLegalDimension(numCopies))
         throw OpenMMException("RPMDIntegrator: the number of copies must be a multiple of powers of 2, 3, and 5.");
@@ -68,6 +68,7 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     vector<mm_float4> temp(positions->getSize());
     for (int i = 0; i < positions->getSize(); i++)
         temp[i] = mm_float4(0, 0, 0, 0);
+    positions->upload(temp);
     for (int i = 0; i < velocities->getSize(); i++)
         temp[i] = mm_float4(0, 0, 0, 1);
     velocities->upload(temp);
@@ -120,10 +121,10 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     if (!forcesAreValid) {
         for (int i = 0; i < numCopies; i++) {
             cl.getQueue().enqueueCopyBuffer(positions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(),
-                    i*paddedParticles, 0, paddedParticles*sizeof(mm_float4));
+                    i*paddedParticles*sizeof(mm_float4), 0, paddedParticles*sizeof(mm_float4));
             context.calcForcesAndEnergy(true, false);
             cl.getQueue().enqueueCopyBuffer(cl.getForce().getDeviceBuffer(), forces->getDeviceBuffer(),
-                    0, i*paddedParticles, paddedParticles*sizeof(mm_float4));
+                    0, i*paddedParticles*sizeof(mm_float4), paddedParticles*sizeof(mm_float4));
         }
     }
     
@@ -146,10 +147,10 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     
     for (int i = 0; i < numCopies; i++) {
         cl.getQueue().enqueueCopyBuffer(positions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(),
-                i*paddedParticles, 0, paddedParticles*sizeof(mm_float4));
+                i*paddedParticles*sizeof(mm_float4), 0, paddedParticles*sizeof(mm_float4));
         context.calcForcesAndEnergy(true, false);
         cl.getQueue().enqueueCopyBuffer(cl.getForce().getDeviceBuffer(), forces->getDeviceBuffer(),
-                0, i*paddedParticles, paddedParticles*sizeof(mm_float4));
+                0, i*paddedParticles*sizeof(mm_float4), paddedParticles*sizeof(mm_float4));
     }
     
     // Update velocities.
