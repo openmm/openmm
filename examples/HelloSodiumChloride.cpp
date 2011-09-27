@@ -32,8 +32,6 @@ static const double StepSizeInFs        = 2;       // integration step size (fs)
 static const double ReportIntervalInFs  = 50;      // how often to issue PDB frame (fs)
 static const double SimulationTimeInPs  = 100;     // total simulation time (ps)
 
-// Currently energy calculation is not available in the GPU kernels so asking
-// for it requires slow Reference Platform computation at reporting intervals.
 static const bool   WantEnergy          = true;
 
 

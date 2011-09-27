@@ -38,9 +38,6 @@ MODULE MyAtomInfo
     parameter(ReportIntervalInFs = 50)  !how often for PDB frame (fs)
     parameter(SimulationTimeInPs = 100) !total simulation time (ps)
     
-    ! Currently energy calculation is not available in the GPU kernels so
-    ! asking for it requires slow Reference Platform computation at 
-    ! reporting intervals. If you have a big system you'll want this off.
     logical, parameter :: WantEnergy = .true.
 
     ! Atom and force field information

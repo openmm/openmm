@@ -355,7 +355,6 @@ static void
 myGetOpenMMState(MyOpenMMData* omm, double& timeInPs,
                  std::vector<double>& atomPositionsInAng)
 {
-    // We don't calculate energy in this example because it would take most of the time
     const OpenMM::State state = omm->context->getState(OpenMM::State::Positions, true);
     timeInPs = state.getTime(); // OpenMM time is in ps already
 
