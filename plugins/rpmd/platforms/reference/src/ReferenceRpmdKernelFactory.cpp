@@ -33,22 +33,19 @@
 
 using namespace OpenMM;
 
-extern "C" void registerPlatforms() {
-}
-
 #if defined(WIN32)
     #include <windows.h>
-    extern "C" void registerKernelFactories();
+    extern "C" void initRpmdReferenceKernels();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-            registerKernelFactories();
+            initRpmdReferenceKernels();
         return TRUE;
     }
 #else
-    extern "C" void __attribute__((constructor)) registerKernelFactories();
+    extern "C" void __attribute__((constructor)) initRpmdReferenceKernels();
 #endif
 
-extern "C" void registerKernelFactories() {
+extern "C" void initRpmdReferenceKernels() {
     Platform& platform = Platform::getPlatformByName("Reference");
     ReferenceRpmdKernelFactory* factory = new ReferenceRpmdKernelFactory();
     platform.registerKernelFactory(IntegrateRPMDStepKernel::Name(), factory);

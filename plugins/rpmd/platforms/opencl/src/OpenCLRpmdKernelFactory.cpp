@@ -24,6 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include <exception>
+
 #include "OpenCLRpmdKernelFactory.h"
 #include "OpenCLRpmdKernels.h"
 #include "openmm/internal/windowsExport.h"
@@ -36,9 +38,14 @@ extern "C" void registerPlatforms() {
 }
 
 extern "C" void registerKernelFactories() {
-    Platform& platform = Platform::getPlatformByName("OpenCL");
-    OpenCLRpmdKernelFactory* factory = new OpenCLRpmdKernelFactory();
-    platform.registerKernelFactory(IntegrateRPMDStepKernel::Name(), factory);
+    try {
+        Platform& platform = Platform::getPlatformByName("OpenCL");
+        OpenCLRpmdKernelFactory* factory = new OpenCLRpmdKernelFactory();
+        platform.registerKernelFactory(IntegrateRPMDStepKernel::Name(), factory);
+    }
+    catch (std::exception ex) {
+        // Ignore
+    }
 }
 
 KernelImpl* OpenCLRpmdKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
