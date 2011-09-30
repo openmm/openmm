@@ -142,8 +142,11 @@ public:
      * @param copy  the index of the copy for which to retrieve state information
      * @param types the set of data types which should be stored in the State object.  This
      * should be a union of DataType values, e.g. (State::Positions | State::Velocities).
+     * @param enforcePeriodicBox if false, the position of each particle will be whatever position
+     * is stored by the integrator, regardless of periodic boundary conditions.  If true, particle
+     * positions will be translated so the center of every molecule lies in the same periodic box.
      */
-    State getState(int copy, int types);
+    State getState(int copy, int types, bool enforcePeriodicBox=false);
     /**
      * Advance a simulation through time by taking a series of time steps.
      *
