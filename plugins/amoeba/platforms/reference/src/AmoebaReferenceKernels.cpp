@@ -36,6 +36,7 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "AmoebaReferenceVdwForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
+#include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
 #include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include "AmoebaReferenceUreyBradleyForce.h"
 #include "ReferencePlatform.h"
@@ -412,16 +413,31 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
     for (int ii = 0; ii < numTorsionTorsionGrids; ii++) {
 
         const TorsionTorsionGrid grid = force.getTorsionTorsionGrid( ii );
-
         torsionTorsionGrids[ii].resize( grid.size() );
+
+        // check if grid needs to be reordered: x-angle should be 'slow' index
+
+        TorsionTorsionGrid reorderedGrid;
+        int reorder = 0; 
+        if( grid[0][0][0] != grid[0][1][0] ){
+            AmoebaTorsionTorsionForceImpl::reorderGrid( grid, reorderedGrid );
+            reorder = 1; 
+        }    
+
         for (unsigned int kk = 0; kk < grid.size(); kk++) {
 
             torsionTorsionGrids[ii][kk].resize( grid[kk].size() );
             for (unsigned int jj = 0; jj < grid[kk].size(); jj++) {
 
                 torsionTorsionGrids[ii][kk][jj].resize( grid[kk][jj].size() );
-                for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
-                    torsionTorsionGrids[ii][kk][jj][ll] = static_cast<RealOpenMM>(grid[kk][jj][ll]);
+                if( reorder ){
+                    for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
+                        torsionTorsionGrids[ii][kk][jj][ll] = static_cast<RealOpenMM>(reorderedGrid[kk][jj][ll]);
+                    }
+                } else {
+                    for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
+                        torsionTorsionGrids[ii][kk][jj][ll] = static_cast<RealOpenMM>(grid[kk][jj][ll]);
+                    }
                 }
             }
         }

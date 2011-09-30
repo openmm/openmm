@@ -27,8 +27,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/amoebaKernels.h"
 #include "openmm/System.h"
+#include "openmm/amoebaKernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 namespace OpenMM {

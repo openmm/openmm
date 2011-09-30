@@ -289,6 +289,11 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu , float innerDielectr
                                 int includeCavityTerm, float probeRadius, float surfaceAreaFactor);
 
 extern "C"
+void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu , float innerDielectric, float solventDielectric, float dielectricOffset,
+                                   const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
+                                   int includeCavityTerm, float probeRadius, float surfaceAreaFactor);
+
+extern "C"
 void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<int>& indexIVs, 
                                 const std::vector<int>& indexClasses, 
@@ -313,7 +318,7 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
                                 const float awater, const float shctd, const float dispoff );
  
 extern "C"
-void amoebaGpuSetConstants(amoebaGpuContext gpu);
+void amoebaGpuSetConstants(amoebaGpuContext gpu, int updateFlag );
 
 extern "C"
 void gpuSetAmoebaBondOffsets(amoebaGpuContext gpu);

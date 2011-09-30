@@ -124,9 +124,15 @@ extern void GetCalculateAmoebaKirkwoodEDiffSim( amoebaGpuContext amoebaGpu );
 //extern void cudaComputeAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu );
 extern void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu );
 
-extern void SetCalculateAmoebaObcGbsaBornSumSim( gpuContext gpu );
-extern void GetCalculateAmoebaObcGbsaBornSumSim( gpuContext gpu );
-extern void cudaComputeAmoebaBornRadii( amoebaGpuContext amoebaGpu );
+//extern void SetCalculateAmoebaObcGbsaBornSumSim( gpuContext gpu );
+//extern void GetCalculateAmoebaObcGbsaBornSumSim( gpuContext gpu );
+//extern void cudaComputeAmoebaBornRadii( amoebaGpuContext amoebaGpu );
+extern void kCalculateAmoebaGrycukBornRadii( amoebaGpuContext amoebaGpu );
+extern void kReduceGrycukGbsaBornSum( amoebaGpuContext gpu );
+extern void SetCalculateAmoebaGrycukSim(amoebaGpuContext amoebaGpu );
+extern void GetCalculateAmoebaGrycukSim(amoebaGpuContext amoebaGpu );
+extern void kCalculateGrycukGbsaForces2( amoebaGpuContext amoebaGpu );
+
 
 // OBC -- Part 1
 //extern void SetCalculateObcGbsaForces1Sim(gpuContext gpu);

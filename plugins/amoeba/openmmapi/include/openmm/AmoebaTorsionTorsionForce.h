@@ -41,6 +41,7 @@
 namespace OpenMM {
 
 typedef std::vector< std::vector< std::vector<double> > > TorsionTorsionGrid;
+typedef std::vector< std::vector< std::vector<float> > > TorsionTorsionGridFloat;
 
 /**
  * This class implements the Amoeba torsion-torsion interaction
@@ -198,6 +199,13 @@ public:
                 }
             }
         }   
+/*
+        for( unsigned int kk = 0; kk < grid.size(); kk++ ){
+            for( unsigned int jj = 0; jj < grid[kk].size(); jj++ ){
+                fprintf( stderr, "xGrid %4d %4d %12.3f %12.3f  %15.7e  %15.7e\n", kk, jj,  grid[kk][jj][0], grid[kk][jj][1], grid[kk][jj][2], grid[kk][jj][2]/4.184 );
+            }
+        }
+*/
 
         _startValues[0] =  _grid[0][0][0];
         _startValues[1] =  _grid[0][0][1];

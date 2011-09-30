@@ -1666,8 +1666,8 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
- void kReduceToBornForcePrefactor_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
-                                          float* fieldOut )
+ void kReduceToObcBornForcePrefactor_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
+                                             float* fieldOut )
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1723,8 +1723,8 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
-void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
-                                                float* fieldOut )
+void kReduceToObcBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
+                                                   float* fieldOut )
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1788,17 +1788,137 @@ void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, un
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
 }
 
-/*
-static void kReduceAndCombine_dBorn(amoebaGpuContext amoebaGpu )
-{
 
-    kReduceAndCombineFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
-                                     gpu->sim.paddedNumberOfAtoms, gpu->sim.outputBuffers,
-                                     amoebaGpu->psWorkArray_1_1->_pDevData,
-                                     amoebaGpu->psWorkArray_1_2->_pDevData,
-                                     amoebaGpu->psBorn->_pDevData );
-    LAUNCHERROR("kReduce_dBorn");
-} */
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+ void kReduceToBornForcePrefactor_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
+                                          float* fieldOut )
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Reduce field
+
+    while (pos < fieldComponents)
+    {
+
+        float totalField = 0.0f;
+
+        float* pFt1      = fieldIn1 + pos;
+        float* pFt2      = fieldIn2 + pos;
+
+        //float bornRadius = cSim.pBornRadii[pos];
+        //float obcChain   = cSim.pObcChain[pos];
+
+        unsigned int i   = outputBuffers;
+
+        while (i >= 4)
+        {
+            totalField += pFt1[0] + pFt1[fieldComponents] + pFt1[2*fieldComponents] + pFt1[3*fieldComponents];
+            totalField += pFt2[0] + pFt2[fieldComponents] + pFt2[2*fieldComponents] + pFt2[3*fieldComponents];
+            pFt1       += fieldComponents*4;
+            pFt2       += fieldComponents*4;
+            i          -= 4;
+        }
+
+        if (i >= 2)
+        {
+            totalField += pFt1[0] + pFt1[fieldComponents];
+            totalField += pFt2[0] + pFt2[fieldComponents];
+            pFt1       += fieldComponents*2;
+            pFt2       += fieldComponents*2;
+            i          -= 2;
+        }
+
+        if (i > 0)
+        {
+            totalField += pFt1[0];
+            totalField += pFt2[0];
+        }
+
+        //fieldOut[pos]   = totalField*bornRadius*bornRadius*obcChain;
+        fieldOut[pos]   = totalField;
+        pos            += gridDim.x * blockDim.x;
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
+                                                float* fieldOut )
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+
+    float energy     = 0.0f;
+
+    // Reduce field
+
+    while (pos < fieldComponents)
+    {
+
+        float totalForce = 0.0f;
+
+        float* pFt1      = fieldIn1 + pos;
+        float* pFt2      = fieldIn2 + pos;
+
+        float bornRadius = cSim.pBornRadii[pos];
+        //float obcChain   = cSim.pObcChain[pos];
+        float2 obcData   = cSim.pObcData[pos];
+
+        unsigned int i   = outputBuffers;
+
+        while (i >= 4)
+        {
+            totalForce += pFt1[0] + pFt1[fieldComponents] + pFt1[2*fieldComponents] + pFt1[3*fieldComponents];
+            totalForce += pFt2[0] + pFt2[fieldComponents] + pFt2[2*fieldComponents] + pFt2[3*fieldComponents];
+            pFt1       += fieldComponents*4;
+            pFt2       += fieldComponents*4;
+            i          -= 4;
+        }
+
+        if (i >= 2)
+        {
+            totalForce += pFt1[0] + pFt1[fieldComponents];
+            totalForce += pFt2[0] + pFt2[fieldComponents];
+            pFt1       += fieldComponents*2;
+            pFt2       += fieldComponents*2;
+            i          -= 2;
+        }
+
+        if (i > 0)
+        {
+            totalForce += pFt1[0];
+            totalForce += pFt2[0];
+        }
+
+        float r        = (obcData.x + cSim.dielectricOffset + cSim.probeRadius);
+        float ratio6   = ( (obcData.x + cSim.dielectricOffset) / bornRadius);
+              ratio6   = ratio6*ratio6*ratio6;
+              ratio6   = ratio6*ratio6;
+        float saTerm   = cSim.surfaceAreaFactor * r * r * ratio6;
+
+        totalForce    += saTerm / bornRadius;
+        //totalForce    *= bornRadius * bornRadius * obcChain;
+
+        fieldOut[pos]  = totalForce;
+
+        energy        += saTerm;
+        pos           += gridDim.x * blockDim.x;
+    }
+
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
+}
 
 static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
 {
@@ -1982,7 +2102,8 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     // Tinker's Born1 && E-diff
 
-    kCalculateObcGbsaForces2( amoebaGpu->gpuContext );
+    //kCalculateObcGbsaForces2( amoebaGpu->gpuContext );
+    kCalculateGrycukGbsaForces2( amoebaGpu );
     kCalculateAmoebaKirkwoodEDiff( amoebaGpu );
 
    // ---------------------------------------------------------------------------------------

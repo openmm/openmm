@@ -37,6 +37,7 @@ AmoebaCudaData::AmoebaCudaData( CudaPlatform::PlatformData& data ) : cudaPlatfor
     hasAmoebaBonds                = false;
     hasAmoebaGeneralizedKirkwood  = false;
     hasAmoebaMultipole            = false;
+    useGrycuk                     = true;
     amoebaGpu                     = amoebaGpuInit( cudaPlatformData.gpu );
     localForceKernel              = NULL;
     log                           = NULL;
@@ -45,6 +46,10 @@ AmoebaCudaData::AmoebaCudaData( CudaPlatform::PlatformData& data ) : cudaPlatfor
     applyMultipoleCutoff          = 0;
     useVdwNeighborList            = 0;
     multipoleForceCount           = 0;
+
+    boxDimensions[0]              = 0.0;
+    boxDimensions[1]              = 0.0;
+    boxDimensions[2]              = 0.0;
 }   
 
 AmoebaCudaData::~AmoebaCudaData() {
@@ -72,6 +77,10 @@ void AmoebaCudaData::setHasAmoebaMultipole( bool inputHasAmoebaMultipole ) {
 
 bool AmoebaCudaData::getHasAmoebaMultipole( void ) const {
     return hasAmoebaMultipole;
+}
+
+int AmoebaCudaData::getUseGrycuk( void ) const {
+    return useGrycuk;
 }
 
 void AmoebaCudaData::setHasAmoebaGeneralizedKirkwood( bool inputHasAmoebaGeneralizedKirkwood ) {
@@ -108,6 +117,7 @@ void AmoebaCudaData::setContextImpl( void* inputContextImpl ) {
 }
 
 void AmoebaCudaData::initializeGpu( void ) {
+
     if( !gpuInitialized ){
         if( getHasAmoebaGeneralizedKirkwood() && !getHasAmoebaMultipole() ){
             throw OpenMMException("GK force requires Multipole force\n");
@@ -117,16 +127,33 @@ void AmoebaCudaData::initializeGpu( void ) {
         amoebaGpuBuildThreadBlockWorkList( amoebaGpu );
         amoebaGpuBuildVdwExclusionList( amoebaGpu );
         amoebaGpuBuildScalingList( amoebaGpu );
-        amoebaGpuSetConstants( amoebaGpu );
+        amoebaGpuSetConstants( amoebaGpu, 0 );
 
-        gpuInitialized = true;
+        boxDimensions[0] = amoebaGpu->gpuContext->sim.periodicBoxSizeX;
+        boxDimensions[1] = amoebaGpu->gpuContext->sim.periodicBoxSizeY;
+        boxDimensions[2] = amoebaGpu->gpuContext->sim.periodicBoxSizeZ;
+
+        gpuInitialized   = true;
 
         if( log ){
             gpuPrintCudaAmoebaGmxSimulation( amoebaGpu, getLog() );
             (void) fprintf( log, "Gpu initialized\n" );
             (void) fflush( log );
         }
+    } else {
+
+        if( boxDimensions[0] != amoebaGpu->gpuContext->sim.periodicBoxSizeX ||
+            boxDimensions[1] != amoebaGpu->gpuContext->sim.periodicBoxSizeY ||
+            boxDimensions[2] != amoebaGpu->gpuContext->sim.periodicBoxSizeZ ){
+            amoebaGpuSetConstants( amoebaGpu, 1 );
+            
+            boxDimensions[0] = amoebaGpu->gpuContext->sim.periodicBoxSizeX;
+            boxDimensions[1] = amoebaGpu->gpuContext->sim.periodicBoxSizeY;
+            boxDimensions[2] = amoebaGpu->gpuContext->sim.periodicBoxSizeZ;
+        }
+
     }
+
     return;
 }
 

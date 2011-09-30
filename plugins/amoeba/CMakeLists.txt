@@ -18,6 +18,7 @@
 
 # ----------------------------------------------------------------------------
 #SET(CREATE_SERIALIZABLE_OPENMM_AMOEBA OFF CACHE BOOL "Build verison of OpenMMAmoeba w/ backdoor serialization capability")
+#SET(CREATE_SERIALIZABLE_OPENMM_AMOEBA TRUE )
 SET(CREATE_SERIALIZABLE_OPENMM_AMOEBA FALSE )
 # ----------------------------------------------------------------------------
 

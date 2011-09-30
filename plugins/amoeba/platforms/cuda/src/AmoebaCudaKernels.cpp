@@ -31,6 +31,7 @@
 #include "kernels/amoebaCudaKernels.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
 #include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
+#include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaForceInfo.h"
 
@@ -738,22 +739,39 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
     // torsion-torsion grids
 
     numTorsionTorsionGrids = force.getNumTorsionTorsionGrids();
-    std::vector< std::vector< std::vector< std::vector<float> > > > floatGrids;
+    std::vector<TorsionTorsionGridFloat> floatGrids;
 
     floatGrids.resize(numTorsionTorsionGrids);
     for (int gridIndex = 0; gridIndex < numTorsionTorsionGrids; gridIndex++) {
 
         const TorsionTorsionGrid& grid = force.getTorsionTorsionGrid( gridIndex );
-
         floatGrids[gridIndex].resize( grid.size() );
+
+        // check if grid needs to be reordered: x-angle should be 'slow' index
+
+        TorsionTorsionGrid reorderedGrid;
+        int reorder = 0;
+        if( grid[0][0][0] != grid[0][1][0] ){
+            AmoebaTorsionTorsionForceImpl::reorderGrid( grid, reorderedGrid );
+            reorder = 1;
+            if( data.getLog() ){
+                (void) fprintf( data.getLog(), "CudaCalcAmoebaTorsionTorsionForceKernel::initialize: reordering torsion-torsion grid %d.\n", gridIndex );
+            }
+        }
         for (unsigned int ii = 0; ii < grid.size(); ii++) {
 
             floatGrids[gridIndex][ii].resize( grid[ii].size() );
             for (unsigned int jj = 0; jj < grid[ii].size(); jj++) {
 
                 floatGrids[gridIndex][ii][jj].resize( grid[ii][jj].size() );
-                for (unsigned int kk = 0; kk < grid[ii][jj].size(); kk++) {
-                    floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(grid[ii][jj][kk]);
+                if( reorder ){
+                    for( unsigned int kk = 0; kk < grid[ii][jj].size(); kk++) {
+                        floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(reorderedGrid[ii][jj][kk]);
+                    }
+                } else {
+                    for( unsigned int kk = 0; kk < grid[ii][jj].size(); kk++) {
+                        floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(grid[ii][jj][kk]);
+                    }
                 }
             }
         }
@@ -788,12 +806,17 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
 
     data.initializeGpu();
 
-    // calculate Born radii
+    // calculate Born radii using either the Grycuk or OBC algorithm if GK is active
 
     if( data.getHasAmoebaGeneralizedKirkwood() ){
         kClearBornSum( gpu->gpuContext );
-        kCalculateObcGbsaBornSum(gpu->gpuContext);
-        kReduceObcGbsaBornSum(gpu->gpuContext);
+        if( data.getUseGrycuk() ){
+            kCalculateAmoebaGrycukBornRadii( gpu );
+            kReduceGrycukGbsaBornSum( gpu );
+        } else {
+            kCalculateObcGbsaBornSum(gpu->gpuContext);
+            kReduceObcGbsaBornSum(gpu->gpuContext);
+       }
     }   
 
     // multipoles
@@ -990,23 +1013,27 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             zsize = pmeGridDimension[2];
             pmeParametersSetBasedOnEwaldErrorTolerance = 0;
         }
+
+        gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
+
         if( data.getLog() ){
-            (void) fprintf( data.getLog(), "AmoebaMultipoleForce: PME parameters tol=%12.3e cutoff=%12.3f alpha=%12.3f [%d %d %d] -",
+            (void) fprintf( data.getLog(), "AmoebaMultipoleForce: PME parameters tol=%12.3e cutoff=%12.3f alpha=%12.3f [%d %d %d]\n",
                             force.getEwaldErrorTolerance(), force.getCutoffDistance(),  alpha, xsize, ysize, zsize );
             if( pmeParametersSetBasedOnEwaldErrorTolerance  ){
-                 (void) fprintf( data.getLog(), " parameters set based on error tolerance and OpenMM algorithm.\n" );
+                 (void) fprintf( data.getLog(), "Parameters based on error tolerance and OpenMM algorithm.\n" );
             } else {
                  double alphaT;
                  int xsizeT, ysizeT, zsizeT;
                  NonbondedForceImpl::calcPMEParameters(system, nb, alphaT, xsizeT, ysizeT, zsizeT);
                  double impliedTolerance  = alpha*force.getCutoffDistance();
                         impliedTolerance  = 0.5*exp( -(impliedTolerance*impliedTolerance) );
-                 (void) fprintf( data.getLog(), " using input parameters implied tolerance=%12.3e;", impliedTolerance );
+                 (void) fprintf( data.getLog(), "Using input parameters implied tolerance=%12.3e;", impliedTolerance );
                  (void) fprintf( data.getLog(), "OpenMM param: aEwald=%12.3f [%6d %6d %6d]\n", alphaT, xsizeT, ysizeT, zsizeT);
             }
+            (void) fprintf( data.getLog(), "\n" );
             (void) fflush( data.getLog() );
         }
-        gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
+
         data.setApplyMultipoleCutoff( 1 );
 
         data.cudaPlatformData.nonbondedMethod = PARTICLE_MESH_EWALD;
@@ -1067,12 +1094,25 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
         scale[ii]   = static_cast<float>( scalingFactor );
         charge[ii]  = static_cast<float>( particleCharge );
     }   
-    gpuSetAmoebaObcParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
-                               static_cast<float>( force.getSolventDielectric() ), 
-                               static_cast<float>( force.getDielectricOffset() ), radius, scale, charge,
-                               force.getIncludeCavityTerm(),
-                               static_cast<float>( force.getProbeRadius() ), 
-                               static_cast<float>( force.getSurfaceAreaFactor() ) ); 
+    if( data.getUseGrycuk() ){
+
+        gpuSetAmoebaGrycukParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
+                                      static_cast<float>( force.getSolventDielectric() ), 
+                                      static_cast<float>( force.getDielectricOffset() ), radius, scale, charge,
+                                      force.getIncludeCavityTerm(),
+                                      static_cast<float>( force.getProbeRadius() ), 
+                                      static_cast<float>( force.getSurfaceAreaFactor() ) ); 
+        
+    } else {
+
+        gpuSetAmoebaObcParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
+                                   static_cast<float>( force.getSolventDielectric() ), 
+                                   static_cast<float>( force.getDielectricOffset() ), radius, scale, charge,
+                                   force.getIncludeCavityTerm(),
+                                   static_cast<float>( force.getProbeRadius() ), 
+                                   static_cast<float>( force.getSurfaceAreaFactor() ) ); 
+
+    }
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 

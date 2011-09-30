@@ -77,6 +77,13 @@ public:
     bool getHasAmoebaMultipole( void ) const;
 
     /**
+     * Get use Grycuk flag
+     * 
+     * @return value of useGrycuk
+     */
+    int getUseGrycuk( void ) const;
+
+    /**
      * Set value of hasAmoebaGeneralizedKirkwood
      * 
      * @param value of hasAmoebaGeneralizedKirkwood
@@ -190,11 +197,13 @@ private:
     int multipoleForceCount;
     int applyMultipoleCutoff;
     int useVdwNeighborList;
+    int useGrycuk;
     KernelImpl* localForceKernel;
     unsigned int kernelCount;
     void* contextImpl;
     FILE* log;
     bool gpuInitialized;
+    double boxDimensions[3];
 };
 
 

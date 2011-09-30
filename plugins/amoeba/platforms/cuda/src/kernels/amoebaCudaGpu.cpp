@@ -32,12 +32,16 @@
 #ifdef WIN32
   #define _USE_MATH_DEFINES /* M_PI */
 #endif
+
+#define PARAMETER_PRINT 1
+#define MAX_PARAMETER_PRINT 10
+
 #include "openmm/OpenMMException.h"
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 
 // for some reason, these are not being included w/ cudaKernels.h on Windows
-extern void OPENMMCUDA_EXPORT SetCalculateObcGbsaForces2Sim(gpuContext gpu);
+//extern void OPENMMCUDA_EXPORT SetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu);
 
 #include <cmath>
@@ -503,20 +507,33 @@ void gpuSetAmoebaBondParameters(amoebaGpuContext amoebaGpu, const std::vector<in
         (*psBondID)[i].w         = gpu->pOutputBufferCounter[(*psBondID)[i].y]++;
         (*psBondParameter)[i].x  = length[i];
         (*psBondParameter)[i].y  = k[i];
-
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )                
-if( amoebaGpu->log && (i < DUMP_PARAMETERS || i > bonds - (DUMP_PARAMETERS + 1)  ) )
-        fprintf( amoebaGpu->log, "Bonds: %5d [%5d %5d %5d %5d] L=%15.7e k[%15.7e %15.7e %15.7e] [%5d %5d]\n",
-            i, (*psBondID)[i].x, (*psBondID)[i].y, (*psBondID)[i].z, (*psBondID)[i].w, 
-            (*psBondParameter)[i].x, (*psBondParameter)[i].y, cubic, quartic, 
-            gpu->pOutputBufferCounter[(*psBondID)[i].x],
-            gpu->pOutputBufferCounter[(*psBondID)[i].y] );
-#endif
-#undef DUMP_PARAMETERS
-
     }
+
+    // logging info
+
+    if( amoebaGpu->log ){
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = bonds;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaBondParameters: number of bonds=%5d cubicK=%15.7e quarticK=%15.7e\n", bonds, cubic, quartic );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "    %5d [%5d %5d %5d %5d] l=%15.7e k=%15.7e counters: [%5d %5d]\n",
+                            ii, (*psBondID)[ii].x, (*psBondID)[ii].y, (*psBondID)[ii].z, (*psBondID)[ii].w, 
+                            (*psBondParameter)[ii].x, (*psBondParameter)[ii].y,
+                            gpu->pOutputBufferCounter[(*psBondID)[ii].x],
+                            gpu->pOutputBufferCounter[(*psBondID)[ii].y] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
+
     psBondID->Upload();
     psBondParameter->Upload();
 }
@@ -548,19 +565,34 @@ void gpuSetAmoebaUreyBradleyParameters(amoebaGpuContext amoebaGpu, const std::ve
         (*psUreyBradleyParameter)[i].x  = length[i];
         (*psUreyBradleyParameter)[i].y  = k[i];
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )                
-if( amoebaGpu->log && (i < DUMP_PARAMETERS || i > bonds - (DUMP_PARAMETERS + 1)  ) )
-        fprintf( amoebaGpu->log, "UreyBradleys: %5d [%5d %5d %5d %5d] L=%15.7e k[%15.7e %15.7e %15.7e] [%5d %5d]\n",
-            i, (*psUreyBradleyID)[i].x, (*psUreyBradleyID)[i].y, (*psUreyBradleyID)[i].z, (*psUreyBradleyID)[i].w, 
-            (*psUreyBradleyParameter)[i].x, (*psUreyBradleyParameter)[i].y, cubic, quartic, 
-            gpu->pOutputBufferCounter[(*psUreyBradleyID)[i].x],
-            gpu->pOutputBufferCounter[(*psUreyBradleyID)[i].y] );
-#endif
-#undef DUMP_PARAMETERS
-
     }
+
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = bonds;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaUreyBradleyParameters: number of bonds=%5d cubicK==%15.7e quarticK=%15.7e\n", bonds, cubic, quartic );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "    %5d [%5d %5d %5d %5d] L=%15.7e k=%15.7e counters: [%5d %5d]\n",
+                            ii, (*psUreyBradleyID)[ii].x, (*psUreyBradleyID)[ii].y, (*psUreyBradleyID)[ii].z, (*psUreyBradleyID)[ii].w, 
+            (*psUreyBradleyParameter)[ii].x, (*psUreyBradleyParameter)[ii].y,
+            gpu->pOutputBufferCounter[(*psUreyBradleyID)[ii].x],
+            gpu->pOutputBufferCounter[(*psUreyBradleyID)[ii].y] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
+
     psUreyBradleyID->Upload();
     psUreyBradleyParameter->Upload();
 }
@@ -602,21 +634,37 @@ void gpuSetAmoebaAngleParameters(amoebaGpuContext amoebaGpu, const std::vector<i
         psAngleID1->_pSysData[i].w = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].x]++;
         psAngleID2->_pSysData[i].x = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].y]++;
         psAngleID2->_pSysData[i].y = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].z]++;
-
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "Angles: %5d [%5d %5d %5d %5d] [%5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d]\n", i, 
-                  (*psAngleID1)[i].x, (*psAngleID1)[i].y, (*psAngleID1)[i].z, (*psAngleID1)[i].w,
-                  (*psAngleID2)[i].x, (*psAngleID2)[i].y,
-                  (*psAngleParameter)[i].x, (*psAngleParameter)[i].y,
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].z] );
-#endif
-#undef DUMP_PARAMETERS
     }
+
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = bond_angles;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaAngleParameters: number of angles=%5d cubicK=%15.7e quarticK=%15.7e penticK=%15.7e sexticK=%15.7e\n",
+                        bond_angles, cubicK, quarticK, penticK, sexticK );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "    %5d [%5d %5d %5d %5d] [%5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d]\n", ii, 
+                           (*psAngleID1)[ii].x, (*psAngleID1)[ii].y, (*psAngleID1)[ii].z, (*psAngleID1)[ii].w,
+                           (*psAngleID2)[ii].x, (*psAngleID2)[ii].y,
+                           (*psAngleParameter)[ii].x, (*psAngleParameter)[ii].y,
+                           gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].x],
+                           gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].y],
+                           gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].z] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
+
     psAngleID1->Upload();
     psAngleID2->Upload();
     psAngleParameter->Upload();
@@ -662,21 +710,36 @@ void gpuSetAmoebaInPlaneAngleParameters(amoebaGpuContext amoebaGpu, const std::v
         psAngleID2->_pSysData[i].y = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].y]++;
         psAngleID2->_pSysData[i].z = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].z]++;
         psAngleID2->_pSysData[i].w = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].w]++;
+    }
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 10
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d %5d]\n", i, 
-                  (*psAngleID1)[i].x, (*psAngleID1)[i].y, (*psAngleID1)[i].z, (*psAngleID1)[i].w,
-                  (*psAngleID2)[i].x, (*psAngleID2)[i].y, (*psAngleID2)[i].z, (*psAngleID2)[i].w,
-                  (*psAngleParameter)[i].x, (*psAngleParameter)[i].y,
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].z],
-                  gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].w] );
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = bond_angles;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaInPlaneAngleParameters: number of angles=%5d cubicK=%15.7e quarticK=%15.7e penticK==%15.7e sexticK=%15.7e\n",
+                        bond_angles, cubicK, quarticK, penticK, sexticK );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "    %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d %5d]\n", ii, 
+                            (*psAngleID1)[ii].x, (*psAngleID1)[ii].y, (*psAngleID1)[ii].z, (*psAngleID1)[ii].w,
+                            (*psAngleID2)[ii].x, (*psAngleID2)[ii].y, (*psAngleID2)[ii].z, (*psAngleID2)[ii].w,
+                            (*psAngleParameter)[ii].x, (*psAngleParameter)[ii].y,
+                            gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].x],
+                            gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].y],
+                            gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].z],
+                            gpu->pOutputBufferCounter[psAngleID1->_pSysData[ii].w] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
 #endif
-#undef DUMP_PARAMETERS
+        (void) fflush( amoebaGpu->log );
     }
 
     psAngleID1->Upload();
@@ -731,24 +794,37 @@ void gpuSetAmoebaTorsionParameters(amoebaGpuContext amoebaGpu, const std::vector
         psTorsionID2->_pSysData[i].y = gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].y]++;
         psTorsionID2->_pSysData[i].z = gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].z]++;
         psTorsionID2->_pSysData[i].w = gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].w]++;
-
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > torsions - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "Torsions: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] 0[%15.7e %15.7e] 1[%15.7e %15.7e] 2[%15.7e %15.7e] [%5d %5d %5d %5d]\n", i, 
-                  (*psTorsionID1)[i].x, (*psTorsionID1)[i].y, (*psTorsionID1)[i].z, (*psTorsionID1)[i].w,
-                  (*psTorsionID2)[i].x, (*psTorsionID2)[i].y, (*psTorsionID2)[i].z, (*psTorsionID2)[i].w,
-                  (*psTorsionParameter1)[i].x, (*psTorsionParameter1)[i].y, (*psTorsionParameter1)[i].z, (*psTorsionParameter1)[i].w,
-                  (*psTorsionParameter2)[i].x, (*psTorsionParameter2)[i].y,
-                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].z],
-                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[i].w] );
-#endif
-#undef DUMP_PARAMETERS
     }
 
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = torsions;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaTorsionParameters: number of torsions=%5d\n", torsions );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "    %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] 0[%15.7e %15.7e] 1[%15.7e %15.7e] 2[%15.7e %15.7e] [%5d %5d %5d %5d]\n", ii, 
+                  (*psTorsionID1)[ii].x, (*psTorsionID1)[ii].y, (*psTorsionID1)[ii].z, (*psTorsionID1)[ii].w,
+                  (*psTorsionID2)[ii].x, (*psTorsionID2)[ii].y, (*psTorsionID2)[ii].z, (*psTorsionID2)[ii].w,
+                  (*psTorsionParameter1)[ii].x, (*psTorsionParameter1)[ii].y, (*psTorsionParameter1)[ii].z, (*psTorsionParameter1)[ii].w,
+                  (*psTorsionParameter2)[ii].x, (*psTorsionParameter2)[ii].y,
+                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[ii].x],
+                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[ii].y],
+                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[ii].z],
+                  gpu->pOutputBufferCounter[psTorsionID1->_pSysData[ii].w] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
     psTorsionID1->Upload();
     psTorsionID2->Upload();
     psTorsionParameter1->Upload();
@@ -799,24 +875,38 @@ void gpuSetAmoebaPiTorsionParameters(amoebaGpuContext amoebaGpu, const std::vect
         psPiTorsionID3->_pSysData[i].y = gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[i].w]++;
         psPiTorsionID3->_pSysData[i].z = gpu->pOutputBufferCounter[psPiTorsionID2->_pSysData[i].x]++;
         psPiTorsionID3->_pSysData[i].w = gpu->pOutputBufferCounter[psPiTorsionID2->_pSysData[i].y]++;
+    }
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > piTorsions - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "PiTorsions: %5d [%5d %5d %5d %5d %5d %5d [%5d %5d %5d %5d %5d %5d]  k=%15.7e [%5d %5d %5d %5d %5d %5d]\n", i, 
-                  (*psPiTorsionID1)[i].x, (*psPiTorsionID1)[i].y, (*psPiTorsionID1)[i].z, (*psPiTorsionID1)[i].w,
-                  (*psPiTorsionID2)[i].x, (*psPiTorsionID2)[i].y, (*psPiTorsionID2)[i].z, (*psPiTorsionID2)[i].w,
-                  (*psPiTorsionID3)[i].x, (*psPiTorsionID3)[i].y, (*psPiTorsionID3)[i].z, (*psPiTorsionID3)[i].w,
-                  (*psPiTorsionParameter)[i],
-                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[i].z],
-                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[i].w],
-                  gpu->pOutputBufferCounter[psPiTorsionID2->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psPiTorsionID2->_pSysData[i].y] );
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = piTorsions;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaPiTorsionParameters: number of pi torsions=%5d\n", piTorsions );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+         fprintf( amoebaGpu->log, "PiTorsions: %5d [%5d %5d %5d %5d %5d %5d [%5d %5d %5d %5d %5d %5d]  k=%15.7e [%5d %5d %5d %5d %5d %5d]\n", ii, 
+                  (*psPiTorsionID1)[ii].x, (*psPiTorsionID1)[ii].y, (*psPiTorsionID1)[ii].z, (*psPiTorsionID1)[ii].w,
+                  (*psPiTorsionID2)[ii].x, (*psPiTorsionID2)[ii].y, (*psPiTorsionID2)[ii].z, (*psPiTorsionID2)[ii].w,
+                  (*psPiTorsionID3)[ii].x, (*psPiTorsionID3)[ii].y, (*psPiTorsionID3)[ii].z, (*psPiTorsionID3)[ii].w,
+                  (*psPiTorsionParameter)[ii],
+                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[ii].x],
+                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[ii].y],
+                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[ii].z],
+                  gpu->pOutputBufferCounter[psPiTorsionID1->_pSysData[ii].w],
+                  gpu->pOutputBufferCounter[psPiTorsionID2->_pSysData[ii].x],
+                  gpu->pOutputBufferCounter[psPiTorsionID2->_pSysData[ii].y] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
 #endif
-#undef DUMP_PARAMETERS
+        (void) fflush( amoebaGpu->log );
     }
 
     psPiTorsionID1->Upload();
@@ -859,21 +949,36 @@ void gpuSetAmoebaStretchBendParameters(amoebaGpuContext amoebaGpu, const std::ve
         psStretchBendID1->_pSysData[i].w = gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[i].x]++;
         psStretchBendID2->_pSysData[i].x = gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[i].y]++;
         psStretchBendID2->_pSysData[i].y = gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[i].z]++;
-
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > stretchBends - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "StretchBends: %5d [%5d %5d %5d] [%5d %5d %5d] [%15.7e %15.7e %15.7e %15.7e [%5d %5d %5d]\n", i, 
-                  (*psStretchBendID1)[i].x, (*psStretchBendID1)[i].y, (*psStretchBendID1)[i].z, (*psStretchBendID1)[i].w,
-                  (*psStretchBendID2)[i].x, (*psStretchBendID2)[i].y,
-                  (*psStretchBendParameter)[i].x, (*psStretchBendParameter)[i].y, (*psStretchBendParameter)[i].z, (*psStretchBendParameter)[i].w,
-                  gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[i].z] );
-#endif
-#undef DUMP_PARAMETERS
     }
+
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = stretchBends;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaStretchBendParameters: number of stretch bends=%5d\n", stretchBends);
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, " %5d [%5d %5d %5d] [%5d %5d %5d] [%15.7e %15.7e %15.7e %15.7e [%5d %5d %5d]\n", ii, 
+                            (*psStretchBendID1)[ii].x, (*psStretchBendID1)[ii].y, (*psStretchBendID1)[ii].z, (*psStretchBendID1)[ii].w,
+                            (*psStretchBendID2)[ii].x, (*psStretchBendID2)[ii].y,
+                            (*psStretchBendParameter)[ii].x, (*psStretchBendParameter)[ii].y, (*psStretchBendParameter)[ii].z, (*psStretchBendParameter)[ii].w,
+                            gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[ii].x],
+                            gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[ii].y],
+                            gpu->pOutputBufferCounter[psStretchBendID1->_pSysData[ii].z] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
+
     psStretchBendID1->Upload();
     psStretchBendID2->Upload();
     psStretchBendParameter->Upload();
@@ -906,13 +1011,6 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
     amoebaGpu->amoebaSim.amoebaOutOfPlaneBendPenticK     = penticK;
     amoebaGpu->amoebaSim.amoebaOutOfPlaneBendSexticK     = sexticK;
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 10
-#if (DUMP_PARAMETERS > 0 )
-    if( amoebaGpu->log )
-        fprintf( amoebaGpu->log, "OutOfPlaneBends: global ks[%15.7e %15.7e %15.7e %15.7e]\n", cubicK, quarticK, penticK, sexticK );
-#endif
-
     for (int i = 0; i < outOfPlaneBends; i++)
     {
         (*psOutOfPlaneBendID1)[i].x         = particles1[i];
@@ -924,20 +1022,38 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
         psOutOfPlaneBendID2->_pSysData[i].y = gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].y]++;
         psOutOfPlaneBendID2->_pSysData[i].z = gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].z]++;
         psOutOfPlaneBendID2->_pSysData[i].w = gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].w]++;
-
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > outOfPlaneBends - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "OutOfPlaneBends: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] k=%15.7e [%5d %5d %5d %5d]\n", i, 
-                  (*psOutOfPlaneBendID1)[i].x, (*psOutOfPlaneBendID1)[i].y, (*psOutOfPlaneBendID1)[i].z, (*psOutOfPlaneBendID1)[i].w,
-                  (*psOutOfPlaneBendID2)[i].x, (*psOutOfPlaneBendID2)[i].y, (*psOutOfPlaneBendID2)[i].z, (*psOutOfPlaneBendID2)[i].w,
-                  (*psOutOfPlaneBendParameter)[i], 
-                  gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].z],
-                  gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[i].w] );
-#endif
-#undef DUMP_PARAMETERS
     }
+
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = outOfPlaneBends;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaOutOfPlaneBendParameters: number of out-of-plane bends=%5d global ks[%15.7e %15.7e %15.7e %15.7e]\n", outOfPlaneBends,
+                        cubicK, quarticK, penticK, sexticK );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "    %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] k=%15.7e [%5d %5d %5d %5d]\n", ii, 
+                            (*psOutOfPlaneBendID1)[ii].x, (*psOutOfPlaneBendID1)[ii].y, (*psOutOfPlaneBendID1)[ii].z, (*psOutOfPlaneBendID1)[ii].w,
+                            (*psOutOfPlaneBendID2)[ii].x, (*psOutOfPlaneBendID2)[ii].y, (*psOutOfPlaneBendID2)[ii].z, (*psOutOfPlaneBendID2)[ii].w,
+                            (*psOutOfPlaneBendParameter)[ii], 
+                            gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[ii].x],
+                            gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[ii].y],
+                            gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[ii].z],
+                            gpu->pOutputBufferCounter[psOutOfPlaneBendID1->_pSysData[ii].w] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
+
     psOutOfPlaneBendID1->Upload();
     psOutOfPlaneBendID2->Upload();
     psOutOfPlaneBendParameter->Upload();
@@ -980,23 +1096,38 @@ void gpuSetAmoebaTorsionTorsionParameters(amoebaGpuContext amoebaGpu, const std:
         psTorsionTorsionID3->_pSysData[i].y = gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[i].z]++;
         psTorsionTorsionID3->_pSysData[i].z = gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[i].w]++;
         psTorsionTorsionID3->_pSysData[i].w = gpu->pOutputBufferCounter[psTorsionTorsionID2->_pSysData[i].x]++;
-
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )
-if( (i < DUMP_PARAMETERS || i > torsionTorsions - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "TorsionTorsions: %5d [%5d %5d %5d %5d %5d] chiral=%5d grid=%5d [%5d %5d %5d %5d %5d] [%5d %5d %5d %5d %5d]\n", i, 
-                  (*psTorsionTorsionID1)[i].x, (*psTorsionTorsionID1)[i].y, (*psTorsionTorsionID1)[i].z, (*psTorsionTorsionID1)[i].w,
-                  (*psTorsionTorsionID2)[i].x, (*psTorsionTorsionID2)[i].y, (*psTorsionTorsionID2)[i].z, (*psTorsionTorsionID2)[i].w,
-                  (*psTorsionTorsionID3)[i].x, (*psTorsionTorsionID3)[i].y, (*psTorsionTorsionID3)[i].z,  (*psTorsionTorsionID3)[i].w,
-                  gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[i].x],
-                  gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[i].y],
-                  gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[i].z],
-                  gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[i].w], 
-                  gpu->pOutputBufferCounter[psTorsionTorsionID2->_pSysData[i].x] );
-#endif
-#undef DUMP_PARAMETERS
     }
+
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = torsionTorsions;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaTorsionTorsionParameters: number of torsion-torsions=%5d\n", torsionTorsions );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log, "TorsionTorsions: %5d [%5d %5d %5d %5d %5d] chiral=%5d grid=%5d [%5d %5d %5d %5d %5d] [%5d %5d %5d %5d %5d]\n", ii, 
+                            (*psTorsionTorsionID1)[ii].x, (*psTorsionTorsionID1)[ii].y, (*psTorsionTorsionID1)[ii].z, (*psTorsionTorsionID1)[ii].w,
+                            (*psTorsionTorsionID2)[ii].x, (*psTorsionTorsionID2)[ii].y, (*psTorsionTorsionID2)[ii].z, (*psTorsionTorsionID2)[ii].w,
+                            (*psTorsionTorsionID3)[ii].x, (*psTorsionTorsionID3)[ii].y, (*psTorsionTorsionID3)[ii].z,  (*psTorsionTorsionID3)[ii].w,
+                            gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[ii].x],
+                            gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[ii].y],
+                            gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[ii].z],
+                            gpu->pOutputBufferCounter[psTorsionTorsionID1->_pSysData[ii].w], 
+                            gpu->pOutputBufferCounter[psTorsionTorsionID2->_pSysData[ii].x] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
+    }
+
     psTorsionTorsionID1->Upload();
     psTorsionTorsionID2->Upload();
     psTorsionTorsionID3->Upload();
@@ -1069,7 +1200,7 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "Grids %u totalGridEntries=%u totalFloat4 entries=%u\n", torsionTorsionGrids, totalGridEntries, totalEntries );
         for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
-            (void) fprintf( amoebaGpu->log, "Grid %u offset=%d begin=%.3f delta=%.3f Ny=%d\n", ii, amoebaGpu->amoebaSim.amoebaTorTorGridOffset[ii],
+            (void) fprintf( amoebaGpu->log, "Grid %u offset=%6d begin=%10.3f delta=%10.3f Ny=%3d\n", ii, amoebaGpu->amoebaSim.amoebaTorTorGridOffset[ii],
                             amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii], amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii], amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]);
         }
     }
@@ -1080,23 +1211,41 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
         for (unsigned int jj = 0; jj < floatGrids[ii].size(); jj++) {
             for (unsigned int kk = 0; kk < floatGrids[ii][jj].size(); kk++) {
+
                 (*psTorsionTorsionGrids)[index].x    = floatGrids[ii][jj][kk][2];
                 (*psTorsionTorsionGrids)[index].y    = floatGrids[ii][jj][kk][3];
                 (*psTorsionTorsionGrids)[index].z    = floatGrids[ii][jj][kk][4];
                 (*psTorsionTorsionGrids)[index].w    = floatGrids[ii][jj][kk][5];
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
-#if (DUMP_PARAMETERS > 0 )
-if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         (void) fprintf( amoebaGpu->log, "TorsionTorsionGrid: %5d %5d [%5d %5d ] [%10.3f %10.3f] [%15.7e %15.7e %15.7e %15.7e]\n", index, ii, jj, kk,
-                  floatGrids[ii][jj][kk][0], floatGrids[ii][jj][kk][1],
-                  (*psTorsionTorsionGrids)[index].x, (*psTorsionTorsionGrids)[index].y, (*psTorsionTorsionGrids)[index].z, (*psTorsionTorsionGrids)[index].w );
-#endif
-#undef DUMP_PARAMETERS
                 index++;
             }
         }
+    }
+    
+    // logging info
+
+    if( amoebaGpu->log ){
+
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaTorsionTorsionGrids: number of grids=%5u\n", static_cast<unsigned int>(floatGrids.size()) );
+#ifdef PARAMETER_PRINT
+        unsigned int index    = 0;
+        for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
+            for (unsigned int jj = 0; jj < floatGrids[ii].size(); jj++) {
+                for (unsigned int kk = 0; kk < floatGrids[ii][jj].size(); kk++) {
+                    if( index < maxPrint || (index > (totalEntries - maxPrint)) ){
+                        (void) fprintf( amoebaGpu->log, "     %5d %5d [%5d %5d ] [%10.3f %10.3f] [%15.7e %15.7e %15.7e %15.7e]\n", index, ii, jj, kk,
+                                        floatGrids[ii][jj][kk][0], floatGrids[ii][jj][kk][1],
+                                        (*psTorsionTorsionGrids)[index].x, (*psTorsionTorsionGrids)[index].y, (*psTorsionTorsionGrids)[index].z, (*psTorsionTorsionGrids)[index].w );
+                    }
+                    index++;
+                }
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
     }
     
 #if 0
@@ -1155,8 +1304,6 @@ if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) &&
 exit(0);
 #endif
 
-
-
     psTorsionTorsionGrids->Upload();
 
 }
@@ -1200,8 +1347,6 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
 
     amoebaGpu->amoebaSim.amoebaUreyBradley_offset              = amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset +
                                                                  (amoebaGpu->psAmoebaUreyBradleyParameter ?  amoebaGpu->psAmoebaUreyBradleyParameter->_stride : 0);
-
-    //gpu->sim.localForces_threads_per_block  = (std::max(amoebaGpu->amoebaSim.amoebaTorsionTorsion_offset, gpu->sim.customBonds) / gpu->sim.blocks + 15) & 0xfffffff0;
 
     unsigned int maxI                                          = (amoebaGpu->amoebaSim.amoebaUreyBradley_offset > gpu->sim.customBonds) ? amoebaGpu->amoebaSim.amoebaUreyBradley_offset : gpu->sim.customBonds;
     gpu->sim.localForces_threads_per_block                     = (maxI/gpu->sim.blocks + 15) & 0xfffffff0;
@@ -1403,8 +1548,6 @@ static void gpuFixedEFieldAllocate( amoebaGpuContext amoebaGpu )
     
     unsigned int offset                              = paddedNumberOfAtoms*sizeof( float );
     memset( amoebaGpu->psDampingFactorAndThole->_pSysData,              0,2*offset );
-    //memset( amoebaGpu->psE_Field->_pSysData,            0, offset*3 );
-    //memset( amoebaGpu->psE_FieldPolar->_pSysData,       0, offset*3 );
 
 }
 
@@ -1522,13 +1665,6 @@ void gpuKirkwoodAllocate( amoebaGpuContext amoebaGpu )
 
     int paddedNumberOfAtoms = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
 
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log,"%s: paddedNumberOfAtoms      =%d\n", methodName.c_str(), paddedNumberOfAtoms );
-        (void) fflush( amoebaGpu->log );
-    }
-#endif
-
     amoebaGpu->psBorn                            = new CUDAStream<float>(paddedNumberOfAtoms,   1, "KirkwoodBorn");
     amoebaGpu->psBornPolar                       = new CUDAStream<float>(paddedNumberOfAtoms,   1, "KirkwoodBornPolar");
     amoebaGpu->psGk_Field                        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Gk_Fixed_Field");
@@ -1596,7 +1732,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
     unsigned int dipoleIndex                                                  = 0;
     unsigned int quadrupoleIndex                                              = 0;
-    unsigned int maxPrint                                                     = 5;
+    unsigned int maxPrint                                                     = 10;
     
     if( nonbondedMethod == 0 ){
         amoebaGpu->multipoleNonbondedMethod = AMOEBA_NO_CUTOFF;
@@ -1606,12 +1742,6 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         throw OpenMM::OpenMMException("multipoleNonbondedMethod not recognized.\n" );
     }
 
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log,"%s Nonbonded method=%d %d [NoCutoff=%d PME=%d] polarizationType=%d (0=mutual/1=direct)\n",
-                        methodName.c_str(), nonbondedMethod, amoebaGpu->multipoleNonbondedMethod,
-                        AMOEBA_NO_CUTOFF, AMOEBA_PARTICLE_MESH_EWALD, polarizationType );
-        (void) fflush( amoebaGpu->log );
-    }
     amoebaGpu->amoebaSim.sqrtPi                      = std::sqrt( 3.14159265358f );
     amoebaGpu->amoebaSim.electric                    = electricConstant;
     amoebaGpu->gpuContext->sim.alphaEwald            = alphaEwald;
@@ -1621,11 +1751,28 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         amoebaGpu->amoebaSim.dielec               = 1.0f;
     }
 
-    static const int maxAxisType = 6;
-    int axisTypeCount[maxAxisType+1] = { 0, 0, 0, 0, 0, 0, 0 };
+    // logging info
+
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log,"%s\n", methodName.c_str() );
+        (void) fprintf( amoebaGpu->log,"   input nonbonded method=%d multipoleNonbondedMethod=%d [NoCutoff=%d PME=%d]\n",
+                        nonbondedMethod, amoebaGpu->multipoleNonbondedMethod, AMOEBA_NO_CUTOFF, AMOEBA_PARTICLE_MESH_EWALD );
+        (void) fprintf( amoebaGpu->log,"   polarizationType=%d (0=mutual/1=direct)\n", polarizationType );
+        (void) fprintf( amoebaGpu->log,"   maxCovalentDegreeSz=%d minId=%s mutualInducedMaxIterations=%d mutualInducedTargetEpsilon=%15.7e\n", 
+                        amoebaGpu->maxCovalentDegreeSz, minId.c_str(), amoebaGpu->mutualInducedMaxIterations, amoebaGpu->mutualInducedTargetEpsilon );
+        (void) fprintf( amoebaGpu->log,"   electric=%15.7e alphaEwald=%15.7e nonbondedCutoff=%15.7e dielec=%15.7e\n", 
+                        amoebaGpu->amoebaSim.electric, amoebaGpu->gpuContext->sim.alphaEwald, amoebaGpu->gpuContext->sim.nonbondedCutoff,  amoebaGpu->amoebaSim.dielec );
+        (void) fflush( amoebaGpu->log );
+    }
+
     std::vector<int> axisCount(charges.size(),0);
-    int maxTorqueBufferIndex = 0;
-    for( int ii = 0; ii < static_cast<int>(charges.size()); ii++ ){
+
+    static const int maxAxisType     = 6;
+    int axisTypeCount[maxAxisType+1] = { 0, 0, 0, 0, 0, 0, 0 };
+    int maxTorqueBufferIndex         = 0;
+
+    int chargeSize                   = static_cast<int>(charges.size());
+    for( int ii = 0; ii < chargeSize; ii++ ){
 
         // axis type & multipole particles ids
  
@@ -1666,10 +1813,15 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             }
         }
 
-        if( 0 && amoebaGpu->log ){
-            fprintf( amoebaGpu->log, "Z1 %4d %d [%4d %4d %4d] dmp/thole %15.7e %15.7e\n", ii,  axisType[ii],
-                     multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii], dampingFactors[ii], tholes[ii] );
+#ifdef MAX_PARAMETER_PRINT
+        if( amoebaGpu->log && (ii < maxPrint || (ii > (chargeSize-maxPrint)) ) ){
+            (void) fprintf( amoebaGpu->log, "%6d axisType=%1d axis=[%6d %6d %6d] dipole[%15.7e %15.7e %15.7e] dmp/thole/polar %15.7e %15.7e %15.7e\n",
+                            ii,  axisType[ii],
+                            multipoleParticleX[ii], multipoleParticleY[ii], multipoleParticleZ[ii], 
+                            dipoles[dipoleIndex], dipoles[dipoleIndex+1], dipoles[dipoleIndex+2],
+                            dampingFactors[ii], tholes[ii], polarity[ii] );
         }
+#endif
 
         // charges
 
@@ -1748,8 +1900,9 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             }
         }
 
-#ifdef AMOEBA_DEBUG
-        if( (amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (charges.size() - maxPrint) )) ) ) ){
+        // logging info
+
+        if( 0 && (amoebaGpu->log && ( ( ( ii < maxPrint ) || (ii >= (chargeSize - maxPrint) )) ) ) ){
 
             // axis particles
 
@@ -1848,9 +2001,8 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             amoebaGpu->psDampingFactorAndThole->_pSysData[ii].x == -std::numeric_limits<double>::infinity()){
             (void) fprintf( amoebaGpu->log,"Nan detected at index=%d in psDampingFactor\n", ii );
         }
-#endif
 
-#ifdef AMOEBA_DEBUG
+#if 0
         if( amoebaGpu->log ){
 
             // covalent
@@ -1901,12 +2053,14 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     }
 
     amoebaGpu->amoebaSim.maxTorqueBufferIndex = maxTorqueBufferIndex;
+
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Max axis count=%d\n", maxTorqueBufferIndex );
+        (void) fprintf( amoebaGpu->log, "%s max axis count=%d\n", methodName.c_str(), maxTorqueBufferIndex );
         std::string axisLabel[maxAxisType+1] = {  "ZThenX", "Bisector", "ZBisect", "ThreeFold", "ZOnly", "NoAxisType", "Unknown"};
         for( unsigned int kk = 0; kk < (maxAxisType+1); kk++ ){
             (void) fprintf( amoebaGpu->log, "%2u %10s atom count=%d\n", kk, axisLabel[kk].c_str(), axisTypeCount[kk] );
         }
+        (void) fprintf( amoebaGpu->log, "\n" );
     }
 
     // upload
@@ -1932,7 +2086,6 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
     gpuContext gpu                         = amoebaGpu->gpuContext;
     int paddedNumberOfAtoms                = gpu->sim.paddedNumberOfAtoms;
     gpu->sim.dielectricOffset              = dielectricOffset;
-    //gpu->bIncludeGBSA                      = 1;
     amoebaGpu->includeObcCavityTerm        = includeCavityTerm;
     gpu->sim.probeRadius                   = probeRadius;
     gpu->sim.surfaceAreaFactor             = surfaceAreaFactor;
@@ -1961,17 +2114,13 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
     amoebaGpu->amoebaSim.dwater      = solventDielectric;
     amoebaGpu->amoebaSim.dielec      = innerDielectric;
 
-//    amoebaGpu->amoebaSim.fc          = amoebaGpu->amoebaSim.electric*1.0f*(1.0f-solventDielectric)/(0.0f+1.0f*solventDielectric);;
-//    amoebaGpu->amoebaSim.fd          = amoebaGpu->amoebaSim.electric*2.0f*(1.0f-solventDielectric)/(1.0f+2.0f*solventDielectric);;
-//    amoebaGpu->amoebaSim.fq          = amoebaGpu->amoebaSim.electric*3.0f*(1.0f-solventDielectric)/(2.0f+3.0f*solventDielectric);;
-
     amoebaGpu->amoebaSim.fc          = 1.0f*(1.0f-solventDielectric)/(0.0f+1.0f*solventDielectric);;
     amoebaGpu->amoebaSim.fd          = 2.0f*(1.0f-solventDielectric)/(1.0f+2.0f*solventDielectric);;
     amoebaGpu->amoebaSim.fq          = 3.0f*(1.0f-solventDielectric)/(2.0f+3.0f*solventDielectric);;
 
     gpu->sim.preFactor               = -amoebaGpu->amoebaSim.electric*((1.0f/innerDielectric)-(1.0f/solventDielectric));
 
-    if( 0 && amoebaGpu->log ){
+    if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log,"gpuSetAmoebaObcParameters: cavity=%d dielectricOffset=%15.7e probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
                         includeCavityTerm, dielectricOffset, probeRadius, surfaceAreaFactor );
         (void) fprintf( amoebaGpu->log,"                           gkc=%12.3f solventDielectric=%15.7e innerDielectric=%15.7e sim.preFactor=%15.7e\n", 
@@ -1984,6 +2133,84 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
             (void) fprintf( amoebaGpu->log,"%6d %15.7e %15.7e %15.7e %15.7e\n", i,
                             radius[i] , (*gpu->psObcData)[i].x, (*gpu->psObcData)[i].y, scale[i] );
         }
+    }
+
+    gpuRotationToLabFrameAllocate( amoebaGpu );
+    gpuFixedEFieldAllocate( amoebaGpu );
+    gpuElectrostaticAllocate( amoebaGpu );
+    gpuKirkwoodAllocate( amoebaGpu );
+
+}
+
+extern "C"
+void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu, float innerDielectric, float solventDielectric, float dielectricOffset,
+                                   const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
+                                   int includeCavityTerm, float probeRadius, float surfaceAreaFactor )
+{
+
+    gpuContext gpu                         = amoebaGpu->gpuContext;
+    int paddedNumberOfAtoms                = gpu->sim.paddedNumberOfAtoms;
+    gpu->sim.dielectricOffset              = dielectricOffset;
+    amoebaGpu->includeObcCavityTerm        = includeCavityTerm;
+    gpu->sim.probeRadius                   = probeRadius;
+    gpu->sim.surfaceAreaFactor             = surfaceAreaFactor;
+    unsigned int particles                 = radius.size();
+
+    for (unsigned int i = 0; i < particles; i++) 
+    {    
+            (*gpu->psObcData)[i].x = radius[i];
+            (*gpu->psObcData)[i].y = scale[i]*(*gpu->psObcData)[i].x;
+            (*gpu->psPosq4)[i].w   = charge[i];
+    }    
+
+    // Dummy out extra particles data
+
+    for (unsigned int i = particles; i < paddedNumberOfAtoms; i++) 
+    {    
+        (*gpu->psBornRadii)[i]     = 0.2f;
+        (*gpu->psObcData)[i].x     = 0.01f;
+        (*gpu->psObcData)[i].y     = 0.01f;
+    }    
+
+    gpu->psBornRadii->Upload();
+    gpu->psObcData->Upload();
+    gpu->psPosq4->Upload();
+
+    amoebaGpu->amoebaSim.gkc         = 2.455f;
+    amoebaGpu->amoebaSim.dwater      = solventDielectric;
+    amoebaGpu->amoebaSim.dielec      = innerDielectric;
+
+    amoebaGpu->amoebaSim.fc          = 1.0f*(1.0f-solventDielectric)/(0.0f+1.0f*solventDielectric);;
+    amoebaGpu->amoebaSim.fd          = 2.0f*(1.0f-solventDielectric)/(1.0f+2.0f*solventDielectric);;
+    amoebaGpu->amoebaSim.fq          = 3.0f*(1.0f-solventDielectric)/(2.0f+3.0f*solventDielectric);;
+
+    gpu->sim.preFactor               = -amoebaGpu->amoebaSim.electric*((1.0f/innerDielectric)-(1.0f/solventDielectric));
+
+    // logging info
+
+    if( amoebaGpu->log ){
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
+        unsigned int maxIndex = particles;
+        (void) fprintf( amoebaGpu->log,"gpuSetAmoebaGrycukParameters: cavity=%d dielectricOffset=%15.7e probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
+                        includeCavityTerm, dielectricOffset, probeRadius, surfaceAreaFactor );
+        (void) fprintf( amoebaGpu->log,"                           gkc=%12.3f solventDielectric=%15.7e innerDielectric=%15.7e sim.preFactor=%15.7e\n", 
+                        amoebaGpu->amoebaSim.gkc, amoebaGpu->amoebaSim.dwater, amoebaGpu->amoebaSim.dielec, gpu->sim.preFactor );
+        (void) fprintf( amoebaGpu->log,"                           fc=%15.7e fd=%15.7e fq=%15.7e\n",
+                        amoebaGpu->amoebaSim.fc, amoebaGpu->amoebaSim.fq, amoebaGpu->amoebaSim.fq );
+        (void) fprintf( amoebaGpu->log,"\nRadius scl*radius scl\n" );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < maxIndex; ii++ ){
+            (void) fprintf( amoebaGpu->log,"%6d %15.7e %15.7e %15.7e\n", ii,
+                            (*gpu->psObcData)[ii].x, (*gpu->psObcData)[ii].y, scale[ii] );
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = maxIndex - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
+        (void) fflush( amoebaGpu->log );
     }
 
     gpuRotationToLabFrameAllocate( amoebaGpu );
@@ -2068,22 +2295,15 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
         }
     }
 
-    if( particles < 1 ){
-        (void) fprintf( stderr, "%s number of particles\n", methodName );
-        return;
-    } 
-
     amoebaGpu->psVdwSigmaEpsilon           = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms,   1, "VdwSigmaEpsilon");
-    for (unsigned int ii = 0; ii < particles; ii++) 
-    {    
+    for( unsigned int ii = 0; ii < particles; ii++ ){    
         amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].x    = sigmas[ii];
         amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].y    = epsilons[ii];
     }    
 
     // Dummy out extra particles data
 
-    for (unsigned int ii = particles; ii < gpu->sim.paddedNumberOfAtoms; ii++) 
-    {    
+    for( unsigned int ii = particles; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){    
         amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].x     = 1.0f;
         amoebaGpu->psVdwSigmaEpsilon->_pSysData[ii].y     = 0.0f;
     }    
@@ -2114,23 +2334,12 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
 
    unsigned int numberOfNonReductions = 0;
    unsigned int numberOfReductions    = 0;
-    for (unsigned int ii = 0; ii < particles; ii++) 
-    {    
-        if( ivNonMapping[ii] )
-        {
+    for( unsigned int ii = 0; ii < particles; ii++ ){    
+        if( ivNonMapping[ii] ){
             numberOfNonReductions++;
         }
-        if( ivMapping[ii].size() > 0 )
-        {
+        if( ivMapping[ii].size() > 0 ){
             numberOfReductions++;
-#ifdef AMOEBA_DEBUG
-            (void) fprintf( amoebaGpu->log, "Atom %u has %u reductions: [", ii, ivMapping[ii].size() );
-            for (unsigned int jj = 0; jj < ivMapping[ii].size(); jj++) 
-            {
-                (void) fprintf( amoebaGpu->log, "%u ", ivMapping[ii][jj] );
-            }
-            (void) fprintf( amoebaGpu->log, "]  %12.4f\n", reductionFactors[ii] );
-#endif
         }
     }    
     
@@ -2152,15 +2361,12 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
 
    unsigned int count    = 0;
    unsigned int nonCount = 0;
-    for (unsigned int ii = 0; ii < particles; ii++) 
-    {    
-        if( ivNonMapping[ii] )
-        {
+    for( unsigned int ii = 0; ii < particles; ii++ ){    
+        if( ivNonMapping[ii] ){
             psVdwNonReductionID->_pSysData[nonCount++] = ii;
         }
 
-        if( ivMapping[ii].size() > 0 )
-        {
+        if( ivMapping[ii].size() > 0 ){
             psAmoebaVdwReduction->_pSysData[count] = reductionFactors[ii];
             psVdwReductionID->_pSysData[count].x   = ii;
             psVdwReductionID->_pSysData[count].y   = ivMapping[ii][0];
@@ -2186,79 +2392,108 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     psAmoebaVdwReduction->Upload();
 
     amoebaGpu->vdwExclusions.resize( gpu->natoms );
-    for( unsigned int ii = 0; ii < gpu->natoms; ii++)
-    {
+    for( unsigned int ii = 0; ii < gpu->natoms; ii++ ){
         for (unsigned int jj = 0; jj < allExclusions[ii].size(); jj++){ 
             amoebaGpu->vdwExclusions[ii].push_back( allExclusions[ii][jj] );
         }
     }
 
-#ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        unsigned int maxPrint = 32;
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
         (void) fprintf( amoebaGpu->log, "%s sigma/epsilon combining rules=%d %d\n", methodName, 
                         amoebaGpu->vdwSigmaCombiningRule, amoebaGpu->vdwEpsilonCombiningRule);
-        for (unsigned int ii = 0; ii < gpu->natoms; ii++) 
-        {    
-            (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e Ex[", ii, sigmas[ii], epsilons[ii] );
-            for (unsigned int jj = 0; jj < allExclusions[ii].size(); jj++){ 
-                (void) fprintf( amoebaGpu->log, "%d ", allExclusions[ii][jj] );
+        (void) fprintf( amoebaGpu->log, "%s particles=%d numberOfNonReductions=%d numberOfReductionsi=%d\n",
+                        methodName, particles, numberOfNonReductions, numberOfReductions );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < gpu->natoms; ii++ ){    
+            (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e %15.7e Ex[", ii, sigmas[ii], epsilons[ii], reductionFactors[ii] );
+            for( unsigned int jj = 0; jj < allExclusions[ii].size(); jj++ ){ 
+                (void) fprintf( amoebaGpu->log, "%6d ", allExclusions[ii][jj] );
             }
             (void) fprintf( amoebaGpu->log, "]\n", ii, sigmas[ii], epsilons[ii] );
-            if( ii == maxPrint && ii < (gpu->sim.paddedNumberOfAtoms - maxPrint) )
-            {
-                ii = (gpu->sim.addedNumberOfAtoms - maxPrint);
+
+            if( ii == maxPrint ){
+                (void) fprintf( amoebaGpu->log, "\n" );
+                ii = (gpu->sim.paddedNumberOfAtoms - maxPrint);
+                if( ii < maxPrint )ii = maxPrint;
             }
         } 
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
         (void) fflush( amoebaGpu->log );
     }    
-#endif
 
-#undef AMOEBA_DEBUG
 }
 
 extern "C"
 void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ)
 {
-    gpuContext gpu = amoebaGpu->gpuContext;
-    gpu->sim.alphaEwald = alpha;
-    int3 gridSize = make_int3(gridSizeX, gridSizeY, gridSizeZ);
-    gpu->sim.pmeGridSize = gridSize;
+    gpuContext gpu                         = amoebaGpu->gpuContext;
+
+    gpu->sim.alphaEwald                    = alpha;
+
+    int3 gridSize                          = make_int3(gridSizeX, gridSizeY, gridSizeZ);
+    gpu->sim.pmeGridSize                   = gridSize;
+
     int3 groupSize = make_int3(2, 4, 4);
     gpu->sim.pmeGroupSize = groupSize;
-    const int3 numGroups = make_int3((gridSize.x+groupSize.x-1)/groupSize.x, (gridSize.y+groupSize.y-1)/groupSize.y, (gridSize.z+groupSize.z-1)/groupSize.z);
-    const unsigned int totalGroups = numGroups.x*numGroups.y*numGroups.z;
+
+    // logging info
+
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "gpuSetAmoebaPMEParameters alpha=%15.7e grid: [%d %d %d]\n",
+                        gpu->sim.alphaEwald , gridSizeX, gridSizeY, gridSizeZ );
+    }
+
+    const int3 numGroups                   = make_int3((gridSize.x+groupSize.x-1)/groupSize.x, (gridSize.y+groupSize.y-1)/groupSize.y, (gridSize.z+groupSize.z-1)/groupSize.z);
+    const unsigned int totalGroups         = numGroups.x*numGroups.y*numGroups.z;
+
     cufftPlan3d(&gpu->fftplan, gridSize.x, gridSize.y, gridSize.z, CUFFT_C2C);
-    gpu->psPmeGrid = new CUDAStream<cufftComplex>(gridSize.x*gridSize.y*gridSize.z, 1, "PmeGrid");
-    gpu->sim.pPmeGrid = gpu->psPmeGrid->_pDevData;
-    gpu->psPmeBsplineModuli[0] = new CUDAStream<float>(gridSize.x, 1, "PmeBsplineModuli0");
-    gpu->sim.pPmeBsplineModuli[0] = gpu->psPmeBsplineModuli[0]->_pDevData;
-    gpu->psPmeBsplineModuli[1] = new CUDAStream<float>(gridSize.y, 1, "PmeBsplineModuli1");
-    gpu->sim.pPmeBsplineModuli[1] = gpu->psPmeBsplineModuli[1]->_pDevData;
-    gpu->psPmeBsplineModuli[2] = new CUDAStream<float>(gridSize.z, 1, "PmeBsplineModuli2");
-    gpu->sim.pPmeBsplineModuli[2] = gpu->psPmeBsplineModuli[2]->_pDevData;
-    amoebaGpu->psThetai1 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai1");
-    amoebaGpu->amoebaSim.pThetai1 = amoebaGpu->psThetai1->_pDevData;
-    amoebaGpu->psThetai2 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai2");
-    amoebaGpu->amoebaSim.pThetai2 = amoebaGpu->psThetai2->_pDevData;
-    amoebaGpu->psThetai3 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai3");
-    amoebaGpu->amoebaSim.pThetai3 = amoebaGpu->psThetai3->_pDevData;
-    amoebaGpu->psIgrid = new CUDAStream<int4>(gpu->natoms, 1, "igrid");
-    amoebaGpu->amoebaSim.pIgrid = amoebaGpu->psIgrid->_pDevData;
-    amoebaGpu->psPhi = new CUDAStream<float>(20*gpu->natoms, 1, "phi");
-    amoebaGpu->amoebaSim.pPhi = amoebaGpu->psPhi->_pDevData;
-    amoebaGpu->psPhid = new CUDAStream<float>(10*gpu->natoms, 1, "phid");
-    amoebaGpu->amoebaSim.pPhid = amoebaGpu->psPhid->_pDevData;
-    amoebaGpu->psPhip = new CUDAStream<float>(10*gpu->natoms, 1, "phip");
-    amoebaGpu->amoebaSim.pPhip = amoebaGpu->psPhip->_pDevData;
-    amoebaGpu->psPhidp = new CUDAStream<float>(20*gpu->natoms, 1, "phidp");
-    amoebaGpu->amoebaSim.pPhidp = amoebaGpu->psPhidp->_pDevData;
-    gpu->psPmeAtomRange = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
-    gpu->sim.pPmeAtomRange = gpu->psPmeAtomRange->_pDevData;
-    gpu->psPmeAtomGridIndex = new CUDAStream<int2>(gpu->natoms, 1, "PmeAtomGridIndex");
-    gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
-    gpu->psPmeBsplineTheta = new CUDAStream<float4>(1, 1, "PmeBsplineTheta"); // Not actually uesd
-    gpu->psPmeBsplineDtheta = new CUDAStream<float4>(1, 1, "PmeBsplineDtheta"); // Not actually used
+
+    gpu->psPmeGrid                         = new CUDAStream<cufftComplex>(gridSize.x*gridSize.y*gridSize.z, 1, "PmeGrid");
+    gpu->sim.pPmeGrid                      = gpu->psPmeGrid->_pDevData;
+
+    gpu->psPmeBsplineModuli[0]             = new CUDAStream<float>(gridSize.x, 1, "PmeBsplineModuli0");
+    gpu->sim.pPmeBsplineModuli[0]          = gpu->psPmeBsplineModuli[0]->_pDevData;
+
+    gpu->psPmeBsplineModuli[1]             = new CUDAStream<float>(gridSize.y, 1, "PmeBsplineModuli1");
+    gpu->sim.pPmeBsplineModuli[1]          = gpu->psPmeBsplineModuli[1]->_pDevData;
+
+    gpu->psPmeBsplineModuli[2]             = new CUDAStream<float>(gridSize.z, 1, "PmeBsplineModuli2");
+    gpu->sim.pPmeBsplineModuli[2]          = gpu->psPmeBsplineModuli[2]->_pDevData;
+
+    amoebaGpu->psThetai1                   = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai1");
+    amoebaGpu->amoebaSim.pThetai1          = amoebaGpu->psThetai1->_pDevData;
+
+    amoebaGpu->psThetai2                   = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai2");
+    amoebaGpu->amoebaSim.pThetai2          = amoebaGpu->psThetai2->_pDevData;
+
+    amoebaGpu->psThetai3                   = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai3");
+    amoebaGpu->amoebaSim.pThetai3          = amoebaGpu->psThetai3->_pDevData;
+
+    amoebaGpu->psIgrid                     = new CUDAStream<int4>(gpu->natoms, 1, "igrid");
+    amoebaGpu->amoebaSim.pIgrid            = amoebaGpu->psIgrid->_pDevData;
+
+    amoebaGpu->psPhi                       = new CUDAStream<float>(20*gpu->natoms, 1, "phi");
+    amoebaGpu->amoebaSim.pPhi              = amoebaGpu->psPhi->_pDevData;
+
+    amoebaGpu->psPhid                      = new CUDAStream<float>(10*gpu->natoms, 1, "phid");
+    amoebaGpu->amoebaSim.pPhid             = amoebaGpu->psPhid->_pDevData;
+
+    amoebaGpu->psPhip                      = new CUDAStream<float>(10*gpu->natoms, 1, "phip");
+    amoebaGpu->amoebaSim.pPhip             = amoebaGpu->psPhip->_pDevData;
+
+    amoebaGpu->psPhidp                     = new CUDAStream<float>(20*gpu->natoms, 1, "phidp");
+    amoebaGpu->amoebaSim.pPhidp            = amoebaGpu->psPhidp->_pDevData;
+
+    gpu->psPmeAtomRange                    = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
+    gpu->sim.pPmeAtomRange                 = gpu->psPmeAtomRange->_pDevData;
+
+    gpu->psPmeAtomGridIndex                = new CUDAStream<int2>(gpu->natoms, 1, "PmeAtomGridIndex");
+    gpu->sim.pPmeAtomGridIndex             = gpu->psPmeAtomGridIndex->_pDevData;
+
+    gpu->psPmeBsplineTheta                 = new CUDAStream<float4>(1, 1, "PmeBsplineTheta"); // Not actually uesd
+    gpu->psPmeBsplineDtheta                = new CUDAStream<float4>(1, 1, "PmeBsplineDtheta"); // Not actually used
 
     // Initialize the b-spline moduli.
 
@@ -2624,22 +2859,23 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
     amoebaGpu->amoebaSim.shctd                       = shctd;
     amoebaGpu->amoebaSim.dispoff                     = dispoff;
 
-#ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        unsigned int maxPrint = 10;
+        unsigned int maxPrint = MAX_PARAMETER_PRINT;
         (void) fprintf( amoebaGpu->log, "%s particles=%u total max dispersion energy=%14.5e eps[%14.5e %14.5e] rmin[%14.5e %14.5e] awtr=%14.5e shctd=%14.5e dispoff=%14.5e\n",
-                        methodName, radii.size(), totalMaxWcaDisperionEnergy, epso, epsh, rmino, rminh, awater, shctd, dispoff );
-        for (unsigned int ii = 0; ii < gpu->natoms; ii++) 
-        {    
+                        methodName, static_cast<unsigned int>(radii.size()), totalMaxWcaDispersionEnergy, epso, epsh, rmino, rminh, awater, shctd, dispoff );
+#ifdef PARAMETER_PRINT
+        for( unsigned int ii = 0; ii < gpu->natoms; ii++ ){    
             (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e\n", ii, radii[ii], epsilons[ii] );
-            if( ii == maxPrint && ii < (paddedNumberOfAtoms - maxPrint) )
-            {
+            if( ii == maxPrint && ii < (paddedNumberOfAtoms - maxPrint) ){
+                (void) fprintf( amoebaGpu->log, "\n" );
                 ii = (paddedNumberOfAtoms - maxPrint);
+                if( ii < maxPrint )ii = maxPrint;
             }
         } 
+        (void) fprintf( amoebaGpu->log, "\n" );
+#endif
         (void) fflush( amoebaGpu->log );
     }    
-#endif
 
 }
 
@@ -2770,37 +3006,39 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
 }
 
 extern "C"
-void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu) 
+void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu, int updateFlag ) 
 {
 
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "In amoebaGpuSetConstants\n" );
-        (void) fflush( amoebaGpu->log );
+    if( updateFlag == 0 ){
+
+        if( amoebaGpu->log ){
+            (void) fprintf( amoebaGpu->log, "AmoebaGpuSetConstants %d\n", updateFlag );
+            (void) fflush( amoebaGpu->log );
+        }
+
+        if( amoebaGpu->amoebaSim.dielec > 0.0f && amoebaGpu->amoebaSim.dwater > 0.0f ){
+            amoebaGpu->gpuContext->sim.preFactor = -amoebaGpu->amoebaSim.electric*((1.0f/amoebaGpu->amoebaSim.dielec)-(1.0f/amoebaGpu->amoebaSim.dwater));
+        }
+        gpuSetAmoebaBondOffsets( amoebaGpu );
+        SetCalculateAmoebaLocalForcesSim( amoebaGpu );
+        SetCalculateAmoebaCudaWcaDispersionSim( amoebaGpu );
+        SetCalculateAmoebaKirkwoodSim( amoebaGpu );
+        SetCalculateAmoebaKirkwoodEDiffSim( amoebaGpu );
+        SetCalculateAmoebaGrycukSim(  amoebaGpu  );
     }
 
-    if( amoebaGpu->amoebaSim.dielec > 0.0f && amoebaGpu->amoebaSim.dwater > 0.0f ){
-        amoebaGpu->gpuContext->sim.preFactor = -amoebaGpu->amoebaSim.electric*((1.0f/amoebaGpu->amoebaSim.dielec)-(1.0f/amoebaGpu->amoebaSim.dwater));
-    }
-
-    gpuSetAmoebaBondOffsets( amoebaGpu );
-    SetCalculateAmoebaLocalForcesSim( amoebaGpu );
-    SetForcesSim( amoebaGpu->gpuContext );
+    SetCalculateAmoebaCudaUtilitiesSim( amoebaGpu );
     SetCalculateAmoebaMultipoleForcesSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEFieldSim( amoebaGpu );
     SetCalculateAmoebaCudaVdw14_7Sim( amoebaGpu );
-    SetCalculateAmoebaCudaWcaDispersionSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedFieldSim( amoebaGpu );
     SetCalculateAmoebaCudaPmeMutualInducedFieldSim( amoebaGpu );
     SetCalculateAmoebaCudaPmeFixedEFieldSim( amoebaGpu );
     SetCalculateAmoebaElectrostaticSim( amoebaGpu );
     SetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpu );
     SetCalculateAmoebaCudaMapTorquesSim( amoebaGpu );
-    SetCalculateAmoebaKirkwoodSim( amoebaGpu );
-    SetCalculateAmoebaCudaUtilitiesSim( amoebaGpu );
-    SetCalculateAmoebaKirkwoodEDiffSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEAndGKFieldsSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedAndGkFieldsSim( amoebaGpu );
-    SetCalculateObcGbsaForces2Sim(  amoebaGpu->gpuContext  );
     SetCalculateAmoebaPMESim( amoebaGpu );
 }
 
