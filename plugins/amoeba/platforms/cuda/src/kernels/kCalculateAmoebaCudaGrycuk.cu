@@ -171,7 +171,7 @@ void kReduceGrycukGbsaBornSum( amoebaGpuContext amoebaGpu )
     kReduceGrycukGbsaBornSum_kernel<<<amoebaGpu->gpuContext->sim.blocks, 384>>>();
     LAUNCHERROR("kReduceGrycukGbsaBornSum");
 
-    if( 1 ){
+    if( 0 ){
         static int callId                    = 0;
         gpuContext gpu                       = amoebaGpu->gpuContext;
         std::vector<int> fileId;
