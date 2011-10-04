@@ -1,4 +1,3 @@
-
 /* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
@@ -23,73 +22,15 @@
  */
 
 #include <math.h>
+#include <iostream>
 #include <sstream>
 #include <string.h>
 
+#include "openmm/OpenMMException.h"
 #include "GBVISoftcoreParameters.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
-
-// #define UseGromacsMalloc 1
-
-#ifdef UseGromacsMalloc
-extern "C" {
-#include "smalloc.h" 
-}
-#endif
-
-/**---------------------------------------------------------------------------------------
-
-   GBVISoftcoreParameters:
-
-		Calculates for each atom
-
-			(1) the van der Waal radii
-         (2) volume
-         (3) fixed terms in Obc equation gPol
-         (4) list of atoms that should be excluded in calculating
-				 force -- nonbonded atoms (1-2, and 1-3 atoms)
-
-	Implementation:
-
-		Slightly different sequence of calls when running on CPU vs GPU.
-		Difference arise because the CPU-side data arrays for the Brook
-		streams are allocated by the BrookStreamWrapper objects. These
-		arrays are then used by GBVISoftcoreParameters when initializing the
-		the values (vdwRadii, volume, ...) to be used in the calculation.
-
-		Cpu:
-			 GBVISoftcoreParameters* gb_VIParameters = new GBVISoftcoreParameters( numberOfAtoms, log );
-          gb_VIParameters->initializeParameters( top );
-
-		Gpu:
-
-			gb_VIParameters   = new GBVISoftcoreParameters( gpu->natoms, log );
-			
-			// set arrays for cpu using stream data field; 
-			// initializeParameters() only allocates space for arrays if they are not set (==NULL)
-			// also set flag so that GBVISoftcoreParameters destructor does not free arrays 
-			
-			gb_VIParameters->setVdwRadii(  getBrookStreamWrapperAtIndex( GpuObc::gb_VIVdwRadii  )->getData() );
-			gb_VIParameters->setVolume(    getBrookStreamWrapperAtIndex( GpuObc::gb_VIVolume    )->getData() );
-			gb_VIParameters->setGPolFixed( getBrookStreamWrapperAtIndex( GpuObc::gb_VIGpolFixed )->getData() );
-			gb_VIParameters->setBornRadii( getBrookStreamWrapperAtIndex( GpuObc::gb_VIBornRadii )->getData() );
-			
-			gb_VIParameters->setFreeArrays( false );
-			
-			gb_VIParameters->initializeParameters( top );
- 
-
-   Issues:
-
-		Tinker's atom radii are used. 
-      The logic for mapping the Gromacs atom names to Tinker type may be incomplete;
-      only tested for generic proteins
-		see mapGmxAtomNameToTinkerAtomNumber()
-
-   --------------------------------------------------------------------------------------- */
-
 
 /**---------------------------------------------------------------------------------------
 
@@ -99,69 +40,100 @@ extern "C" {
 
    --------------------------------------------------------------------------------------- */
 
-GBVISoftcoreParameters::GBVISoftcoreParameters( int numberOfAtoms ) : ImplicitSolventParameters( numberOfAtoms ), cutoff(false), periodic(false) {
+GBVISoftcoreParameters::GBVISoftcoreParameters( int numberOfAtoms ) : _numberOfAtoms(numberOfAtoms), _soluteDielectric(1.0), _solventDielectric(78.3),
+                                                                      _electricConstant(-0.5*ONE_4PI_EPS0), _quinticLowerLimitFactor(0.8), _bornRadiusScalingSoftcoreMethod(NoScaling),
+                                                                      _cutoff(false), _periodic(false) {
 
-   // ---------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nGBVISoftcoreParameters::GBVISoftcoreParameters";
-   
-   // ---------------------------------------------------------------------------------------
-
-   _ownScaledRadii                      = 0;
-   _scaledRadii                         = NULL;
-   _ownGammaParameters                  = 0;
-   _gammaParameters                     = NULL;
-   _ownBornRadiusScaleFactors           = 0;
-   _bornRadiusScaleFactors              = NULL;
-
-   _bornRadiusScalingSoftcoreMethod     = NoScaling;
-   _quinticLowerLimitFactor             = static_cast<RealOpenMM>(0.8);
-   setQuinticUpperBornRadiusLimit( static_cast<RealOpenMM>(5.0) );
+    _atomicRadii.resize( numberOfAtoms );
+    _scaledRadii.resize( numberOfAtoms );
+    _gammaParameters.resize( numberOfAtoms );
+    _bornRadiusScaleFactors.resize( numberOfAtoms );
+ 
+    setQuinticUpperBornRadiusLimit( static_cast<RealOpenMM>(5.0) );
 
 }
 
 /**---------------------------------------------------------------------------------------
 
-   GBVISoftcoreParameters destructor (Simbios) 
+   GBVISoftcoreParameters destructor
 
    --------------------------------------------------------------------------------------- */
 
 GBVISoftcoreParameters::~GBVISoftcoreParameters( ){
+}
 
-   // ---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nGBVISoftcoreParameters::~GBVISoftcoreParameters";
-   
-   // ---------------------------------------------------------------------------------------
+   Get number of atoms
 
-   // in GPU runs, arrays may be 'owned' by BrookStreamWrapper -- hence they should not
-   // be freed here, i.e., _freeArrays should be 'false'   
+   @return number of atoms
 
-#ifdef UseGromacsMalloc
+   --------------------------------------------------------------------------------------- */
 
-/*
-   if( _freeArrays ){
+int GBVISoftcoreParameters::getNumberOfAtoms( void ) const {
+    return _numberOfAtoms;
+}
 
-      if( _vdwRadii != NULL ){
-         save_free( "_vdwRadii", __FILE__, __LINE__, _vdwRadii );
-      }
-   
-   } */
+/**---------------------------------------------------------------------------------------
 
-#else
+   Get electric constant
 
-   if( _ownScaledRadii ){
-      delete[] _scaledRadii;
-   }
-   delete[] _gammaParameters;
-   delete[] _bornRadiusScaleFactors;
-/*
-   if( getFreeArrays() ){
+   @return electric constant
 
-   } */
+   --------------------------------------------------------------------------------------- */
 
-#endif
+RealOpenMM GBVISoftcoreParameters::getElectricConstant( void ) const {
+    return _electricConstant;
+}
 
+/**---------------------------------------------------------------------------------------
+
+   Get solvent dielectric
+
+   @return solvent dielectric
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM GBVISoftcoreParameters::getSolventDielectric( void ) const {
+    return _solventDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set solvent dielectric
+
+   @param solventDielectric solvent dielectric
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVISoftcoreParameters::setSolventDielectric( RealOpenMM solventDielectric ){
+    _solventDielectric = solventDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get solute dielectric
+
+   @return soluteDielectric
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM GBVISoftcoreParameters::getSoluteDielectric( void ) const {
+    return _soluteDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set solute dielectric
+
+   @param soluteDielectric solute dielectric
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVISoftcoreParameters::setSoluteDielectric( RealOpenMM soluteDielectric ){
+    _soluteDielectric = soluteDielectric;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -173,14 +145,7 @@ GBVISoftcoreParameters::~GBVISoftcoreParameters( ){
    --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVISoftcoreParameters::getQuinticLowerLimitFactor( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "GBVISoftcoreParameters::getQuinticLowerLimitFactor:";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _quinticLowerLimitFactor;
+    return _quinticLowerLimitFactor;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -192,14 +157,7 @@ RealOpenMM GBVISoftcoreParameters::getQuinticLowerLimitFactor( void ) const {
    --------------------------------------------------------------------------------------- */
 
 void GBVISoftcoreParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "GBVISoftcoreParameters::setQuinticLowerLimitFactor:";
-
-   // ---------------------------------------------------------------------------------------
-
-   _quinticLowerLimitFactor = quinticLowerLimitFactor;
+    _quinticLowerLimitFactor = quinticLowerLimitFactor;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -211,14 +169,7 @@ void GBVISoftcoreParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLower
    --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVISoftcoreParameters::getQuinticUpperBornRadiusLimit( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "GBVISoftcoreParameters::getQuinticUpperBornRadiusLimit:";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _quinticUpperBornRadiusLimit;
+    return _quinticUpperBornRadiusLimit;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -230,15 +181,8 @@ RealOpenMM GBVISoftcoreParameters::getQuinticUpperBornRadiusLimit( void ) const 
    --------------------------------------------------------------------------------------- */
 
 void GBVISoftcoreParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperBornRadiusLimit ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "GBVISoftcoreParameters::setQuinticUpperBornRadiusLimit:";
-
-   // ---------------------------------------------------------------------------------------
-
-   _quinticUpperBornRadiusLimit  = quinticUpperBornRadiusLimit;
-   _quinticUpperSplineLimit      = POW( _quinticUpperBornRadiusLimit, static_cast<RealOpenMM>(-3.0) ); 
+    _quinticUpperBornRadiusLimit  = quinticUpperBornRadiusLimit;
+    _quinticUpperSplineLimit      = POW( _quinticUpperBornRadiusLimit, static_cast<RealOpenMM>(-3.0) ); 
 }
 
 /**---------------------------------------------------------------------------------------
@@ -250,14 +194,7 @@ void GBVISoftcoreParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticU
    --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVISoftcoreParameters::getQuinticUpperSplineLimit( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "GBVISoftcoreParameters::getQuinticUpperSplineLimit:";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _quinticUpperSplineLimit;
+    return _quinticUpperSplineLimit;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -268,41 +205,13 @@ RealOpenMM GBVISoftcoreParameters::getQuinticUpperSplineLimit( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* GBVISoftcoreParameters::getAtomicRadii( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nImplicitSolventParameters::getAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   RealOpenMM* atomicRadii = ImplicitSolventParameters::getAtomicRadii();
-
-   return atomicRadii;
+const std::vector<RealOpenMM>& GBVISoftcoreParameters::getAtomicRadii( void ) const {
+    return _atomicRadii;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set AtomicRadii array
-
-   @param atomicRadii array of atomic radii
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set AtomicRadii array
+   Set AtomicRadii vector
 
    @param atomicRadii vector of atomic radii
 
@@ -312,111 +221,30 @@ void GBVISoftcoreParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nGBVISoftcoreParameters::setAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+    if( atomicRadii.size() == _atomicRadii.size() ){
+        for( unsigned int ii = 0; ii < atomicRadii.size(); ii++ ){
+            _atomicRadii[ii] = atomicRadii[ii];
+        }
+    } else {
+        std::stringstream msg;
+        msg << "GBVISoftcoreParameters: input size for atomic radii does not agree w/ current size: input=";
+        msg << atomicRadii.size();
+        msg << " current size=" << _atomicRadii.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }
 }
 
 /**---------------------------------------------------------------------------------------
 
    Return scaled radii
-   If not previously set, allocate space
 
    @return array 
 
    --------------------------------------------------------------------------------------- */
 
-const RealOpenMM* GBVISoftcoreParameters::getScaledRadii( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::getScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _scaledRadii == NULL ){
-      GBVISoftcoreParameters* localThis  = const_cast<GBVISoftcoreParameters* const>(this);
-      localThis->_scaledRadii    = new RealOpenMM[getNumberOfAtoms()];
-      localThis->_ownScaledRadii = true;
-      memset( _scaledRadii, 0, sizeof( RealOpenMM )*getNumberOfAtoms() );
-   }   
-   return _scaledRadii;
+const std::vector<RealOpenMM>& GBVISoftcoreParameters::getScaledRadii( void ) const {
+    return _scaledRadii;
 }
-
-/**---------------------------------------------------------------------------------------
-
-   Set flag indicating whether scale factors array should be deleted
-
-   @param ownScaledRadii flag indicating whether scale factors 
-                                 array should be deleted
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setOwnScaledRadii( int ownScaledRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setOwnScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   _ownScaledRadii = ownScaledRadii;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set scaled radii
-
-   @param scaledRadii  scaledRadii
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setScaledRadii( RealOpenMM* scaledRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownScaledRadii && _scaledRadii != scaledRadii ){
-      delete[] _scaledRadii;
-      _ownScaledRadii = false;
-   }
-
-   _scaledRadii = scaledRadii;
-}
-
-#if RealOpenMMType == 0
-
-/**---------------------------------------------------------------------------------------
-
-   Set scaled radii
-
-   @param scaledRadii  scaledRadii
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setScaledRadii( float* scaledRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _scaledRadii == NULL ){
-      _scaledRadii    = new RealOpenMM[getNumberOfAtoms()];
-      _ownScaledRadii = true;
-   }   
-   for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
-      _scaledRadii[ii] = (RealOpenMM) scaledRadii[ii];
-   }
-}
-
-#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -430,118 +258,30 @@ void GBVISoftcoreParameters::setScaledRadii( const RealOpenMMVector& scaledRadii
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nCpuObc::setScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownScaledRadii && _scaledRadii != NULL ){
-      delete[] _scaledRadii;
-   }
-   _ownScaledRadii = true;
-   _scaledRadii    = new RealOpenMM[getNumberOfAtoms()];
-   for( int ii = 0; ii < (int) scaledRadii.size(); ii++ ){
-      _scaledRadii[ii] = scaledRadii[ii];
-   }
+    if( scaledRadii.size() == _scaledRadii.size() ){
+        for( unsigned int ii = 0; ii < scaledRadii.size(); ii++ ){
+            _scaledRadii[ii] = scaledRadii[ii];
+        }
+    } else {
+        std::stringstream msg;
+        msg << "GBVISoftcoreParameters: input size for scaled radii does not agree w/ current size: input=";
+        msg << scaledRadii.size();
+        msg << " current size=" << _scaledRadii.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }
 }
 
 /**---------------------------------------------------------------------------------------
 
    Return gamma parameters
-   If not previously set, allocate space
 
    @return array 
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* GBVISoftcoreParameters::getGammaParameters( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::getGammaParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _gammaParameters == NULL ){
-      GBVISoftcoreParameters* localThis = const_cast<GBVISoftcoreParameters* const>(this);
-      localThis->_gammaParameters    = new RealOpenMM[getNumberOfAtoms()];
-      localThis->_ownGammaParameters = true;
-      memset( _gammaParameters, 0, sizeof( RealOpenMM )*getNumberOfAtoms() );
-   }   
-   return _gammaParameters;
+const std::vector<RealOpenMM>& GBVISoftcoreParameters::getGammaParameters( void ) const {
+    return _gammaParameters;
 }
-
-/**---------------------------------------------------------------------------------------
-
-   Set flag indicating whether scale factors array should be deleted
-
-   @param ownGammaParameters   flag indicating whether gamma parameter
-                               array should be deleted
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setOwnGammaParameters( int ownGammaParameters ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setOwnScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   _ownGammaParameters = ownGammaParameters;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set gamma parameters
-
-   @param gammas  gamma parameters
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setGammaParameters( RealOpenMM* gammas ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setGammas";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownGammaParameters && _gammaParameters != gammas ){
-      delete[] _gammaParameters;
-      _ownGammaParameters = false;
-   }
-
-   _gammaParameters = gammas;
-}
-
-#if RealOpenMMType == 0
-
-/**---------------------------------------------------------------------------------------
-
-   Set gamma parameters
-
-   @param gammas  gammas
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setGammaParameters( float* gammas ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setGammas";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _gammaParameters == NULL ){
-      _gammaParameters    = new RealOpenMM[getNumberOfAtoms()];
-      _ownGammaParameters = true;
-   }   
-   for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
-      _gammaParameters[ii] = (RealOpenMM) gammas[ii];
-   }
-}
-
-#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -555,122 +295,30 @@ void GBVISoftcoreParameters::setGammaParameters( const RealOpenMMVector& gammas 
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nCpuObc::setGammas";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownGammaParameters && _gammaParameters != NULL ){
-      delete[] _gammaParameters;
-   }
-   _ownGammaParameters = true;
-
-   _gammaParameters    = new RealOpenMM[getNumberOfAtoms()];
-   for( int ii = 0; ii < (int) gammas.size(); ii++ ){
-      _gammaParameters[ii] = gammas[ii];
-   }
+    if( gammas.size() == _gammaParameters.size() ){
+        for( unsigned int ii = 0; ii < gammas.size(); ii++ ){
+            _gammaParameters[ii] = gammas[ii];
+        }
+    } else {
+        std::stringstream msg;
+        msg << "GBVISoftcoreParameters: input size for gammas does not agree w/ current size: input=";
+        msg << gammas.size();
+        msg << " current size=" << _gammaParameters.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }
 }
 
 /**---------------------------------------------------------------------------------------
 
    Return BornRadiusScaleFactors
-   If not previously set, allocate space
 
    @return array 
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* GBVISoftcoreParameters::getBornRadiusScaleFactors( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::getBornRadiusScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _bornRadiusScaleFactors == NULL ){
-      GBVISoftcoreParameters* localThis = const_cast<GBVISoftcoreParameters* const>(this);
-      localThis->_bornRadiusScaleFactors    = new RealOpenMM[getNumberOfAtoms()];
-      localThis->_ownBornRadiusScaleFactors = true;
-      memset( _bornRadiusScaleFactors, 0, sizeof( RealOpenMM )*getNumberOfAtoms() );
-   }   
-   return _bornRadiusScaleFactors;
+const std::vector<RealOpenMM>& GBVISoftcoreParameters::getBornRadiusScaleFactors( void ) const {
+    return _bornRadiusScaleFactors;
 }
-
-/**---------------------------------------------------------------------------------------
-
-   Set flag indicating whether scale factors array should be deleted
-
-   @param ownBornRadiusScaleFactors   flag indicating whether Born radius scale factors 
-                                       array should be deleted
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setOwnBornRadiusScaleFactors( int ownBornRadiusScaleFactorsParameters ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setOwnScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   _ownBornRadiusScaleFactors = ownBornRadiusScaleFactorsParameters;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set BornRadiusScaleFactors 
-
-   @param bornRadiusScaleFactors Born radius scale factors
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setBornRadiusScaleFactors( RealOpenMM* bornRadiusScaleFactors ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setBornRadiusScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownBornRadiusScaleFactors && _bornRadiusScaleFactors != bornRadiusScaleFactors ){
-      delete[] _bornRadiusScaleFactors;
-      _ownBornRadiusScaleFactors = false;
-   }
-
-   _bornRadiusScaleFactors = bornRadiusScaleFactors;
-}
-
-#if RealOpenMMType == 0
-
-/**---------------------------------------------------------------------------------------
-
-   Set bornRadiusScaleFactors parameters
-
-   @param bornRadiusScaleFactorss  bornRadiusScaleFactorss
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVISoftcoreParameters::setBornRadiusScaleFactors( float* bornRadiusScaleFactorss ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::setBornRadiusScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _bornRadiusScaleFactors == NULL ){
-      _bornRadiusScaleFactors    = new RealOpenMM[getNumberOfAtoms()];
-      _ownBornRadiusScaleFactors = true;
-   }   
-   for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
-      _bornRadiusScaleFactors[ii] = (RealOpenMM) bornRadiusScaleFactorss[ii];
-   }
-
-   return 0;
-
-}
-
-#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -684,46 +332,17 @@ void GBVISoftcoreParameters::setBornRadiusScaleFactors( const RealOpenMMVector& 
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nCpuObc::setBornRadiusScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownBornRadiusScaleFactors && _bornRadiusScaleFactors != NULL ){
-      delete[] _bornRadiusScaleFactors;
-   }
-   _ownBornRadiusScaleFactors = true;
-
-   _bornRadiusScaleFactors    = new RealOpenMM[getNumberOfAtoms()];
-   for( int ii = 0; ii < (int) bornRadiusScaleFactors.size(); ii++ ){
-      _bornRadiusScaleFactors[ii] = bornRadiusScaleFactors[ii];
-   }
-}
-
-/**---------------------------------------------------------------------------------------
-      
-   Get string w/ state
-   
-   @param title               title (optional)
-      
-   @return string
-      
-   --------------------------------------------------------------------------------------- */
-
-std::string GBVISoftcoreParameters::getStateString( const char* title ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::getStateString";
-
-   // ---------------------------------------------------------------------------------------
-
-   std::stringstream message;
-   message << ImplicitSolventParameters::getStateString( title );
-
-   std::string tab           = getStringTab();
-
-   return message.str();
-
+    if( bornRadiusScaleFactors.size() == _bornRadiusScaleFactors.size() ){
+        for( int ii = 0; ii < (int) bornRadiusScaleFactors.size(); ii++ ){
+            _bornRadiusScaleFactors[ii] = bornRadiusScaleFactors[ii];
+        }
+    } else {
+        std::stringstream msg;
+        msg << "GBVISoftcoreParameters: input size for bornRadiusScaleFactors does not agree w/ current size: input=";
+        msg << bornRadiusScaleFactors.size();
+        msg << " current size=" << _bornRadiusScaleFactors.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -735,9 +354,8 @@ std::string GBVISoftcoreParameters::getStateString( const char* title ) const {
      --------------------------------------------------------------------------------------- */
 
 void GBVISoftcoreParameters::setUseCutoff( RealOpenMM distance ) {
-
-    cutoff = true;
-    cutoffDistance = distance;
+     _cutoff         = true;
+     _cutoffDistance = distance;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -747,7 +365,7 @@ void GBVISoftcoreParameters::setUseCutoff( RealOpenMM distance ) {
      --------------------------------------------------------------------------------------- */
 
 bool GBVISoftcoreParameters::getUseCutoff() {
-    return cutoff;
+     return _cutoff;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -757,7 +375,7 @@ bool GBVISoftcoreParameters::getUseCutoff() {
      --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVISoftcoreParameters::getCutoffDistance() {
-    return cutoffDistance;
+     return _cutoffDistance;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -772,14 +390,16 @@ RealOpenMM GBVISoftcoreParameters::getCutoffDistance() {
 
 void GBVISoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
 
-    assert(cutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
-    periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    assert(_cutoff);
+
+    assert(boxSize[0] >= 2.0*_cutoffDistance);
+    assert(boxSize[1] >= 2.0*_cutoffDistance);
+    assert(boxSize[2] >= 2.0*_cutoffDistance);
+
+    _periodic           = true;
+    _periodicBoxSize[0] = boxSize[0];
+    _periodicBoxSize[1] = boxSize[1];
+    _periodicBoxSize[2] = boxSize[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -789,7 +409,7 @@ void GBVISoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
      --------------------------------------------------------------------------------------- */
 
 bool GBVISoftcoreParameters::getPeriodic() {
-    return periodic;
+    return _periodic;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -799,7 +419,7 @@ bool GBVISoftcoreParameters::getPeriodic() {
      --------------------------------------------------------------------------------------- */
 
 const RealOpenMM* GBVISoftcoreParameters::getPeriodicBox() {
-    return periodicBoxSize;
+    return _periodicBoxSize;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -812,23 +432,21 @@ const RealOpenMM* GBVISoftcoreParameters::getPeriodicBox() {
 
 RealOpenMM GBVISoftcoreParameters::getTau( void ) const {
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVISoftcoreParameters::getTau:";
-
-   static const RealOpenMM zero = 0.0;
-   static const RealOpenMM one  = 1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   RealOpenMM tau;
-   if( getSoluteDielectric() != zero && getSolventDielectric() != zero ){
-      tau = (one/getSoluteDielectric()) - (one/getSolventDielectric());
-   } else {
-      tau = zero;
-   }   
-
-   return tau;
+    // ---------------------------------------------------------------------------------------
+ 
+    static const RealOpenMM zero = 0.0;
+    static const RealOpenMM one  = 1.0;
+ 
+    // ---------------------------------------------------------------------------------------
+ 
+    RealOpenMM tau;
+    if( getSoluteDielectric() != zero && getSolventDielectric() != zero ){
+       tau = (one/getSoluteDielectric()) - (one/getSolventDielectric());
+    } else {
+       tau = zero;
+    }   
+ 
+    return tau;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -840,15 +458,7 @@ RealOpenMM GBVISoftcoreParameters::getTau( void ) const {
    --------------------------------------------------------------------------------------- */
 
 GBVISoftcoreParameters::BornRadiusScalingSoftcoreMethod GBVISoftcoreParameters::getBornRadiusScalingSoftcoreMethod( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = " GBVISoftcoreParameters::getBornRadiusScalingSoftcoreMethod:";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _bornRadiusScalingSoftcoreMethod;
-
+    return _bornRadiusScalingSoftcoreMethod;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -860,13 +470,5 @@ GBVISoftcoreParameters::BornRadiusScalingSoftcoreMethod GBVISoftcoreParameters::
    --------------------------------------------------------------------------------------- */
 
 void GBVISoftcoreParameters::setBornRadiusScalingSoftcoreMethod( BornRadiusScalingSoftcoreMethod bornRadiusScalingSoftcoreMethod ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = " GBVISoftcoreParameters::setBornRadiusScalingSoftcoreMethod:";
-
-   // ---------------------------------------------------------------------------------------
-
-   _bornRadiusScalingSoftcoreMethod = bornRadiusScalingSoftcoreMethod;
-
+    _bornRadiusScalingSoftcoreMethod = bornRadiusScalingSoftcoreMethod;
 }

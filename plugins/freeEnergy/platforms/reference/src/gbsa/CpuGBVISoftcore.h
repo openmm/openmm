@@ -26,11 +26,10 @@
 #define __CpuGBVISoftcore_H__
 
 #include "GBVISoftcoreParameters.h"
-#include "gbsa/CpuImplicitSolvent.h"
 
 // ---------------------------------------------------------------------------------------
 
-class CpuGBVISoftcore : public CpuImplicitSolvent {
+class CpuGBVISoftcore {
 
    private:
 
@@ -38,14 +37,9 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
 
       GBVISoftcoreParameters* _gbviParameters;
 
-      // arrays containing switching function derivative 
+      // vector containing switching function derivative 
 
-      RealOpenMM* _switchDeriviative;
-
-      // initialize data members (more than
-      // one constructor, so centralize intialization here)
-
-      void _initializeGBVISoftcoreDataMembers( void );
+      std::vector<RealOpenMM> _switchDeriviative;
 
    public:
 
@@ -59,7 +53,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuGBVISoftcore( ImplicitSolventParameters* gbviParameters );
+       CpuGBVISoftcore( GBVISoftcoreParameters* gbviParameters );
 
       /**---------------------------------------------------------------------------------------
       
@@ -98,8 +92,7 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM* getSwitchDeriviative( void );
-      RealOpenMM* getSwitchDeriviativeConst( void ) const;
+      std::vector<RealOpenMM>& getSwitchDeriviative( void );
 
       /**---------------------------------------------------------------------------------------
       
@@ -111,8 +104,6 @@ class CpuGBVISoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii,
-                            RealOpenMM* switchDeriviative = NULL );
       void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
 
       /**---------------------------------------------------------------------------------------

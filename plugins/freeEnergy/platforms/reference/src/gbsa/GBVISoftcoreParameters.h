@@ -26,11 +26,10 @@
 #define __GBVISoftcoreParameters_H__
 
 #include "SimTKUtilities/SimTKOpenMMCommon.h"
-#include "gbsa/ImplicitSolventParameters.h"
 
 // ---------------------------------------------------------------------------------------
 
-class GBVISoftcoreParameters : public ImplicitSolventParameters {
+class GBVISoftcoreParameters {
 
    public:
 
@@ -43,40 +42,40 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
          */
         NoScaling          = 0,
         /**
-         * Use the method outlined in Proteins 55, 383-394 (2004), Eq. 6
-         */
-        Tanh               = 1,
-        /**
          * Use quintic spline scaling function
          */
-        QuinticSpline       = 2
+        QuinticSpline       = 1
     };  
 
    private:
 
-      // scaled radii
+      int _numberOfAtoms;
 
-      int _ownScaledRadii;
-      RealOpenMM* _scaledRadii;
+      // parameters:
+      //    scaled radii
+      //    gamma parameters
+      //    BornRadiusScaleFactors parameters
 
-      // gamma parameters
-      int _ownGammaParameters;
-      RealOpenMM* _gammaParameters;
+      std::vector<RealOpenMM> _scaledRadii;
+      std::vector<RealOpenMM> _atomicRadii;
+      std::vector<RealOpenMM> _gammaParameters;
+      std::vector<RealOpenMM> _bornRadiusScaleFactors;
 
-      // BornRadiusScaleFactors parameters
-      int _ownBornRadiusScaleFactors;
-      RealOpenMM* _bornRadiusScaleFactors;
+      RealOpenMM _solventDielectric;
+      RealOpenMM _soluteDielectric;
+      RealOpenMM _electricConstant;
 
       // cutoff and periodic boundary conditions
       
-      bool cutoff;
-      bool periodic;
-      RealOpenMM periodicBoxSize[3];
-      RealOpenMM cutoffDistance;
+      bool _cutoff;
+      bool _periodic;
+      RealOpenMM _periodicBoxSize[3];
+      RealOpenMM _cutoffDistance;
 
       // Born radii switching function params
 
       BornRadiusScalingSoftcoreMethod _bornRadiusScalingSoftcoreMethod; 
+
       RealOpenMM _quinticLowerLimitFactor;
       RealOpenMM _quinticUpperBornRadiusLimit;
       RealOpenMM _quinticUpperSplineLimit;
@@ -103,39 +102,84 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         Return scaled radii
+         Get number of atoms
       
-         @return array
-      
-         --------------------------------------------------------------------------------------- */
-      
-      const RealOpenMM* getScaledRadii( void ) const;
-        
-      /**---------------------------------------------------------------------------------------
-      
-         Return scaled radii
-      
-         @return array
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void setScaledRadii( RealOpenMM* scaledRadii );
-#if RealOpenMMType == 0
-      void setScaledRadii( float* scaledRadii );
-#endif
-      void setScaledRadii( const RealOpenMMVector& scaledRadii );
-        
-      /**---------------------------------------------------------------------------------------
-      
-         Set flag indicating whether scaled radii array should be deleted
-      
-         @param ownScaledRadiusFactors flag indicating whether scaled radii
-                                       array should be deleted
+         @return number of atoms
       
          --------------------------------------------------------------------------------------- */
 
-      void setOwnScaledRadii( int ownScaledRadii );
+      int getNumberOfAtoms( void ) const;
+
+      /**---------------------------------------------------------------------------------------
       
+         Get electric constant
+      
+         @return electric constant
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getElectricConstant( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get solvent dielectric
+      
+         @return solvent dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getSolventDielectric( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set solvent dielectric
+      
+         @param solventDielectric solvent dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setSolventDielectric( RealOpenMM solventDielectric );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get solute dielectric
+      
+         @return soluteDielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getSoluteDielectric( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set solute dielectric
+      
+         @param soluteDielectric solute dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setSoluteDielectric( RealOpenMM soluteDielectric );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Return scaled radii
+      
+         @return array
+      
+         --------------------------------------------------------------------------------------- */
+      
+      const std::vector<RealOpenMM>& getScaledRadii( void ) const;
+        
+      /**---------------------------------------------------------------------------------------
+      
+         Set scaled radii
+      
+         @param vector of scaled radii
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setScaledRadii( const std::vector<RealOpenMM>& radii );
+        
       /**---------------------------------------------------------------------------------------
       
          Get AtomicRadii array w/ dielectric offset applied
@@ -144,17 +188,7 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM* getAtomicRadii( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set AtomicRadii array
-      
-         @param atomicRadii array of atomic radii
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setAtomicRadii( RealOpenMM* atomicRadii );
+      const std::vector<RealOpenMM>& getAtomicRadii( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -168,34 +202,13 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         Set flag indicating whether gamma parameter array should be deleted
-      
-         @param ownGammaParameters   flag indicating whether gamma parameter
-                                     array should be deleted
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setOwnGammaParameters( int ownGammaParameters );
-      
-      /**---------------------------------------------------------------------------------------
-      
          Get GammaParameters array
       
          @return array of gamma values
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM* getGammaParameters( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set GammaParameters array
-      
-         @param gammaParameters    array of gamma parameters
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setGammaParameters( RealOpenMM* gammaParameters );
+      const std::vector<RealOpenMM>& getGammaParameters( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -209,34 +222,13 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         Set flag indicating whether bornRadiusScaleFactor parameter array should be deleted
-      
-         @param ownBornRadiusScaleFactors   flag indicating whether bornRadiusScaleFactor parameter
-                                     array should be deleted
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setOwnBornRadiusScaleFactors( int ownBornRadiusScaleFactors );
-      
-      /**---------------------------------------------------------------------------------------
-      
          Get BornRadiusScaleFactors array
       
          @return array of bornRadiusScaleFactor values
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM* getBornRadiusScaleFactors( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set BornRadiusScaleFactors array
-      
-         @param bornRadiusScaleFactors    array of bornRadiusScaleFactor parameters
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setBornRadiusScaleFactors( RealOpenMM* bornRadiusScaleFactors );
+      const std::vector<RealOpenMM>& getBornRadiusScaleFactors( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -247,18 +239,6 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
          --------------------------------------------------------------------------------------- */
 
       void setBornRadiusScaleFactors( const RealOpenMMVector& bornRadiusScaleFactors );
-
-      /**---------------------------------------------------------------------------------------
-            
-         Get string w/ state
-         
-         @param title               title (optional)
-            
-         @return string
-            
-         --------------------------------------------------------------------------------------- */
-      
-      std::string getStateString( const char* title ) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -276,7 +256,7 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      bool getUseCutoff();
+      bool getUseCutoff( void );
 
       /**---------------------------------------------------------------------------------------
 
@@ -284,7 +264,7 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getCutoffDistance();
+      RealOpenMM getCutoffDistance( void );
 
       /**---------------------------------------------------------------------------------------
 
@@ -304,7 +284,7 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      bool getPeriodic();
+      bool getPeriodic( void );
 
       /**---------------------------------------------------------------------------------------
 
@@ -312,7 +292,7 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMM* getPeriodicBox();
+      const RealOpenMM* getPeriodicBox( void );
 
       /**---------------------------------------------------------------------------------------
 
