@@ -375,7 +375,7 @@ double ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& cont
     vector<RealVec>& posData = extractPositions(context);
 
     vector<RealOpenMM> bornRadii(context.getSystem().getNumParticles());
-    gbviSoftcore->computeBornRadii(posData, bornRadii, NULL );
+    gbviSoftcore->computeBornRadii(posData, bornRadii );
     if (includeForces) {
         vector<RealVec>& forceData = extractForces(context);
         gbviSoftcore->computeBornForces(bornRadii, posData, &charges[0], forceData);
