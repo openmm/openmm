@@ -847,12 +847,13 @@ double ReferenceCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool inclu
     vector<RealVec>& forceData = extractForces(context);
     if (isPeriodic)
         obc->getObcParameters()->setPeriodic(extractBoxSize(context));
-    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
-    return obc->getEnergy();
+    return obc->computeBornEnergyForces(posData, charges, forceData);
 }
 
 ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
     if (gbvi) {
+        GBVIParameters * gBVIParameters = gbvi->getGBVIParameters();
+        delete gBVIParameters;
         delete gbvi;
     }
 }
@@ -887,18 +888,21 @@ void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIFo
 }
 
 double ReferenceCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+
     vector<RealVec>& posData = extractPositions(context);
-    vector<RealOpenMM> bornRadii(context.getSystem().getNumParticles());
+
     if (isPeriodic)
         gbvi->getGBVIParameters()->setPeriodic(extractBoxSize(context));
-    gbvi->computeBornRadii(posData, bornRadii );
+
+    RealOpenMM energy;
     if (includeForces) {
         vector<RealVec>& forceData = extractForces(context);
-        gbvi->computeBornForces(bornRadii, posData, &charges[0], forceData);
+        gbvi->computeBornForces(posData, charges, forceData);
+        energy = 0.0;
     }
-    RealOpenMM energy = 0.0;
-    if (includeEnergy)
-        energy = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
+    if( includeEnergy ){
+        energy = gbvi->computeBornEnergy(posData, charges);
+    }
     return static_cast<double>(energy);
 }
 

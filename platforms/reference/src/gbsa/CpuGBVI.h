@@ -25,26 +25,21 @@
 #ifndef __CpuGBVI_H__
 #define __CpuGBVI_H__
 
+#include <vector>
+
 #include "../SimTKUtilities/RealVec.h"
 #include "GBVIParameters.h"
-#include "CpuImplicitSolvent.h"
-#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
-class CpuGBVI : public CpuImplicitSolvent {
+class CpuGBVI {
 
    private:
 
       // GB/VI parameters
 
       GBVIParameters* _gbviParameters;
-      std::vector<RealOpenMM> _switchDeriviative;
-
-      // initialize data members (more than
-      // one constructor, so centralize intialization here)
-
-      void _initializeGBVIDataMembers( void );
+      RealOpenMMVector _switchDeriviative;
 
    public:
 
@@ -58,7 +53,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuGBVI( ImplicitSolventParameters* gbviParameters );
+       CpuGBVI( GBVIParameters* gbviParameters );
 
       /**---------------------------------------------------------------------------------------
       
@@ -98,50 +93,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get Born energy and forces (not used)
-      
-         @param bornRadii         Born radii
-         @param atomCoordinates   atomic coordinates
-         @param partialCharges    partial charges
-         @param forces            forces
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void computeBornEnergyForces( RealOpenMM* bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                   const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get state 
-      
-         title             title (optional)
-      
-         @return state string
-      
-         --------------------------------------------------------------------------------------- */
-      
-      std::string getStateString( const char* title ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Write Born energy and forces (Simbios)
-      
-         @param atomCoordinates   atomic coordinates
-         @param partialCharges    partial atom charges
-         @param forces            force array
-         @param resultsFileName   output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn if file opened; else return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-          
-      int writeBornEnergyForces( std::vector<OpenMM::RealVec>& atomCoordinates,
-                                 const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces,
-                                 const std::string& resultsFileName ) const;
+      void computeBornRadii( const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -155,7 +107,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getVolume( RealOpenMM r, RealOpenMM R, RealOpenMM S  );
+      static RealOpenMM getVolume( RealOpenMM r, RealOpenMM R, RealOpenMM S );
       
       /**---------------------------------------------------------------------------------------
       
@@ -215,7 +167,6 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          Get GB/VI energy
       
-         @param bornRadii           Born radii
          @param atomCoordinates     atomic coordinates
          @param partialCharges      partial charges
       
@@ -223,22 +174,20 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                    const RealOpenMM* partialCharges );
+      RealOpenMM computeBornEnergy( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges );
       
       /**---------------------------------------------------------------------------------------
       
          Get GB/VI forces
       
-         @param bornRadii           Born radii
          @param atomCoordinates     atomic coordinates
          @param partialCharges      partial charges
          @param forces              output forces
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                             const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
+      void computeBornForces( std::vector<OpenMM::RealVec>& atomCoordinates,
+                              const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------
       
@@ -305,7 +254,7 @@ class CpuGBVI : public CpuImplicitSolvent {
     
        --------------------------------------------------------------------------------------- */
     
-      std::vector<RealOpenMM>& getSwitchDeriviative( void );
+      RealOpenMMVector& getSwitchDeriviative( void );
     
     /**---------------------------------------------------------------------------------------
     

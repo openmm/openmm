@@ -26,11 +26,10 @@
 #define __ObcParameters_H__
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "ImplicitSolventParameters.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ObcParameters : public ImplicitSolventParameters {
+class ObcParameters {
 
    public:
 
@@ -38,12 +37,18 @@ class ObcParameters : public ImplicitSolventParameters {
 
        enum ObcType { ObcTypeI, ObcTypeII };
 
-       static const std::string ParameterFileName;
-
    private:
 
       // OBC constants & parameters
    
+      int _numberOfAtoms;
+
+      RealOpenMM _solventDielectric;
+      RealOpenMM _soluteDielectric;
+      RealOpenMM _electricConstant;
+      RealOpenMM _probeRadius;
+      RealOpenMM _pi4Asolv;
+
       RealOpenMM _dielectricOffset;
       RealOpenMM _alphaObc;
       RealOpenMM _betaObc;
@@ -52,20 +57,19 @@ class ObcParameters : public ImplicitSolventParameters {
 
       // scaled radius factors (S_kk in HCT paper)
 
-      int _ownScaledRadiusFactors;
-      RealOpenMM* _scaledRadiusFactors;
+      RealOpenMMVector _atomicRadii;
+      RealOpenMMVector _scaledRadiusFactors;
 
       // cutoff and periodic boundary conditions
       
-      bool cutoff;
-      bool periodic;
-      RealOpenMM periodicBoxSize[3];
-      RealOpenMM cutoffDistance;
-
+      bool _cutoff;
+      bool _periodic;
+      RealOpenMM _periodicBoxSize[3];
+      RealOpenMM _cutoffDistance;
 
       /**---------------------------------------------------------------------------------------
       
-         Set solvent dielectric (Simbios) 
+         Set solvent dielectric 
       
          @param dielectricOffset         solvent dielectric
 
@@ -77,7 +81,7 @@ class ObcParameters : public ImplicitSolventParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         ObcParameters constructor (Simbios) 
+         ObcParameters constructor 
       
          @param numberOfAtoms       number of atoms
       
@@ -87,19 +91,102 @@ class ObcParameters : public ImplicitSolventParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         ObcParameters destructor (Simbios) 
+         ObcParameters destructor 
       
          --------------------------------------------------------------------------------------- */
       
        ~ObcParameters( );
 
-      // override of new/delete
+      /**---------------------------------------------------------------------------------------
+      
+         Get number of atoms
+      
+         @return number of atoms
+      
+         --------------------------------------------------------------------------------------- */
 
-      //static void* operator new( size_t size );
-      //static void  operator delete( void *p );
+      int getNumberOfAtoms( void ) const;
 
-      //static void* operator new[]( size_t size );
-      //static void  operator delete[]( void *p );
+      /**---------------------------------------------------------------------------------------
+      
+         Get electric constant
+      
+         @return electric constant
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getElectricConstant( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get probe radius (Simbios) 
+      
+         @return probeRadius
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getProbeRadius( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set probe radius (Simbios) 
+      
+         @param probeRadius   probe radius
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setProbeRadius( RealOpenMM probeRadius );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get pi4Asolv:  used in ACE approximation for nonpolar term  
+            ((RealOpenMM) M_PI)*4.0f*0.0049f*1000.0f; (Simbios) 
+      
+         @return pi4Asolv
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getPi4Asolv( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get solvent dielectric
+      
+         @return solvent dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getSolventDielectric( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set solvent dielectric
+      
+         @param solventDielectric solvent dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setSolventDielectric( RealOpenMM solventDielectric );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get solute dielectric
+      
+         @return soluteDielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getSoluteDielectric( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set solute dielectric
+      
+         @param soluteDielectric solute dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setSoluteDielectric( RealOpenMM soluteDielectric );
 
       /**---------------------------------------------------------------------------------------
       
@@ -153,7 +240,7 @@ class ObcParameters : public ImplicitSolventParameters {
       
       /**---------------------------------------------------------------------------------------
       
-         Get solvent dielectric (Simbios) 
+         Get solvent dielectric 
       
          @return dielectricOffset dielectric offset
       
@@ -169,7 +256,7 @@ class ObcParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMM* getScaledRadiusFactors( void ) const;
+      const RealOpenMMVector& getScaledRadiusFactors( void ) const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -179,41 +266,8 @@ class ObcParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
       void setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
         
-      /**---------------------------------------------------------------------------------------
-      
-         Set flag indicating whether scale factors arra should be deleted
-      
-         @param ownScaledRadiusFactors flag indicating whether scale factors 
-                                       array should be deleted
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setOwnScaleFactors( int ownScaledRadiusFactors );
-      
-      /**--------------------------------------------------------------------------------------- 
-      
-         Assign standard radii for GB/SA methods other than ACE;
-         taken from Macromodel and OPLS-AA, except for hydrogens (Simbios)
-      
-         Logic based on logic in Tinker's ksolv.f
-      
-         Currently only works for standard amino acid atoms
-         If invalid atom name is encountered, a message is printed to log file and the
-         radius for that atom is set to 1.0f
-      
-         @param numberOfAtoms       number of atoms
-         @param atomNames           array of atom names from GMX top data struct
-         @param radii               array to store Macromodel radii for each atom
-         @param log                 if set, then print error messages to log file
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void getMacroModelAtomicRadii( int numberOfAtoms,
-                                    char*** atomNames, RealOpenMM* radii, FILE* log );
-
       /**---------------------------------------------------------------------------------------
       
          Get AtomicRadii array w/ dielectric offset applied
@@ -222,17 +276,7 @@ class ObcParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM* getAtomicRadii( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set AtomicRadii array
-      
-         @param atomicRadii array of atomic radii
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setAtomicRadii( RealOpenMM* atomicRadii );
+      const RealOpenMMVector& getAtomicRadii( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -244,30 +288,6 @@ class ObcParameters : public ImplicitSolventParameters {
 
       void setAtomicRadii( const RealOpenMMVector& atomicRadii );
 
-      /**---------------------------------------------------------------------------------------
-      
-         Map Gmx atom name to Tinker atom number (Simbios)
-      
-         @param atomName            atom name (CA, HA, ...); upper and lower case should both work
-         @param log                 if set, then print error messages to log file
-      
-         return Tinker atom number if atom name is valid; else return -1
-      
-         --------------------------------------------------------------------------------------- */
-            
-      int mapGmxAtomNameToTinkerAtomNumber( const char* atomName, FILE* log ) const;
-
-      /**---------------------------------------------------------------------------------------
-            
-         Get string w/ state
-         
-         @param title               title (optional)
-            
-         @return string
-            
-         --------------------------------------------------------------------------------------- */
-      
-      std::string getStateString( const char* title ) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -305,7 +325,7 @@ class ObcParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic( const OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -325,19 +345,6 @@ class ObcParameters : public ImplicitSolventParameters {
 
 };
    
-/**---------------------------------------------------------------------------------------
-      
-   Qsort/heapsort integer comparison (Simbios) 
-      
-   @parma a first value to compare
-   @param b second value to compare
-
-   @return -1, 0, 1
-      
---------------------------------------------------------------------------------------- */
-
-int integerComparison( const void *a, const void *b);
-
 // ---------------------------------------------------------------------------------------
 
 #endif // __ObcParameters_H__

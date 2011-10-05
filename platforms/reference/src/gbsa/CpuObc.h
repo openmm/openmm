@@ -26,11 +26,10 @@
 #define __CpuObc_H__
 
 #include "ObcParameters.h"
-#include "CpuImplicitSolvent.h"
 
 // ---------------------------------------------------------------------------------------
 
-class CpuObc : public CpuImplicitSolvent {
+class CpuObc {
 
    private:
 
@@ -40,13 +39,13 @@ class CpuObc : public CpuImplicitSolvent {
 
       // arrays containing OBC chain derivative 
 
-      std::vector<RealOpenMM> _obcChain;
-      std::vector<RealOpenMM> _obcChainTemp;
+      RealOpenMMVector _obcChain;
 
-      // initialize data members (more than
-      // one constructor, so centralize intialization here)
+      // flag to signal whether ACE approximation
+      // is to be included
 
-      void _initializeObcDataMembers( void );
+      int _includeAceApproximation;
+
 
    public:
 
@@ -60,7 +59,7 @@ class CpuObc : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuObc( ImplicitSolventParameters* obcParameters );
+       CpuObc( ObcParameters* obcParameters );
 
       /**---------------------------------------------------------------------------------------
       
@@ -92,26 +91,33 @@ class CpuObc : public CpuImplicitSolvent {
  
       /**---------------------------------------------------------------------------------------
       
-         Return OBC chain derivative: size = _implicitSolventParameters->getNumberOfAtoms()
-         On first call, memory for array is allocated if not set
+         Return flag signalling whether AceApproximation for nonpolar term is to be included
       
-         @return array
+         @return flag
       
          --------------------------------------------------------------------------------------- */
-      
-      std::vector<RealOpenMM>& getObcChain( void );
-      const std::vector<RealOpenMM>& getObcChainConst( void ) const;
-      
+
+      int includeAceApproximation( void ) const;
+
       /**---------------------------------------------------------------------------------------
       
-         Return OBC chain temp work array of size=_implicitSolventParameters->getNumberOfAtoms()
-         On first call, memory for array is allocated if not set
+         Set flag indicating whether AceApproximation is to be included
+      
+         @param includeAceApproximation new includeAceApproximation value
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setIncludeAceApproximation( int includeAceApproximation );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Return OBC chain derivative: size = _implicitSolventParameters->getNumberOfAtoms()
       
          @return array
       
          --------------------------------------------------------------------------------------- */
       
-      std::vector<RealOpenMM>& getObcChainTemp( void );
+      RealOpenMMVector& getObcChain( void );
       
       /**---------------------------------------------------------------------------------------
       
@@ -119,38 +125,38 @@ class CpuObc : public CpuImplicitSolvent {
 
          @param atomCoordinates   atomic coordinates
          @param bornRadii         output array of Born radii
-         @param obcChain          output array of OBC chain derivative factors; if NULL,
-                                  then ignored
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+      void computeBornRadii( const std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii );
       
+      /**---------------------------------------------------------------------------------------
+        
+         Get nonpolar solvation force constribution via ACE approximation
+        
+         @param obcParameters parameters
+         @param vdwRadii                  Vdw radii
+         @param bornRadii                 Born radii
+         @param energy                    energy (output): value is incremented from input value 
+         @param forces                    forces: values are incremented from input values
+        
+            --------------------------------------------------------------------------------------- */
+        
+      void computeAceNonPolarForce( const ObcParameters* obcParameters, const RealOpenMMVector& bornRadii, 
+                                    RealOpenMM* energy, RealOpenMMVector& forces ) const;
+        
       /**---------------------------------------------------------------------------------------
       
          Get Born energy and forces based on OBC 
       
-         @param bornRadii         Born radii
          @param atomCoordinates   atomic coordinates
          @param partialCharges    partial charges
          @param forces            forces
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                   const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get state 
-      
-         title             title (optional)
-      
-         @return state string
-      
-         --------------------------------------------------------------------------------------- */
-      
-      std::string getStateString( const char* title ) const;
+      RealOpenMM computeBornEnergyForces( const std::vector<OpenMM::RealVec>& atomCoordinates,
+                                          const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& forces );
       
 };
 

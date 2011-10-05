@@ -26,590 +26,399 @@
 #include <sstream>
 #include <string.h>
 
+#include "openmm/OpenMMException.h"
 #include "GBVIParameters.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "../SimTKUtilities/SimTKOpenMMLog.h"
-#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 
 using std::vector;
 using OpenMM::RealVec;
 
-const std::string GBVIParameters::ParameterFileName = std::string( "params.agb" );
-
 /**---------------------------------------------------------------------------------------
 
-   GBVIParameters:
+    GBVIParameters constructor 
 
-		Calculates for each atom
+    @param numberOfAtoms       number of atoms
 
-			(1) the van der Waal radii
-         (2) volume
-         (3) fixed terms in Obc equation gPol
-         (4) list of atoms that should be excluded in calculating
-				 force -- nonbonded atoms (1-2, and 1-3 atoms)
+    --------------------------------------------------------------------------------------- */
 
-	Implementation:
+GBVIParameters::GBVIParameters( int numberOfAtoms ) : _numberOfAtoms(numberOfAtoms), 
+                                                      _soluteDielectric(1.0),
+                                                      _solventDielectric(78.3),
+                                                      _electricConstant(-0.5*ONE_4PI_EPS0),
+                                                      _cutoff(false),
+                                                      _periodic(false),
+                                                      _bornRadiusScalingMethod(0),
+                                                      _quinticLowerLimitFactor(0.8),
+                                                      _quinticUpperBornRadiusLimit(5.0) {
 
-		Slightly different sequence of calls when running on CPU vs GPU.
-		Difference arise because the CPU-side data arrays for the Brook
-		streams are allocated by the BrookStreamWrapper objects. These
-		arrays are then used by GBVIParameters when initializing the
-		the values (vdwRadii, volume, ...) to be used in the calculation.
-
-		Cpu:
-			 GBVIParameters* gb_VIParameters = new GBVIParameters( numberOfAtoms, log );
-          gb_VIParameters->initializeParameters( top );
-
-		Gpu:
-
-			gb_VIParameters   = new GBVIParameters( gpu->natoms, log );
-			
-			// set arrays for cpu using stream data field; 
-			// initializeParameters() only allocates space for arrays if they are not set (==NULL)
-			// also set flag so that GBVIParameters destructor does not free arrays 
-			
-			gb_VIParameters->setVdwRadii(  getBrookStreamWrapperAtIndex( GpuObc::gb_VIVdwRadii  )->getData() );
-			gb_VIParameters->setVolume(    getBrookStreamWrapperAtIndex( GpuObc::gb_VIVolume    )->getData() );
-			gb_VIParameters->setGPolFixed( getBrookStreamWrapperAtIndex( GpuObc::gb_VIGpolFixed )->getData() );
-			gb_VIParameters->setBornRadii( getBrookStreamWrapperAtIndex( GpuObc::gb_VIBornRadii )->getData() );
-			
-			gb_VIParameters->setFreeArrays( false );
-			
-			gb_VIParameters->initializeParameters( top );
- 
-
-   Issues:
-
-		Tinker's atom radii are used. 
-      The logic for mapping the Gromacs atom names to Tinker type may be incomplete;
-      only tested for generic proteins
-		see mapGmxAtomNameToTinkerAtomNumber()
-
-   --------------------------------------------------------------------------------------- */
-
-
-/**---------------------------------------------------------------------------------------
-
-   GBVIParameters constructor (Simbios) 
-
-   @param numberOfAtoms       number of atoms
-
-   --------------------------------------------------------------------------------------- */
-
-GBVIParameters::GBVIParameters( int numberOfAtoms ) : ImplicitSolventParameters( numberOfAtoms ), cutoff(false), periodic(false) {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::GBVIParameters";
-   
-   // ---------------------------------------------------------------------------------------
-
-   _ownScaledRadii                = 0;
-   _scaledRadii                   = NULL;
-   _ownGammaParameters            = 0;
-   _gammaParameters               = NULL;
-   _bornRadiusScalingMethod       = 0;
-   _quinticLowerLimitFactor       = 0.8f;
-   _quinticUpperBornRadiusLimit   = 5.0f;
+    _atomicRadii.resize( numberOfAtoms );
+    _scaledRadii.resize( numberOfAtoms );
+    _gammaParameters.resize( numberOfAtoms ); 
 
 }
 
 /**---------------------------------------------------------------------------------------
 
-   GBVIParameters destructor (Simbios) 
+    GBVIParameters destructor 
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 GBVIParameters::~GBVIParameters( ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::~GBVIParameters";
-   
-   // ---------------------------------------------------------------------------------------
-
-   // in GPU runs, arrays may be 'owned' by BrookStreamWrapper -- hence they should not
-   // be freed here, i.e., _freeArrays should be 'false'   
-
-#ifdef UseGromacsMalloc
-
-/*
-   if( _freeArrays ){
-
-      if( _vdwRadii != NULL ){
-         save_free( "_vdwRadii", __FILE__, __LINE__, _vdwRadii );
-      }
-   
-   } */
-
-#else
-
-   if( _ownScaledRadii ){
-      delete[] _scaledRadii;
-   }
-   delete[] _gammaParameters;
-/*
-   if( getFreeArrays() ){
-
-   } */
-
-#endif
-
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Get AtomicRadii array
+   Get number of atoms
 
-   @return array of atomic radii
+   @return number of atoms
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* GBVIParameters::getAtomicRadii( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nImplicitSolventParameters::getAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   RealOpenMM* atomicRadii = ImplicitSolventParameters::getAtomicRadii();
-
-   return atomicRadii;
+int GBVIParameters::getNumberOfAtoms( void ) const {
+    return _numberOfAtoms;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set AtomicRadii array
+   Get electric constant
 
-   @param atomicRadii array of atomic radii
+   @return electric constant
 
    --------------------------------------------------------------------------------------- */
 
-void GBVIParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::setAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
+RealOpenMM GBVIParameters::getElectricConstant( void ) const {
+    return _electricConstant;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set AtomicRadii array
+   Get solvent dielectric
 
-   @param atomicRadii vector of atomic radii
+   @return solvent dielectric
 
    --------------------------------------------------------------------------------------- */
+
+RealOpenMM GBVIParameters::getSolventDielectric( void ) const {
+    return _solventDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set solvent dielectric
+
+   @param solventDielectric solvent dielectric
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVIParameters::setSolventDielectric( RealOpenMM solventDielectric ){
+    _solventDielectric = solventDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get solute dielectric
+
+   @return soluteDielectric
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM GBVIParameters::getSoluteDielectric( void ) const {
+    return _soluteDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set solute dielectric
+
+   @param soluteDielectric solute dielectric
+
+   --------------------------------------------------------------------------------------- */
+
+void GBVIParameters::setSoluteDielectric( RealOpenMM soluteDielectric ){
+    _soluteDielectric = soluteDielectric;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Get AtomicRadii array
+
+    @return array of atomic radii
+
+    --------------------------------------------------------------------------------------- */
+
+const RealOpenMMVector& GBVIParameters::getAtomicRadii( void ) const {
+    return _atomicRadii;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Set AtomicRadii array
+
+    @param atomicRadii vector of atomic radii
+
+    --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
-   // ---------------------------------------------------------------------------------------
+    if( atomicRadii.size() == _atomicRadii.size() ){
+        for( unsigned int ii = 0; ii < atomicRadii.size(); ii++ ){
+            _atomicRadii[ii] = atomicRadii[ii];
+        }   
+    } else {
+        std::stringstream msg;
+        msg << "GBVIParameters: input size for atomic radii does not agree w/ current size: input=";
+        msg << atomicRadii.size();
+        msg << " current size=" << _atomicRadii.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }   
 
-   static const char* methodName = "\nGBVIParameters::setAtomicRadii:";
-
-   // ---------------------------------------------------------------------------------------
-
-   ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Return scaled radii
-   If not previously set, allocate space
+    Return scaled radii
+    @return array 
 
-   @return array 
+    --------------------------------------------------------------------------------------- */
 
-   --------------------------------------------------------------------------------------- */
-
-const RealOpenMM* GBVIParameters::getScaledRadii( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::getScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _scaledRadii == NULL ){
-      GBVIParameters* localThis  = const_cast<GBVIParameters* const>(this);
-      localThis->_scaledRadii    = new RealOpenMM[getNumberOfAtoms()];
-      localThis->_ownScaledRadii = true;
-      memset( _scaledRadii, 0, sizeof( RealOpenMM )*getNumberOfAtoms() );
-   }   
-   return _scaledRadii;
+const RealOpenMMVector& GBVIParameters::getScaledRadii( void ) const {
+    return _scaledRadii;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set flag indicating whether scale factors array should be deleted
+    Set scaled radii
 
-   @param ownScaledRadii flag indicating whether scale factors 
-                                 array should be deleted
+    @param scaledRadii  scaledRadii
 
-   --------------------------------------------------------------------------------------- */
-
-void GBVIParameters::setOwnScaledRadii( int ownScaledRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::setOwnScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   _ownScaledRadii = ownScaledRadii;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set scaled radii
-
-   @param scaledRadii  scaledRadii
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownScaledRadii && _scaledRadii != scaledRadii ){
-      delete[] _scaledRadii;
-      _ownScaledRadii = false;
-   }
-
-   _scaledRadii = scaledRadii;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set scaled radii
-
-   @param scaledRadii  scaledRadii
-
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setScaledRadii( const RealOpenMMVector& scaledRadii ){
 
-   // ---------------------------------------------------------------------------------------
+    if( scaledRadii.size() == _scaledRadii.size() ){
+        for( unsigned int ii = 0; ii < scaledRadii.size(); ii++ ){
+            _scaledRadii[ii] = scaledRadii[ii];
+        }
+    } else {
+        std::stringstream msg;
+        msg << "GBVIParameters: input size for scaled radii does not agree w/ current size: input=";
+        msg << scaledRadii.size();
+        msg << " current size=" << _scaledRadii.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }
 
-   // static const char* methodName = "\nCpuObc::setScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownScaledRadii && _scaledRadii != NULL ){
-      delete[] _scaledRadii;
-   }
-   _ownScaledRadii = true;
-   _scaledRadii    = new RealOpenMM[getNumberOfAtoms()];
-   for( int ii = 0; ii < (int) scaledRadii.size(); ii++ ){
-      _scaledRadii[ii] = scaledRadii[ii];
-   }
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Return gamma parameters
-   If not previously set, allocate space
+    Return gamma parameters
+    If not previously set, allocate space
 
-   @return array 
+    @return array 
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
-RealOpenMM* GBVIParameters::getGammaParameters( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::getGammaParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _gammaParameters == NULL ){
-      GBVIParameters* localThis = const_cast<GBVIParameters* const>(this);
-      localThis->_gammaParameters    = new RealOpenMM[getNumberOfAtoms()];
-      localThis->_ownGammaParameters = true;
-      memset( _gammaParameters, 0, sizeof( RealOpenMM )*getNumberOfAtoms() );
-   }   
-   return _gammaParameters;
+const RealOpenMMVector& GBVIParameters::getGammaParameters( void ) const {
+    return _gammaParameters;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set flag indicating whether scale factors array should be deleted
+    Set gamma parameters
 
-   @param ownGammaParameters   flag indicating whether gamma parameter
-                               array should be deleted
+    @param gammas  gammas
 
-   --------------------------------------------------------------------------------------- */
-
-void GBVIParameters::setOwnGammaParameters( int ownGammaParameters ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::setOwnScaleFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   _ownGammaParameters = ownGammaParameters;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set gamma parameters
-
-   @param gammas  gamma parameters
-
-   --------------------------------------------------------------------------------------- */
-
-void GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setGammas";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownGammaParameters && _gammaParameters != gammas ){
-      delete[] _gammaParameters;
-      _ownGammaParameters = false;
-   }
-
-   _gammaParameters = gammas;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set gamma parameters
-
-   @param gammas  gammas
-
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setGammaParameters( const RealOpenMMVector& gammas ){
 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setGammas";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _ownGammaParameters && _gammaParameters != NULL ){
-      delete[] _gammaParameters;
-   }
-   _ownGammaParameters = true;
-
-   _gammaParameters    = new RealOpenMM[getNumberOfAtoms()];
-   for( int ii = 0; ii < (int) gammas.size(); ii++ ){
-      _gammaParameters[ii] = gammas[ii];
-   }
-}
-
-/**---------------------------------------------------------------------------------------
-      
-   Get string w/ state
-   
-   @param title               title (optional)
-      
-   @return string
-      
-   --------------------------------------------------------------------------------------- */
-
-std::string GBVIParameters::getStateString( const char* title ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::getStateString";
-
-   // ---------------------------------------------------------------------------------------
-
-   std::stringstream message;
-   message << ImplicitSolventParameters::getStateString( title );
-
-   std::string tab           = getStringTab();
-
-   return message.str();
+    if( gammas.size() == _gammaParameters.size() ){
+        for( unsigned int ii = 0; ii < gammas.size(); ii++ ){
+            _gammaParameters[ii] = gammas[ii];
+        }
+    } else {
+        std::stringstream msg;
+        msg << "GBVIParameters: input size for gammas does not agree w/ current size: input=";
+        msg << gammas.size();
+        msg << " current size=" << _gammaParameters.size();
+        throw OpenMM::OpenMMException(msg.str());
+    }
 
 }
 
 /**---------------------------------------------------------------------------------------
 
-     Set the force to use a cutoff.
+      Set the force to use a cutoff.
 
-     @param distance            the cutoff distance
+      @param distance            the cutoff distance
 
-     --------------------------------------------------------------------------------------- */
+      --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setUseCutoff( RealOpenMM distance ) {
 
-    cutoff = true;
-    cutoffDistance = distance;
+     _cutoff          = true;
+     _cutoffDistance = distance;
 }
 
 /**---------------------------------------------------------------------------------------
 
-     Get whether to use a cutoff.
+      Get whether to use a cutoff.
 
-     --------------------------------------------------------------------------------------- */
+      --------------------------------------------------------------------------------------- */
 
 bool GBVIParameters::getUseCutoff() {
-    return cutoff;
+     return _cutoff;
 }
 
 /**---------------------------------------------------------------------------------------
 
-     Get the cutoff distance.
+      Get the cutoff distance.
 
-     --------------------------------------------------------------------------------------- */
+      --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVIParameters::getCutoffDistance() {
-    return cutoffDistance;
+     return _cutoffDistance;
 }
 
 /**---------------------------------------------------------------------------------------
 
-     Set the force to use periodic boundary conditions.  This requires that a cutoff has
-     also been set, and the smallest side of the periodic box is at least twice the cutoff
-     distance.
+      Set the force to use periodic boundary conditions.  This requires that a cutoff has
+      also been set, and the smallest side of the periodic box is at least twice the cutoff
+      distance.
 
-     @param boxSize             the X, Y, and Z widths of the periodic box
+      @param boxSize             the X, Y, and Z widths of the periodic box
 
-     --------------------------------------------------------------------------------------- */
+      --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setPeriodic( RealVec& boxSize ) {
 
-    assert(cutoff);
-    assert(boxSize[0] >= 2.0*cutoffDistance);
-    assert(boxSize[1] >= 2.0*cutoffDistance);
-    assert(boxSize[2] >= 2.0*cutoffDistance);
-    periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+     assert(_cutoff);
+
+     assert(boxSize[0] >= 2.0*_cutoffDistance);
+     assert(boxSize[1] >= 2.0*_cutoffDistance);
+     assert(boxSize[2] >= 2.0*_cutoffDistance);
+
+     _periodic           = true;
+     _periodicBoxSize[0] = boxSize[0];
+     _periodicBoxSize[1] = boxSize[1];
+     _periodicBoxSize[2] = boxSize[2];
 }
 
 /**---------------------------------------------------------------------------------------
 
-     Get whether to use periodic boundary conditions.
+      Get whether to use periodic boundary conditions.
 
-     --------------------------------------------------------------------------------------- */
+      --------------------------------------------------------------------------------------- */
 
 bool GBVIParameters::getPeriodic() {
-    return periodic;
+     return _periodic;
 }
 
 /**---------------------------------------------------------------------------------------
 
-     Get the periodic box dimension
+      Get the periodic box dimension
 
-     --------------------------------------------------------------------------------------- */
+      --------------------------------------------------------------------------------------- */
 
 const RealOpenMM* GBVIParameters::getPeriodicBox() {
-    return periodicBoxSize;
+     return _periodicBoxSize;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Get tau prefactor
+    Get tau prefactor
 
-   @return (1/e1 - 1/e0), where e1 = solute dielectric, e0 = solvent dielectric
+    @return (1/e1 - 1/e0), where e1 = solute dielectric, e0 = solvent dielectric
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVIParameters::getTau( void ) const {
 
-   // ---------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nGBVIParameters::getTau:";
+    static const RealOpenMM zero = 0.0;
+    static const RealOpenMM one  = 1.0;
 
-   static const RealOpenMM zero = 0.0;
-   static const RealOpenMM one  = 1.0;
+    // ---------------------------------------------------------------------------------------
 
-   // ---------------------------------------------------------------------------------------
+    RealOpenMM tau;
+    if( getSoluteDielectric() != zero && getSolventDielectric() != zero ){
+        tau = (one/getSoluteDielectric()) - (one/getSolventDielectric());
+    } else {
+        tau = zero;
+    }   
 
-   RealOpenMM tau;
-   if( getSoluteDielectric() != zero && getSolventDielectric() != zero ){
-      tau = (one/getSoluteDielectric()) - (one/getSolventDielectric());
-   } else {
-      tau = zero;
-   }   
-
-   return tau;
+    return tau;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Get bornRadiusScalingMethod
+    Get bornRadiusScalingMethod
 
-   @return bornRadiusScalingMethod
+    @return bornRadiusScalingMethod
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 int GBVIParameters::getBornRadiusScalingMethod( void ) const {
-   return _bornRadiusScalingMethod;
+    return _bornRadiusScalingMethod;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set bornRadiusScalingMethod 
+    Set bornRadiusScalingMethod 
 
-   @param bornRadiusScalingMethod bornRadiusScalingMethod
+    @param bornRadiusScalingMethod bornRadiusScalingMethod
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setBornRadiusScalingMethod( int bornRadiusScalingMethod ){
-   _bornRadiusScalingMethod    = bornRadiusScalingMethod;
+    _bornRadiusScalingMethod    = bornRadiusScalingMethod;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Get quinticLowerLimitFactor
+    Get quinticLowerLimitFactor
 
-   @return quinticLowerLimitFactor
+    @return quinticLowerLimitFactor
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVIParameters::getQuinticLowerLimitFactor( void ) const {
-   return _quinticLowerLimitFactor;
+    return _quinticLowerLimitFactor;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set quinticLowerLimitFactor 
+    Set quinticLowerLimitFactor 
 
-   @param quinticLowerLimitFactor quinticLowerLimitFactor
+    @param quinticLowerLimitFactor quinticLowerLimitFactor
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor ){
-   _quinticLowerLimitFactor    = quinticLowerLimitFactor;
+    _quinticLowerLimitFactor    = quinticLowerLimitFactor;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Get quinticUpperBornRadiusLimit
+    Get quinticUpperBornRadiusLimit
 
-   @return quinticUpperBornRadiusLimit
+    @return quinticUpperBornRadiusLimit
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 RealOpenMM GBVIParameters::getQuinticUpperBornRadiusLimit( void ) const {
-   return _quinticUpperBornRadiusLimit;
+    return _quinticUpperBornRadiusLimit;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set quinticUpperBornRadiusLimit 
+    Set quinticUpperBornRadiusLimit 
 
-   @param quinticUpperBornRadiusLimit quinticUpperBornRadiusLimit
+    @param quinticUpperBornRadiusLimit quinticUpperBornRadiusLimit
 
-   --------------------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------------------- */
 
 void GBVIParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperBornRadiusLimit ){
-   _quinticUpperBornRadiusLimit    = quinticUpperBornRadiusLimit;
+    _quinticUpperBornRadiusLimit    = quinticUpperBornRadiusLimit;
 }
-
