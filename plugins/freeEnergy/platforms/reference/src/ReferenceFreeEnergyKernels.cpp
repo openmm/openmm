@@ -241,6 +241,8 @@ double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl&
 
 ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::~ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel() {
     if (obc) {
+        ObcSoftcoreParameters* obcSoftcoreParameters = obc->getObcSoftcoreParameters();
+        delete obcSoftcoreParameters;
         delete obc;
     }
 }
@@ -248,7 +250,6 @@ ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::~ReferenceFreeEnergyCalcGBSAO
 void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& system, const GBSAOBCSoftcoreForce& force) {
 
     int numParticles = system.getNumParticles();
-
     charges.resize(numParticles);
 
     std::vector<RealOpenMM> atomicRadii(numParticles);
@@ -308,8 +309,7 @@ void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System&
 double ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
-    return obc->getEnergy();
+    return obc->computeBornEnergyForces(posData, charges, forceData);
 }
 
 ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::~ReferenceFreeEnergyCalcGBVISoftcoreForceKernel() {
