@@ -39,7 +39,7 @@ class CpuGBVISoftcore {
 
       // vector containing switching function derivative 
 
-      std::vector<RealOpenMM> _switchDeriviative;
+      RealOpenMMVector _switchDeriviative;
 
    public:
 
@@ -92,7 +92,7 @@ class CpuGBVISoftcore {
       
          --------------------------------------------------------------------------------------- */
 
-      std::vector<RealOpenMM>& getSwitchDeriviative( void );
+      RealOpenMMVector& getSwitchDeriviative( void );
 
       /**---------------------------------------------------------------------------------------
       
@@ -104,7 +104,7 @@ class CpuGBVISoftcore {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<RealOpenMM>& bornRadii );
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii );
 
       /**---------------------------------------------------------------------------------------
       
@@ -198,7 +198,7 @@ class CpuGBVISoftcore {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM computeBornEnergy( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+      RealOpenMM computeBornEnergy( const RealOpenMMVector& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
                                     const RealOpenMM* partialCharges );
       
       /**---------------------------------------------------------------------------------------
@@ -212,8 +212,8 @@ class CpuGBVISoftcore {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornForces( const std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                             const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
+      void computeBornForces( const RealOpenMMVector& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
+                              const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& inputForces );
       
       /**---------------------------------------------------------------------------------------
       

@@ -205,7 +205,7 @@ RealOpenMM GBVISoftcoreParameters::getQuinticUpperSplineLimit( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-const std::vector<RealOpenMM>& GBVISoftcoreParameters::getAtomicRadii( void ) const {
+const RealOpenMMVector& GBVISoftcoreParameters::getAtomicRadii( void ) const {
     return _atomicRadii;
 }
 
@@ -242,7 +242,7 @@ void GBVISoftcoreParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii
 
    --------------------------------------------------------------------------------------- */
 
-const std::vector<RealOpenMM>& GBVISoftcoreParameters::getScaledRadii( void ) const {
+const RealOpenMMVector& GBVISoftcoreParameters::getScaledRadii( void ) const {
     return _scaledRadii;
 }
 
@@ -279,7 +279,7 @@ void GBVISoftcoreParameters::setScaledRadii( const RealOpenMMVector& scaledRadii
 
    --------------------------------------------------------------------------------------- */
 
-const std::vector<RealOpenMM>& GBVISoftcoreParameters::getGammaParameters( void ) const {
+const RealOpenMMVector& GBVISoftcoreParameters::getGammaParameters( void ) const {
     return _gammaParameters;
 }
 
@@ -316,7 +316,7 @@ void GBVISoftcoreParameters::setGammaParameters( const RealOpenMMVector& gammas 
 
    --------------------------------------------------------------------------------------- */
 
-const std::vector<RealOpenMM>& GBVISoftcoreParameters::getBornRadiusScaleFactors( void ) const {
+const RealOpenMMVector& GBVISoftcoreParameters::getBornRadiusScaleFactors( void ) const {
     return _bornRadiusScaleFactors;
 }
 

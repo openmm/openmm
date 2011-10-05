@@ -56,10 +56,10 @@ class GBVISoftcoreParameters {
       //    gamma parameters
       //    BornRadiusScaleFactors parameters
 
-      std::vector<RealOpenMM> _scaledRadii;
-      std::vector<RealOpenMM> _atomicRadii;
-      std::vector<RealOpenMM> _gammaParameters;
-      std::vector<RealOpenMM> _bornRadiusScaleFactors;
+      RealOpenMMVector _scaledRadii;
+      RealOpenMMVector _atomicRadii;
+      RealOpenMMVector _gammaParameters;
+      RealOpenMMVector _bornRadiusScaleFactors;
 
       RealOpenMM _solventDielectric;
       RealOpenMM _soluteDielectric;
@@ -168,7 +168,7 @@ class GBVISoftcoreParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const std::vector<RealOpenMM>& getScaledRadii( void ) const;
+      const RealOpenMMVector& getScaledRadii( void ) const;
         
       /**---------------------------------------------------------------------------------------
       
@@ -178,7 +178,7 @@ class GBVISoftcoreParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadii( const std::vector<RealOpenMM>& radii );
+      void setScaledRadii( const RealOpenMMVector& radii );
         
       /**---------------------------------------------------------------------------------------
       
@@ -188,7 +188,7 @@ class GBVISoftcoreParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const std::vector<RealOpenMM>& getAtomicRadii( void ) const;
+      const RealOpenMMVector& getAtomicRadii( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -208,7 +208,7 @@ class GBVISoftcoreParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const std::vector<RealOpenMM>& getGammaParameters( void ) const;
+      const RealOpenMMVector& getGammaParameters( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -228,7 +228,7 @@ class GBVISoftcoreParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      const std::vector<RealOpenMM>& getBornRadiusScaleFactors( void ) const;
+      const RealOpenMMVector& getBornRadiusScaleFactors( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
