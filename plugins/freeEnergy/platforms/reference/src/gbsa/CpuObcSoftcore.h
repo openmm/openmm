@@ -30,7 +30,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class CpuObcSoftcore : public CpuImplicitSolvent {
+class CpuObcSoftcore {
 
    private:
 
@@ -40,13 +40,12 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
 
       // arrays containing OBC chain derivative 
 
-      std::vector<RealOpenMM> _obcChain;
-      std::vector<RealOpenMM> _obcChainTemp;
+      RealOpenMMVector _obcChain;
 
-      // initialize data members (more than
-      // one constructor, so centralize intialization here)
+      // flag to signal whether ACE approximation
+      // is to be included
 
-      void _initializeObcDataMembers( void );
+      int _includeAceApproximation;
 
    public:
 
@@ -60,7 +59,7 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
 
-       CpuObcSoftcore( ImplicitSolventParameters* obcSoftcoreParameters );
+       CpuObcSoftcore( ObcSoftcoreParameters* obcSoftcoreParameters );
 
       /**---------------------------------------------------------------------------------------
       
@@ -92,6 +91,37 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
  
       /**---------------------------------------------------------------------------------------
       
+         Return flag signalling whether AceApproximation for nonpolar term is to be included
+      
+         @return flag
+      
+         --------------------------------------------------------------------------------------- */
+
+      int includeAceApproximation( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set flag indicating whether AceApproximation is to be included
+      
+         @param includeAceApproximation new includeAceApproximation value
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setIncludeAceApproximation( int includeAceApproximation );
+
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get energy 
+      
+         @return energy
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getEnergy( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
          Return OBC chain derivative: size = _implicitSolventParameters->getNumberOfAtoms()
          On first call, memory for array is allocated if not set
       
@@ -99,19 +129,7 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      std::vector<RealOpenMM>& getObcChain( void );
-      const std::vector<RealOpenMM>& getObcChainConst( void ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Return OBC chain temp work array of size=_implicitSolventParameters->getNumberOfAtoms()
-         On first call, memory for array is allocated if not set
-      
-         @return array
-      
-         --------------------------------------------------------------------------------------- */
-      
-      std::vector<RealOpenMM>& getObcChainTemp( void );
+      RealOpenMMVector& getObcChain( void );
       
       /**---------------------------------------------------------------------------------------
       
@@ -124,7 +142,7 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates,  std::vector<RealOpenMM>& bornRadii );
+      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates,  RealOpenMMVector& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -139,22 +157,23 @@ class CpuObcSoftcore : public CpuImplicitSolvent {
          --------------------------------------------------------------------------------------- */
       
       void computeAceNonPolarForce( const ObcSoftcoreParameters* obcSoftcoreParameters,
-                                   const std::vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
-                                   std::vector<RealOpenMM>& forces ) const;
+                                    const RealOpenMMVector& bornRadii, RealOpenMM* energy,
+                                    RealOpenMMVector& forces ) const;
       
       /**---------------------------------------------------------------------------------------
       
          Get Born energy and forces based on OBC 
       
-         @param bornRadii         Born radii
          @param atomCoordinates   atomic coordinates
          @param partialCharges    partial charges
          @param forces            forces
+
+         @return energy
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornEnergyForces( std::vector<RealOpenMM>& bornRadii, std::vector<OpenMM::RealVec>& atomCoordinates,
-                                   const RealOpenMM* partialCharges, std::vector<OpenMM::RealVec>& forces );
+      RealOpenMM computeBornEnergyForces( std::vector<OpenMM::RealVec>& atomCoordinates,
+                                          const RealOpenMMVector& partialCharges, std::vector<OpenMM::RealVec>& forces );
 };
 
 // ---------------------------------------------------------------------------------------

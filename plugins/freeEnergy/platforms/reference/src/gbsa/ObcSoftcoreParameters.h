@@ -1,4 +1,3 @@
-
 /* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
@@ -26,11 +25,10 @@
 #define __ObcSoftcoreParameters_H__
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "gbsa/ImplicitSolventParameters.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ObcSoftcoreParameters : public ImplicitSolventParameters {
+class ObcSoftcoreParameters {
 
    public:
 
@@ -38,9 +36,9 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
        enum ObcType { ObcTypeI, ObcTypeII };
 
-       static const std::string ParameterFileName;
-
    private:
+
+      int _numberOfAtoms;
 
       // OBC constants & parameters
    
@@ -48,27 +46,32 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       RealOpenMM _alphaObc;
       RealOpenMM _betaObc;
       RealOpenMM _gammaObc;
+      RealOpenMM _probeRadius;
+      RealOpenMM _pi4Asolv;
 
       ObcType _obcType;
 
       RealOpenMM _nonPolarPreFactor;
 
+      RealOpenMM _solventDielectric;
+      RealOpenMM _soluteDielectric;
+      RealOpenMM _electricConstant;
+
      // scaling factors for nonpolar term
 
-      int _ownNonPolarScaleFactors;
-      RealOpenMM* _nonPolarScaleFactors;
+      RealOpenMMVector _atomicRadii;
+      RealOpenMMVector _nonPolarScaleFactors;
 
       // scaled radius factors (S_kk in HCT paper)
 
-      int _ownScaledRadiusFactors;
-      RealOpenMM* _scaledRadiusFactors;
+      RealOpenMMVector _scaledRadiusFactors;
 
       // cutoff and periodic boundary conditions
       
-      bool cutoff;
-      bool periodic;
-      RealOpenMM periodicBoxSize[3];
-      RealOpenMM cutoffDistance;
+      bool _cutoff;
+      bool _periodic;
+      RealOpenMM _periodicBoxSize[3];
+      RealOpenMM _cutoffDistance;
 
    public:
 
@@ -89,6 +92,97 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
          --------------------------------------------------------------------------------------- */
       
        ~ObcSoftcoreParameters( );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get number of atoms
+      
+         @return number of atoms
+      
+         --------------------------------------------------------------------------------------- */
+
+      int getNumberOfAtoms( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get electric constant
+      
+         @return electric constant
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getElectricConstant( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get probe radius (Simbios) 
+      
+         @return probeRadius
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getProbeRadius( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set probe radius (Simbios) 
+      
+         @param probeRadius   probe radius
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setProbeRadius( RealOpenMM probeRadius );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get pi4Asolv:  used in ACE approximation for nonpolar term  
+            ((RealOpenMM) M_PI)*4.0f*0.0049f*1000.0f; (Simbios) 
+      
+         @return pi4Asolv
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getPi4Asolv( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get solvent dielectric
+      
+         @return solvent dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getSolventDielectric( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set solvent dielectric
+      
+         @param solventDielectric solvent dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setSolventDielectric( RealOpenMM solventDielectric );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get solute dielectric
+      
+         @return soluteDielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getSoluteDielectric( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set solute dielectric
+      
+         @param soluteDielectric solute dielectric
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setSoluteDielectric( RealOpenMM soluteDielectric );
 
       /**---------------------------------------------------------------------------------------
       
@@ -158,33 +252,18 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMM* getScaledRadiusFactors( void ) const;
+      const RealOpenMMVector& getScaledRadiusFactors( void ) const;
         
       /**---------------------------------------------------------------------------------------
       
-         Return OBC scale factors
+         Set OBC scale factors
       
-         @return array
+         @param input vector of radius factors
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
-#if RealOpenMMType == 0
-      void setScaledRadiusFactors( float* scaledRadiusFactors );
-#endif
       void setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
         
-      /**---------------------------------------------------------------------------------------
-      
-         Set flag indicating whether scale factors arra should be deleted
-      
-         @param ownScaledRadiusFactors flag indicating whether scale factors 
-                                       array should be deleted
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setOwnScaleFactors( int ownScaledRadiusFactors );
-
       /**---------------------------------------------------------------------------------------
       
          Get AtomicRadii array w/ dielectric offset applied
@@ -193,17 +272,7 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM* getAtomicRadii( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set AtomicRadii array
-      
-         @param atomicRadii array of atomic radii
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setAtomicRadii( RealOpenMM* atomicRadii );
+      const RealOpenMMVector& getAtomicRadii( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -214,31 +283,6 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
          --------------------------------------------------------------------------------------- */
 
       void setAtomicRadii( const RealOpenMMVector& atomicRadii );
-
-      /**---------------------------------------------------------------------------------------
-      
-         Map Gmx atom name to Tinker atom number (Simbios)
-      
-         @param atomName            atom name (CA, HA, ...); upper and lower case should both work
-         @param log                 if set, then print error messages to log file
-      
-         return Tinker atom number if atom name is valid; else return -1
-      
-         --------------------------------------------------------------------------------------- */
-            
-      int mapGmxAtomNameToTinkerAtomNumber( const char* atomName, FILE* log ) const;
-
-      /**---------------------------------------------------------------------------------------
-            
-         Get string w/ state
-         
-         @param title               title (optional)
-            
-         @return string
-            
-         --------------------------------------------------------------------------------------- */
-      
-      std::string getStateString( const char* title ) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -256,7 +300,7 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      bool getUseCutoff();
+      bool getUseCutoff( void );
 
       /**---------------------------------------------------------------------------------------
 
@@ -264,7 +308,7 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      RealOpenMM getCutoffDistance();
+      RealOpenMM getCutoffDistance( void );
 
       /**---------------------------------------------------------------------------------------
 
@@ -284,7 +328,7 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      bool getPeriodic();
+      bool getPeriodic( void );
 
       /**---------------------------------------------------------------------------------------
 
@@ -292,29 +336,17 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      const RealOpenMM* getPeriodicBox();
+      const RealOpenMM* getPeriodicBox( void );
 
       /**---------------------------------------------------------------------------------------
       
-         Set flag indicating whether scale factors array should be deleted
-      
-         @param ownNonPolarScaleFactors flag indicating whether scale factors 
-                                       array should be deleted
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void setOwnNonPolarScaleFactors( int ownNonPolarScaleFactors );
-      
-      /**---------------------------------------------------------------------------------------
-      
          Return non-polar scale factors
-         If not previously set, allocate space
       
          @return array 
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMM* getNonPolarScaleFactors( void ) const;
+      const RealOpenMMVector& getNonPolarScaleFactors( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -338,19 +370,6 @@ class ObcSoftcoreParameters : public ImplicitSolventParameters {
 
 };
    
-/**---------------------------------------------------------------------------------------
-      
-   Qsort/heapsort integer comparison (Simbios) 
-      
-   @parma a first value to compare
-   @param b second value to compare
-
-   @return -1, 0, 1
-      
---------------------------------------------------------------------------------------- */
-
-int integerComparison( const void *a, const void *b);
-
 // ---------------------------------------------------------------------------------------
 
 #endif // __ObcSoftcoreParameters_H__

@@ -23,15 +23,13 @@
  */
 
 #include <string.h>
+#include <math.h>
 #include <sstream>
 #include <vector>
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "../SimTKUtilities/SimTKOpenMMLog.h"
-#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "CpuGBVISoftcore.h"
 #include "../SimTKReference/ReferenceForce.h"
-#include <math.h>
+#include "CpuGBVISoftcore.h"
 
 using std::vector;
 using OpenMM::RealVec;
