@@ -77,7 +77,7 @@ class ObcSoftcoreParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         ObcSoftcoreParameters constructor (Simbios) 
+         ObcSoftcoreParameters constructor  
       
          @param numberOfAtoms       number of atoms
       
@@ -87,7 +87,7 @@ class ObcSoftcoreParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         ObcSoftcoreParameters destructor (Simbios) 
+         ObcSoftcoreParameters destructor  
       
          --------------------------------------------------------------------------------------- */
       
@@ -115,7 +115,7 @@ class ObcSoftcoreParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         Get probe radius (Simbios) 
+         Get probe radius  
       
          @return probeRadius
       
@@ -125,7 +125,7 @@ class ObcSoftcoreParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         Set probe radius (Simbios) 
+         Set probe radius  
       
          @param probeRadius   probe radius
       
@@ -136,7 +136,7 @@ class ObcSoftcoreParameters {
       /**---------------------------------------------------------------------------------------
       
          Get pi4Asolv:  used in ACE approximation for nonpolar term  
-            ((RealOpenMM) M_PI)*4.0f*0.0049f*1000.0f; (Simbios) 
+            ((RealOpenMM) M_PI)*4.0f*0.0049f*1000.0f;  
       
          @return pi4Asolv
       
@@ -236,7 +236,7 @@ class ObcSoftcoreParameters {
       
       /**---------------------------------------------------------------------------------------
       
-         Get solvent dielectric (Simbios) 
+         Get solvent dielectric  
       
          @return dielectricOffset dielectric offset
       

@@ -41,10 +41,16 @@
 
 ObcSoftcoreParameters::ObcSoftcoreParameters( int numberOfAtoms, ObcSoftcoreParameters::ObcType obcType ) :
                                               _numberOfAtoms(numberOfAtoms),                                          
-                                              _obcType(obcType), _dielectricOffset(0.009), _nonPolarPreFactor(2.25936),
-                                              _soluteDielectric(1.0), _solventDielectric(78.3), _probeRadius(0.14),
-                                              _electricConstant(-0.5*ONE_4PI_EPS0), _pi4Asolv( 28.3919551),
-                                              _cutoff(false), _periodic(false) {
+                                              _obcType(obcType),
+                                              _dielectricOffset(0.009),
+                                              _nonPolarPreFactor(2.25936),
+                                              _soluteDielectric(1.0), 
+                                              _solventDielectric(78.3),
+                                               _probeRadius(0.14),
+                                              _electricConstant(-0.5*ONE_4PI_EPS0),
+                                              _pi4Asolv( 28.3919551),
+                                              _cutoff(false),
+                                              _periodic(false) {
 
     _atomicRadii.resize( numberOfAtoms );
     _scaledRadiusFactors.resize( numberOfAtoms );
@@ -156,6 +162,7 @@ RealOpenMM ObcSoftcoreParameters::getBetaObc( void ) const {
 RealOpenMM ObcSoftcoreParameters::getGammaObc( void ) const {
     return _gammaObc;
 }
+
 /**---------------------------------------------------------------------------------------
 
    Get solvent dielectric

@@ -26,7 +26,6 @@
 #define __CpuObcSoftcore_H__
 
 #include "ObcSoftcoreParameters.h"
-#include "gbsa/CpuImplicitSolvent.h"
 
 // ---------------------------------------------------------------------------------------
 
@@ -109,17 +108,6 @@ class CpuObcSoftcore {
 
       void setIncludeAceApproximation( int includeAceApproximation );
 
-
-      /**---------------------------------------------------------------------------------------
-      
-         Get energy 
-      
-         @return energy
-      
-         --------------------------------------------------------------------------------------- */
-
-      RealOpenMM getEnergy( void ) const;
-
       /**---------------------------------------------------------------------------------------
       
          Return OBC chain derivative: size = _implicitSolventParameters->getNumberOfAtoms()
@@ -142,7 +130,7 @@ class CpuObcSoftcore {
       
          --------------------------------------------------------------------------------------- */
       
-      void computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates,  RealOpenMMVector& bornRadii );
+      void computeBornRadii( const std::vector<OpenMM::RealVec>& atomCoordinates,  RealOpenMMVector& bornRadii );
       
       /**---------------------------------------------------------------------------------------
       

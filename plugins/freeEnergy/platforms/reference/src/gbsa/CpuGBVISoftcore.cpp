@@ -42,11 +42,7 @@ using OpenMM::RealVec;
    
    --------------------------------------------------------------------------------------- */
 
-CpuGBVISoftcore::CpuGBVISoftcore( GBVISoftcoreParameters* gbviParameters ){
-
-    // ---------------------------------------------------------------------------------------
-
-    _gbviParameters = gbviParameters;
+CpuGBVISoftcore::CpuGBVISoftcore( GBVISoftcoreParameters* gbviParameters ) : _gbviParameters(gbviParameters) {
     _switchDeriviative.resize(_gbviParameters->getNumberOfAtoms());
 
 }
@@ -69,9 +65,6 @@ CpuGBVISoftcore::~CpuGBVISoftcore( ){
    --------------------------------------------------------------------------------------- */
 
 GBVISoftcoreParameters* CpuGBVISoftcore::getGBVISoftcoreParameters( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
     return _gbviParameters;
 }
 

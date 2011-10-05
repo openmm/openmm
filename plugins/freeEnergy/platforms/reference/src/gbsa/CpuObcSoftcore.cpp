@@ -44,10 +44,12 @@ using OpenMM::RealVec;
    
    --------------------------------------------------------------------------------------- */
 
-CpuObcSoftcore::CpuObcSoftcore( ObcSoftcoreParameters* obcSoftcoreParameters ){
-    _obcSoftcoreParameters   = obcSoftcoreParameters;
-    _includeAceApproximation = 1;
+CpuObcSoftcore::CpuObcSoftcore( ObcSoftcoreParameters* obcSoftcoreParameters ) :
+                                 _obcSoftcoreParameters(obcSoftcoreParameters),
+                                 _includeAceApproximation(1) {
+
     _obcChain.resize(_obcSoftcoreParameters->getNumberOfAtoms());
+
 }
 
 /**---------------------------------------------------------------------------------------
@@ -132,7 +134,7 @@ void CpuObcSoftcore::setIncludeAceApproximation( int includeAceApproximation ){
 
     --------------------------------------------------------------------------------------- */
 
-void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates,  RealOpenMMVector& bornRadii ){
+void CpuObcSoftcore::computeBornRadii( const vector<RealVec>& atomCoordinates,  RealOpenMMVector& bornRadii ){
 
     // ---------------------------------------------------------------------------------------
 
@@ -191,6 +193,7 @@ void CpuObcSoftcore::computeBornRadii( vector<RealVec>& atomCoordinates,  RealOp
                 RealOpenMM rScaledRadiusJ  = r + scaledRadiusJ;
    
                 if( offsetRadiusI < rScaledRadiusJ ){
+
                     RealOpenMM rInverse = one/r;
                     RealOpenMM l_ij     = offsetRadiusI > FABS( r - scaledRadiusJ ) ? offsetRadiusI : FABS( r - scaledRadiusJ );
                                l_ij     = one/l_ij;
@@ -248,7 +251,8 @@ void CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSo
                                               const vector<RealOpenMM>& bornRadii, RealOpenMM* energy,
                                               vector<RealOpenMM>& forces ) const {
 
-    static const RealOpenMM minusSix = -6.0;
+    static const RealOpenMM zero     =  0.0;
+    static const RealOpenMM six      =  6.0;
 
     // ---------------------------------------------------------------------------------------
 
@@ -277,12 +281,12 @@ void CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSo
     // no paper to cite.
 
     for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-        if( bornRadii[atomI] > 0.0 ){
+        if( bornRadii[atomI] > zero ){
             RealOpenMM r            = atomicRadii[atomI] + probeRadius;
-            RealOpenMM ratio6       = POW( atomicRadii[atomI]/bornRadii[atomI], static_cast<RealOpenMM>( 6.0 ) );
+            RealOpenMM ratio6       = POW( atomicRadii[atomI]/bornRadii[atomI], six );
             RealOpenMM saTerm       = nonPolarScaleFactors[atomI]*surfaceAreaFactor*r*r*ratio6;
             *energy                += saTerm;
-            forces[atomI]          += minusSix*saTerm/bornRadii[atomI]; 
+            forces[atomI]          -= six*saTerm/bornRadii[atomI]; 
         }
     }
 }
@@ -295,7 +299,7 @@ void CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSo
     @param partialCharges      partial charges
     @param forces              forces
 
-    The array bornRadii is also updated and the obcEnergy
+    @return energy
 
     --------------------------------------------------------------------------------------- */
 
@@ -369,6 +373,7 @@ RealOpenMM CpuObcSoftcore::computeBornEnergyForces( vector<RealVec>& atomCoordin
               ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
           if (_obcSoftcoreParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcSoftcoreParameters->getCutoffDistance())
               continue;
+
           RealOpenMM r2                     = deltaR[ReferenceForce::R2Index];
           RealOpenMM deltaX                 = deltaR[ReferenceForce::XIndex];
           RealOpenMM deltaY                 = deltaR[ReferenceForce::YIndex];
