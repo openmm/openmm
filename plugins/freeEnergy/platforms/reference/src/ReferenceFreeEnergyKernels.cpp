@@ -155,7 +155,6 @@ void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const Syste
 
     nonbondedMethod  = CalcNonbondedSoftcoreForceKernel::NonbondedSoftcoreMethod(force.getNonbondedMethod());
     nonbondedCutoff  = (RealOpenMM) force.getCutoffDistance();
-    //softCoreLJLambda = (RealOpenMM) force.getSoftCoreLJLambda();
 
     Vec3 boxVectors[3];
     system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -168,42 +167,6 @@ void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const Syste
     else
         neighborList = new NeighborList();
 
-#if 0
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME) {
-        RealOpenMM ewaldErrorTol = (RealOpenMM) force.getEwaldErrorTolerance();
-        ewaldAlpha = (RealOpenMM) (std::sqrt(-std::log(ewaldErrorTol))/nonbondedCutoff);
-        RealOpenMM mx = periodicBoxSize[0]/nonbondedCutoff;
-        RealOpenMM my = periodicBoxSize[1]/nonbondedCutoff;
-        RealOpenMM mz = periodicBoxSize[2]/nonbondedCutoff;
-        RealOpenMM pi = (RealOpenMM) 3.1415926535897932385;
-        kmax[0] = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-        kmax[1] = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-        kmax[2] = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-        if (kmax[0]%2 == 0)
-            kmax[0]++;
-        if (kmax[1]%2 == 0)
-            kmax[1]++;
-        if (kmax[2]%2 == 0)
-            kmax[2]++;
-    }
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME) {
-        RealOpenMM ewaldErrorTol = (RealOpenMM) force.getEwaldErrorTolerance();
-        ewaldAlpha = (RealOpenMM) (std::sqrt(-std::log(ewaldErrorTol))/nonbondedCutoff);
-        RealOpenMM mx = periodicBoxSize[0]/nonbondedCutoff;
-        RealOpenMM my = periodicBoxSize[1]/nonbondedCutoff;
-        RealOpenMM mz = periodicBoxSize[2]/nonbondedCutoff;
-        RealOpenMM pi = (RealOpenMM) 3.1415926535897932385;
-        kmax[0] = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-        kmax[1] = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-        kmax[2] = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-        if (kmax[0]%2 == 0)
-            kmax[0]++;
-        if (kmax[1]%2 == 0)
-            kmax[1]++;
-        if (kmax[2]%2 == 0)
-            kmax[2]++;
-    }
-#endif
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
 }
 
@@ -214,21 +177,18 @@ double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl&
 
     RealOpenMM energy = 0;
     ReferenceFreeEnergyLJCoulombSoftcoreIxn clj;
-   // clj.setSoftCoreLJLambda( softCoreLJLambda );
+
     bool periodic = (nonbondedMethod == CutoffPeriodic);
-    bool ewald  = (nonbondedMethod == Ewald);
-    bool pme  = (nonbondedMethod == PME);
+
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodicBoxSize, periodic || ewald || pme, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodicBoxSize, periodic, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
-    if (periodic || ewald || pme)
+    if (periodic)
         clj.setPeriodic(periodicBoxSize);
-    if (ewald)
-        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
-    if (pme)
-        clj.setUsePME(ewaldAlpha);
+
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
+
     ReferenceBondForce refBondForce;
     ReferenceFreeEnergyLJCoulomb14Softcore nonbonded14;
     if (nonbondedMethod == CutoffNonPeriodic || nonbondedMethod == CutoffPeriodic)

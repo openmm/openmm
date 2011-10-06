@@ -42,7 +42,6 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
       RealOpenMM krf, crf;
-      RealOpenMM softCoreLJLambda;
       int numRx, numRy, numRz;
       RealOpenMM alphaEwald;
 
@@ -62,15 +61,13 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
          @param atomCoordinates  atom coordinates
          @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
       
          --------------------------------------------------------------------------------------- */
           
       void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
-
+                            RealOpenMM* totalEnergy ) const;
 
    public:
 
@@ -116,41 +113,7 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
        
       /**---------------------------------------------------------------------------------------
       
-         Set the force to use Ewald summation.
-      
-         @param alpha  the Ewald separation parameter
-         @param kmaxx  the largest wave vector in the x direction
-         @param kmaxy  the largest wave vector in the y direction
-         @param kmaxz  the largest wave vector in the z direction
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void setUseEwald(RealOpenMM alpha, int kmaxx, int kmaxy, int kmaxz);
-
-     
-      /**---------------------------------------------------------------------------------------
-      
-         Set the force to use Particle-Mesh Ewald (PME) summation.
-      
-         @param alpha  the Ewald separation parameter
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void setUsePME(RealOpenMM alpha);
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set the soft core LJ lambda
-      
-         @param lambda the soft core LJ lambda
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void setSoftCoreLJLambda(RealOpenMM lambda);
-
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate parameters for LJ 1-4 ixn
+         Calculate parameters for ixn
       
          @param c6               c6
          @param c12              c12
@@ -164,8 +127,7 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
       
       void getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
-                                RealOpenMM epsfacSqrt,
-                                RealOpenMM* parameters ) const;
+                                 RealOpenMM epsfacSqrt, RealOpenMM* parameters ) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -180,62 +142,16 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
                                  interacting w/ atom atomIndex
          @param fixedParameters  non atom parameters (not currently used)
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
       
          --------------------------------------------------------------------------------------- */
           
       void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+                             RealOpenMM** atomParameters, int** exclusions,
+                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
+                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 private:
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate Ewald ixn
-      
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
-         @param fixedParameters  non atom parameters (not currently used)
-         @param forces           force array (forces added)
-         @param energyByAtom     atom energy
-         @param totalEnergy      total energy
-
-         --------------------------------------------------------------------------------------- */
-          
-      void calculateEwaldIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate PME ixn
-      
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
-         @param fixedParameters  non atom parameters (not currently used)
-         @param forces           force array (forces added)
-         @param energyByAtom     atom energy
-         @param totalEnergy      total energy
-            
-         --------------------------------------------------------------------------------------- */
-          
-      void calculatePMEIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
         /**---------------------------------------------------------------------------------------
       
@@ -250,7 +166,7 @@ private:
            --------------------------------------------------------------------------------------- */
       
       void calculateOneLJIxn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
-                             RealOpenMM* dEdR, RealOpenMM* energy ) const;
+                              RealOpenMM* dEdR, RealOpenMM* energy ) const;
       
         /**---------------------------------------------------------------------------------------
       
@@ -266,7 +182,7 @@ private:
            --------------------------------------------------------------------------------------- */
       
       void calculateOneSoftCoreLJIxn( RealOpenMM r, RealOpenMM sig, RealOpenMM eps,
-                                     RealOpenMM lambda, RealOpenMM* dEdR, RealOpenMM* energy ) const;
+                                      RealOpenMM lambda, RealOpenMM* dEdR, RealOpenMM* energy ) const;
       
       
 };

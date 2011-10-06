@@ -37,13 +37,12 @@
 
 #include "sfmt/SFMT.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
 #include "openmm/CustomGBForce.h"
 
 #include "openmm/GBSAOBCSoftcoreForce.h"
-
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -53,7 +52,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testSoftcoreOBC( double lambda1, double lambda2 ){
+void testOBCSoftcore( double lambda1, double lambda2 ){
 
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
@@ -168,9 +167,9 @@ int main() {
 
         // test various combinations of lambdas
 
-        testSoftcoreOBC( 1.0, 1.0 );
-        testSoftcoreOBC( 1.0, 0.0 );
-        testSoftcoreOBC( 1.0, 0.5 );
+        testOBCSoftcore( 1.0, 1.0 );
+        testOBCSoftcore( 1.0, 0.0 );
+        testOBCSoftcore( 1.0, 0.5 );
 
     } catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -100,12 +100,10 @@ ReferenceFreeEnergyLJCoulomb14Softcore::~ReferenceFreeEnergyLJCoulomb14Softcore(
    --------------------------------------------------------------------------------------- */
 
 void ReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
-                                                                  RealOpenMM q2, RealOpenMM epsfac,
-                                                                  RealOpenMM* parameters ) const {
+                                                                   RealOpenMM q2, RealOpenMM epsfac,
+                                                                   RealOpenMM* parameters ) const {
 
    // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters";
 
    static const RealOpenMM zero       =  0.0;
    static const RealOpenMM one        =  1.0;
@@ -218,7 +216,7 @@ void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices,
        *totalEnergy += energy;
 }
 
-  /**---------------------------------------------------------------------------------------
+/**---------------------------------------------------------------------------------------
 
      Calculate LJ pair ixn between two atoms
 
@@ -231,7 +229,7 @@ void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices,
      --------------------------------------------------------------------------------------- */
 
 void ReferenceFreeEnergyLJCoulomb14Softcore::calculateOneLJ14Ixn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
-                                                                 RealOpenMM* dEdR, RealOpenMM* energy ) const {
+                                                                  RealOpenMM* dEdR, RealOpenMM* energy ) const {
 
     // ---------------------------------------------------------------------------------------
 
