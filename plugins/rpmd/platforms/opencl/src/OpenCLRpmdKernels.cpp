@@ -91,6 +91,8 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     pileKernel = cl::Kernel(program, "applyPileThermostat");
     stepKernel = cl::Kernel(program, "integrateStep");
     velocitiesKernel = cl::Kernel(program, "advanceVelocities");
+    copyToContextKernel = cl::Kernel(program, "copyToContext");
+    copyFromContextKernel = cl::Kernel(program, "copyFromContext");
 }
 
 void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -118,13 +120,19 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     
     // Loop over copies and compute the force on each one.
     
+    copyToContextKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndex().getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndex().getDeviceBuffer());
     if (!forcesAreValid) {
         for (int i = 0; i < numCopies; i++) {
-            cl.getQueue().enqueueCopyBuffer(positions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(),
-                    i*paddedParticles*sizeof(mm_float4), 0, paddedParticles*sizeof(mm_float4));
+            copyToContextKernel.setArg<cl_int>(3, i);
+            cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
             context.calcForcesAndEnergy(true, false);
-            cl.getQueue().enqueueCopyBuffer(cl.getForce().getDeviceBuffer(), forces->getDeviceBuffer(),
-                    0, i*paddedParticles*sizeof(mm_float4), paddedParticles*sizeof(mm_float4));
+            copyFromContextKernel.setArg<cl_int>(3, i);
+            cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
         }
     }
     
@@ -146,11 +154,11 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     // Calculate forces based on the updated positions.
     
     for (int i = 0; i < numCopies; i++) {
-        cl.getQueue().enqueueCopyBuffer(positions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(),
-                i*paddedParticles*sizeof(mm_float4), 0, paddedParticles*sizeof(mm_float4));
+        copyToContextKernel.setArg<cl_int>(3, i);
+        cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
         context.calcForcesAndEnergy(true, false);
-        cl.getQueue().enqueueCopyBuffer(cl.getForce().getDeviceBuffer(), forces->getDeviceBuffer(),
-                0, i*paddedParticles*sizeof(mm_float4), paddedParticles*sizeof(mm_float4));
+        copyFromContextKernel.setArg<cl_int>(3, i);
+        cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
     }
     
     // Update velocities.
@@ -190,12 +198,15 @@ void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
     cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &velm[0]);
 }
 
-void OpenCLIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) const {
-    int paddedParticles = cl.getPaddedNumAtoms();
-    cl.getQueue().enqueueCopyBuffer(positions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(),
-            copy*paddedParticles*sizeof(mm_float4), 0, paddedParticles*sizeof(mm_float4));
-    cl.getQueue().enqueueCopyBuffer(velocities->getDeviceBuffer(), cl.getVelm().getDeviceBuffer(),
-            copy*paddedParticles*sizeof(mm_float4), 0, paddedParticles*sizeof(mm_float4));
+void OpenCLIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
+    copyToContextKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndex().getDeviceBuffer());
+    copyToContextKernel.setArg<cl_int>(3, copy);
+    cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+    copyToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
+    cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
 }
 
 string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable, bool forward) {

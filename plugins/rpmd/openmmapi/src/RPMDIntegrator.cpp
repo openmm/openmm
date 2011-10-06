@@ -80,7 +80,7 @@ void RPMDIntegrator::setVelocities(int copy, const vector<Vec3>& velocities) {
 }
 
 State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox) {
-    dynamic_cast<const IntegrateRPMDStepKernel&>(kernel.getImpl()).copyToContext(copy, *context);
+    dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).copyToContext(copy, *context);
     return context->getOwner().getState(types, enforcePeriodicBox);
 }
 

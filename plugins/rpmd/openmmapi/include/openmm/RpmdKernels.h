@@ -79,7 +79,7 @@ public:
     /**
      * Copy positions and velocities for one copy into the context.
      */
-    virtual void copyToContext(int copy, ContextImpl& context) const = 0;
+    virtual void copyToContext(int copy, ContextImpl& context) = 0;
 };
 
 } // namespace OpenMM

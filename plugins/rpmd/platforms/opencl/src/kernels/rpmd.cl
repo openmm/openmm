@@ -170,3 +170,23 @@ __kernel void advanceVelocities(__global float4* velm, __global float4* force, f
         velm[index] = particleVelm;
     }
 }
+
+/**
+ * Copy a set of per-atom values from the integrator's arrays to the context.
+ */
+__kernel void copyToContext(__global float4* src, __global float4* dst, __global int* order, int copy) {
+    const int base = copy*PADDED_NUM_ATOMS;
+    for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
+        dst[particle] = src[base+order[particle]];
+    }
+}
+
+/**
+ * Copy a set of per-atom values from the context to the integrator's arrays.
+ */
+__kernel void copyFromContext(__global float4* src, __global float4* dst, __global int* order, int copy) {
+    const int base = copy*PADDED_NUM_ATOMS;
+    for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
+        dst[base+order[particle]] = src[particle];
+    }
+}

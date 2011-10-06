@@ -332,7 +332,7 @@ void ReferenceIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3
         velocities[copy][i] = vel[i];
 }
 
-void ReferenceIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) const {
+void ReferenceIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
     extractPositions(context) = positions[copy];
     extractVelocities(context) = velocities[copy];
 }

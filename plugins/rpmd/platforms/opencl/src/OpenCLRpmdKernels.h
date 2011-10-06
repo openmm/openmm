@@ -75,7 +75,7 @@ public:
     /**
      * Copy positions and velocities for one copy into the context.
      */
-    void copyToContext(int copy, ContextImpl& context) const;
+    void copyToContext(int copy, ContextImpl& context);
 private:
     std::string createFFT(int size, const std::string& variable, bool forward);
     OpenCLContext& cl;
@@ -84,7 +84,7 @@ private:
     OpenCLArray<mm_float4>* forces;
     OpenCLArray<mm_float4>* positions;
     OpenCLArray<mm_float4>* velocities;
-    cl::Kernel pileKernel, stepKernel, velocitiesKernel;
+    cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel;
 };
 
 } // namespace OpenMM
