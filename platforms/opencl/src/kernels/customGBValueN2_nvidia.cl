@@ -7,16 +7,16 @@
 /**
  * Compute a value based on pair interactions.
  */
-__kernel void computeN2Value(__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices,
+__kernel void computeN2Value(__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        __global long* global_value,
+        __global long* restrict global_value,
 #else
-        __global float* global_value,
+        __global float* restrict global_value,
 #endif
-        __local float* local_value, __local float* tempBuffer,
+        __local float* restrict local_value, __local float* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
 #else
         unsigned int numTiles
 #endif

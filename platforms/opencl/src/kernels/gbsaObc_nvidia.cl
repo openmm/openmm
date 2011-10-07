@@ -16,14 +16,14 @@ typedef struct {
  */
 __kernel void computeBornSum(
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        __global long* global_bornSum,
+        __global long* restrict global_bornSum,
 #else
-        __global float* global_bornSum,
+        __global float* restrict global_bornSum,
 #endif
-        __global float4* posq, __global float2* global_params,
-        __local AtomData1* localData, __local float* tempBuffer,
+        __global const float4* restrict posq, __global const float2* restrict global_params,
+        __local AtomData1* restrict localData, __local float* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags,
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags,
 #else
         unsigned int numTiles,
 #endif
@@ -337,14 +337,14 @@ typedef struct {
 
 __kernel void computeGBSAForce1(
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        __global long* forceBuffers, __global long* global_bornForce,
+        __global long* restrict forceBuffers, __global long* restrict global_bornForce,
 #else
-        __global float4* forceBuffers, __global float* global_bornForce,
+        __global float4* restrict forceBuffers, __global float* restrict global_bornForce,
 #endif
-        __global float* energyBuffer, __global float4* posq, __global float* global_bornRadii,
-        __local AtomData2* localData, __local float4* tempBuffer,
+        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
+        __local AtomData2* restrict localData, __local float4* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags,
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags,
 #else
         unsigned int numTiles,
 #endif

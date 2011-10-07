@@ -6,7 +6,8 @@ float2 multiplyComplex(float2 c1, float2 c2) {
  * Perform a 1D FFT on each row along one axis.
  */
 
-__kernel void execFFT(__global float2* in, __global float2* out, float sign, __local float2* w, __local float2* data0, __local float2* data1) {
+__kernel void execFFT(__global const float2* restrict in, __global float2* restrict out, float sign, __local float2* restrict w,
+        __local float2* restrict data0, __local float2* restrict data1) {
     for (int i = get_local_id(0); i < ZSIZE; i += get_local_size(0))
         w[i] = (float2) (cos(-sign*i*2*M_PI/ZSIZE), sin(-sign*i*2*M_PI/ZSIZE));
     barrier(CLK_LOCAL_MEM_FENCE);

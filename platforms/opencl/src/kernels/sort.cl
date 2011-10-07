@@ -8,7 +8,7 @@ float getValue(TYPE value) {
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */
-__kernel void computeRange(__global TYPE* data, int length, __global float2* range, __local float* buffer) {
+__kernel void computeRange(__global const TYPE* restrict data, int length, __global float2* restrict range, __local float* restrict buffer) {
     float minimum = MAXFLOAT;
     float maximum = -MAXFLOAT;
 
@@ -45,8 +45,8 @@ __kernel void computeRange(__global TYPE* data, int length, __global float2* ran
 /**
  * Assign elements to buckets.
  */
-__kernel void assignElementsToBuckets(__global TYPE* data, int length, int numBuckets, __global float2* range,
-        __global int* bucketOffset, __global int* bucketOfElement, __global int* offsetInBucket) {
+__kernel void assignElementsToBuckets(__global const TYPE* restrict data, int length, int numBuckets, __global const float2* restrict range,
+        __global int* bucketOffset, __global int* restrict bucketOfElement, __global int* restrict offsetInBucket) {
 #ifdef AMD_ATOMIC_WORK_AROUND
     // Do a byte write to force all memory accesses to interactionCount to use the complete path.
     // This avoids the atomic access from causing all word accesses to other buffers from using the slow complete path.
@@ -72,7 +72,7 @@ __kernel void assignElementsToBuckets(__global TYPE* data, int length, int numBu
  * Sum the bucket sizes to compute the start position of each bucket.  This kernel
  * is executed as a single work group.
  */
-__kernel void computeBucketPositions(int numBuckets, __global int* bucketOffset, __local int* buffer) {
+__kernel void computeBucketPositions(int numBuckets, __global int* restrict bucketOffset, __local int* restrict buffer) {
     int globalOffset = 0;
     for (int startBucket = 0; startBucket < numBuckets; startBucket += get_local_size(0)) {
         // Load the bucket sizes into local memory.
@@ -101,7 +101,7 @@ __kernel void computeBucketPositions(int numBuckets, __global int* bucketOffset,
 /**
  * Copy the input data into the buckets for sorting.
  */
-__kernel void copyDataToBuckets(__global TYPE* data, __global TYPE* buckets, int length, __global int* bucketOffset, __global int* bucketOfElement, __global int* offsetInBucket) {
+__kernel void copyDataToBuckets(__global const TYPE* restrict data, __global TYPE* restrict buckets, int length, __global const int* restrict bucketOffset, __global const int* restrict bucketOfElement, __global const int* restrict offsetInBucket) {
     for (int index = get_global_id(0); index < length; index += get_global_size(0)) {
         TYPE element = data[index];
         int bucketIndex = bucketOfElement[index];
@@ -113,7 +113,7 @@ __kernel void copyDataToBuckets(__global TYPE* data, __global TYPE* buckets, int
 /**
  * Sort the data in each bucket.
  */
-__kernel void sortBuckets(__global TYPE* data, __global TYPE* buckets, int numBuckets, __global int* bucketOffset, __local TYPE* buffer) {
+__kernel void sortBuckets(__global TYPE* restrict data, __global const TYPE* restrict buckets, int numBuckets, __global const int* restrict bucketOffset, __local TYPE* restrict buffer) {
     for (int index = get_group_id(0); index < numBuckets; index += get_num_groups(0)) {
         int startIndex = (index == 0 ? 0 : bucketOffset[index-1]);
         int endIndex = bucketOffset[index];

@@ -154,12 +154,12 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         const vector<int>& set = *iter;
         int setSize = set.size();
         stringstream s;
-        s<<"__kernel void computeBondedForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq";
+        s<<"__kernel void computeBondedForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             string indexType = "uint"+(indexWidth[force] == 1 ? "" : OpenCLExpressionUtilities::intToString(indexWidth[force]));
-            s<<", __global "<<indexType<<"* atomIndices"<<i;
-            s<<", __global "<<indexType<<"* bufferIndices"<<i;
+            s<<", __global const "<<indexType<<"* restrict atomIndices"<<i;
+            s<<", __global const "<<indexType<<"* restrict bufferIndices"<<i;
         }
         for (int i = 0; i < (int) arguments.size(); i++)
             s<<", __global "<<argTypes[i]<<"* customArg"<<(i+1);

@@ -2,7 +2,7 @@
  * Generate random numbers
  */
 
-__kernel void generateRandomNumbers(int numValues, __global float4* random, __global uint4* seed) {
+__kernel void generateRandomNumbers(int numValues, __global float4* restrict random, __global uint4* restrict seed) {
     int index = get_global_id(0);
     uint4 state = seed[index];
     unsigned int carry = 0;

@@ -8,11 +8,11 @@
 
 __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float beta, float gamma,
 #ifdef SUPPORTS_64_BIT_ATOMICS
-            __global long* bornSum,
+            __global const long* restrict bornSum,
 #else
-            __global float* bornSum,
+            __global const float* restrict bornSum,
 #endif
-            __global float2* params, __global float* bornRadii, __global float* obcChain) {
+            __global const float2* restrict params, __global float* restrict bornRadii, __global float* restrict obcChain) {
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Get summed Born data
@@ -49,9 +49,9 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
 
 __kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce,
 #ifdef SUPPORTS_64_BIT_ATOMICS
-            __global long* bornForceIn,
+            __global const long* restrict bornForceIn,
 #endif
-            __global float* energyBuffer, __global float2* params, __global float* bornRadii, __global float* obcChain) {
+            __global float* restrict energyBuffer, __global const float2* restrict params, __global const float* restrict bornRadii, __global const float* restrict obcChain) {
     float energy = 0.0f;
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {

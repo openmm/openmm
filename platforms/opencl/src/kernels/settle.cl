@@ -2,7 +2,7 @@
  * Enforce constraints on SETTLE clusters
  */
 
-__kernel void applySettle(int numClusters, float tol, __global float4* oldPos, __global float4* posDelta, __global float4* newDelta, __global float4* velm, __global int4* clusterAtoms, __global float2* clusterParams) {
+__kernel void applySettle(int numClusters, float tol, __global const float4* restrict oldPos, __global const float4* restrict posDelta, __global float4* restrict newDelta, __global const float4* restrict velm, __global const int4* restrict clusterAtoms, __global const float2* restrict clusterParams) {
     int index = get_global_id(0);
     while (index < numClusters) {
         // Load the data for this cluster.

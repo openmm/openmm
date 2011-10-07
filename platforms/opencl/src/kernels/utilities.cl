@@ -2,7 +2,7 @@
  * Fill a buffer with 0.
  */
 
-__kernel void clearBuffer(__global int* buffer, int size) {
+__kernel void clearBuffer(__global int* restrict buffer, int size) {
     int index = get_global_id(0);
     __global int4* buffer4 = (__global int4*) buffer;
     int sizeDiv4 = size/4;
@@ -18,7 +18,7 @@ __kernel void clearBuffer(__global int* buffer, int size) {
 /**
  * Fill two buffers with 0.
  */
-__kernel void clearTwoBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2) {
+__kernel void clearTwoBuffers(__global int* restrict buffer1, int size1, __global int* restrict buffer2, int size2) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
 }
@@ -26,7 +26,7 @@ __kernel void clearTwoBuffers(__global int* buffer1, int size1, __global int* bu
 /**
  * Fill three buffers with 0.
  */
-__kernel void clearThreeBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3) {
+__kernel void clearThreeBuffers(__global int* restrict buffer1, int size1, __global int* restrict buffer2, int size2, __global int* restrict buffer3, int size3) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -35,7 +35,7 @@ __kernel void clearThreeBuffers(__global int* buffer1, int size1, __global int* 
 /**
  * Fill four buffers with 0.
  */
-__kernel void clearFourBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3, __global int* buffer4, int size4) {
+__kernel void clearFourBuffers(__global int* restrict buffer1, int size1, __global int* restrict buffer2, int size2, __global int* restrict buffer3, int size3, __global int* restrict buffer4, int size4) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -45,7 +45,7 @@ __kernel void clearFourBuffers(__global int* buffer1, int size1, __global int* b
 /**
  * Fill five buffers with 0.
  */
-__kernel void clearFiveBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3, __global int* buffer4, int size4, __global int* buffer5, int size5) {
+__kernel void clearFiveBuffers(__global int* restrict buffer1, int size1, __global int* restrict buffer2, int size2, __global int* restrict buffer3, int size3, __global int* restrict buffer4, int size4, __global int* restrict buffer5, int size5) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -56,7 +56,7 @@ __kernel void clearFiveBuffers(__global int* buffer1, int size1, __global int* b
 /**
  * Fill six buffers with 0.
  */
-__kernel void clearSixBuffers(__global int* buffer1, int size1, __global int* buffer2, int size2, __global int* buffer3, int size3, __global int* buffer4, int size4, __global int* buffer5, int size5, __global int* buffer6, int size6) {
+__kernel void clearSixBuffers(__global int* restrict buffer1, int size1, __global int* restrict buffer2, int size2, __global int* restrict buffer3, int size3, __global int* restrict buffer4, int size4, __global int* restrict buffer5, int size5, __global int* restrict buffer6, int size6) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -69,7 +69,7 @@ __kernel void clearSixBuffers(__global int* buffer1, int size1, __global int* bu
  * Sum a collection of buffers into the first one.
  */
 
-__kernel void reduceFloat4Buffer(__global float4* buffer, int bufferSize, int numBuffers) {
+__kernel void reduceFloat4Buffer(__global float4* restrict buffer, int bufferSize, int numBuffers) {
     int index = get_global_id(0);
     int totalSize = bufferSize*numBuffers;
     while (index < bufferSize) {
@@ -84,7 +84,7 @@ __kernel void reduceFloat4Buffer(__global float4* buffer, int bufferSize, int nu
 /**
  * Sum the various buffers containing forces.
  */
-__kernel void reduceForces(__global long* longBuffer, __global float4* buffer, int bufferSize, int numBuffers) {
+__kernel void reduceForces(__global const long* restrict longBuffer, __global float4* restrict buffer, int bufferSize, int numBuffers) {
     int totalSize = bufferSize*numBuffers;
     float scale = 1.0f/(float) 0xFFFFFFFF;
     for (int index = get_global_id(0); index < bufferSize; index += get_global_size(0)) {
@@ -99,7 +99,7 @@ __kernel void reduceForces(__global long* longBuffer, __global float4* buffer, i
  * This is called to determine the accuracy of various native functions.
  */
 
-__kernel void determineNativeAccuracy(__global float8* values, int numValues) {
+__kernel void determineNativeAccuracy(__global float8* restrict values, int numValues) {
     for (int i = get_global_id(0); i < numValues; i += get_global_size(0)) {
         float v = values[i].s0;
         values[i] = (float8) (v, native_sqrt(v), native_rsqrt(v), native_recip(v), native_exp(v), native_log(v), 0.0f, 0.0f);

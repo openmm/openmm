@@ -7,7 +7,7 @@ float2 multofFloat2(float2 a, float2 b) {
  * Precompute the cosine and sine sums which appear in each force term.
  */
 
-__kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global float4* posq, __global float2* cosSinSum, float4 reciprocalPeriodicBoxSize, float reciprocalCoefficient) {
+__kernel void calculateEwaldCosSinSums(__global float* restrict energyBuffer, __global const float4* restrict posq, __global float2* restrict cosSinSum, float4 reciprocalPeriodicBoxSize, float reciprocalCoefficient) {
     const unsigned int ksizex = 2*KMAX_X-1;
     const unsigned int ksizey = 2*KMAX_Y-1;
     const unsigned int ksizez = 2*KMAX_Z-1;
@@ -58,7 +58,7 @@ __kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global fl
  * previous routine.
  */
 
-__kernel void calculateEwaldForces(__global float4* forceBuffers, __global float4* posq, __global float2* cosSinSum, float4 reciprocalPeriodicBoxSize, float reciprocalCoefficient) {
+__kernel void calculateEwaldForces(__global float4* restrict forceBuffers, __global const float4* restrict posq, __global const float2* restrict cosSinSum, float4 reciprocalPeriodicBoxSize, float reciprocalCoefficient) {
     unsigned int atom = get_global_id(0);
     while (atom < NUM_ATOMS) {
         float4 force = forceBuffers[atom];

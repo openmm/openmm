@@ -1739,7 +1739,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
-        tableArgs << ", __global float4* " << arrayName;
+        tableArgs << ", __global const float4* restrict " << arrayName;
     }
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
@@ -1837,7 +1837,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* global_" << paramName << ", __local " << buffer.getType() << "* local_" << paramName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << paramName << ", __local " << buffer.getType() << "* restrict local_" << paramName;
             loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
             loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
             load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
@@ -1884,12 +1884,12 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* " << paramName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict " << paramName;
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string valueName = "values"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* global_" << valueName;
+            extraArgs << ", __global " << buffer.getType() << "* restrict global_" << valueName;
             reductionSource << buffer.getType() << " local_" << valueName << ";\n";
         }
         reductionSource << "local_values" << computedValues->getParameterSuffix(0) << " = sum;\n";
@@ -1977,7 +1977,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* global_" << paramName << ", __local " << buffer.getType() << "* local_" << paramName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << paramName << ", __local " << buffer.getType() << "* restrict local_" << paramName;
             loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
             loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
             load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
@@ -1986,17 +1986,17 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string valueName = "values"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* global_" << valueName << ", __local " << buffer.getType() << "* local_" << valueName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << valueName << ", __local " << buffer.getType() << "* restrict local_" << valueName;
             loadLocal1 << "local_" << valueName << "[localAtomIndex] = " << valueName << "1;\n";
             loadLocal2 << "local_" << valueName << "[localAtomIndex] = global_" << valueName << "[j];\n";
             load1 << buffer.getType() << " " << valueName << "1 = global_" << valueName << "[atom1];\n";
             load2 << buffer.getType() << " " << valueName << "2 = local_" << valueName << "[atom2];\n";
         }
         if (useLong) {
-            extraArgs << ", __global long* derivBuffers";
+            extraArgs << ", __global long* restrict derivBuffers";
             for (int i = 0; i < force.getNumComputedValues(); i++) {
                 string index = intToString(i+1);
-                extraArgs << ", __local float* local_deriv" << index;
+                extraArgs << ", __local float* restrict local_deriv" << index;
                 clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
                 declare1 << "float deriv" << index << "_1 = 0.0f;\n";
                 load2 << "float deriv" << index << "_2 = 0.0f;\n";
@@ -2011,7 +2011,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
                 const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
                 string index = intToString(i+1);
-                extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index << ", __local " << buffer.getType() << "* local_deriv" << index;
+                extraArgs << ", __global " << buffer.getType() << "* restrict derivBuffers" << index << ", __local " << buffer.getType() << "* restrict local_deriv" << index;
                 clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
                 declare1 << buffer.getType() << " deriv" << index << "_1 = 0.0f;\n";
                 load2 << buffer.getType() << " deriv" << index << "_2 = 0.0f;\n";
@@ -2068,21 +2068,21 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* " << paramName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict " << paramName;
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string valueName = "values"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* " << valueName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict " << valueName;
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
             string index = intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index;
+            extraArgs << ", __global " << buffer.getType() << "* restrict derivBuffers" << index;
             compute << buffer.getType() << " deriv" << index << " = derivBuffers" << index << "[index];\n";
         }
         if (useLong) {
-            extraArgs << ", __global long* derivBuffersIn";
+            extraArgs << ", __global const long* restrict derivBuffersIn";
             for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
                 reduce << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
                         " = (1.0f/0xFFFFFFFF)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << intToString(i) << "];\n";
@@ -2147,17 +2147,17 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* " << paramName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict " << paramName;
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string valueName = "values"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* " << valueName;
+            extraArgs << ", __global const " << buffer.getType() << "* restrict " << valueName;
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
             string index = intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index;
+            extraArgs << ", __global " << buffer.getType() << "* restrict derivBuffers" << index;
             compute << buffer.getType() << " deriv" << index << " = derivBuffers" << index << "[index];\n";
         }
         map<string, string> variables;
@@ -2866,12 +2866,12 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, min, max);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
-        tableArgs << ", __global float4* " << arrayName;
+        tableArgs << ", __global const float4* restrict " << arrayName;
     }
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        tableArgs << ", __global float4* functionParams";
+        tableArgs << ", __global const float4* restrict functionParams";
     }
 
     // Record information about parameters.
@@ -2973,15 +2973,15 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     // Next it needs to load parameters from global memory.
 
     if (force.getNumGlobalParameters() > 0)
-        extraArgs << ", __global float* globals";
+        extraArgs << ", __global const float* restrict globals";
     for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
-        extraArgs << ", __global "+buffer.getType()+"* donor"+buffer.getName();
+        extraArgs << ", __global const "+buffer.getType()+"* restrict donor"+buffer.getName();
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" donorParams"+intToString(i+1)+" = donor"+buffer.getName()+"[index];\n");
     }
     for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
-        extraArgs << ", __global "+buffer.getType()+"* acceptor"+buffer.getName();
+        extraArgs << ", __global const "+buffer.getType()+"* restrict acceptor"+buffer.getName();
         addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" acceptorParams"+intToString(i+1)+" = acceptor"+buffer.getName()+"[index];\n");
     }
 

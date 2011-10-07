@@ -1,7 +1,7 @@
 /**
  * Compute the direction each constraint is pointing in.  This is called once at the beginning of constraint evaluation.
  */
-__kernel void computeConstraintDirections(__global int2* constraintAtoms, __global float4* constraintDistance, __global float4* atomPositions) {
+__kernel void computeConstraintDirections(__global const int2* restrict constraintAtoms, __global float4* restrict constraintDistance, __global const float4* restrict atomPositions) {
     for (int index = get_global_id(0); index < NUM_CONSTRAINTS; index += get_global_size(0)) {
         // Compute the direction for this constraint.
 
@@ -19,8 +19,8 @@ __kernel void computeConstraintDirections(__global int2* constraintAtoms, __glob
 /**
  * Compute the force applied by each constraint.
  */
-__kernel void computeConstraintForce(__global int2* constraintAtoms, __global float4* constraintDistance, __global float4* atomPositions,
-        __global float* reducedMass, __global float* delta1, __global int* converged, float tol, int iteration) {
+__kernel void computeConstraintForce(__global const int2* restrict constraintAtoms, __global const float4* restrict constraintDistance, __global const float4* restrict atomPositions,
+        __global const float* restrict reducedMass, __global float* restrict delta1, __global int* restrict converged, float tol, int iteration) {
     __local int groupConverged;
     if (converged[1-iteration%2]) {
         if (get_global_id(0) == 0)
@@ -58,8 +58,8 @@ __kernel void computeConstraintForce(__global int2* constraintAtoms, __global fl
 /**
  * Multiply the vector of constraint forces by the constraint matrix.
  */
-__kernel void multiplyByConstraintMatrix(__global float* delta1, __global float* delta2, __global int* constraintMatrixColumn,
-        __global float* constraintMatrixValue, __global int* converged, int iteration) {
+__kernel void multiplyByConstraintMatrix(__global const float* restrict delta1, __global float* restrict delta2, __global const int* restrict constraintMatrixColumn,
+        __global const float* restrict constraintMatrixValue, __global const int* restrict converged, int iteration) {
     if (converged[iteration%2])
         return; // The constraint iteration has already converged.
 
@@ -81,8 +81,8 @@ __kernel void multiplyByConstraintMatrix(__global float* delta1, __global float*
 /**
  * Update the atom positions based on constraint forces.
  */
-__kernel void updateAtomPositions(__global int* numAtomConstraints, __global int* atomConstraints, __global float4* constraintDistance,
-        __global float4* atomPositions, __global float4* velm, __global float* delta1, __global float* delta2, __global int* converged, int iteration) {
+__kernel void updateAtomPositions(__global const int* restrict numAtomConstraints, __global const int* restrict atomConstraints, __global const float4* restrict constraintDistance,
+        __global float4* restrict atomPositions, __global const float4* restrict velm, __global const float* restrict delta1, __global const float* restrict delta2, __global int* restrict converged, int iteration) {
     if (get_global_id(0) == 0)
         converged[1-iteration%2] = 1;
     if (converged[iteration%2])

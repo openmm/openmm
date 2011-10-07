@@ -8,8 +8,8 @@ enum {VelScale, ForceScale, NoiseScale, MaxParams};
  * Perform the first step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart1(__global float4* velm, __global float4* force, __global float4* posDelta,
-        __global float* paramBuffer, __global float2* dt, __global float4* random, unsigned int randomIndex) {
+__kernel void integrateLangevinPart1(__global float4* restrict velm, __global const float4* restrict force, __global float4* restrict posDelta,
+        __global const float* restrict paramBuffer, __global const float2* restrict dt, __global const float4* restrict random, unsigned int randomIndex) {
     float vscale = paramBuffer[VelScale];
     float fscale = paramBuffer[ForceScale];
     float noisescale = paramBuffer[NoiseScale];
@@ -31,7 +31,7 @@ __kernel void integrateLangevinPart1(__global float4* velm, __global float4* for
  * Perform the second step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart2(__global float4* posq, __global float4* posDelta, __global float4* velm, __global float2* dt) {
+__kernel void integrateLangevinPart2(__global float4* restrict posq, __global const float4* restrict posDelta, __global float4* restrict velm, __global const float2* restrict dt) {
 #ifdef cl_khr_fp64
     double invStepSize = 1.0/dt[0].y;
 #else
@@ -58,8 +58,8 @@ __kernel void integrateLangevinPart2(__global float4* posq, __global float4* pos
  * Select the step size to use for the next step.
  */
 
-__kernel void selectLangevinStepSize(float maxStepSize, float errorTol, float tau, float kT, __global float2* dt,
-        __global float4* velm, __global float4* force, __global float* paramBuffer, __local float* params, __local float* error) {
+__kernel void selectLangevinStepSize(float maxStepSize, float errorTol, float tau, float kT, __global float2* restrict dt,
+        __global const float4* restrict velm, __global const float4* restrict force, __global float* restrict paramBuffer, __local float* restrict params, __local float* restrict error) {
     // Calculate the error.
 
     float err = 0.0f;

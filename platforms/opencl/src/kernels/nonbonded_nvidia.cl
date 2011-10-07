@@ -16,15 +16,15 @@ typedef struct {
  */
 __kernel void computeNonbonded(
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        __global long* forceBuffers,
+        __global long* restrict forceBuffers,
 #else
-        __global float4* forceBuffers,
+        __global float4* restrict forceBuffers,
 #endif
-        __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float* tempBuffer,
+        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData, __local float* restrict tempBuffer,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
 #else
         unsigned int numTiles
 #endif

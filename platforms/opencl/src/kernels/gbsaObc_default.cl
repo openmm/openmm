@@ -12,10 +12,10 @@ typedef struct {
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params,
-        __local AtomData1* localData, __local float* tempBuffer,
+void computeBornSum(__global float* restrict global_bornSum, __global const float4* restrict posq, __global const float2* restrict global_params,
+        __local AtomData1* restrict localData, __local float* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
         unsigned int numTiles) {
 #endif
@@ -205,11 +205,11 @@ typedef struct {
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeGBSAForce1(__global float4* forceBuffers, __global float* global_bornForce,
-        __global float* energyBuffer, __global float4* posq, __global float* global_bornRadii,
-        __local AtomData2* localData, __local float4* tempBuffer,
+void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* restrict global_bornForce,
+        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
+        __local AtomData2* restrict localData, __local float4* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
         unsigned int numTiles) {
 #endif

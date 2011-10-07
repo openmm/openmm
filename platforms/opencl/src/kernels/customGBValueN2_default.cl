@@ -5,11 +5,11 @@
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeN2Value(__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __global float* global_value, __local float* local_value,
-        __local float* tempBuffer,
+void computeN2Value(__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global float* restrict global_value, __local float* restrict local_value,
+        __local float* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles
 #else
         unsigned int numTiles
 #endif

@@ -6,7 +6,7 @@
  * Perform the first step of verlet integration.
  */
 
-__kernel void integrateVerletPart1(int numAtoms, __global float2* dt, __global float4* posq, __global float4* velm, __global float4* force, __global float4* posDelta) {
+__kernel void integrateVerletPart1(int numAtoms, __global const float2* restrict dt, __global const float4* restrict posq, __global float4* restrict velm, __global const float4* restrict force, __global float4* restrict posDelta) {
     float2 stepSize = dt[0];
     float dtPos = stepSize.y;
     float dtVel = 0.5f*(stepSize.x+stepSize.y);
@@ -26,7 +26,7 @@ __kernel void integrateVerletPart1(int numAtoms, __global float2* dt, __global f
  * Perform the second step of verlet integration.
  */
 
-__kernel void integrateVerletPart2(int numAtoms, __global float2* dt, __global float4* posq, __global float4* velm, __global float4* posDelta) {
+__kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, __global float4* restrict posq, __global float4* restrict velm, __global const float4* restrict posDelta) {
     float2 stepSize = dt[0];
 #ifdef cl_khr_fp64
     double oneOverDt = 1.0/stepSize.y;
@@ -57,7 +57,7 @@ __kernel void integrateVerletPart2(int numAtoms, __global float2* dt, __global f
  * Select the step size to use for the next step.
  */
 
-__kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorTol, __global float2* dt, __global float4* velm, __global float4* force, __local float* error) {
+__kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorTol, __global float2* restrict dt, __global const float4* restrict velm, __global const float4* restrict force, __local float* restrict error) {
     // Calculate the error.
 
     float err = 0.0f;

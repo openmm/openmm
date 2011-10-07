@@ -56,7 +56,7 @@ unsigned int sumReduce128(__local unsigned int* arr) {
     return arr[0];
 }
 
-__kernel void countElts(__global unsigned int* dgBlockCounts, __global unsigned int* dgValid, const unsigned int len, __local unsigned int* dsCount) {
+__kernel void countElts(__global unsigned int* restrict dgBlockCounts, __global const unsigned int* restrict dgValid, const unsigned int len, __local unsigned int* restrict dsCount) {
     dsCount[get_local_id(0)] = 0;
     unsigned int ub;
     const unsigned int eltsPerBlock = len/get_num_groups(0) + ((len % get_num_groups(0)) ? 1 : 0);
@@ -110,9 +110,9 @@ int compactSIMDPrefixSum(__local const unsigned int* dsData, __local const unsig
     return numValid;
 }
 
-__kernel void moveValidElementsStaged(__global unsigned int* dgData, __global unsigned int* dgCompact, __global unsigned int* dgValid,
-            __global unsigned int* dgBlockCounts, unsigned int len, __global unsigned int* dNumValidElements,
-            __local unsigned int* inBlock, __local unsigned int* validBlock, __local unsigned int* compactBlock) {
+__kernel void moveValidElementsStaged(__global const unsigned int* restrict dgData, __global unsigned int* restrict dgCompact, __global const unsigned int* restrict dgValid,
+            __global const unsigned int* restrict dgBlockCounts, unsigned int len, __global unsigned int* restrict dNumValidElements,
+            __local unsigned int* restrict inBlock, __local unsigned int* restrict validBlock, __local unsigned int* restrict compactBlock) {
     __local unsigned int dsLocalIndex[256];
     int blockOutOffset=0;
     // Sum up the blockCounts before us to find our offset

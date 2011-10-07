@@ -8,7 +8,7 @@
 /**
  * Find a bounding box for the atoms in each block.
  */
-__kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox, __global unsigned int* interactionCount) {
+__kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict posq, __global float4* restrict blockCenter, __global float4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount) {
     int index = get_global_id(0);
     int base = index*TILE_SIZE;
     while (base < numAtoms) {
@@ -47,7 +47,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPe
  */
 void storeInteractionData(__local ushort2* buffer, __local int* valid, __local short* sum, __local ushort2* temp, __local int* baseIndex,
             __global unsigned int* interactionCount, __global ushort2* interactingTiles, float cutoffSquared, float4 periodicBoxSize,
-            float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox, unsigned int maxTiles) {
+            float4 invPeriodicBoxSize, __global const float4* posq, __global const float4* blockCenter, __global const float4* blockBoundingBox, unsigned int maxTiles) {
     // The buffer is full, so we need to compact it and write out results.  Start by doing a parallel prefix sum.
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
@@ -144,9 +144,9 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */
-__kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
-        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
-        __global unsigned int* interactionFlags, __global float4* posq, unsigned int maxTiles, unsigned int startTileIndex,
+__kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict blockCenter,
+        __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount, __global ushort2* restrict interactingTiles,
+        __global unsigned int* restrict interactionFlags, __global const float4* restrict posq, unsigned int maxTiles, unsigned int startTileIndex,
         unsigned int endTileIndex) {
     __local ushort2 buffer[BUFFER_SIZE];
     __local int valid[BUFFER_SIZE];
@@ -220,8 +220,8 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
  * Compare each atom in one block to the bounding box of another block, and set
  * flags for which ones are interacting.
  */
-__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global ushort2* tiles, __global float4* blockCenter,
-            __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags, unsigned int maxTiles) {
+__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict posq, __global const ushort2* restrict tiles, __global const float4* restrict blockCenter,
+            __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionFlags, __global const unsigned int* restrict interactionCount, __local unsigned int* restrict flags, unsigned int maxTiles) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int numTiles = interactionCount[0];

@@ -1,4 +1,5 @@
-__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __local float4* bsplinesCache, __global int2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void updateBsplines(__global const float4* restrict posq, __global float4* restrict pmeBsplineTheta, __local float4* restrict bsplinesCache,
+        __global int2* restrict pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
@@ -38,7 +39,7 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
 /**
  * For each grid point, find the range of sorted atoms associated with that point.
  */
-__kernel void findAtomRangeForGrid(__global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float4* posq, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void findAtomRangeForGrid(__global int2* restrict pmeAtomGridIndex, __global int* restrict pmeAtomRange, __global const float4* restrict posq, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
     int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
@@ -75,7 +76,8 @@ __kernel void findAtomRangeForGrid(__global int2* pmeAtomGridIndex, __global int
 #define BUFFER_SIZE (PME_ORDER*PME_ORDER*PME_ORDER)
 
 __kernel __attribute__((reqd_work_group_size(BUFFER_SIZE, 1, 1)))
-__kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global long* pmeGrid, __global float4* pmeBsplineTheta, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+void gridSpreadCharge(__global const float4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
+        __global long* restrict pmeGrid, __global const float4* restrict pmeBsplineTheta, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     int ix = get_local_id(0)/(PME_ORDER*PME_ORDER);
     int remainder = get_local_id(0)-ix*PME_ORDER*PME_ORDER;
     int iy = remainder/PME_ORDER;
@@ -122,7 +124,7 @@ __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGrid
     }
 }
 
-__kernel void finishSpreadCharge(__global long* pmeGrid) {
+__kernel void finishSpreadCharge(__global long* restrict pmeGrid) {
     __global float2* floatGrid = (__global float2*) pmeGrid;
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     float scale = EPSILON_FACTOR/(float) 0xFFFFFFFF;
@@ -133,7 +135,8 @@ __kernel void finishSpreadCharge(__global long* pmeGrid) {
     }
 }
 #else
-__kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float2* pmeGrid, __global float4* pmeBsplineTheta) {
+__kernel void gridSpreadCharge(__global const float4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
+        __global float2* restrict pmeGrid, __global const float4* restrict pmeBsplineTheta) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     for (int gridIndex = get_global_id(0); gridIndex < numGridPoints; gridIndex += get_global_size(0)) {
         // Compute the charge on a grid point.
@@ -190,8 +193,8 @@ __kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGrid
 }
 #endif
 
-__kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* energyBuffer, __global float* pmeBsplineModuliX,
-        __global float* pmeBsplineModuliY, __global float* pmeBsplineModuliZ, float4 invPeriodicBoxSize, float recipScaleFactor) {
+__kernel void reciprocalConvolution(__global float2* restrict pmeGrid, __global float* restrict energyBuffer, __global const float* restrict pmeBsplineModuliX,
+        __global const float* restrict pmeBsplineModuliY, __global const float* restrict pmeBsplineModuliZ, float4 invPeriodicBoxSize, float recipScaleFactor) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     float energy = 0.0f;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
@@ -220,7 +223,8 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float2* pmeGrid, float4 periodicBoxSize, float4 invPeriodicBoxSize, __local float4* bsplinesCache) {
+__kernel void gridInterpolateForce(__global const float4* restrict posq, __global float4* restrict forceBuffers, __global const float2* restrict pmeGrid,
+        float4 periodicBoxSize, float4 invPeriodicBoxSize, __local float4* restrict bsplinesCache) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
     __local float4* ddata = &bsplinesCache[get_local_id(0)*PME_ORDER + get_local_size(0)*PME_ORDER];

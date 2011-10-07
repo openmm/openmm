@@ -55,8 +55,8 @@ float4 computeCross(float4 vec1, float4 vec2) {
 /**
  * Compute forces on donors.
  */
-__kernel void computeDonorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
-        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer, float4 periodicBoxSize, float4 invPeriodicBoxSize
+__kernel void computeDonorForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, __global const int4* restrict exclusions,
+        __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict donorBufferIndices, __local float4* posBuffer, float4 periodicBoxSize, float4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     float energy = 0.0f;
     float4 f1 = (float4) 0;
@@ -141,8 +141,8 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
 /**
  * Compute forces on acceptors.
  */
-__kernel void computeAcceptorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
-        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer, float4 periodicBoxSize, float4 invPeriodicBoxSize
+__kernel void computeAcceptorForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, __global const int4* restrict exclusions,
+        __global const int4* restrict donorAtoms, __global const int4* restrict acceptorAtoms, __global const int4* restrict acceptorBufferIndices, __local float4* restrict posBuffer, float4 periodicBoxSize, float4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     float4 f1 = (float4) 0;
     float4 f2 = (float4) 0;

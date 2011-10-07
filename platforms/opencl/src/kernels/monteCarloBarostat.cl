@@ -2,8 +2,8 @@
  * Scale the particle positions.
  */
 
-__kernel void scalePositions(float scale, int numMolecules, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq,
-        __global int* moleculeAtoms, __global int* moleculeStartIndex) {
+__kernel void scalePositions(float scale, int numMolecules, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* restrict posq,
+        __global const int* restrict moleculeAtoms, __global const int* restrict moleculeStartIndex) {
     for (int index = get_global_id(0); index < numMolecules; index += get_global_size(0)) {
         int first = moleculeStartIndex[index];
         int last = moleculeStartIndex[index+1];

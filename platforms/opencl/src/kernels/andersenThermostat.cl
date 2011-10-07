@@ -2,8 +2,8 @@
  * Apply the Andersen thermostat to adjust particle velocities.
  */
 
-__kernel void applyAndersenThermostat(float collisionFrequency, float kT, __global float4* velm, __global float2* stepSize, __global float4* random,
-        unsigned int randomIndex, __global int* atomGroups) {
+__kernel void applyAndersenThermostat(float collisionFrequency, float kT, __global float4* velm, __global const float2* restrict stepSize, __global const float4* restrict random,
+        unsigned int randomIndex, __global const int* restrict atomGroups) {
     float collisionProbability = 1.0f-exp(-collisionFrequency*stepSize[0].y);
     float randomRange = erf(collisionProbability/sqrt(2.0f));
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {

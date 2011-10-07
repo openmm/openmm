@@ -8,7 +8,7 @@
  * Reduce the derivatives computed in the N^2 energy kernel, and compute all per-particle energy terms.
  */
 
-__kernel void computePerParticleEnergy(int bufferSize, int numBuffers, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq
+__kernel void computePerParticleEnergy(int bufferSize, int numBuffers, __global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq
         PARAMETER_ARGUMENTS) {
     float energy = 0.0f;
     unsigned int index = get_global_id(0);

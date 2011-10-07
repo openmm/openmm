@@ -399,9 +399,9 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
     for (int i = 0; i < (int) params.size(); i++) {
-        args << ", __global ";
+        args << ", __global const ";
         args << params[i].getType();
-        args << "* global_";
+        args << "* restrict global_";
         args << params[i].getName();
     }
     for (int i = 0; i < (int) arguments.size(); i++) {
@@ -411,11 +411,11 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         }
         else {
             if ((arguments[i].getMemory().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0)
-                args << ", __global ";
+                args << ", __global const ";
             else
                 args << ", __constant ";
             args << arguments[i].getType();
-            args << "* ";
+            args << "* restrict ";
             args << arguments[i].getName();
         }
     }

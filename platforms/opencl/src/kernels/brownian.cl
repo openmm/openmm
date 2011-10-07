@@ -2,8 +2,8 @@
  * Perform the first step of Brownian integration.
  */
 
-__kernel void integrateBrownianPart1(float tauDeltaT, float noiseAmplitude, __global float4* force,
-        __global float4* posDelta, __global float4* velm, __global float4* random, unsigned int randomIndex) {
+__kernel void integrateBrownianPart1(float tauDeltaT, float noiseAmplitude, __global const float4* restrict force,
+        __global float4* restrict posDelta, __global const float4* restrict velm, __global const float4* restrict random, unsigned int randomIndex) {
     randomIndex += get_global_id(0);
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
         float invMass = velm[index].w;
@@ -16,7 +16,7 @@ __kernel void integrateBrownianPart1(float tauDeltaT, float noiseAmplitude, __gl
  * Perform the second step of Brownian integration.
  */
 
-__kernel void integrateBrownianPart2(float oneOverDeltaT, __global float4* posq, __global float4* velm, __global float4* posDelta) {
+__kernel void integrateBrownianPart2(float oneOverDeltaT, __global float4* posq, __global float4* velm, __global const float4* restrict posDelta) {
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
         float4 delta = posDelta[index];
         velm[index].xyz = oneOverDeltaT*delta.xyz;
