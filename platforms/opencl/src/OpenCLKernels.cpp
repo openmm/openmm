@@ -1532,7 +1532,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         computeBornSumKernel.setArg<cl::Buffer>(index++, (useLong ? longBornSum->getDeviceBuffer() : bornSum->getDeviceBuffer()));
         computeBornSumKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         computeBornSumKernel.setArg<cl::Buffer>(index++, params->getDeviceBuffer());
-        computeBornSumKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*13*sizeof(cl_float), NULL);
+        computeBornSumKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*7*sizeof(cl_float), NULL);
         computeBornSumKernel.setArg(index++, (deviceIsCpu ? 1 : nb.getForceThreadBlockSize())*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
@@ -1544,8 +1544,10 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         }
         else
             computeBornSumKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
-        computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getExclusionIndices().getDeviceBuffer());
-        computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getExclusionRowIndices().getDeviceBuffer());
+        if (cl.getSIMDWidth() == 32) {
+            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getExclusionIndices().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getExclusionRowIndices().getDeviceBuffer());
+        }
         force1Kernel = cl::Kernel(program, "computeGBSAForce1");
         index = 0;
         force1Kernel.setArg<cl::Buffer>(index++, (useLong ? cl.getLongForceBuffer().getDeviceBuffer() : cl.getForceBuffers().getDeviceBuffer()));
@@ -1553,7 +1555,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
-        force1Kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*13*sizeof(cl_float), NULL);
+        force1Kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*9*sizeof(cl_float), NULL);
         force1Kernel.setArg(index++, (deviceIsCpu ? 1 : nb.getForceThreadBlockSize())*sizeof(mm_float4), NULL);
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
@@ -1565,8 +1567,10 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         }
         else
             force1Kernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
-        force1Kernel.setArg<cl::Buffer>(index++, nb.getExclusionIndices().getDeviceBuffer());
-        force1Kernel.setArg<cl::Buffer>(index++, nb.getExclusionRowIndices().getDeviceBuffer());
+        if (cl.getSIMDWidth() == 32) {
+            force1Kernel.setArg<cl::Buffer>(index++, nb.getExclusionIndices().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(index++, nb.getExclusionRowIndices().getDeviceBuffer());
+        }
         program = cl.createProgram(OpenCLKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
         reduceBornSumKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
