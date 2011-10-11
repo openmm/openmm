@@ -326,8 +326,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 void OpenCLNonbondedUtilities::computeInteractions() {
     if (cutoff != -1.0) {
         if (useCutoff) {
-            forceKernel.setArg<mm_float4>(12, context.getPeriodicBoxSize());
-            forceKernel.setArg<mm_float4>(13, context.getInvPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(11, context.getPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(12, context.getInvPeriodicBoxSize());
         }
         context.executeKernel(forceKernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
@@ -480,8 +480,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
-    if (context.getSIMDWidth() == 32)
-        defines["WARPS_PER_GROUP"] = OpenCLExpressionUtilities::intToString(forceThreadBlockSize/OpenCLContext::TileSize);
+    defines["NONBONDED_WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(forceThreadBlockSize);
     defines["CUTOFF_SQUARED"] = OpenCLExpressionUtilities::doubleToString(cutoff*cutoff);
     defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
@@ -509,7 +508,6 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, exclusionIndices->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionRowIndices->getDeviceBuffer());
     kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize*localDataSize : forceThreadBlockSize*localDataSize), NULL);
-    kernel.setArg(index++, 4*forceThreadBlockSize*sizeof(cl_float), NULL);
     kernel.setArg<cl_uint>(index++, startTileIndex);
     kernel.setArg<cl_uint>(index++, startTileIndex+numTiles);
     if (useCutoff) {

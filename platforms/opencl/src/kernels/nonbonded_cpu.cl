@@ -12,7 +12,7 @@ typedef struct {
  */
 
 __kernel void computeNonbonded(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
-        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData, __local float4* restrict tempBuffer,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags

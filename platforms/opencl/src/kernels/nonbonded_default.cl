@@ -11,9 +11,9 @@ typedef struct {
  * Compute nonbonded interactions.
  */
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+__kernel __attribute__((reqd_work_group_size(NONBONDED_WORK_GROUP_SIZE, 1, 1)))
 void computeNonbonded(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
-        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData, __local float4* restrict tempBuffer,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
@@ -31,6 +31,7 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
+    __local float tempBuffer[3*(NONBONDED_WORK_GROUP_SIZE/2)];
     __local unsigned int exclusionRange[2];
     __local int exclusionIndex[1];
 
@@ -124,8 +125,12 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 
             // Sum the forces and write results.
 
-            if (get_local_id(0) >= TILE_SIZE)
-                tempBuffer[get_local_id(0)] = force;
+            int bufferIndex = 3*tgx;
+            if (get_local_id(0) >= TILE_SIZE) {
+                tempBuffer[bufferIndex] = force.x;
+                tempBuffer[bufferIndex+1] = force.y;
+                tempBuffer[bufferIndex+2] = force.z;
+            }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
@@ -133,7 +138,9 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #else
                 unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz+tempBuffer[get_local_id(0)+TILE_SIZE].xyz;
+                float4 sum = forceBuffers[offset];
+                sum += force + (float4) (tempBuffer[bufferIndex], tempBuffer[bufferIndex+1], tempBuffer[bufferIndex+2], 0.0f);
+                forceBuffers[offset] = sum;
             }
         }
         else {
@@ -210,8 +217,12 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 
             // Sum the forces and write results.
 
-            if (get_local_id(0) >= TILE_SIZE)
-                tempBuffer[get_local_id(0)] = force;
+            int bufferIndex = 3*tgx;
+            if (get_local_id(0) >= TILE_SIZE) {
+                tempBuffer[bufferIndex] = force.x;
+                tempBuffer[bufferIndex+1] = force.y;
+                tempBuffer[bufferIndex+2] = force.z;
+            }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
@@ -221,9 +232,13 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
                 unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                forceBuffers[offset1].xyz = forceBuffers[offset1].xyz+force.xyz+tempBuffer[get_local_id(0)+TILE_SIZE].xyz;
-                float4 sum = (float4) (localData[get_local_id(0)].fx+localData[get_local_id(0)+TILE_SIZE].fx, localData[get_local_id(0)].fy+localData[get_local_id(0)+TILE_SIZE].fy, localData[get_local_id(0)].fz+localData[get_local_id(0)+TILE_SIZE].fz, 0.0f);
-                forceBuffers[offset2].xyz = forceBuffers[offset2].xyz+sum.xyz;
+                // Cheaper to load/store float4 than float3. Do both loads before both stores to minimize store-load waits.
+                float4 sum1 = forceBuffers[offset1];
+                float4 sum2 = forceBuffers[offset2];
+                sum1 += force + (float4) (tempBuffer[bufferIndex], tempBuffer[bufferIndex+1], tempBuffer[bufferIndex+2], 0.0f);
+                sum2 += (float4) (localData[get_local_id(0)].fx+localData[get_local_id(0)+TILE_SIZE].fx, localData[get_local_id(0)].fy+localData[get_local_id(0)+TILE_SIZE].fy, localData[get_local_id(0)].fz+localData[get_local_id(0)+TILE_SIZE].fz, 0.0f);
+                forceBuffers[offset1] = sum1;
+                forceBuffers[offset2] = sum2;
             }
         }
         lasty = y;
