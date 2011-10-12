@@ -190,3 +190,15 @@ __kernel void copyFromContext(__global float4* src, __global float4* dst, __glob
         dst[base+order[particle]] = src[particle];
     }
 }
+
+/**
+ * Update atom positions so all copies are offset by the same number of periodic box widths.
+ */
+__kernel void applyCellTranslations(__global float4* posq, __global float4* movedPos, __global int* order, int movedCopy) {
+    for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
+        int index = order[particle];
+        float4 delta = movedPos[particle]-posq[movedCopy*PADDED_NUM_ATOMS+index];
+        for (int copy = 0; copy < NUM_COPIES; copy++)
+            posq[copy*PADDED_NUM_ATOMS+index] += delta;
+    }
+}

@@ -61,8 +61,8 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 }
 
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
-        forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
+        velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL), thread(NULL) {
     try {
         contextIndex = platformData.contexts.size();
@@ -573,6 +573,7 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
 void OpenCLContext::reorderAtoms() {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
         return;
+    atomsWereReordered = true;
 
     // Find the range of positions and the number of bins along each axis.
 

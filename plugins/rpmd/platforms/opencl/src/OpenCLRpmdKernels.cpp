@@ -35,6 +35,7 @@
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLFFT3D.h"
+#include "OpenCLNonbondedUtilities.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
@@ -93,6 +94,7 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     velocitiesKernel = cl::Kernel(program, "advanceVelocities");
     copyToContextKernel = cl::Kernel(program, "copyToContext");
     copyFromContextKernel = cl::Kernel(program, "copyFromContext");
+    translateKernel = cl::Kernel(program, "applyCellTranslations");
 }
 
 void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -116,6 +118,9 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
         stepKernel.setArg(6, numCopies*sizeof(mm_float2), NULL);
         velocitiesKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
         velocitiesKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
+        translateKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+        translateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+        translateKernel.setArg<cl::Buffer>(2, cl.getAtomIndex().getDeviceBuffer());
     }
     
     // Loop over copies and compute the force on each one.
@@ -126,15 +131,8 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     copyFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndex().getDeviceBuffer());
-    if (!forcesAreValid) {
-        for (int i = 0; i < numCopies; i++) {
-            copyToContextKernel.setArg<cl_int>(3, i);
-            cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
-            context.calcForcesAndEnergy(true, false);
-            copyFromContextKernel.setArg<cl_int>(3, i);
-            cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
-        }
-    }
+    if (!forcesAreValid)
+        computeForces(context);
     
     // Apply the PILE-L thermostat.
     
@@ -153,13 +151,7 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
     // Calculate forces based on the updated positions.
     
-    for (int i = 0; i < numCopies; i++) {
-        copyToContextKernel.setArg<cl_int>(3, i);
-        cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
-        context.calcForcesAndEnergy(true, false);
-        copyFromContextKernel.setArg<cl_int>(3, i);
-        cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
-    }
+    computeForces(context);
     
     // Update velocities.
     velocitiesKernel.setArg<cl_float>(2, dt);
@@ -174,6 +166,23 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
     cl.setTime(cl.getTime()+dt);
     cl.setStepCount(cl.getStepCount()+1);
+}
+
+void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
+    for (int i = 0; i < numCopies; i++) {
+        copyToContextKernel.setArg<cl_int>(3, i);
+        cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+        context.calcForcesAndEnergy(true, false);
+        copyFromContextKernel.setArg<cl_int>(3, i);
+        cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
+        if (cl.getAtomsWereReordered() && cl.getNonbondedUtilities().getUsePeriodic()) {
+            // Atoms may have been translated into a different periodic box, so apply
+            // the same translation to all the beads.
+            
+            translateKernel.setArg<cl_int>(3, i);
+            cl.executeKernel(translateKernel, cl.getNumAtoms());
+        }
+    }
 }
 
 void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {

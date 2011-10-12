@@ -445,6 +445,18 @@ public:
         return *thread;
     }
     /**
+     * Get whether atoms were reordered during the most recent force/energy computation.
+     */
+    bool getAtomsWereReordered() const {
+        return atomsWereReordered;
+    }
+    /**
+     * Set whether atoms were reordered during the most recent force/energy computation.
+     */
+    void setAtomsWereReordered(bool wereReordered) {
+        atomsWereReordered = wereReordered;
+    }
+    /**
      * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
      * together in the arrays.
      */
@@ -466,7 +478,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics;
+    bool supports64BitGlobalAtomics, atomsWereReordered;
     mm_float4 periodicBoxSize;
     mm_float4 invPeriodicBoxSize;
     std::string defaultOptimizationOptions;

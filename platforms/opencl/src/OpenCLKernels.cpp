@@ -79,6 +79,7 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    cl.setAtomsWereReordered(false);
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0) {
         cl.reorderAtoms();
         cl.getNonbondedUtilities().updateNeighborListSize();
