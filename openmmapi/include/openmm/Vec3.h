@@ -66,6 +66,14 @@ public:
         assert(index >= 0 && index < 3);
         return data[index];
     }
+
+    bool operator==(const Vec3& rhs) const {
+        return (data[0] == rhs[0] && data[1] == rhs[1] && data[2] == rhs[2]);
+    }
+
+    bool operator!=(const Vec3& rhs) const {
+        return (data[0] != rhs[0] || data[1] != rhs[1] || data[2] != rhs[2]);
+    }
     
     // Arithmetic operators
     
