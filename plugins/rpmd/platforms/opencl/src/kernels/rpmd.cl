@@ -35,7 +35,7 @@ __kernel void applyPileThermostat(__global float4* velm, __local float4* v, __lo
     if (get_local_id(0) < NUM_COPIES)
         w[indexInBlock] = (float2) (cos(-indexInBlock*2*M_PI/NUM_COPIES), sin(-indexInBlock*2*M_PI/NUM_COPIES));
     barrier(CLK_LOCAL_MEM_FENCE);
-    randomIndex += blockStart;
+    randomIndex += NUM_COPIES*(get_global_id(0)/NUM_COPIES);
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         float4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
         float invMass = particleVelm.w;
