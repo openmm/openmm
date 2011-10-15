@@ -349,14 +349,14 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
         newSize = numTiles;
     delete interactingTiles;
     interactingTiles = new OpenCLArray<mm_ushort2>(context, newSize, "interactingTiles");
-    forceKernel.setArg<cl::Buffer>(10, interactingTiles->getDeviceBuffer());
-    forceKernel.setArg<cl_uint>(14, newSize);
+    forceKernel.setArg<cl::Buffer>(9, interactingTiles->getDeviceBuffer());
+    forceKernel.setArg<cl_uint>(13, newSize);
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(9, newSize);
     if (context.getSIMDWidth() == 32 || deviceIsCpu) {
         delete interactionFlags;
         interactionFlags = new OpenCLArray<cl_uint>(context, deviceIsCpu ? 2*newSize : newSize, "interactionFlags");
-        forceKernel.setArg<cl::Buffer>(15, interactionFlags->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(14, interactionFlags->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, interactingTiles->getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
