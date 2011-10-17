@@ -590,12 +590,13 @@ void OpenCLContext::reorderAtoms() {
     }
     else {
         for (int i = 1; i < numAtoms; i++) {
-            minx = min(minx, posq->get(i).x);
-            maxx = max(maxx, posq->get(i).x);
-            miny = min(miny, posq->get(i).y);
-            maxy = max(maxy, posq->get(i).y);
-            minz = min(minz, posq->get(i).z);
-            maxz = max(maxz, posq->get(i).z);
+            const mm_float4& pos = posq->get(i);
+            minx = min(minx, pos.x);
+            maxx = max(maxx, pos.x);
+            miny = min(miny, pos.y);
+            maxy = max(maxy, pos.y);
+            minz = min(minz, pos.z);
+            maxz = max(maxz, pos.z);
         }
     }
 
@@ -612,27 +613,29 @@ void OpenCLContext::reorderAtoms() {
         int numMolecules = mol.instances.size();
         vector<int>& atoms = mol.atoms;
         vector<mm_float4> molPos(numMolecules);
+        float invNumAtoms = 1.0f/atoms.size();
         for (int i = 0; i < numMolecules; i++) {
             molPos[i].x = 0.0f;
             molPos[i].y = 0.0f;
             molPos[i].z = 0.0f;
             for (int j = 0; j < (int)atoms.size(); j++) {
                 int atom = atoms[j]+mol.instances[i];
-                molPos[i].x += posq->get(atom).x;
-                molPos[i].y += posq->get(atom).y;
-                molPos[i].z += posq->get(atom).z;
+                const mm_float4& pos = posq->get(atom);
+                molPos[i].x += pos.x;
+                molPos[i].y += pos.y;
+                molPos[i].z += pos.z;
             }
-            molPos[i].x /= atoms.size();
-            molPos[i].y /= atoms.size();
-            molPos[i].z /= atoms.size();
+            molPos[i].x *= invNumAtoms;
+            molPos[i].y *= invNumAtoms;
+            molPos[i].z *= invNumAtoms;
         }
         if (nonbonded->getUsePeriodic()) {
             // Move each molecule position into the same box.
 
             for (int i = 0; i < numMolecules; i++) {
-                int xcell = (int) floor(molPos[i].x/periodicBoxSize.x);
-                int ycell = (int) floor(molPos[i].y/periodicBoxSize.y);
-                int zcell = (int) floor(molPos[i].z/periodicBoxSize.z);
+                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
+                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
+                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
                 float dx = xcell*periodicBoxSize.x;
                 float dy = ycell*periodicBoxSize.y;
                 float dz = zcell*periodicBoxSize.z;
@@ -663,14 +666,15 @@ void OpenCLContext::reorderAtoms() {
             binWidth = (float)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
             binWidth = (float)(0.2*nonbonded->getCutoffDistance());
-        int xbins = 1 + (int) ((maxx-minx)/binWidth);
-        int ybins = 1 + (int) ((maxy-miny)/binWidth);
+        float invBinWidth = 1.0f/binWidth;
+        int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
+        int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
         vector<pair<int, int> > molBins(numMolecules);
         bitmask_t coords[3];
         for (int i = 0; i < numMolecules; i++) {
-            int x = (int) ((molPos[i].x-minx)/binWidth);
-            int y = (int) ((molPos[i].y-miny)/binWidth);
-            int z = (int) ((molPos[i].z-minz)/binWidth);
+            int x = (int) ((molPos[i].x-minx)*invBinWidth);
+            int y = (int) ((molPos[i].y-miny)*invBinWidth);
+            int z = (int) ((molPos[i].z-minz)*invBinWidth);
             int bin;
             if (useHilbert) {
                 coords[0] = x;
