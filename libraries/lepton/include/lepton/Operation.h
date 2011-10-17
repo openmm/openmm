@@ -153,7 +153,7 @@ public:
     class Abs;
 };
 
-class Operation::Constant : public Operation {
+class LEPTON_EXPORT Operation::Constant : public Operation {
 public:
     Constant(double value) : value(value) {
     }
@@ -186,7 +186,7 @@ private:
     double value;
 };
 
-class Operation::Variable : public Operation {
+class LEPTON_EXPORT Operation::Variable : public Operation {
 public:
     Variable(const std::string& name) : name(name) {
     }
@@ -217,7 +217,7 @@ private:
     std::string name;
 };
 
-class Operation::Custom : public Operation {
+class LEPTON_EXPORT Operation::Custom : public Operation {
 public:
     Custom(const std::string& name, CustomFunction* function) : name(name), function(function), isDerivative(false), derivOrder(function->getNumArguments(), 0) {
     }
@@ -262,7 +262,7 @@ private:
     std::vector<int> derivOrder;
 };
 
-class Operation::Add : public Operation {
+class LEPTON_EXPORT Operation::Add : public Operation {
 public:
     Add() {
     }
@@ -290,7 +290,7 @@ public:
     }
 };
 
-class Operation::Subtract : public Operation {
+class LEPTON_EXPORT Operation::Subtract : public Operation {
 public:
     Subtract() {
     }
@@ -315,7 +315,7 @@ public:
     }
 };
 
-class Operation::Multiply : public Operation {
+class LEPTON_EXPORT Operation::Multiply : public Operation {
 public:
     Multiply() {
     }
@@ -343,7 +343,7 @@ public:
     }
 };
 
-class Operation::Divide : public Operation {
+class LEPTON_EXPORT Operation::Divide : public Operation {
 public:
     Divide() {
     }
@@ -368,7 +368,7 @@ public:
     }
 };
 
-class Operation::Power : public Operation {
+class LEPTON_EXPORT Operation::Power : public Operation {
 public:
     Power() {
     }
@@ -393,7 +393,7 @@ public:
     }
 };
 
-class Operation::Negate : public Operation {
+class LEPTON_EXPORT Operation::Negate : public Operation {
 public:
     Negate() {
     }
@@ -415,7 +415,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Sqrt : public Operation {
+class LEPTON_EXPORT Operation::Sqrt : public Operation {
 public:
     Sqrt() {
     }
@@ -437,7 +437,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Exp : public Operation {
+class LEPTON_EXPORT Operation::Exp : public Operation {
 public:
     Exp() {
     }
@@ -459,7 +459,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Log : public Operation {
+class LEPTON_EXPORT Operation::Log : public Operation {
 public:
     Log() {
     }
@@ -481,7 +481,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Sin : public Operation {
+class LEPTON_EXPORT Operation::Sin : public Operation {
 public:
     Sin() {
     }
@@ -503,7 +503,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Cos : public Operation {
+class LEPTON_EXPORT Operation::Cos : public Operation {
 public:
     Cos() {
     }
@@ -525,7 +525,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Sec : public Operation {
+class LEPTON_EXPORT Operation::Sec : public Operation {
 public:
     Sec() {
     }
@@ -547,7 +547,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Csc : public Operation {
+class LEPTON_EXPORT Operation::Csc : public Operation {
 public:
     Csc() {
     }
@@ -569,7 +569,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Tan : public Operation {
+class LEPTON_EXPORT Operation::Tan : public Operation {
 public:
     Tan() {
     }
@@ -591,7 +591,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Cot : public Operation {
+class LEPTON_EXPORT Operation::Cot : public Operation {
 public:
     Cot() {
     }
@@ -613,7 +613,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Asin : public Operation {
+class LEPTON_EXPORT Operation::Asin : public Operation {
 public:
     Asin() {
     }
@@ -635,7 +635,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Acos : public Operation {
+class LEPTON_EXPORT Operation::Acos : public Operation {
 public:
     Acos() {
     }
@@ -657,7 +657,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Atan : public Operation {
+class LEPTON_EXPORT Operation::Atan : public Operation {
 public:
     Atan() {
     }
@@ -679,7 +679,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Sinh : public Operation {
+class LEPTON_EXPORT Operation::Sinh : public Operation {
 public:
     Sinh() {
     }
@@ -701,7 +701,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Cosh : public Operation {
+class LEPTON_EXPORT Operation::Cosh : public Operation {
 public:
     Cosh() {
     }
@@ -723,7 +723,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Tanh : public Operation {
+class LEPTON_EXPORT Operation::Tanh : public Operation {
 public:
     Tanh() {
     }
@@ -745,7 +745,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Erf : public Operation {
+class LEPTON_EXPORT Operation::Erf : public Operation {
 public:
     Erf() {
     }
@@ -765,7 +765,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Erfc : public Operation {
+class LEPTON_EXPORT Operation::Erfc : public Operation {
 public:
     Erfc() {
     }
@@ -785,7 +785,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Step : public Operation {
+class LEPTON_EXPORT Operation::Step : public Operation {
 public:
     Step() {
     }
@@ -807,7 +807,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Square : public Operation {
+class LEPTON_EXPORT Operation::Square : public Operation {
 public:
     Square() {
     }
@@ -829,7 +829,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Cube : public Operation {
+class LEPTON_EXPORT Operation::Cube : public Operation {
 public:
     Cube() {
     }
@@ -851,7 +851,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Reciprocal : public Operation {
+class LEPTON_EXPORT Operation::Reciprocal : public Operation {
 public:
     Reciprocal() {
     }
@@ -873,7 +873,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::AddConstant : public Operation {
+class LEPTON_EXPORT Operation::AddConstant : public Operation {
 public:
     AddConstant(double value) : value(value) {
     }
@@ -906,7 +906,7 @@ private:
     double value;
 };
 
-class Operation::MultiplyConstant : public Operation {
+class LEPTON_EXPORT Operation::MultiplyConstant : public Operation {
 public:
     MultiplyConstant(double value) : value(value) {
     }
@@ -939,7 +939,7 @@ private:
     double value;
 };
 
-class Operation::PowerConstant : public Operation {
+class LEPTON_EXPORT Operation::PowerConstant : public Operation {
 public:
     PowerConstant(double value) : value(value) {
     }
@@ -975,7 +975,7 @@ private:
     double value;
 };
 
-class Operation::Min : public Operation {
+class LEPTON_EXPORT Operation::Min : public Operation {
 public:
     Min() {
     }
@@ -998,7 +998,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Max : public Operation {
+class LEPTON_EXPORT Operation::Max : public Operation {
 public:
     Max() {
     }
@@ -1021,7 +1021,7 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Abs : public Operation {
+class LEPTON_EXPORT Operation::Abs : public Operation {
 public:
     Abs() {
     }
