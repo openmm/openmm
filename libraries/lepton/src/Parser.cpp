@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/Operation.h"
 #include "lepton/ParsedExpression.h"
+#include <cctype>
 #include <iostream>
 
 using namespace Lepton;
@@ -67,11 +68,11 @@ string Parser::trim(const string& expression) {
     // Remove leading and trailing spaces.
     
     int start, end;
-    for (start = 0; start < (int) expression.size() && expression[start] == ' '; start++)
+    for (start = 0; start < (int) expression.size() && isspace(expression[start]); start++)
         ;
-    for (end = expression.size()-1; end > start && expression[end] == ' '; end--)
+    for (end = expression.size()-1; end > start && isspace(expression[end]); end--)
         ;
-    if (start == end && expression[end] == ' ')
+    if (start == end && isspace(expression[end]))
         return "";
     return expression.substr(start, end-start+1);
 }
@@ -86,11 +87,11 @@ ParseToken Parser::getNextToken(const string& expression, int start) {
         return ParseToken(",", ParseToken::Comma);
     if (Operators.find(c) != string::npos)
         return ParseToken(string(1, c), ParseToken::Operator);
-    if (c == ' ') {
+    if (isspace(c)) {
         // White space
 
         for (int pos = start+1; pos < (int) expression.size(); pos++) {
-            if (expression[pos] != ' ')
+            if (!isspace(expression[pos]))
                 return ParseToken(expression.substr(start, pos-start), ParseToken::Whitespace);
         }
         return ParseToken(expression.substr(start, string::npos), ParseToken::Whitespace);
@@ -126,7 +127,7 @@ ParseToken Parser::getNextToken(const string& expression, int start) {
         c = expression[pos];
         if (c == '(')
             return ParseToken(expression.substr(start, pos-start+1), ParseToken::Function);
-        if (Operators.find(c) != string::npos || c == ',' || c == ')' || c == ' ')
+        if (Operators.find(c) != string::npos || c == ',' || c == ')' || isspace(c))
             return ParseToken(expression.substr(start, pos-start), ParseToken::Variable);
     }
     return ParseToken(expression.substr(start, string::npos), ParseToken::Variable);
