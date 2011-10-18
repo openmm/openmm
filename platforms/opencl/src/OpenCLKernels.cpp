@@ -1746,7 +1746,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float", 4, sizeof(cl_float4), tabulatedFunctionParams->getDeviceBuffer()));
-        tableArgs << ", __constant float4* " << prefix << "functionParams";
+        tableArgs << ", __global const float4* " << prefix << "functionParams";
     }
 
     // Record the global parameters.
@@ -1834,7 +1834,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_VALUE"] = n2ValueSource.str();
         stringstream extraArgs, loadLocal1, loadLocal2, load1, load2;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", __constant float* globals";
+            extraArgs << ", __global const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
@@ -1881,7 +1881,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream reductionSource, extraArgs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", __constant float* globals";
+            extraArgs << ", __global const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
@@ -1906,7 +1906,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             variables[computedValueNames[i-1]] = "local_values"+computedValues->getParameterSuffix(i-1);
             map<string, Lepton::ParsedExpression> valueExpressions;
             valueExpressions["local_values"+computedValues->getParameterSuffix(i)+" = "] = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
-            reductionSource << OpenCLExpressionUtilities::createExpressions(valueExpressions, variables, functionDefinitions, "value"+intToString(i)+"_temp", "functionParams");
+            reductionSource << OpenCLExpressionUtilities::createExpressions(valueExpressions, variables, functionDefinitions, "value"+intToString(i)+"_temp", prefix+"functionParams");
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             string valueName = "values"+intToString(i+1);
@@ -1974,7 +1974,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_INTERACTION"] = n2EnergySource.str();
         stringstream extraArgs, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2, declareTemps, setTemps;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", __constant float* globals";
+            extraArgs << ", __global const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
@@ -2065,7 +2065,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream compute, extraArgs, reduce;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", __constant float* globals";
+            extraArgs << ", __global const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
@@ -2144,7 +2144,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream compute, extraArgs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", __constant float* globals";
+            extraArgs << ", __global const float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
