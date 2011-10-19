@@ -45,7 +45,7 @@ void NonbondedSoftcoreForceProxy::serialize(const void* object, SerializationNod
     const NonbondedSoftcoreForce& force = *reinterpret_cast<const NonbondedSoftcoreForce*>(object);
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
-    node.setDoubleProperty("ewaldTolerance", force.getEwaldErrorTolerance());
+    //node.setDoubleProperty("ewaldTolerance", force.getEwaldErrorTolerance());
     node.setDoubleProperty("rfDielectric", force.getReactionFieldDielectric());
     //node.setIntProperty("dispersionCorrection", force.getUseDispersionCorrection());
     SerializationNode& particles = node.createChildNode("Particles");
@@ -64,13 +64,13 @@ void NonbondedSoftcoreForceProxy::serialize(const void* object, SerializationNod
 }
 
 void* NonbondedSoftcoreForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    if (node.getIntProperty("version") != 1 )
         throw OpenMMException("Unsupported version number");
     NonbondedSoftcoreForce* force = new NonbondedSoftcoreForce();
     try {
         force->setNonbondedMethod((NonbondedSoftcoreForce::NonbondedSoftcoreMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
+        //force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
         //force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
         const SerializationNode& particles = node.getChildNode("Particles");

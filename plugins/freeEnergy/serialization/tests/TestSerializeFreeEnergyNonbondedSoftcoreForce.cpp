@@ -45,7 +45,7 @@ void testSerialization() {
     NonbondedSoftcoreForce force;
     force.setNonbondedMethod(NonbondedSoftcoreForce::CutoffPeriodic);
     force.setCutoffDistance(2.0);
-    force.setEwaldErrorTolerance(1e-3);
+    //force.setEwaldErrorTolerance(1e-3);
     force.setReactionFieldDielectric(50.0);
     //force.setUseDispersionCorrection(false);
     force.addParticle(1, 0.1, 0.01);
@@ -65,7 +65,7 @@ void testSerialization() {
     NonbondedSoftcoreForce& force2 = *copy;
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
-    ASSERT_EQUAL(force.getEwaldErrorTolerance(), force2.getEwaldErrorTolerance());
+    //ASSERT_EQUAL(force.getEwaldErrorTolerance(), force2.getEwaldErrorTolerance());
     ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());
     //ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());

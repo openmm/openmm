@@ -49,7 +49,7 @@ void testSerialization() {
     force.setSolventDielectric(50.0);
     force.setQuinticLowerLimitFactor(0.1);
     force.setQuinticUpperBornRadiusLimit(5.1);
-    force.setTanhParameters(5.1, 4.2, 1.3);
+    //force.setTanhParameters(5.1, 4.2, 1.3);
     
     force.addParticle(1, 0.1, 0.01, 0.1);
     force.addParticle(0.5, 0.2, 0.02, 0.2);
@@ -73,6 +73,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getQuinticLowerLimitFactor(), force2.getQuinticLowerLimitFactor());
     ASSERT_EQUAL(force.getQuinticUpperBornRadiusLimit(), force2.getQuinticUpperBornRadiusLimit());
     ASSERT_EQUAL(force.getBornRadiusScalingMethod(), force2.getBornRadiusScalingMethod());
+/*
     double alpha1, beta1, gamma1;
     double alpha2, beta2, gamma2;
     force.getTanhParameters( alpha1, beta1, gamma1 );
@@ -80,6 +81,7 @@ void testSerialization() {
     ASSERT_EQUAL(alpha1, alpha2);
     ASSERT_EQUAL(beta1, beta2);
     ASSERT_EQUAL(gamma1, gamma2);
+*/
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge1, radius1, scale1, bornRadiusScaleFactor1;
