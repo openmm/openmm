@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 
-
+#include "openmm/internal/windowsExport.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -109,6 +109,7 @@ typedef enum fftpack_direction
  *  \return status - 0 or a standard error message.
  */
 int
+OPENMM_EXPORT
 fftpack_init_1d        (fftpack_t *       fft,
                         int               nx);
 
@@ -124,6 +125,7 @@ fftpack_init_1d        (fftpack_t *       fft,
  *
  */
 int
+OPENMM_EXPORT
 fftpack_init_2d        (fftpack_t *         fft,
                         int                 nx,
                         int                 ny);
@@ -142,6 +144,7 @@ fftpack_init_2d        (fftpack_t *         fft,
  *
  */
 int
+OPENMM_EXPORT
 fftpack_init_3d        (fftpack_t *         fft,
                         int                 nx,
                         int                 ny,
@@ -167,6 +170,7 @@ fftpack_init_3d        (fftpack_t *         fft,
  *       depending on your grid type.
  */
 int
+OPENMM_EXPORT
 fftpack_exec_1d          (fftpack_t                  setup,
                           enum fftpack_direction     dir,
                           t_complex *                in_data,
@@ -189,6 +193,7 @@ fftpack_exec_1d          (fftpack_t                  setup,
  *       depending on your grid type.
  */
 int
+OPENMM_EXPORT
 fftpack_exec_2d          (fftpack_t                  setup,
                           enum fftpack_direction     dir,
                           t_complex *                in_data,
@@ -212,6 +217,7 @@ fftpack_exec_2d          (fftpack_t                  setup,
  *       depending on your grid type.
  */
 int
+OPENMM_EXPORT
 fftpack_exec_3d          (fftpack_t                  setup,
                           enum fftpack_direction     dir,
                           t_complex *                in_data,
@@ -227,6 +233,7 @@ fftpack_exec_3d          (fftpack_t                  setup,
  *
  */
 void
+OPENMM_EXPORT
 fftpack_destroy          (fftpack_t                 setup);
 
 
