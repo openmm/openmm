@@ -43,6 +43,9 @@ void testSerialization() {
 
     GBVIForce force;
     force.setNonbondedMethod(GBVIForce::CutoffPeriodic);
+    force.setBornRadiusScalingMethod(GBVIForce::QuinticSpline);
+    force.setQuinticLowerLimitFactor(0.123);
+    force.setQuinticUpperBornRadiusLimit(5.123);
     force.setCutoffDistance(2.0);
     force.setSoluteDielectric(5.1);
     force.setSolventDielectric(50.0);
@@ -66,6 +69,9 @@ void testSerialization() {
     ASSERT_EQUAL(force.getSoluteDielectric(), force2.getSoluteDielectric());
     ASSERT_EQUAL(force.getSolventDielectric(), force2.getSolventDielectric());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    ASSERT_EQUAL(force.getQuinticUpperBornRadiusLimit(), force2.getQuinticUpperBornRadiusLimit());
+    ASSERT_EQUAL(force.getQuinticLowerLimitFactor(), force2.getQuinticLowerLimitFactor());
+    ASSERT_EQUAL(force.getBornRadiusScalingMethod(), force2.getBornRadiusScalingMethod());
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge1, radius1, scale1;
         double charge2, radius2, scale2;

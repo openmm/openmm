@@ -42,9 +42,12 @@ GBVIForceProxy::GBVIForceProxy() : SerializationProxy("GBVIForce") {
 }
 
 void GBVIForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
+    node.setIntProperty("version", 2);
     const GBVIForce& force = *reinterpret_cast<const GBVIForce*>(object);
     node.setIntProperty("method", (int) force.getNonbondedMethod());
+    node.setIntProperty("scalingMethod", (int) force.getBornRadiusScalingMethod());
+    node.setDoubleProperty("quinticLowerLimitFactor", force.getQuinticLowerLimitFactor());
+    node.setDoubleProperty("quinticUpperBornRadiusLimit", force.getQuinticUpperBornRadiusLimit());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     node.setDoubleProperty("soluteDielectric", force.getSoluteDielectric());
     node.setDoubleProperty("solventDielectric", force.getSolventDielectric());
@@ -64,7 +67,7 @@ void GBVIForceProxy::serialize(const void* object, SerializationNode& node) cons
 }
 
 void* GBVIForceProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
+    if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
         throw OpenMMException("Unsupported version number");
     GBVIForce* force = new GBVIForce();
     try {
@@ -72,6 +75,13 @@ void* GBVIForceProxy::deserialize(const SerializationNode& node) const {
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setSoluteDielectric(node.getDoubleProperty("soluteDielectric"));
         force->setSolventDielectric(node.getDoubleProperty("solventDielectric"));
+
+        if( node.getIntProperty("version") >= 2 ){
+            force->setBornRadiusScalingMethod( (GBVIForce::BornRadiusScalingMethod) node.getIntProperty( "scalingMethod"));
+            force->setQuinticLowerLimitFactor(node.getDoubleProperty("quinticLowerLimitFactor"));
+            force->setQuinticUpperBornRadiusLimit(node.getDoubleProperty("quinticUpperBornRadiusLimit"));
+        }
+
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];
