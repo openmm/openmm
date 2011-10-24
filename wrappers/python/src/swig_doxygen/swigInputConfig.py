@@ -414,6 +414,7 @@ UNITS = {
 ("GBVIForce", "getParticleParameters")
  : (None, ('unit.elementary_charge',
            'unit.nanometer', 'unit.kilojoule_per_mole')),
+("GBSAOBCSoftcoreForce", "getNonbondedMethod") : (None, ()),
 ("GBSAOBCSoftcoreForce", "getParticleParameters")
  : (None, ('unit.elementary_charge', 'unit.nanometer',
            'unit.dimensionless', 'unit.dimensionless')),
@@ -428,7 +429,6 @@ UNITS = {
 ("GBVISoftcoreForce", "getBornRadiusScalingMethod") : (None, ()),
 ("GBVISoftcoreForce", "getQuinticLowerLimitFactor") : (None, ()),
 ("GBVISoftcoreForce", "getQuinticUpperBornRadiusLimit") : ('unit.nanometer',()),
-("GBVISoftcoreForce", "getTanhParameters") : (None, ()),
 ("HarmonicAngleForce", "getAngleParameters")
  : (None, (None, None, None, 'unit.radian',
            'unit.kilojoule_per_mole/(unit.radian*unit.radian)')),
