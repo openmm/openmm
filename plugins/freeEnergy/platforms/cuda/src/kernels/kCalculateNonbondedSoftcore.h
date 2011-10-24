@@ -25,35 +25,31 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This file contains the kernels for evalauating nonbonded forces.  It is included
- * several times in kCalculateCDLJForces.cu with different #defines to generate
+ * This file contains the kernels for evaluating nonbonded softcore forces.  It is included
+ * several times in kCalculateNonbondedSoftcore.cu with different #defines to generate
  * different versions of the kernels.
  */
 
-#ifdef USE_SOFTCORE_LJ
-#include "kSoftcoreLJ.h"
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
-
-/* Cuda compiler on Windows does not recognized "static const float" values */
-#define LOCAL_HACK_PI 3.1415926535897932384626433832795f
-
-//__global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit, float* softCoreLJLambdaArray)
-__global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
+void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos          = warp*numWorkUnits/totalWarps;
+    unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
     float CDLJ_energy;
-    float energy = 0.0f;
+    float energy              = 0.0f;
 #ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
-#endif
-
-#ifdef USE_EWALD
-    const float TWO_OVER_SQRT_PI = 2.0f/sqrt(LOCAL_HACK_PI);
+    float3* tempBuffer        = (float3*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
@@ -75,16 +71,17 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
         float sig;
         float eps;
         float dEdR;
-        unsigned int tgx = threadIdx.x & (GRID - 1);
-        unsigned int tbx = threadIdx.x - tgx;
-        unsigned int tj = tgx;
-        Atom* psA = &sA[tbx];
+
+        unsigned int tgx             = threadIdx.x & (GRID - 1);
+        unsigned int tbx             = threadIdx.x - tgx;
+        unsigned int tj              = tgx;
+
+        Atom* psA                    = &sA[tbx];
         unsigned int i               = x + tgx;
+
         apos                         = cSim.pPosq[i];
-        float2 a                     = cSim.pAttr[i];
-        //float softCoreLJLambda       = cSim.pSoftCoreLJLambda[i];
-        //float softCoreLJLambda       = softCoreLJLambdaArray[i];
-        float softCoreLJLambda       = feSimDev.pParticleSoftCoreLJLambda[i];
+        float4 a                     = feSimDev.pSigEps4[i];
+        float softCoreLJLambda       = a.z;
         af.x                         = 0.0f;
         af.y                         = 0.0f;
         af.z                         = 0.0f;
@@ -94,11 +91,11 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
             sA[threadIdx.x].x                     = apos.x;
             sA[threadIdx.x].y                     = apos.y;
             sA[threadIdx.x].z                     = apos.z;
-            sA[threadIdx.x].q                     = apos.w;
+            sA[threadIdx.x].q                     = a.w;
             sA[threadIdx.x].sig                   = a.x;
             sA[threadIdx.x].eps                   = a.y;
-            sA[threadIdx.x].softCoreLJLambda      = softCoreLJLambda;
-            apos.w                               *= cSim.epsfac;
+            sA[threadIdx.x].softCoreLJLambda      = a.z;
+            a.w                                  *= cSim.epsfac;
             if (!bExclusionFlag)
             {
                 for (unsigned int j = 0; j < GRID; j++)
@@ -107,9 +104,9 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
                     dy              = psA[j].y - apos.y;
                     dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx             -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy             -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz             -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
                     invR            = 1.0f / sqrt(r2);
@@ -126,33 +123,20 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
 #endif
 
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r         = sqrt(r2);
-                    float alphaR    = cSim.alphaEwald * r;
-                    float erfcAlphaR = fastErfc(alphaR);
-                    dEdR           += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI );
-		              /* E */
-                    CDLJ_energy    += apos.w * psA[j].q * invR * erfcAlphaR;
-    #else
-                    dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-		              /* E */
-		              CDLJ_energy    += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                    dEdR           += a.w * psA[j].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+		              CDLJ_energy    += a.w * psA[j].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
-                    dEdR           += apos.w * psA[j].q * invR;
-		              /* E */
-		              CDLJ_energy    += apos.w * psA[j].q * invR;
+                    dEdR           += a.w * psA[j].q * invR;
+		              CDLJ_energy    += a.w * psA[j].q * invR;
 #endif
                     dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
                     if (r2 > cSim.nonbondedCutoffSqr)
                     {
-                        dEdR = 0.0f;
-                        /* E */
+                        dEdR        = 0.0f;
                         CDLJ_energy = 0.0f;
                     }
 #endif
-		              /* E */
 		              energy         += 0.5f*CDLJ_energy;
                     dx             *= dEdR;
                     dy             *= dEdR;
@@ -161,21 +145,22 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
                     af.y           -= dy;
                     af.z           -= dz;
                 }
-            }
-            else  // bExclusion
-            {
+
+            } else  {
+
                 unsigned int xi   = x>>GRIDBITS;
-                unsigned int cell          = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int cell = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
+
                 for (unsigned int j = 0; j < GRID; j++)
                 {
                     dx              = psA[j].x - apos.x;
                     dy              = psA[j].y - apos.y;
                     dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx             -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy             -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz             -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
                     invR            = 1.0f / sqrt(r2);
@@ -188,53 +173,27 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
                     sig2           *= sig2;
                     float sig6      = sig2 * sig2 * sig2;
                     dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
-		              /* E */
                     CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #endif
 
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r         = sqrt(r2);
-                    float alphaR    = cSim.alphaEwald * r;
-                    float erfcAlphaR = fastErfc(alphaR);
-                    dEdR           += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                    /* E */
-		              CDLJ_energy    += apos.w * psA[j].q * invR * erfcAlphaR;
-                    bool needCorrection = !(excl & 0x1) && x+tgx != y+j && x+tgx < cSim.atoms && y+j < cSim.atoms;
-                    if (needCorrection)
-                    {   
-                        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
-
-                        dEdR        = -apos.w * psA[j].q * invR * ((1.0f-erfcAlphaR) - alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJ_energy = -apos.w * psA[j].q * invR * (1.0f-erfcAlphaR);
-                    }   
-
-    #else
-                    dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                    /* E */
-		              CDLJ_energy    += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                    dEdR           += a.w * psA[j].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+		              CDLJ_energy    += a.w * psA[j].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
-                    dEdR           += apos.w * psA[j].q * invR;
-                    /* E */
-		              CDLJ_energy    += apos.w * psA[j].q * invR;
+                    dEdR           += a.w * psA[j].q * invR;
+		              CDLJ_energy    += a.w * psA[j].q * invR;
 #endif
                     dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    if ((!(excl & 0x1) && !needCorrection) || r2 > cSim.nonbondedCutoffSqr)
-    #else
                     if (!(excl & 0x1) || r2 > cSim.nonbondedCutoffSqr)
-    #endif
 #else
                     if (!(excl & 0x1))
 #endif
                     {
                         dEdR = 0.0f;
-                			/* E */
 		                  CDLJ_energy  = 0.0f;
                     }
-		              /* E */
+
                     energy         += 0.5f*CDLJ_energy;
                     dx             *= dEdR;
                     dy             *= dEdR;
@@ -249,7 +208,7 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                          = x + tgx + warp*cSim.stride;
+            unsigned int offset                 = x + tgx + warp*cSim.stride;
             of                                  = cSim.pForce4[offset];
             of.x                               += af.x;
             of.y                               += af.y;
@@ -260,25 +219,26 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
             of.y                                = af.y;
             of.z                                = af.z;
             of.w                                = 0.0f;
-            unsigned int offset                          = x + tgx + (x >> GRIDBITS) * cSim.stride;
+            unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pForce4[offset]                = of;
 #endif
-        }
-        else        // 100% utilization
-        {
+
+        } else {
+
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
                 unsigned int j                   = y + tgx;
                 float4 temp                      = cSim.pPosq[j];
-                float2 temp1                     = cSim.pAttr[j];
+                //float2 temp1                     = cSim.pAttr[j];
+                float4 temp1                     = feSimDev.pSigEps4[j];
                 //float  temp3                     = cSim.pSoftCoreLJLambda[j];
                 //float  temp3                     = softCoreLJLambdaArray[j];
-                float temp3                      = feSimDev.pParticleSoftCoreLJLambda[j];
+                float temp3                      = temp1.z;
                 sA[threadIdx.x].x                = temp.x;
                 sA[threadIdx.x].y                = temp.y;
                 sA[threadIdx.x].z                = temp.z;
-                sA[threadIdx.x].q                = temp.w;
+                sA[threadIdx.x].q                = temp1.w;
                 sA[threadIdx.x].sig              = temp1.x;
                 sA[threadIdx.x].eps              = temp1.y;
                 sA[threadIdx.x].softCoreLJLambda = temp3;
@@ -286,7 +246,7 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
             sA[threadIdx.x].fx      = 0.0f;
             sA[threadIdx.x].fy      = 0.0f;
             sA[threadIdx.x].fz      = 0.0f;
-            apos.w                 *= cSim.epsfac;
+            a.w                *= cSim.epsfac;
             if (!bExclusionFlag)
             {
 #ifdef USE_CUTOFF
@@ -324,33 +284,21 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
 			               CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #endif
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                        float r         = sqrt(r2);
-                        float alphaR    = cSim.alphaEwald * r;
-                        float erfcAlphaR = fastErfc(alphaR);
-                        dEdR           += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        /* E */
-                        CDLJ_energy    += apos.w * psA[tj].q * invR * erfcAlphaR;
-    #else
-                        dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-			/* E */
-                        CDLJ_energy    += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                        dEdR           += a.w * psA[tj].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                        CDLJ_energy    += a.w * psA[tj].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
-                        dEdR           += apos.w * psA[tj].q * invR;
-                        /* E */
-                        CDLJ_energy    += apos.w * psA[tj].q * invR;
+                        dEdR           += a.w * psA[tj].q * invR;
+                        CDLJ_energy    += a.w * psA[tj].q * invR;
 #endif
                         dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
                         if (r2 > cSim.nonbondedCutoffSqr)
                         {
                             dEdR = 0.0f;
-			                   /* E */
        			             CDLJ_energy = 0.0f;
                         }
 #endif
-			               /* E */
+
 			               energy         += CDLJ_energy;
                         dx             *= dEdR;
                         dy             *= dEdR;
@@ -392,36 +340,23 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
                             sig2           *= sig2;
                             float sig6      = sig2 * sig2 * sig2;
                             dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
-			                   /* E */
                 			    CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #endif
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                            float r         = sqrt(r2);
-                            float alphaR    = cSim.alphaEwald * r;
-                            float erfcAlphaR = fastErfc(alphaR);
-                            dEdR           += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                            CDLJ_energy    += apos.w * psA[j].q * invR * erfcAlphaR;
-    #else
-                            dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                            /* E */
-                            CDLJ_energy    += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                            dEdR           += a.w * psA[j].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                            CDLJ_energy    += a.w * psA[j].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
-                            dEdR           += apos.w * psA[j].q * invR;
-                            /* E */
-                            CDLJ_energy    += apos.w * psA[j].q * invR;
+                            dEdR           += a.w * psA[j].q * invR;
+                            CDLJ_energy    += a.w * psA[j].q * invR;
 #endif
                             dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
                             if (r2 > cSim.nonbondedCutoffSqr)
                             {
                                 dEdR = 0.0f;
-				                    /* E */
 				                    CDLJ_energy = 0.0f;
                             }
 #endif
-			                   /* E */
 			                   energy         += CDLJ_energy;
                             dx             *= dEdR;
                             dy             *= dEdR;
@@ -499,52 +434,27 @@ __global__ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int*
                     sig2           *= sig2;
                     float sig6      = sig2 * sig2 * sig2;
                     dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
-		              /* E */
 		              CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #endif
 
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r         = sqrt(r2);
-                    float alphaR    = cSim.alphaEwald * r;
-                    float erfcAlphaR = fastErfc(alphaR);
-                    dEdR           += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                    /* E */
-                    CDLJ_energy    += apos.w * psA[tj].q * invR * erfcAlphaR;
-                    bool needCorrection = !(excl & 0x1) && x+tgx != y+tj && x+tgx < cSim.atoms && y+tj < cSim.atoms;
-                    if (needCorrection)
-                    {
-                        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
-
-                        dEdR        = -apos.w * psA[tj].q * invR * ((1.0f-erfcAlphaR) - alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJ_energy = -apos.w * psA[tj].q * invR * (1.0f-erfcAlphaR);
-                    }
-    #else
-                    dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                    /* E */
-	                 CDLJ_energy    += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                    dEdR           += a.w * psA[tj].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+	                 CDLJ_energy    += a.w * psA[tj].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
-                    dEdR           += apos.w * psA[tj].q * invR;
-                    /* E */
-                    CDLJ_energy    += apos.w * psA[tj].q * invR;
+                    dEdR           += a.w * psA[tj].q * invR;
+                    CDLJ_energy    += a.w * psA[tj].q * invR;
 #endif
                     dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    if ((!(excl & 0x1) && !needCorrection) || r2 > cSim.nonbondedCutoffSqr)
-    #else
                     if (!(excl & 0x1) || r2 > cSim.nonbondedCutoffSqr)
-    #endif
 #else
                     if (!(excl & 0x1))
 #endif
                     {
                         dEdR = 0.0f;			
-                        /* E */
 	                     CDLJ_energy  = 0.0f;
                     }
-             	    /* E */
+
 		              energy         += CDLJ_energy;
                     dx             *= dEdR;
                     dy             *= dEdR;

@@ -38,7 +38,7 @@
 using namespace OpenMM;
 
 GBVISoftcoreForce::GBVISoftcoreForce() :  nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0),
-               scalingMethod(NoScaling), alpha(1.0), beta(0.8), gamma(4.85), quinticLowerLimitFactor(0.8), quinticUpperBornRadiusLimit(5.0) {
+               scalingMethod(QuinticSpline), alpha(1.0), beta(0.8), gamma(4.85), quinticLowerLimitFactor(0.8), quinticUpperBornRadiusLimit(5.0) {
 
 }
 
@@ -104,19 +104,6 @@ double GBVISoftcoreForce::getQuinticUpperBornRadiusLimit( void ) const {
 
 void GBVISoftcoreForce::setQuinticUpperBornRadiusLimit(double inputQuinticUpperBornRadiusLimit){
     quinticUpperBornRadiusLimit = inputQuinticUpperBornRadiusLimit;
-}
-
-void GBVISoftcoreForce::getTanhParameters( double& returnAlpha, double& returnBeta, double& returnGamma) const {
-    returnAlpha   = alpha;
-    returnBeta    = beta;
-    returnGamma   = gamma;
-    return;
-}
-
-void GBVISoftcoreForce::setTanhParameters(double inputAlpha, double inputBeta, double inputGamma){
-    alpha   = inputAlpha;
-    beta    = inputBeta;
-    gamma   = inputGamma;
 }
 
 int GBVISoftcoreForce::addBond(int particle1, int particle2, double bondLength) {

@@ -27,6 +27,7 @@
 #include "CudaFreeEnergyKernelFactory.h"
 #include "CudaFreeEnergyKernels.h"
 #include "openmm/freeEnergyKernels.h"
+#include "FreeEnergyCudaData.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include "kernels/GpuFreeEnergyCudaKernels.h"
@@ -51,18 +52,69 @@ extern "C" void registerKernelFactories() {
     }   
 }
 
+extern "C" OPENMMCUDA_EXPORT void registerFreeEnergyCudaKernelFactories( void ) { 
+    int hasCudaPlatform = 0;
+    for( int ii = 0; ii < Platform::getNumPlatforms() && hasCudaPlatform == 0; ii++ ){
+        Platform& platform = Platform::getPlatform(ii);
+        if( platform.getName() == "Cuda" ){
+            hasCudaPlatform = 1;
+        }   
+    }   
+    if( hasCudaPlatform == 0 ){
+        if (gpuIsAvailable() ){
+            Platform::registerPlatform(new CudaPlatform());
+        }   
+    }   
+    registerKernelFactories();
+}
+
+static std::map<ContextImpl*, FreeEnergyCudaData*> contextToFreeEnergyDataMap;
+
+// look up FreeEnergyCudaData for input contextImpl in contextToFreeEnergyDataMap
+
+extern "C" void* getFreeEnergyCudaData( ContextImpl& context ) { 
+    std::map<ContextImpl*, FreeEnergyCudaData*>::const_iterator mapIterator  = contextToFreeEnergyDataMap.find(&context);
+    if( mapIterator == contextToFreeEnergyDataMap.end() ){
+        return NULL;
+    } else {
+        return static_cast<void*>(mapIterator->second);
+    }   
+}
+
+// remove FreeEnergyCudaData from contextToFreeEnergyDataMap
+
+extern "C" void removeFreeEnergyCudaDataFromContextMap( void* inputContext ) { 
+    ContextImpl* context = static_cast<ContextImpl*>(inputContext);
+    contextToFreeEnergyDataMap.erase( context );
+    return;
+}
+
 KernelImpl* CudaFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
 
-    CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
+    // create FreeEnergyCudaData object if contextToFreeEnergyDataMap does not contain
+    // key equal to current context
+
+    FreeEnergyCudaData* freeEnergyCudaData;
+    std::map<ContextImpl*, FreeEnergyCudaData*>::const_iterator mapIterator  = contextToFreeEnergyDataMap.find(&context);
+
+    if( mapIterator == contextToFreeEnergyDataMap.end() ){
+        CudaPlatform::PlatformData& cudaPlatformData = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
+        freeEnergyCudaData                           = new FreeEnergyCudaData( cudaPlatformData );
+        contextToFreeEnergyDataMap[&context]         = freeEnergyCudaData;
+        //freeEnergyCudaData->setLog( stderr );
+        freeEnergyCudaData->setContextImpl( static_cast<void*>(&context) );
+    } else {
+        freeEnergyCudaData                           = mapIterator->second;
+    }
 
     if (name == CalcNonbondedSoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcNonbondedSoftcoreForceKernel(name, platform, data, context.getSystem());
+        return new CudaFreeEnergyCalcNonbondedSoftcoreForceKernel(name, platform, *freeEnergyCudaData, context.getSystem());
 
     if (name == CalcGBSAOBCSoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel(name, platform, data);
+        return new CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel(name, platform, *freeEnergyCudaData);
 
     if (name == CalcGBVISoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcGBVISoftcoreForceKernel(name, platform, data);
+        return new CudaFreeEnergyCalcGBVISoftcoreForceKernel(name, platform, *freeEnergyCudaData);
 
     throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
 }

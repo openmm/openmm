@@ -38,7 +38,7 @@ using namespace OpenMM;
 
 // units of nonPolarPrefactor are now kJ/mol/nm^2
 
-GBSAOBCSoftcoreForce::GBSAOBCSoftcoreForce() : solventDielectric(78.3), soluteDielectric(1.0), nonPolarPrefactor( 2.25936 ){
+GBSAOBCSoftcoreForce::GBSAOBCSoftcoreForce() :  nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0), nonPolarPrefactor( 2.25936 ){
 }
 
 int GBSAOBCSoftcoreForce::addParticle(double charge, double radius, double scalingFactor, double nonPolarScalingFactor) {
@@ -64,6 +64,22 @@ void GBSAOBCSoftcoreForce::setParticleParameters(int index, double charge, doubl
     particles[index].radius                 = radius;
     particles[index].scalingFactor          = scalingFactor;
     particles[index].nonPolarScalingFactor  = nonPolarScalingFactor;
+}
+
+GBSAOBCSoftcoreForce::NonbondedSoftcoreMethod GBSAOBCSoftcoreForce::getNonbondedMethod() const {
+    return nonbondedMethod;
+}
+
+void GBSAOBCSoftcoreForce::setNonbondedMethod(NonbondedSoftcoreMethod method) {
+    nonbondedMethod = method;
+}
+
+double GBSAOBCSoftcoreForce::getCutoffDistance() const {
+    return cutoffDistance;
+}
+
+void GBSAOBCSoftcoreForce::setCutoffDistance(double distance) {
+    cutoffDistance = distance;
 }
 
 ForceImpl* GBSAOBCSoftcoreForce::createImpl() {

@@ -86,16 +86,6 @@ public:
          * cutoff distance are modified using the reaction field method.
          */
         CutoffPeriodic = 2,
-        /**
-         * Periodic boundary conditions are used, and Ewald summation is used to compute the interaction of each particle
-         * with all periodic copies of every other particle.
-         */
-        Ewald = 3,
-        /**
-         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
-         * with all periodic copies of every other particle.
-         */
-        PME = 4
     };
 
     /**
@@ -132,20 +122,6 @@ public:
      * is NoCutoff, this value will have no effect.
      */
     void setCutoffDistance(double distance);
-    /**
-     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
-     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
-     * parameter so that the average error level will be less than the tolerance.  There is not a
-     * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
-     */
-    double getEwaldErrorTolerance() const;
-    /**
-     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
-     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
-     * parameter so that the average error level will be less than the tolerance.  There is not a
-     * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
-     */
-    void setEwaldErrorTolerance(double tol);
     /**
      * Get the dielectric constant to use for the solvent in the reaction field approximation.
      */

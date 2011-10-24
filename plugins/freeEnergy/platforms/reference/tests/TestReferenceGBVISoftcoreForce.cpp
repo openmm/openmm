@@ -106,7 +106,7 @@ void testSingleParticle() {
     system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
-    GBVISoftcoreForce* forceField = new GBVISoftcoreForce;
+    GBVISoftcoreForce* forceField = new GBVISoftcoreForce();
 
     double charge         = 1.0;
     double radius         = 0.15;
@@ -130,7 +130,7 @@ void testSingleParticle() {
     double tau            = (1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric());
 
     double bornEnergy     = (-charge*charge/(8*PI_M*eps0))*tau/bornRadius;
-    double nonpolarEnergy = -0.1*gamma*tau*std::pow( radius/bornRadius, 3.0);
+    double nonpolarEnergy = -gamma*tau*std::pow( radius/bornRadius, 3.0);
 
     double expectedE      = (bornEnergy+nonpolarEnergy); 
     double obtainedE      = state.getPotentialEnergy(); 

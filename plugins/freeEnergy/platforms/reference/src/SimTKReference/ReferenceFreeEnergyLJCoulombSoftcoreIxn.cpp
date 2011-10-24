@@ -161,11 +161,11 @@ void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtom
                                                                 RealOpenMM** atomParameters, int** exclusions,
                                                                 RealOpenMM* fixedParameters, vector<RealVec>& forces,
                                                                 RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
-
+   std::vector<RealOpenMM> de( numberOfAtoms, 0.0 );
    if (cutoff) {
        for (int i = 0; i < (int) neighborList->size(); i++) {
            OpenMM::AtomPair pair = (*neighborList)[i];
-           calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, totalEnergy);
+           calculateOneIxn(pair.first, pair.second, atomCoordinates, atomParameters, forces, totalEnergy, de);
        }
    } else {
 
@@ -185,7 +185,7 @@ void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtom
           for( int jj = ii+1; jj < numberOfAtoms; jj++ ){
 
              if( exclusionIndices[jj] != ii ){
-                 calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, totalEnergy);
+                 calculateOneIxn(ii, jj, atomCoordinates, atomParameters, forces, totalEnergy, de);
              }
           }
        }
@@ -206,9 +206,10 @@ void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePairIxn( int numberOfAtom
 
      --------------------------------------------------------------------------------------- */
 
-void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& atomCoordinates,
-                        RealOpenMM** atomParameters, vector<RealVec>& forces,
-                        RealOpenMM* totalEnergy ) const {
+void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj,
+                                                               vector<RealVec>& atomCoordinates,
+                                                               RealOpenMM** atomParameters, vector<RealVec>& forces,
+                                                               RealOpenMM* totalEnergy, std::vector<RealOpenMM>& de ) const {
 
     // ---------------------------------------------------------------------------------------
 
@@ -246,21 +247,28 @@ void ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, v
 
     RealOpenMM energy          = zero;
     RealOpenMM dEdR;
+    RealOpenMM dEdRx;
+    RealOpenMM dEdCol;
 
     if( minSoftCoreLJLambda < one ){
        calculateOneSoftCoreLJIxn( deltaR[0][ReferenceForce::RIndex], sig, eps, minSoftCoreLJLambda, &dEdR, &energy );
     } else {
        calculateOneLJIxn( inverseR, sig, eps, &dEdR, &energy );
     }
+    dEdRx = dEdR;
 
     // Coulomb
 
-    if (cutoff)
+    if (cutoff){
        dEdR       += atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2);
-    else
+       dEdCol      = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2);
+    } else {
        dEdR       += atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
+       dEdCol      = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
+    }
 
-    dEdR          *= inverseR*inverseR;
+    dEdCol *= inverseR*inverseR;
+    dEdR   *= inverseR*inverseR;
 
     // accumulate forces
 

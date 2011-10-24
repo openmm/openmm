@@ -25,13 +25,14 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaFreeEnergyKernels.h"
+#include "CudaForceInfo.h"
+
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
 #include "kernels/GpuFreeEnergyCudaKernels.h" 
-#include "kernels/GpuLJ14Softcore.h" 
 
 #include <cmath>
 #include <map>
@@ -201,13 +202,44 @@ static void getForceMap(const System& system, MapStringInt& forceMap, FILE* log)
      }
 }
 
+class CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const NonbondedSoftcoreForce& force) : force(force) {
+    }    
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2, softcoreLJLambda1, softcoreLJLambda2;
+        force.getParticleParameters(particle1, charge1, sigma1, epsilon1, softcoreLJLambda1);
+        force.getParticleParameters(particle2, charge2, sigma2, epsilon2, softcoreLJLambda2);
+        return (charge1 == charge2 && sigma1 == sigma2 && epsilon1 == epsilon2 && softcoreLJLambda1 == softcoreLJLambda2);
+    }    
+    int getNumParticleGroups() {
+        return force.getNumExceptions();
+    }    
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon, softcoreLJLambda;
+        force.getExceptionParameters(index, particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }    
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double chargeProd1, chargeProd2, sigma1, sigma2, epsilon1, epsilon2, softcoreLJLambda1, softcoreLJLambda2;
+        force.getExceptionParameters(group1, particle1, particle2, chargeProd1, sigma1, epsilon1, softcoreLJLambda1);
+        force.getExceptionParameters(group2, particle1, particle2, chargeProd2, sigma2, epsilon2, softcoreLJLambda2);
+        return (chargeProd1 == chargeProd2 && sigma1 == sigma2 && epsilon1 == epsilon2 && softcoreLJLambda1 == softcoreLJLambda2);
+    }    
+private:
+    const NonbondedSoftcoreForce& force;
+};
+
 CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::~CudaFreeEnergyCalcNonbondedSoftcoreForceKernel() {
-    if( log ){
-        (void) fprintf( log, "CudaFreeEnergyCalcNonbondedSoftcoreForceKernel destructor called.\n" );
-        (void) fflush( log );
+    if( 0 && data.getLog() ){
+        (void) fprintf( data.getLog(), "~CudaFreeEnergyCalcNonbondedSoftcoreForceKernel called.\n" );
+        (void) fflush( data.getLog() );
     }
-    delete gpuNonbondedSoftcore;
-    delete gpuLJ14Softcore;
+    data.decrementKernelCount();
 }
 
 void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& system, const NonbondedSoftcoreForce& force) {
@@ -218,15 +250,15 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
 
 // ---------------------------------------------------------------------------------------
 
-    if( log ){
-        (void) fprintf( log, "%s called.\n", methodName.c_str() );
-        (void) fflush( log );
+    if( data.getLog() ){
+        (void) fprintf( data.getLog(), "%s called.\n", methodName.c_str() );
+        (void) fflush( data.getLog() );
     }
 
     // check forces and relevant parameters
 
     MapStringInt forceMap;
-    getForceMap( system, forceMap, log);
+    getForceMap( system, forceMap, data.getLog() );
 
     int softcore        = 0;
     if( forceMap.find( GBSA_OBC_FORCE ) != forceMap.end() ){
@@ -253,7 +285,6 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
     setIncludeSoftcore( softcore );
 
     numParticles      = force.getNumParticles();
-    _gpuContext* gpu  = data.gpu;
 
     // Identify which exceptions are 1-4 interactions.
 
@@ -270,7 +301,7 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
 
     // Initialize nonbonded interactions.
     
-    {
+    if( numParticles > 0 ){
         std::vector<int> particle(numParticles);
         std::vector<float> c6(numParticles);
         std::vector<float> c12(numParticles);
@@ -295,89 +326,51 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
         }
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        gpuSetPeriodicBoxSize(gpu, static_cast<float>(boxVectors[0][0] ), static_cast<float>(boxVectors[1][1] ), static_cast<float>(boxVectors[2][2] ));
-        CudaNonbondedMethod method = NO_CUTOFF;
+        freeEnergyGpuSetPeriodicBoxSize( data.getFreeEnergyGpu(), static_cast<float>(boxVectors[0][0] ), static_cast<float>(boxVectors[1][1] ), static_cast<float>(boxVectors[2][2] ));
+
+        CudaFreeEnergyNonbondedMethod method = FREE_ENERGY_NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedSoftcoreForce::NoCutoff) {
-            throw OpenMMException( "NonbondedSoftcoreForce currently only handles NoCutoff option." );
-            //gpuSetNonbondedCutoff(gpu, static_cast<float>(force.getCutoffDistance() ), force.getReactionFieldDielectric());
-            method = CUTOFF;
+            method = FREE_ENERGY_CUTOFF;
         }
         if (force.getNonbondedMethod() == NonbondedSoftcoreForce::CutoffPeriodic) {
-            method = PERIODIC;
+            method = FREE_ENERGY_PERIODIC;
         }
-        if (force.getNonbondedMethod() == NonbondedSoftcoreForce::Ewald || force.getNonbondedMethod() == NonbondedSoftcoreForce::PME) {
-            double ewaldErrorTol = force.getEwaldErrorTolerance();
-            double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
-            double mx = boxVectors[0][0]/force.getCutoffDistance();
-            double my = boxVectors[1][1]/force.getCutoffDistance();
-            double mz = boxVectors[2][2]/force.getCutoffDistance();
-            double pi = 3.1415926535897932385;
-            int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-            int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-            int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-            if (force.getNonbondedMethod() == NonbondedSoftcoreForce::Ewald) {
-                if (kmaxx%2 == 0)
-                    kmaxx++;
-                if (kmaxy%2 == 0)
-                    kmaxy++;
-                if (kmaxz%2 == 0)
-                    kmaxz++;
-                //gpuSetEwaldParameters(gpu, static_cast<float>( alpha ), kmaxx, kmaxy, kmaxz);
-                method = EWALD;
-            }
-            else {
-                int gridSizeX = kmaxx*3;
-                int gridSizeY = kmaxy*3;
-                int gridSizeZ = kmaxz*3;
-                gridSizeX = ((gridSizeX+3)/4)*4;
-                gridSizeY = ((gridSizeY+3)/4)*4;
-                gridSizeZ = ((gridSizeZ+3)/4)*4;
-                //gpuSetPMEParameters(gpu, static_cast<float>( alpha ), gridSizeX, gridSizeY, gridSizeZ);
-                method = PARTICLE_MESH_EWALD;
-            }
-        }
-        data.nonbondedMethod = method;
 
         // setup parameters
 
-        gpuNonbondedSoftcore = gpuSetNonbondedSoftcoreParameters(gpu, 138.935485f, particle, c6, c12, q,
-                                                                 softcoreLJLambdaArray, symbol, exclusionList, method);
-
-        // Compute the Ewald self energy.
-
-        data.ewaldSelfEnergy = 0.0;
-        if (force.getNonbondedMethod() == NonbondedSoftcoreForce::Ewald || force.getNonbondedMethod() == NonbondedSoftcoreForce::PME) {
-            double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
-                for (int i = 0; i < numParticles; i++)
-                    data.ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
-        }
+        gpuSetNonbondedSoftcoreParameters( data.getFreeEnergyGpu(), 138.935485f, particle, c6, c12, q,
+                                           softcoreLJLambdaArray, symbol, exclusionList, method,
+                                           static_cast<float>(force.getCutoffDistance() ), static_cast<float>(force.getReactionFieldDielectric()));
     }
 
     // Initialize 1-4 nonbonded interactions.
-    
-    {
-        numExceptions = exceptions.size();
+
+    numExceptions = exceptions.size();
+    if( numExceptions > 0 ){
         std::vector<int> particle1(numExceptions);
         std::vector<int> particle2(numExceptions);
         std::vector<float> c6(numExceptions);
         std::vector<float> c12(numExceptions);
-        std::vector<float> q1(numExceptions);
-        std::vector<float> q2(numExceptions);
+        std::vector<float> qProd(numExceptions);
         std::vector<float> softcoreLJLambdaArray(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             double charge, sig, eps, softcoreLJLambda;
             force.getExceptionParameters(exceptions[i], particle1[i], particle2[i], charge, sig, eps, softcoreLJLambda);
             c6[i]                    = static_cast<float>( (4.0f*eps*powf(sig, 6.0f)) );
             c12[i]                   = static_cast<float>( (4.0f*eps*powf(sig, 12.0f)) );
-            q1[i]                    = static_cast<float>( charge );
-            q2[i]                    = 1.0f;
+            qProd[i]                 = static_cast<float>( charge );
             softcoreLJLambdaArray[i] = static_cast<float>( softcoreLJLambda );
         }
-        gpuLJ14Softcore = gpuSetLJ14SoftcoreParameters(gpu, 138.935485f, 1.0f, particle1, particle2, c6, c12, q1, q2, softcoreLJLambdaArray);
+        gpuSetLJ14SoftcoreParameters( data.getFreeEnergyGpu(), 138.935485f, particle1, particle2, c6, c12, qProd, softcoreLJLambdaArray);
+    } else if( data.getLog() ){
+        (void) fprintf( data.getLog(), "Mo nonbonded softcore exceptions.\n" );
+        (void) fflush( data.getLog() );
     }
+
+    data.getFreeEnergyGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
-double CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::execute( ContextImpl& context, bool includeForces, bool includeEnergy ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -385,49 +378,22 @@ double CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl& cont
 
 // ---------------------------------------------------------------------------------------
 
-    _gpuContext* gpu = data.gpu;
+    freeEnergyGpuContext gpu = data.getFreeEnergyGpu();
 
-    // write array, ... address's to board
-
-    if( setSim == 0 ){
-        setSim++;
-        if( log ){
-            (void) fprintf( log, "%s Obc=%d GB/VI=%d exceptions=%d\n",
-                            methodName.c_str(), getIncludeGBSA(), getIncludeGBVI(), getNumExceptions() );
-            (void) fflush( log );
-        }
-        SetCalculateCDLJSoftcoreGpuSim( gpu );
-        SetCalculateLocalSoftcoreGpuSim( gpu );
-
-        // flip strides (unsure if this is needed)
-
-#if 0
-        (void) fprintf( stderr, "flipping gpuLJ14Softcore\n" ); fflush( stderr );
-        GpuLJ14Softcore* gpuLJ14Softcore = getGpuLJ14Softcore( );
-        if( gpuLJ14Softcore ){
-            gpuLJ14Softcore->flipStrides( gpu );
-            if( log ){
-                (void) fprintf( log, "CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces flipping LJ14\n" );
-                (void) fflush( log );
-            }
-        }
-#endif
-
-    }
+    data.initializeGpu( );
  
     // calculate nonbonded ixns here, only if implicit solvent is inactive
 
     if ( !getIncludeGBSA() && !getIncludeGBVI() ) {
         kCalculateCDLJSoftcoreForces(gpu);
     }
-  
+
     // local LJ-14 forces
 
-//kPrintForces( gpu, "Pre  kCalculateLocalSoftcoreForces ", call );
-    kCalculateLocalSoftcoreForces(gpu);
-//kPrintForces( gpu, "Post kCalculateLocalSoftcoreForces ", call );
-//kPrintForces(gpu, "Post kCalculateLocalSoftcoreForces", call );
-//kReduceForces(gpu);
+    if( getNumExceptions() > 0 ){
+        kCalculateLocalSoftcoreForces(gpu);
+    }
+
     return 0.0;
 }
 
@@ -459,27 +425,33 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::setIncludeSoftcore( int inp
     includeSoftcore = inputIncludeSoftcore;
 }
 
-GpuLJ14Softcore* CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::getGpuLJ14Softcore( void ) const {
-    return gpuLJ14Softcore;
-}
-
-void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::setGpuLJ14Softcore( GpuLJ14Softcore* inputGpuLJ14Softcore ){
-    gpuLJ14Softcore = inputGpuLJ14Softcore;
-}
+class CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const GBSAOBCSoftcoreForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2, particleNonPolarScalingFactor1, particleNonPolarScalingFactor2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1, particleNonPolarScalingFactor1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2, particleNonPolarScalingFactor2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2 && particleNonPolarScalingFactor1 == particleNonPolarScalingFactor2);
+    }
+private:
+    const GBSAOBCSoftcoreForce& force;
+};
 
 CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::~CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel() {
-    delete gpuObcGbsaSoftcore;
+    if( 0 && data.getLog() ){
+        (void) fprintf( data.getLog(), "~CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel called.\n" );
+        (void) fflush( data.getLog() );
+    }
+    data.decrementKernelCount();
 }
 
 void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& system, const GBSAOBCSoftcoreForce& force) {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize";
-
-// ---------------------------------------------------------------------------------------
-
-    _gpuContext* gpu = data.gpu;
+    freeEnergyGpuContext gpu  = data.getFreeEnergyGpu();
 
     MapStringInt forceMap;
     getForceMap( system, forceMap, log);
@@ -487,7 +459,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& syst
     // check that nonbonded (non-softcore is not active)
 
     if( forceMap.find( NB_FORCE ) != forceMap.end() ){ 
-        throw OpenMMException( "Mixing NonbondedForce and GBSAOBCSoftoreForce not allowed -- use NonbondedSoftcoreForce " );
+        throw OpenMMException( "Mixing NonbondedForce and GBSAOBCSoftoreForce is not allowed -- use NonbondedSoftcoreForce " );
     }
     if( forceMap.find( NB_SOFTCORE_FORCE ) == forceMap.end() ){ 
         throw OpenMMException( "NonbondedSoftcore force must be included w/ GBSAOBCSoftcore force." );
@@ -500,99 +472,89 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& syst
     std::vector<float> charge(numParticles);
     std::vector<float> nonPolarScalingFactors(numParticles);
 
-    for (int i = 0; i < numParticles; i++) {
+    for( int ii = 0; ii < numParticles; ii++ ){
         double particleCharge, particleRadius, scalingFactor, particleNonPolarScalingFactor;
-        force.getParticleParameters(i, particleCharge, particleRadius, scalingFactor, particleNonPolarScalingFactor);
-        radius[i]                 = static_cast<float>( particleRadius);
-        scale[i]                  = static_cast<float>( scalingFactor);
-        charge[i]                 = static_cast<float>( particleCharge);
-        nonPolarScalingFactors[i] = static_cast<float>( particleNonPolarScalingFactor);
+        force.getParticleParameters( ii, particleCharge, particleRadius, scalingFactor, particleNonPolarScalingFactor);
+        radius[ii]                 = static_cast<float>( particleRadius);
+        scale[ii]                  = static_cast<float>( scalingFactor);
+        charge[ii]                 = static_cast<float>( particleCharge);
+        nonPolarScalingFactors[ii] = static_cast<float>( particleNonPolarScalingFactor);
     }
 
-    gpuObcGbsaSoftcore = gpuSetObcSoftcoreParameters(gpu, static_cast<float>( force.getSoluteDielectric()),
-                                                     static_cast<float>( force.getSolventDielectric()),
-                                                     static_cast<float>( force.getNonPolarPrefactor()),
-                                                     radius, scale, charge, nonPolarScalingFactors );
+    gpuSetObcSoftcoreParameters( gpu, static_cast<float>( force.getSoluteDielectric()),
+                                 static_cast<float>( force.getSolventDielectric()),
+                                 static_cast<float>( force.getNonPolarPrefactor()),
+                                 radius, scale, charge, nonPolarScalingFactors );
+
+    data.getFreeEnergyGpu()->gpuContext->forces.push_back(new ForceInfo(force));
+    return;
+
 }
 
 double CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces";
-
-// ---------------------------------------------------------------------------------------
-
-    _gpuContext* gpu = data.gpu;
-
-    int debug        = 1;
-
+    freeEnergyGpuContext freeEnergyGpu = data.getFreeEnergyGpu();
+    gpuContext gpu                     = freeEnergyGpu->gpuContext;
+    int call = 0;
+    
     // send address's of arrays, ... to device on first call
-    // required since force/energy buffers not set when CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize() was called
+    // required since force/energy buffers not set when CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize() was called
 
-    if( setSim == 0 ){
-       setSim++;
-       SetCalculateObcGbsaSoftcoreBornSumSim( gpu );
-       SetCalculateCDLJObcGbsaSoftcoreGpu1Sim( gpu );
-       SetCalculateObcGbsaSoftcoreForces2Sim( gpu );
-    }
+    data.initializeGpu( );
 
-    // required!!
-    gpu->bRecalculateBornRadii = true;
-
-    // calculate Born radii and first loop of Obc forces
-
-    if( debug && log ){
-        if( log ){
-            (void) fprintf( log, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1\n", methodName.c_str() );
-            (void) fflush( log );
-        }
-    }
+    // (1) clear Born force array
+    // (2) calculate Born radii and sum
+    // (3) loop 1
+    // (4) sum/calculate Born forces
+    // (5) loop 2
 
     kClearSoftcoreBornForces(gpu);
-    kCalculateObcGbsaSoftcoreBornSum(gpu);
+    kCalculateObcGbsaSoftcoreBornSum( freeEnergyGpu );
     kReduceObcGbsaSoftcoreBornSum(gpu);
-    kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
+    kCalculateCDLJObcGbsaSoftcoreForces1( freeEnergyGpu );
 
-//kPrintForces(gpu, "Post kCalculateCDLJObcGbsaSoftcoreForces1", call );
-    if( debug && log ){
-        (void) fprintf( log, "\n%s: calling kReduceObcGbsaBornForces\n", methodName.c_str()  );
-        (void) fflush( log );
-    }
-
-    // compute Born forces
+    // sum Born forces and  execute second OBC loop
 
     kReduceObcGbsaSoftcoreBornForces(gpu);
+    kCalculateObcGbsaSoftcoreForces2( freeEnergyGpu );
 
-    if( debug && log ){
-        (void) fprintf( log, "\n%s calling kCalculateObcGbsaForces2\n", methodName.c_str() );
-        (void) fflush( log );
+    if( data.getLog() ){
+        kPrintObcGbsaSoftcore( freeEnergyGpu, "Post kCalculateObcGbsaSoftcoreForces2", call, data.getLog() );
     }
 
-    // second loop of Obc GBSA forces
-
-    kCalculateObcGbsaSoftcoreForces2(gpu);
     return 0.0;
 }
 
+class CudaFreeEnergyCalcGBVISoftcoreForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const GBVISoftcoreForce& force) : force(force) {
+    }    
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, gamma1, gamma2, bornRadiusScaleFactor1, bornRadiusScaleFactor2;
+        force.getParticleParameters(particle1, charge1, radius1, gamma1, bornRadiusScaleFactor1);
+        force.getParticleParameters(particle2, charge2, radius2, gamma2, bornRadiusScaleFactor2);
+        return (charge1 == charge2 && radius1 == radius2 && gamma1 == gamma2 && bornRadiusScaleFactor1 == bornRadiusScaleFactor2);
+    }    
+private:
+    const GBVISoftcoreForce& force;
+};
+
 CudaFreeEnergyCalcGBVISoftcoreForceKernel::~CudaFreeEnergyCalcGBVISoftcoreForceKernel() {
-    if( log ){
-        (void) fprintf( log, "CudaFreeEnergyCalcGBVISoftcoreForceKernel destructor called -- freeing gpuGBVISoftcore.\n" );
-        (void) fflush( log );
+    if( 0 && data.getLog() ){
+        (void) fprintf( data.getLog(), "~CudaFreeEnergyCalcGBVISoftcoreForceKernel called.\n" );
+        (void) fflush( data.getLog() );
     }
-    delete gpuGBVISoftcore;
+    data.decrementKernelCount();
 }
 
 void CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& system, const GBVISoftcoreForce& force, const std::vector<double> & inputScaledRadii) {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize";
-
-// ---------------------------------------------------------------------------------------
-
-    int numParticles = system.getNumParticles();
-    _gpuContext* gpu = data.gpu;
+    int numParticles          = system.getNumParticles();
+    freeEnergyGpuContext gpu  = data.getFreeEnergyGpu();
 
     // check forces and relevant parameters
 
@@ -611,7 +573,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& system,
     std::vector<float> gammas(numParticles);
     std::vector<float> bornRadiusScaleFactors(numParticles);
 
-    for (int i = 0; i < numParticles; i++) {
+    for( int i = 0; i < numParticles; i++ ){
         double charge, particleRadius, gamma, bornRadiusScaleFactor;
         force.getParticleParameters(i, charge, particleRadius, gamma, bornRadiusScaleFactor);
         particle[i]                  = i;
@@ -621,20 +583,8 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& system,
         bornRadiusScaleFactors[i]    = static_cast<float>( bornRadiusScaleFactor );
     }
 
-    // tanh not implemented
-
-//    std::vector<float> tanhScaleFactors;
     std::vector<float> quinticSplineParameters;
-    if( force.getBornRadiusScalingMethod() == GBVISoftcoreForce::Tanh ){
-/*
-        double alpha, beta, gamma;
-        force.getTanhParameters( alpha, beta, gamma );
-        tanhScaleFactors.resize( 3 );
-        tanhScaleFactors[0] = static_cast<float>(alpha);
-        tanhScaleFactors[1] = static_cast<float>(beta);
-        tanhScaleFactors[2] = static_cast<float>(gamma);
-*/
-    } else if( force.getBornRadiusScalingMethod() == GBVISoftcoreForce::QuinticSpline ){
+    if( force.getBornRadiusScalingMethod() == GBVISoftcoreForce::QuinticSpline ){
 
         // quintic spline
 
@@ -642,125 +592,62 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& system,
         quinticSplineParameters[0] = static_cast<float>(force.getQuinticLowerLimitFactor());
         quinticSplineParameters[1] = static_cast<float>(force.getQuinticUpperBornRadiusLimit());
         quinticSplineParameters[1] = powf( quinticSplineParameters[1], -3.0f ); 
-        setQuinticScaling( 1 );
+        quinticScaling =  1;
     }
 
     // load parameters onto board
     // defined in kCalculateGBVISoftcore.cu
 
-    gpuGBVISoftcore = gpuSetGBVISoftcoreParameters(gpu, static_cast<float>( force.getSoluteDielectric() ), static_cast<float>( force.getSolventDielectric() ),
-                                                   particle, radius, gammas, scaledRadii, bornRadiusScaleFactors, quinticSplineParameters);
+    gpuSetGBVISoftcoreParameters( gpu, static_cast<float>( force.getSoluteDielectric() ), static_cast<float>( force.getSolventDielectric() ),
+                                  particle, radius, gammas, scaledRadii, bornRadiusScaleFactors, quinticSplineParameters);
 
+    data.getFreeEnergyGpu()->gpuContext->forces.push_back(new ForceInfo(force));
+
+    return;
 }
 
 double CudaFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName      = "CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces";
-
-// ---------------------------------------------------------------------------------------
-
-    _gpuContext* gpu = data.gpu;
-    int debug        = 1;
-
+    freeEnergyGpuContext freeEnergyGpu = data.getFreeEnergyGpu();
+    gpuContext gpu                     = freeEnergyGpu->gpuContext;
+    
     // send address's of arrays, ... to device on first call
     // required since force/energy buffers not set when CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize() was called
 
-    if( setSim == 0 ){
-       setSim++;
-       SetCalculateGBVISoftcoreBornSumGpuSim( gpu );
-       SetCalculateObcGbsaSoftcoreBornSumSim( gpu );
-       SetCalculateCDLJObcGbsaSoftcoreGpu1Sim( gpu );
-       SetCalculateGBVISoftcoreForces2Sim( gpu );
-    }
+    data.initializeGpu( );
+
+    // (1) clear Born force array
+    // (2) calculate Born radii and sum
+    // (3) loop 1
+    // (4) sum/calculate Born forces
+    // (5) loop 2
 
     // calculate Born radii and first loop of GB/VI forces
 
-    if( debug && log ){
-        if( log ){
-            (void) fprintf( log, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1 & %s\n", methodName.c_str(),
-                            getQuinticScaling() ? "kReduceGBVIBornSumQuinticScaling" : "kReduceGBVIBornSum" );
-            (void) fflush( log );
-        }
-    }
-
-    // In kCalculateObcGbsaSoftcoreBornSum: SetCalculateObcGbsaSoftcoreBornSumSim
     kClearSoftcoreBornForces(gpu);
 
-    // In kCalculateGBVISoftcoreBornSum: SetCalculateGBVISoftcoreBornSumGpuSim
-    kCalculateGBVISoftcoreBornSum(gpu);
+    kCalculateGBVISoftcoreBornSum( freeEnergyGpu );
 
-    if( getQuinticScaling() ){
-
-        // kCalculateGBVISoftcoreBornSum.cu
-
-        kReduceGBVIBornSumQuinticScaling(gpu, gpuGBVISoftcore );
+    if( quinticScaling ){
+        kReduceGBVIBornSumQuinticScaling( freeEnergyGpu );
     } else {
-
-        // In kCalculateGBVISoftcoreBornSum.cu
-
-        kReduceGBVISoftcoreBornSum(gpu);
+        kReduceGBVISoftcoreBornSum( freeEnergyGpu );
     }
 
-    // In kCalculateCDLJObcGbsaSoftcoreForces1.cu
-    //    SetCalculateCDLJObcGbsaSoftcoreGpu1Sim
-    //    SetCalculateCDLJObcGbsaSoftcoreSupplementary1Sim (called in GpuNonbondedSoftcore.cpp)
+    kCalculateCDLJObcGbsaSoftcoreForces1( freeEnergyGpu );
 
-    kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
-
-    if( debug && log ){
-        (void) fprintf( log, "\n%s: calling %s\n", methodName.c_str(),
-                        getQuinticScaling() ? "kReduceGBVIBornForcesQuinticScaling" : "kReduceObcGbsaBornForces" );
-        (void) fflush( log );
-    }
-
-    // compute Born forces
-
-    if( getQuinticScaling() ){
-
-        // In kCalculateGBVISoftcoreBornSum.cu
-
-        kReduceGBVIBornForcesQuinticScaling(gpu);
+    if( quinticScaling ){
+        kReduceGBVIBornForcesQuinticScaling(freeEnergyGpu);
     } else {
-
-        // In kCalculateGBVISoftcoreBornSum.cu
-        kReduceGBVISoftcoreBornForces(gpu);
-
-    }
-    if( debug && log ){
-        (void) fprintf( log, "\n%s: calling kCalculateGBVIForces2\n", methodName.c_str() );
-        (void) fflush( log );
+        kReduceGBVISoftcoreBornForces( freeEnergyGpu );
     }
 
     // second loop of GB/VI forces
 
-    // In kCalculateGBVISoftcoreForces2.cu (SetCalculateGBVISoftcoreForces2Sim)
+    kCalculateGBVISoftcoreForces2( freeEnergyGpu );
+    if( data.getLog() ){
+        kPrintGBVISoftcore( freeEnergyGpu, "Post kCalculateGBVISoftcoreForces2", 0, data.getLog() );
+    }
 
-    kCalculateGBVISoftcoreForces2(gpu);
-//kPrintForces( gpu, "Post GBVISoftcoreForces2", call );
     return 0.0;
 }
-
-int CudaFreeEnergyCalcGBVISoftcoreForceKernel::getQuinticScaling( void ) const {
-
-// ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName      = "CudaFreeEnergyCalcGBVISoftcoreForceKernel::getQuinticScaling";
-
-// ---------------------------------------------------------------------------------------
-
-    return quinticScaling;
-}
-
-void CudaFreeEnergyCalcGBVISoftcoreForceKernel::setQuinticScaling( int inputQuinticScaling) {
-
-// ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName      = "CudaFreeEnergyCalcGBVISoftcoreForceKernel::setQuinticScaling";
-
-// ---------------------------------------------------------------------------------------
-
-    quinticScaling = inputQuinticScaling;
-}
-

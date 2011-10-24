@@ -30,16 +30,24 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUnit)
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_BORNFORCE2_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_BORNFORCE2_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_BORNFORCE2_THREADS_PER_BLOCK, 1)
+#endif
+void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos          = warp*numWorkUnits/totalWarps;
+    unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
 #endif
 
     unsigned int lasty = -0xFFFFFFFF;
@@ -55,14 +63,19 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
         float4 apos                     = cSim.pPosq[i];
         float2 a                        = cSim.pObcData[i];
         float fb                        = cSim.pBornForce[i];
-        float  nonPolarScaleDataI       = gbsaSimDev.pNonPolarScalingFactors[i];
+        float  nonPolarScaleDataI       = feSimDev.pNonPolarScalingFactors[i];
         unsigned int tbx                = threadIdx.x - tgx;
         unsigned int tj                 = tgx;
+
         Atom* psA                       = &sA[tbx];
+        sA[threadIdx.x].fx              = 0.0f;
+        sA[threadIdx.x].fy              = 0.0f;
+        sA[threadIdx.x].fz              = 0.0f;
+
         float3 af;
-        sA[threadIdx.x].fx = af.x   = 0.0f;
-        sA[threadIdx.x].fy = af.y   = 0.0f;
-        sA[threadIdx.x].fz = af.z   = 0.0f;
+        af.x                            = 0.0f;
+        af.y                            = 0.0f;
+        af.z                            = 0.0f;
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {
             // Read fixed atom data into registers and GRF
@@ -81,9 +94,9 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                 float dy                = psA[j].y - apos.y;
                 float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 float r2                = dx * dx + dy * dy + dz * dz;
                 float r                 = sqrt(r2);
@@ -92,40 +105,40 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                 // Atom I Born forces and sum
                 float rScaledRadiusJ    = r + psA[j].sr;
 
-                float l_ij          = 1.0f / max(a.x, fabs(r - psA[j].sr));
-                float u_ij          = 1.0f / rScaledRadiusJ;
-                float rInverse      = 1.0f / r;
-                float l_ij2         = l_ij * l_ij;
-                float u_ij2         = u_ij * u_ij;
-                float r2Inverse     = rInverse * rInverse;
-                float t1            = log (u_ij / l_ij);
-                float t2            = (l_ij2 - u_ij2);
-                float t3            = t2 * rInverse;
-                t1                 *= rInverse;
+                float l_ij              = 1.0f / max(a.x, fabs(r - psA[j].sr));
+                float u_ij              = 1.0f / rScaledRadiusJ;
+                float rInverse          = 1.0f / r;
+                float l_ij2             = l_ij * l_ij;
+                float u_ij2             = u_ij * u_ij;
+                float r2Inverse         = rInverse * rInverse;
+                float t1                = log (u_ij / l_ij);
+                float t2                = (l_ij2 - u_ij2);
+                float t3                = t2 * rInverse;
+                t1                     *= rInverse;
 
                 // Born Forces term
-                float term          =  0.125f *
-                                      (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3 +
-                                       0.250f * t1 * r2Inverse;
-                term               *= psA[j].npScale*nonPolarScaleDataI;
-                float dE            = fb * term;
+                float term              =  0.125f * (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3 +
+                                           0.250f * t1 * r2Inverse;
+                term                   *= psA[j].npScale*nonPolarScaleDataI;
+                float dE                = fb * term;
 
-#if defined USE_PERIODIC
+#if defined USE_CUTOFF
                 if (a.x >= rScaledRadiusJ || i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
 #else
-                if (a.x >= rScaledRadiusJ)
+                if (a.x >= rScaledRadiusJ || i >= cSim.atoms || x+j >= cSim.atoms )
 #endif
                 {
                     dE              = 0.0f;
                 }
+
                 float d             = dx * dE;
                 af.x               -= d;
                 psA[j].fx          += d;
+
                 d                   = dy * dE;
                 af.y               -= d;
                 psA[j].fy          += d;
+
                 d                   = dz * dE;
                 af.z               -= d;
                 psA[j].fz          += d;
@@ -143,10 +156,10 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
             of.y                       += af.y + sA[threadIdx.x].fy;
             of.z                       += af.z + sA[threadIdx.x].fz;
             of.w                        = 0.0f;
-            cSim.pForce4[offset]       = of;
-        }
-        else
-        {
+            cSim.pForce4[offset]        = of;
+
+        } else {
+
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
@@ -154,7 +167,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                 float4 temp                 = cSim.pPosq[j];
                 float2 temp1                = cSim.pObcData[j];
                 sA[threadIdx.x].fb          = cSim.pBornForce[j];
-                sA[threadIdx.x].npScale     = gbsaSimDev.pNonPolarScalingFactors[j];
+                sA[threadIdx.x].npScale     = feSimDev.pNonPolarScalingFactors[j];
                 sA[threadIdx.x].x           = temp.x;
                 sA[threadIdx.x].y           = temp.y;
                 sA[threadIdx.x].z           = temp.z;
@@ -179,9 +192,9 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float r                 = sqrt(r2);
@@ -215,12 +228,10 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     term                   *= psA[tj].npScale*nonPolarScaleDataI;
                     float dE                = fb * term;
 
-#if defined USE_PERIODIC
+#if defined USE_CUTOFF
                     if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
 #else
-                    if (a.x >= rScaledRadiusJ)
+                    if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+tj >= cSim.atoms)
 #endif
                     {
                         dE                  = 0.0f;
@@ -244,12 +255,10 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     dE                      = psA[tj].fb * term;
 
                     float rj = psA[tj].r;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                     if (rj >= rScaledRadiusI || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
 #else
-                    if (rj >= rScaledRadiusI)
+                    if (rj >= rScaledRadiusI || i >= cSim.atoms || y+tj >= cSim.atoms )
 #endif
                     {
                         dE                  = 0.0f;

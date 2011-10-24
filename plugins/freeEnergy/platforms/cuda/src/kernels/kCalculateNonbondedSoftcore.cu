@@ -24,161 +24,171 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "GpuNonbondedSoftcore.h"
+#include "freeEnergyGpuTypes.h"
 #include "GpuFreeEnergyCudaKernels.h"
 #include "openmm/OpenMMException.h"
-#include <algorithm>
+#include <sstream>
 
-// structure containing array of softcore lambdas
-
-struct cudaFreeEnergySimulationNonBonded {
-    float* pParticleSoftCoreLJLambda;
-};
-//struct cudaFreeEnergySimulationNonBonded feSim;
+#define PARAMETER_PRINT 0
+#define MAX_PARAMETER_PRINT 10
 
 // device handles
 
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ cudaFreeEnergySimulationNonBonded feSimDev;
+static __constant__ cudaFreeEnergyGmxSimulation feSimDev;
 
 // write address of structs to devices
 
-void SetCalculateCDLJSoftcoreGpuSim( gpuContext gpu )
-{
+void SetCalculateCDLJSoftcoreGpuSim( freeEnergyGpuContext freeEnergyGpu ){
     cudaError_t status;
-    status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));
+    status = cudaMemcpyToSymbol(cSim, &freeEnergyGpu->gpuContext->sim, sizeof(cudaGmxSimulation));
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJSoftcoreGpuSim copy to cSim failed");
 
-    //(void) fprintf( stderr, "SetCalculateCDLJSoftcoreGpuSim gpu=%p cSim=%p sizeof=%u\n", gpu, &gpu->sim, sizeof(cudaGmxSimulation) ); fflush( stderr );
-}
-
-void SetCalculateCDLJSoftcoreSupplementarySim( float* gpuParticleSoftCoreLJLambda)
-{
-    cudaError_t status;
-    struct cudaFreeEnergySimulationNonBonded feSim;
-
-    feSim.pParticleSoftCoreLJLambda = gpuParticleSoftCoreLJLambda;
-    status = cudaMemcpyToSymbol(feSimDev, &feSim, sizeof(cudaFreeEnergySimulationNonBonded));
-    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJSoftcoreSupplementarySim");
-
-    //(void) fprintf( stderr, "SetCalculateCDLJSoftcoreSupplementarySim\n" );
-}
-
-void GetCalculateCDLJSoftcoreForcesSim(float* gpuParticleSoftCoreLJLambda)
-{
-//    cudaError_t status;
-//    status = cudaMemcpyFromSymbol(gpuParticleSoftCoreLJLambda, particleSoftCoreLJLambdaDev, sizeof(float*));
-//    RTERROR(status, "cudaMemcpyFromSymbol: GetCalculateCDLJSoftcoreForcesSim failed");
-}
-
-// create, initialize and entrt SoftCoreLJLambda values
-// return handle to GpuNonbondedSoftcore object
-
-static void setSoftcoreExclusions(gpuContext gpu, const std::vector<std::vector<int> >& exclusions) {
-    if (gpu->exclusions.size() > 0) { 
-        bool ok = (exclusions.size() == gpu->exclusions.size());
-        for (unsigned int i = 0; i < exclusions.size() && ok; i++) {
-            if (exclusions[i].size() != gpu->exclusions[i].size())
-                ok = false;
-            else {
-                for (unsigned int j = 0; j < exclusions[i].size(); j++) 
-                    if (find(gpu->exclusions[i].begin(), gpu->exclusions[i].end(), exclusions[i][j]) == gpu->exclusions[i].end())
-                        ok = false;
-            }
-        }
-        if (!ok)
-            throw OpenMM::OpenMMException("All nonbonded forces must have identical sets of exceptions");
-    }    
-    gpu->exclusions = exclusions;
+    status = cudaMemcpyToSymbol( feSimDev, &freeEnergyGpu->freeEnergySim, sizeof(cudaFreeEnergyGmxSimulation));
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJSoftcoreGpuSim copy to feSimDev failed");
 }
 
 extern "C"
-GpuNonbondedSoftcore* gpuSetNonbondedSoftcoreParameters(gpuContext gpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6,
-                                                        const std::vector<float>& c12, const std::vector<float>& q,
-                                                        const std::vector<float>& softcoreLJLambdaArray, const std::vector<char>& symbol,
-                                                        const std::vector<std::vector<int> >& exclusions, CudaNonbondedMethod method)
+void freeEnergyGpuSetPeriodicBoxSize( freeEnergyGpuContext freeEnergyGpu, float xsize, float ysize, float zsize)
 {
-    unsigned int numberOfParticles     = c6.size();
-    gpu->sim.epsfac                    = epsfac;
-    gpu->sim.nonbondedMethod           = method;
-    if (numberOfParticles > 0)
-        setSoftcoreExclusions(gpu, exclusions);
-    
-    // create gpuNonbondedSoftcore
+    freeEnergyGpu->freeEnergySim.periodicBoxSizeX    = xsize;
+    freeEnergyGpu->freeEnergySim.periodicBoxSizeY    = ysize;
+    freeEnergyGpu->freeEnergySim.periodicBoxSizeZ    = zsize;
 
-    GpuNonbondedSoftcore* gpuNonbondedSoftcore = new GpuNonbondedSoftcore();
-    gpuNonbondedSoftcore->initializeParticleSoftCoreLJLambda( numberOfParticles );
-    float minSoftcore                          = 1.0e+10;
-    for (unsigned int i = 0; i < numberOfParticles; i++)
-    {
-            float p0               = q[i];
+    freeEnergyGpu->freeEnergySim.invPeriodicBoxSizeX = 1.0f/xsize;
+    freeEnergyGpu->freeEnergySim.invPeriodicBoxSizeY = 1.0f/ysize;
+    freeEnergyGpu->freeEnergySim.invPeriodicBoxSizeZ = 1.0f/zsize;
 
-            // track min softcore value
+    freeEnergyGpu->freeEnergySim.recipBoxSizeX       = 2.0f*PI/freeEnergyGpu->freeEnergySim.periodicBoxSizeX;
+    freeEnergyGpu->freeEnergySim.recipBoxSizeY       = 2.0f*PI/freeEnergyGpu->freeEnergySim.periodicBoxSizeY;
+    freeEnergyGpu->freeEnergySim.recipBoxSizeZ       = 2.0f*PI/freeEnergyGpu->freeEnergySim.periodicBoxSizeZ;
 
-            float softcoreLJLambda = softcoreLJLambdaArray[i];
-            if( minSoftcore > softcoreLJLambda ){
-                minSoftcore = softcoreLJLambda;
-            }
-            gpuNonbondedSoftcore->setParticleSoftCoreLJLambda( i, softcoreLJLambda );
+    freeEnergyGpu->freeEnergySim.cellVolume          = freeEnergyGpu->freeEnergySim.periodicBoxSizeX*freeEnergyGpu->freeEnergySim.periodicBoxSizeY*freeEnergyGpu->freeEnergySim.periodicBoxSizeZ;
 
-            float p1 = 0.5f, p2 = 0.0f;               
-            if ((c6[i] > 0.0f) && (c12[i] > 0.0f))
-            {
-                p1 = 0.5f * powf(c12[i] / c6[i], 1.0f / 6.0f);
-                p2 = c6[i] * sqrtf(1.0f / c12[i]);
-            }
-            if (symbol.size() > 0)
-                gpu->pAtomSymbol[i] = symbol[i];
+    gpuSetPeriodicBoxSize( freeEnergyGpu->gpuContext, xsize, ysize, zsize );
+}
 
-            (*gpu->psPosq4)[i].w          = p0;
-            (*gpu->psSigEps2)[i].x        = p1;
-            (*gpu->psSigEps2)[i].y        = p2;
+extern "C"
+void gpuSetNonbondedSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6,
+                                        const std::vector<float>& c12, const std::vector<float>& q,
+                                        const std::vector<float>& softcoreLJLambdaArray, const std::vector<char>& symbol,
+                                        const std::vector<std::vector<int> >& exclusions, CudaFreeEnergyNonbondedMethod method,
+                                        float cutoffDistance, float solventDielectric ){
+
+    unsigned int numberOfParticles                         = c6.size();
+    gpuContext gpu                                         = freeEnergyGpu->gpuContext;
+    int paddedNumberOfAtoms                                = gpu->sim.paddedNumberOfAtoms;
+
+    // sanity checks
+
+    if( paddedNumberOfAtoms < 1 ){
+        std::stringstream msg;
+        msg << "gpuSetNonbondedSoftcoreParameters: number of padded atoms=" <<  gpu->sim.paddedNumberOfAtoms << " is less than 1.";
+        throw OpenMM::OpenMMException( msg.str() );
     }
-    gpuNonbondedSoftcore->setSoftCoreLJLambda( minSoftcore );
+
+    if( freeEnergyGpu->gpuContext->sim.atoms != numberOfParticles  ){
+        std::stringstream msg;
+        msg << "gpuSetNonbondedSoftcoreParameters: number of atoms in gpuContext does not match input count: " << freeEnergyGpu->gpuContext->sim.atoms << " " << numberOfParticles << ".";
+        throw OpenMM::OpenMMException( msg.str() );
+    }
+
+    freeEnergyGpu->freeEnergySim.epsfac                    = epsfac;
+    freeEnergyGpu->freeEnergySim.nonbondedMethod           = method;
+
+    freeEnergyGpu->freeEnergySim.nonbondedCutoff           = cutoffDistance;
+    freeEnergyGpu->freeEnergySim.nonbondedCutoffSqr        = cutoffDistance*cutoffDistance;
+
+    gpu->sim.nonbondedCutoff                               = cutoffDistance;
+    gpu->sim.nonbondedCutoffSqr                            = cutoffDistance*cutoffDistance;
+
+    if( cutoffDistance > 0.0f ){
+        freeEnergyGpu->freeEnergySim.reactionFieldK        = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
+        freeEnergyGpu->freeEnergySim.reactionFieldC        = (1.0f / cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
+        gpu->sim.reactionFieldK                            = freeEnergyGpu->freeEnergySim.reactionFieldK;
+        gpu->sim.reactionFieldC                            = freeEnergyGpu->freeEnergySim.reactionFieldC;
+    } else {
+        freeEnergyGpu->freeEnergySim.reactionFieldK        = 0.0f;
+        freeEnergyGpu->freeEnergySim.reactionFieldC        = 0.0f;
+    }
+
+    setExclusions( gpu, exclusions );
+ 
+    // parameters
+ 
+    freeEnergyGpu->psSigEps4                               = new CUDAStream<float4>( paddedNumberOfAtoms, 1, "freeEnergyGpuSigEps4");
+    freeEnergyGpu->freeEnergySim.pSigEps4                  = freeEnergyGpu->psSigEps4->_pDevData;
+
+    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
+
+        float p1 = 0.5f;
+        float p2 = 0.0f;               
+
+        if( (c6[ii] > 0.0f) && (c12[ii] > 0.0f) ){
+            p1 = 0.5f * powf(c12[ii] / c6[ii], 1.0f / 6.0f);
+            p2 = c6[ii] * sqrtf(1.0f / c12[ii]);
+        }
+/*
+            if (symbol.size() > 0)
+                freeEnergyGpu->pAtomSymbol[ii] = symbol[ii];
+*/
+
+        (*freeEnergyGpu->psSigEps4)[ii].x        = p1;
+        (*freeEnergyGpu->psSigEps4)[ii].y        = p2;
+        (*freeEnergyGpu->psSigEps4)[ii].z        = softcoreLJLambdaArray[ii];
+        (*freeEnergyGpu->psSigEps4)[ii].w        = q[ii];
+    }
 
     // Dummy out extra atom data
-    for (unsigned int i = numberOfParticles; i < gpu->sim.paddedNumberOfAtoms; i++)
-    {
-        (*gpu->psPosq4)[i].x                = 100000.0f + i * 10.0f;
-        (*gpu->psPosq4)[i].y                = 100000.0f + i * 10.0f;
-        (*gpu->psPosq4)[i].z                = 100000.0f + i * 10.0f;
-        (*gpu->psPosq4)[i].w                = 0.0f;
-        (*gpu->psSigEps2)[i].x              = 0.0f;
-        (*gpu->psSigEps2)[i].y              = 0.0f;
+
+    for( unsigned int ii = numberOfParticles; ii < paddedNumberOfAtoms; ii++ ){
+
+        (*freeEnergyGpu->psSigEps4)[ii].x              = 1.0f;
+        (*freeEnergyGpu->psSigEps4)[ii].y              = 0.0f;
+        (*freeEnergyGpu->psSigEps4)[ii].z              = 0.0f;
+        (*freeEnergyGpu->psSigEps4)[ii].w              = 0.0f;
+
+        (*gpu->psPosq4)[ii].x                          = 100000.0f + ii * 10.0f;
+        (*gpu->psPosq4)[ii].y                          = 100000.0f + ii * 10.0f;
+        (*gpu->psPosq4)[ii].z                          = 100000.0f + ii * 10.0f;
+        (*gpu->psPosq4)[ii].w                          = 0.0f;
+
     }
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 0
-#if (DUMP_PARAMETERS == 1)
-    (void) fprintf( stderr,"gpuSetNonbondedSoftcoreParameters: %5u epsfac=%14.7e method=%d\n", numberOfParticles, gpu->sim.paddedNumberOfAtoms, epsfac, method );
-    int maxPrint = 31;
-    for (unsigned int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++){
-        (void) fprintf( stderr,"%6u x[%14.7e %14.7e %14.7e %14.7e] sig[%14.7e %14.7e]\n",
-                        ii, (*gpu->psPosq4)[ii].x, (*gpu->psPosq4)[ii].y, (*gpu->psPosq4)[ii].z, (*gpu->psPosq4)[ii].w,
-                        (*gpu->psSigEps2)[ii].x, (*gpu->psSigEps2)[ii].y );
-        if( ii == maxPrint && ii < gpu->sim.paddedNumberOfAtoms - maxPrint ){
-           ii = gpu->sim.paddedNumberOfAtoms - maxPrint;
+    if( freeEnergyGpu->log ){
+        (void) fprintf( freeEnergyGpu->log,"freeEnergyGpuSetNonbondedSoftcoreParameters: %5u padded=%u epsfac=%14.7e method=%d cutoffDistance=%9.2f solventDielectric=%9.2f\n",
+                        numberOfParticles, freeEnergyGpu->gpuContext->sim.paddedNumberOfAtoms, epsfac, method, cutoffDistance, solventDielectric );
+#ifdef PARAMETER_PRINT
+        int maxPrint = MAX_PARAMETER_PRINT;
+        for (unsigned int ii = 0; ii < numberOfParticles; ii++){
+            (void) fprintf( freeEnergyGpu->log,"%6u sig[%14.7e %14.7e] lambda=%10.3f q=%10.3f\n",
+                            ii, 
+                            (*freeEnergyGpu->psSigEps4)[ii].x, (*freeEnergyGpu->psSigEps4)[ii].y, (*freeEnergyGpu->psSigEps4)[ii].z, (*freeEnergyGpu->psSigEps4)[ii].w );
+            if( ii == maxPrint && ii < freeEnergyGpu->gpuContext->sim.paddedNumberOfAtoms - maxPrint ){
+               ii = numberOfParticles - maxPrint;
+            }
         }
-    }
+        unsigned int offset = paddedNumberOfAtoms - maxPrint;
+        if( offset > 0 ){
+            if( offset > numberOfParticles ){
+                (void) fprintf( freeEnergyGpu->log,"Dummy padded entries\n" );
+                for (unsigned int ii = offset; ii < paddedNumberOfAtoms; ii++){
+                    (void) fprintf( freeEnergyGpu->log,"%6u sig[%14.7e %14.7e] lambda=%10.3f q=%10.3f\n",
+                                    ii, 
+                                    (*freeEnergyGpu->psSigEps4)[ii].x, (*freeEnergyGpu->psSigEps4)[ii].y, (*freeEnergyGpu->psSigEps4)[ii].z, (*freeEnergyGpu->psSigEps4)[ii].w );
+                }
+            }
+        }
 #endif
+        (void) fflush( freeEnergyGpu->log );
+    }
  
     // upload data to board
 
-    gpuNonbondedSoftcore->upload( gpu );
-
+    freeEnergyGpu->psSigEps4->Upload();
     gpu->psPosq4->Upload();
-    gpu->psSigEps2->Upload();
 
-    return gpuNonbondedSoftcore;
-}
-
-// delete gpuNonbondedSoftcore
-
-extern "C"
-void gpuDeleteNonbondedSoftcoreParameters( void* gpuNonbondedSoftcore)
-{
-    GpuNonbondedSoftcore* internalGNonbondedSoftcore = static_cast<GpuNonbondedSoftcore*>(gpuNonbondedSoftcore);
-    delete internalGNonbondedSoftcore;
+    return;
 }
 
 extern "C"
@@ -202,46 +212,25 @@ struct Atom {
     float fz;
 };
 
-#if 0
-texture<float, 1, cudaReadModeElementType> tabulatedErfcRef;
-
-__device__ float fastErfc(float r)
-{
-    float normalized = cSim.tabulatedErfcScale*r;
-    int index = (int) normalized;
-    float fract2 = normalized-index;
-    float fract1 = 1.0f-fract2;
-    return fract1*tex1Dfetch(tabulatedErfcRef, index) + fract2*tex1Dfetch(tabulatedErfcRef, index+1);
-}
-
-// Include versions of the kernels for N^2 calculations.
-
-#define METHOD_NAME(a, b) a##N2##b
-#include "kCalculateNonbondedSoftcore.h"
-#define USE_OUTPUT_BUFFER_PER_WARP
-#undef METHOD_NAME
-#define METHOD_NAME(a, b) a##N2ByWarp##b
-#include "kCalculateNonbondedSoftcore.h"
-
-#endif
-
 // Include versions of the kernels for N^2 calculations with softcore LJ.
+
+#define USE_SOFTCORE_LJ
+#ifdef USE_SOFTCORE_LJ
+#include "kSoftcoreLJ.h"
+#endif
 
 #undef METHOD_NAME
 #define METHOD_NAME(a, b) a##N2SoftcoreLJ##b
 #undef USE_OUTPUT_BUFFER_PER_WARP
-#define USE_SOFTCORE_LJ
 #include "kCalculateNonbondedSoftcore.h"
 
 #define USE_OUTPUT_BUFFER_PER_WARP
 #undef METHOD_NAME
 #define METHOD_NAME(a, b) a##N2SoftcoreLJByWarp##b
 #include "kCalculateNonbondedSoftcore.h"
-#undef USE_SOFTCORE_LJ
 
 // Include versions of the kernels with cutoffs.
 
-#if 0
 #undef METHOD_NAME
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define USE_CUTOFF
@@ -266,74 +255,29 @@ __device__ float fastErfc(float r)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateNonbondedSoftcore.h"
 
-// Include versions of the kernels for Ewald
-
-#undef METHOD_NAME
-#undef USE_OUTPUT_BUFFER_PER_WARP
-#define USE_PERIODIC
-#define USE_EWALD
-#define METHOD_NAME(a, b) a##Ewald##b
-#include "kCalculateNonbondedSoftcore.h"
-#define USE_OUTPUT_BUFFER_PER_WARP
-#undef METHOD_NAME
-#define METHOD_NAME(a, b) a##EwaldByWarp##b
-#include "kCalculateNonbondedSoftcore.h"
-
-// Reciprocal Space Ewald summation is in a separate kernel
-#include "kCalculateCDLJEwaldFastReciprocal.h"
-
-void kCalculatePME(gpuContext gpu);
-#endif
-
-void kCalculateCDLJSoftcoreForces(gpuContext gpu )
+void kCalculateCDLJSoftcoreForces( freeEnergyGpuContext freeEnergyGpu )
 {
 
-    //printf("kCalculateCDLJCutoffForces %d\n", gpu->sim.nonbondedMethod); fflush( stdout );
-    switch (gpu->sim.nonbondedMethod)
+    gpuContext gpu = freeEnergyGpu->gpuContext;
+    // (void) fprintf( stderr,"kCalculateCDLJCutoffForces %d warp=%u nonbond_blocks=%u nonbond_threads_per_block=%u rfK=%15.7e rfC=%15.7e\n", freeEnergyGpu->freeEnergySim.nonbondedMethod,
+    //                 gpu->bOutputBufferPerWarp, gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.reactionFieldK, gpu->sim.reactionFieldC); fflush( stderr );
+
+    switch (freeEnergyGpu->freeEnergySim.nonbondedMethod)
     {
-        case NO_CUTOFF:
+        case FREE_ENERGY_NO_CUTOFF:
+
            if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJSoftcoreN2SoftcoreLJByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                          sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
            else
                    kCalculateCDLJSoftcoreN2SoftcoreLJForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                            sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit );
-//(gpu->sim.pWorkUnit, gpuNonbondedSoftcore->getGpuParticleSoftCoreLJLambda());
             LAUNCHERROR("kCalculateCDLJSoftcoreN2Forces");
 
-#if 0
-int maxPrint = 31; 
-gpu->psWorkUnit->Download();
-fprintf( stderr, "kCalculateCDLJSoftcoreForces: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
-                 gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
-        sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
-
-               gpu->psPosq4->Download();
-
-                (void) fprintf( stderr, "\nkCalculateGBVISoftcoreBornSum: pre BornSum %s Born radii & params\n",
-                               (gpu->bIncludeGBVI ? "GBVI" : "Obc") );
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                   (void) fprintf( stderr, "%6d bSum=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f]\n",
-                                   ii,
-                                   gpu->psBornSum->_pSysStream[0][ii],
-                                   gpu->psGBVIData->_pSysStream[0][ii].x,
-                                   gpu->psGBVIData->_pSysStream[0][ii].y,
-                                   gpu->psGBVIData->_pSysStream[0][ii].z,
-                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w
-                                 );
-                   if( (ii == maxPrint) && ( ii < (gpu->natoms - maxPrint)) ){
-                      ii = gpu->natoms - maxPrint;
-                   }
-                }
-
-#endif
-#undef GBVI
-
-
             break;
-#if 0
-        case CUTOFF:
+
+        case FREE_ENERGY_CUTOFF:
+
             kFindBlockBoundsCutoff_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
             LAUNCHERROR("kFindBlockBoundsCutoff");
             kFindBlocksWithInteractionsCutoff_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
@@ -341,44 +285,19 @@ fprintf( stderr, "kCalculateCDLJSoftcoreForces: bOutputBufferPerWarp=%u blks=%u 
             compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
             kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-#if 0
-    static int iteration = 0;
-    if (iteration >= 0)
-    {
-        gpu->psInteractingWorkUnit->Download();
-        gpu->psInteractionCount->Download();
-/*
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
-*/
- 
-        printf("# Post kCalculateCDLJCutoffForces %d atoms warps=%d cnt=%u bOutputBufferPerWarp=%d zC=%d\n", 
-                gpu->natoms, ((gpu->sim.nonbond_blocks*gpu->sim.nonbond_threads_per_block)/GRID),
-                gpu->psInteractionCount->_pSysStream[0][0], gpu->bOutputBufferPerWarp,
-                (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block);
-        fflush( stdout );
-        for (int i = 0; i < gpu->psInteractingWorkUnit->_stride; i++)
-        {
-            printf("%5d %u\n", i, gpu->psInteractingWorkUnit->_pSysStream[0][i] );
-            fflush( stdout );
-        }
-    }
-    iteration++;
-#endif
-
 
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJSoftcoreCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateCDLJCutoffForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJSoftcoreCutoffForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJCutoffForces");
+
+            LAUNCHERROR("kCalculateCDLJSoftcoreCutoffForces");
             break;
-        case PERIODIC:
+
+        case FREE_ENERGY_PERIODIC:
+
             kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
             LAUNCHERROR("kFindBlockBoundsPeriodic");
             kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
@@ -387,123 +306,17 @@ fprintf( stderr, "kCalculateCDLJSoftcoreForces: bOutputBufferPerWarp=%u blks=%u 
             kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJPeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJSoftcorePeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateCDLJPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJSoftcorePeriodicForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJPeriodicForces");
+            LAUNCHERROR("kCalculateCDLJSoftcorePeriodicForces");
             break;
-        case EWALD:
-        case PARTICLE_MESH_EWALD:
-            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
-            LAUNCHERROR("kFindBlockBoundsPeriodic");
-            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
-            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
-            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
-            cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
-            cudaBindTexture(NULL, &tabulatedErfcRef, gpu->psTabulatedErfc->_pDevData, &channelDesc, gpu->psTabulatedErfc->_length*sizeof(float));
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJEwaldByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            else
-                kCalculateCDLJEwaldForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJEwaldForces");
-            if (gpu->sim.nonbondedMethod == EWALD)
-            {
-                kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
-                LAUNCHERROR("kCalculateEwaldFastCosSinSums");
-                kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-                LAUNCHERROR("kCalculateEwaldFastForces");
-            }
-            else
-                kCalculatePME(gpu);
-#endif
+
+        default:
+            throw OpenMM::OpenMMException( "Nonbonded softcore method not recognized." );
+
     }
-}
-
-void kPrintForces(gpuContext gpu, std::string idString, int call )
-{
- //   printf("kReduceForces\n");
-#define GBVI_DEBUG 4
-#if ( GBVI_DEBUG == 4 )
-
-                gpu->psBornRadii->Download();
-                gpu->psObcData->Download();
-                gpu->psObcChain->Download();
-                gpu->psBornForce->Download();
-                gpu->psForce4->Download();
-                gpu->psPosq4->Download();
-                int maxPrint = 30; 
-int   nanHit       = 0;
-int   targetIndex  = -852;
-float maxForce     = 3.0e+04;
-float maxPosition  = 2.0e+02;
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-
-int   hit  = 0;
-float dist = sqrtf( gpu->psPosq4->_pSysStream[0][ii].x*gpu->psPosq4->_pSysStream[0][ii].x + 
-                    gpu->psPosq4->_pSysStream[0][ii].y*gpu->psPosq4->_pSysStream[0][ii].y +
-                    gpu->psPosq4->_pSysStream[0][ii].z*gpu->psPosq4->_pSysStream[0][ii].z );
-
-if( fabs( gpu->psForce4->_pSysStream[0][ii].x ) > maxForce ||
-    fabs( gpu->psForce4->_pSysStream[0][ii].y ) > maxForce ||
-    fabs( gpu->psForce4->_pSysStream[0][ii].z ) > maxForce ||
-//    gpu->psBornRadii->_pSysStream[0][ii] <= 0.0            ||
-    dist > maxPosition                                     ||
-    isnan( gpu->psForce4->_pSysStream[0][ii].x )           ||
-    isnan( gpu->psForce4->_pSysStream[0][ii].y )           ||
-    isnan( gpu->psForce4->_pSysStream[0][ii].z )  ){  
-   hit = 1;
-} else {
-   hit = 0;
-}
-if( ii == targetIndex || ii == (targetIndex+1) || ii == (targetIndex+2) )hit = 1;
-if( isnan( gpu->psBornForce->_pSysStream[0][ii] ) ||
-    isnan( gpu->psBornRadii->_pSysStream[0][ii] ) ||
-    isnan( gpu->psObcChain->_pSysStream[0][ii]  ) ||
-    isnan( gpu->psForce4->_pSysStream[0][ii].x  )  ||
-    isnan( gpu->psForce4->_pSysStream[0][ii].y  )  ||
-    isnan( gpu->psForce4->_pSysStream[0][ii].z  )  ){  
-   hit    = 1;
-   nanHit = 1;
-}
-
-                if( hit || ii < maxPrint || ii >= (gpu->natoms - maxPrint) ){
-                //if( hit ){
-                    static int firstHit = 1;
-                    if( firstHit ){
-                       firstHit = 0;
-                       (void) fprintf( stderr, "\nkPrintForces: %d [r, scl q] b[r/c/f] f[] x[] Born radii/force (%p %p)\n", call,
-                                       gpu->psBornForce, gpu->psBornForce->_pDevStream[0] );
-                    }
-                    (void) fprintf( stderr, "%6d [%8.3f %8.3f %8.3f] b[%13.6e %13.6e %13.6e] f[%13.6e %13.6e %13.6e] x[%13.6e %13.6e %13.6e] %10.3e %s %s %d\n",
-                                    ii, 
-                                    (gpu->psObcData->_pSysStream[0][ii].x + 0.009f),
-                                    (gpu->psObcData->_pSysStream[0][ii].y/gpu->psObcData->_pSysStream[0][ii].x),
-                                    gpu->psPosq4->_pSysStream[0][ii].w,
-                                    gpu->psBornRadii->_pSysStream[0][ii],
-                                    gpu->psObcChain->_pSysStream[0][ii],
-                                    gpu->psBornForce->_pSysStream[0][ii],
-
-                                    gpu->psForce4->_pSysStream[0][ii].x,
-                                    gpu->psForce4->_pSysStream[0][ii].y,
-                                    gpu->psForce4->_pSysStream[0][ii].z,
-
-                                    gpu->psPosq4->_pSysStream[0][ii].x,
-                                    gpu->psPosq4->_pSysStream[0][ii].y,
-                                    gpu->psPosq4->_pSysStream[0][ii].z, dist,
-
-                                    (hit ? "XXXXXXX" : "" ), idString.c_str(), call );
-                }
-                }
-                (void) fflush( stderr );
-//                if( nanHit )exit(0);
-#endif
-
 }
 

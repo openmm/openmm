@@ -30,7 +30,22 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUnit)
+#undef TARGET
+//#define TARGET 1
+
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
+#endif
+#ifdef DEBUG
+void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2)
+#else
+void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUnit)
+#endif
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
@@ -40,7 +55,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned 
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 
 #ifdef USE_CUTOFF
-    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+    float* tempBuffer         = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
     while (pos < end)
@@ -50,28 +65,33 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned 
         //unsigned int x = workUnit[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
         unsigned int x = workUnit[pos];
         unsigned int y = ((x >> 2) & 0x7fff) << GRIDBITS;
-        x = (x >> 17) << GRIDBITS;
+        x              = (x >> 17) << GRIDBITS;
+
         float       dx;
         float       dy;
         float       dz;
+
         float       r2;
         float       r;
 
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
-        unsigned int tj = tgx;
-        Atom* psA = &sA[tbx];
+        unsigned int tj  = tgx;
+
+        Atom* psA        = &sA[tbx];
 
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {
             // Read fixed atom data into registers and GRF
-            unsigned int i = x + tgx;
+            unsigned int i                          = x + tgx;
             float4 apos                             = cSim.pPosq[i];    // Local atom x, y, z, sum
             float2 ar                               = cSim.pObcData[i];   // Local atom vr, sr
             float polarScaleData                    = gbsaSimDev.pNonPolarScalingFactors[i];  // scale contribution
+
             sA[threadIdx.x].x                       = apos.x;
             sA[threadIdx.x].y                       = apos.y;
             sA[threadIdx.x].z                       = apos.z;
+
             sA[threadIdx.x].r                       = ar.x;
             sA[threadIdx.x].sr                      = ar.y;
             sA[threadIdx.x].polarScaleData          = polarScaleData;
@@ -83,99 +103,132 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned 
                 dy                      = psA[j].y - apos.y;
                 dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
+
                 r2                      = dx * dx + dy * dy + dz * dz;
-#if defined USE_PERIODIC
+
+#if defined USE_CUTOFF
                 if (i < cSim.atoms && x+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                if (i < cSim.atoms && x+j < cSim.atoms )
 #endif
                 {
                     r                       = sqrt(r2);
-                    float rInverse          = 1.0f / r;
+                    float rInverse          = 1.0f/r;
                     float rScaledRadiusJ    = r + psA[j].sr;
-                    if ((j != tgx) && (ar.x < rScaledRadiusJ))
-                    {
+                    if( (j != tgx) && (ar.x < rScaledRadiusJ) ){
                         float l_ij     = 1.0f / max(ar.x, fabs(r - psA[j].sr));
                         float u_ij     = 1.0f / rScaledRadiusJ;
                         float l_ij2    = l_ij * l_ij;
                         float u_ij2    = u_ij * u_ij;
                         float ratio    = log(u_ij / l_ij);
-                        float sum      = l_ij -
-                                         u_ij +
+                        float term     = l_ij - u_ij +
                                          0.25f * r * (u_ij2 - l_ij2) +
                                          (0.50f * rInverse * ratio) +
                                          (0.25f * psA[j].sr * psA[j].sr * rInverse) *
                                          (l_ij2 - u_ij2);
-                        float rj = psA[j].r;
-                        if (ar.x < (rj - r))
-                        {
-                            sum += 2.0f * ((1.0f / ar.x) - l_ij);
+                        float rj       = psA[j].sr;
+                        if( ar.x < (rj - r) ){
+                            term += 2.0f * ((1.0f / ar.x) - l_ij);
                         }
-                        apos.w +=  psA[j].polarScaleData*sum;
+                        apos.w += psA[j].polarScaleData*term;
+#ifdef DEBUG
+int jIdx = j;
+if( i == TARGET ){
+
+int tjj     = y+jIdx;
+pdE1[tjj].x = term;
+pdE1[tjj].y = r;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = 1.0f;
+
+pdE2[tjj].x = r;
+pdE2[tjj].y = l_ij;
+pdE2[tjj].z = rj;
+pdE2[tjj].w = 1.0f;
+}
+/*
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE2[tjj].x = sum;
+pdE2[tjj].y = psA[jIdx].polarScaleData;
+pdE2[tjj].z = ar.x;
+pdE2[tjj].w = -1.0f;
+} */
+#endif
+
+
                     }
                 }
             }
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset = x + tgx + warp*cSim.stride;
+            unsigned int offset    = x + tgx + warp*cSim.stride;
             cSim.pBornSum[offset] += apos.w;
 #else
-            unsigned int offset = x + tgx + (x >> GRIDBITS) * cSim.stride;
+            unsigned int offset   = x + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pBornSum[offset] = apos.w;
 #endif
-        }
-        else        // 100% utilization
-        {
+
+        } else {
+
             // Read fixed atom data into registers and GRF
+
             unsigned int j                  = y + tgx;
             unsigned int i                  = x + tgx;
 
             float4 temp                     = cSim.pPosq[j];
             float2 temp1                    = cSim.pObcData[j];
             float polarScaleDataJ           = gbsaSimDev.pNonPolarScalingFactors[j];  // scale contribution
+
             float4 apos                     = cSim.pPosq[i];        // Local atom x, y, z, sum
+            apos.w                          = 0.0f;
+
             float2 ar                       = cSim.pObcData[i];    // Local atom vr, sr
             float polarScaleDataI           = gbsaSimDev.pNonPolarScalingFactors[i];  // scale contribution
+
             sA[threadIdx.x].x               = temp.x;
             sA[threadIdx.x].y               = temp.y;
             sA[threadIdx.x].z               = temp.z;
+
             sA[threadIdx.x].r               = temp1.x;
             sA[threadIdx.x].sr              = temp1.y;
+
             sA[threadIdx.x].polarScaleData  = polarScaleDataJ;
-            sA[threadIdx.x].sum = apos.w    = 0.0f;
+
+            sA[threadIdx.x].sum             = 0.0f;
 
 #ifdef USE_CUTOFF
-            //unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
-            unsigned int flags = cSim.pInteractionFlag[pos];
+            unsigned int flags              = cSim.pInteractionFlag[pos];
             if (flags == 0)
             {
                 // No interactions in this block.
             }
-            else if (flags == 0xFFFFFFFF)
+//            else if (flags == 0xFFFFFFFF)
+            else if (flags )
 #endif
             {
                 // Compute all interactions within this block.
 
-                for (unsigned int j = 0; j < GRID; j++)
-                {
-                    dx                      = psA[tj].x - apos.x;
-                    dy                      = psA[tj].y - apos.y;
-                    dz                      = psA[tj].z - apos.z;
+                for( unsigned int j = 0; j < GRID; j++ ){
+
+                    dx  = psA[tj].x - apos.x;
+                    dy  = psA[tj].y - apos.y;
+                    dz  = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
                     dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
                     dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
                     dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                     if (i < cSim.atoms && y+tj < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                    if (i < cSim.atoms && y+tj < cSim.atoms )
 #endif
                     {
                         r                       = sqrt(r2);
@@ -188,20 +241,50 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned 
                             float l_ij2    = l_ij * l_ij;
                             float u_ij2    = u_ij * u_ij;
                             float ratio    = log(u_ij / l_ij);
-                            float term     = l_ij -
-                                             u_ij +
+                            float term     = l_ij - u_ij +
                                              0.25f * r * (u_ij2 - l_ij2) +
                                              (0.50f * rInverse * ratio) +
                                              (0.25f * psA[tj].sr * psA[tj].sr * rInverse) *
                                              (l_ij2 - u_ij2);
-                            float srj = psA[tj].sr;
-                            float scale = psA[tj].polarScaleData;
+                            float srj      = psA[tj].sr;
+                            float scale    = psA[tj].polarScaleData;
                             if (ar.x < (srj - r))
                             {
                                 term += 2.0f * ((1.0f / ar.x) - l_ij);
                             }
-                            //apos.w        += term;
                             apos.w        += (scale*term);
+
+#ifdef DEBUG
+int jIdx = tj;
+if( i == TARGET ){
+
+int tjj     = y+jIdx;
+pdE1[tjj].x = term;
+pdE1[tjj].y = r;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = 2.0f;
+/*
+pdE2[tjj].x = r;
+pdE2[tjj].y = l_ij;
+pdE2[tjj].z = rj;
+pdE2[tjj].w = 2.0f;
+*/
+}
+
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+/*
+pdE1[tjj].x = term;
+pdE1[tjj].y = r;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = -2.0f;
+*/
+pdE2[tjj].x = term;
+pdE2[tjj].y = r;
+pdE2[tjj].z = ar.x;
+pdE2[tjj].w = -2.0f;
+}
+#endif
                         }
                         float rScaledRadiusI    = r + ar.y;
                         if (psA[tj].r < rScaledRadiusI)
@@ -211,18 +294,38 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned 
                             float l_ij2    = l_ij * l_ij;
                             float u_ij2    = u_ij * u_ij;
                             float ratio    = log(u_ij / l_ij);
-                            float term     = l_ij -
-                                             u_ij +
+                            float term     = l_ij - u_ij +
                                              0.25f * r * (u_ij2 - l_ij2) +
                                              (0.50f * rInverse * ratio) +
                                              (0.25f * ar.y * ar.y * rInverse) *
                                              (l_ij2 - u_ij2);
+
                             float rj = psA[tj].r;
                             if (rj < (ar.y - r))
                             {
                                 term += 2.0f * ((1.0f / psA[tj].r) - l_ij);
                             }
                             psA[tj].sum    += polarScaleDataI*term;
+
+#ifdef DEBUG
+int jIdx = tj;
+if( i == TARGET ){
+
+int tjj     = y+jIdx;
+pdE1[tjj].x = term;
+pdE1[tjj].y = r;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = 3.0f;
+}
+
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE2[tjj].x = term;
+pdE2[tjj].y = r;
+pdE2[tjj].z = ar.x;
+pdE2[tjj].w = -3.0f;
+}
+#endif
                         }
                     }
                     tj = (tj - 1) & (GRID - 1);
@@ -242,15 +345,15 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned 
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                         if (i < cSim.atoms && y+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                        if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                        if (i < cSim.atoms && y+j < cSim.atoms )
 #endif
                         {
                             r                       = sqrt(r2);

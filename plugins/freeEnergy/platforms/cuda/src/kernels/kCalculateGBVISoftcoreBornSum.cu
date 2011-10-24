@@ -29,133 +29,120 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "GpuGBVISoftcore.h"
 #include "GpuFreeEnergyCudaKernels.h"
-#include <cuda.h>
+#include "freeEnergyGpuTypes.h"
 
-struct cudaFreeEnergySimulationGBVI {
-    float quinticLowerLimitFactor;
-    float quinticUpperLimit;
-    float* pSwitchDerivative;
-};
-struct cudaFreeEnergySimulationGBVI gbviSim;
+#include "openmm/OpenMMException.h"
+#include <cuda.h>
+#include <sstream>
+
+#define PARAMETER_PRINT 0
+#define MAX_PARAMETER_PRINT 10
+//#define DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ cudaFreeEnergySimulationGBVI gbviSimDev;
+static __constant__ cudaFreeEnergyGmxSimulation gbviSimDev;
 
-void SetCalculateGBVISoftcoreBornSumGpuSim(gpuContext gpu)
+void SetCalculateGBVISoftcoreBornSumGpuSim( freeEnergyGpuContext freeEnergyGpu)
 {
     cudaError_t status;
-    status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
+    status = cudaMemcpyToSymbol( cSim, &freeEnergyGpu->gpuContext->sim, sizeof(cudaGmxSimulation));    
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateGBVISoftcoreBornSumGpuSim copy to cSim failed");
-    //(void) fprintf( stderr, "SetCalculateGBVISoftcoreBornSumGpuSim\n" );
-}
 
-void GetCalculateGBVISoftcoreBornSumSim(gpuContext gpu)
-{
-    cudaError_t status;
-    status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
-}
-
-void SetCalculateGBVISoftcoreSupplementarySim( GpuGBVISoftcore* gpuGBVISoftcore )
-{
-    cudaError_t status;
-    gbviSim.pSwitchDerivative        = gpuGBVISoftcore->getGpuSwitchDerivative();
-    gbviSim.quinticLowerLimitFactor  = gpuGBVISoftcore->getQuinticLowerLimitFactor();
-    gbviSim.quinticUpperLimit        = gpuGBVISoftcore->getQuinticUpperLimit();
-    status                           = cudaMemcpyToSymbol(gbviSimDev, &gbviSim, sizeof(cudaFreeEnergySimulationGBVI));
-    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateGBVISoftcoreSupplementarySim");
-
-    //(void) fprintf( stderr, "SetCalculateGBVISoftcoreSupplementarySim %14.6e %14.6e swDerv=%p\n",
-    //                gbviSim.quinticLowerLimitFactor, gbviSim.quinticUpperLimit, gbviSim.pSwitchDerivative );
+    status = cudaMemcpyToSymbol( gbviSimDev, &freeEnergyGpu->freeEnergySim, sizeof(cudaFreeEnergyGmxSimulation));    
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateGBVISoftcoreBornSumGpuSim copy to feSim failed");
 }
 
 // create, initialize and enter BornRadiusScaleFactors values (used to scale contribution of atoms to Born sum of other atoms)
-// return handle to GpuGBVISoftcore object
 
 extern "C"
-GpuGBVISoftcore* gpuSetGBVISoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom,
-                                              const std::vector<float>& radius, const std::vector<float>& gamma,
-                                              const std::vector<float>& scaledRadii, const std::vector<float>& bornRadiusScaleFactors,
-                                              const std::vector<float>& quinticSplineParameters)
-{
-    static const float electricConstant         = -166.02691f;
-    unsigned int atoms                          = atom.size();
-    double tau                                  = ((1.0f/innerDielectric)-(1.0f/solventDielectric)); 
+void gpuSetGBVISoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom,
+                                   const std::vector<float>& radius, const std::vector<float>& gamma,
+                                   const std::vector<float>& scaledRadii, const std::vector<float>& bornRadiusScaleFactors,
+                                   const std::vector<float>& quinticSplineParameters ){
+
+    unsigned int numberOfParticles                    = radius.size();
+
+    gpuContext gpu                                    = freeEnergyGpu->gpuContext;
+
+    static const float electricConstant               = -166.02691f;
+    double tau                                        = ((1.0f/innerDielectric)-(1.0f/solventDielectric)); 
+    freeEnergyGpu->psSwitchDerivative                 = new CUDAStream<float>( numberOfParticles, 1, "SwitchDerivative");
+    freeEnergyGpu->freeEnergySim.pSwitchDerivative    = freeEnergyGpu->psSwitchDerivative->_pDevData;
 
     // create gpuGBVISoftcore, load parameters, and track minimum softcore value
     // gpuGBVISoftcore is not really being used (it was in the initial implementation) -- 
     // will be removed in future once confirmed not needed
 
-    GpuGBVISoftcore* gpuGBVISoftcore            = new GpuGBVISoftcore();
-    unsigned int numberOfParticles              = radius.size();
 
     // check if quintic scaling to be applied
 
     if( quinticSplineParameters.size() == 2 ){
-       gpuGBVISoftcore->setBornRadiiScalingMethod( 1 );
-       gpuGBVISoftcore->setQuinticLowerLimitFactor( quinticSplineParameters[0] );
-       gpuGBVISoftcore->setQuinticUpperLimit(       quinticSplineParameters[1] );
-       gpuGBVISoftcore->initializeGpuSwitchDerivative(  gpu->sim.paddedNumberOfAtoms );
+       freeEnergyGpu->freeEnergySim.bornRadiiScalingMethod        = 1;
+       freeEnergyGpu->freeEnergySim.quinticLowerLimitFactor       = quinticSplineParameters[0];
+       freeEnergyGpu->freeEnergySim.quinticUpperLimit             = quinticSplineParameters[1];
+    } else {
+       freeEnergyGpu->freeEnergySim.bornRadiiScalingMethod        = 0;
+       freeEnergyGpu->freeEnergySim.quinticLowerLimitFactor       = 0.8f;
+       freeEnergyGpu->freeEnergySim.quinticUpperLimit             = 5.0f;
     }
 
-    for (unsigned int i = 0; i < bornRadiusScaleFactors.size(); i++) 
-    {
-            (*gpu->psGBVIData)[i].x = radius[i];
-            (*gpu->psGBVIData)[i].y = scaledRadii[i];
-            (*gpu->psGBVIData)[i].z = tau*gamma[i];
-            (*gpu->psGBVIData)[i].w = bornRadiusScaleFactors[i];
-
-(*gpu->psObcData)[i].x  = radius[i];
-(*gpu->psObcData)[i].y  = 0.9f*radius[i];
-
+    for( unsigned int ii = 0; ii < bornRadiusScaleFactors.size(); ii++ ){
+            (*gpu->psGBVIData)[ii].x = radius[ii];
+            (*gpu->psGBVIData)[ii].y = scaledRadii[ii];
+            (*gpu->psGBVIData)[ii].z = tau*gamma[ii];
+            (*gpu->psGBVIData)[ii].w = bornRadiusScaleFactors[ii];
     }
 
     // Dummy out extra atom data
 
-    for (unsigned int i = atoms; i < gpu->sim.paddedNumberOfAtoms; i++)
-    {
-        (*gpu->psBornRadii)[i]      = 0.2f;
-        (*gpu->psGBVIData)[i].x     = 0.01f;
-        (*gpu->psGBVIData)[i].y     = 0.01f;
-        (*gpu->psGBVIData)[i].z     = 0.01f;
-        (*gpu->psGBVIData)[i].w     = 1.00f;
+    for( unsigned int ii = bornRadiusScaleFactors.size(); ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+        (*gpu->psGBVIData)[ii].x     = 0.01f;
+        (*gpu->psGBVIData)[ii].y     = 0.01f;
+        (*gpu->psGBVIData)[ii].z     = 0.0f;
+        (*gpu->psGBVIData)[ii].w     = 0.0f;
     }
 
-#undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 0
-#if (DUMP_PARAMETERS == 1)
-    (void) fprintf( stderr,"GBVI softcore param %u %u sclMeth=%d LwFct=%8.3f UpLmt=[%12.5e (nm) %12.5e]\nR scaledR gamma*tau= bornRadiusScaleFactor \n",
-                    bornRadiusScaleFactors.size(), gpu->sim.paddedNumberOfAtoms,
-                    gpuGBVISoftcore->getBornRadiiScalingMethod(), gpuGBVISoftcore->getQuinticLowerLimitFactor(),
-                    powf( gpuGBVISoftcore->getQuinticUpperLimit(), -0.3333333f ), gpuGBVISoftcore->getQuinticUpperLimit() );
-    int maxPrint = 31;
-    for (unsigned int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++) 
-    {
+    gpu->sim.preFactor               = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
 
-        (void) fprintf( stderr,"%6u %14.7e %14.7e %14.7e %14.7e\n",
-                        ii, (*gpu->psGBVIData)[ii].x, (*gpu->psGBVIData)[ii].y, (*gpu->psGBVIData)[ii].z, (*gpu->psGBVIData)[ii].w ); 
-        if( ii == maxPrint ){
-            ii = gpu->sim.paddedNumberOfAtoms - maxPrint;
-            if( ii < maxPrint )ii = maxPrint;
+    // diagnostics
+
+    if( freeEnergyGpu->log ){
+        (void) fprintf( freeEnergyGpu->log,"GBVISoftcore: part.=%u padded=%u sclMeth=%d\n",
+                        static_cast<unsigned int>(bornRadiusScaleFactors.size()), static_cast<unsigned int>(gpu->sim.paddedNumberOfAtoms),
+                        freeEnergyGpu->freeEnergySim.bornRadiiScalingMethod );
+        if( quinticSplineParameters.size() == 2 ){
+            (void) fprintf( freeEnergyGpu->log,"QuinticScaling: LwFct=%8.3f UpLmt=[%12.5e (nm) %12.5e]\n",
+                        freeEnergyGpu->freeEnergySim.quinticLowerLimitFactor,
+                        powf( freeEnergyGpu->freeEnergySim.quinticUpperLimit, -0.3333333f ), freeEnergyGpu->freeEnergySim.quinticUpperLimit );
         }
+        (void) fprintf( freeEnergyGpu->log, "gpuSetGBVISoftcoreParameters: preFactor=%14.6e elecCnstnt=%.4f frcCnvrsnFctr=%.4f tau=%.4f.\n",
+                        gpu->sim.preFactor, 2.0f*electricConstant, gpu->sim.forceConversionFactor, ((1.0f/innerDielectric)-(1.0f/solventDielectric)) );
+#ifdef PARAMETER_PRINT
+        int maxPrint = MAX_PARAMETER_PRINT;
+        (void) fprintf( freeEnergyGpu->log, "               radius  scaled radius      tau*gamma         lambda\n" );
+        for( unsigned int ii = 0; ii < bornRadiusScaleFactors.size(); ii++ ){
+    
+            (void) fprintf( freeEnergyGpu->log,"%6u %14.7e %14.7e %14.7e %14.7e\n",
+                            ii, (*gpu->psGBVIData)[ii].x, (*gpu->psGBVIData)[ii].y, (*gpu->psGBVIData)[ii].z, (*gpu->psGBVIData)[ii].w ); 
+            if( ii == maxPrint ){
+                ii = bornRadiusScaleFactors.size() - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
+        unsigned int offset = gpu->sim.paddedNumberOfAtoms - MAX_PARAMETER_PRINT;
+        if( offset > 0 && gpu->sim.paddedNumberOfAtoms > bornRadiusScaleFactors.size()  ){
+            for( unsigned int ii = offset; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+                (void) fprintf( freeEnergyGpu->log,"%6u %14.7e %14.7e %14.7e %14.7e\n",
+                                ii, (*gpu->psGBVIData)[ii].x, (*gpu->psGBVIData)[ii].y, (*gpu->psGBVIData)[ii].z, (*gpu->psGBVIData)[ii].w ); 
+            }
+        }
+#endif
     }
-#endif
 
-    gpu->psBornRadii->Upload();
     gpu->psGBVIData->Upload();
-gpu->psObcData->Upload();
-    gpu->sim.preFactor              = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
-    gpuGBVISoftcore->upload( gpu );
 
-#if (DUMP_PARAMETERS == 1)
-(void) fprintf( stderr, "gpuSetGBVISoftcoreParameters: preFactor=%14.6e elecCnstnt=%.4f frcCnvrsnFctr=%.4f tau=%.4f.\n",
-                gpu->sim.preFactor, 2.0f*electricConstant, gpu->sim.forceConversionFactor, ((1.0f/innerDielectric)-(1.0f/solventDielectric)) );
-#endif
-
-    return gpuGBVISoftcore;
-
+    return;
 }
 
 struct Atom {
@@ -186,7 +173,7 @@ void kClearGBVISoftcoreBornSum(gpuContext gpu) {
 __global__ void kReduceGBVISoftcoreBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
-    float energy = 0.0f;
+    float energy     = 0.0f;
     while (pos < cSim.atoms)
     {
         float bornRadius  = cSim.pBornRadii[pos];
@@ -224,20 +211,23 @@ __global__ void kReduceGBVISoftcoreBornForces_kernel()
 
         float ratio         = (gbviData.x/bornRadius);
         float ratio3        = ratio*ratio*ratio;
-        energy             -= gbviData.z*ratio3;
+
+        energy             -= gbviData.z*ratio3;                   //  gbviData.z = gamma*tau
+
         totalForce         += (3.0f*gbviData.z*ratio3)/bornRadius; // 'cavity' term
         float br2           = bornRadius*bornRadius;
         totalForce         *= (1.0f/3.0f)*br2*br2;
 
-        pFt = cSim.pBornForce + pos;
-        *pFt = totalForce;
-        pos += gridDim.x * blockDim.x;
+        pFt                 = cSim.pBornForce + pos;
+        *pFt                = totalForce;
+        pos                += gridDim.x * blockDim.x;
     }
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy;
 }
 
-void kReduceGBVISoftcoreBornForces(gpuContext gpu)
+void kReduceGBVISoftcoreBornForces( freeEnergyGpuContext freeEnergyGpu )
 {
+    gpuContext gpu = freeEnergyGpu->gpuContext;
     kReduceGBVISoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceGBVISoftcoreBornForces");
 
@@ -249,15 +239,14 @@ __global__ void kReduceGBVISoftcoreBornSum_kernel()
     
     while (pos < cSim.atoms)
     {
-        float sum = 0.0f;
-        float* pSt = cSim.pBornSum + pos;
-        float4 atom = cSim.pGBVIData[pos];
+        float sum    = 0.0f;
+        float* pSt   = cSim.pBornSum + pos;
+        float4 atom  = cSim.pGBVIData[pos];
         
         // Get summed Born data
         for (int i = 0; i < cSim.nonbondOutputBuffers; i++)
         {
             sum += *pSt;
-       //     printf("%4d %4d A: %9.4f\n", pos, i, *pSt);
             pSt += cSim.stride;
         }
         
@@ -266,37 +255,14 @@ __global__ void kReduceGBVISoftcoreBornSum_kernel()
         float Rinv           = 1.0f/atom.x;
         sum                  = Rinv*Rinv*Rinv - sum; 
         cSim.pBornRadii[pos] = pow( sum, (-1.0f/3.0f) ); 
-        pos += gridDim.x * blockDim.x;
+        pos                 += gridDim.x * blockDim.x;
     }   
 }
 
-void kReduceGBVISoftcoreBornSum(gpuContext gpu)
+void kReduceGBVISoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
 {
-    //printf("kReduceGBVISoftcoreBornSum\n");
-#define GBVISoftcore_DEBUG 0
-#if ( GBVISoftcore_DEBUG == 1 )
-               gpu->psGBVISoftcoreData->Download();
-               gpu->psBornSum->Download();
-               gpu->psPosq4->Download();
-                (void) fprintf( stderr, "\nkReduceGBVISoftcoreBornSum: Post BornSum %s Born radii & params\n", 
-                               (gpu->bIncludeGBVISoftcore ? "GBVI" : "Obc") );
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                   (void) fprintf( stderr, "%d bSum=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f]\n",
-                                   ii, 
-                                   gpu->psBornSum->_pSysStream[0][ii],
-                                   gpu->psGBVISoftcoreData->_pSysStream[0][ii].x,
-                                   gpu->psGBVISoftcoreData->_pSysStream[0][ii].y,
-                                   gpu->psGBVISoftcoreData->_pSysStream[0][ii].z,
-                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w
-                                 );  
-                }   
-#endif
-#undef GBVISoftcore_DEBUG
-
-
+    gpuContext gpu = freeEnergyGpu->gpuContext;
     kReduceGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
-    gpu->bRecalculateBornRadii = false;
     LAUNCHERROR("kReduceGBVISoftcoreBornSum");
 }
 
@@ -311,7 +277,6 @@ void kReduceGBVISoftcoreBornSum(gpuContext gpu)
 
 // Include versions of the kernels with cutoffs.
 
-#if 0
 #undef METHOD_NAME
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define USE_CUTOFF
@@ -333,19 +298,6 @@ void kReduceGBVISoftcoreBornSum(gpuContext gpu)
 #undef METHOD_NAME
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateGBVISoftcoreBornSum.h"
-#endif
-
-#if 0
-__global__ void kClearGBVISoftcoreBornSum_kernel()
-{
-    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
-    {
-        ((float*)cSim.pBornSum)[pos] = 0.0f;
-        pos += gridDim.x * blockDim.x;
-    }
-}
-#endif
 
  __device__ void quinticSpline( float  x, float rl, float ru, float* outValue, float* outDerivative )
 {
@@ -373,7 +325,6 @@ __global__ void kReduceGBVIBornSumQuinticScaling_kernel()
         for (int i = 0; i < cSim.nonbondOutputBuffers; i++)
         {
             sum += *pSt;
-       //     printf("%4d %4d A: %9.4f\n", pos, i, *pSt);
             pSt += cSim.stride;
         }
         
@@ -382,7 +333,6 @@ __global__ void kReduceGBVIBornSumQuinticScaling_kernel()
         float Rinv           = 1.0f/atom.x;
         float r3             = Rinv*Rinv*Rinv;
         float splineL        = gbviSimDev.quinticLowerLimitFactor*r3;
-//float bSum           = sum;
         float switchDeriviative;
         if( sum > splineL ){
             if( sum < r3 ){
@@ -400,47 +350,16 @@ __global__ void kReduceGBVIBornSumQuinticScaling_kernel()
         }
 
         cSim.pBornRadii[pos]              = pow( sum, (-1.0f/3.0f) ); 
-//cSim.pBornSum[pos]              = bSum;
         gbviSimDev.pSwitchDerivative[pos] = switchDeriviative;
         pos += gridDim.x * blockDim.x;
     }   
 }
 
-void kReduceGBVIBornSumQuinticScaling(gpuContext gpu, GpuGBVISoftcore* gpuGBVISoftcore)
+void kReduceGBVIBornSumQuinticScaling( freeEnergyGpuContext freeEnergyGpu )
 {
-    //printf("kReduceGBVIBornSumQuinticScaling_kernel\n");
+    gpuContext gpu = freeEnergyGpu->gpuContext;
     kReduceGBVIBornSumQuinticScaling_kernel<<<gpu->sim.blocks, 384>>>();
-    gpu->bRecalculateBornRadii = false;
     LAUNCHERROR("kReduceGBVIBornSumQuinticScaling_kernel");
-
-#define GBVI_DEBUG 0
-#if ( GBVI_DEBUG == 1 )
-               gpu->psGBVIData->Download();
-               gpu->psBornSum->Download();
-               gpu->psBornRadii->Download();
-               gpu->psPosq4->Download();
-               CUDAStream<float>* psSwitchDerivative = gpuGBVISoftcore->getSwitchDerivative();
-                
-               psSwitchDerivative->Download();
-                (void) fprintf( stderr, "\nkReduceGBVIBornSumQuinticScaling: Post BornSum %s Born radii & params\n", 
-                               (gpu->bIncludeGBVI ? "GBVI" : "Obc") );
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                   (void) fprintf( stderr, "%6d bSum=%14.6e bR=%14.6e swDerv=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f] %s\n",
-                                   ii, 
-                                   gpu->psBornSum->_pSysStream[0][ii],
-                                   gpu->psBornRadii->_pSysStream[0][ii],
-                                   psSwitchDerivative->_pSysStream[0][ii],
-                                   gpu->psGBVIData->_pSysStream[0][ii].x,
-                                   gpu->psGBVIData->_pSysStream[0][ii].y,
-                                   gpu->psGBVIData->_pSysStream[0][ii].z,
-                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w,
-                                   (fabs( psSwitchDerivative->_pSysStream[0][ii] - 1.0 ) > 1.0e-05 ? "SWWWWW" : "")
-                                 );  
-                }   
-#endif
-#undef GBVI_DEBUG
-
 }
 
 __global__ void kReduceGBVIBornForcesQuinticScaling_kernel()
@@ -490,60 +409,115 @@ __global__ void kReduceGBVIBornForcesQuinticScaling_kernel()
         float br2           = bornRadius*bornRadius;
         totalForce         *= (1.0f/3.0f)*br2*br2*switchDeriv;
 
-        pFt = cSim.pBornForce + pos;
-        *pFt = totalForce;
-        pos += gridDim.x * blockDim.x;
+        pFt                 = cSim.pBornForce + pos;
+        *pFt                = totalForce;
+        pos                += gridDim.x * blockDim.x;
     }
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy;
 }
 
-void kReduceGBVIBornForcesQuinticScaling(gpuContext gpu)
+void kReduceGBVIBornForcesQuinticScaling( freeEnergyGpuContext freeEnergyGpu )
 {
     //printf("kReduceObcGbsaBornForces\n");
+    gpuContext gpu = freeEnergyGpu->gpuContext;
     kReduceGBVIBornForcesQuinticScaling_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceGBVIBornForcesQuinticScaling");
 }
 
-void kPrintGBVISoftcore(gpuContext gpu, GpuGBVISoftcore* gpuGBVISoftcore, std::string callId, int call)
+void kPrintGBVISoftcore( freeEnergyGpuContext freeEnergyGpu, std::string callId, int call, FILE* log)
 {
-    int maxPrint = 20;
-    (void) fprintf( stderr, "kPrintGBVgSoftcore %s %d\n", callId.c_str(), call );
+    gpuContext gpu = freeEnergyGpu->gpuContext;
+    //int maxPrint   = gpu->natoms;
+
     gpu->psGBVIData->Download();
     gpu->psBornRadii->Download();
     gpu->psBornForce->Download();
     gpu->psPosq4->Download();
-    CUDAStream<float>* switchDeriviative = gpuGBVISoftcore-> getSwitchDerivative( );
-    switchDeriviative->Download();
 
-    (void) fprintf( stderr, "BornSum Born radii & params\n" );
+    CUDAStream<float>* switchDeriviative = freeEnergyGpu->psSwitchDerivative;
+    CUDAStream<float4>* sigEps4          = freeEnergyGpu->psSigEps4;
+
+    switchDeriviative->Download();
+    sigEps4->Download();
+
+    (void) fprintf( log, "kPrintGBViSoftcore Cuda comp bR bF swd   prm    sigeps4\n" );
     for( int ii = 0; ii < gpu->natoms; ii++ ){
-        (void) fprintf( stderr, "%6d prm[%14.6e %14.6e %14.6e] bR=%14.6e bF=%14.6e swDrv=%14.6e x[%14.6f %14.6f %14.6f %14.6f]\n",
-                        ii,
-                        gpu->psGBVIData->_pSysStream[0][ii].x,
-                        gpu->psGBVIData->_pSysStream[0][ii].y,
-                        gpu->psGBVIData->_pSysStream[0][ii].z,
-                        gpu->psBornRadii->_pSysStream[0][ii],
-                        gpu->psBornForce->_pSysStream[0][ii],
-                        switchDeriviative->_pSysStream[0][ii],
-                        gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                        gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w );
-        if( (ii == maxPrint) && ( ii < (gpu->natoms - maxPrint)) ){
-            ii = gpu->natoms - maxPrint;
-        }
+        (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e \n",
+                        ii, 
+                        gpu->psBornRadii->_pSysData[ii],
+                        gpu->psBornForce->_pSysData[ii],
+                        switchDeriviative->_pSysData[ii],
+
+                        gpu->psGBVIData->_pSysData[ii].x,
+                        gpu->psGBVIData->_pSysData[ii].y,
+                        gpu->psGBVIData->_pSysData[ii].z,
+                        gpu->psGBVIData->_pSysData[ii].w,
+
+                        sigEps4->_pSysData[ii].x,
+                        sigEps4->_pSysData[ii].y,
+                        sigEps4->_pSysData[ii].z,
+                        sigEps4->_pSysData[ii].w );
+
     }
+
 }
 
-void kCalculateGBVISoftcoreBornSum(gpuContext gpu)
+extern __global__ void kFindBlockBoundsCutoff_kernel();
+extern __global__ void kFindBlockBoundsPeriodic_kernel();
+
+extern __global__ void kFindBlocksWithInteractionsCutoff_kernel();
+extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
+
+extern __global__ void kFindInteractionsWithinBlocksCutoff_kernel(unsigned int*);
+extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
+
+void kCalculateGBVISoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
 {
-    //printf("kCalculateGBVIBornSum\n");
+
+    gpuContext gpu = freeEnergyGpu->gpuContext;
+
+#ifdef DEBUG
+fprintf( stderr, "kCalculateCDLJObcGbsaSoftcoreForces1 cutoff=%15.7e\n", gpu->sim.nonbondedCutoffSqr );
+int psize = gpu->sim.paddedNumberOfAtoms;
+CUDAStream<float4>* pdE1 = new CUDAStream<float4>( psize, 1, "pdE");
+CUDAStream<float4>* pdE2 = new CUDAStream<float4>( psize, 1, "pdE");
+float bF; 
+float bF1; 
+showWorkUnitsFreeEnergy( freeEnergyGpu, 1 );
+
+for( int ii = 0; ii < psize; ii++ ){
+
+pdE1->_pSysData[ii].x = 0.0f;
+pdE1->_pSysData[ii].y = 0.001f;
+pdE1->_pSysData[ii].z = 0.001f;
+pdE1->_pSysData[ii].w = 0.001f;
+
+pdE2->_pSysData[ii].x = 0.001f;
+pdE2->_pSysData[ii].y = 0.001f;
+pdE2->_pSysData[ii].z = 0.001f;
+pdE2->_pSysData[ii].w = 0.001f;
+}
+pdE1->Upload();
+pdE2->Upload();
+
+#endif
+
     kClearGBVISoftcoreBornSum( gpu );
     LAUNCHERROR("kClearGBVIBornSum from kCalculateGBVISoftcoreBornSum");
 
-    //size_t numWithInteractions;
-    switch (gpu->sim.nonbondedMethod)
-    {
-        case NO_CUTOFF:
+    switch (freeEnergyGpu->freeEnergySim.nonbondedMethod)
+    {   
+        case FREE_ENERGY_NO_CUTOFF:
 
+#ifdef DEBUG
+            if (gpu->bOutputBufferPerWarp){
+                kCalculateGBVISoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+            } else {
+                kCalculateGBVISoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+            }
+#else
             if (gpu->bOutputBufferPerWarp){
                 kCalculateGBVISoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
@@ -551,25 +525,93 @@ void kCalculateGBVISoftcoreBornSum(gpuContext gpu)
                 kCalculateGBVISoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             }
+#endif
+
             break;
-#if 0
-        case CUTOFF:
+
+        case FREE_ENERGY_CUTOFF:
+
+            kFindBlockBoundsCutoff_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsCutoff");
+            kFindBlocksWithInteractionsCutoff_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsCutoff");
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+
+#ifdef DEBUG
+            (void) fprintf( stderr, "kCalculateGBVISoftcoreBornSum cutoff=%15.7e warp=%u GridBoundingBox.length=%u interaction_blocks=%u interaction_threads_per_block=%u nonbond_blocks=%u nonbond_threads_per_block=%u\n",
+                            gpu->sim.nonbondedCutoffSqr, gpu->bOutputBufferPerWarp, gpu->psGridBoundingBox->_length, gpu->sim.interaction_blocks,
+                            gpu->sim.interaction_threads_per_block, gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block ); fflush( stderr );
+
+
             if (gpu->bOutputBufferPerWarp)
-                kCalculateGBVICutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateGBVISoftcoreCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+            else
+                kCalculateGBVISoftcoreCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData );
+
+#else
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateGBVISoftcoreCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateGBVICutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
-            break;
-        case PERIODIC:
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateGBVIPeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
-            else
-                kCalculateGBVIPeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateGBVISoftcoreCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
             break;
 #endif
+
+        case FREE_ENERGY_PERIODIC:
+
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+
+#ifdef DEBUG
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateGBVISoftcorePeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData  );
+            else
+                kCalculateGBVISoftcorePeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData  );
+#else
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateGBVISoftcorePeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
+            else
+                kCalculateGBVISoftcorePeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
+#endif
+            break;
+
+        default:
+            throw OpenMM::OpenMMException( "Nonbonded softcore method not recognized." );
+
     }
     LAUNCHERROR("kCalculateGBVISoftcoreBornSum");
+
+#ifdef DEBUG
+pdE1->Download();
+pdE2->Download();
+fprintf( stderr, "bSum Cud method=%u warp=%u\n", freeEnergyGpu->freeEnergySim.nonbondedMethod, gpu->bOutputBufferPerWarp );
+bF  = 0.0;
+bF1 = 0.0;
+for( int ii = 0; ii < gpu->natoms; ii++ ){
+    if( fabsf( pdE1->_pSysData[ii].w ) > 0.002 ){
+        bF1 += pdE1->_pSysData[ii].x;
+        if( fabsf( pdE1->_pSysData[ii].x ) > 0.001 ){
+            fprintf( stderr, "%4d %15.7e %15.7e %15.7e %15.7e    %15.7e %15.7e %15.7e %15.7e\n", ii,
+                     pdE1->_pSysData[ii].x, pdE1->_pSysData[ii].y, pdE1->_pSysData[ii].z, pdE1->_pSysData[ii].w,
+                     pdE2->_pSysData[ii].x, pdE2->_pSysData[ii].y, pdE2->_pSysData[ii].z, pdE2->_pSysData[ii].w );
+        }
+    }
+    bF += pdE1->_pSysData[ii].x;
+}
+fprintf( stderr, "bSum Cud %6d %15.7e %15.7e\n", TARGET, bF, bF1 );
+#endif
 }

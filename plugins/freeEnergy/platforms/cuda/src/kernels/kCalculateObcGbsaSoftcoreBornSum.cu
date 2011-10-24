@@ -25,11 +25,16 @@
  * -------------------------------------------------------------------------- */
 
 #include "gputypes.h"
+#include "freeEnergyGpuTypes.h"
+#include "GpuFreeEnergyCudaKernels.h"
 #include "kernels/cudaKernels.h"
-#include "GpuObcGbsaSoftcore.h"
+#include "openmm/OpenMMException.h"
 
 #include <cuda.h>
-#include <string>
+
+#define PARAMETER_PRINT 0
+#define MAX_PARAMETER_PRINT 10
+//#define DEBUG
 
 struct Atom {
     float x;
@@ -41,38 +46,17 @@ struct Atom {
     float polarScaleData;
 };
 
-struct cudaFreeEnergySimulationObcGbsaSoftcore {
-    float* pNonPolarScalingFactors;
-};
-struct cudaFreeEnergySimulationObcGbsaSoftcore gbsaSim;
-
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ cudaFreeEnergySimulationObcGbsaSoftcore gbsaSimDev;
+static __constant__ cudaFreeEnergyGmxSimulation gbsaSimDev;
 
-extern "C"
-void SetCalculateObcGbsaSoftcoreBornSumSim(gpuContext gpu)
+extern "C" void SetCalculateObcGbsaSoftcoreBornSumSim( freeEnergyGpuContext freeEnergyGpu)
 {
     cudaError_t status;
-    status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "SetCalculateObcGbsaSoftcoreBornSumSim: cudaMemcpyToSymbol: SetSim copy to cSim failed");
-}
+    status = cudaMemcpyToSymbol( cSim, &freeEnergyGpu->gpuContext->sim, sizeof(cudaGmxSimulation));
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreBornSumSim copy to cSim failed.");
 
-extern "C"
-void SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim( float* nonPolarScalingFactors )
-{
-    cudaError_t status;
-    gbsaSim.pNonPolarScalingFactors = nonPolarScalingFactors;
-    status                          = cudaMemcpyToSymbol(gbsaSimDev, &gbsaSim, sizeof(cudaFreeEnergySimulationObcGbsaSoftcore));
-    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim");
-
-    //(void) fprintf( stderr, "In SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim\n" );
-}
-
-void GetCalculateObcGbsaSoftcoreBornSumSim(gpuContext gpu)
-{
-    cudaError_t status;
-    status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "GetCalculateObcGbsaSoftcoreBornSumSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
+    status = cudaMemcpyToSymbol( gbsaSimDev, &freeEnergyGpu->freeEnergySim, sizeof(cudaFreeEnergyGmxSimulation));
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreBornSumSim copy to gbsaSimDev failed.");
 }
 
 __global__ void kClearObcGbsaSoftcoreBornSum_kernel()
@@ -80,8 +64,8 @@ __global__ void kClearObcGbsaSoftcoreBornSum_kernel()
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
     {
-        ((float*)cSim.pBornSum)[pos] = 0.0f;
-        pos += gridDim.x * blockDim.x;
+        ((float*)cSim.pBornSum)[pos]   = 0.0f;
+        pos                           += gridDim.x * blockDim.x;
     }
 }
 
@@ -90,8 +74,8 @@ __global__ void kClearSoftcoreBornForces_kernel()
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
     {   
-        ((float*)cSim.pBornForce)[pos] = 0.0f;
-        pos += gridDim.x * blockDim.x;
+        ((float*)cSim.pBornForce)[pos]  = 0.0f;
+        pos                            += gridDim.x * blockDim.x;
     }   
 }
 
@@ -111,17 +95,18 @@ void kClearObcGbsaSoftcoreBornSum(gpuContext gpu)
 __global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
-    float energy = 0.0f;
+    float energy     = 0.0f;
+
     while (pos < cSim.atoms)
     {
         float bornRadius         = cSim.pBornRadii[pos];
         float obcChain           = cSim.pObcChain[pos];
         float2 obcData           = cSim.pObcData[pos];
         float  nonPolarScaleData = gbsaSimDev.pNonPolarScalingFactors[pos];
-        float totalForce = 0.0f;
-        float* pFt = cSim.pBornForce + pos;
+        float totalForce         = 0.0f;
+        float* pFt               = cSim.pBornForce + pos;
 
-        int i = cSim.nonbondOutputBuffers;
+        int i                    = cSim.nonbondOutputBuffers;
         while (i >= 4)
         {
             float f1    = *pFt;
@@ -153,23 +138,21 @@ __global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
         float saTerm       = nonPolarScaleData*cSim.surfaceAreaFactor * r * r * ratio6;
         totalForce        += saTerm / bornRadius; // 1.102 == Temp mysterious fudge factor, FIX FIX FIX
 
-        /* E */
-        energy += saTerm;
+        energy            += saTerm;
 
-        totalForce *= bornRadius * bornRadius * obcChain;
+        totalForce        *= bornRadius * bornRadius * obcChain;
 
-        pFt = cSim.pBornForce + pos;
-        *pFt = totalForce;
-        pos += gridDim.x * blockDim.x;
+        pFt                = cSim.pBornForce + pos;
+        *pFt               = totalForce;
+        pos               += gridDim.x * blockDim.x;
     }
-    /* E */
+
     // correct for surface area factor of -6
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
 }
 
 
-void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
-{
+void kReduceObcGbsaSoftcoreBornForces( gpuContext gpu ){
 
     kReduceObcGbsaSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceObcGbsaSoftcoreBornForces");
@@ -187,7 +170,6 @@ void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
 
 // Include versions of the kernels with cutoffs.
 
-#if 0
 #undef METHOD_NAME
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define USE_CUTOFF
@@ -209,7 +191,6 @@ void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
 #undef METHOD_NAME
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaSoftcoreBornSum.h"
-#endif
 
 __global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
 {
@@ -217,15 +198,13 @@ __global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
     
     while (pos < cSim.atoms)
     {
-        float sum = 0.0f;
-        float* pSt = cSim.pBornSum + pos;
+        float sum   = 0.0f;
+        float* pSt  = cSim.pBornSum + pos;
         float2 atom = cSim.pObcData[pos];
         
         // Get summed Born data
-        for (int i = 0; i < cSim.nonbondOutputBuffers; i++)
-        {
+        for( int i = 0; i < cSim.nonbondOutputBuffers; i++ ){
             sum += *pSt;
-       //     printf("%4d %4d A: %9.4f\n", pos, i, *pSt);
             pSt += cSim.stride;
         }
         
@@ -240,9 +219,9 @@ __global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
         float bornRadius        = 1.0f / (1.0f / atom.x - tanhSum / nonOffsetRadii); 
         float obcChain          = atom.x * (cSim.alphaOBC - 2.0f * cSim.betaOBC * sum + 3.0f * cSim.gammaOBC * sum2);
         obcChain                = (1.0f - tanhSum * tanhSum) * obcChain / nonOffsetRadii;        
-        cSim.pBornRadii[pos] = bornRadius;
-        cSim.pObcChain[pos]  = obcChain;
-        pos += gridDim.x * blockDim.x;
+        cSim.pBornRadii[pos]    = bornRadius;
+        cSim.pObcChain[pos]     = obcChain;
+        pos                    += gridDim.x * blockDim.x;
     }   
 }
 
@@ -257,7 +236,7 @@ void kReduceObcGbsaSoftcoreBornSum(gpuContext gpu)
 /** 
  * Initialize parameters for Cuda Obc softcore
  * 
- * @param gpu                  gpu context
+ * @param freeEnergyGpu        freeEnergyGpu context
  * @param innerDielectric      solute dielectric
  * @param solventDielectric    solvent dielectric
  * @param radius               intrinsic Born radii
@@ -268,9 +247,9 @@ void kReduceObcGbsaSoftcoreBornSum(gpuContext gpu)
  */
 
 extern "C"
-GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, float nonPolarPrefactor,
-                                                const std::vector<float>& radius, const std::vector<float>& scale,
-                                                const std::vector<float>& charge, const std::vector<float>& nonPolarScalingFactors)
+void  gpuSetObcSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, float innerDielectric, float solventDielectric, float nonPolarPrefactor,
+                                   const std::vector<float>& radius, const std::vector<float>& scale,
+                                   const std::vector<float>& charge, const std::vector<float>& nonPolarScalingFactors)
 {
 
 // ---------------------------------------------------------------------------------------
@@ -281,97 +260,252 @@ GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDiele
 
 // ---------------------------------------------------------------------------------------
 
-    unsigned int atoms                     = radius.size();
+    unsigned int numberOfParticles                       = radius.size();
+    gpuContext gpu                                       = freeEnergyGpu->gpuContext;
 
     // initialize parameters
 
-//    gpu->bIncludeGBSA = true;
-    GpuObcGbsaSoftcore* gpuObcGbsaSoftcore = new GpuObcGbsaSoftcore();
-    gpuObcGbsaSoftcore->initializeNonPolarScalingFactors( gpu->sim.paddedNumberOfAtoms );
+    freeEnergyGpu->psNonPolarScalingFactors              = new CUDAStream<float>( gpu->sim.paddedNumberOfAtoms, 1, "ObcSoftcoreNonPolarScaling");
+    freeEnergyGpu->freeEnergySim.pNonPolarScalingFactors = freeEnergyGpu->psNonPolarScalingFactors->_pDevData;
 
-    gpu->sim.surfaceAreaFactor             =  -6.0f*PI*4.0f*nonPolarPrefactor;
-    for (unsigned int i = 0; i < atoms; i++)
-    {
-            (*gpu->psObcData)[i].x = radius[i] - dielectricOffset;
-            (*gpu->psObcData)[i].y = scale[i] * (*gpu->psObcData)[i].x;
-            (*gpu->psPosq4)[i].w   = charge[i];
-            gpuObcGbsaSoftcore->setNonPolarScalingFactors( i, nonPolarScalingFactors[i] );
+    gpu->sim.surfaceAreaFactor                           =  -6.0f*PI*4.0f*nonPolarPrefactor;
+    gpu->sim.preFactor                                   = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
 
+    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
+        (*gpu->psObcData)[ii].x                        = radius[ii] - dielectricOffset;
+        (*gpu->psObcData)[ii].y                        = scale[ii] * (*gpu->psObcData)[ii].x;
+        (*gpu->psPosq4)[ii].w                          = charge[ii];
+        (*freeEnergyGpu->psNonPolarScalingFactors)[ii] = nonPolarScalingFactors[ii];
     }
 
     // diagnostics
-#define DUMP_PARAMETERS 0
-#if (DUMP_PARAMETERS == 1)
-    (void) fprintf( stderr, "%s %u %u\n", methodName.c_str(), gpu->natoms, gpu->sim.paddedNumberOfAtoms );
-    for (unsigned int i = 0; i < atoms; i++)
-    {
-       (void) fprintf( stderr, "%6u %13.6e %13.6e %8.3f %8.3f\n", i,  (*gpu->psObcData)[i].x, (*gpu->psObcData)[i].y, (*gpu->psPosq4)[i].w , nonPolarScalingFactors[i] );
-    }
+
+    if( freeEnergyGpu->log ){
+        (void) fprintf( freeEnergyGpu->log, "%s %u %u\n", methodName.c_str(), gpu->natoms, gpu->sim.paddedNumberOfAtoms );
+        (void) fprintf( freeEnergyGpu->log, "surfaceAreaFactor=%15.7e preFactor=%15.7e\n", gpu->sim.surfaceAreaFactor, gpu->sim.preFactor);
+#ifdef PARAMETER_PRINT
+        int maxPrint = MAX_PARAMETER_PRINT;
+        for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
+            (void) fprintf( freeEnergyGpu->log, "%6u %13.6e %13.6e %8.3f %8.3f\n", ii, 
+                            (*gpu->psObcData)[ii].x, (*gpu->psObcData)[ii].y, (*gpu->psPosq4)[ii].w, (*freeEnergyGpu->psNonPolarScalingFactors)[ii] );
+             if( ii == maxPrint ){
+                ii = numberOfParticles - maxPrint;
+                if( ii < maxPrint )ii = maxPrint;
+            }
+        }
 #endif
+    }
 
     // dummy out extra atom data
 
-    for (unsigned int i = gpu->natoms; i < gpu->sim.paddedNumberOfAtoms; i++)
-    {
-        (*gpu->psBornRadii)[i]     = 0.2f;
-        (*gpu->psObcData)[i].x     = 0.01f;
-        (*gpu->psObcData)[i].y     = 0.01f;
+    for (unsigned int ii = gpu->natoms; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+        (*gpu->psObcData)[ii].x                         = 0.01f;
+        (*gpu->psObcData)[ii].y                         = 0.01f;
+        (*freeEnergyGpu->psNonPolarScalingFactors)[ii]  = 0.0f;
     }
 
     // load data to board
 
-    gpuObcGbsaSoftcore->upload( gpu );
-    gpu->psBornRadii->Upload();
     gpu->psObcData->Upload();
     gpu->psPosq4->Upload();
+    freeEnergyGpu->psNonPolarScalingFactors->Upload();
 
-    gpu->sim.preFactor = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
-
-    return gpuObcGbsaSoftcore;
+    return;
 }
 
-void kCalculateObcGbsaSoftcoreBornSum(gpuContext gpu)
+void kPrintObcGbsaSoftcore( freeEnergyGpuContext freeEnergyGpu, std::string callId, int call, FILE* log){
+
+    gpuContext gpu = freeEnergyGpu->gpuContext;
+    int maxPrint   = gpu->natoms;
+
+    (void) fprintf( log, "kPrintObcGbsaSoftcore %s %d\n", callId.c_str(), call );
+
+    gpu->psObcData->Download();
+    gpu->psBornRadii->Download();
+    gpu->psBornForce->Download();
+    gpu->psPosq4->Download();
+    freeEnergyGpu->psNonPolarScalingFactors->Download();
+
+    CUDAStream<float4>* sigEps4          = freeEnergyGpu->psSigEps4;
+    sigEps4->Download();
+
+    (void) fprintf( log, "BornSum Born radii & params\n" );
+    for( int ii = 0; ii < gpu->natoms; ii++ ){
+        //(void) fprintf( log, "%6d prm[%15.7e %15.7e %15.7e %15.7e] [%15.7e %15.7e %15.7e %15.7e] bR=%15.7e bF=%15.7e swDrv=%3.1f x[%8.3f %8.3f %8.3f %15.7f]\n",
+        (void) fprintf( log, "%6d prm[%15.7e %15.7e %15.7e] sig/eps4[%15.7e %15.7e %15.7e %15.7e] bR=%15.7e bF=%15.7e\n",
+                        ii,
+
+                        gpu->psObcData->_pSysData[ii].x,
+                        gpu->psObcData->_pSysData[ii].y,
+                        freeEnergyGpu->psNonPolarScalingFactors->_pSysData[ii],
+
+                        sigEps4->_pSysData[ii].x,
+                        sigEps4->_pSysData[ii].y,
+                        sigEps4->_pSysData[ii].z,
+                        sigEps4->_pSysData[ii].w,
+
+                        gpu->psBornRadii->_pSysData[ii],
+                        gpu->psBornForce->_pSysData[ii]
+/*
+                        gpu->psPosq4->_pSysData[ii].x,
+                        gpu->psPosq4->_pSysData[ii].y,
+                        gpu->psPosq4->_pSysData[ii].z,
+                        gpu->psPosq4->_pSysData[ii].w );
+*/
+                        );
+
+        if( (ii == maxPrint) && ( ii < (gpu->natoms - maxPrint)) ){
+            ii = gpu->natoms - maxPrint;
+        }
+    }
+
+}
+extern __global__ void kFindBlockBoundsCutoff_kernel();
+extern __global__ void kFindBlockBoundsPeriodic_kernel();
+
+extern __global__ void kFindBlocksWithInteractionsCutoff_kernel();
+extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
+
+extern __global__ void kFindInteractionsWithinBlocksCutoff_kernel(unsigned int*);
+extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
+
+void kCalculateObcGbsaSoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
 {
   //  printf("kCalculateObcGbsaSoftcoreBornSum\n");
+    gpuContext gpu = freeEnergyGpu->gpuContext;
+
+#ifdef DEBUG 
+fprintf( stderr, "kCalculateObcGbsaSoftcoreBornSum cutoff=%15.7e\n", gpu->sim.nonbondedCutoffSqr );
+int psize = gpu->sim.paddedNumberOfAtoms;
+CUDAStream<float4>* pdE1 = new CUDAStream<float4>( psize, 1, "pdE");
+CUDAStream<float4>* pdE2 = new CUDAStream<float4>( psize, 1, "pdE");
+float bF; 
+float bF1; 
+showWorkUnitsFreeEnergy( freeEnergyGpu, 1 );
+
+for( int ii = 0; ii < psize; ii++ ){
+
+pdE1->_pSysData[ii].x = 0.0f;
+pdE1->_pSysData[ii].y = 0.001f;
+pdE1->_pSysData[ii].z = 0.001f;
+pdE1->_pSysData[ii].w = 0.001f;
+
+pdE2->_pSysData[ii].x = 0.001f;
+pdE2->_pSysData[ii].y = 0.001f;
+pdE2->_pSysData[ii].z = 0.001f;
+pdE2->_pSysData[ii].w = 0.001f;
+}
+pdE1->Upload();
+pdE2->Upload();
+#endif
+
     kClearObcGbsaSoftcoreBornSum(gpu);
     LAUNCHERROR("kClearBornSum from kCalculateObcGbsaSoftcoreBornSum");
 
-    switch (gpu->sim.nonbondedMethod)
+    switch ( freeEnergyGpu->freeEnergySim.nonbondedMethod )
     {
-        case NO_CUTOFF:
-#define GBSA 0
-#if GBSA == 1
-gpu->psWorkUnit->Download();
-fprintf( stderr, "kCalculateObcGbsaSoftcoreBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u\n", gpu->bOutputBufferPerWarp,
-                 gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysData[0] );
-#endif
-#undef GBSA
+        case FREE_ENERGY_NO_CUTOFF:
 
+#ifdef DEBUG 
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateObcGbsaSoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit,  pdE1->_pDevData, pdE2->_pDevData);
+            else
+                kCalculateObcGbsaSoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit,  pdE1->_pDevData, pdE2->_pDevData);
+
+#else
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaSoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             else
                 kCalculateObcGbsaSoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
-            break;
-#if 0
-        case CUTOFF:
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateObcGbsaCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            else
-                kCalculateObcGbsaCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            break;
-        case PERIODIC:
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateObcGbsaPeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            else
-                kCalculateObcGbsaPeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            break;
 #endif
+            break;
+
+        case FREE_ENERGY_CUTOFF:
+
+            kFindBlockBoundsCutoff_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsCutoff");
+            kFindBlocksWithInteractionsCutoff_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsCutoff");
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+
+#ifdef DEBUG
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateObcGbsaSoftcoreCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+            else
+                kCalculateObcGbsaSoftcoreCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+#else
+
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateObcGbsaSoftcoreCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            else
+                kCalculateObcGbsaSoftcoreCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+#endif
+
+            break;
+
+        case FREE_ENERGY_PERIODIC:
+
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+
+#ifdef DEBUG
+
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateObcGbsaSoftcorePeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+            else
+                kCalculateObcGbsaSoftcorePeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
+#else
+
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateObcGbsaSoftcorePeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            else
+                kCalculateObcGbsaSoftcorePeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+
+#endif
+            break;
+
+        default:
+            throw OpenMM::OpenMMException( "Nonbonded softcore method not recognized." );
+
     }
     LAUNCHERROR("kCalculateObcGbsaSoftcoreBornSum");
+
+#ifdef DEBUG 
+
+pdE1->Download();
+pdE2->Download();
+//gpu->psBornRadii->Download();
+//gpu->psObcData->Download();
+fprintf( stderr, "bL Obc Cud\n" );
+bF  = 0.0;
+bF1 = 0.0;
+for( int ii = 0; ii < gpu->natoms; ii++ ){
+    bF1 += pdE1->_pSysData[ii].x;
+            fprintf( stderr, "%4d %15.7e %15.7e %15.7e %15.7e    %15.7e %15.7e %15.7e %15.7e\n", ii,
+                     pdE1->_pSysData[ii].x, pdE1->_pSysData[ii].y, pdE1->_pSysData[ii].z, pdE1->_pSysData[ii].w,
+                     pdE2->_pSysData[ii].x, pdE2->_pSysData[ii].y, pdE2->_pSysData[ii].z, pdE2->_pSysData[ii].w );
+    bF += pdE1->_pSysData[ii].x;
+}
+fprintf( stderr, "bS Obc Cud %6d %15.7e %15.7e\n", TARGET, bF, bF1 );
+#endif
+
 }

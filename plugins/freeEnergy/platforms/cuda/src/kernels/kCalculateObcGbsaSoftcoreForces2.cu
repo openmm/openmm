@@ -34,7 +34,7 @@
 using namespace std;
 
 #include "gputypes.h"
-#include "GpuObcGbsaSoftcore.h"
+#include "freeEnergyGpuTypes.h"
 
 struct Atom {
     float x;
@@ -49,38 +49,19 @@ struct Atom {
     float fb;
 };
 
-struct cudaFreeEnergySimulationObcGbsaSoftcore {
-    float* pNonPolarScalingFactors;
-};
-struct cudaFreeEnergySimulationObcGbsaSoftcore gbsaSimObc2;
-
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ cudaFreeEnergySimulationObcGbsaSoftcore gbsaSimDev;
+static __constant__ cudaFreeEnergyGmxSimulation feSimDev;
 
 extern "C"
-void SetCalculateObcGbsaSoftcoreForces2Sim(gpuContext gpu)
+void SetCalculateObcGbsaSoftcoreForces2Sim( freeEnergyGpuContext freeEnergyGpu )
 {
     cudaError_t status;
-    status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
-}
+    status = cudaMemcpyToSymbol(cSim, &freeEnergyGpu->gpuContext->sim, sizeof(cudaGmxSimulation));
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreForces2Sim copy to cSim failed");
 
-extern "C" 
-void SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim( float* nonPolarScalingFactors )
-{
-    cudaError_t status;
-    gbsaSimObc2.pNonPolarScalingFactors = nonPolarScalingFactors;
-    status                              = cudaMemcpyToSymbol(gbsaSimDev, &gbsaSimObc2, sizeof(cudaFreeEnergySimulationObcGbsaSoftcore));
-    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim");
+    status = cudaMemcpyToSymbol( feSimDev, &freeEnergyGpu->freeEnergySim, sizeof(cudaFreeEnergyGmxSimulation));
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreForces2Sim copy to feSimDev failed");
 
-    //(void) fprintf( stderr, "In SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsObc2Sim\n" );
-}
-
-void GetCalculateObcGbsaSoftcoreForces2Sim(gpuContext gpu)
-{
-    cudaError_t status;
-    status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
 // Include versions of the kernels for N^2 calculations.
@@ -116,15 +97,14 @@ void GetCalculateObcGbsaSoftcoreForces2Sim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaSoftcoreForces2.h"
 
-void kCalculateObcGbsaSoftcoreForces2(gpuContext gpu)
+void kCalculateObcGbsaSoftcoreForces2( freeEnergyGpuContext freeEnergyGpu )
 {
     //printf("kCalculateObcGbsaSoftcoreForces2\n");
-    //fprintf( stderr, "kCalculateObcGbsaSoftcoreForces2 nonbondedMethod=%d warp=%d\n", gpu->sim.nonbondedMethod, gpu->bOutputBufferPerWarp);
-//fprintf( stderr, "kCalculateObcGbsaSoftcoreForces2 nonbondedMethod=%d calling kReduceForces\n", gpu->sim.nonbondedMethod);
-//kReduceForces(gpu);
-    switch (gpu->sim.nonbondedMethod)
+    gpuContext gpu                     = freeEnergyGpu->gpuContext;
+    switch (freeEnergyGpu->freeEnergySim.nonbondedMethod)
     {
-        case NO_CUTOFF:
+        case FREE_ENERGY_NO_CUTOFF:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaSoftcoreN2ByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
                         sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit);
@@ -132,7 +112,9 @@ void kCalculateObcGbsaSoftcoreForces2(gpuContext gpu)
                 kCalculateObcGbsaSoftcoreN2Forces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
                         sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit);
             break;
-        case CUTOFF:
+
+        case FREE_ENERGY_CUTOFF:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaSoftcoreCutoffByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
@@ -140,7 +122,9 @@ void kCalculateObcGbsaSoftcoreForces2(gpuContext gpu)
                 kCalculateObcGbsaSoftcoreCutoffForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             break;
-        case PERIODIC:
+
+        case FREE_ENERGY_PERIODIC:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaSoftcorePeriodicByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);

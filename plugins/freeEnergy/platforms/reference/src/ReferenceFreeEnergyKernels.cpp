@@ -246,11 +246,12 @@ void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System&
     // If there is a NonbondedForce in this system, use it to initialize cutoffs and periodic boundary conditions.
 
     for (int i = 0; i < system.getNumForces(); i++) {
-        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&system.getForce(i));
+        const NonbondedSoftcoreForce* nonbonded = dynamic_cast<const NonbondedSoftcoreForce*>(&system.getForce(i));
         if (nonbonded != NULL) {
-            if (nonbonded->getNonbondedMethod() != NonbondedForce::NoCutoff)
+            if (nonbonded->getNonbondedMethod() != NonbondedSoftcoreForce::NoCutoff){
                 obcParameters->setUseCutoff(static_cast<RealOpenMM>(nonbonded->getCutoffDistance()));
-            if (nonbonded->getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
+            }
+            if (nonbonded->getNonbondedMethod() == NonbondedSoftcoreForce::CutoffPeriodic) {
                 Vec3 boxVectors[3];
                 system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
                 RealOpenMM periodicBoxSize[3];
@@ -317,8 +318,10 @@ void ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& sy
     gBVIParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
     gBVIParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
 
-    if (force.getNonbondedMethod() != GBVISoftcoreForce::NoCutoff)
+    if (force.getNonbondedMethod() != GBVISoftcoreForce::NoCutoff){
         gBVIParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
+     }
+
     if (force.getNonbondedMethod() == GBVISoftcoreForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);

@@ -50,13 +50,6 @@ void GBVISoftcoreForceProxy::serialize(const void* object, SerializationNode& no
     node.setDoubleProperty("solventDielectric", force.getSolventDielectric());
     node.setDoubleProperty("quinticLwrLmtFctr", force.getQuinticLowerLimitFactor());
     node.setDoubleProperty("quinticUpprBrLmt", force.getQuinticUpperBornRadiusLimit());
-/*
-    double alpha, beta, gamma;
-    force.getTanhParameters( alpha, beta, gamma );
-    node.setDoubleProperty("alphaT", alpha);
-    node.setDoubleProperty("betaT", beta);
-    node.setDoubleProperty("gammaT", gamma);
-*/
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, gamma, bornRadiusScaleFactor;
@@ -84,13 +77,6 @@ void* GBVISoftcoreForceProxy::deserialize(const SerializationNode& node) const {
         force->setSolventDielectric(node.getDoubleProperty("solventDielectric"));
         force->setQuinticLowerLimitFactor(node.getDoubleProperty("quinticLwrLmtFctr"));
         force->setQuinticUpperBornRadiusLimit(node.getDoubleProperty("quinticUpprBrLmt"));
-/*
-        double alpha, beta, gamma;
-        alpha  = node.getDoubleProperty("alphaT");
-        beta   = node.getDoubleProperty("betaT");
-        gamma  = node.getDoubleProperty("gammaT");
-        force->setTanhParameters( alpha, beta, gamma );
-*/
         const SerializationNode& particles = node.getChildNode("Particles");
         for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             const SerializationNode& particle = particles.getChildren()[i];

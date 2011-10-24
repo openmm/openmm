@@ -67,7 +67,7 @@ class ReferenceFreeEnergyLJCoulombSoftcoreIxn : public ReferencePairIxn {
           
       void calculateOneIxn( int atom1, int atom2, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* totalEnergy ) const;
+                            RealOpenMM* totalEnergy, std::vector<RealOpenMM>& de ) const;
 
    public:
 
@@ -166,7 +166,7 @@ private:
            --------------------------------------------------------------------------------------- */
       
       void calculateOneLJIxn( RealOpenMM inverseR, RealOpenMM sig, RealOpenMM eps,
-                              RealOpenMM* dEdR, RealOpenMM* energy ) const;
+                              RealOpenMM* dEdR, RealOpenMM* energy) const;
       
         /**---------------------------------------------------------------------------------------
       

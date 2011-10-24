@@ -206,7 +206,8 @@ void CpuGBVISoftcore::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadiu
 
    --------------------------------------------------------------------------------------- */
 
-void CpuGBVISoftcore::computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates, RealOpenMMVector& bornRadii ){
+void CpuGBVISoftcore::computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordinates,
+                                        RealOpenMMVector& bornRadii ){
 
     // ---------------------------------------------------------------------------------------
 
@@ -254,6 +255,7 @@ void CpuGBVISoftcore::computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordi
                    continue;
 
                sum  += bornRadiusScaleFactors[atomJ]*CpuGBVISoftcore::getVolume( r, radiusI, scaledRadii[atomJ] );
+
             }
         }
 
@@ -267,8 +269,11 @@ void CpuGBVISoftcore::computeBornRadii( std::vector<OpenMM::RealVec>& atomCoordi
             computeBornRadiiUsingQuinticSpline( atomicRadius3, sum, gbviParameters, 
                                                 bornRadii[atomI], &switchDeriviativeValue );
             switchDeriviative[atomI] = switchDeriviativeValue;
+
         }
+
     }
+
 }
 
 /**---------------------------------------------------------------------------------------
@@ -558,12 +563,7 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
     // set energy/forces to zero
 
     RealOpenMMVector bornForces( numberOfAtoms, 0.0 );
-    std::vector<RealVec> forces( numberOfAtoms );
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-        forces[atomI][0] = zero;
-        forces[atomI][1] = zero;
-        forces[atomI][2] = zero;
-    }
+    std::vector<RealVec> forces( numberOfAtoms, RealVec(0.0, 0.0, 0.0) );
 
     // ---------------------------------------------------------------------------------------
 
@@ -602,7 +602,6 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
             RealOpenMM dGpol_dr           = -Gpol*( one - fourth*expTerm )/denominator2;  
 
             RealOpenMM dGpol_dalpha2_ij   = -half*Gpol*expTerm*( one + D_ij )/denominator2;
-
             if( atomI != atomJ ){
 
                 bornForces[atomJ] += dGpol_dalpha2_ij*bornRadii[atomI];
@@ -621,10 +620,10 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
 
            }
            bornForces[atomI] += dGpol_dalpha2_ij*bornRadii[atomJ];
+
        }
     }
 
-    // ---------------------------------------------------------------------------------------
 
     // second main loop: (dGpol/dBornRadius)(dBornRadius/dr)(dr/dx)
 
@@ -634,6 +633,9 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
     const RealOpenMMVector& scaledRadii                 = gbviParameters->getScaledRadii();
     RealOpenMMVector& switchDeriviative                 = getSwitchDeriviative();
     const RealOpenMMVector& bornRadiusScaleFactors      = gbviParameters->getBornRadiusScaleFactors();
+
+    // ---------------------------------------------------------------------------------------
+
     for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
         RealOpenMM R        = atomicRadii[atomI];
@@ -706,6 +708,8 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
 
     }
 
+    //printGbvi( atomCoordinates, partialCharges, bornRadii,bornForces, forces, "GBVI softcore post loop2", stderr );
+
     // apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
     RealOpenMM conversion = static_cast<RealOpenMM>(gbviParameters->getTau());  
@@ -714,6 +718,68 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
         inputForces[atomI][1] += conversion*forces[atomI][1];
         inputForces[atomI][2] += conversion*forces[atomI][2];
     }
+
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Print GB/VI parameters, radii, forces, ...
+
+    @param atomCoordinates     atomic coordinates
+    @param partialCharges      partial charges
+    @param bornRadii           Born radii (may be empty)
+    @param bornForces          Born forces (may be empty)
+    @param forces              forces (may be empty)
+    @param idString            id string (who is calling)
+    @param log                 log file
+
+    --------------------------------------------------------------------------------------- */
+
+void CpuGBVISoftcore::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
+                                 const RealOpenMMVector& bornRadii,
+                                 const RealOpenMMVector& bornForces,
+                                 const std::vector<OpenMM::RealVec>& forces,
+                                 const std::string& idString, FILE* log ){
+
+    // ---------------------------------------------------------------------------------------
+
+    const GBVISoftcoreParameters* gbviParameters    = getGBVISoftcoreParameters();
+    const int numberOfAtoms                         = gbviParameters->getNumberOfAtoms();
+    const RealOpenMMVector& atomicRadii             = gbviParameters->getAtomicRadii();
+    const RealOpenMMVector& gammaParameters         = gbviParameters->getGammaParameters();
+    const RealOpenMMVector& bornRadiusScaleFactors  = gbviParameters->getBornRadiusScaleFactors();
+    const RealOpenMM preFactor                      = 2.0*gbviParameters->getElectricConstant();
+
+    // ---------------------------------------------------------------------------------------
+
+    const RealOpenMMVector& scaledRadii       = gbviParameters->getScaledRadii();
+    const RealOpenMMVector& switchDeriviative = getSwitchDeriviative();
+    RealOpenMM tau                            = static_cast<RealOpenMM>(gbviParameters->getTau());  
+
+    (void) fprintf( log, "Reference Gbvi     %s atoms=%d\n", idString.c_str(), numberOfAtoms );
+    (void) fprintf( log, "    tau            %15.7e\n", tau ); 
+    (void) fprintf( log, "    scaleMethod    %d (QuinticEnum=%d)\n", 
+                    gbviParameters->getBornRadiusScalingSoftcoreMethod(), GBVISoftcoreParameters::QuinticSpline );
+    (void) fprintf( log, "    preFactor      %15.7e)\n", preFactor );
+ 
+    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+        (void) fprintf( log, "%6d r=%15.7e rSc=%15.7e swd=%15.7e lmda=%4.2f tau*gam=%15.7e q=%15.7e", atomI,
+                        atomicRadii[atomI],    
+                        scaledRadii[atomI],    
+                        switchDeriviative[atomI],    
+                        bornRadiusScaleFactors[atomI],
+                        tau*gammaParameters[atomI],    
+                        partialCharges[atomI] );
+        if( bornRadii.size() > atomI ){
+             (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
+        }
+        if( bornForces.size() > atomI ){
+             (void) fprintf( log, " tau*bF=%15.7e", tau*bornForces[atomI] );    
+        }
+        (void) fprintf( log, "\n" );
+    }   
+
+    return;
 
 }
 

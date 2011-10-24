@@ -33,6 +33,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/NonbondedSoftcoreForce.h"
 #include "openmm/internal/NonbondedSoftcoreForceImpl.h"
+
 #include <cmath>
 #include <map>
 #include <sstream>
@@ -71,15 +72,6 @@ double NonbondedSoftcoreForce::getReactionFieldDielectric( void ) const {
 
 void NonbondedSoftcoreForce::setReactionFieldDielectric(double dielectric) {
     rfDielectric = dielectric;
-}
-
-double NonbondedSoftcoreForce::getEwaldErrorTolerance( void ) const {
-    return ewaldErrorTol;
-}
-
-void NonbondedSoftcoreForce::setEwaldErrorTolerance(double tol)
-{
-    ewaldErrorTol = tol;
 }
 
 int NonbondedSoftcoreForce::addParticle(double charge, double sigma, double epsilon, double softcoreLJLambda) {

@@ -83,10 +83,6 @@ public:
          */
         NoScaling          = 0,
         /**
-         * Use the method outlined in Proteins 55, 383-394 (2004), Eq. 6
-         */
-        Tanh               = 1,
-        /**
          * Use quintic spline scaling function
          */
         QuinticSpline       = 2 
@@ -240,16 +236,6 @@ public:
      * Set the upper limit used in the quintic spline scaling method (typically 0.008)
      */
     void setQuinticUpperBornRadiusLimit(double quinticUpperBornRadiusLimit);
-    /** 
-     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * is NoCutoff, this value will have no effect.
-     */
-    void getTanhParameters( double& alpha, double& beta, double& gamma) const;
-    /** 
-     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * is NoCutoff, this value will have no effect.
-     */
-    void setTanhParameters(double alpha, double beta, double gamma);
 protected:
     ForceImpl* createImpl();
 private:

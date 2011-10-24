@@ -52,7 +52,29 @@ namespace OpenMM {
  */
 
 class OPENMM_EXPORT GBSAOBCSoftcoreForce : public Force {
+
 public:
+
+    /** 
+     * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
+     */
+    enum NonbondedSoftcoreMethod {
+        /** 
+         * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
+         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
+         */
+        NoCutoff = 0,
+        /** 
+         * Interactions beyond the cutoff distance are ignored.
+         */
+        CutoffNonPeriodic = 1,
+        /** 
+         * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
+         * each other particle.  Interactions beyond the cutoff distance are ignored.
+         */
+        CutoffPeriodic = 2,
+    };  
+
     /*
      * Create a GBSAOBCSoftcoreForce.
      */
@@ -134,17 +156,41 @@ public:
     double getNonPolarPrefactor() const {
         return nonPolarPrefactor;
     }
+
     /**
      * Set the nonPolarPrefactor; units are kJ/mol/nm^2
      */
     void setNonPolarPrefactor(double inputNonPolarPrefactor) {
         nonPolarPrefactor = inputNonPolarPrefactor;
     }
+
+    /** 
+     * Get the method used for handling long range nonbonded interactions.
+     */
+    NonbondedSoftcoreMethod getNonbondedMethod() const;
+
+    /** 
+     * Set the method used for handling long range nonbonded interactions.
+     */
+    void setNonbondedMethod(NonbondedSoftcoreMethod method);
+
+    /** 
+     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     */
+    double getCutoffDistance() const;
+
+    /** 
+     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     */
+    void setCutoffDistance(double distance);
 protected:
     ForceImpl* createImpl();
 private:
     class ParticleInfo;
-    double solventDielectric, soluteDielectric, nonPolarPrefactor;
+    NonbondedSoftcoreMethod nonbondedMethod;
+    double cutoffDistance, solventDielectric, soluteDielectric, nonPolarPrefactor;
 
 // Retarded visual studio compiler complains about being unable to 
 // export private stl class members.

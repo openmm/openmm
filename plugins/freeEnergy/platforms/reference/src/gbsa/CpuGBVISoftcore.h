@@ -303,6 +303,26 @@ class CpuGBVISoftcore {
                                               GBVISoftcoreParameters* gbviParameters, 
                                               RealOpenMM& bornRadius, RealOpenMM* switchDeriviative );
       
+    /**---------------------------------------------------------------------------------------
+    
+        Print GB/VI parameters, radii, forces, ...
+    
+        @param atomCoordinates     atomic coordinates
+        @param partialCharges      partial charges
+        @param bornRadii           Born radii (may be empty)
+        @param bornForces          Born forces (may be empty)
+        @param forces              forces (may be empty)
+        @param idString            id string (who is calling)
+        @param log                 log file
+    
+        --------------------------------------------------------------------------------------- */
+    
+    void printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
+                    const RealOpenMMVector& bornRadii,
+                    const RealOpenMMVector& bornForces,
+                    const std::vector<OpenMM::RealVec>& forces,
+                    const std::string& idString, FILE* log );
+    
 };
 
 // ---------------------------------------------------------------------------------------

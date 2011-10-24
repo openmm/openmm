@@ -37,7 +37,22 @@
 
 #include "kCalculateGBVIAux.h"
 
-__global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int* workUnit)
+#undef TARGET
+//#define TARGET 5443
+
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
+#endif
+#ifdef DEBUG
+void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2 )
+#else
+void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int* workUnit)
+#endif
 {
     extern __shared__ Atom sA[];
 
@@ -47,10 +62,8 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
     unsigned int pos          = warp*numWorkUnits/totalWarps;
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 
-//    int end = workUnits / gridDim.x;
-//    int pos = end - (threadIdx.x >> GRIDBITS) - 1;
 #ifdef USE_CUTOFF
-    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+    float* tempBuffer         = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
     while ( pos < end )
@@ -85,68 +98,93 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
             sA[threadIdx.x].r                       = ar.x;
             sA[threadIdx.x].sr                      = ar.y;
             sA[threadIdx.x].bornRadiusScaleFactor   = ar.w;
-            apos.w                                  = 0.0f;
+            float bSum                              = 0.0f;
 
-            for (unsigned int j             = 0; j < GRID; j++)
+            for (unsigned int j = 0; j < GRID; j++)
             {
                 dx                                  = psA[j].x - apos.x;
                 dy                                  = psA[j].y - apos.y;
                 dz                                  = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                                 -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                                 -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                                 -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
-                r2                      = dx * dx + dy * dy + dz * dz;
-#if defined USE_PERIODIC
-                if (i < cSim.atoms && x+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (r2 < cSim.nonbondedCutoffSqr)
+                r2                                  = dx * dx + dy * dy + dz * dz;
+#if defined USE_CUTOFF
+                if (i < cSim.atoms && x+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr && j != tgx)
+#else
+                if (i < cSim.atoms && x+j < cSim.atoms && j != tgx )
 #endif
                 {
-                    r                       = sqrt(r2);
-                    if ((j != tgx) )
-                    {
-                        apos.w             += psA[j].bornRadiusScaleFactor*getGBVI_Volume( r, ar.x, psA[j].sr );
-                    }
+                    bSum  += psA[j].bornRadiusScaleFactor*getGBVI_Volume( sqrt(r2), ar.x, psA[j].sr );
+
+#ifdef DEBUG
+int jIdx = j;
+if( i == TARGET ){
+int tjj     = y+jIdx;
+pdE1[tjj].x = psA[jIdx].bornRadiusScaleFactor*getGBVI_Volume( sqrt(r2), ar.x, psA[jIdx].sr );
+pdE1[tjj].y = psA[jIdx].bornRadiusScaleFactor;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = 1.0f;
+pdE2[tjj].x = sqrt(r2);
+pdE2[tjj].y = psA[jIdx].sr;
+pdE2[tjj].z = ar.x;
+pdE2[tjj].w = 1.0f;
+}
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x =  psA[jIdx].bornRadiusScaleFactor*getGBVI_Volume( sqrt(r2), ar.x, psA[jIdx].sr );
+pdE1[tjj].y =  psA[jIdx].bornRadiusScaleFactor;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = -1.0f;
+} 
+#endif
+
                 }
             }
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset = x + tgx + warp*cSim.stride;
-            cSim.pBornSum[offset] += apos.w;
+            cSim.pBornSum[offset] += bSum;
 #else
             unsigned int offset = x + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pBornSum[offset] = apos.w;
+            cSim.pBornSum[offset] = bSum;
 #endif
-        }
-        else        // 100% utilization
-        {
+
+
+        } else {
+
             // Read fixed atom data into registers and GRF
             unsigned int j                              = y + tgx;
             unsigned int i                              = x + tgx;
 
             float4 temp                                 = cSim.pPosq[j];
             float4 temp1                                = cSim.pGBVIData[j];
+
             float4 apos                                 = cSim.pPosq[i];        // Local atom x, y, z, sum
             float4 ar                                   = cSim.pGBVIData[i];    // Local atom vr, sr
+
             sA[threadIdx.x].x                           = temp.x;
             sA[threadIdx.x].y                           = temp.y;
             sA[threadIdx.x].z                           = temp.z;
+
             sA[threadIdx.x].r                           = temp1.x;
             sA[threadIdx.x].sr                          = temp1.y;
             sA[threadIdx.x].bornRadiusScaleFactor       = temp1.w;
-            sA[threadIdx.x].sum             = apos.w    = 0.0f;
+
+            sA[threadIdx.x].sum                         = 0.0f;
+            apos.w                                      = 0.0f;
 
 #ifdef USE_CUTOFF
-            //unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*workUnits)/gridDim.x];
             unsigned int flags = cSim.pInteractionFlag[pos];
             if (flags == 0)
             {
                 // No interactions in this block.
             }
             else if (flags == 0xFFFFFFFF)
+            //else if (flags )
 #endif
             {
                 // Compute all interactions within this block.
@@ -157,15 +195,15 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
                     dy                      = psA[tj].y - apos.y;
                     dz                      = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                     if (i < cSim.atoms && y+tj < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                    if (i < cSim.atoms && y+tj < cSim.atoms )
 #endif
                     {
                         r                       = sqrt(r2);
@@ -173,11 +211,39 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
                         // psA[tj].sr = Sj
                         // ar.x       = Ri
 
-                        apos.w                 += psA[tj].bornRadiusScaleFactor*getGBVI_Volume( r, ar.x,      psA[tj].sr );
+                        apos.w                 += psA[tj].bornRadiusScaleFactor*getGBVI_Volume( r, ar.x, psA[tj].sr );
                         psA[tj].sum            += ar.w*getGBVI_Volume( r, psA[tj].r, ar.y );
+
+#ifdef DEBUG
+int jIdx = tj;
+if( i == TARGET ){
+
+int tjj     = y+jIdx;
+pdE1[tjj].x = psA[jIdx].bornRadiusScaleFactor*getGBVI_Volume( r, ar.x, psA[jIdx].sr );
+pdE1[tjj].y = psA[jIdx].bornRadiusScaleFactor;
+pdE1[tjj].z = ar.x;
+pdE1[tjj].w = 2.0f;
+
+float R =  ar.x;
+float S =  psA[tj].sr;
+pdE2[tjj].x = getGBVI_L( r, (r + S), S );
+pdE2[tjj].y = -getGBVI_L( r, (r - S), S );
+pdE2[tjj].z = -getGBVI_L( r, R, S );
+pdE2[tjj].w = (1.0f/(R*R*R));
+
+}
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x = ar.w*getGBVI_Volume( r, psA[jIdx].r, ar.y );
+pdE1[tjj].y = ar.w;
+pdE1[tjj].z = psA[jIdx].r;
+pdE1[tjj].w = -2.0f;
+}
+#endif
                     }
                     tj = (tj - 1) & (GRID - 1);
                 }
+
             }
 #ifdef USE_CUTOFF
             else
@@ -193,19 +259,20 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                         if (i < cSim.atoms && y+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                        if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                        if (i < cSim.atoms && y+j < cSim.atoms)
 #endif
                         {
                             r                       = sqrt(r2);
-                            tempBuffer[threadIdx.x] = ar.w*getGBVI_Volume( r, psA[tj].r, ar.y );
+                            tempBuffer[threadIdx.x] = ar.w*getGBVI_Volume( r, psA[j].r, ar.y );
+                            apos.w                 += psA[j].bornRadiusScaleFactor*getGBVI_Volume( r, ar.x, psA[j].sr );
                         }
 
                         // Sum the terms.
@@ -226,6 +293,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
 #endif
 
             // Write results
+
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset = x + tgx + warp*cSim.stride;
             cSim.pBornSum[offset] += apos.w;
@@ -237,6 +305,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, BornSum_kernel)(unsigned int
             offset = y + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pBornSum[offset] = sA[threadIdx.x].sum;
 #endif
+
         }
 
         pos++;

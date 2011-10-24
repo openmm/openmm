@@ -33,12 +33,7 @@
 #include "openmm/System.h"
 #include "OpenMMFreeEnergy.h"
 #include "openmm/freeEnergyKernels.h"
-#include "kernels/GpuNonbondedSoftcore.h"
-#include "kernels/GpuLJ14Softcore.h"
-#include "kernels/GpuObcGbsaSoftcore.h"
-#include "kernels/GpuGBVISoftcore.h"
-
-//#define FreeEnergyDebug
+#include "FreeEnergyCudaData.h"
 
 namespace OpenMM {
 
@@ -46,25 +41,22 @@ namespace OpenMM {
  * This kernel is invoked by NonbondedSoftcoreForce to calculate the forces acting on the system.
  */
 class CudaFreeEnergyCalcNonbondedSoftcoreForceKernel : public CalcNonbondedSoftcoreForceKernel {
+
 public:
-    CudaFreeEnergyCalcNonbondedSoftcoreForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) :
+    CudaFreeEnergyCalcNonbondedSoftcoreForceKernel(std::string name, const Platform& platform, FreeEnergyCudaData& data, System& system) :
              CalcNonbondedSoftcoreForceKernel(name, platform), data(data), system(system) {
-        gpuNonbondedSoftcore = NULL;
-        gpuLJ14Softcore      = NULL;
-#ifdef FreeEnergyDebug
-        log                  = stderr;
-#else
-        log                  = NULL;
-#endif
-        setSim               = 0;
+
         numExceptions        = 0;
         numParticles         = 0;
         bIncludeGBSA         = false;
         bIncludeGBVI         = false;
         includeSoftcore      = false;
+        log                  = NULL;
+        data.incrementKernelCount();
     }
 
     ~CudaFreeEnergyCalcNonbondedSoftcoreForceKernel();
+
     /**
      * Initialize the kernel.
      * 
@@ -123,30 +115,16 @@ public:
      * @return number of exceptions
      */
     int getNumExceptions( void ) const;
-    /**
-     * Get GpuLJ14Softcore
-     *
-     * @return GpuLJ14Softcore object
-     */
-    GpuLJ14Softcore* getGpuLJ14Softcore( void ) const;
-    /**
-     * Set GpuLJ14Softcore
-     *
-     * @param GpuLJ14Softcore object
-     */
-    void setGpuLJ14Softcore( GpuLJ14Softcore* gpuLJ14Softcore );
 private:
-    CudaPlatform::PlatformData& data;
+    FreeEnergyCudaData& data;
+    class ForceInfo;
     int numParticles;
     System& system;
-    GpuNonbondedSoftcore* gpuNonbondedSoftcore;
-    GpuLJ14Softcore* gpuLJ14Softcore;
     bool bIncludeGBSA;
     bool bIncludeGBVI;
     int includeSoftcore;
     int numExceptions;
     FILE* log;
-    int setSim;
 };
 
 /**
@@ -154,15 +132,10 @@ private:
  */
 class CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel : public CalcGBSAOBCSoftcoreForceKernel {
 public:
-    CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) :
+    CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel(std::string name, const Platform& platform, FreeEnergyCudaData& data) :
        CalcGBSAOBCSoftcoreForceKernel(name, platform), data(data) {
-#ifdef FreeEnergyDebug
-        log                  = stderr;
-#else
         log                  = NULL;
-#endif
-        setSim               = 0;
-        gpuObcGbsaSoftcore   = NULL;
+        data.incrementKernelCount();
     }
     ~CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel();
     /**
@@ -182,10 +155,9 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
-    CudaPlatform::PlatformData& data;
+    FreeEnergyCudaData& data;
+    class ForceInfo;
     FILE* log;
-    int setSim;
-    GpuObcGbsaSoftcore* gpuObcGbsaSoftcore;
 };
 
 /**
@@ -193,16 +165,12 @@ private:
  */
 class CudaFreeEnergyCalcGBVISoftcoreForceKernel : public CalcGBVISoftcoreForceKernel {
 public:
-    CudaFreeEnergyCalcGBVISoftcoreForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) :
+    CudaFreeEnergyCalcGBVISoftcoreForceKernel(std::string name, const Platform& platform, FreeEnergyCudaData& data) :
          CalcGBVISoftcoreForceKernel(name, platform), data(data) {
-#ifdef FreeEnergyDebug
-        log                  = stderr;
-#else
+
         log                  = NULL;
-#endif
-        setSim               = 0;
         quinticScaling       = 0;
-        gpuGBVISoftcore      = NULL;
+        data.incrementKernelCount();
     }
 
     ~CudaFreeEnergyCalcGBVISoftcoreForceKernel();
@@ -224,25 +192,10 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 
-    /**
-     * Apply quintic scaling for Born radii
-     * 
-     * @return nonzero value if scaling is to be applied
-     */
-    int getQuinticScaling(void) const;
-
-    /**
-     * Set flag for quintic scaling for Born radii
-     * 
-     * @param nonzero value if scaling is to be applied
-     */
-    void setQuinticScaling(int quinticScaling );
-
 private:
-    CudaPlatform::PlatformData& data;
-    GpuGBVISoftcore* gpuGBVISoftcore;
+    FreeEnergyCudaData& data;
+    class ForceInfo;
     FILE* log;
-    int setSim;
     int quinticScaling;
 };
 

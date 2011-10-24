@@ -1,8 +1,8 @@
-#ifndef _K_SOFTCORE_LJ__H__
-#define _K_SOFTCORE_LJ__H__
+#ifndef __FREE_ENERGY_GPUTYPES_H__
+#define __FREE_ENERGY_GPUTYPES_H__
 
 /* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
+ *                          OpenMMFreeEnergy                                      *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
@@ -27,53 +27,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-/**
- * This file contains kernel for calculating softcore LJ force prefactor
- */
+#include "kernels/gputypes.h"
+#include "freeEnergyCudaTypes.h"
 
-#ifdef USE_SOFTCORE_LJ
-static __device__ float getSoftCoreLJ( float r2, float sig, float  eps, float lambdaI, float lambdaJ, float* energy)
-{
+#include <map>
+typedef std::map<int,float> MapIntFloat;
+typedef MapIntFloat::const_iterator MapIntFloatCI;
 
-   float lambda                    = lambdaI < lambdaJ ? lambdaI : lambdaJ;
-   eps                            *= lambda;
-
-
-    // (r/sig)
-    float sig2                     = 1.0f/sig;
-          sig2                    *= sig2;
-          sig2                    *= r2;
-    float sig6                     = sig2*sig2*sig2;
-
-    float softcoreLJTerm           = 0.5f*( 1.0f -  lambda) + sig6;
-    float softcoreLJInv            = 1.0f/softcoreLJTerm;
-    float softcoreLJInv2           = softcoreLJInv*softcoreLJInv;
-    *energy                        = eps*(softcoreLJInv2 - softcoreLJInv);
-
-    return eps*softcoreLJInv2*( 12.0f*softcoreLJInv - 6.0f )*sig6;
+struct _freeEnergyGpuContext {
     
-}
-
-static __device__ float getSoftCoreLJMod( float sigInvR, float  eps, float lambdaI, float lambdaJ, float* energy)
-{
-
-   float lambda                    = lambdaI < lambdaJ ? lambdaI : lambdaJ;
-   eps                            *= lambda;
-
-
-    // (r/sig)
-    float sig2                     = sigInvR*sigInvR;
-    float sig6                     = sig2*sig2*sig2;
-
-    float softcoreLJTerm           = 0.5f*( 1.0f -  lambda) + sig6;
-    float softcoreLJInv            = 1.0f/softcoreLJTerm;
-    float softcoreLJInv2           = softcoreLJInv*softcoreLJInv;
-    *energy                        = eps*(softcoreLJInv2 - softcoreLJInv);
-
-    return eps*softcoreLJInv2*( 12.0f*softcoreLJInv - 6.0f )*sig6;
+    _gpuContext* gpuContext;
+    cudaFreeEnergyGmxSimulation freeEnergySim;
+    std::vector<std::vector<int> > exclusions;
     
-}
+    CUDAStream<float4>* psSigEps4;
+    CUDAStream<int4>*   psLJ14ID;
+    CUDAStream<float4>* psLJ14Parameter;
+    CUDAStream<float>*  psSwitchDerivative;
+    CUDAStream<float>*  psNonPolarScalingFactors;
+ 
+    FILE* log;
+};
 
-#endif
+typedef struct _freeEnergyGpuContext *freeEnergyGpuContext;
 
-#endif
+// Function prototypes
+
+extern "C" freeEnergyGpuContext freeEnergyGpuInit( _gpuContext* gpu );
+extern "C" void freeEnergyGpuShutDown(freeEnergyGpuContext gpu);
+extern "C" void freeEnergyGpuSetConstants(freeEnergyGpuContext gpu);
+
+#endif // __FREE_ENERGY_GPUTYPES_H__

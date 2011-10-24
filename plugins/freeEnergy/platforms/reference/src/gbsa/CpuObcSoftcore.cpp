@@ -209,11 +209,12 @@ void CpuObcSoftcore::computeBornRadii( const vector<RealVec>& atomCoordinates,  
                     // this case (atom i completely inside atom j) is not considered in the original paper
                     // Jay Ponder and the authors of Tinker recognized this and
                     // worked out the details
-     
                     if( offsetRadiusI < (scaledRadiusJ - r) ){
                         term += two*( radiusIInverse - l_ij);
                     }
+
                     sum += nonPolarScaleFactors[atomJ]*term;
+
                 }
             }
         }
@@ -341,10 +342,7 @@ RealOpenMM CpuObcSoftcore::computeBornEnergyForces( vector<RealVec>& atomCoordin
     computeBornRadii( atomCoordinates,  bornRadii );
 
     RealOpenMM obcEnergy                 = zero;
-    RealOpenMMVector bornForces( numberOfAtoms );
-    for( int ii = 0; ii < numberOfAtoms; ii++ ){
-       bornForces[ii] = zero;
-    }
+    RealOpenMMVector bornForces( numberOfAtoms, 0.0 );
 
     // ---------------------------------------------------------------------------------------
 

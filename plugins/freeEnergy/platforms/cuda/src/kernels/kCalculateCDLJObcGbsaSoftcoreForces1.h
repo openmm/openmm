@@ -30,34 +30,39 @@
  * different versions of the kernels.
  */
 
+#define USE_SOFTCORE_LJ
+
 #ifdef USE_SOFTCORE_LJ
 #include "kSoftcoreLJ.h"
 #endif
 
-/* Cuda compiler on Windows does not recognized "static const float" values */
-#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+#undef TARGET
+//#define TARGET 0
 
-#define COULOMB_ON
-
-__global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* workUnit)
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
+#endif
+void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* workUnit )
 {
+//void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2 )
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int totalWarps        = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int warp              = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int numWorkUnits      = cSim.pInteractionCount[0];
+    unsigned int pos               = warp*numWorkUnits/totalWarps;
+    unsigned int end               = (warp+1)*numWorkUnits/totalWarps;
     float CDLJObcGbsa_energy;
-    float energy = 0.0f;
+    float energy                   = 0.0f;
 #ifdef USE_CUTOFF
-    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+    float* tempBuffer              = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
-#ifdef USE_EWALD
-    const float TWO_OVER_SQRT_PI = 2.0f/sqrt(LOCAL_HACK_PI);
-#endif
-
-    unsigned int lasty = -0xFFFFFFFF;
+    unsigned int lasty             = -0xFFFFFFFF;
     while (pos < end)
     {
 
@@ -69,30 +74,36 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
         unsigned int tgx                    = threadIdx.x & (GRID - 1);
         unsigned int i                      = x + tgx;
         float4 apos                         = cSim.pPosq[i];
-        float2 a                            = cSim.pAttr[i];
-        float  softCoreLJLambda             = feSimDev.pParticleSoftCoreLJLambda[i];
+        float4 a                            = feSimDev.pSigEps4[i];
+        float  softCoreLJLambda             = a.z;
         float br                            = cSim.pBornRadii[i];
         unsigned int tbx                    = threadIdx.x - tgx;
         unsigned int tj                     = tgx;
         Atom* psA                           = &sA[tbx];
+
         float4 af;
-        af.x                        = 0.0f;
-        af.y                        = 0.0f;
-        af.z                        = 0.0f;
-        af.w                        = 0.0f;
+        af.x                                = 0.0f;
+        af.y                                = 0.0f;
+        af.z                                = 0.0f;
+        af.w                                = 0.0f;
+
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {
             // Read fixed atom data into registers and GRF
+
             sA[threadIdx.x].x                    = apos.x;
             sA[threadIdx.x].y                    = apos.y;
             sA[threadIdx.x].z                    = apos.z;
-            sA[threadIdx.x].q                    = apos.w;
-            float q2                             = cSim.preFactor * apos.w;
-            apos.w                              *= cSim.epsfac;
+
+            sA[threadIdx.x].q                    = a.w;
             sA[threadIdx.x].sig                  = a.x;
             sA[threadIdx.x].eps                  = a.y;
             sA[threadIdx.x].br                   = br;
             sA[threadIdx.x].softCoreLJLambda     = softCoreLJLambda;
+
+            float q2                             = cSim.preFactor*a.w;
+            a.w                                 *= cSim.epsfac;
+
             if (!bExclusionFlag)
             {
                 for (unsigned int j = 0; j < GRID; j++)
@@ -101,9 +112,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     float dy                = psA[j].y - apos.y;
                     float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float invR              = 1.0f / sqrt(r2);
@@ -118,29 +129,16 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     sig2                   *= sig2;
                     float sig6              = sig2 * sig2 * sig2;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-                    /* E */ 
 		              CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #endif
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r                 = sqrt(r2);
-                    float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = fastErfc(alphaR);
-                    dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-		    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
-    #else
-                    dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                    dEdR                   += a.w * psA[j].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                    CDLJObcGbsa_energy     += a.w * psA[j].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
 
-#ifdef COULOMB_ON
-                    float factorX           = apos.w * psA[j].q * invR;
+                    float factorX           = a.w * psA[j].q * invR;
                     dEdR                   += factorX;
                     CDLJObcGbsa_energy     += factorX;
-#endif
 
 #endif
                     dEdR                   *= invR * invR;
@@ -153,105 +151,107 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     float denominator       = sqrt(denominator2);
                     float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
-                    af.w                   += dGpol_dalpha2_ij * psA[j].br;
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
-		    /* E */
-		    CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
+		              CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
 #ifdef USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR = 0.0f;
- 			/* E */
-			CDLJObcGbsa_energy  = 0.0f;
-                   }
+                    if ( i >= cSim.atoms || (x+j) >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                    if ( i >= cSim.atoms || (x+j) >= cSim.atoms)
 #endif
-		    /* E */
-                    if (i < cSim.atoms)
                     {
-                        energy             += 0.5f*CDLJObcGbsa_energy;
+                        dEdR                = 0.0f;
+			               CDLJObcGbsa_energy  = 0.0f;
+                        dGpol_dalpha2_ij    = 0.0f;
                     }
+                    af.w                   += dGpol_dalpha2_ij * psA[j].br;
+
+
+/*
+int jIdx = j;
+if( i == TARGET ){
+int tjj     = y+jIdx;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z =  (q2 * psA[j].q) / denominator;
+pdE1[tjj].w = 1.0f;
+}
+
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x = dEdR - Gpol * (1.0f - 0.25f * expTerm);
+pdE1[tjj].y = r2;
+pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
+pdE1[tjj].w = -1.0f;
+} */
+                    energy                 += 0.5f*CDLJObcGbsa_energy;
+
                     // Add Forces
+
                     dx                     *= dEdR;
                     dy                     *= dEdR;
                     dz                     *= dEdR;
+
                     af.x                   -= dx;
                     af.y                   -= dy;
                     af.z                   -= dz;
                 }
-            }
-            else  // bExclusion
-            {
+
+            } else {
+
                 unsigned int xi   = x>>GRIDBITS;
                 unsigned int cell = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
+
                 for (unsigned int j = 0; j < GRID; j++)
                 {
                     float dx                = psA[j].x - apos.x;
                     float dy                = psA[j].y - apos.y;
                     float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float invR              = 1.0f / sqrt(r2);
                     float sig               = a.x + psA[j].sig;
                     float eps               = a.y * psA[j].eps;
+
 #ifdef USE_SOFTCORE_LJ
                     float dEdR              = getSoftCoreLJ( r2, sig, eps, softCoreLJLambda, psA[j].softCoreLJLambda, &CDLJObcGbsa_energy );
+                    //float dEdR              = getSoftCoreLJMod( (invR*sig), eps, softCoreLJLambda, psA[j].softCoreLJLambda, &CDLJObcGbsa_energy );
 #else
 
                     // CDLJ part
+
                     float sig2              = invR * sig;
                     sig2                   *= sig2;
                     float sig6              = sig2 * sig2 * sig2;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-                    /* E */ 
 		              CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #endif
-#ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r                 = sqrt(r2);
-                    float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = fastErfc(alphaR);
-                    dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-		    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
-                    bool needCorrection = !(excl & 0x1) && x+tgx != y+j && x+tgx < cSim.atoms && y+j < cSim.atoms;
-                    if (needCorrection)
-                    {
-                        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
-                        dEdR               = -apos.w * psA[j].q * invR * ((1.0f-erfcAlphaR) - alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJObcGbsa_energy = -apos.w * psA[j].q * invR * (1.0f-erfcAlphaR);
-                    }
-    #else
-                    dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+#ifdef USE_CUTOFF
+                    dEdR                   += a.w * psA[j].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                    CDLJObcGbsa_energy     += a.w * psA[j].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
 
-#ifdef COULOMB_ON
-                    float factorX           = apos.w * psA[j].q * invR;
+                    float factorX           = a.w * psA[j].q * invR;
                     dEdR                   += factorX;
                     CDLJObcGbsa_energy     += factorX;
-#endif
 
 #endif
                     dEdR                   *= invR * invR;
-#ifdef USE_EWALD
-                    if (!(excl & 0x1) && !needCorrection)
-#else
+
                     if (!(excl & 0x1))
-#endif
                     {
                         dEdR                = 0.0f;
                         CDLJObcGbsa_energy  = 0.0f;
                     }
+//float dEdRx = dEdR;
 
                     // ObcGbsaForce1 part
+
                     float alpha2_ij         = br * psA[j].br;
                     float D_ij              = r2 / (4.0f * alpha2_ij);
                     float expTerm           = exp(-D_ij);
@@ -259,34 +259,54 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     float denominator       = sqrt(denominator2);
                     float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
-                    af.w                   += dGpol_dalpha2_ij * psA[j].br;
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
-                    /* E */
                     CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
-#if defined USE_PERIODIC
+
+#if defined USE_CUTOFF
                     if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR               = 0.0f;
-		                  CDLJObcGbsa_energy = 0.0f;
-                    }
-#elif defined USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR               = 0.0f;
-		                  CDLJObcGbsa_energy = 0.0f;
-                    }
+#else
+                    if (i >= cSim.atoms || x+j >= cSim.atoms )
 #endif
-                    if (i < cSim.atoms)
                     {
-                        energy         += 0.5f*CDLJObcGbsa_energy;
+                        dEdR               = 0.0f;
+		                  CDLJObcGbsa_energy = 0.0f;
+                        dGpol_dalpha2_ij   = 0.0f;
+//dEdRx = 0.0f;
                     }
+
+/*
+int jIdx    = j;
+if( i == TARGET ){
+int tjj     =  (y+jIdx);
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z =  (q2 * psA[j].q) / denominator;
+pdE1[tjj].x = dEdRx;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
+pdE1[tjj].w = 2.0f;
+}
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z =  (q2 * psA[j].q) / denominator;
+pdE1[tjj].w = -2.0f;
+} */
+
+                    af.w                  += dGpol_dalpha2_ij * psA[j].br;
+                    energy                += 0.5f*CDLJObcGbsa_energy;
+                     
                     // Add Forces
+
                     dx                     *= dEdR;
                     dy                     *= dEdR;
                     dz                     *= dEdR;
+
                     af.x                   -= dx;
                     af.y                   -= dy;
                     af.z                   -= dz;
+
                     excl                  >>= 1;
                 }
             }
@@ -307,32 +327,32 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
             cSim.pForce4[offset]        = of;
             cSim.pBornForce[offset]     = bf;
 
-        }
-        else        // 100% utilization
-        {
+        } else { 
+
             // Read fixed atom data into registers and GRF
+
             if (lasty != y)
             {
                 unsigned int j                       = y + tgx;
                 float4 temp                          = cSim.pPosq[j];
-                float2 temp1                         = cSim.pAttr[j];
-                float  temp2                         = feSimDev.pParticleSoftCoreLJLambda[j];
-//float  temp2 = 1.0f;
+                float4 temp1                         = feSimDev.pSigEps4[j];
                 sA[threadIdx.x].br                   = cSim.pBornRadii[j];
                 sA[threadIdx.x].x                    = temp.x;
                 sA[threadIdx.x].y                    = temp.y;
                 sA[threadIdx.x].z                    = temp.z;
-                sA[threadIdx.x].q                    = temp.w;
+                sA[threadIdx.x].q                    = temp1.w;
                 sA[threadIdx.x].sig                  = temp1.x;
                 sA[threadIdx.x].eps                  = temp1.y;
-                sA[threadIdx.x].softCoreLJLambda     = temp2;
+                sA[threadIdx.x].softCoreLJLambda     = temp1.z;
             }
+
             sA[threadIdx.x].fx          = 0.0f;
             sA[threadIdx.x].fy          = 0.0f;
             sA[threadIdx.x].fz          = 0.0f;
             sA[threadIdx.x].fb          = 0.0f;
-            float q2                    = apos.w * cSim.preFactor;
-            apos.w                     *= cSim.epsfac;
+
+            float q2                    = a.w * cSim.preFactor;
+            a.w                        *= cSim.epsfac;
             if (!bExclusionFlag)
             {
 #ifdef USE_CUTOFF
@@ -352,9 +372,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                         float dy                = psA[tj].y - apos.y;
                         float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         float r2                = dx * dx + dy * dy + dz * dz;
                         float invR              = 1.0f / sqrt(r2);
@@ -369,33 +389,22 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                         sig2                   *= sig2;
                         float sig6              = sig2 * sig2 * sig2;
                         float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-                        /* E */ 
                         CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #endif
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                        float r                 = sqrt(r2);
-                        float alphaR            = cSim.alphaEwald * r;
-                        float erfcAlphaR        = fastErfc(alphaR);
-                        dEdR                   += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        /* E */
-                        CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfcAlphaR;
-    #else
-                        dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                        /* E */
-                        CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                        dEdR                   += a.w * psA[tj].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                        CDLJObcGbsa_energy     += a.w * psA[tj].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
 
-#ifdef COULOMB_ON
-                        float factorX           = apos.w * psA[tj].q * invR;
+                        float factorX           = a.w * psA[tj].q * invR;
                         dEdR                   += factorX;
                         CDLJObcGbsa_energy     += factorX;
 #endif
-#endif
                         dEdR                   *= invR * invR;
+//float dEdRx = dEdR;
 
                         // ObcGbsaForce1 part
+
                         float alpha2_ij         = br * psA[tj].br;
                         float D_ij              = r2 / (4.0f * alpha2_ij);
                         float expTerm           = exp(-D_ij);
@@ -403,38 +412,64 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                         float denominator       = sqrt(denominator2);
                         float Gpol              = (q2 * psA[tj].q) / (denominator * denominator2);
                         float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
-                        af.w                   += dGpol_dalpha2_ij * psA[tj].br;
-                        psA[tj].fb             += dGpol_dalpha2_ij * br;
                         dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
-                        /* E */
                         CDLJObcGbsa_energy     += (q2 * psA[tj].q) / denominator;
 #ifdef USE_CUTOFF
-                        if (r2 > cSim.nonbondedCutoffSqr)
+                        if ( i >= cSim.atoms || (y+tj) >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                        if ( i >= cSim.atoms || (y+tj) >= cSim.atoms)
+#endif
                         {
                             dEdR               = 0.0f;
        			             CDLJObcGbsa_energy = 0.0f;
+                            dGpol_dalpha2_ij   = 0.0f;
+//dEdRx = 0.0f;
                         }
-#endif
-                        if (i < cSim.atoms)
-                        {
-                            energy            += CDLJObcGbsa_energy;
-                        }
+                        psA[tj].fb             += dGpol_dalpha2_ij * br;
+                        af.w                   += dGpol_dalpha2_ij * psA[tj].br;
+                        energy                 += CDLJObcGbsa_energy;
+
+
+
+/*
+int jIdx = tj;
+if( i == TARGET ){
+int tjj     = y+jIdx;
+pdE1[tjj].x = dEdRx;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z = -dEdRx*dz;
+pdE1[tjj].w = 3.0f;
+}
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x = dEdRx;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z = dEdRx*dz;
+pdE1[tjj].w = -3.0f;
+} */
+
+
+
                         // Add forces
+
                         dx                     *= dEdR;
                         dy                     *= dEdR;
                         dz                     *= dEdR;
+
                         af.x                   -= dx;
                         af.y                   -= dy;
                         af.z                   -= dz;
+
                         psA[tj].fx             += dx;
                         psA[tj].fy             += dy;
                         psA[tj].fz             += dz;
+
                         tj                      = (tj + 1) & (GRID - 1);
                     }
                 }
 #ifdef USE_CUTOFF
-                else
-                {
+                else {
+
                     // Compute only a subset of the interactions in this block.
 
                     for (unsigned int j = 0; j < GRID; j++)
@@ -445,9 +480,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                             float dy                = psA[j].y - apos.y;
                             float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                            dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                            dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                            dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                            dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                             float r2                = dx * dx + dy * dy + dz * dz;
                             float invR              = 1.0f / sqrt(r2);
@@ -462,28 +497,16 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                             sig2                   *= sig2;
                             float sig6              = sig2 * sig2 * sig2;
                             float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-                            /* E */ 
                             CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #endif
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                            float r                 = sqrt(r2);
-                            float alphaR            = cSim.alphaEwald * r;
-                            float erfcAlphaR        = fastErfc(alphaR);
-                            dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                            CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
-    #else
-                            dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                            /* E */
-                            CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                            dEdR                   += a.w * psA[j].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                            CDLJObcGbsa_energy     += a.w * psA[j].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
 
-#ifdef COULOMB_ON
-                            float factorX           = apos.w * psA[j].q * invR;
+                            float factorX           = a.w * psA[j].q * invR;
                             dEdR                   += factorX;
                             CDLJObcGbsa_energy     += factorX;
-#endif
 #endif
                             dEdR                   *= invR * invR;
 
@@ -495,10 +518,20 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                             float denominator       = sqrt(denominator2);
                             float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
                             float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
-                            af.w                   += dGpol_dalpha2_ij * psA[j].br;
                             dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
-                            /* E */
                             CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
+
+#ifdef USE_CUTOFF
+                            if ( i >= cSim.atoms || (y+j) >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                            if ( i >= cSim.atoms || (y+j) >= cSim.atoms)
+#endif
+                            {
+                                dEdR                = 0.0f;
+				                    CDLJObcGbsa_energy  = 0.0f;
+                                dGpol_dalpha2_ij    = 0.0f;
+                            }
+                            af.w                   += dGpol_dalpha2_ij * psA[j].br;
 
                             // Sum the Born forces.
 
@@ -513,17 +546,28 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                                 tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
                             if (tgx == 0)
                                 psA[j].fb += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
-#ifdef USE_CUTOFF
-                            if (r2 > cSim.nonbondedCutoffSqr)
-                            {
-                                dEdR                = 0.0f;
-				                    CDLJObcGbsa_energy  = 0.0f;
-                            }
-#endif
-                            if (i < cSim.atoms)
-                            {
-                                energy         += CDLJObcGbsa_energy;
-                            }
+
+/*
+int jIdx = j;
+if( i == TARGET ){
+int tjj     = y+jIdx;
+pdE1[tjj].x = dEdR;
+pdE1[tjj].y = r2;
+pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
+pdE1[tjj].w = -4.7f;
+}
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x = dEdR;
+pdE1[tjj].y = r2;
+pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
+pdE1[tjj].w = -4.7f;
+} */
+
+
+
+                            energy                 += CDLJObcGbsa_energy;
+
                             // Add forces
                             dx                     *= dEdR;
                             dy                     *= dEdR;
@@ -568,9 +612,8 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     }
                 }
 #endif
-            }
-            else  // bExclusion
-            {
+            } else  {
+
                 unsigned int xi   = x>>GRIDBITS;
                 unsigned int yi   = y>>GRIDBITS;
                 unsigned int cell = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
@@ -582,9 +625,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float invR              = 1.0f / sqrt(r2);
@@ -599,49 +642,25 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     sig2                   *= sig2;
                     float sig6              = sig2 * sig2 * sig2;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-                    /* E */ 
 		              CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #endif
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r                 = sqrt(r2);
-                    float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = fastErfc(alphaR);
-                    dEdR                   += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfcAlphaR;
-                    bool needCorrection = !(excl & 0x1) && x+tgx != y+tj && x+tgx < cSim.atoms && y+tj < cSim.atoms;
-                    if (needCorrection)
-                    {
-                        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
-
-                        dEdR               = -apos.w * psA[tj].q * invR * ((1.0f-erfcAlphaR) - alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJObcGbsa_energy = -apos.w * psA[tj].q * invR * (1.0f-erfcAlphaR);
-                    }
-    #else
-                    dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
+                    dEdR                   += a.w * psA[tj].q * (invR - 2.0f * feSimDev.reactionFieldK * r2);
+                    CDLJObcGbsa_energy     += a.w * psA[tj].q * (invR + feSimDev.reactionFieldK * r2 - feSimDev.reactionFieldC);
 #else
-#ifdef COULOMB_ON
-                    float factorX           = apos.w * psA[tj].q * invR;
+                    float factorX           = a.w * psA[tj].q * invR;
                     dEdR                   += factorX;
                     CDLJObcGbsa_energy     += factorX;
 #endif
-#endif
                     dEdR                   *= invR * invR;
-#ifdef USE_EWALD
-                    if (!(excl & 0x1) && !needCorrection)
-#else
                     if (!(excl & 0x1))
-#endif
                     {
                         dEdR               = 0.0f;
 			               CDLJObcGbsa_energy = 0.0f;
                     }
-
+//float dEdRx = dEdR;
                     // ObcGbsaForce1 part
+
                     float alpha2_ij         = br * psA[tj].br;
                     float D_ij              = r2 / (4.0f * alpha2_ij);
                     float expTerm           = exp(-D_ij);
@@ -649,37 +668,57 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
                     float denominator       = sqrt(denominator2);
                     float Gpol              = (q2 * psA[tj].q) / (denominator * denominator2);
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
-                    af.w                   += dGpol_dalpha2_ij * psA[tj].br;
-                    psA[tj].fb             += dGpol_dalpha2_ij * br;
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
 		              CDLJObcGbsa_energy     += (q2 * psA[tj].q) / denominator;
-#if defined USE_PERIODIC
+#if defined USE_CUTOFF
                     if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms)
+#endif
                     {
                         dEdR               = 0.0f;
 			               CDLJObcGbsa_energy = 0.0f;
+                        dGpol_dalpha2_ij   = 0.0f;
+//dEdRx = 0.0;
                     }
-#elif defined USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR = 0.0f;
-			               CDLJObcGbsa_energy = 0.0f;
-                    }
-#endif
-                    if (i < cSim.atoms)
-                    {
-                        energy             += CDLJObcGbsa_energy;
-                    }
+
+/*
+int jIdx = tj;
+if( i == TARGET ){
+int tjj     = y+jIdx;
+pdE1[tjj].x = dEdRx;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z = dEdRx*dz;
+pdE1[tjj].w = 6.0f;
+}
+if( (y+jIdx) == TARGET ){
+int tjj     = i;
+pdE1[tjj].x = dEdRx;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].z = dEdRx*dz;
+pdE1[tjj].w = -6.0f;
+}  */
+
+
+
+                    af.w                   += dGpol_dalpha2_ij * psA[tj].br;
+                    psA[tj].fb             += dGpol_dalpha2_ij * br;
+                    energy                 += CDLJObcGbsa_energy;
+
                     // Add forces
+
                     dx                     *= dEdR;
                     dy                     *= dEdR;
                     dz                     *= dEdR;
+
                     af.x                   -= dx;
                     af.y                   -= dy;
                     af.z                   -= dz;
+
                     psA[tj].fx             += dx;
                     psA[tj].fy             += dy;
                     psA[tj].fz             += dz;
+
                     excl                  >>= 1;
                     tj                      = (tj + 1) & (GRID - 1);
                 }
@@ -714,41 +753,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
             cSim.pForce4[offset]        = of;
             cSim.pBornForce[offset]     = bf;
 
-#if 0
-
-#ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset         = x + tgx + warp*cSim.stride;
-            float4 of                   = cSim.pForce4[offset];
-            of.x                       += af.x;
-            of.y                       += af.y;
-            of.z                       += af.z;
-            of.w                       += af.w;
-            cSim.pForce4[offset]        = of; 
-            cSim.pBornForce[offset]     = af.w;
-            offset                      = y + tgx + warp*cSim.stride;
-            of                          = cSim.pForce4[offset];
-            of.x                       += sA[threadIdx.x].fx;
-            of.y                       += sA[threadIdx.x].fy;
-            of.z                       += sA[threadIdx.x].fz;
-            of.w                       += sA[threadIdx.x].fb;
-            cSim.pForce4[offset]        = of; 
-            cSim.pBornForce[offset]     = af.w;
-#else
-            unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
-            cSim.pForce4[offset]        = af; 
-            cSim.pBornForce[offset]     = af.w;
-            af.x                        = sA[threadIdx.x].fx;
-            af.y                        = sA[threadIdx.x].fy;
-            af.z                        = sA[threadIdx.x].fz;
-            af.w                        = sA[threadIdx.x].fb;
-            offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pForce4[offset]        = af; 
-            cSim.pBornForce[offset]     = af.w;
-#endif
-
-#endif
-
-            lasty = y;
+            lasty                       = y;
         }
         pos++;
     }
