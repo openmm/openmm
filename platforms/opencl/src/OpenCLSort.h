@@ -165,7 +165,7 @@ public:
         sortBucketsKernel.setArg<cl::Buffer>(1, buckets->getDeviceBuffer());
         sortBucketsKernel.setArg<cl_int>(2, numBuckets);
         sortBucketsKernel.setArg<cl::Buffer>(3, bucketOffset->getDeviceBuffer());
-        sortBucketsKernel.setArg(4, sortKernelSize*sizeof(mm_float2), NULL);
+        sortBucketsKernel.setArg(4, sortKernelSize*sizeof(TYPE), NULL);
         context.executeKernel(sortBucketsKernel, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize);
     }
 private:
