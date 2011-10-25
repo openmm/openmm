@@ -48,9 +48,10 @@ static __device__ float getGBVI_L( float r, float x, float S )
    return (1.5f*xInv2)*( (0.25f*rInv) - (xInv/3.0f) + (0.125f*diff2*xInv2*rInv) );
 }
 
-static __device__ float getGBVI_Volume( float r_ij, float R, float S )
+static __device__ float getGBVI_Volume( float r, float R, float S )
 {
 
+/*
      float upperBound        = r_ij + S; 
      float rdiffS            = r_ij - S; 
      float lowerBound        = R > rdiffS ? R : rdiffS;
@@ -60,6 +61,22 @@ static __device__ float getGBVI_Volume( float r_ij, float R, float S )
      float addOn             = r_ij < (S - R) ? (1.0f/(R*R*R)) : 0.0f;  
 
      return (mask*( L_upper - L_lower ) + addOn);
+*/
+    float addOn = 0.0;
+    float mask  = 1.0;
+    float lowerBound = (r - S); 
+
+    float diff  = (S - R); 
+    if( fabs( diff ) < r ){
+        lowerBound = R > lowerBound ? R : lowerBound; 
+    } else if( r <= diff ){
+        addOn      = (1.0f/(R*R*R));
+    } else {
+        mask       = 0.0f;
+    }   
+    float s2 = getGBVI_L( r, lowerBound, S );
+    float s1 = getGBVI_L( r, (r + S),    S );
+    return mask*(s1 - s2 + addOn);
 
 }
 
@@ -111,8 +128,9 @@ static __device__ float getGBVI_dE2( float r, float R, float S, float bornForce 
         mask       = 1.0f;
         lowerBound = (r - S);  
     }   
-    dE                    -= getGBVI_dL_dr( r, lowerBound, S ) + mask*getGBVI_dL_dx( r, lowerBound, S );
-    dE                     = (absDiff >= r) && r >= diff ? 0.0f : dE; 
+    float dE2              = getGBVI_dL_dr( r, lowerBound, S ) + mask*getGBVI_dL_dx( r, lowerBound, S );
+    dE                    -= (absDiff >= r) && r >= diff ? 0.0f : dE2;
+
     dE                    *= ( (r > 1.0e-08f) ? (bornForce/r) : 0.0f);
 
     return (-dE);
