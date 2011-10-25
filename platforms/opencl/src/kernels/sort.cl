@@ -113,7 +113,7 @@ __kernel void copyDataToBuckets(__global const TYPE* restrict data, __global TYP
 /**
  * Sort the data in each bucket.
  */
-__kernel void sortBuckets(__global TYPE* restrict data, __global const TYPE* restrict buckets, int numBuckets, __global const int* restrict bucketOffset, __local TYPE* restrict buffer) {
+__kernel void sortBuckets(__global TYPE* data, __global const TYPE* buckets, int numBuckets, __global const int* restrict bucketOffset, __local TYPE* buffer) {
     for (int index = get_group_id(0); index < numBuckets; index += get_num_groups(0)) {
         int startIndex = (index == 0 ? 0 : bucketOffset[index-1]);
         int endIndex = bucketOffset[index];
