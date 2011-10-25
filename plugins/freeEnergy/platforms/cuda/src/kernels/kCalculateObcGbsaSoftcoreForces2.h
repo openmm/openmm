@@ -41,16 +41,21 @@ __launch_bounds__(G8X_BORNFORCE2_THREADS_PER_BLOCK, 1)
 void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    unsigned int totalWarps   = gridDim.x*blockDim.x/GRID;
     unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+
+    //unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    //unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos          = warp*numWorkUnits/totalWarps;
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    //float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    float3* tempBuffer        = (float3*) &sA[blockDim.x];
 #endif
 
-    unsigned int lasty = -0xFFFFFFFF;
+    unsigned int lasty        = -0xFFFFFFFF;
     while (pos < end)
     {
 

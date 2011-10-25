@@ -24,6 +24,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/OpenMMException.h"
+#include "gputypes.h"
+#include "freeEnergyGpuTypes.h"
+
 #include <stdio.h>
 #include <cuda.h>
 #include <vector_functions.h>
@@ -32,9 +36,6 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
-
-#include "gputypes.h"
-#include "freeEnergyGpuTypes.h"
 
 struct Atom {
     float x;
@@ -99,38 +100,53 @@ void SetCalculateObcGbsaSoftcoreForces2Sim( freeEnergyGpuContext freeEnergyGpu )
 
 void kCalculateObcGbsaSoftcoreForces2( freeEnergyGpuContext freeEnergyGpu )
 {
-    //printf("kCalculateObcGbsaSoftcoreForces2\n");
-    gpuContext gpu                     = freeEnergyGpu->gpuContext;
+    unsigned int threadsPerBlock;
+    static unsigned int threadsPerBlockPerMethod[3] = { 0, 0, 0 };
+    static unsigned int natoms[3]                   = { 0, 0, 0 };
+    gpuContext gpu                                  = freeEnergyGpu->gpuContext;
+    unsigned int methodIndex                        = static_cast<unsigned int>(freeEnergyGpu->freeEnergySim.nonbondedMethod);
+
+    if( methodIndex > 2 ){
+        throw OpenMM::OpenMMException( "kCalculateObcGbsaSoftcoreForces2 method index invalid." );
+    }   
+
+    if( natoms[methodIndex] != gpu->natoms ){
+        unsigned int extra                    = methodIndex == 0 ? 0 : sizeof(float3);
+        threadsPerBlockPerMethod[methodIndex] = std::min(getThreadsPerBlockFEP( freeEnergyGpu, (sizeof(Atom) + extra), gpu->sharedMemoryPerBlock ), gpu->sim.nonbond_threads_per_block );
+        natoms[methodIndex]                   = gpu->natoms;
+    }
+    threadsPerBlock                                 = threadsPerBlockPerMethod[methodIndex];
+
     switch (freeEnergyGpu->freeEnergySim.nonbondedMethod)
     {
         case FREE_ENERGY_NO_CUTOFF:
 
             if (gpu->bOutputBufferPerWarp)
-                kCalculateObcGbsaSoftcoreN2ByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit);
+                kCalculateObcGbsaSoftcoreN2ByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, threadsPerBlock,
+                        sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit);
             else
-                kCalculateObcGbsaSoftcoreN2Forces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit);
+                kCalculateObcGbsaSoftcoreN2Forces2_kernel<<<gpu->sim.bornForce2_blocks, threadsPerBlock,
+                        sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit);
             break;
 
         case FREE_ENERGY_CUTOFF:
 
             if (gpu->bOutputBufferPerWarp)
-                kCalculateObcGbsaSoftcoreCutoffByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateObcGbsaSoftcoreCutoffByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, threadsPerBlock,
+                        (sizeof(Atom)+sizeof(float3))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateObcGbsaSoftcoreCutoffForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateObcGbsaSoftcoreCutoffForces2_kernel<<<gpu->sim.bornForce2_blocks, threadsPerBlock,
+                        (sizeof(Atom)+sizeof(float3))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
             break;
 
         case FREE_ENERGY_PERIODIC:
 
             if (gpu->bOutputBufferPerWarp)
-                kCalculateObcGbsaSoftcorePeriodicByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateObcGbsaSoftcorePeriodicByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, threadsPerBlock,
+                        (sizeof(Atom)+sizeof(float3))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateObcGbsaSoftcorePeriodicForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateObcGbsaSoftcorePeriodicForces2_kernel<<<gpu->sim.bornForce2_blocks, threadsPerBlock,
+                        (sizeof(Atom)+sizeof(float3))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
             break;
     }
     LAUNCHERROR("kCalculateObcGbsaSoftcoreForces2");
