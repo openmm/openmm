@@ -237,71 +237,48 @@ __global__ void kReduceGBVIBornSum_kernel()
 void kReduceGBVIBornSum(gpuContext gpu)
 {
     //printf("kReduceGBVIBornSum\n");
-#define GBVI_DEBUG 0
-#if ( GBVI_DEBUG == 1 )
-               gpu->psGBVIData->Download();
-               gpu->psBornSum->Download();
-               gpu->psPosq4->Download();
-                (void) fprintf( stderr, "\nkReduceGBVIBornSum: Post BornSum %s Born radii & params\n", 
-                               (gpu->bIncludeGBVI ? "GBVI" : "Obc") );
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                   (void) fprintf( stderr, "%d bSum=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f]\n",
-                                   ii, 
-                                   gpu->psBornSum->_pSysStream[0][ii],
-                                   gpu->psGBVIData->_pSysStream[0][ii].x,
-                                   gpu->psGBVIData->_pSysStream[0][ii].y,
-                                   gpu->psGBVIData->_pSysStream[0][ii].z,
-                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w
-                                 );  
-                }   
-#endif
-#undef GBVI_DEBUG
-
-
     kReduceGBVIBornSum_kernel<<<gpu->sim.blocks, 384>>>();
     gpu->bRecalculateBornRadii = false;
     LAUNCHERROR("kReduceGBVIBornSum");
 }
 
+void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
+{
+
+    gpu->psGBVIData->Download();
+    gpu->psBornRadii->Download();
+    gpu->psBornForce->Download();
+    gpu->psPosq4->Download();
+    gpu->psSigEps2->Download();
+
+    (void) fprintf( log, "kPrintGBVI Cuda comp bR bF prm    sigeps2\n" );
+    (void) fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
+                    gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
+                    sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
+    for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+        (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e \n", ii,
+                        gpu->psBornRadii->_pSysData[ii],
+                        gpu->psBornForce->_pSysData[ii],
+
+                        gpu->psGBVIData->_pSysData[ii].x,
+                        gpu->psGBVIData->_pSysData[ii].y,
+                        gpu->psGBVIData->_pSysData[ii].z,
+                        gpu->psGBVIData->_pSysData[ii].w,
+
+                        gpu->psSigEps2->_pSysData[ii].x,
+                        gpu->psSigEps2->_pSysData[ii].y );
+
+    }   
+
+}
+
 void kCalculateGBVIBornSum(gpuContext gpu)
 {
     //printf("kCalculateGBVIBornSum\n");
-    //size_t numWithInteractions;
+
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:
-#define GBVI 0
-#if GBVI == 1
-int maxPrint = 10;
-gpu->psWorkUnit->Download();
-fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
-                 gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
-        sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
-
-               gpu->psGBVIData->Download();
-               gpu->psBornSum->Download();
-               gpu->psPosq4->Download();
-
-                (void) fprintf( stderr, "\nkCalculateGBVIBornSum: pre BornSum %s Born radii & params\n",
-                               (gpu->bIncludeGBVI ? "GBVI" : "Obc") );
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                   (void) fprintf( stderr, "%d bSum=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f]\n",
-                                   ii, 
-                                   gpu->psBornSum->_pSysStream[0][ii],
-                                   gpu->psGBVIData->_pSysStream[0][ii].x,
-                                   gpu->psGBVIData->_pSysStream[0][ii].y,
-                                   gpu->psGBVIData->_pSysStream[0][ii].z,
-                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w
-                                 );
-                   if( (ii == maxPrint) && ( ii < (gpu->natoms - maxPrint)) ){
-                      ii = gpu->natoms - maxPrint;
-                   }
-                }
-
-#endif
-#undef GBVI
             if (gpu->bOutputBufferPerWarp){
                 kCalculateGBVIN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
@@ -310,6 +287,7 @@ fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             }
             break;
+
         case CUTOFF:
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVICutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
@@ -318,6 +296,7 @@ fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=
                 kCalculateGBVICutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
             break;
+
         case PERIODIC:
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVIPeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
@@ -326,6 +305,7 @@ fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=
                 kCalculateGBVIPeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
             break;
+
     }
     LAUNCHERROR("kCalculateGBVIBornSum");
 }

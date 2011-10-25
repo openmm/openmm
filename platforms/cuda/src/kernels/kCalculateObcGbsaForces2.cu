@@ -130,4 +130,6 @@ void OPENMMCUDA_EXPORT kCalculateObcGbsaForces2(gpuContext gpu)
             break;
     }
     LAUNCHERROR("kCalculateObcGbsaForces2");
+
+    //kPrintObc( gpu, "Post kCalculateObcGbsaForces2", 0, stderr );
 }

@@ -254,7 +254,7 @@ void CpuGBVI::computeBornRadii( const vector<RealVec>& atomCoordinates, RealOpen
         }
 
         RealOpenMM atomicRadius3 = POW( radiusI, minusThree );
-        if( _gbviParameters->getBornRadiusScalingMethod() == GBVIParameters::QuinticSpline ){
+        if( _gbviParameters->getBornRadiusScalingMethod() != GBVIParameters::QuinticSpline ){
            sum                        = atomicRadius3 - sum; 
            bornRadii[atomI]           = POW( sum, minusOneThird );
            switchDeriviatives[atomI]  = one; 

@@ -223,7 +223,7 @@ void kReduceBornSumAndForces_kernel()
 
 void kReduceBornSumAndForces(gpuContext gpu)
 {
-    //printf("kReduceBornSumAndForces\n");
+    fprintf( stderr, "kReduceBornSumAndForces\n");
     kReduceBornSumAndForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceBornSumAndForces");
 }
@@ -428,8 +428,6 @@ void kReduceGBVIBornForces_kernel()
 
 void kReduceObcGbsaBornForces(gpuContext gpu)
 {
-    //fprintf( stderr, "kReduceObcGbsaBornForces %u %u  %u %u %u\n", gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block, GF1XX_THREADS_PER_BLOCK,
-    //         GT2XX_THREADS_PER_BLOCK, G8X_THREADS_PER_BLOCK ); fflush( stderr );
     if( gpu->bIncludeGBSA ){
        kReduceObcGbsaBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
        LAUNCHERROR("kReduceObcGbsaBornForces");

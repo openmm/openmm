@@ -495,5 +495,69 @@ RealOpenMM CpuObc::computeBornEnergyForces( const vector<RealVec>& atomCoordinat
 
     }
 
+    //printObc( atomCoordinates, partialCharges, bornRadii, bornForces, inputForces, "Obc Post loop2", stderr );
+
     return obcEnergy;
 }
+
+/**---------------------------------------------------------------------------------------
+
+    Print Obc parameters, radii, forces, ...
+
+    @param atomCoordinates     atomic coordinates
+    @param partialCharges      partial charges
+    @param bornRadii           Born radii (may be empty)
+    @param bornForces          Born forces (may be empty)
+    @param forces              forces (may be empty)
+    @param idString            id string (who is calling)
+    @param log                 log file
+
+    --------------------------------------------------------------------------------------- */
+
+void CpuObc::printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
+                       const RealOpenMMVector& partialCharges,
+                       const RealOpenMMVector& bornRadii,
+                       const RealOpenMMVector& bornForces,
+                       const std::vector<OpenMM::RealVec>& forces,
+                       const std::string& idString, FILE* log ){
+
+    // ---------------------------------------------------------------------------------------
+
+    const ObcParameters* obcParameters          = getObcParameters();
+    const int numberOfAtoms                     = obcParameters->getNumberOfAtoms();
+    const RealOpenMMVector& atomicRadii         = obcParameters->getAtomicRadii();
+    const RealOpenMM preFactor                  = 2.0*obcParameters->getElectricConstant();
+    const RealOpenMMVector& obcChain            = getObcChain();
+    const RealOpenMMVector& scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
+
+    const RealOpenMM alphaObc                   = obcParameters->getAlphaObc();
+    const RealOpenMM betaObc                    = obcParameters->getBetaObc();
+    const RealOpenMM gammaObc                   = obcParameters->getGammaObc();
+
+    // ---------------------------------------------------------------------------------------
+
+    (void) fprintf( log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms );
+    (void) fprintf( log, "    preFactor      %15.7e\n", preFactor );
+    (void) fprintf( log, "    alpha          %15.7e\n", alphaObc);
+    (void) fprintf( log, "    beta           %15.7e\n", betaObc);
+    (void) fprintf( log, "    gamma          %15.7e\n", gammaObc );
+ 
+    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+        (void) fprintf( log, "%6d r=%15.7e q=%6.3f", atomI,
+                        atomicRadii[atomI], partialCharges[atomI] );
+        if( obcChain.size() > atomI ){
+             (void) fprintf( log, " bChn=%15.7e", obcChain[atomI] );
+        }
+        if( bornRadii.size() > atomI ){
+             (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
+        }
+        if( bornForces.size() > atomI ){
+             (void) fprintf( log, " bF=%15.7e", bornForces[atomI] );    
+        }
+        (void) fprintf( log, "\n" );
+    }   
+
+    return;
+
+}
+

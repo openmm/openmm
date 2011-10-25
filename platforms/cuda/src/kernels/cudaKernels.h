@@ -133,3 +133,7 @@ extern void SetCustomExternalGlobalParams(const std::vector<float>& paramValues)
 extern void SetCustomNonbondedForceExpression(const Expression<256>& expression);
 extern void SetCustomNonbondedEnergyExpression(const Expression<256>& expression);
 extern void SetCustomNonbondedGlobalParams(const std::vector<float>& paramValues);
+
+extern void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log);
+extern void kPrintObc( gpuContext gpu, std::string callId, int call, FILE* log);
+

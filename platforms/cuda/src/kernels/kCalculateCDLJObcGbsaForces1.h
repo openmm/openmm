@@ -30,9 +30,6 @@
  * different versions of the kernels.
  */
 
-/* Cuda compiler on Windows does not recognized "static const float" values */
-#define LOCAL_HACK_PI 3.1415926535897932384626433832795
-
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
@@ -41,25 +38,21 @@ __launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
-void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
+void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit )
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos          = warp*numWorkUnits/totalWarps;
+    unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
     float CDLJObcGbsa_energy;
     float energy = 0.0f;
 #ifdef USE_CUTOFF
-    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+	 float* tempBuffer         = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
-#ifdef USE_EWALD
-    const float TWO_OVER_SQRT_PI = 2.0f/sqrt(LOCAL_HACK_PI);
-#endif
-
-    unsigned int lasty = -0xFFFFFFFF;
+    unsigned int lasty        = -0xFFFFFFFF;
     while (pos < end)
     {
 
@@ -101,9 +94,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dy                = psA[j].y - apos.y;
                     float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
 
@@ -115,26 +108,14 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float sig6              = sig2 * sig2 * sig2;
                     float eps               = a.y * psA[j].eps;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-                    /* E */ 
-		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
+                    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r                 = sqrt(r2);
-                    float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = fastErfc(alphaR);
-                    dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-		    /* E */
-                    CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
-    #else
                     dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-                    /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
 #else
                     float factorX           = apos.w * psA[j].q * invR;
 
                     dEdR                   += factorX;
-                    /* E */
                     CDLJObcGbsa_energy     += factorX;
 #endif
                     dEdR                   *= invR * invR;
@@ -149,18 +130,18 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
                     CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
+
 #ifdef USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
+                    if ( i >= cSim.atoms || (x+j) >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                    if ( i >= cSim.atoms || (x+j) >= cSim.atoms)
+#endif
                     {
                         dEdR                = 0.0f;
                         dGpol_dalpha2_ij    = 0.0f;
                         CDLJObcGbsa_energy  = 0.0f;
-                   }
-#endif
-                    if (i < cSim.atoms)
-                    {
-                        energy             += 0.5f*CDLJObcGbsa_energy;
                     }
+                    energy                 += 0.5f*CDLJObcGbsa_energy;
                     // Add Forces
                     dx                     *= dEdR;
                     dy                     *= dEdR;
@@ -169,10 +150,11 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     af.y                   -= dy;
                     af.z                   -= dz;
                     af.w                   += dGpol_dalpha2_ij * psA[j].br;
+
                 }
-            }
-            else  // bExclusion
-            {
+
+            } else {
+
                 unsigned int xi   = x>>GRIDBITS;
                 unsigned int cell = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
@@ -182,11 +164,11 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dy                = psA[j].y - apos.y;
                     float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
-                        float r2                = dx * dx + dy * dy + dz * dz;
+                    float r2                = dx * dx + dy * dy + dz * dz;
 
                     // CDLJ part
                     float invR              = 1.0f / sqrt(r2);
@@ -198,24 +180,8 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
                     CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r                 = sqrt(r2);
-                    float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = fastErfc(alphaR);
-                    dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                    CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
-                    bool needCorrection = !(excl & 0x1) && x+tgx != y+j && x+tgx < cSim.atoms && y+j < cSim.atoms;
-                    if (needCorrection)
-                    {
-                        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
-
-                        dEdR               = -apos.w * psA[j].q * invR * ((1.0f-erfcAlphaR) - alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJObcGbsa_energy = -apos.w * psA[j].q * invR * (1.0f-erfcAlphaR);
-                    }
-    #else
                     dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
 #else
                     float factorX           = apos.w * psA[j].q * invR;
 
@@ -223,13 +189,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     CDLJObcGbsa_energy     += factorX;
 #endif
                     dEdR                   *= invR * invR;
-#ifdef USE_EWALD
-                    if (!(excl & 0x1) && !needCorrection)
-#else
                     if (!(excl & 0x1))
-#endif
                     {
-                        dEdR = 0.0f;
+                        dEdR                = 0.0f;
 		                  CDLJObcGbsa_energy  = 0.0f;
                     }
 
@@ -243,26 +205,18 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
                     CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
-#if defined USE_PERIODIC
+#if defined USE_CUTOFF
                     if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR               = 0.0f;
-                        dGpol_dalpha2_ij   = 0.0f;
-		                  CDLJObcGbsa_energy = 0.0f;
-                    }
-#elif defined USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR               = 0.0f;
-                        dGpol_dalpha2_ij   = 0.0f;
-		                  CDLJObcGbsa_energy = 0.0f;
-                    }
+#else
+                    if (i >= cSim.atoms || x+j >= cSim.atoms )
 #endif
-		    /* E */
-                    if (i < cSim.atoms)
                     {
-                        energy         += 0.5f*CDLJObcGbsa_energy;
+                        dEdR                = 0.0f;
+                        dGpol_dalpha2_ij    = 0.0f;
+		                  CDLJObcGbsa_energy  = 0.0f;
                     }
+                    energy                 += 0.5f*CDLJObcGbsa_energy;
+
                     // Add Forces
                     dx                     *= dEdR;
                     dy                     *= dEdR;
@@ -288,9 +242,8 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
             of.w                       += af.w;
             cSim.pForce4[offset]        = of;
             cSim.pBornForce[offset]     = of.w;
-        }
-        else        // 100% utilization
-        {
+
+        } else {
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
@@ -330,9 +283,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                         float dy                = psA[tj].y - apos.y;
                         float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         float r2                = dx * dx + dy * dy + dz * dz;
 
@@ -346,16 +299,8 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                         float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
                         CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                        float r                 = sqrt(r2);
-                        float alphaR            = cSim.alphaEwald * r;
-                        float erfcAlphaR        = fastErfc(alphaR);
-                        dEdR                   += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfcAlphaR;
-    #else
                         dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                         CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
 #else
                         float factorX           = apos.w * psA[tj].q * invR;
 
@@ -375,18 +320,17 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                         dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
                         CDLJObcGbsa_energy     += (q2 * psA[tj].q) / denominator;
 #ifdef USE_CUTOFF
-                        if (r2 > cSim.nonbondedCutoffSqr)
+                        if ( i >= cSim.atoms || (y+tj) >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                        if ( i >= cSim.atoms || (y+tj) >= cSim.atoms)
+#endif
                         {
                             dEdR               = 0.0f;
                             dGpol_dalpha2_ij   = 0.0f;
        			             CDLJObcGbsa_energy = 0.0f;
                         }
-#endif
-			/* E */
-                        if (i < cSim.atoms)
-                        {
-                            energy         += CDLJObcGbsa_energy;
-                        }
+                        energy                += CDLJObcGbsa_energy;
+
                         // Add forces
                         dx                     *= dEdR;
                         dy                     *= dEdR;
@@ -399,7 +343,10 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                         psA[tj].fy             += dy;
                         psA[tj].fz             += dz;
                         psA[tj].fb             += dGpol_dalpha2_ij * br;
+
                         tj                      = (tj + 1) & (GRID - 1);
+
+
                     }
                 }
 #ifdef USE_CUTOFF
@@ -431,16 +378,8 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                             float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
                             CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                            float r                 = sqrt(r2);
-                            float alphaR            = cSim.alphaEwald * r;
-                            float erfcAlphaR        = fastErfc(alphaR);
-                            dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                            CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
-    #else
                             dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                             CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
 #else
                             float factorX           = apos.w * psA[j].q * invR;
 
@@ -461,17 +400,17 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                             CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
 
 #ifdef USE_CUTOFF
-                            if (r2 > cSim.nonbondedCutoffSqr)
+                            if ( i >= cSim.atoms || (y+j) >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                            if ( i >= cSim.atoms || (y+j) >= cSim.atoms)
+#endif
                             {
-                                dEdR = 0.0f;
-                                dGpol_dalpha2_ij = 0.0f;
+                                dEdR                = 0.0f;
+                                dGpol_dalpha2_ij    = 0.0f;
 				                    CDLJObcGbsa_energy  = 0.0f;
                             }
-#endif
-                            if (i < cSim.atoms)
-                            {
-                                 energy         += CDLJObcGbsa_energy;
-                            }
+                            energy                 += CDLJObcGbsa_energy;
+                             
                             // Add forces
                             dx                     *= dEdR;
                             dy                     *= dEdR;
@@ -535,9 +474,7 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     }
                 }
 #endif
-            }
-            else  // bExclusion
-            {
+            } else {
                 unsigned int xi   = x>>GRIDBITS;
                 unsigned int yi   = y>>GRIDBITS;
                 unsigned int cell = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
@@ -549,9 +486,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
 
@@ -565,38 +502,18 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
 		              CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-    #ifdef USE_EWALD
-                    float r                 = sqrt(r2);
-                    float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = fastErfc(alphaR);
-                    dEdR                   += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                    CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfcAlphaR;
-                    bool needCorrection = !(excl & 0x1) && x+tgx != y+tj && x+tgx < cSim.atoms && y+tj < cSim.atoms;
-                    if (needCorrection)
-                    {
-                        // Subtract off the part of this interaction that was included in the reciprocal space contribution.
-
-                        dEdR               = -apos.w * psA[tj].q * invR * ((1.0f-erfcAlphaR) - alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
-                        CDLJObcGbsa_energy = -apos.w * psA[tj].q * invR * (1.0f-erfcAlphaR);
-                    }
-    #else
                     dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
-    #endif
 #else
                     float factorX           = apos.w * psA[tj].q * invR;
                     dEdR                   += factorX;
                     CDLJObcGbsa_energy     += factorX;
 #endif
                     dEdR                   *= invR * invR;
-#ifdef USE_EWALD
-                    if (!(excl & 0x1) && !needCorrection)
-#else
                     if (!(excl & 0x1))
-#endif
                     {
-                        dEdR = 0.0f;
-			               CDLJObcGbsa_energy = 0.0f;
+                        dEdR                = 0.0f;
+			               CDLJObcGbsa_energy  = 0.0f;
                     }
 
                     // ObcGbsaForce1 part
@@ -609,26 +526,19 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
 		              CDLJObcGbsa_energy     += (q2 * psA[tj].q) / denominator;
-#if defined USE_PERIODIC
+
+#ifdef USE_CUTOFF
                     if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR               = 0.0f;
-                        dGpol_dalpha2_ij   = 0.0f;
-			               CDLJObcGbsa_energy = 0.0f;
-                    }
-#elif defined USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR               = 0.0f;
-                        dGpol_dalpha2_ij   = 0.0f;
-			               CDLJObcGbsa_energy = 0.0f;
-                    }
+#else
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms )
 #endif
-		    /* E */
-                    if (i < cSim.atoms)
                     {
-                        energy             += CDLJObcGbsa_energy;
+                        dEdR               = 0.0f;
+                        dGpol_dalpha2_ij   = 0.0f;
+			               CDLJObcGbsa_energy = 0.0f;
                     }
+                    energy                += CDLJObcGbsa_energy;
+                     
                     // Add forces
                     dx                     *= dEdR;
                     dy                     *= dEdR;
@@ -642,6 +552,7 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
                     psA[tj].fz             += dz;
                     psA[tj].fb             += dGpol_dalpha2_ij * br;
                     excl                  >>= 1;
+
                     tj                      = (tj + 1) & (GRID - 1);
                 }
             }

@@ -41,15 +41,12 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos          = warp*numWorkUnits/totalWarps;
+    unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 
-#ifdef USE_OUTPUT_BUFFER_PER_WARP
- //   unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-#endif
 #ifdef USE_CUTOFF
     float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
@@ -69,8 +66,8 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
 
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
-        unsigned int tj = tgx;
-        Atom* psA = &sA[tbx];
+        unsigned int tj  = tgx;
+        Atom* psA        = &sA[tbx];
 
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {
@@ -91,15 +88,15 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                 dy                      = psA[j].y - apos.y;
                 dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 r2                      = dx * dx + dy * dy + dz * dz;
-#if defined USE_PERIODIC
+#if defined USE_CUTOFF
                 if (i < cSim.atoms && x+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                if (i < cSim.atoms && x+j < cSim.atoms )
 #endif
                 {
                     r                       = sqrt(r2);
@@ -118,7 +115,7 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                                          (0.50f * rInverse * ratio) +
                                          (0.25f * psA[j].sr * psA[j].sr * rInverse) *
                                          (l_ij2 - u_ij2);
-                        float rj = psA[j].r;
+                        float rj = psA[j].sr;
                         if (ar.x < (rj - r))
                         {
                             apos.w += 2.0f * ((1.0f / ar.x) - l_ij);
@@ -170,15 +167,15 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                     dy                      = psA[tj].y - apos.y;
                     dz                      = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                     if (i < cSim.atoms && y+tj < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                    if (i < cSim.atoms && y+tj < cSim.atoms)
 #endif
                     {
                         r                       = sqrt(r2);
@@ -243,15 +240,15 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                         if (i < cSim.atoms && y+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                        if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                        if (i < cSim.atoms && y+j < cSim.atoms)
 #endif
                         {
                             r                       = sqrt(r2);

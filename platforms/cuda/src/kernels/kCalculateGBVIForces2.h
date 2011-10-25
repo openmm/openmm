@@ -45,15 +45,16 @@ __launch_bounds__(GT2XX_BORNFORCE2_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_BORNFORCE2_THREADS_PER_BLOCK, 1)
 #endif
-METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit, unsigned int numWorkUnits)
+METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps  = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
-    unsigned int warp        = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    unsigned int pos         = warp*numWorkUnits/totalWarps;
-    unsigned int end         = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int numWorkUnits = cSim.pInteractionCount[0];
+    unsigned int pos          = warp*numWorkUnits/totalWarps;
+    unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    float3* tempBuffer       = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
 #endif
 
     unsigned int lasty = -0xFFFFFFFF;

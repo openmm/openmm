@@ -167,76 +167,41 @@ __global__ void kCalculateGBVIForces2a_kernel()
 
 void kCalculateGBVIForces2(gpuContext gpu)
 {
-    //printf("kCalculateGBVIForces2\n");
-    size_t numWithInteractions;
-
-#if 0
-    kClearForces(gpu);
-    (void) fprintf( stderr, "\nkCalculateGBVIForces2: cleared force prior loop2\n" ); (void) fflush( stderr );
-    kCalculateGBVIForces2a_kernel<<<gpu->sim.blocks, 384>>>();
-    (void) fprintf( stderr, "\ncalled kCalculateGBVIForces2a\n" ); (void) fflush( stderr );
-    return;
-#endif
 
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVIN2ByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit, gpu->sim.workUnits);
+                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit );
             else
                 kCalculateGBVIN2Forces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit, gpu->sim.workUnits);
-//(void) fprintf( stderr, "\nkCalculateGBVIForces2: Born radii/force forces warp=%u\n", gpu->bOutputBufferPerWarp ); (void) fflush( stderr );
-#define GBVI_DEBUG 0
-#if ( GBVI_DEBUG == 1 )
-                (void) fprintf( stderr, "\nkCalculateGBVIForces2: Born radii/force forces:\n" ); (void) fflush( stderr );
-                gpu->psBornForce->Download();
-                gpu->psForce4->Download();
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                    (void) fprintf( stderr, "%d bF=%14.6e Fa[%14.6e %14.6e %14.6e] Fb[%14.6e %14.6e %14.6e]\n",
-                                    ii,
-                                    gpu->psBornForce->_pSysStream[0][ii],
-                                    gpu->psForce4->_pSysStream[0][ii].x,
-                                    gpu->psForce4->_pSysStream[0][ii].y,
-                                    gpu->psForce4->_pSysStream[0][ii].z,
-                                    gpu->psForce4->_pSysStream[1][ii].x,
-                                    gpu->psForce4->_pSysStream[1][ii].y,
-                                    gpu->psForce4->_pSysStream[1][ii].z
-                                  );  
-                }   
-                for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms*2; ii++ ){
-                    (void) fprintf( stderr, "%d bF=%14.6e Fa[%14.6e %14.6e %14.6e %14.6e]\n",
-                                    ii,
-                                    gpu->psBornForce->_pSysStream[0][ii],
-                                    gpu->psForce4->_pSysStream[0][ii].x,
-                                    gpu->psForce4->_pSysStream[0][ii].y,
-                                    gpu->psForce4->_pSysStream[0][ii].z,
-                                    gpu->psForce4->_pSysStream[0][ii].w
-                                  );  
-                }   
-#endif
-#undef GBVI_DEBUG
-
+                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pWorkUnit );
             break;
+
         case CUTOFF:
-            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVICutoffByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
             else
                 kCalculateGBVICutoffForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             break;
+
         case PERIODIC:
-            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVIPeriodicByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
             else
                 kCalculateGBVIPeriodicForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit );
             break;
+
     }
     LAUNCHERROR("kCalculateGBVIForces2");
+
+    //kPrintGBVI( gpu, "kCalculateGBVIForces2", 0, stderr);
 }

@@ -35,9 +35,6 @@ using namespace std;
 
 #include "gputypes.h"
 
-#define UNROLLXX 0
-#define UNROLLXY 0
-
 struct Atom {
     float x;
     float y;
@@ -105,18 +102,16 @@ void kReduceObcGbsaBornSum_kernel()
     
     while (pos < cSim.atoms)
     {
-        float sum = 0.0f;
-        float* pSt = cSim.pBornSum + pos;
+        float sum   = 0.0f;
+        float* pSt  = cSim.pBornSum + pos;
         float2 atom = cSim.pObcData[pos];
         
         // Get summed Born data
         for (int i = 0; i < cSim.nonbondOutputBuffers; i++)
         {
             sum += *pSt;
-       //     printf("%4d %4d A: %9.4f\n", pos, i, *pSt);
             pSt += cSim.stride;
         }
-        
         
         // Now calculate Born radius and OBC term.
         sum                    *= 0.5f * atom.x;
@@ -127,18 +122,47 @@ void kReduceObcGbsaBornSum_kernel()
         float bornRadius        = 1.0f / (1.0f / atom.x - tanhSum / nonOffsetRadii); 
         float obcChain          = atom.x * (cSim.alphaOBC - 2.0f * cSim.betaOBC * sum + 3.0f * cSim.gammaOBC * sum2);
         obcChain                = (1.0f - tanhSum * tanhSum) * obcChain / nonOffsetRadii;        
-        cSim.pBornRadii[pos] = bornRadius;
-        cSim.pObcChain[pos]  = obcChain;
-        pos += gridDim.x * blockDim.x;
+        cSim.pBornRadii[pos]    = bornRadius;
+        cSim.pObcChain[pos]     = obcChain;
+        pos                    += gridDim.x * blockDim.x;
     }   
 }
 
 void OPENMMCUDA_EXPORT kReduceObcGbsaBornSum(gpuContext gpu)
 {
-//    printf("kReduceObcGbsaBornSum\n");
     kReduceObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
     gpu->bRecalculateBornRadii = false;
     LAUNCHERROR("kReduceObcGbsaBornSum");
+}
+
+void kPrintObc( gpuContext gpu, std::string callId, int call, FILE* log)
+{
+
+    gpu->psObcData->Download();
+    gpu->psBornRadii->Download();
+    gpu->psObcChain->Download();
+    gpu->psBornForce->Download();
+    gpu->psPosq4->Download();
+    gpu->psSigEps2->Download();
+
+    (void) fprintf( log, "kPrintObc Cuda bCh bR bF prm[2]   sigeps[2]\n" );
+    (void) fprintf( stderr, "bOutputWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
+                    gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
+                    sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
+    for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+        (void) fprintf( log, "%6d %15.7e %15.7e %15.7e    %15.7e %15.7e   %15.7e %15.7e \n", ii, 
+                        gpu->psObcChain->_pSysData[ii],
+                        gpu->psBornRadii->_pSysData[ii],
+                        gpu->psBornForce->_pSysData[ii],
+
+                        gpu->psObcData->_pSysData[ii].x,
+                        gpu->psObcData->_pSysData[ii].y,
+
+                        gpu->psSigEps2->_pSysData[ii].x,
+                        gpu->psSigEps2->_pSysData[ii].y );
+
+    }   
+
 }
 
 void OPENMMCUDA_EXPORT kCalculateObcGbsaBornSum(gpuContext gpu)
@@ -155,7 +179,9 @@ void OPENMMCUDA_EXPORT kCalculateObcGbsaBornSum(gpuContext gpu)
                 kCalculateObcGbsaN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             break;
+
         case CUTOFF:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
@@ -163,7 +189,9 @@ void OPENMMCUDA_EXPORT kCalculateObcGbsaBornSum(gpuContext gpu)
                 kCalculateObcGbsaCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             break;
+
         case PERIODIC:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaPeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
@@ -172,5 +200,6 @@ void OPENMMCUDA_EXPORT kCalculateObcGbsaBornSum(gpuContext gpu)
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             break;
     }
+
     LAUNCHERROR("kCalculateBornSum");
 }
