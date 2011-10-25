@@ -65,7 +65,8 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
     float CDLJObcGbsa_energy;
     float energy                   = 0.0f;
 #ifdef USE_CUTOFF
-    float* tempBuffer              = (float*) &sA[cSim.nonbond_threads_per_block];
+    //float* tempBuffer              = (float*) &sA[cSim.nonbond_threads_per_block];
+    float* tempBuffer              = (float*) &sA[blockDim.x];
 #endif
 
     unsigned int lasty             = -0xFFFFFFFF;

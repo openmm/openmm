@@ -186,7 +186,8 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
             {
                 // No interactions in this block.
             }
-            else if (flags == 0xFFFFFFFF)
+            //else if (flags == 0xFFFFFFFF)
+            else if (flags)
 #endif
             {
                 // Compute all interactions within this block.

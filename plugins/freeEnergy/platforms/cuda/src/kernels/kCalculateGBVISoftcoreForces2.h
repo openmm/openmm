@@ -58,7 +58,8 @@ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit 
     unsigned int pos          = warp*numWorkUnits/totalWarps;
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    //float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    float3* tempBuffer        = (float3*) &sA[blockDim.x];
 #endif
 
     unsigned int lasty = -0xFFFFFFFF;
