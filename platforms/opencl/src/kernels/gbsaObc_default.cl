@@ -11,9 +11,9 @@ typedef struct {
  * Compute the Born sum.
  */
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+__kernel __attribute__((reqd_work_group_size(FORCE_WORK_GROUP_SIZE, 1, 1)))
 void computeBornSum(__global float* restrict global_bornSum, __global const float4* restrict posq, __global const float2* restrict global_params,
-        __local AtomData1* restrict localData, __local float* restrict tempBuffer,
+        __local AtomData1* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
@@ -28,6 +28,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
     unsigned int lasty = 0xFFFFFFFF;
+    __local float tempBuffer[FORCE_WORK_GROUP_SIZE/2];
 
     while (pos < end) {
         // Extract the coordinates of this tile
@@ -94,9 +95,8 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
 
             // Sum the forces and write results.
 
-
             if (get_local_id(0) >= TILE_SIZE)
-                tempBuffer[get_local_id(0)] = bornSum;
+                tempBuffer[tgx] = bornSum;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
@@ -104,7 +104,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
 #else
                 unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                global_bornSum[offset] += bornSum+tempBuffer[get_local_id(0)+TILE_SIZE];
+                global_bornSum[offset] += bornSum+tempBuffer[tgx];
             }
         }
         else {
@@ -174,7 +174,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
             // Sum the forces and write results.
 
             if (get_local_id(0) >= TILE_SIZE)
-                tempBuffer[get_local_id(0)] = bornSum;
+                tempBuffer[tgx] = bornSum;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
@@ -184,8 +184,13 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                 unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                global_bornSum[offset1] += bornSum+tempBuffer[get_local_id(0)+TILE_SIZE];
-                global_bornSum[offset2] += localData[get_local_id(0)].bornSum+localData[get_local_id(0)+TILE_SIZE].bornSum;
+                // Do both loads before both stores to minimize store-load waits.
+                float sum1 = global_bornSum[offset1];
+                float sum2 = global_bornSum[offset2];
+                sum1 += bornSum + tempBuffer[tgx];
+                sum2 += localData[get_local_id(0)].bornSum + localData[get_local_id(0)+TILE_SIZE].bornSum;
+                global_bornSum[offset1] = sum1;
+                global_bornSum[offset2] = sum2;
             }
         }
         lasty = y;
@@ -204,10 +209,10 @@ typedef struct {
  * First part of computing the GBSA interaction.
  */
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+__kernel __attribute__((reqd_work_group_size(FORCE_WORK_GROUP_SIZE, 1, 1)))
 void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* restrict global_bornForce,
         __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
-        __local AtomData2* restrict localData, __local float4* restrict tempBuffer,
+        __local AtomData2* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
@@ -223,6 +228,7 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
+    __local float4 tempBuffer[FORCE_WORK_GROUP_SIZE/2];
 
     while (pos < end) {
         // Extract the coordinates of this tile
@@ -295,7 +301,7 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
             // Sum the forces and write results.
 
             if (get_local_id(0) >= TILE_SIZE)
-                tempBuffer[get_local_id(0)] = force;
+                tempBuffer[tgx] = force;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
@@ -303,8 +309,13 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
 #else
                 unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz+tempBuffer[get_local_id(0)+TILE_SIZE].xyz;
-                global_bornForce[offset] += force.w+tempBuffer[get_local_id(0)+TILE_SIZE].w;
+                // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
+                float4 sum = forceBuffers[offset];
+                float global_sum = global_bornForce[offset];
+                sum.xyz += force.xyz + tempBuffer[tgx].xyz;
+                global_sum += force.w + tempBuffer[tgx].w;
+                forceBuffers[offset] = sum;
+                global_bornForce[offset] = global_sum;
             }
         }
         else {
@@ -370,7 +381,7 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
             // Sum the forces and write results.
 
             if (get_local_id(0) >= TILE_SIZE)
-                tempBuffer[get_local_id(0)] = force;
+                tempBuffer[tgx] = force;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
@@ -380,14 +391,21 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
                 unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                forceBuffers[offset1].xyz = forceBuffers[offset1].xyz+force.xyz+tempBuffer[get_local_id(0)+TILE_SIZE].xyz;
-                float4 sum = (float4) (localData[get_local_id(0)].fx+localData[get_local_id(0)+TILE_SIZE].fx,
-                                       localData[get_local_id(0)].fy+localData[get_local_id(0)+TILE_SIZE].fy,
-                                       localData[get_local_id(0)].fz+localData[get_local_id(0)+TILE_SIZE].fz,
-                                       localData[get_local_id(0)].fw+localData[get_local_id(0)+TILE_SIZE].fw);
-                forceBuffers[offset2].xyz = forceBuffers[offset2].xyz+sum.xyz;
-                global_bornForce[offset1] += force.w+tempBuffer[get_local_id(0)+TILE_SIZE].w;
-                global_bornForce[offset2] += sum.w;
+                // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
+                float4 sum1 = forceBuffers[offset1];
+                float4 sum2 = forceBuffers[offset2];
+                float global_sum1 = global_bornForce[offset2];
+                float global_sum2 = global_bornForce[offset2];
+                sum1.xyz += force.xyz + tempBuffer[tgx].xyz;
+                global_sum1 += force.w + tempBuffer[tgx].w;
+                sum2.x += localData[get_local_id(0)].fx + localData[get_local_id(0)+TILE_SIZE].fx;
+                sum2.y += localData[get_local_id(0)].fy + localData[get_local_id(0)+TILE_SIZE].fy;
+                sum2.z += localData[get_local_id(0)].fz + localData[get_local_id(0)+TILE_SIZE].fz;
+                global_sum2 += localData[get_local_id(0)].fw + localData[get_local_id(0)+TILE_SIZE].fw;
+                forceBuffers[offset1] = sum1;
+                forceBuffers[offset2] = sum2;
+                global_bornForce[offset1] = global_sum1;
+                global_bornForce[offset2] = global_sum2;
             }
         }
         lasty = y;

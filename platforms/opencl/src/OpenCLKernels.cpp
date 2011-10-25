@@ -1517,8 +1517,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
-        if (cl.getSIMDWidth() == 32)
-            defines["WARPS_PER_GROUP"] = OpenCLExpressionUtilities::intToString(cl.getNonbondedUtilities().getForceThreadBlockSize()/OpenCLContext::TileSize);
+        defines["FORCE_WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(nb.getForceThreadBlockSize());
         string file;
         if (deviceIsCpu)
             file = OpenCLKernelSources::gbsaObc_cpu;
@@ -1534,7 +1533,6 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         computeBornSumKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         computeBornSumKernel.setArg<cl::Buffer>(index++, params->getDeviceBuffer());
         computeBornSumKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*7*sizeof(cl_float), NULL);
-        computeBornSumKernel.setArg(index++, (deviceIsCpu ? 1 : nb.getForceThreadBlockSize())*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -1557,7 +1555,6 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
         force1Kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*9*sizeof(cl_float), NULL);
-        force1Kernel.setArg(index++, (deviceIsCpu ? 1 : nb.getForceThreadBlockSize())*sizeof(mm_float4), NULL);
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -1596,19 +1593,19 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         reduceBornForceKernel.setArg<cl::Buffer>(index++, obcChain->getDeviceBuffer());
     }
     if (nb.getUseCutoff()) {
-        computeBornSumKernel.setArg<mm_float4>(7, cl.getPeriodicBoxSize());
-        computeBornSumKernel.setArg<mm_float4>(8, cl.getInvPeriodicBoxSize());
-        force1Kernel.setArg<mm_float4>(9, cl.getPeriodicBoxSize());
-        force1Kernel.setArg<mm_float4>(10, cl.getInvPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(6, cl.getPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(7, cl.getInvPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
             computeBornSumKernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_uint>(9, maxTiles);
-            force1Kernel.setArg<cl::Buffer>(7, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(11, maxTiles);
+            computeBornSumKernel.setArg<cl_uint>(8, maxTiles);
+            force1Kernel.setArg<cl::Buffer>(6, nb.getInteractingTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl_uint>(10, maxTiles);
             if (cl.getSIMDWidth() == 32 || deviceIsCpu) {
-                computeBornSumKernel.setArg<cl::Buffer>(10, nb.getInteractionFlags().getDeviceBuffer());
-                force1Kernel.setArg<cl::Buffer>(12, nb.getInteractionFlags().getDeviceBuffer());
+                computeBornSumKernel.setArg<cl::Buffer>(9, nb.getInteractionFlags().getDeviceBuffer());
+                force1Kernel.setArg<cl::Buffer>(11, nb.getInteractionFlags().getDeviceBuffer());
             }
         }
     }

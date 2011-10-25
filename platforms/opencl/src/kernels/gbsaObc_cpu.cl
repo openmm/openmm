@@ -15,7 +15,7 @@ typedef struct {
  */
 
 __kernel void computeBornSum(__global float* restrict global_bornSum, __global const float4* restrict posq, __global const float2* restrict global_params,
-        __local AtomData* restrict localData, __local float* restrict tempBuffer,
+        __local AtomData* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags) {
 #else
@@ -192,7 +192,7 @@ __kernel void computeBornSum(__global float* restrict global_bornSum, __global c
 
 __kernel void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* restrict energyBuffer,
         __global const float4* restrict posq, __global const float* restrict global_bornRadii, __global float* restrict global_bornForce,
-        __local AtomData* restrict localData, __local float4* restrict tempBuffer,
+        __local AtomData* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags) {
 #else

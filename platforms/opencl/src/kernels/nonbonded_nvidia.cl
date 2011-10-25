@@ -3,7 +3,7 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #endif
 #define TILE_SIZE 32
-#define WARPS_PER_GROUP (NONBONDED_WORK_GROUP_SIZE/TILE_SIZE)
+#define WARPS_PER_GROUP (FORCE_WORK_GROUP_SIZE/TILE_SIZE)
 
 typedef struct {
     float x, y, z;
@@ -41,7 +41,7 @@ __kernel void computeNonbonded(
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
 #endif
     float energy = 0.0f;
-    __local float tempBuffer[3*NONBONDED_WORK_GROUP_SIZE];
+    __local float tempBuffer[3*FORCE_WORK_GROUP_SIZE];
     __local unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __local int exclusionIndex[WARPS_PER_GROUP];
     __local int2* reservedBlocks = (__local int2*) exclusionRange;
