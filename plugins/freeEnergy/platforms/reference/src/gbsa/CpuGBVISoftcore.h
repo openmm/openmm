@@ -317,7 +317,7 @@ class CpuGBVISoftcore {
     
         --------------------------------------------------------------------------------------- */
     
-    void printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
+    void printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMM* partialCharges,
                     const RealOpenMMVector& bornRadii,
                     const RealOpenMMVector& bornForces,
                     const std::vector<OpenMM::RealVec>& forces,

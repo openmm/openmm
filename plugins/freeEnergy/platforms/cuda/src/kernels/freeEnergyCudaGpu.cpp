@@ -255,6 +255,29 @@ void freeEnergyGpuSetConstants( freeEnergyGpuContext freeEnergyGpu ){
 
 }
 
+/**---------------------------------------------------------------------------------------
+
+   Get threads/block
+
+   @param amoebaGpu              amoebaGpuContext
+   @param sharedMemoryPerThread  shared memory/thread
+   @param sharedMemoryPerBlock   shared memory/block
+
+   @return threadsPerBlock
+
+   --------------------------------------------------------------------------------------- */
+
+extern "C"
+unsigned int getThreadsPerBlockFEP( freeEnergyGpuContext freeEnergyGpu, unsigned int sharedMemoryPerThread, unsigned int sharedMemoryPerBlock )
+{
+    unsigned int grid               = freeEnergyGpu->gpuContext->grid;
+    unsigned int threadsPerBlock    = (sharedMemoryPerBlock + grid -1)/(grid*sharedMemoryPerThread);
+    threadsPerBlock                 = threadsPerBlock < 1 ? 1 : threadsPerBlock;
+    threadsPerBlock                *= grid;
+
+   return threadsPerBlock;
+}
+
 static int decodeCell( int cellCode, unsigned int* x, unsigned int* y, unsigned int* exclusion ){
     *x         =  cellCode >> 17; 
     *y         = (cellCode >> 2 ) & 0x7FFF;
@@ -275,8 +298,9 @@ void showWorkUnitsFreeEnergy( freeEnergyGpuContext freeEnergyGpu, int interactin
     //unsigned int numWorkUnits    = cSim.pInteractionCount[0];
     unsigned int numWorkUnits    = gpu->psInteractionCount->_pSysData[0];
 
-    (void) fprintf( stderr, "Total warps=%u blocks=%u threads=%u GRID=%u wus=%u\n",
-                    totalWarps, gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, GRID, numWorkUnits );
+    (void) fprintf( stderr, "Total warps=%u blocks=%u threads=%u GRID=%u wus=%u warpOutput=%d\n",
+                    totalWarps, gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, GRID, 
+                    numWorkUnits, gpu->bOutputBufferPerWarp );
 
     unsigned int maxPrint = 3;
     std::stringstream message;
@@ -287,10 +311,10 @@ void showWorkUnitsFreeEnergy( freeEnergyGpuContext freeEnergyGpu, int interactin
         unsigned int blockId = ii;
         for( unsigned int jj = 0; jj < gpu->sim.nonbond_threads_per_block; jj++ )
         {
-            unsigned int warp = (ii*gpu->sim.nonbond_threads_per_block+jj)/GRID;
-            unsigned int pos  = warp*numWorkUnits/totalWarps;
-            unsigned int end  = (warp+1)*numWorkUnits/totalWarps;
-            unsigned int print = 0;
+            unsigned int warp    = (ii*gpu->sim.nonbond_threads_per_block+jj)/GRID;
+            unsigned int pos     = warp*numWorkUnits/totalWarps;
+            unsigned int end     = (warp+1)*numWorkUnits/totalWarps;
+            unsigned int print   = 0;
             while( pos < end ){
                 unsigned int x, y, exclusion, flags;
                 int flagInt;
@@ -309,8 +333,13 @@ void showWorkUnitsFreeEnergy( freeEnergyGpuContext freeEnergyGpu, int interactin
 
                 x                   *= GRID;
                 y                   *= GRID;
+                unsigned int bufferX = gpu->bOutputBufferPerWarp ? warp*gpu->sim.stride : (x >> GRIDBITS) * gpu->sim.stride;
+                unsigned int bufferY = gpu->bOutputBufferPerWarp ? warp*gpu->sim.stride : (y >> GRIDBITS) * gpu->sim.stride;
+                bufferX             /= gpu->sim.paddedNumberOfAtoms;
+                bufferY             /= gpu->sim.paddedNumberOfAtoms;
                 if( jj == 1 ){
-                     (void) sprintf( buffer, "Block %4u thread %4u warp=%4u pos[%4u %4u] ", ii, jj, warp, pos, end );
+                //if( bufferX >= 62 || bufferY >= 62 ){
+                     (void) sprintf( buffer, "Block %4u thread %4u warp=%4u pos[%4u %4u] bufXY[%4u %4u]", ii, jj, warp, pos, end, bufferX, bufferY );
                      message << buffer;
                      (void) sprintf( buffer, "    x[%4u %4u] y[%4u %4u] excl=%u", x, x+32, y, y+32, exclusion );
                      message << buffer;

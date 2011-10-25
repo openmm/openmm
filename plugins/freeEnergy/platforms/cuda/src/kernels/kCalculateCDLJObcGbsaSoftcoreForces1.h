@@ -37,7 +37,7 @@
 #endif
 
 #undef TARGET
-//#define TARGET 0
+#define TARGET 1926
 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
@@ -47,12 +47,18 @@ __launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
+#ifdef DEBUG
+void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2 )
+#else
 void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* workUnit )
+#endif
 {
-//void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2 )
     extern __shared__ Atom sA[];
-    unsigned int totalWarps        = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int totalWarps        = gridDim.x*blockDim.x/GRID;
     unsigned int warp              = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+
+    //unsigned int totalWarps        = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    //unsigned int warp              = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits      = cSim.pInteractionCount[0];
     unsigned int pos               = warp*numWorkUnits/totalWarps;
     unsigned int end               = (warp+1)*numWorkUnits/totalWarps;
@@ -166,23 +172,22 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                     af.w                   += dGpol_dalpha2_ij * psA[j].br;
 
 
-/*
+#ifdef DEBUG
 int jIdx = j;
 if( i == TARGET ){
 int tjj     = y+jIdx;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z =  (q2 * psA[j].q) / denominator;
 pdE1[tjj].w = 1.0f;
 }
 
 if( (y+jIdx) == TARGET ){
 int tjj     = i;
-pdE1[tjj].x = dEdR - Gpol * (1.0f - 0.25f * expTerm);
-pdE1[tjj].y = r2;
-pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
+pdE1[tjj].y = sqrt(r2);
 pdE1[tjj].w = -1.0f;
-} */
+}
+#endif
                     energy                 += 0.5f*CDLJObcGbsa_energy;
 
                     // Add Forces
@@ -248,7 +253,6 @@ pdE1[tjj].w = -1.0f;
                         dEdR                = 0.0f;
                         CDLJObcGbsa_energy  = 0.0f;
                     }
-//float dEdRx = dEdR;
 
                     // ObcGbsaForce1 part
 
@@ -271,28 +275,23 @@ pdE1[tjj].w = -1.0f;
                         dEdR               = 0.0f;
 		                  CDLJObcGbsa_energy = 0.0f;
                         dGpol_dalpha2_ij   = 0.0f;
-//dEdRx = 0.0f;
                     }
 
-/*
+#ifdef DEBUG
 int jIdx    = j;
 if( i == TARGET ){
 int tjj     =  (y+jIdx);
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z =  (q2 * psA[j].q) / denominator;
-pdE1[tjj].x = dEdRx;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
 pdE1[tjj].w = 2.0f;
 }
 if( (y+jIdx) == TARGET ){
 int tjj     = i;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z =  (q2 * psA[j].q) / denominator;
 pdE1[tjj].w = -2.0f;
-} */
+}
+#endif
 
                     af.w                  += dGpol_dalpha2_ij * psA[j].br;
                     energy                += 0.5f*CDLJObcGbsa_energy;
@@ -361,7 +360,8 @@ pdE1[tjj].w = -2.0f;
                 {
                     // No interactions in this block.
                 }
-                else if (flags == 0xFFFFFFFF)
+                //else if (flags == 0xFFFFFFFF)
+                else if (flags)
 #endif
                 {
                     // Compute all interactions within this block.
@@ -401,7 +401,6 @@ pdE1[tjj].w = -2.0f;
                         CDLJObcGbsa_energy     += factorX;
 #endif
                         dEdR                   *= invR * invR;
-//float dEdRx = dEdR;
 
                         // ObcGbsaForce1 part
 
@@ -423,7 +422,6 @@ pdE1[tjj].w = -2.0f;
                             dEdR               = 0.0f;
        			             CDLJObcGbsa_energy = 0.0f;
                             dGpol_dalpha2_ij   = 0.0f;
-//dEdRx = 0.0f;
                         }
                         psA[tj].fb             += dGpol_dalpha2_ij * br;
                         af.w                   += dGpol_dalpha2_ij * psA[tj].br;
@@ -431,22 +429,21 @@ pdE1[tjj].w = -2.0f;
 
 
 
-/*
+#ifdef DEBUG
 int jIdx = tj;
 if( i == TARGET ){
 int tjj     = y+jIdx;
-pdE1[tjj].x = dEdRx;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = -dEdRx*dz;
 pdE1[tjj].w = 3.0f;
 }
 if( (y+jIdx) == TARGET ){
 int tjj     = i;
-pdE1[tjj].x = dEdRx;
+pdE1[tjj].x = dGpol_dalpha2_ij * br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = dEdRx*dz;
 pdE1[tjj].w = -3.0f;
-} */
+}
+#endif
 
 
 
@@ -547,22 +544,21 @@ pdE1[tjj].w = -3.0f;
                             if (tgx == 0)
                                 psA[j].fb += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
 
-/*
+#ifdef DEBUG
 int jIdx = j;
 if( i == TARGET ){
 int tjj     = y+jIdx;
-pdE1[tjj].x = dEdR;
-pdE1[tjj].y = r2;
-pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
-pdE1[tjj].w = -4.7f;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].w = 4.0f;
 }
 if( (y+jIdx) == TARGET ){
 int tjj     = i;
-pdE1[tjj].x = dEdR;
-pdE1[tjj].y = r2;
-pdE1[tjj].z = CDLJObcGbsa_energy - (q2 * psA[jIdx].q) / denominator;
-pdE1[tjj].w = -4.7f;
-} */
+pdE1[tjj].x = tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
+pdE1[tjj].y = sqrt(r2);
+pdE1[tjj].w = -4.0f;
+} 
+#endif
 
 
 
@@ -612,7 +608,7 @@ pdE1[tjj].w = -4.7f;
                     }
                 }
 #endif
-            } else  {
+            } else {
 
                 unsigned int xi   = x>>GRIDBITS;
                 unsigned int yi   = y>>GRIDBITS;
@@ -658,7 +654,7 @@ pdE1[tjj].w = -4.7f;
                         dEdR               = 0.0f;
 			               CDLJObcGbsa_energy = 0.0f;
                     }
-//float dEdRx = dEdR;
+
                     // ObcGbsaForce1 part
 
                     float alpha2_ij         = br * psA[tj].br;
@@ -679,25 +675,25 @@ pdE1[tjj].w = -4.7f;
                         dEdR               = 0.0f;
 			               CDLJObcGbsa_energy = 0.0f;
                         dGpol_dalpha2_ij   = 0.0f;
-//dEdRx = 0.0;
                     }
 
-/*
+#ifdef DEBUG
 int jIdx = tj;
 if( i == TARGET ){
 int tjj     = y+jIdx;
-pdE1[tjj].x = dEdRx;
+pdE1[tjj].x = dGpol_dalpha2_ij * psA[tj].br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = dEdRx*dz;
+pdE1[tjj].z = dGpol_dalpha2_ij;
 pdE1[tjj].w = 6.0f;
 }
 if( (y+jIdx) == TARGET ){
 int tjj     = i;
-pdE1[tjj].x = dEdRx;
+pdE1[tjj].x = dGpol_dalpha2_ij * br;
 pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = dEdRx*dz;
+pdE1[tjj].z = dGpol_dalpha2_ij;
 pdE1[tjj].w = -6.0f;
-}  */
+} 
+#endif
 
 
 

@@ -38,7 +38,7 @@
 #include "kCalculateGBVIAux.h"
 
 #undef TARGET
-//#define TARGET 5443
+//#define TARGET 39
 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)

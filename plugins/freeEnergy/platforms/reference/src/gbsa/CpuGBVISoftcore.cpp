@@ -23,6 +23,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <math.h>
 #include <sstream>
 #include <vector>
@@ -534,7 +535,6 @@ RealOpenMM CpuGBVISoftcore::computeBornEnergy( const vector<RealOpenMM>& bornRad
 
    --------------------------------------------------------------------------------------- */
 
-
 void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, vector<RealVec>& atomCoordinates,
                                          const RealOpenMM* partialCharges, vector<RealVec>& inputForces ){
 
@@ -568,6 +568,10 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
     // ---------------------------------------------------------------------------------------
 
     // first main loop
+
+#undef TARGET
+#define TARGET -1926
+RealOpenMMVector bornForcesT( numberOfAtoms, 0.0 );
 
     for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
@@ -606,6 +610,10 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
 
                 bornForces[atomJ] += dGpol_dalpha2_ij*bornRadii[atomI];
 
+if( atomJ == TARGET ){
+bornForcesT[atomI] = dGpol_dalpha2_ij*bornRadii[atomI];
+}
+
                 deltaX            *= dGpol_dr;
                 deltaY            *= dGpol_dr;
                 deltaZ            *= dGpol_dr;
@@ -620,6 +628,9 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
 
            }
            bornForces[atomI] += dGpol_dalpha2_ij*bornRadii[atomJ];
+if( atomI == TARGET ){
+bornForcesT[atomJ] = dGpol_dalpha2_ij*bornRadii[atomJ];
+}
 
        }
     }
@@ -633,6 +644,25 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
     const RealOpenMMVector& scaledRadii                 = gbviParameters->getScaledRadii();
     RealOpenMMVector& switchDeriviative                 = getSwitchDeriviative();
     const RealOpenMMVector& bornRadiusScaleFactors      = gbviParameters->getBornRadiusScaleFactors();
+
+if( 0 ){
+double bF = 0.0;
+int count = 0;
+fprintf( stderr, "PdeRef %d\n", TARGET );
+RealOpenMM tau      = static_cast<RealOpenMM>(gbviParameters->getTau());
+for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+    bF += bornForcesT[atomI];
+    if( fabs( bornForcesT[atomI] ) > 0.0 ){
+        count++;
+        fprintf( stderr, "%6d %6d bFAdd=%15.7e bR=%15.7e\n", atomI, count, tau*bornForcesT[atomI], bornRadii[atomI] );
+    }
+}
+RealOpenMM  ratio   = (atomicRadii[TARGET]/bornRadii[TARGET]);
+RealOpenMM    bF1   = bF + (three*gammaParameters[TARGET]*ratio*ratio*ratio)/bornRadii[TARGET];
+RealOpenMM b2       = bornRadii[TARGET]*bornRadii[TARGET];
+bF1                *= switchDeriviative[TARGET]*oneThird*b2*b2;
+fprintf( stderr, "sumbF Ref %6d %15.7e %15.7e %15.7e %15.7e\n", TARGET, bF, tau*bF1, bornRadii[TARGET], switchDeriviative[TARGET] );
+}
 
     // ---------------------------------------------------------------------------------------
 
@@ -708,7 +738,7 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
 
     }
 
-    //printGbvi( atomCoordinates, partialCharges, bornRadii,bornForces, forces, "GBVI softcore post loop2", stderr );
+    //printGbvi( atomCoordinates, partialCharges, bornRadii,bornForces, forces, "Reference: GBVI softcore post loop2", stderr );
 
     // apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
@@ -735,7 +765,8 @@ void CpuGBVISoftcore::computeBornForces( const vector<RealOpenMM>& bornRadii, ve
 
     --------------------------------------------------------------------------------------- */
 
-void CpuGBVISoftcore::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, const RealOpenMMVector& partialCharges,
+void CpuGBVISoftcore::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates,
+                                 const RealOpenMM* partialCharges,
                                  const RealOpenMMVector& bornRadii,
                                  const RealOpenMMVector& bornForces,
                                  const std::vector<OpenMM::RealVec>& forces,

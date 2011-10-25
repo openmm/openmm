@@ -56,5 +56,6 @@ typedef struct _freeEnergyGpuContext *freeEnergyGpuContext;
 extern "C" freeEnergyGpuContext freeEnergyGpuInit( _gpuContext* gpu );
 extern "C" void freeEnergyGpuShutDown(freeEnergyGpuContext gpu);
 extern "C" void freeEnergyGpuSetConstants(freeEnergyGpuContext gpu);
+extern "C" unsigned int getThreadsPerBlockFEP( freeEnergyGpuContext freeEnergyGpu, unsigned int sharedMemoryPerThread, unsigned int sharedMemoryPerBlock );
 
 #endif // __FREE_ENERGY_GPUTYPES_H__

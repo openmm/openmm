@@ -799,8 +799,8 @@ int main() {
 #ifdef USE_SOFTCORE
         DoubleVector lamda2;
         lamda2.push_back( 1.0 );
-        lamda2.push_back( 0.5 );
-        lamda2.push_back( 0.0 );
+        //lamda2.push_back( 0.5 );
+        //lamda2.push_back( 0.0 );
         if( lamda2.size() > 0 ){
             generativeArgumentMaps["lambda2"] = lamda2;
             inputArgumentMap["lambda2"]       = lamda2[0];

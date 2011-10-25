@@ -275,6 +275,7 @@ void  gpuSetObcSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, float inn
         (*gpu->psObcData)[ii].x                        = radius[ii] - dielectricOffset;
         (*gpu->psObcData)[ii].y                        = scale[ii] * (*gpu->psObcData)[ii].x;
         (*gpu->psPosq4)[ii].w                          = charge[ii];
+        (*gpu->psBornRadii)[ii]                        = 0.0f;
         (*freeEnergyGpu->psNonPolarScalingFactors)[ii] = nonPolarScalingFactors[ii];
     }
 
@@ -302,12 +303,14 @@ void  gpuSetObcSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, float inn
         (*gpu->psObcData)[ii].x                         = 0.01f;
         (*gpu->psObcData)[ii].y                         = 0.01f;
         (*freeEnergyGpu->psNonPolarScalingFactors)[ii]  = 0.0f;
+        (*gpu->psBornRadii)[ii]                         = 0.0f;
     }
 
     // load data to board
 
     gpu->psObcData->Upload();
     gpu->psPosq4->Upload();
+    gpu->psBornRadii->Upload();
     freeEnergyGpu->psNonPolarScalingFactors->Upload();
 
     return;
@@ -330,7 +333,7 @@ void kPrintObcGbsaSoftcore( freeEnergyGpuContext freeEnergyGpu, std::string call
     sigEps4->Download();
 
     (void) fprintf( log, "BornSum Born radii & params\n" );
-    for( int ii = 0; ii < gpu->natoms; ii++ ){
+    for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
         //(void) fprintf( log, "%6d prm[%15.7e %15.7e %15.7e %15.7e] [%15.7e %15.7e %15.7e %15.7e] bR=%15.7e bF=%15.7e swDrv=%3.1f x[%8.3f %8.3f %8.3f %15.7f]\n",
         (void) fprintf( log, "%6d prm[%15.7e %15.7e %15.7e] sig/eps4[%15.7e %15.7e %15.7e %15.7e] bR=%15.7e bF=%15.7e\n",
                         ii,

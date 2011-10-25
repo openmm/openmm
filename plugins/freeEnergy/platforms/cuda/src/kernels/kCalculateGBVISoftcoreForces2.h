@@ -49,8 +49,11 @@ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit 
 {
 //METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2 )
     extern __shared__ Atom sA[];
-    unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    unsigned int totalWarps   = gridDim.x*blockDim.x/GRID;
     unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+
+    //unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    //unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos          = warp*numWorkUnits/totalWarps;
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
@@ -191,7 +194,8 @@ if( (x+j) == TARGET ){
             {
                 // No interactions in this block.
             }
-            else if (flags == 0xFFFFFFFF)
+            //else if (flags == 0xFFFFFFFF)
+            else if (flags)
 #endif
             {
                 // Compute all interactions within this block.
