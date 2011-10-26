@@ -34,6 +34,7 @@
 #include <cuda.h>
 #include <vector_functions.h>
 #include <cstdlib>
+#include <iostream>
 #include <sstream>
 
 #define USE_SOFTCORE_LJ

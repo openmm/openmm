@@ -27,6 +27,7 @@
 #include "freeEnergyGpuTypes.h"
 #include "GpuFreeEnergyCudaKernels.h"
 #include "openmm/OpenMMException.h"
+#include <iostream>
 #include <sstream>
 
 #define PARAMETER_PRINT 0

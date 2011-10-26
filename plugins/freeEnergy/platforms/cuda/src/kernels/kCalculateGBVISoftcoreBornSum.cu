@@ -34,6 +34,7 @@
 
 #include "openmm/OpenMMException.h"
 #include <cuda.h>
+#include <iostream>
 #include <sstream>
 
 #define PARAMETER_PRINT 0
@@ -329,8 +330,8 @@ void kReduceGBVISoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
    float ratio2       = ratio*ratio;
    float ratio3       = ratio2*ratio;
 
-   *outValue          = 1.0f + ratio3*(-10.f + 15.0f*ratio - 6.0f*ratio2);
-   *outDerivative     = ratio2*(-30.0f + 60.0f*ratio - 30.0f*ratio2)/denominator;
+   *outValue          =  1.0f + ratio3*(-10.f + 3.0f*ratio*(5.0f - 2.0f*ratio));
+   *outDerivative     = -30.0f*ratio2*( 1.0f + ratio*(ratio - 2.0f))/denominator;
 }
 
 __global__ void kReduceGBVIBornSumQuinticScaling_kernel()
@@ -473,7 +474,7 @@ void kPrintGBVISoftcore( freeEnergyGpuContext freeEnergyGpu, std::string callId,
     switchDeriviative->Download();
     sigEps4->Download();
 
-    (void) fprintf( log, "kPrintGBViSoftcore Cuda comp bR bF swd   prm    sigeps4\n" );
+    (void) fprintf( log, "kPrintGBVISoftcore Cuda Softcore bR bF swd   prm    sigeps4\n" );
     for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
         (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e \n",
                         ii, 
