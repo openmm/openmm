@@ -72,7 +72,9 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(OpenCLDeviceIndex());
+    platformProperties.push_back(OpenCLPlatformIndex());
     setPropertyDefaultValue(OpenCLDeviceIndex(), "");
+    setPropertyDefaultValue(OpenCLPlatformIndex(), "");
 }
 
 bool OpenCLPlatform::supportsDoublePrecision() const {
@@ -92,10 +94,12 @@ void OpenCLPlatform::setPropertyValue(Context& context, const string& property, 
 }
 
 void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
+    const string& platformPropValue = (properties.find(OpenCLPlatformIndex()) == properties.end() ?
+            getPropertyDefaultValue(OpenCLPlatformIndex()) : properties.find(OpenCLPlatformIndex())->second);
     const string& devicePropValue = (properties.find(OpenCLDeviceIndex()) == properties.end() ?
             getPropertyDefaultValue(OpenCLDeviceIndex()) : properties.find(OpenCLDeviceIndex())->second);
     int numParticles = context.getSystem().getNumParticles();
-    context.setPlatformData(new PlatformData(numParticles, devicePropValue));
+    context.setPlatformData(new PlatformData(numParticles, platformPropValue, devicePropValue));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -103,7 +107,10 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& deviceIndexProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& platformPropValue, const string& deviceIndexProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+    int platformIndex = 0;
+    if (platformPropValue.length() > 0)
+        stringstream(platformPropValue) >> platformIndex;
     vector<string> devices;
     size_t searchPos = 0, nextPos;
     while ((nextPos = deviceIndexProperty.find_first_of(", ", searchPos)) != string::npos) {
@@ -115,11 +122,11 @@ OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& devic
         if (devices[i].length() > 0) {
             unsigned int deviceIndex;
             stringstream(devices[i]) >> deviceIndex;
-            contexts.push_back(new OpenCLContext(numParticles, deviceIndex, *this));
+            contexts.push_back(new OpenCLContext(numParticles, platformIndex, deviceIndex, *this));
         }
     }
     if (contexts.size() == 0)
-        contexts.push_back(new OpenCLContext(numParticles, -1, *this));
+        contexts.push_back(new OpenCLContext(numParticles, platformIndex, -1, *this));
     stringstream device;
     for (int i = 0; i < (int) contexts.size(); i++) {
         if (i > 0)
@@ -127,6 +134,7 @@ OpenCLPlatform::PlatformData::PlatformData(int numParticles, const string& devic
         device << contexts[i]->getDeviceIndex();
     }
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
+    propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = OpenCLExpressionUtilities::intToString(platformIndex);
     contextEnergy.resize(contexts.size());
 }
 

@@ -145,7 +145,7 @@ public:
     class WorkThread;
     static const int ThreadBlockSize;
     static const int TileSize;
-    OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
+    OpenCLContext(int numParticles, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system

@@ -60,7 +60,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
-OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
+OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
         velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL), thread(NULL) {
@@ -68,7 +68,9 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex, OpenCLPlatform::
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
-        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[0](), 0};
+        if (platformIndex < 0 || platformIndex >= platforms.size())
+            throw OpenMMException("Illegal value for OpenCL platform index");
+        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};
         context = cl::Context(CL_DEVICE_TYPE_ALL, cprops, errorCallback);
         vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
         const int minThreadBlockSize = 32;

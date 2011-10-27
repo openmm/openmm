@@ -61,11 +61,18 @@ public:
         static const std::string key = "OpenCLDeviceIndex";
         return key;
     }
+    /**
+     * This is the name of the parameter for selecting which OpenCL platform to use.
+     */
+    static const std::string& OpenCLPlatformIndex() {
+        static const std::string key = "OpenCLPlatformIndex";
+        return key;
+    }
 };
 
 class OPENMM_EXPORT OpenCLPlatform::PlatformData {
 public:
-    PlatformData(int numParticles, const std::string& deviceIndexProperty);
+    PlatformData(int numParticles, const std::string& platformPropValue, const std::string& deviceIndexProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
