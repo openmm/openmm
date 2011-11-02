@@ -70,7 +70,7 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
         if (get_local_id(0) == 0)
             exclusionIndex[0] = -1;
         barrier(CLK_LOCAL_MEM_FENCE);
-        for (int i = exclusionRange[0]+get_local_id(0); i < exclusionRange[1]; i += TILE_SIZE)
+        for (int i = exclusionRange[0]+get_local_id(0); i < exclusionRange[1]; i += FORCE_WORK_GROUP_SIZE)
             if (exclusionIndices[i] == y)
                 exclusionIndex[0] = i*TILE_SIZE;
         barrier(CLK_LOCAL_MEM_FENCE);
