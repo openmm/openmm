@@ -67,10 +67,10 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #ifdef USE_EXCLUSIONS
         if (get_local_id(0) < 2)
             exclusionRange[get_local_id(0)] = exclusionRowIndices[x+get_local_id(0)];
-        if (tgx == 0)
+        if (get_local_id(0) == 0)
             exclusionIndex[0] = -1;
         barrier(CLK_LOCAL_MEM_FENCE);
-        for (int i = exclusionRange[0]+tgx; i < exclusionRange[1]; i += TILE_SIZE)
+        for (int i = exclusionRange[0]+get_local_id(0); i < exclusionRange[1]; i += TILE_SIZE)
             if (exclusionIndices[i] == y)
                 exclusionIndex[0] = i*TILE_SIZE;
         barrier(CLK_LOCAL_MEM_FENCE);
