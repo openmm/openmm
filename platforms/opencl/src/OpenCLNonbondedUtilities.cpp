@@ -369,8 +369,8 @@ void OpenCLNonbondedUtilities::setTileRange(int startTileIndex, int numTiles) {
     this->numTiles = numTiles;
     if (cutoff == -1.0)
         return; // There are no nonbonded interactions in the System.
-    forceKernel.setArg<cl_uint>(8, startTileIndex);
-    forceKernel.setArg<cl_uint>(9, startTileIndex+numTiles);
+    forceKernel.setArg<cl_uint>(7, startTileIndex);
+    forceKernel.setArg<cl_uint>(8, startTileIndex+numTiles);
     if (useCutoff) {
         findInteractingBlocksKernel.setArg<cl_uint>(10, startTileIndex);
         findInteractingBlocksKernel.setArg<cl_uint>(11, startTileIndex+numTiles);
