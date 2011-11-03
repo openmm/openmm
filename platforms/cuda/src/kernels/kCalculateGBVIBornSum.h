@@ -47,7 +47,7 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
 void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
 {
-    extern __shared__ Atom sA[];
+    extern __shared__ volatile Atom sA[];
 
     unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
@@ -58,7 +58,7 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
 //    int end = workUnits / gridDim.x;
 //    int pos = end - (threadIdx.x >> GRIDBITS) - 1;
 #ifdef USE_CUTOFF
-    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+    volatile float* tempBuffer = (volatile float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
     while ( pos < end )
@@ -79,7 +79,7 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
         unsigned int tj  = tgx;
-        Atom* psA        = &sA[tbx];
+        volatile Atom* psA = &sA[tbx];
 
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {

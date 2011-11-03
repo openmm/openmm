@@ -101,7 +101,7 @@ __device__ static void load3dArrayBufferPerWarp( unsigned int offset, float* for
 
 }
 
-__device__ static void add3dArrayToFloat4( unsigned int offset, float* forceSum, float4* outputForce )
+__device__ static void add3dArrayToFloat4( unsigned int offset, volatile float* forceSum, float4* outputForce )
 {
 
     float4 of; 
@@ -125,7 +125,7 @@ __device__ static void load3dArrayToFloat4( unsigned int offset, float* forceSum
 
 }
 
-__device__ static void load3dArray( unsigned int offset, float* forceSum, float* outputForce )
+__device__ static void load3dArray( unsigned int offset, volatile float* forceSum, float* outputForce )
 {
 
     outputForce[offset]                 = forceSum[0];  
@@ -134,7 +134,7 @@ __device__ static void load3dArray( unsigned int offset, float* forceSum, float*
 
 }
 
-__device__ static void add3dArray( unsigned int offset, float* forceSum, float* outputForce )
+__device__ static void add3dArray( unsigned int offset, volatile float* forceSum, float* outputForce )
 {
 
     outputForce[offset]                += forceSum[0];  

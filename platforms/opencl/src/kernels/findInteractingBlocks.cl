@@ -221,7 +221,7 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
  * flags for which ones are interacting.
  */
 __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict posq, __global const ushort2* restrict tiles, __global const float4* restrict blockCenter,
-            __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionFlags, __global const unsigned int* restrict interactionCount, __local unsigned int* restrict flags, unsigned int maxTiles) {
+            __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionFlags, __global const unsigned int* restrict interactionCount, __local volatile unsigned int* restrict flags, unsigned int maxTiles) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int numTiles = interactionCount[0];

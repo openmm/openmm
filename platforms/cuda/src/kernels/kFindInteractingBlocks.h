@@ -115,7 +115,7 @@ __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
  */
 __global__ void METHOD_NAME(kFindInteractionsWithinBlocks, _kernel)(unsigned int* workUnit)
 {
-    extern __shared__ unsigned int flags[];
+    extern __shared__ volatile unsigned int flags[];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];

@@ -42,7 +42,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 #endif
 ){
 
-    extern __shared__ ElectrostaticParticle sA[];
+    extern __shared__ volatile ElectrostaticParticle sA[];
 
     unsigned int totalWarps      = gridDim.x*blockDim.x/GRID;
     unsigned int warp            = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
@@ -69,7 +69,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
         unsigned int tbx              = threadIdx.x - tgx;
         unsigned int tj               = tgx;
 
-        ElectrostaticParticle* psA    = &sA[tbx];
+        volatile ElectrostaticParticle* psA = &sA[tbx];
         unsigned int atomI            = x + tgx;
         ElectrostaticParticle localParticle;
         loadElectrostaticParticle( &localParticle, atomI );

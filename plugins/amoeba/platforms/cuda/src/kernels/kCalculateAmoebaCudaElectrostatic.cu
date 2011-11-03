@@ -468,7 +468,7 @@ __device__ void calculateElectrostaticPairIxnOrig_kernel( ElectrostaticParticle&
 }
 #endif
 
-static __device__ void loadElectrostaticParticle( struct ElectrostaticParticle* sA, unsigned int atomI ){
+static __device__ void loadElectrostaticParticle( volatile struct ElectrostaticParticle* sA, unsigned int atomI ){
 
     // coordinates & charge
 
@@ -512,7 +512,7 @@ static __device__ void loadElectrostaticParticle( struct ElectrostaticParticle* 
 
 }
 
-static __device__ void zeroElectrostaticParticle( struct ElectrostaticParticle* sA ){
+static __device__ void zeroElectrostaticParticle( volatile struct ElectrostaticParticle* sA ){
     sA->force[0]                 = 0.0f;
     sA->force[1]                 = 0.0f;
     sA->force[2]                 = 0.0f;

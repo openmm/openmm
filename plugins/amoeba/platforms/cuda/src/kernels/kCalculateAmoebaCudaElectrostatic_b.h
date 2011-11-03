@@ -1,5 +1,5 @@
 
-__device__ void SUB_METHOD_NAME( calculateElectrostaticPairIxn, _kernel )( ElectrostaticParticle& atomI,   ElectrostaticParticle& atomJ,
+__device__ void SUB_METHOD_NAME( calculateElectrostaticPairIxn, _kernel )( ElectrostaticParticle& atomI, volatile ElectrostaticParticle& atomJ,
                                                                            float* scalingFactors,
 #ifdef F1
                                                                            float* energy,

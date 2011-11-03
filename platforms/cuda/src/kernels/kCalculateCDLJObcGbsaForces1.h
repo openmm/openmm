@@ -40,7 +40,7 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
 void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit )
 {
-    extern __shared__ Atom sA[];
+    extern __shared__ volatile Atom sA[];
     unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
@@ -49,7 +49,7 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit )
     float CDLJObcGbsa_energy;
     float energy = 0.0f;
 #ifdef USE_CUTOFF
-	 float* tempBuffer         = (float*) &sA[cSim.nonbond_threads_per_block];
+    volatile float* tempBuffer = (volatile float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
     unsigned int lasty        = -0xFFFFFFFF;
@@ -68,7 +68,7 @@ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit )
         float br                            = cSim.pBornRadii[i];
         unsigned int tbx                    = threadIdx.x - tgx;
         unsigned int tj                     = tgx;
-        Atom* psA                           = &sA[tbx];
+        volatile Atom* psA                  = &sA[tbx];
         float4 af;
         af.x                        = 0.0f;
         af.y                        = 0.0f;

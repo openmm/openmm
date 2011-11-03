@@ -43,7 +43,7 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
 void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 {
-    extern __shared__ Atom sA[];
+    extern __shared__ volatile Atom sA[];
     unsigned int totalWarps = gridDim.x*blockDim.x/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
@@ -52,7 +52,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
     float CDLJ_energy;
     float energy = 0.0f;
 #ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
+    volatile float3* tempBuffer = (volatile float3*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
 #ifdef USE_EWALD
@@ -83,7 +83,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
         unsigned int tj = tgx;
-        Atom* psA = &sA[tbx];
+        volatile Atom* psA = &sA[tbx];
         unsigned int i      = x + tgx;
         apos                = cSim.pPosq[i];
         float2 a            = cSim.pAttr[i];

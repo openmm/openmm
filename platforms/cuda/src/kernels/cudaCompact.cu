@@ -29,7 +29,7 @@ typedef unsigned int T;
 
 // Phase 1: Count valid elements per thread block
 // Hard-code 128 thd/blk
-__device__ unsigned int sumReduce128(unsigned int* arr) {
+__device__ unsigned int sumReduce128(volatile unsigned int* arr) {
     // Parallel reduce element counts
     // Assumes 128 thd/block
     if (threadIdx.x < 64) arr[threadIdx.x] += arr[threadIdx.x+64];
@@ -47,7 +47,7 @@ __device__ unsigned int sumReduce128(unsigned int* arr) {
 }
 
 __global__ void countElts(unsigned int* dgBlockCounts,const unsigned int* dgValid,const size_t eltsPerBlock,const size_t len) {
-    __shared__ unsigned int dsCount[128];
+    __shared__ volatile unsigned int dsCount[128];
     dsCount[threadIdx.x] = 0;
     size_t ub;
     ub = (len < (blockIdx.x+1)*eltsPerBlock) ? len : ((blockIdx.x + 1)*eltsPerBlock);
