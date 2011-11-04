@@ -3,19 +3,16 @@
 typedef struct {
     float x, y, z;
     float q;
-    float fx, fy, fz, fw;
     float radius, scaledRadius;
     float bornSum;
-    float bornRadius;
-    float bornForce;
-} AtomData;
+} AtomData1;
 
 /**
  * Compute the Born sum.
  */
 
 __kernel void computeBornSum(__global float* restrict global_bornSum, __global const float4* restrict posq, __global const float2* restrict global_params,
-        __local AtomData* restrict localData,
+        __local AtomData1* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags) {
 #else
@@ -186,13 +183,20 @@ __kernel void computeBornSum(__global float* restrict global_bornSum, __global c
     }
 }
 
+typedef struct {
+    float x, y, z;
+    float q;
+    float fx, fy, fz, fw;
+    float bornRadius;
+} AtomData2;
+
 /**
  * First part of computing the GBSA interaction.
  */
 
-__kernel void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* restrict energyBuffer,
-        __global const float4* restrict posq, __global const float* restrict global_bornRadii, __global float* restrict global_bornForce,
-        __local AtomData* restrict localData,
+__kernel void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* restrict global_bornForce,
+        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
+        __local AtomData2* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags) {
 #else
