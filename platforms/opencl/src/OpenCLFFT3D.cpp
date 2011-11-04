@@ -210,8 +210,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize) {
     replacements["ZSIZE"] = OpenCLExpressionUtilities::intToString(zsize);
     replacements["M_PI"] = OpenCLExpressionUtilities::doubleToString(M_PI);
     replacements["COMPUTE_FFT"] = source.str();
-    if (loopRequired)
-        replacements["LOOP_REQUIRED"] = "1";
+    replacements["LOOP_REQUIRED"] = (loopRequired ? "1" : "0");
     cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::fft, replacements));
     cl::Kernel kernel(program, "execFFT");
     kernel.setArg(3, zsize*sizeof(mm_float2), NULL);

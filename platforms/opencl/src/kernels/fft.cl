@@ -14,7 +14,7 @@ __kernel void execFFT(__global const float2* restrict in, __global float2* restr
     for (int index = get_group_id(0); index < XSIZE*YSIZE; index += get_num_groups(0)) {
         int x = index/YSIZE;
         int y = index-x*YSIZE;
-#ifdef LOOP_REQUIRED
+#if LOOP_REQUIRED
         for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))
             data0[z] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+z];
 #else
