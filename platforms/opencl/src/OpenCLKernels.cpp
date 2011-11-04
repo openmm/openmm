@@ -2339,7 +2339,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
         int index = 0;
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
-        pairValueKernel.setArg(index++, nb.getForceThreadBlockSize()*sizeof(cl_float4), NULL);
+        pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*sizeof(cl_float4), NULL);
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusions().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionIndices().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
@@ -2361,7 +2361,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             pairValueKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairValueKernel.setArg(index++, nb.getForceThreadBlockSize()*buffer.getSize(), NULL);
+            pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
         }
         if (tabulatedFunctionParams != NULL) {
             for (int i = 0; i < (int) tabulatedFunctions.size(); i++)

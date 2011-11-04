@@ -80,6 +80,7 @@ __kernel void computeN2Energy(__global float4* restrict forceBuffers, __global f
 #endif
                 unsigned int atom1 = x*TILE_SIZE+tgx;
                 float4 force = 0.0f;
+                DECLARE_ATOM1_DERIVATIVES
                 float4 posq1 = posq[atom1];
                 LOAD_ATOM1_PARAMETERS
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
@@ -141,6 +142,7 @@ __kernel void computeN2Energy(__global float4* restrict forceBuffers, __global f
                     if ((flags2&(1<<tgx)) != 0) {
                         unsigned int atom1 = x*TILE_SIZE+tgx;
                         float value = 0.0f;
+                        DECLARE_ATOM1_DERIVATIVES
                         float4 posq1 = posq[atom1];
                         LOAD_ATOM1_PARAMETERS
                         for (unsigned int j = 0; j < TILE_SIZE; j++) {
@@ -188,6 +190,7 @@ __kernel void computeN2Energy(__global float4* restrict forceBuffers, __global f
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     unsigned int atom1 = x*TILE_SIZE+tgx;
                     float4 force = 0.0f;
+                    DECLARE_ATOM1_DERIVATIVES
                     float4 posq1 = posq[atom1];
                     LOAD_ATOM1_PARAMETERS
 #ifdef USE_EXCLUSIONS
