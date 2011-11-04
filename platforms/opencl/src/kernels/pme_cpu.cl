@@ -1,4 +1,4 @@
-__kernel void updateBsplines(__global const float4* restrict posq, __global float4* restrict pmeBsplineTheta, __global float4* restrict pmeBsplineDTheta, __local float4* restrict bsplinesCache, __global int2* restrict pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void updateBsplines(__global const float4* restrict posq, __global float4* restrict pmeBsplineTheta, __local float4* restrict bsplinesCache, __global int2* restrict pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* restrict pmeBsplineDTheta) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
@@ -112,7 +112,7 @@ __kernel void reciprocalConvolution(__global float2* restrict pmeGrid, __global 
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel void gridInterpolateForce(__global const float4* restrict posq, __global float4* restrict forceBuffers, __global const float4* restrict pmeBsplineTheta, __global const float4* restrict pmeBsplineDTheta, __global const float2* restrict pmeGrid, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void gridInterpolateForce(__global const float4* restrict posq, __global float4* restrict forceBuffers, __global const float2* restrict pmeGrid, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict pmeBsplineTheta, __global const float4* restrict pmeBsplineDTheta) {
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
         float4 force = 0.0f;
         float4 pos = posq[atom];

@@ -936,6 +936,8 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete pmeBsplineModuliZ;
     if (pmeBsplineTheta != NULL)
         delete pmeBsplineTheta;
+    if (pmeBsplineDTheta != NULL)
+        delete pmeBsplineDTheta;
     if (pmeAtomRange != NULL)
         delete pmeAtomRange;
     if (pmeAtomGridIndex != NULL)
@@ -1059,6 +1061,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         pmeBsplineModuliY = new OpenCLArray<cl_float>(cl, gridSizeY, "pmeBsplineModuliY");
         pmeBsplineModuliZ = new OpenCLArray<cl_float>(cl, gridSizeZ, "pmeBsplineModuliZ");
         pmeBsplineTheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineTheta");
+        bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
+        if (deviceIsCpu)
+            pmeBsplineDTheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineTheta");
         pmeAtomRange = new OpenCLArray<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
         pmeAtomGridIndex = new OpenCLArray<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
         sort = new OpenCLSort<mm_int2>(cl, cl.getNumAtoms(), "int2", "value.y");
@@ -1181,6 +1186,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(1, pmeBsplineTheta->getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg(2, OpenCLContext::ThreadBlockSize*PmeOrder*sizeof(mm_float4), NULL);
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(3, pmeAtomGridIndex->getDeviceBuffer());
+            if (deviceIsCpu)
+                pmeUpdateBsplinesKernel.setArg<cl::Buffer>(6, pmeBsplineDTheta->getDeviceBuffer());
             pmeAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
             pmeAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange->getDeviceBuffer());
             pmeAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
@@ -1198,7 +1205,12 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
-            pmeInterpolateForceKernel.setArg(5, 2*interpolateForceThreads*PmeOrder*sizeof(mm_float4), NULL);
+            if (deviceIsCpu) {
+                pmeInterpolateForceKernel.setArg<cl::Buffer>(5, pmeBsplineTheta->getDeviceBuffer());
+                pmeInterpolateForceKernel.setArg<cl::Buffer>(6, pmeBsplineDTheta->getDeviceBuffer());
+            }
+            else
+                pmeInterpolateForceKernel.setArg(5, 2*interpolateForceThreads*PmeOrder*sizeof(mm_float4), NULL);
             if (cl.getSupports64BitGlobalAtomics()) {
                 pmeFinishSpreadChargeKernel = cl::Kernel(program, "finishSpreadCharge");
                 pmeFinishSpreadChargeKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
