@@ -78,9 +78,10 @@ int AmoebaMultipoleForce::getPmeBSplineOrder( void ) const {
     return pmeBSplineOrder;		 
 }		 
 		 
+/*
 void AmoebaMultipoleForce::setPmeBSplineOrder(int inputBSplineOrder) {			 
     pmeBSplineOrder = inputBSplineOrder;		 
-}		 
+}	*/	 
  
 void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension ) const {		 
     if( gridDimension.size() < 3 ){
@@ -103,14 +104,14 @@ void AmoebaMultipoleForce::setPmeGridDimensions( const std::vector<int>& gridDim
     pmeGridDimension[2] = gridDimension[2];
     return;
 }		 
- 
+/* 
 AmoebaMultipoleForce::MutualInducedIterationMethod AmoebaMultipoleForce::getMutualInducedIterationMethod( void ) const {
     return mutualInducedIterationMethod;
 }
 
 void AmoebaMultipoleForce::setMutualInducedIterationMethod( AmoebaMultipoleForce::MutualInducedIterationMethod inputMutualInducedIterationMethod ) {
     mutualInducedIterationMethod = inputMutualInducedIterationMethod;
-}
+} */
 
 int AmoebaMultipoleForce::getMutualInducedMaxIterations( void ) const {
     return mutualInducedMaxIterations;
@@ -127,7 +128,7 @@ double AmoebaMultipoleForce::getMutualInducedTargetEpsilon( void ) const {
 void AmoebaMultipoleForce::setMutualInducedTargetEpsilon( double inputMutualInducedTargetEpsilon ) {
     mutualInducedTargetEpsilon = inputMutualInducedTargetEpsilon;
 }
-
+/*
 double AmoebaMultipoleForce::getScalingDistanceCutoff( void ) const {
     return scalingDistanceCutoff;
 }
@@ -142,7 +143,7 @@ double AmoebaMultipoleForce::getElectricConstant( void ) const {
 
 void AmoebaMultipoleForce::setElectricConstant( double inputElectricConstant ) {
     electricConstant = inputElectricConstant;
-}
+} */
 
 double AmoebaMultipoleForce::getEwaldErrorTolerance() const {
     return ewaldErrorTol;

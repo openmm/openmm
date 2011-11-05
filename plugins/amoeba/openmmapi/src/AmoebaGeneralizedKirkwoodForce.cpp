@@ -57,14 +57,14 @@ void AmoebaGeneralizedKirkwoodForce::setParticleParameters(int index, double cha
     particles[index].radius = radius;
     particles[index].scalingFactor = scalingFactor;
 }
-
+/*
 double AmoebaGeneralizedKirkwoodForce::getDielectricOffset() const {
     return dielectricOffset;
 }
 
 void AmoebaGeneralizedKirkwoodForce::setDielectricOffset(double inputDielectricOffset ) {
     dielectricOffset = inputDielectricOffset;
-}
+} */
 
 int AmoebaGeneralizedKirkwoodForce::getIncludeCavityTerm() const {
     return includeCavityTerm;

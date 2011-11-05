@@ -126,12 +126,12 @@ public:
     /**
      * Get the dielectric offset (nm) used in OBC
      */
-    double getDielectricOffset() const;
+    //double getDielectricOffset() const;
 
     /**
      * Set the dielectric offset (nm) used in OBC
      */
-    void setDielectricOffset(double dielectricOffset);
+    //void setDielectricOffset(double dielectricOffset);
 
     /**
      * Get the flag signalling whether the cavity term should be included

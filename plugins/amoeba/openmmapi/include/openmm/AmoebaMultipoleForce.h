@@ -165,7 +165,7 @@ public:
      *		 
      * @param the B-spline order parameter
      */		 
-    void setPmeBSplineOrder(int inputBSplineOrder);
+    //void setPmeBSplineOrder(int inputBSplineOrder);
      
    /**		   
      * Get the PME grid dimensions		 
@@ -265,14 +265,14 @@ public:
      * 
      * @return iteration method to be used for calculating the mutual induced dipole
      */
-    MutualInducedIterationMethod getMutualInducedIterationMethod( void ) const;
+    //MutualInducedIterationMethod getMutualInducedIterationMethod( void ) const;
     
     /**
      * Set the iteration method to be used for calculating the mutual induced dipoles
      * 
      * @param iteration method to be used for calculating the mutual induced dipole
      */
-    void setMutualInducedIterationMethod( MutualInducedIterationMethod inputMutualInducedIterationMethod ); 
+    //void setMutualInducedIterationMethod( MutualInducedIterationMethod inputMutualInducedIterationMethod ); 
     
     /**
      * Get the max number of iterations to be used in calculating the mutual induced dipoles
@@ -307,28 +307,29 @@ public:
      * 
      * @return scaling distance cutoff
      */
-    double getScalingDistanceCutoff( void ) const;
+    //double getScalingDistanceCutoff( void ) const;
     
     /**
      * Set the scaling distance cutoff
      * 
      * @param scaling distance cutoff
      */
-    void setScalingDistanceCutoff( double inputScalingDistanceCutoff ); 
+    //void setScalingDistanceCutoff( double inputScalingDistanceCutoff ); 
     
     /**
      * Get the electric constant
       
      * @return the electric constant
      */
-    double getElectricConstant( void ) const;
+    //double getElectricConstant( void ) const;
     
     /**
      * Set the electric constant
      * 
      * @param the electric constant
      */
-    void setElectricConstant( double inputElectricConstant ); 
+    //void setElectricConstant( double inputElectricConstant ); 
+
     /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation

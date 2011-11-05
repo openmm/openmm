@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : usePBC(0), cutoff(1.0e+10), useNeighborList(0) {
+AmoebaVdwForce::AmoebaVdwForce() : sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), usePBC(0), cutoff(1.0e+10), useNeighborList(0) {
 }
 
 int AmoebaVdwForce::addParticle(int ivIndex, int classIndex, double sigma, double epsilon, double reductionFactor ) {

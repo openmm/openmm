@@ -118,7 +118,7 @@ public:
     /**
      * Set epsilon combining rule
      * 
-     * @param epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
+     * @param epsilonCombiningRule   epsilon combining rule:   'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
     void setEpsilonCombiningRule( const std::string& epsilonCombiningRule );
 
@@ -193,9 +193,12 @@ private:
 
     class VdwInfo;
     int usePBC;
-    int useNeighborList; double cutoff;
+    int useNeighborList;
+    double cutoff;
+
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
+
     std::vector< std::vector<int> > exclusions;
 
 // Retarded visual studio compiler complains about being unable to 
