@@ -47,7 +47,7 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
 
     node.setDoubleProperty("GeneralizedKirkwoodSolventDielectric", force.getSolventDielectric() );
     node.setDoubleProperty("GeneralizedKirkwoodSoluteDielectric",  force.getSoluteDielectric() );
-    node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset() );
+    //node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset() );
     node.setDoubleProperty("GeneralizedKirkwoodProbeRadius",       force.getProbeRadius() );
     node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor() );
     node.setIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm() );
@@ -69,7 +69,7 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
 
         force->setSolventDielectric(   node.getDoubleProperty( "GeneralizedKirkwoodSolventDielectric" ) );
         force->setSoluteDielectric(    node.getDoubleProperty( "GeneralizedKirkwoodSoluteDielectric" ) );
-        force->setDielectricOffset(    node.getDoubleProperty( "GeneralizedKirkwoodDielectricOffset" ) );
+        //force->setDielectricOffset(    node.getDoubleProperty( "GeneralizedKirkwoodDielectricOffset" ) );
         force->setProbeRadius(         node.getDoubleProperty( "GeneralizedKirkwoodProbeRadius" ) );
         force->setSurfaceAreaFactor(   node.getDoubleProperty( "GeneralizedKirkwoodSurfaceAreaFactor" ) );
         force->setIncludeCavityTerm(   node.getIntProperty(    "GeneralizedKirkwoodIncludeCavityTerm" ) );

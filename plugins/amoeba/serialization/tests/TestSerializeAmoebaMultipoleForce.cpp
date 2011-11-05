@@ -59,17 +59,17 @@ void testSerialization() {
     force1.setNonbondedMethod( AmoebaMultipoleForce::NoCutoff );
     force1.setCutoffDistance( 0.9 );
     force1.setAEwald( 0.544 );
-    force1.setPmeBSplineOrder( 4 );
+    //force1.setPmeBSplineOrder( 4 );
 
     std::vector<int> gridDimension;
     gridDimension.push_back( 64 );
     gridDimension.push_back( 63 );
     gridDimension.push_back( 61 );
     force1.setPmeGridDimensions( gridDimension ); 
-    force1.setMutualInducedIterationMethod( AmoebaMultipoleForce::SOR ); 
+    //force1.setMutualInducedIterationMethod( AmoebaMultipoleForce::SOR ); 
     force1.setMutualInducedMaxIterations( 200 ); 
     force1.setMutualInducedTargetEpsilon( 1.0e-05 ); 
-    force1.setElectricConstant( 138.93 ); 
+    //force1.setElectricConstant( 138.93 ); 
     force1.setEwaldErrorTolerance( 1.0e-05 ); 
 
     std::vector<std::string> covalentTypes;
@@ -112,11 +112,11 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getCutoffDistance(),                force2.getCutoffDistance());
     ASSERT_EQUAL(force1.getNonbondedMethod(),               force2.getNonbondedMethod());
     ASSERT_EQUAL(force1.getAEwald(),                        force2.getAEwald());
-    ASSERT_EQUAL(force1.getPmeBSplineOrder(),               force2.getPmeBSplineOrder());
-    ASSERT_EQUAL(force1.getMutualInducedIterationMethod(),  force2.getMutualInducedIterationMethod());
+    //ASSERT_EQUAL(force1.getPmeBSplineOrder(),               force2.getPmeBSplineOrder());
+    //ASSERT_EQUAL(force1.getMutualInducedIterationMethod(),  force2.getMutualInducedIterationMethod());
     ASSERT_EQUAL(force1.getMutualInducedMaxIterations(),    force2.getMutualInducedMaxIterations());
     ASSERT_EQUAL(force1.getMutualInducedTargetEpsilon(),    force2.getMutualInducedTargetEpsilon());
-    ASSERT_EQUAL(force1.getElectricConstant(),              force2.getElectricConstant());
+    //ASSERT_EQUAL(force1.getElectricConstant(),              force2.getElectricConstant());
     ASSERT_EQUAL(force1.getEwaldErrorTolerance(),           force2.getEwaldErrorTolerance());
 
 

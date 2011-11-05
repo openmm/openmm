@@ -75,14 +75,14 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
 
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
     node.setIntProperty("polarizationType",                 force.getPolarizationType());
-    node.setIntProperty("pmeBSplineOrder",                  force.getPmeBSplineOrder());
-    node.setIntProperty("mutualInducedIterationMethod",     force.getMutualInducedIterationMethod());
+    //node.setIntProperty("pmeBSplineOrder",                  force.getPmeBSplineOrder());
+    //node.setIntProperty("mutualInducedIterationMethod",     force.getMutualInducedIterationMethod());
     node.setIntProperty("mutualInducedMaxIterations",       force.getMutualInducedMaxIterations());
 
     node.setDoubleProperty("cutoffDistance",                force.getCutoffDistance());
     node.setDoubleProperty("aEwald",                        force.getAEwald());
     node.setDoubleProperty("mutualInducedTargetEpsilon",    force.getMutualInducedTargetEpsilon());
-    node.setDoubleProperty("electricConstant",              force.getElectricConstant());
+    //node.setDoubleProperty("electricConstant",              force.getElectricConstant());
     node.setDoubleProperty("ewaldErrorTolerance",           force.getEwaldErrorTolerance());
 
     std::vector<int> gridDimensions;
@@ -136,14 +136,14 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
         if( node.getIntProperty("version") == 2 ){
             force->setPolarizationType( static_cast<AmoebaMultipoleForce::AmoebaPolarizationType>(node.getIntProperty( "polarizationType" )) );
         }
-        force->setPmeBSplineOrder( node.getIntProperty( "pmeBSplineOrder" ) );
-        force->setMutualInducedIterationMethod( static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty( "mutualInducedIterationMethod" ) ) );
+        //force->setPmeBSplineOrder( node.getIntProperty( "pmeBSplineOrder" ) );
+        //force->setMutualInducedIterationMethod( static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty( "mutualInducedIterationMethod" ) ) );
         force->setMutualInducedMaxIterations( node.getIntProperty( "mutualInducedMaxIterations" ) );
 
         force->setCutoffDistance( node.getDoubleProperty( "cutoffDistance" ) );
         force->setAEwald( node.getDoubleProperty( "aEwald" ) );
         force->setMutualInducedTargetEpsilon( node.getDoubleProperty( "mutualInducedTargetEpsilon" ) );
-        force->setElectricConstant( node.getDoubleProperty( "electricConstant" ) );
+        //force->setElectricConstant( node.getDoubleProperty( "electricConstant" ) );
         force->setEwaldErrorTolerance( node.getDoubleProperty( "ewaldErrorTolerance" ) );
 
         std::vector<int> gridDimensions;
