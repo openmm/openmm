@@ -1699,7 +1699,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange, 
                                      int mutualInducedIterativeMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, int polarizationType, float cutoffDistance, float alphaEwald, float electricConstant ) {
+                                     int nonbondedMethod, int polarizationType, float cutoffDistance, float alphaEwald ) {
 
 // ---------------------------------------------------------------------------------------
 
@@ -1743,7 +1743,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     }
 
     amoebaGpu->amoebaSim.sqrtPi                      = std::sqrt( 3.14159265358f );
-    amoebaGpu->amoebaSim.electric                    = electricConstant;
+    amoebaGpu->amoebaSim.electric                    = 138.9354558456f;
     amoebaGpu->gpuContext->sim.alphaEwald            = alphaEwald;
     amoebaGpu->gpuContext->sim.nonbondedCutoff       = cutoffDistance;
 
@@ -2078,14 +2078,14 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 }
 
 extern "C"
-void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectric, float solventDielectric, float dielectricOffset,
+void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectric, float solventDielectric,
                                 const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
                                 int includeCavityTerm, float probeRadius, float surfaceAreaFactor )
 {
 
     gpuContext gpu                         = amoebaGpu->gpuContext;
     int paddedNumberOfAtoms                = gpu->sim.paddedNumberOfAtoms;
-    gpu->sim.dielectricOffset              = dielectricOffset;
+    gpu->sim.dielectricOffset              = 0.009f;
     amoebaGpu->includeObcCavityTerm        = includeCavityTerm;
     gpu->sim.probeRadius                   = probeRadius;
     gpu->sim.surfaceAreaFactor             = surfaceAreaFactor;
@@ -2093,7 +2093,7 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
 
     for (unsigned int i = 0; i < particles; i++) 
     {    
-            (*gpu->psObcData)[i].x = radius[i] - dielectricOffset;
+            (*gpu->psObcData)[i].x = radius[i] - gpu->sim.dielectricOffset;
             (*gpu->psObcData)[i].y = scale[i] * (*gpu->psObcData)[i].x;
             (*gpu->psPosq4)[i].w   = charge[i];
     }    
@@ -2122,7 +2122,7 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
 
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log,"gpuSetAmoebaObcParameters: cavity=%d dielectricOffset=%15.7e probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
-                        includeCavityTerm, dielectricOffset, probeRadius, surfaceAreaFactor );
+                        includeCavityTerm, gpu->sim.dielectricOffset, probeRadius, surfaceAreaFactor );
         (void) fprintf( amoebaGpu->log,"                           gkc=%12.3f solventDielectric=%15.7e innerDielectric=%15.7e sim.preFactor=%15.7e\n", 
                         amoebaGpu->amoebaSim.gkc, amoebaGpu->amoebaSim.dwater, amoebaGpu->amoebaSim.dielec, gpu->sim.preFactor );
         (void) fprintf( amoebaGpu->log,"                           fc=%15.7e fd=%15.7e fq=%15.7e\n",
@@ -2143,14 +2143,13 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
 }
 
 extern "C"
-void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu, float innerDielectric, float solventDielectric, float dielectricOffset,
+void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu, float innerDielectric, float solventDielectric,
                                    const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
                                    int includeCavityTerm, float probeRadius, float surfaceAreaFactor )
 {
 
     gpuContext gpu                         = amoebaGpu->gpuContext;
     int paddedNumberOfAtoms                = gpu->sim.paddedNumberOfAtoms;
-    gpu->sim.dielectricOffset              = dielectricOffset;
     amoebaGpu->includeObcCavityTerm        = includeCavityTerm;
     gpu->sim.probeRadius                   = probeRadius;
     gpu->sim.surfaceAreaFactor             = surfaceAreaFactor;
@@ -2191,8 +2190,8 @@ void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu, float innerDielec
     if( amoebaGpu->log ){
         unsigned int maxPrint = MAX_PARAMETER_PRINT;
         unsigned int maxIndex = particles;
-        (void) fprintf( amoebaGpu->log,"gpuSetAmoebaGrycukParameters: cavity=%d dielectricOffset=%15.7e probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
-                        includeCavityTerm, dielectricOffset, probeRadius, surfaceAreaFactor );
+        (void) fprintf( amoebaGpu->log,"gpuSetAmoebaGrycukParameters: cavity=%d probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
+                        includeCavityTerm, probeRadius, surfaceAreaFactor );
         (void) fprintf( amoebaGpu->log,"                           gkc=%12.3f solventDielectric=%15.7e innerDielectric=%15.7e sim.preFactor=%15.7e\n", 
                         amoebaGpu->amoebaSim.gkc, amoebaGpu->amoebaSim.dwater, amoebaGpu->amoebaSim.dielec, gpu->sim.preFactor );
         (void) fprintf( amoebaGpu->log,"                           fc=%15.7e fd=%15.7e fq=%15.7e\n",

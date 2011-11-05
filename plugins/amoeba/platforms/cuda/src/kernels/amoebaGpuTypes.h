@@ -280,16 +280,16 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange,
                                      int mutualInducedIterationMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, int polarizationType, float cutoffDistance,  float alphaEwald, float electricConstant );
+                                     int nonbondedMethod, int polarizationType, float cutoffDistance,  float alphaEwald );
 
 
 extern "C"
-void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu , float innerDielectric, float solventDielectric, float dielectricOffset,
+void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu , float innerDielectric, float solventDielectric,
                                 const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
                                 int includeCavityTerm, float probeRadius, float surfaceAreaFactor);
 
 extern "C"
-void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu , float innerDielectric, float solventDielectric, float dielectricOffset,
+void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu , float innerDielectric, float solventDielectric,
                                    const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
                                    int includeCavityTerm, float probeRadius, float surfaceAreaFactor);
 

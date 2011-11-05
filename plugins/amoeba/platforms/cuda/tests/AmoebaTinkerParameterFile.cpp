@@ -2216,7 +2216,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
         multipoleForce->setNonbondedMethod( AmoebaMultipoleForce::PME );
         multipoleForce->setCutoffDistance( cutoffDistance );
         multipoleForce->setAEwald( aewald );
-        multipoleForce->setPmeBSplineOrder( bsOrder );
+        //multipoleForce->setPmeBSplineOrder( bsOrder );
         multipoleForce->setPmeGridDimensions( grid );
         system.setDefaultPeriodicBoxVectors( Vec3(box[0], 0.0, 0.0), Vec3(0.0, box[1], 0.0), Vec3(0.0, 0.0, box[2]) );
     } else {
@@ -2334,7 +2334,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
       
         multipoleForce->setAEwald(                multipoleForce->getAEwald()/AngstromToNm );
         multipoleForce->setCutoffDistance(        multipoleForce->getCutoffDistance()*AngstromToNm );
-        multipoleForce->setScalingDistanceCutoff( multipoleForce->getScalingDistanceCutoff()*AngstromToNm );
+        //multipoleForce->setScalingDistanceCutoff( multipoleForce->getScalingDistanceCutoff()*AngstromToNm );
 
         Vec3 a,b,c;
         system.getDefaultPeriodicBoxVectors( a, b, c);
@@ -2374,9 +2374,11 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
 
         }
     } else {
+/*
         float electricConstant         = static_cast<float>(multipoleForce->getElectricConstant());
               electricConstant        /= static_cast<float>(AngstromToNm*CalToJoule);
         multipoleForce->setElectricConstant( electricConstant );
+*/
     }
 
     // diagnostics
@@ -2597,7 +2599,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
     // convert to OpenMM units
 
     if( useOpenMMUnits ){
-        gbsaObcForce->setDielectricOffset( 0.009 );
+        //gbsaObcForce->setDielectricOffset( 0.009 );
         for( int ii = 0; ii < gbsaObcForce->getNumParticles(); ii++ ){
             double charge, radius, scalingFactor;
             gbsaObcForce->getParticleParameters( ii, charge, radius, scalingFactor );
@@ -2605,7 +2607,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
             gbsaObcForce->setParticleParameters( ii, charge, radius, scalingFactor );
         }
     } else {
-        gbsaObcForce->setDielectricOffset( 0.09 );
+        //gbsaObcForce->setDielectricOffset( 0.09 );
         gbsaObcForce->setProbeRadius( 1.4 );
         double surfaceAreaFactor = gbsaObcForce->getSurfaceAreaFactor( );
         surfaceAreaFactor       *= (AngstromToNm*AngstromToNm)/CalToJoule;

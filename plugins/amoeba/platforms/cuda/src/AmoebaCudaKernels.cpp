@@ -893,7 +893,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     std::vector<int> minCovalentIndices(numMultipoles);
     std::vector<int> minCovalentPolarizationIndices(numMultipoles);
 
-    float scalingDistanceCutoff = static_cast<float>(force.getScalingDistanceCutoff());
+    //float scalingDistanceCutoff = static_cast<float>(force.getScalingDistanceCutoff());
+    float scalingDistanceCutoff = 50.0f;
 
     std::vector<AmoebaMultipoleForce::CovalentType> covalentList;
     covalentList.push_back( AmoebaMultipoleForce::Covalent12 );
@@ -970,11 +971,6 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     }
 
     int polarizationType = static_cast<int>(force.getPolarizationType());
-    int iterativeMethod = static_cast<int>(force.getMutualInducedIterationMethod());
-    if( iterativeMethod != 0 && polarizationType == 0 ){
-         throw OpenMMException("Iterative method for mutual induced dipoles not recognized.\n");
-    }
-
     int nonbondedMethod = static_cast<int>(force.getNonbondedMethod());
     if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
          throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
@@ -987,13 +983,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     gpuSetAmoebaMultipoleParameters(data.getAmoebaGpu(), charges, dipoles, quadrupoles, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
                                     tholes, scalingDistanceCutoff, dampingFactors, polarity,
                                     multipoleAtomCovalentInfo, covalentDegree, minCovalentIndices, minCovalentPolarizationIndices, (maxCovalentRange+2),
-                                    static_cast<int>(force.getMutualInducedIterationMethod()),
-                                    force.getMutualInducedMaxIterations(),
+                                    0, force.getMutualInducedMaxIterations(),
                                     static_cast<float>( force.getMutualInducedTargetEpsilon()),
                                     nonbondedMethod, polarizationType,
                                     static_cast<float>( force.getCutoffDistance()),
-                                    static_cast<float>( force.getAEwald()),
-                                    static_cast<float>( force.getElectricConstant()) );
+                                    static_cast<float>( force.getAEwald()) );
     if (nonbondedMethod == AmoebaMultipoleForce::PME) {
         double alpha;
         int xsize, ysize, zsize;
@@ -1098,7 +1092,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
 
         gpuSetAmoebaGrycukParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
                                       static_cast<float>( force.getSolventDielectric() ), 
-                                      static_cast<float>( force.getDielectricOffset() ), radius, scale, charge,
+                                      radius, scale, charge,
                                       force.getIncludeCavityTerm(),
                                       static_cast<float>( force.getProbeRadius() ), 
                                       static_cast<float>( force.getSurfaceAreaFactor() ) ); 
@@ -1107,7 +1101,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
 
         gpuSetAmoebaObcParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
                                    static_cast<float>( force.getSolventDielectric() ), 
-                                   static_cast<float>( force.getDielectricOffset() ), radius, scale, charge,
+                                   radius, scale, charge,
                                    force.getIncludeCavityTerm(),
                                    static_cast<float>( force.getProbeRadius() ), 
                                    static_cast<float>( force.getSurfaceAreaFactor() ) ); 
