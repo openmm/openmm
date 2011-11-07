@@ -64,7 +64,7 @@ namespace OpenMM {
  * </ol>
  * 
  * As a simple example, the following source code would be used to implement a pairwise interaction of
- * the form E=-r^2:
+ * the form E=r^2:
  * 
  * <tt><pre>
  * float4 delta = pos2-pos1;
