@@ -303,7 +303,7 @@ extern "C"
 int gpuBuildThreadBlockWorkList(gpuContext gpu);
 
 extern "C"
-void gpuBuildExclusionList(gpuContext gpu);
+void OPENMMCUDA_EXPORT gpuBuildExclusionList(gpuContext gpu);
 
 extern "C"
 int OPENMMCUDA_EXPORT gpuSetConstants(gpuContext gpu);
@@ -312,6 +312,6 @@ extern "C"
 void gpuReorderAtoms(gpuContext gpu);
 
 extern "C"
-void setExclusions(gpuContext gpu, const std::vector<std::vector<int> >& exclusions);
+void OPENMMCUDA_EXPORT setExclusions(gpuContext gpu, const std::vector<std::vector<int> >& exclusions);
 
 #endif //__GPUTYPES_H__

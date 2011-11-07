@@ -547,7 +547,7 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
     psLJ14Parameter->Upload();
 }
 
-extern "C" void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
+extern "C" void OPENMMCUDA_EXPORT setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
     if (gpu->exclusions.size() > 0) {
         bool ok = (exclusions.size() == gpu->exclusions.size());
         for (int i = 0; i < (int) exclusions.size() && ok; i++) {
@@ -2306,7 +2306,7 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
 }
 
 extern "C"
-void gpuBuildExclusionList(gpuContext gpu)
+void OPENMMCUDA_EXPORT gpuBuildExclusionList(gpuContext gpu)
 {
     const unsigned int atoms = gpu->sim.paddedNumberOfAtoms;
     const unsigned int grid = gpu->grid;
