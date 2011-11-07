@@ -81,11 +81,15 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["download_url"]      = "https://simtk.org/home/openmm"
     setupKeywords["packages"]          = ["simtk",
                                           "simtk.unit",
-                                          "simtk.openmm"]
+                                          "simtk.openmm",
+                                          "simtk.openmm.app",
+                                          "simtk.openmm.app.internal"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"simtk" : [],
                                           "simtk.unit" : [],
-                                          "simtk.openmm" : []}
+                                          "simtk.openmm" : [],
+                                          "simtk.openmm.app" : ['data/*.xml'],
+                                          "simtk.openmm.app.internal" : []}
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
