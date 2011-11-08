@@ -1338,14 +1338,13 @@ class AmoebaHarmonicBondGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
 
-        if (verbose): 
-            countConstraint(data)
-
         self.hasBeenCalled = 1
+
+        countConstraint(data)
+        print "In AmoebaHarmonicBondForce generator"
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.AmoebaHarmonicBondForce]
@@ -1358,10 +1357,6 @@ class AmoebaHarmonicBondGenerator:
         force.setAmoebaGlobalHarmonicBondCubic(self.cubic)
         force.setAmoebaGlobalHarmonicBondQuartic(self.quartic)
 
-        if (verbose):
-            print "In AmoebaHarmonicBondGenerator bonds=%d " % (len(data.bonds))
-
-        count = 0
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
@@ -1374,21 +1369,13 @@ class AmoebaHarmonicBondGenerator:
                     hit = 1
                     if bond.isConstrained:
                         sys.addConstraint(bond.atom1, bond.atom2, self.length[i])
-                        if (verbose):
-                            atomS1 = getAtomPrint(data, bond.atom1)
-                            atomS2 = getAtomPrint(data, bond.atom2)
-                            print "AmoebaHarmonicBondGenerator %5d %5d %5d [%s %s] [%5s %5s] %15.6f %15.6f Constraint" % (count, bond.atom1, bond.atom2, atomS1, atomS2, type1, type2, self.length[i], self.k[i])
                     elif self.k[i] != 0:
-                        if (verbose):
-                            atomS1 = getAtomPrint(data, bond.atom1)
-                            atomS2 = getAtomPrint(data, bond.atom2)
-                            print "AmoebaHarmonicBondGenerator %5d %5d %5d [%s %s] [%5s %5s] %15.6f %15.6f" % (count, bond.atom1, bond.atom2, atomS1, atomS2, type1, type2, self.length[i], self.k[i])
                         force.addBond(bond.atom1, bond.atom2, self.length[i], self.k[i])
                     break
-            if (hit == 0): 
-                print "AmoebaHarmonicBondGenerator missing: %5d types=[%5s %5s] atoms=[%6d %6d] " % (count, type1, type2, bond.atom1, bond.atom2)
 
-            count += 1
+            if (hit == 0): 
+                outputString = "AmoebaHarmonicBondGenerator missing: types=[%5s %5s] atoms=[%6d %6d] " % (type1, type2, bond.atom1, bond.atom2)
+                raise ValueError(outputString) 
 
 parsers["AmoebaHarmonicBondForce"] = AmoebaHarmonicBondGenerator.parseElement
 
@@ -1419,7 +1406,6 @@ def addAngleConstraint(angle, idealAngle, data, sys):
                 length = sqrt(l1*l1 + l2*l2 - 2*l1*l2*cos(idealAngle))
                 sys.addConstraint(angle[0], angle[2], length)
                 return
-
 
 #=============================================================================================
 class AmoebaHarmonicAngleGenerator:
@@ -1498,7 +1484,6 @@ class AmoebaHarmonicAngleGenerator:
     
     def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
         self.hasBeenCalled += 1
@@ -1514,17 +1499,13 @@ class AmoebaHarmonicAngleGenerator:
         else:
             force = existing[0]
 
-        # scalars
+        # set scalars
 
         force.setAmoebaGlobalHarmonicAngleCubic(self.cubic)
         force.setAmoebaGlobalHarmonicAngleQuartic(self.quartic)
         force.setAmoebaGlobalHarmonicAnglePentic(self.pentic)
         force.setAmoebaGlobalHarmonicAngleSextic(self.sextic)
 
-        if (verbose):
-            print "In AmoebaHarmonicAngleGenerator angles=%d " % (len(data.angles))
-
-        count = 0
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
@@ -1558,8 +1539,8 @@ class AmoebaHarmonicAngleGenerator:
                             if (numberOfHydrogens < lenAngle):
                                 angleValue =  self.angle[i][numberOfHydrogens]
                             else:
-                                print "Error: AmoebaHarmonicAngleGenerator angle index=%d is out of range: [0, %5d] " % (numberOfHydrogens, lenAngle)
-                                sys.exit(-1)
+                                outputString = "AmoebaHarmonicAngleGenerator angle index=%d is out of range: [0, %5d] " % (numberOfHydrogens, lenAngle)
+                                raise ValueError(outputString) 
                         else:
                             angleValue =  self.angle[i][0]
                
@@ -1567,9 +1548,12 @@ class AmoebaHarmonicAngleGenerator:
                         force.addAngle(angle[0], angle[1], angle[2], angleValue, self.k[i])
                     break
             if (hit == 0): 
-                print "AmoebaHarmonicAngleGenerator missing: %5d %s %s %s " % (count, type1, type2, type3)
-
-            count += 1
+                outputString = "AmoebaHarmonicAngleGenerator missing types: [%s %s %s] for atoms: " % (type1, type2, type3)
+                outputString += getAtomPrint( data, angle[0] ) + ' '
+                outputString += getAtomPrint( data, angle[1] ) + ' '
+                outputString += getAtomPrint( data, angle[2] )
+                outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
+                raise ValueError(outputString) 
 
     #=============================================================================================
     # createForcePostOpBendInPlaneAngle is called by AmoebaOutOfPlaneBendForce with the list of
@@ -1578,7 +1562,6 @@ class AmoebaHarmonicAngleGenerator:
     
     def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
 
-        verbose = 0
         self.hasBeenCalled += 1
 
         # get force
@@ -1599,10 +1582,6 @@ class AmoebaHarmonicAngleGenerator:
         force.setAmoebaGlobalHarmonicInPlaneAnglePentic(self.pentic)
         force.setAmoebaGlobalHarmonicInPlaneAngleSextic(self.sextic)
 
-        if (verbose):
-            print "In AmoebaHarmonicAngleGenerator angles=%d " % (len(data.angles))
-
-        count = 0
         for angleDict in angleList:
  
             angle = angleDict['angle']
@@ -1620,8 +1599,6 @@ class AmoebaHarmonicAngleGenerator:
                 types3 = self.types3[i]
 
                 if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
-                    if (verbose):
-                        print "AmoebaHarmonicInPlaneAngleGenerator %5d %5d %5d %5d len=%d [%5s %5s %5s] %15.6f %15.6f" % (count, angle[0], angle[1], angle[2], len(angle), type1, type2, type3, self.angle[i][0], self.k[i])
                     hit = 1
                     angleDict['idealAngle'] = self.angle[i][0]
                     if (isConstrained and self.k[i] != 0.0):
@@ -1631,9 +1608,12 @@ class AmoebaHarmonicAngleGenerator:
                     break
 
             if (hit == 0): 
-                print "AmoebaHarmonicInPlaneAngleGenerator missing: %5d %s %s " % (count, type1, type2, type3)
-
-            count += 1
+                outputString = "AmoebaHarmonicInPlaneAngleGenerator missing types: [%s %s %s] atoms: " % (type1, type2, type3)
+                outputString += getAtomPrint( data, angle[0] ) + ' '
+                outputString += getAtomPrint( data, angle[1] ) + ' '
+                outputString += getAtomPrint( data, angle[2] )
+                outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
+                raise ValueError(outputString) 
 
 parsers["AmoebaHarmonicAngleForce"] = AmoebaHarmonicAngleGenerator.parseElement
 
@@ -1721,11 +1701,8 @@ class AmoebaOutOfPlaneBendGenerator:
                 generator.ks.append(float(angle.attrib['k']))
 
             else:
-                outputString = "AmoebaOutOfPlaneBendGenerator: error getting types: %s %s %s %s." % (
-                                    angle.attrib['class1'],
-                                    angle.attrib['class2'],
-                                    angle.attrib['class3'],
-                                    angle.attrib['class4'])
+                outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
+                               angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])
                 raise ValueError(outputString) 
     
     #=============================================================================================
@@ -1760,7 +1737,6 @@ class AmoebaOutOfPlaneBendGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
         self.hasBeenCalled = 1
@@ -1781,9 +1757,6 @@ class AmoebaOutOfPlaneBendGenerator:
         force.setAmoebaGlobalOutOfPlaneBendQuartic(self.quartic)
         force.setAmoebaGlobalOutOfPlaneBendPentic( self.pentic)
         force.setAmoebaGlobalOutOfPlaneBendSextic( self.sextic)
-
-        count = 0
-        opBondCount = 0
 
         # this hash is used to insure the out-of-plane-bend bonds
         # are only added once
@@ -1810,9 +1783,9 @@ class AmoebaOutOfPlaneBendGenerator:
 
             # if middle atom has covalency of 3 and 
             # the types of the middle atom and the partner atom (atom bonded to
-            # middle atom, but not in angle) match types2 and types2, then
+            # middle atom, but not in angle) match types1 and types2, then
             # three out-of-plane bend angles are generated. Three in-plane angle 
-            # are also generated. If the conditions are not satisfied the angle is generic angle (not a in-plane angle)
+            # are also generated. If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle)
 
             if (middleAtom > -1 and middleCovalency == 3 and middleAtom not in skipAtoms):
 
@@ -1841,18 +1814,18 @@ class AmoebaOutOfPlaneBendGenerator:
              
                 if (len(partners) == 3):
 
-                    opBondCount += 3
-                    if (verbose):
-                        print "%5d Opbend: %d type=%s cov=%d " % (opBondCount, middleAtom, middleType, middleCovalency)
-
                     force.addOutOfPlaneBend(partners[0], middleAtom, partners[1], partners[2], partnerK[2])
                     force.addOutOfPlaneBend(partners[0], middleAtom, partners[2], partners[1], partnerK[1])
                     force.addOutOfPlaneBend(partners[1], middleAtom, partners[2], partners[0], partnerK[0])
+
+                    # skipAtoms is used to insure angles are only included once
 
                     skipAtoms[middleAtom] = set()
                     skipAtoms[middleAtom].add(partners[0])
                     skipAtoms[middleAtom].add(partners[1])
                     skipAtoms[middleAtom].add(partners[2])
+
+                    # in-plane angle
 
                     angleDict = {}
                     angleList = []
@@ -1872,15 +1845,9 @@ class AmoebaOutOfPlaneBendGenerator:
                         if (atomIndex not in angleSet):
                             angleList.append(atomIndex)
 
-                    if (verbose):
-                        print "%5d Opbend: middle=%d inPlane1 %d %s" % (opBondCount, middleAtom, len(angleList), str(angleList))
-
                     inPlaneAngles.append(angleDict)
 
                 else:
-                    if (verbose):
-                        print "%5d Opbend: %d type=%s cov=%d  xxx" % (opBondCount, middleAtom, middleType, middleCovalency)
-                        print "%5d Opbend: middle=%d inPlane1 %d %s" % (opBondCount, middleAtom, len(angleList), str(angleList))
                     angleDict = {}
                     angleDict['angle'] = angle
                     angleDict['isConstrained'] = isConstrained
@@ -1909,9 +1876,6 @@ class AmoebaOutOfPlaneBendGenerator:
                         if (atomIndex not in angleSet):
                             angleList.append(atomIndex)
 
-                    if (verbose):
-                        print "%5d Opbend: middle=%d inPlane2 %d angleList=%s partnerSet=%s" % (opBondCount, middleAtom, len(angleList), str(angleList), str(partnerSet))
-
                     inPlaneAngles.append(angleDict)
 
                 else:
@@ -1919,8 +1883,6 @@ class AmoebaOutOfPlaneBendGenerator:
                     angleDict['angle'] = angle
                     angleDict['isConstrained'] = isConstrained
                     nonInPlaneAngles.append(angleDict)
-
-            count += 1
 
         # get AmoebaHarmonicAngleGenerator and add AmoebaHarmonicAngle and AmoebaHarmonicInPlaneAngle forces
 
@@ -1944,9 +1906,7 @@ parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElemen
 class AmoebaTorsionGenerator:
 
     #=============================================================================================
-
     """An AmoebaTorsionGenerator constructs a AmoebaTorsionForce."""
-
     #=============================================================================================
 
     def __init__(self, torsionUnit):
@@ -2015,7 +1975,6 @@ class AmoebaTorsionGenerator:
 
     def createForce(self, sys, data, nontorsionedMethod, nontorsionedCutoff, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
         self.hasBeenCalled = 1
@@ -2027,9 +1986,7 @@ class AmoebaTorsionGenerator:
             sys.addForce(force)
         else:
             force = existing[0]
-        if (verbose):
-            print "In AmoebaTorsionGenerator torsions=%d " % (len(data.propers))
-        count = 0
+
         for torsion in data.propers:
 
             type1 = data.atomType[data.atoms[torsion[0]]]
@@ -2048,20 +2005,18 @@ class AmoebaTorsionGenerator:
                 # match types in forward or reverse direction
 
                 if (type1 in types1 and type2 in types2 and type3 in types3 and type4 in types4) or (type4 in types1 and type3 in types2 and type2 in types3 and type1 in types4):
-                    if (verbose):
-                        print "AmoebaTorsionGenerator %5d [%5d %5d %5d %5d] [%5s %5s %5s %5s]" % (
-                              count, torsion[0], torsion[1], torsion[2], torsion[3],
-                              type1, type2, type3, type4)
                     hit = 1
                     force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], self.t1[i],  self.t2[i], self.t3[i])
                     break
+
             if (hit == 0): 
-                print "AmoebaTorsionGenerator missing: %5d %s %s " % (count, type1, type2, type3, type4)
-
-            count += 1
-
-        if (verbose):
-            print "AmoebaTorsionGenerator number of torsions added=%d " % (force.getNumTorsions())
+                outputString = "AmoebaTorsionGenerator missing type: [%s %s %s %s] atoms: " % (type1, type2, type3, type4)
+                outputString += getAtomPrint( data, torsion[0] ) + ' '
+                outputString += getAtomPrint( data, torsion[1] ) + ' '
+                outputString += getAtomPrint( data, torsion[2] ) + ' '
+                outputString += getAtomPrint( data, torsion[3] )
+                outputString += " indices: [%6d %6d %6d %6d]" % (torsion[0], torsion[1], torsion[2], torsion[3])
+                raise ValueError(outputString) 
 
 parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 
@@ -2109,7 +2064,6 @@ class AmoebaPiTorsionGenerator:
 
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
         self.hasBeenCalled = 1
@@ -2123,7 +2077,6 @@ class AmoebaPiTorsionGenerator:
         else:
             force = existing[0]
 
-        count = 0
         for bond in data.bonds:
 
             # search for bonds with both atoms in bond having covalency == 3
@@ -2142,8 +2095,6 @@ class AmoebaPiTorsionGenerator:
                    types2 = self.types2[i]
 
                    if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
-                       if (verbose):
-                            print "AmoebaPiTorsionGenerator %5d %5d %5d [%5s %5s] %15.6f" % (count, atom1, atom2, type1, type2, self.k[i])
 
                        # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2 
                        # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1 
@@ -2185,10 +2136,6 @@ class AmoebaPiTorsionGenerator:
     
                        force.addPiTorsion(piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6, self.k[i])
 
-            count += 1
-        if (verbose):
-            print "AmoebaPiTorsionGenerator number of pi-torsions added=%d " % (force.getNumPiTorsions())
-
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
 #=============================================================================================
@@ -2196,9 +2143,7 @@ parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 class AmoebaTorsionTorsionGenerator:
 
     #=============================================================================================
-
     """An AmoebaTorsionTorsionGenerator constructs a AmoebaTorsionTorsionForce."""
-    
     #=============================================================================================
 
     def __init__(self):
@@ -2363,7 +2308,6 @@ class AmoebaTorsionTorsionGenerator:
  
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
         self.hasBeenCalled = 1
@@ -2377,7 +2321,6 @@ class AmoebaTorsionTorsionGenerator:
         else:
             force = existing[0]
 
-        count = 0
         for angle in data.angles:
 
             # search for bitorsions; based on TINKER subroutine bitors() 
@@ -2439,17 +2382,14 @@ class AmoebaTorsionTorsionGenerator:
         for (index, grid) in enumerate(self.grids):
             force.setTorsionTorsionGrid(index, grid)
  
-        if (verbose):
-            print "AmoebaTorsionTorsionGenerator number of bitorsions added=%d " % (force.getNumTorsionTorsions())
-            print "AmoebaTorsionTorsionGenerator number of grids      added=%d " % (force.getNumTorsionTorsionGrids())
-
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
 #=============================================================================================
 
 class AmoebaStretchBendGenerator:
+
+    #=============================================================================================
     """An AmoebaStretchBendGenerator constructs a AmoebaStretchBendForce."""
-    
     #=============================================================================================
 
     def __init__(self):
@@ -2513,7 +2453,6 @@ class AmoebaStretchBendGenerator:
 
     def createForcePostAmoebaHarmonicBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
 
-        verbose = 0
         if (self.hasBeenCalled):
              return
         self.hasBeenCalled = 1
@@ -2526,10 +2465,6 @@ class AmoebaStretchBendGenerator:
         else:
             force = existing[0]
 
-        if (verbose):
-            print "In AmoebaStretchBendGenerator bonds=%d " % (len(data.bonds))
-
-        count = 0
         for angleDict in angleList:
 
             angle = angleDict['angle']
@@ -2542,7 +2477,6 @@ class AmoebaStretchBendGenerator:
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
 
-            hit = 0
             radian = 57.2957795130
             for i in range(len(self.types1)):
 
@@ -2555,48 +2489,46 @@ class AmoebaStretchBendGenerator:
                 # get ideal angle
 
                 if (type2 in types2 and ((type1 in types1 and type3 in types3) or (type3 in types1 and type1 in types3))): 
-                    if isConstrained:
-                        hit = 1 
+                    bondAB = -1.0
+                    bondCB = -1.0
+                    swap = 0
+                    for bond in data.atomBonds[angle[1]]:
+                        atom1 = data.bonds[bond].atom1
+                        atom2 = data.bonds[bond].atom2
+                        length = data.bonds[bond].length
+                        if (atom1 == angle[0]):
+                            bondAB = length
+                        if (atom1 == angle[2]):
+                            bondCB = length
+                        if (atom2 == angle[2]):
+                            bondCB = length
+                        if (atom2 == angle[0]):
+                            bondAB = length
+                    
+                    # check that ideal angle and bonds are set
+
+                    if ('idealAngle' not in angleDict):
+
+                       outputString = "AmoebaStretchBendGenerator: ideal angle is not set for following entry:\n"
+                       outputString += "   types: %5s %5s %5s atoms: " % (type1, type2, type3)
+                       outputString += getAtomPrint( data, angle[0] ) + ' '
+                       outputString += getAtomPrint( data, angle[1] ) + ' '
+                       outputString += getAtomPrint( data, angle[2] )
+                       raise ValueError(outputString) 
+
+                    elif (bondAB < 0 or bondCB < 0):
+
+                       outputString = "AmoebaStretchBendGenerator: bonds not set: %15.7e %15.7e. for following entry:" % (bondAB, bondCB)
+                       outputString += "     types: [%5s %5s %5s] atoms: " % (type1, type2, type3)
+                       outputString += getAtomPrint( data, angle[0] ) + ' '
+                       outputString += getAtomPrint( data, angle[1] ) + ' '
+                       outputString += getAtomPrint( data, angle[2] )
+                       raise ValueError(outputString) 
+
                     else:
-                        hit = 1
-                        bondAB = -1.0
-                        bondCB = -1.0
-                        swap = 0
-                        for bond in data.atomBonds[angle[1]]:
-                            atom1 = data.bonds[bond].atom1
-                            atom2 = data.bonds[bond].atom2
-                            length = data.bonds[bond].length
-                            if (atom1 == angle[0]):
-                                bondAB = length
-                            if (atom1 == angle[2]):
-                                bondCB = length
-                            if (atom2 == angle[2]):
-                                bondCB = length
-                            if (atom2 == angle[0]):
-                                bondAB = length
-                        
-                        # check that ideal angle and bonds are set
+                        force.addStretchBend(angle[0], angle[1], angle[2], bondAB, bondCB, angleDict['idealAngle']/radian, self.k1[i])
 
-                        if ('idealAngle' not in angleDict):
-                           outputString = "AmoebaStretchBendGenerator: ideal angle is not set for following entry:\n"
-                           outputString += "   %5d [%5d %5d %5d] [%5s %5s %5s]" % (count, angle[0], angle[1], angle[2], type1, type2, type3)
-                           raise ValueError(outputString) 
-
-                        elif (bondAB < 0 or bondCB < 0):
-                           outputString = "AmoebaStretchBendGenerator: bonds not set: %15.7e %15.7e. for following entry:" % (bondAB, bondCB)
-                           outputString += "     %5d [%5d %5d %5d] [%5s %5s %5s]" % (count, angle[0], angle[1], angle[2], type1, type2, type3)
-                           raise ValueError(outputString) 
-
-                        else:
-                            if (verbose):
-                                 print "AmoebaStretchBendGenerator %5d [%5d %5d %5d] [%5s %5s %5s] %15.6f %15.6f %15.6f %15.6f" % (count, angle[0], angle[1], angle[2], type1, type2, type3, bondAB, bondCB, angleDict['idealAngle'], self.k1[i])
-                            force.addStretchBend(angle[0], angle[1], angle[2], bondAB, bondCB, angleDict['idealAngle']/radian, self.k1[i])
                     break
-
-            if (hit == 0 and verbose): 
-                print "AmoebaStretchBendGenerator missing: %5d missing [%5d %5d %5d] [%5s %5s %5s] " % (count, angle[0], angle[1], angle[2], type1, type2, type3)
-
-            count += 1
 
 parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 
@@ -2691,7 +2623,6 @@ class AmoebaVdwGenerator:
 
         sigmaMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'CUBIC-MEAN':1}
         epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'HHG':1}
-        verbose = 0
 
         # get or create force depending on whether it has already been added to the system
 
@@ -2709,7 +2640,7 @@ class AmoebaVdwGenerator:
                     force.setSigmaCombiningRule(sigmaRule.upper())
                 else:
                     stringList = ' ' . join(str(x) for x in sigmaMap.keys())
-                    print "sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList)  
+                    raise ValueError( "AmoebaVdwGenerator: sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList) )
             else:
                 force.setSigmaCombiningRule(self.radiusrule)
 
@@ -2719,7 +2650,7 @@ class AmoebaVdwGenerator:
                     force.setEpsilonCombiningRule(epsilonRule.upper())
                 else:
                     stringList = ' ' . join(str(x) for x in epsilonMap.keys())
-                    print "epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList)  
+                    raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )  
             else:
                 force.setEpsilonCombiningRule(self.epsilonrule)
                
@@ -2729,6 +2660,7 @@ class AmoebaVdwGenerator:
                 force.setCutoff(float(args['vdwCutoff']))
             else:
                 force.setCutoff(nonbondedCutoff)
+
             if (nonbondedMethod == PME):
                 force.setPBC(1)
                 force.setUseNeighborList(1)
@@ -2758,8 +2690,6 @@ class AmoebaVdwGenerator:
                         ivIndex = data.bonds[bondIndex].atom1
 
                 force.addParticle(ivIndex, classIndex, values[0], values[1], values[2])
-                if (verbose):
-                    print "Vdw %5d %5d %2d %15.7e %15.7e %15.7e" % (i, ivIndex, classIndex, values[0], values[1], values[2])
             else:
                 raise ValueError('No vdw type for atom %s' % (atom.name))
 
@@ -2789,13 +2719,6 @@ class AmoebaVdwGenerator:
 
             exclusionSet.add(i)
 
-            if (verbose):
-                print "VdwExcl %5d %s || %s" % (i, str(exclusionSet), str(bondedParticleSets[i]))
-                for atomIndex in sorted(exclusionSet):
-                    atom = data.atoms[atomIndex]
-                    print "   %5d [%s %s %d]" % (atomIndex, atom.name, atom.residue.name, atom.residue.index)
-                print "\n" 
-            
             force.setParticleExclusions(i, exclusionSet)
 
 parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
@@ -2927,8 +2850,6 @@ class AmoebaMultipoleGenerator:
             types = forceField._findAtomTypes(atom, 1)
             if types is not None:
 
-                # print "Multipole Atom %s types=%s." %(atom.attrib['type'], str(types))
-
                 # k-indices not provided default to 0
 
                 kIndices = [int(atom.attrib['type'])]
@@ -3016,7 +2937,6 @@ class AmoebaMultipoleGenerator:
                                 typeMap['pgrpMap'] = pgrpMap 
                                 typeMapList[ii] = typeMap
                                 hit = 1
-                                #print "Adding polarize for %s map=%d len=%d keys=%s" % (classIndex, ii, len(typeMapList), str(typeMap.keys()))
 
                         if (hit == 0):
                             outputString = "AmoebaMultipoleGenerator: error getting type for polarize: class index=%s not in multipole list?" % (atom.attrib['class'])
@@ -3156,7 +3076,6 @@ class AmoebaMultipoleGenerator:
 
         methodMap = {NoCutoff:mm.AmoebaMultipoleForce.NoCutoff,
                      PME:mm.AmoebaMultipoleForce.PME}
-        verbose = 0
 
         # get or create force depending on whether it has already been added to the system
 
@@ -3166,8 +3085,7 @@ class AmoebaMultipoleGenerator:
             force = mm.AmoebaMultipoleForce()
             sys.addForce(force)
             if (nonbondedMethod not in methodMap): 
-                print "Warning: AmoebaMultipoleForce: cutoff method not available using NoCutoff."
-                force.setNonbondedMethod(mm.AmoebaMultipoleForce.NoCutoff)
+                raise ValueError( "AmoebaMultipoleForce: input cutoff method not available." )
             else:
                 force.setNonbondedMethod(methodMap[nonbondedMethod])
             force.setCutoffDistance(nonbondedCutoff)
@@ -3433,9 +3351,6 @@ class AmoebaMultipoleGenerator:
                 # add particle if there was a hit
 
                 if (hit != 0):
-                    if (verbose):
-                        print "Multipole hit for Atom %5d %4s of %4s %4d type=%5s hitBranch=%d axes: %4d %4d %4d axisType=%1d." % (atomIndex,
-                               atom.name, atom.residue.name, atom.residue.index, t, hit, zaxis, xaxis, yaxis, savedMultipoleDict['axisType'])
 
                     atom.multipoleDict = savedMultipoleDict
                     atom.polarizationGroups = dict()
@@ -3516,8 +3431,6 @@ class AmoebaWcaDispersionGenerator:
     
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        verbose = 0
-
         # get or create force depending on whether it has already been added to the system
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
@@ -3546,8 +3459,6 @@ class AmoebaWcaDispersionGenerator:
 
                 values = self.typeMap[t]
                 force.addParticle(values[0], values[1])
-                if (verbose):
-                    print "WcaDispersion %5d %15.7e %15.7e" % (i, values[0], values[1])
             else:
                 raise ValueError('No WcaDispersion type for atom %s of %s %d' % (atom.name, atom.residue.name, atom.residue.index))
 
@@ -3628,8 +3539,7 @@ class AmoebaGeneralizedKirkwoodGenerator:
             shct = 0.88
 
         if (shct < 0.0): 
-            shct = 0.80
-            print "getObcShct: Warning no GK overlap scale factor for atom %s of %s %d using default value=%f" % (atom.name, atom.residue.name, atom.residue.index, shct)
+            raise ValueError( "getObcShct: no GK overlap scale factor for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index) )
  
         return shct 
 
@@ -3646,8 +3556,7 @@ class AmoebaGeneralizedKirkwoodGenerator:
             radius = 0.132
  
             if (len(bondedAtomIndices) < 1):
-                 outputString = "AmoebaGeneralizedKirkwoodGenerator: error getting atom bonded to %s of %s %d " % (atom.name, atom.residue.name, atom.residue.index)
-                 raise ValueError(outputString) 
+                 raise ValueError( "AmoebaGeneralizedKirkwoodGenerator: error getting atom bonded to %s of %s %d " % (atom.name, atom.residue.name, atom.residue.index) )
  
             for bondedAtomIndex in bondedAtomIndices:
                 bondedAtomAtomicNumber = data.atoms[bondedAtomIndex].element.atomic_number
@@ -3715,8 +3624,8 @@ class AmoebaGeneralizedKirkwoodGenerator:
             radius = 0.230
 
         if (radius < 0.0): 
-            radius = 2.0
-            print "Warning no GK radius for atom %s of %s %d using default value=%f" % (atom.name, atom.residue.name, atom.residue.index, radius)
+            outputString = "No GK radius for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index)
+            raise ValueError( outputString )
  
         return radius
 
@@ -3730,8 +3639,8 @@ class AmoebaGeneralizedKirkwoodGenerator:
         if (atomicNumber in bondiMap): 
             radius = bondiMap[atomicNumber]
         else:
-            radius = 0.206
-            print "Warning no Bondi radius for atom %s of %s %d using default value=%f" % (atom.name, atom.residue.name, atom.residue.index, radius)
+            outputString = "Warning no Bondi radius for atom %s of %s %d using default value=%f" % (atom.name, atom.residue.name, atom.residue.index, radius)
+            raise ValueError( outputString )
  
         return radius
 
@@ -3756,8 +3665,9 @@ class AmoebaGeneralizedKirkwoodGenerator:
         if (self.hasBeenCalled ):
             return
 
-        verbose = 0
-      
+        if( nonbondedMethod != NoCutoff ):
+            raise ValueError( "Only the nonbondedMethod=NoCutoff option is available for implicit solvent simulations." )
+
         # check if AmoebaMultipoleForce exists since charges needed
         # if it has not been created, raise an error
 
@@ -3771,7 +3681,7 @@ class AmoebaGeneralizedKirkwoodGenerator:
             for force in self.forceField._forces:
                 if (force.__class__.__name__ == 'AmoebaMultipoleGenerator'): 
                     force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
-
+          
         # get or create force depending on whether it has already been added to the system
 
         existing = [f for f in existing if type(f) == mm.AmoebaGeneralizedKirkwoodForce]
@@ -3796,7 +3706,6 @@ class AmoebaGeneralizedKirkwoodGenerator:
                force.setIncludeCavityTerm(   int(self.includeCavityTerm))
 
         else:
-            print "AmoebaGeneralizedKirkwoodForce exists"
             force = existing[0]
 
         self.hasBeenCalled = 1
@@ -3824,8 +3733,6 @@ class AmoebaGeneralizedKirkwoodGenerator:
                 radius = self.getBondiTypeRadius(data, bonded12ParticleSets[atomIndex], atomIndex)
             shct = self.getObcShct(data, atomIndex)
             force.addParticle(multipoleParameters[0], radius, shct)
-            if (verbose):
-               print "GeneralizedKirkwood %5d %15.7e %15.7e" % (atomIndex, multipoleParameters[0], radius, shct)
 
 parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.parseElement
 
@@ -3834,9 +3741,7 @@ parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.p
 class AmoebaUreyBradleyGenerator:
 
     #=============================================================================================
-
     """An AmoebaUreyBradleyGenerator constructs a AmoebaUreyBradleyForce."""
-
     #=============================================================================================
     
     def __init__(self, cubic, quartic):
@@ -3883,8 +3788,6 @@ class AmoebaUreyBradleyGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        verbose = 0
-
         if (self.hasBeenCalled):
              return
  
@@ -3913,9 +3816,6 @@ class AmoebaUreyBradleyGenerator:
                 types2 = self.types2[i]
                 types3 = self.types3[i]
                 if ((type1 in types1 and type2 in types2 and type3 in types3) or (type3 in types1 and type2 in types2 and type1 in types3)):
-
-                    if (verbose):
-                        print "AmoebaUreyBradleyGenerator %5d %5d %5d [%5s %5s %5s] %15.6f %15.6f" % (angle[0], angle[1], angle[2], type1, type2, type3, self.length[i], self.k[i])
 
                     force.addUreyBradley(angle[0], angle[2], self.length[i], self.k[i])
                     break
