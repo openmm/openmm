@@ -534,29 +534,50 @@ void CpuObc::printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
     const RealOpenMM betaObc                    = obcParameters->getBetaObc();
     const RealOpenMM gammaObc                   = obcParameters->getGammaObc();
 
+    const int comparisonFormat                  = 1;
+
     // ---------------------------------------------------------------------------------------
 
     (void) fprintf( log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms );
-    (void) fprintf( log, "    preFactor      %15.7e\n", preFactor );
-    (void) fprintf( log, "    alpha          %15.7e\n", alphaObc);
-    (void) fprintf( log, "    beta           %15.7e\n", betaObc);
-    (void) fprintf( log, "    gamma          %15.7e\n", gammaObc );
- 
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-        (void) fprintf( log, "%6d r=%15.7e q=%6.3f", atomI,
-                        atomicRadii[atomI], partialCharges[atomI] );
-        if( obcChain.size() > atomI ){
-             (void) fprintf( log, " bChn=%15.7e", obcChain[atomI] );
-        }
-        if( bornRadii.size() > atomI ){
-             (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
-        }
-        if( bornForces.size() > atomI ){
-             (void) fprintf( log, " bF=%15.7e", bornForces[atomI] );    
-        }
-        (void) fprintf( log, "\n" );
+    if( comparisonFormat ){    
+        (void) fprintf( log, "Reference Obc  %s atoms=%d Chain/Radii/Force\n", idString.c_str(), numberOfAtoms );
+        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+            (void) fprintf( log, "%6d ", atomI );
+            if( obcChain.size() > atomI ){
+                 (void) fprintf( log, " %15.7e", obcChain[atomI] );
+            }
+            if( bornRadii.size() > atomI ){
+                 (void) fprintf( log, " %15.7e", bornRadii[atomI] );
+            }
+            if( bornForces.size() > atomI ){
+                 (void) fprintf( log, " %15.7e", bornForces[atomI] );    
+            }
+            (void) fprintf( log, " %15.7e %6.3f", atomicRadii[atomI], partialCharges[atomI] );
+            (void) fprintf( log, "\n" );
+        }   
+    } else { 
+        (void) fprintf( log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms );
+        (void) fprintf( log, "    preFactor      %15.7e\n", preFactor );
+        (void) fprintf( log, "    alpha          %15.7e\n", alphaObc);
+        (void) fprintf( log, "    beta           %15.7e\n", betaObc);
+        (void) fprintf( log, "    gamma          %15.7e\n", gammaObc );
+     
+        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+            (void) fprintf( log, "%6d r=%15.7e q=%6.3f", atomI,
+                            atomicRadii[atomI], partialCharges[atomI] );
+            if( obcChain.size() > atomI ){
+                 (void) fprintf( log, " bChn=%15.7e", obcChain[atomI] );
+            }
+            if( bornRadii.size() > atomI ){
+                 (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
+            }
+            if( bornForces.size() > atomI ){
+                 (void) fprintf( log, " bF=%15.7e", bornForces[atomI] );    
+            }
+            (void) fprintf( log, "\n" );
+        }   
     }   
-
+    
     return;
 
 }
