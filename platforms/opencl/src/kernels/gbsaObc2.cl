@@ -17,7 +17,7 @@
     float term1 = (0.5f*(0.25f+obcParams2.y*obcParams2.y*invRSquaredOver4)*t2J + t1J*invRSquaredOver4)*invR;
     float term2 = (0.5f*(0.25f+obcParams1.y*obcParams1.y*invRSquaredOver4)*t2I + t1I*invRSquaredOver4)*invR;
     float tempdEdR = select(0.0f, bornForce1*term1, obcParams1.x < rScaledRadiusJ);
-    tempdEdR += select(0.0f, bornForce2*term2, obcParams2.x < rScaledRadiusJ);
+    tempdEdR += select(0.0f, bornForce2*term2, obcParams2.x < rScaledRadiusI);
 #ifdef USE_CUTOFF
     unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED);
 #else

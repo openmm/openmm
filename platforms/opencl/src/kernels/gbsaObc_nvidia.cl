@@ -108,7 +108,7 @@ __kernel void computeBornSum(
                             float ratio = LOG(u_ij * RECIP(l_ij));
                             bornSum += l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
                                              (params2.y*params2.y*invR)*(l_ij2-u_ij2));
-                            if (params1.x < params2.x-r)
+                            if (params1.x < params2.y-r)
                                 bornSum += 2.0f*(RECIP(params1.x)-l_ij);
                         }
                     }
@@ -188,7 +188,7 @@ __kernel void computeBornSum(
                                         float ratio = LOG(u_ij * RECIP(l_ij));
                                         float term = l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
                                                          (params1.y*params1.y*invR)*(l_ij2-u_ij2));
-                                        if (params2.x < params1.x-r)
+                                        if (params2.x < params1.y-r)
                                             term += 2.0f*(RECIP(params2.x)-l_ij);
                                         tempBuffer[get_local_id(0)] = term;
                                     }
@@ -247,7 +247,7 @@ __kernel void computeBornSum(
                                 float ratio = LOG(u_ij * RECIP(l_ij));
                                 float term = l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
                                                  (params1.y*params1.y*invR)*(l_ij2-u_ij2));
-                                if (params2.x < params1.x-r)
+                                if (params2.x < params1.y-r)
                                     term += 2.0f*(RECIP(params2.x)-l_ij);
                                 localData[tbx+tj].bornSum += term;
                             }
