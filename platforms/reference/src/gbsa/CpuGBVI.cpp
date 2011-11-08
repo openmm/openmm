@@ -24,6 +24,7 @@
 #include <string.h>
 #include <math.h>
 #include <sstream>
+#include <stdio.h>
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKReference/ReferenceForce.h"
