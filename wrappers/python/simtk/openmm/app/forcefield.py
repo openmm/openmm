@@ -2733,7 +2733,8 @@ class AmoebaVdwGenerator:
 
             if( 'vdwCutoff' in args ):
                 force.setCutoff( float( args['vdwCutoff'] ) )
-
+            else:
+                force.setCutoff( nonbondedCutoff )
             if( nonbondedMethod == PME ):
                 force.setPBC( 1 )
                 force.setUseNeighborList( 1 )
