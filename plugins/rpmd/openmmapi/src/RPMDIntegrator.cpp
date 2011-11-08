@@ -53,6 +53,8 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
 void RPMDIntegrator::initialize(ContextImpl& contextRef) {
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
+    if (contextRef.getSystem().getNumConstraints() > 0)
+        throw OpenMMException("RPMDIntegrator cannot be used with Systems that include constraints");
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateRPMDStepKernel::Name(), contextRef);
