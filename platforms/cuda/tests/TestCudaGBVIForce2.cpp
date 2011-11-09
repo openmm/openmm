@@ -393,6 +393,21 @@ public:
      
     void showDistances( const IntIntPairVector& pairs, const std::vector<Vec3>& positions ) const;
     
+    /** 
+     * Show particles within a specified distance of a given particle
+     *
+     * @param positions                   input vector of positions
+     * @param periodicBoundaryConditions  if set, use PBC in calculating distances
+     * @param particleIndex               particle to check
+     * @param distanceToCheckFor          distance to check for
+     * @param tolerance                   distance tolerance
+     *
+     */
+     
+    void showParticlesWithinDistance( const std::vector<Vec3>& positions, 
+                                      int periodicBoundaryConditions, unsigned int particleIndex,
+                                      double distanceToCheckFor, double tolerance);
+    
 private:
 
     int _numMolecules;
@@ -740,6 +755,35 @@ void PositionGenerator::showMinMaxDistances( const std::vector<Vec3>& positions,
         int jIndex          = index - iIndex*positions.size();
         (void) fprintf( _log, "   [%6d %6d %15.7e]\n", iIndex, jIndex, pair.second);
     }   
+    return;
+}
+
+/** 
+ * Show particles within a specified distance of a given particle
+ *
+ * @param positions                   input vector of positions
+ * @param periodicBoundaryConditions  if set, use PBC in calculating distances
+ * @param particleIndex               particle to check
+ * @param distanceToCheckFor          distance to check for
+ * @param tolerance                   distance tolerance
+ *
+ */
+ 
+void PositionGenerator::showParticlesWithinDistance( const std::vector<Vec3>& positions, 
+                                                     int periodicBoundaryConditions, unsigned int particleIndex,
+                                                     double distanceToCheckFor, double tolerance){
+
+    if( !_log || particleIndex >= positions.size() )return;
+
+    for( unsigned int ii = 0; ii < positions.size(); ii++ ){
+        double distance = periodicBoundaryConditions ? getPeriodicDistance( particleIndex, ii, positions) :  
+                                                           getDistance( particleIndex, ii, positions);
+        double delta    = fabs( distanceToCheckFor - distance );
+        if( ii != particleIndex && delta < tolerance ){
+            (void) fprintf( _log, "Distance=%15.7e between particles %u %u.\n", distance, particleIndex, ii);
+        }
+    }
+
     return;
 }
 
@@ -3202,7 +3246,7 @@ void runTests( MapStringToDouble& inputArgumentMap, FILE* log ){
         (void) fprintf( log, "    numParticlesPerMolecule     %d\n", numParticlesPerMolecule );
         (void) fprintf( log, "    positionPlacementMethod     %d\n", positionPlacementMethod);
         (void) fprintf( log, "    boxSize                     %8.3f\n", boxSize );
-        (void) fprintf( log, "    cutoffDistance              %8.3f\n", cutoffDistance );
+        (void) fprintf( log, "    cutoffDistance              %15.7e\n", cutoffDistance );
         (void) fprintf( log, "    reactionFieldDielectric     %8.3f\n", reactionFieldDielectric );
 
 #if IMPLICIT_SOLVENT == TEST_GBVI
@@ -3251,17 +3295,25 @@ void runTests( MapStringToDouble& inputArgumentMap, FILE* log ){
     if( log ){
         int periodicBoundaryConditions       = (nonbondedMethod > CutoffNonPeriodic_OpenMMTest) ? 1 : 0;
         int showIndex                        = 5;
+        double distanceTolerance             = 1.0e-04;
         IntVector positionIndexVector;
         positionIndexVector.push_back( 0 );
-        positionIndexVector.push_back( 433 );
-        positionIndexVector.push_back( 669 );
+        positionIndexVector.push_back( 2266 );
+        positionIndexVector.push_back( 2656 );
         positionIndexVector.push_back( static_cast<int>(positions.size())-1 );
         //positionGenerator.showMinMaxDistances( positions, periodicBoundaryConditions, showIndex, positionIndexVector);
         positionGenerator.showMinMaxDistances( positions, periodicBoundaryConditions, showIndex );
+        positionGenerator.showParticlesWithinDistance( positions, periodicBoundaryConditions, 2266, cutoffDistance, distanceTolerance );
 
         IntIntPairVector pairs;
-        pairs.push_back( IntIntPair( 732, 0 ) );
-        pairs.push_back( IntIntPair( 433, 669 ) );
+        pairs.push_back( IntIntPair( 2266, 2656 ) );
+        pairs.push_back( IntIntPair( 2266, 2264 ) );
+        pairs.push_back( IntIntPair( 2266, 2292 ) );
+        pairs.push_back( IntIntPair( 2266, 1872 ) );
+        pairs.push_back( IntIntPair( 2266, 1847 ) );
+        pairs.push_back( IntIntPair( 2266, 2658 ) );
+        pairs.push_back( IntIntPair( 2266, 2294 ) );
+        pairs.push_back( IntIntPair( 2266, 2236 ) );
         positionGenerator.showDistances( pairs, positions );
     }    
 
@@ -3422,7 +3474,7 @@ int main() {
         inputArgumentMap["numMolecules"]                    = 10;
         inputArgumentMap["boxSize"]                         = 5.0;
         inputArgumentMap["positionPlacementMethod"]         = 1;
-        inputArgumentMap["cutoffDistance"]                  = 0.3001*inputArgumentMap["boxSize"];
+        inputArgumentMap["cutoffDistance"]                  = 0.301*inputArgumentMap["boxSize"];
         //inputArgumentMap["cutoffDistance"]                  = 1.0;
         inputArgumentMap["relativeTolerance"]               = 5.0e-04;
         inputArgumentMap["applyAssert"]                     = 1;
@@ -3453,9 +3505,9 @@ int main() {
         }   
 
         DoubleVector nonbondedMethod;
-        nonbondedMethod.push_back( NoCutoff_OpenMMTest );
+        //nonbondedMethod.push_back( NoCutoff_OpenMMTest );
         nonbondedMethod.push_back( CutoffNonPeriodic_OpenMMTest );
-        nonbondedMethod.push_back( CutoffPeriodic_OpenMMTest );
+        //nonbondedMethod.push_back( CutoffPeriodic_OpenMMTest );
 #if IMPLICIT_SOLVENT == TEST_NONBONDED
         nonbondedMethod.push_back( Ewald_OpenMMTest );
         nonbondedMethod.push_back( PME_OpenMMTest );
@@ -3562,7 +3614,7 @@ int main() {
                     setIntFromMapStringToDouble(    vectorOfMapStringToDouble[kk], "nonbondedMethod",              nonbondedMethod);
                     msg << " test: system size=" << numMolecules*numParticlesPerMolecule << " nonbonded method=" << getNonbondedMethodName( nonbondedMethod );
                     msg << " exception: " << e.what() << endl;
-                    msg << "Note cases have been encountered for nonbonded methods with cutoffs where the error was due to particles being within 1.0e-05 of the cutoff." << endl;
+                    // msg << "Note cases have been encountered for nonbonded methods with cutoffs where the error was due to particles being within 1.0e-05 of the cutoff." << endl;
                     cout << msg.str();
                     wasException += 1;
                 }
