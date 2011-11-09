@@ -859,11 +859,14 @@ ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
 }
 
 void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii ) {
+
     int numParticles = system.getNumParticles();
+
     charges.resize(numParticles);
     vector<RealOpenMM> atomicRadii(numParticles);
     vector<RealOpenMM> scaledRadii(numParticles);
     vector<RealOpenMM> gammas(numParticles);
+
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, gamma;
         force.getParticleParameters(i, charge, radius, gamma);
@@ -872,15 +875,19 @@ void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIFo
         gammas[i]        = static_cast<RealOpenMM>(gamma);
         scaledRadii[i]   = static_cast<RealOpenMM>(inputScaledRadii[i]);
     }
+
     GBVIParameters * gBVIParameters = new GBVIParameters(numParticles);
+
     gBVIParameters->setAtomicRadii(atomicRadii);
     gBVIParameters->setGammaParameters(gammas);
     gBVIParameters->setScaledRadii(scaledRadii);
     gBVIParameters->setSolventDielectric(static_cast<RealOpenMM>(force.getSolventDielectric()));
     gBVIParameters->setSoluteDielectric(static_cast<RealOpenMM>(force.getSoluteDielectric()));
+
     gBVIParameters->setBornRadiusScalingMethod(force.getBornRadiusScalingMethod());
     gBVIParameters->setQuinticUpperBornRadiusLimit(static_cast<RealOpenMM>(force.getQuinticUpperBornRadiusLimit()));
     gBVIParameters->setQuinticLowerLimitFactor(static_cast<RealOpenMM>(force.getQuinticLowerLimitFactor()));
+
     if (force.getNonbondedMethod() != GBVIForce::NoCutoff)
         gBVIParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     isPeriodic = (force.getNonbondedMethod() == GBVIForce::CutoffPeriodic);

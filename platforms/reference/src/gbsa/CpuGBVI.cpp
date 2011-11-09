@@ -724,7 +724,7 @@ void CpuGBVI::computeBornForces( std::vector<RealVec>& atomCoordinates, const Re
         }
     }
 
-    //printGbvi( atomCoordinates, partialCharges, bornRadii, bornForces, forces, "Post loop2", stderr );
+    //printGbvi( atomCoordinates, partialCharges, bornRadii, bornForces, forces, "GBVI: Post loop2", stderr );
 
     // convert from cal to Joule & apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
@@ -776,26 +776,48 @@ void CpuGBVI::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, co
     const RealOpenMMVector& switchDeriviative = getSwitchDeriviative();
     RealOpenMM tau                            = static_cast<RealOpenMM>(gbviParameters->getTau());  
 
+    int useComparisonFormat                   = 1;
+
     (void) fprintf( log, "Reference Gbvi     %s atoms=%d\n", idString.c_str(), numberOfAtoms );
     (void) fprintf( log, "    tau            %15.7e\n", tau ); 
     (void) fprintf( log, "    scaleMethod    %d (QuinticEnum=%d)\n", 
                     _gbviParameters->getBornRadiusScalingMethod(), GBVIParameters::QuinticSpline );
     (void) fprintf( log, "    preFactor      %15.7e)\n", preFactor );
  
-    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-        (void) fprintf( log, "%6d r=%15.7e rSc=%15.7e swd=%15.7e tau*gam=%15.7e q=%15.7e", atomI,
-                        atomicRadii[atomI],    
-                        scaledRadii[atomI],    
-                        switchDeriviative[atomI],    
-                        tau*gammaParameters[atomI],    
-                        partialCharges[atomI] );
-        if( bornRadii.size() > atomI ){
-             (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
-        }
-        if( bornForces.size() > atomI ){
-             (void) fprintf( log, " tau*bF=%15.7e", tau*bornForces[atomI] );    
-        }
-        (void) fprintf( log, "\n" );
+    if( useComparisonFormat ){
+        (void) fprintf( log, "  br bF swd r scR tau*gamma q)\n" );
+        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+            (void) fprintf( log, "%6d ", atomI );
+            if( bornRadii.size() > atomI ){
+                 (void) fprintf( log, "%15.7e ", bornRadii[atomI] );
+            }
+            if( bornForces.size() > atomI ){
+                 (void) fprintf( log, "%15.7e ", tau*bornForces[atomI] );    
+            }
+            (void) fprintf( log, " %15.7e %15.7e %15.7e %15.7e %15.7e",
+                            switchDeriviative[atomI],    
+                            atomicRadii[atomI],    
+                            scaledRadii[atomI],    
+                            tau*gammaParameters[atomI],    
+                            partialCharges[atomI] );
+            (void) fprintf( log, "\n" );
+        }   
+    } else {
+        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+            (void) fprintf( log, "%6d r=%15.7e rSc=%15.7e swd=%15.7e tau*gam=%15.7e q=%15.7e", atomI,
+                            atomicRadii[atomI],    
+                            scaledRadii[atomI],    
+                            switchDeriviative[atomI],    
+                            tau*gammaParameters[atomI],    
+                            partialCharges[atomI] );
+            if( bornRadii.size() > atomI ){
+                 (void) fprintf( log, " bR=%15.7e", bornRadii[atomI] );
+            }
+            if( bornForces.size() > atomI ){
+                 (void) fprintf( log, " tau*bF=%15.7e", tau*bornForces[atomI] );    
+            }
+            (void) fprintf( log, "\n" );
+        }   
     }   
 
     return;
