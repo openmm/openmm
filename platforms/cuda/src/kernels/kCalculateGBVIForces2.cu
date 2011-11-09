@@ -36,6 +36,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 using namespace std;
 
 #include "gputypes.h"
@@ -71,66 +72,6 @@ void GetCalculateGBVIForces2Sim(gpuContext gpu)
 }
 
 #include "kCalculateGBVIAux.h"
-
-/**
- * This file contains the kernel for evalauating the second stage of GBSA.  It is included
- * several times in kCalculateGBVIForces2.cu with different #defines to generate
- * different versions of the kernels.
- */
-
-__global__ void kCalculateGBVIForces2a_kernel()
-{
-    unsigned int pos  = (blockIdx.x * blockDim.x + threadIdx.x);
-    if( pos >=  cSim.atoms )return;
-
-    float4 apos                     = cSim.pPosq[pos];
-    float4 ar                       = cSim.pGBVIData[pos];
-    float fb                        = cSim.pBornForce[pos];
-    unsigned int posJ               = 0;
-    float4 force;
-    force.x = force.y = force.z = force.w = 0.0f;
-    while ( posJ < cSim.atoms )
-    {
-
-        float4 aposJ                = cSim.pPosq[posJ];
-        float4 arJ                  = cSim.pGBVIData[posJ];
-        float fbJ                   = cSim.pBornForce[posJ];
-
-        float dx                    = aposJ.x - apos.x;
-        float dy                    = aposJ.y - apos.y;
-        float dz                    = aposJ.z - apos.z;
-
-        float r2                    = dx * dx + dy * dy + dz * dz;
-        float r                     = sqrt(r2);
-
-        float dE                    = getGBVI_dE2( r, ar.x, arJ.y, fb );
-        dE                          = r > 1.0e-08f ? dE : 0.0f;
-
-//dx = dy = dz = 1.0f;
-        float d                     = dx*dE;
-        force.x                    -= d;
-        d                           = dy*dE;
-        force.y                    -= d;
-        d                           = dz*dE;
-        force.z                    -= d;
-#if 1
-        dE                          = getGBVI_dE2( r, arJ.x, ar.y, fbJ );
-        dE                          = r > 1.0e-08f ? dE : 0.0f;
-        d                           = dx*dE;
-        force.x                    -= d;
-        d                           = dy*dE;
-        force.y                    -= d;
-        d                           = dz*dE;
-        force.z                    -= d;
-#endif
-
-        posJ                       += 1;
-    }
-
-    // Write results
-    cSim.pForce4[pos]             = force;
-
-}
 
 // Include versions of the kernels for N^2 calculations.
 

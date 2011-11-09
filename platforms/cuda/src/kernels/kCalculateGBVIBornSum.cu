@@ -247,6 +247,7 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
 
     gpu->psGBVIData->Download();
     gpu->psBornRadii->Download();
+    gpu->psGBVISwitchDerivative->Download();
     gpu->psBornForce->Download();
     gpu->psPosq4->Download();
     gpu->psSigEps2->Download();
@@ -255,11 +256,12 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
     (void) fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
                     gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
                     sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
+    (void) fprintf( stderr, "bR bF swd r scR ...\n" );
     for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
-        (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e \n", ii,
+        (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e\n", ii,
                         gpu->psBornRadii->_pSysData[ii],
                         gpu->psBornForce->_pSysData[ii],
-
+                        gpu->psGBVISwitchDerivative->_pSysData[ii],
                         gpu->psGBVIData->_pSysData[ii].x,
                         gpu->psGBVIData->_pSysData[ii].y,
                         gpu->psGBVIData->_pSysData[ii].z,

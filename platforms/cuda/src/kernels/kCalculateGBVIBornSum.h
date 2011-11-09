@@ -49,16 +49,14 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
 {
     extern __shared__ volatile Atom sA[];
 
-    unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos          = warp*numWorkUnits/totalWarps;
-    unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int totalWarps       = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int warp             = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int numWorkUnits     = cSim.pInteractionCount[0];
+    unsigned int pos              = warp*numWorkUnits/totalWarps;
+    unsigned int end              = (warp+1)*numWorkUnits/totalWarps;
 
-//    int end = workUnits / gridDim.x;
-//    int pos = end - (threadIdx.x >> GRIDBITS) - 1;
 #ifdef USE_CUTOFF
-    volatile float* tempBuffer = (volatile float*) &sA[cSim.nonbond_threads_per_block];
+    volatile float* tempBuffer    = (volatile float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
     while ( pos < end )
@@ -76,10 +74,10 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
 
         // forces tgx into interval [0,31] 
         // forces tbx 0 
-        unsigned int tgx = threadIdx.x & (GRID - 1);
-        unsigned int tbx = threadIdx.x - tgx;
-        unsigned int tj  = tgx;
-        volatile Atom* psA = &sA[tbx];
+        unsigned int tgx     = threadIdx.x & (GRID - 1);
+        unsigned int tbx     = threadIdx.x - tgx;
+        unsigned int tj      = tgx;
+        volatile Atom* psA   = &sA[tbx];
 
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {
@@ -94,28 +92,25 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
             sA[threadIdx.x].sr                      = ar.y;
             apos.w                                  = 0.0f;
 
-            for (unsigned int j             = 0; j < GRID; j++)
+            for (unsigned int j = 0; j < GRID; j++)
             {
                 dx                                  = psA[j].x - apos.x;
                 dy                                  = psA[j].y - apos.y;
                 dz                                  = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                                 -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                                 -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                                 -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
-                r2                      = dx * dx + dy * dy + dz * dz;
-#if defined USE_PERIODIC
-                if (i < cSim.atoms && x+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (r2 < cSim.nonbondedCutoffSqr)
+                r2                                  = dx * dx + dy * dy + dz * dz;
+#if defined USE_CUTOFF
+                if (i < cSim.atoms && x+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr && j != tgx)
+#else
+                if (i < cSim.atoms && x+j < cSim.atoms && j != tgx )
 #endif
                 {
                     r                       = sqrt(r2);
-                    if ((j != tgx) )
-                    {
-                        apos.w             += getGBVI_Volume( r, ar.x, psA[j].sr );
-                    }
+                    apos.w                 += getGBVI_Volume( r, ar.x, psA[j].sr );
                 }
             }
 
@@ -127,27 +122,30 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
             unsigned int offset = x + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pBornSum[offset] = apos.w;
 #endif
-        }
-        else        // 100% utilization
-        {
+        } else {
+
             // Read fixed atom data into registers and GRF
             unsigned int j                              = y + tgx;
             unsigned int i                              = x + tgx;
 
             float4 temp                                 = cSim.pPosq[j];
             float4 temp1                                = cSim.pGBVIData[j];
+
             float4 apos                                 = cSim.pPosq[i];        // Local atom x, y, z, sum
             float4 ar                                   = cSim.pGBVIData[i];    // Local atom vr, sr
+
             sA[threadIdx.x].x                           = temp.x;
             sA[threadIdx.x].y                           = temp.y;
             sA[threadIdx.x].z                           = temp.z;
+
             sA[threadIdx.x].r                           = temp1.x;
             sA[threadIdx.x].sr                          = temp1.y;
-            sA[threadIdx.x].sum             = apos.w    = 0.0f;
+
+            sA[threadIdx.x].sum                         = 0.0f;
+            apos.w                                      = 0.0f;
 
 #ifdef USE_CUTOFF
-            //unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*workUnits)/gridDim.x];
-            unsigned int flags = cSim.pInteractionFlag[pos];
+            unsigned int flags                          = cSim.pInteractionFlag[pos];
             if (flags == 0)
             {
                 // No interactions in this block.
@@ -163,22 +161,19 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                     dy                      = psA[tj].y - apos.y;
                     dz                      = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                     if (i < cSim.atoms && y+tj < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                    if (i < cSim.atoms && y+tj < cSim.atoms )
 #endif
+
                     {
                         r                       = sqrt(r2);
-
-                        // psA[tj].sr = Sj
-                        // ar.x       = Ri
-
                         apos.w                 += getGBVI_Volume( r, ar.x,      psA[tj].sr );
                         psA[tj].sum            += getGBVI_Volume( r, psA[tj].r, ar.y );
                     }
@@ -199,19 +194,20 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
+#ifdef USE_CUTOFF
                         if (i < cSim.atoms && y+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                        if (r2 < cSim.nonbondedCutoffSqr)
+#else
+                        if (i < cSim.atoms && y+j < cSim.atoms)
 #endif
                         {
                             r                       = sqrt(r2);
-                            tempBuffer[threadIdx.x] = getGBVI_Volume( r, psA[tj].r, ar.y );
+                            apos.w                 += getGBVI_Volume( r, ar.x,      psA[j].sr );
+                            tempBuffer[threadIdx.x] = getGBVI_Volume( r, psA[j].r, ar.y );
                         }
 
                         // Sum the terms.

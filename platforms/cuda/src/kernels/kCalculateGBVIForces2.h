@@ -94,9 +94,9 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                 float dy                = psA[j].y - apos.y;
                 float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 float r2                = dx * dx + dy * dy + dz * dz;
                 float r                 = sqrt(r2);
@@ -104,18 +104,15 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                 // Atom I Born forces and sum
                 float dE                = getGBVI_dE2( r, ar.x, psA[j].sr, fb );
                
-#if defined USE_PERIODIC
-                if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                {
-                    dE              = 0.0f;
-                }
-#endif
 #if defined USE_CUTOFF
-                if (r2 > cSim.nonbondedCutoffSqr)
+                if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                if (i >= cSim.atoms || x+j >= cSim.atoms )
+#endif
                 {
                     dE              = 0.0f;
                 }
-#endif
+
                 float d             = dx * dE;
                 af.x               -= d;
                 psA[j].fx          += d;
@@ -139,9 +136,9 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
             of.y                       += af.y + sA[threadIdx.x].fy;
             of.z                       += af.z + sA[threadIdx.x].fz;
             cSim.pForce4[offset]       = of;
-        }
-        else
-        {
+
+        } else {
+
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
@@ -157,11 +154,12 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                 sA[threadIdx.x].sr          = temp1.y;
             }
 #ifdef USE_CUTOFF
-            unsigned int flags = cSim.pInteractionFlag[pos];
+            unsigned int flags              = cSim.pInteractionFlag[pos];
             if (flags == 0)
             {
                 // No interactions in this block.
             }
+            //else if (flags)
             else if (flags == 0xFFFFFFFF)
 #endif
             {
@@ -173,27 +171,23 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float r                 = sqrt(r2);
 
                     float dE                = getGBVI_dE2( r, ar.x, psA[tj].sr, fb );
 
-#if defined USE_PERIODIC
-                    if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dE                  = 0.0f;
-                    }
-#endif
 #if defined USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms )
+#endif
                     {
                         dE                  = 0.0f;
                     }
-#endif
 
                     float d                 = dx * dE;
                     af.x                   -= d;
@@ -208,18 +202,15 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                     // Atom J Born sum term
                     dE                      = getGBVI_dE2( r, psA[tj].r, ar.y, psA[tj].fb );
 
-#ifdef USE_PERIODIC
-                    if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dE                  = 0.0f;
-                    }
-#endif
 #if defined USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms )
+#endif
+                    { 
                         dE                  = 0.0f;
                     }
-#endif
+
                     dx                     *= dE;
                     dy                     *= dE;
                     dz                     *= dE;
@@ -245,9 +236,9 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                         float dy                = psA[j].y - apos.y;
                         float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         float r2                = dx * dx + dy * dy + dz * dz;
                         float r                 = sqrt(r2);
@@ -255,18 +246,14 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
                         // Interleaved Atom I and J Born Forces and sum components
                         float dE                = getGBVI_dE2( r, ar.x, psA[j].sr, fb );
 
-#if defined USE_PERIODIC
-                        if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                        {
-                            dE                  = 0.0f;
-                        }
-#endif
 #if defined USE_CUTOFF
-                        if (r2 > cSim.nonbondedCutoffSqr)
+                        if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                        if (i >= cSim.atoms || y+j >= cSim.atoms )
+#endif
                         {
                             dE                  = 0.0f;
                         }
-#endif
 
                         float d                 = dx * dE;
                         af.x                   -= d;
@@ -280,19 +267,15 @@ METHOD_NAME(kCalculateGBVI, Forces2_kernel)(unsigned int* workUnit )
 
                         // Atom J Born sum term
                         dE                      = getGBVI_dE2( r, psA[j].r, ar.y, psA[j].fb );
-
-#ifdef USE_PERIODIC
-                        if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-                        {
-                            dE                  = 0.0f;
-                        }
-#endif
 #if defined USE_CUTOFF
-                        if (r2 > cSim.nonbondedCutoffSqr)
+                        if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+#else
+                        if (i >= cSim.atoms || y+j >= cSim.atoms )
+#endif
                         {
                             dE                  = 0.0f;
                         }
-#endif
+
                         dx                     *= dE;
                         dy                     *= dE;
                         dz                     *= dE;
