@@ -90,7 +90,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                 float ratio = LOG(u_ij * RECIP(l_ij));
                 bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                  (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeInteraction);
-                bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeInteraction && params1.x < params2.x-r);
+                bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeInteraction && params1.x < params2.y-r);
             }
 
             // Sum the forces and write results.
@@ -153,7 +153,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                     unsigned int includeTerm = (includeInteraction && params1.x < rScaledRadiusJ);
                     bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                      (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeTerm);
-                    bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeTerm && params1.x < params2.x-r);
+                    bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeTerm && params1.x < params2.y-r);
                 }
                 float rScaledRadiusI = r+params1.y;
                 {
@@ -164,7 +164,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                     float ratio = LOG(u_ij * RECIP(l_ij));
                     float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                      (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
-                    term += select(0.0f, 2.0f*(RECIP(params2.x)-l_ij), params2.x < params1.x-r);
+                    term += select(0.0f, 2.0f*(RECIP(params2.x)-l_ij), params2.x < params1.y-r);
                     localData[baseLocalAtom+tj+forceBufferOffset].bornSum += select(0.0f, term, includeInteraction && params2.x < rScaledRadiusI);
                 }
                 barrier(CLK_LOCAL_MEM_FENCE);
