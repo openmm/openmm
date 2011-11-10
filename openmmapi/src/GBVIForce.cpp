@@ -38,7 +38,7 @@
 using namespace OpenMM;
 
 GBVIForce::GBVIForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0),
-                         scalingMethod(NoScaling), quinticLowerLimitFactor(0.8), quinticUpperBornRadiusLimit(5.0) {
+                         scalingMethod(QuinticSpline), quinticLowerLimitFactor(0.8), quinticUpperBornRadiusLimit(5.0) {
 }
 
 int GBVIForce::addParticle(double charge, double radius, double gamma) {
