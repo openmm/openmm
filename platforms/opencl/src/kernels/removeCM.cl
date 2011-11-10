@@ -53,10 +53,10 @@ __kernel void calcCenterOfMassMomentum(int numAtoms, __global const float4* rest
  * Remove center of mass motion.
  */
 
-__kernel void removeCenterOfMassMomentum(int numAtoms, __global float4* restrict velm, __global const float4* restrict cmMomentum, __local volatile float4* restrict temp) {
+__kernel void removeCenterOfMassMomentum(unsigned int numAtoms, __global float4* restrict velm, __global const float4* restrict cmMomentum, __local volatile float4* restrict temp) {
     // First sum all of the momenta that were calculated by individual groups.
 
-    int index = get_local_id(0);
+    unsigned int index = get_local_id(0);
     float4 cm = 0.0f;
     while (index < get_num_groups(0)) {
         cm += cmMomentum[index];

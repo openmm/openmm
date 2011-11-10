@@ -123,15 +123,14 @@ void testParallelComputation() {
     for (int i = 0; i < numParticles; i++)
         positions[i] = Vec3(i, i%2, 0);
     VerletIntegrator integrator1(0.01);
-    map<string, string> props1;
-    props1[OpenCLPlatform::OpenCLDeviceIndex()] = "0";
-    Context context1(system, integrator1, platform, props1);
+    Context context1(system, integrator1, platform);
     context1.setPositions(positions);
     State state1 = context1.getState(State::Forces | State::Energy);
     VerletIntegrator integrator2(0.01);
-    map<string, string> props2;
-    props2[OpenCLPlatform::OpenCLDeviceIndex()] = "0,0";
-    Context context2(system, integrator2, platform, props2);
+    string deviceIndex = platform.getPropertyValue(context1, OpenCLPlatform::OpenCLDeviceIndex());
+    map<string, string> props;
+    props[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex+","+deviceIndex;
+    Context context2(system, integrator2, platform, props);
     context2.setPositions(positions);
     State state2 = context2.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);

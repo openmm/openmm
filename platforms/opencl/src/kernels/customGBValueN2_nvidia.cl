@@ -72,7 +72,7 @@ __kernel void computeN2Value(__global const float4* restrict posq, __local float
                 exclusionRange[2*localGroupIndex+tgx] = exclusionRowIndices[x+tgx];
             if (tgx == 0)
                 exclusionIndex[localGroupIndex] = -1;
-            for (int i = exclusionRange[2*localGroupIndex]+tgx; i < exclusionRange[2*localGroupIndex+1]; i += TILE_SIZE)
+            for (unsigned int i = exclusionRange[2*localGroupIndex]+tgx; i < exclusionRange[2*localGroupIndex+1]; i += TILE_SIZE)
                 if (exclusionIndices[i] == y)
                     exclusionIndex[localGroupIndex] = i*TILE_SIZE;
             bool hasExclusions = (exclusionIndex[localGroupIndex] > -1);

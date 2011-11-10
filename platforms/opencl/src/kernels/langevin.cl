@@ -75,7 +75,7 @@ __kernel void selectLangevinStepSize(float maxStepSize, float errorTol, float ta
 
     // Sum the errors from all threads.
 
-    for (int offset = 1; offset < get_local_size(0); offset *= 2) {
+    for (unsigned int offset = 1; offset < get_local_size(0); offset *= 2) {
         if (get_local_id(0)+offset < get_local_size(0) && (get_local_id(0)&(2*offset-1)) == 0)
             error[get_local_id(0)] += error[get_local_id(0)+offset];
         barrier(CLK_LOCAL_MEM_FENCE);

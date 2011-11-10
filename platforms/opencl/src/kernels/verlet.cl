@@ -61,7 +61,7 @@ __kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorT
     // Calculate the error.
 
     float err = 0.0f;
-    unsigned int index = get_local_id(0);
+    int index = get_local_id(0);
     while (index < numAtoms) {
         float4 f = force[index];
         float invMass = velm[index].w;
@@ -73,7 +73,7 @@ __kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorT
 
     // Sum the errors from all threads.
 
-    for (int offset = 1; offset < get_local_size(0); offset *= 2) {
+    for (unsigned int offset = 1; offset < get_local_size(0); offset *= 2) {
         if (get_local_id(0)+offset < get_local_size(0) && (get_local_id(0)&(2*offset-1)) == 0)
             error[get_local_id(0)] += error[get_local_id(0)+offset];
         barrier(CLK_LOCAL_MEM_FENCE);

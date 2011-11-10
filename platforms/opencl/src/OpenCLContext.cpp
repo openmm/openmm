@@ -57,6 +57,9 @@ const int OpenCLContext::ThreadBlockSize = 64;
 const int OpenCLContext::TileSize = 32;
 
 static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_info, size_t cb, void* user_data) {
+    string skip = "OpenCL Build Warning : Compiler build log:";
+    if (strncmp(errinfo, skip.c_str(), skip.length()) == 0)
+        return; // OS X Lion insists on calling this for every build warning, even though they aren't errors.
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
