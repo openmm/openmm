@@ -59,10 +59,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
-#include <iostream>
 #include <cstdio>
-#include <vector>
 #include <typeinfo>
 
 extern "C" void registerFreeEnergyCudaKernelFactories();
@@ -1322,29 +1319,27 @@ static NonbondedForce* copyNonbondedForce( const NonbondedForce& nonbondedForce 
  *
  */
  
-static System* copySystem( const System& inputSystem ){
-
-    System* systemCopy = new System();
+static void copySystem( const System& inputSystem, System& systemCopy ){
 
     for( unsigned int ii = 0; ii < inputSystem.getNumParticles(); ii++ ){
-        systemCopy->addParticle( inputSystem.getParticleMass( static_cast<int>(ii) ) );
+        systemCopy.addParticle( inputSystem.getParticleMass( static_cast<int>(ii) ) );
     }
 
     Vec3 a;
     Vec3 b;
     Vec3 c;
     inputSystem.getDefaultPeriodicBoxVectors( a, b, c );
-    systemCopy->setDefaultPeriodicBoxVectors( a, b, c );
+    systemCopy.setDefaultPeriodicBoxVectors( a, b, c );
 
     for( unsigned int ii = 0; ii < inputSystem.getNumConstraints(); ii++ ){
         int index;
         int particle1, particle2;
         double distance;
         inputSystem.getConstraintParameters( ii, particle1, particle2, distance);
-        systemCopy->addConstraint( particle1, particle2, distance);
+        systemCopy.addConstraint( particle1, particle2, distance);
     }
 
-    return systemCopy;
+    return;
 }
 
 /** 
@@ -1809,8 +1804,9 @@ void runSystemComparisonTest( System& system1, System& system2,
         (void) fprintf( log, "System1: particles=%d forces=%d    System2: particles=%d forces=%d\n",
                         system1.getNumParticles(), system1.getNumForces(),
                         system2.getNumParticles(), system2.getNumForces() );
-        (void) fprintf( log, "Positions=%u\n",
-                        static_cast<unsigned int>(positions.size()) );
+        (void) fprintf( log, "Positions=%u\n", static_cast<unsigned int>(positions.size()) );
+        (void) fprintf( log, "Platform1=%s Platform2=%s\n", platform1.c_str(), platform2.c_str() );
+        (void) fprintf( log, "relativeTolerance=%8.2e applyAssert=%d\n", relativeTolerance, applyAssert );
 
         MapStringInt stringForceVector1;
         MapStringInt stringForceVector2;
@@ -1836,7 +1832,7 @@ void runSystemComparisonTest( System& system1, System& system2,
  
     if( system1.getNumParticles() != static_cast<int>(positions.size()) ){
         std::stringstream msg;
-        msg << "Number of partciles for system des not equal size of position array: " << system1.getNumParticles() << " != " << positions.size();
+        msg << "Number of particles for system does not equal size of position array: " << system1.getNumParticles() << " != " << positions.size();
         throw OpenMMException( msg.str() );
     }
  
@@ -1844,7 +1840,7 @@ void runSystemComparisonTest( System& system1, System& system2,
     context1.setPositions(positions);
     State state1 = context1.getState(State::Forces | State::Energy);
 
-    Context context2( system2, integrator2, Platform::getPlatformByName( "Reference"));
+    Context context2( system2, integrator2, Platform::getPlatformByName( platform2 ));
     context2.setPositions(positions);
 
     State state2 = context2.getState(State::Forces | State::Energy);

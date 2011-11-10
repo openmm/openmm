@@ -221,7 +221,7 @@ void CpuObcSoftcore::computeBornRadii( const vector<RealVec>& atomCoordinates,  
   
         // OBC-specific code (Eqs. 6-8 in paper)
  
-        sum                  *= nonPolarScaleFactors[atomI]*half*offsetRadiusI;
+        sum                  *= half*offsetRadiusI;
         RealOpenMM sum2       = sum*sum;
         RealOpenMM sum3       = sum*sum2;
         RealOpenMM tanhSum    = TANH( alphaObc*sum - betaObc*sum2 + gammaObc*sum3 );
@@ -486,7 +486,7 @@ RealOpenMM CpuObcSoftcore::computeBornEnergyForces( vector<RealVec>& atomCoordin
                 RealOpenMM r2Inverse     = rInverse*rInverse;
 
                 RealOpenMM t3            = eighth*(one + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + fourth*LN( u_ij/l_ij )*r2Inverse;
-                           t3           *= nonPolarScaleFactors[atomI]*nonPolarScaleFactors[atomJ];
+                           t3           *= nonPolarScaleFactors[atomJ];
 
                 RealOpenMM de            = bornForces[atomI]*t3*rInverse;
 

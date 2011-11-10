@@ -41,11 +41,7 @@ __launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
-#ifdef DEBUG
-void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2)
-#else
 void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUnit)
-#endif
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
@@ -135,32 +131,6 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                             term += 2.0f * ((1.0f / ar.x) - l_ij);
                         }
                         apos.w += psA[j].polarScaleData*term;
-#ifdef DEBUG
-int jIdx = j;
-if( i == TARGET ){
-
-int tjj     = y+jIdx;
-pdE1[tjj].x = term;
-pdE1[tjj].y = r;
-pdE1[tjj].z = ar.x;
-pdE1[tjj].w = 1.0f;
-
-pdE2[tjj].x = r;
-pdE2[tjj].y = l_ij;
-pdE2[tjj].z = rj;
-pdE2[tjj].w = 1.0f;
-}
-/*
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE2[tjj].x = sum;
-pdE2[tjj].y = psA[jIdx].polarScaleData;
-pdE2[tjj].z = ar.x;
-pdE2[tjj].w = -1.0f;
-} */
-#endif
-
-
                     }
                 }
             }
@@ -254,37 +224,6 @@ pdE2[tjj].w = -1.0f;
                             }
                             apos.w        += (scale*term);
 
-#ifdef DEBUG
-int jIdx = tj;
-if( i == TARGET ){
-
-int tjj     = y+jIdx;
-pdE1[tjj].x = term;
-pdE1[tjj].y = r;
-pdE1[tjj].z = ar.x;
-pdE1[tjj].w = 2.0f;
-/*
-pdE2[tjj].x = r;
-pdE2[tjj].y = l_ij;
-pdE2[tjj].z = rj;
-pdE2[tjj].w = 2.0f;
-*/
-}
-
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-/*
-pdE1[tjj].x = term;
-pdE1[tjj].y = r;
-pdE1[tjj].z = ar.x;
-pdE1[tjj].w = -2.0f;
-*/
-pdE2[tjj].x = term;
-pdE2[tjj].y = r;
-pdE2[tjj].z = ar.x;
-pdE2[tjj].w = -2.0f;
-}
-#endif
                         }
                         float rScaledRadiusI    = r + ar.y;
                         if (psA[tj].r < rScaledRadiusI)
@@ -307,25 +246,6 @@ pdE2[tjj].w = -2.0f;
                             }
                             psA[tj].sum    += polarScaleDataI*term;
 
-#ifdef DEBUG
-int jIdx = tj;
-if( i == TARGET ){
-
-int tjj     = y+jIdx;
-pdE1[tjj].x = term;
-pdE1[tjj].y = r;
-pdE1[tjj].z = ar.x;
-pdE1[tjj].w = 3.0f;
-}
-
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE2[tjj].x = term;
-pdE2[tjj].y = r;
-pdE2[tjj].z = ar.x;
-pdE2[tjj].w = -3.0f;
-}
-#endif
                         }
                     }
                     tj = (tj - 1) & (GRID - 1);

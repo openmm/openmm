@@ -117,9 +117,6 @@ void kCalculateCDLJSoftcoreForces( freeEnergyGpuContext freeEnergyGpu )
 {
 
     gpuContext gpu = freeEnergyGpu->gpuContext;
-    // (void) fprintf( stderr,"kCalculateCDLJCutoffForces %d warp=%u nonbond_blocks=%u nonbond_threads_per_block=%u rfK=%15.7e rfC=%15.7e\n", freeEnergyGpu->freeEnergySim.nonbondedMethod,
-    //                 gpu->bOutputBufferPerWarp, gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.reactionFieldK, gpu->sim.reactionFieldC); fflush( stderr );
-
     switch (freeEnergyGpu->freeEnergySim.nonbondedMethod)
     {
         case FREE_ENERGY_NO_CUTOFF:

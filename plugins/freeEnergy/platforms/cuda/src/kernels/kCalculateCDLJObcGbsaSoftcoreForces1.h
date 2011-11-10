@@ -36,9 +36,6 @@
 #include "kSoftcoreLJ.h"
 #endif
 
-#undef TARGET
-#define TARGET 1926
-
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
@@ -57,15 +54,12 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
     unsigned int totalWarps        = gridDim.x*blockDim.x/GRID;
     unsigned int warp              = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
 
-    //unsigned int totalWarps        = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
-    //unsigned int warp              = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits      = cSim.pInteractionCount[0];
     unsigned int pos               = warp*numWorkUnits/totalWarps;
     unsigned int end               = (warp+1)*numWorkUnits/totalWarps;
     float CDLJObcGbsa_energy;
     float energy                   = 0.0f;
 #ifdef USE_CUTOFF
-    //float* tempBuffer              = (float*) &sA[cSim.nonbond_threads_per_block];
     float* tempBuffer              = (float*) &sA[blockDim.x];
 #endif
 
@@ -171,24 +165,6 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                         dGpol_dalpha2_ij    = 0.0f;
                     }
                     af.w                   += dGpol_dalpha2_ij * psA[j].br;
-
-
-#ifdef DEBUG
-int jIdx = j;
-if( i == TARGET ){
-int tjj     = y+jIdx;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = 1.0f;
-}
-
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = -1.0f;
-}
-#endif
                     energy                 += 0.5f*CDLJObcGbsa_energy;
 
                     // Add Forces
@@ -277,22 +253,6 @@ pdE1[tjj].w = -1.0f;
 		                  CDLJObcGbsa_energy = 0.0f;
                         dGpol_dalpha2_ij   = 0.0f;
                     }
-
-#ifdef DEBUG
-int jIdx    = j;
-if( i == TARGET ){
-int tjj     =  (y+jIdx);
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = 2.0f;
-}
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = -2.0f;
-}
-#endif
 
                     af.w                  += dGpol_dalpha2_ij * psA[j].br;
                     energy                += 0.5f*CDLJObcGbsa_energy;
@@ -428,26 +388,6 @@ pdE1[tjj].w = -2.0f;
                         af.w                   += dGpol_dalpha2_ij * psA[tj].br;
                         energy                 += CDLJObcGbsa_energy;
 
-
-
-#ifdef DEBUG
-int jIdx = tj;
-if( i == TARGET ){
-int tjj     = y+jIdx;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[jIdx].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = 3.0f;
-}
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE1[tjj].x = dGpol_dalpha2_ij * br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = -3.0f;
-}
-#endif
-
-
-
                         // Add forces
 
                         dx                     *= dEdR;
@@ -544,24 +484,6 @@ pdE1[tjj].w = -3.0f;
                                 tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
                             if (tgx == 0)
                                 psA[j].fb += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
-
-#ifdef DEBUG
-int jIdx = j;
-if( i == TARGET ){
-int tjj     = y+jIdx;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[j].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = 4.0f;
-}
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE1[tjj].x = tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].w = -4.0f;
-} 
-#endif
-
-
 
                             energy                 += CDLJObcGbsa_energy;
 
@@ -677,26 +599,6 @@ pdE1[tjj].w = -4.0f;
 			               CDLJObcGbsa_energy = 0.0f;
                         dGpol_dalpha2_ij   = 0.0f;
                     }
-
-#ifdef DEBUG
-int jIdx = tj;
-if( i == TARGET ){
-int tjj     = y+jIdx;
-pdE1[tjj].x = dGpol_dalpha2_ij * psA[tj].br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = dGpol_dalpha2_ij;
-pdE1[tjj].w = 6.0f;
-}
-if( (y+jIdx) == TARGET ){
-int tjj     = i;
-pdE1[tjj].x = dGpol_dalpha2_ij * br;
-pdE1[tjj].y = sqrt(r2);
-pdE1[tjj].z = dGpol_dalpha2_ij;
-pdE1[tjj].w = -6.0f;
-} 
-#endif
-
-
 
                     af.w                   += dGpol_dalpha2_ij * psA[tj].br;
                     psA[tj].fb             += dGpol_dalpha2_ij * br;

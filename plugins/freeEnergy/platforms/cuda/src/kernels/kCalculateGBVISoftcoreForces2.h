@@ -47,18 +47,14 @@ __launch_bounds__(G8X_BORNFORCE2_THREADS_PER_BLOCK, 1)
 #endif
 void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit )
 {
-//METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit, float4* pdE1, float4* pdE2 )
     extern __shared__ Atom sA[];
     unsigned int totalWarps   = gridDim.x*blockDim.x/GRID;
     unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
 
-    //unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
-    //unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos          = warp*numWorkUnits/totalWarps;
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    //float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
     float3* tempBuffer        = (float3*) &sA[blockDim.x];
 #endif
 
@@ -126,19 +122,6 @@ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit 
                     dE              = 0.0f;
                 }
 
-/*
-if( i == TARGET ){
-    pdE1[x+j].x = dE;
-    pdE1[x+j].y = psA[j].bornRadiusScaleFactor;
-    pdE1[x+j].z = r;
-    pdE1[x+j].w = dE1;
-}
-if( (x+j) == TARGET ){
-    pdE2[i].x = dE;
-    pdE2[i].y = psA[j].bornRadiusScaleFactor;
-    pdE2[i].z = r;
-    pdE2[i].w = psA[j].sr-ar.x;
-}*/
                 float d             = dx * dE;
                 af.x               -= d;
                 psA[j].fx          += d;

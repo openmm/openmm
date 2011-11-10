@@ -44,14 +44,10 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
     unsigned int totalWarps   = gridDim.x*blockDim.x/GRID;
     unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
 
-    //unsigned int totalWarps   = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
-    //unsigned int warp         = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos          = warp*numWorkUnits/totalWarps;
     unsigned int end          = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    //float3* tempBuffer        = (float3*) &sA[cSim.bornForce2_threads_per_block];
     float3* tempBuffer        = (float3*) &sA[blockDim.x];
 #endif
 
@@ -124,7 +120,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
                 // Born Forces term
                 float term              =  0.125f * (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3 +
                                            0.250f * t1 * r2Inverse;
-                term                   *= psA[j].npScale*nonPolarScaleDataI;
+                term                   *= psA[j].npScale;
                 float dE                = fb * term;
 
 #if defined USE_CUTOFF
@@ -231,7 +227,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
                     float term              =  0.125f *
                                               (1.000f + psA[tj].sr * psA[tj].sr * r2Inverse) * t3J +
                                                0.250f * t1J * r2Inverse;
-                    term                   *= psA[tj].npScale*nonPolarScaleDataI;
+                    term                   *= psA[tj].npScale;
                     float dE                = fb * term;
 
 #if defined USE_CUTOFF
@@ -257,7 +253,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
                     term                    =  0.125f *
                                               (1.000f + sr2 * r2Inverse) * t3I +
                                                0.250f * t1I * r2Inverse;
-                    term                   *= psA[tj].npScale*nonPolarScaleDataI;
+                    term                   *= nonPolarScaleDataI;
                     dE                      = psA[tj].fb * term;
 
                     float rj = psA[tj].r;
@@ -293,11 +289,11 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
                         float dx                = psA[j].x - apos.x;
                         float dy                = psA[j].y - apos.y;
                         float dz                = psA[j].z - apos.z;
-    #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
-    #endif
+#ifdef USE_PERIODIC
+                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
                         float r2                = dx * dx + dy * dy + dz * dz;
                         float r                 = sqrt(r2);
 
@@ -327,16 +323,16 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
                         float term              =  0.125f *
                                                   (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3J +
                                                    0.250f * t1J * r2Inverse;
-                        term                   *= psA[j].npScale*nonPolarScaleDataI;
+                        term                   *= psA[j].npScale;
                         float dE                = fb * term;
 
-    #if defined USE_PERIODIC
+#if defined USE_PERIODIC
                         if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-    #elif defined USE_CUTOFF
+#elif defined USE_CUTOFF
                         if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
-    #else
+#else
                         if (a.x >= rScaledRadiusJ)
-    #endif
+#endif
                         {
                             dE                  = 0.0f;
                         }
@@ -355,17 +351,17 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUn
                         term                    =  0.125f *
                                                   (1.000f + sr2 * r2Inverse) * t3I +
                                                    0.250f * t1I * r2Inverse;
-                        term                   *= psA[j].npScale*nonPolarScaleDataI;
+                        term                   *= nonPolarScaleDataI;
                         dE                      = psA[j].fb * term;
 
                         float rj = psA[j].r;
-    #ifdef USE_PERIODIC
+#ifdef USE_PERIODIC
                         if (rj >= rScaledRadiusI || i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-    #elif defined USE_CUTOFF
+#elif defined USE_CUTOFF
                         if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
-    #else
+#else
                         if (rj >= rScaledRadiusI)
-    #endif
+#endif
                         {
                             dE                  = 0.0f;
                         }

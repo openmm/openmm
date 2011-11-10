@@ -38,6 +38,7 @@
 #include "ReferencePlatform.h"
 #include "openmm/GBVISoftcoreForce.h"
 #include "openmm/GBSAOBCForce.h"
+#include "openmm/CustomGBForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/NonbondedForce.h"
@@ -48,13 +49,18 @@
 #include "openmm/freeEnergyKernels.h"
 #include "ReferenceFreeEnergyKernelFactory.h"
 
-#include <iostream>
-#include <vector>
+#define USE_SOFTCORE
+
+#include "TestReferenceSoftcoreForce.h"
+
+#define OBC_FLAG  1
+#define GBVI_FLAG 2
+#define IMPLICIT_SOLVENT GBVI_FLAG
+
+#include <iomanip>
 
 using namespace OpenMM;
 using namespace std;
-
-const double TOL = 1e-5;
 
 #define PRINT_ON 0
 
@@ -399,13 +405,500 @@ void testEnergyEthaneSwitchingFunction( int useSwitchingFunction ) {
    }
 }
 
+// computes the scaled radii based on covalent info and atomic radii
+
+#ifdef USE_SOFTCORE
+static void findScaledRadii( const GBVISoftcoreForce& gbviForce, std::vector<double> & scaledRadii,  FILE* log ) {
+#else
+static void findScaledRadii( const GBVIForce& gbviForce, std::vector<double> & scaledRadii,  FILE* log) {
+#endif
+
+    int     numberOfParticles = gbviForce.getNumParticles();
+    int numberOfBonds         = gbviForce.getNumBonds();
+    FILE* errorLog            = log ? log : stderr;
+    
+    // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
+    // numberOfBonds < 1, indicating they were not set by the user
+    
+    if( numberOfBonds < 1 && numberOfParticles > 1 ){
+        (void) fprintf( errorLog, "Warning: no covalent bonds set for GB/VI force!\n" );
+    }
+    
+    std::vector< std::vector<int> > bondIndices( numberOfBonds );
+    std::vector<double> bondLengths( numberOfBonds );
+    std::vector<double> radii( numberOfParticles);
+
+    scaledRadii.resize(numberOfParticles);
+
+    for (int i = 0; i < numberOfParticles; i++) {
+        double charge, radius, gamma;
+#ifdef USE_SOFTCORE
+        double lambda;
+        gbviForce.getParticleParameters(i, charge, radius, gamma, lambda);
+#else
+        gbviForce.getParticleParameters(i, charge, radius, gamma);
+#endif
+        radii[i]       = radius;
+        scaledRadii[i] = radius;
+    }
+
+    for (int i = 0; i < numberOfBonds; i++) {
+        int particle1, particle2;
+        double bondLength;
+        gbviForce.getBondParameters(i, particle1, particle2, bondLength);
+        if (particle1 < 0 || particle1 >= gbviForce.getNumParticles()) {
+            std::stringstream msg;
+            msg << "GBVISoftcoreForce: Illegal particle index: ";
+            msg << particle1;
+            throw OpenMMException(msg.str());
+        }
+        if (particle2 < 0 || particle2 >= gbviForce.getNumParticles()) {
+            std::stringstream msg;
+            msg << "GBVISoftcoreForce: Illegal particle index: ";
+            msg << particle2;
+            throw OpenMMException(msg.str());
+        }
+        if (bondLength < 0 ) {
+            std::stringstream msg;
+            msg << "GBVISoftcoreForce: negative bondlength: ";
+            msg << bondLength;
+            throw OpenMMException(msg.str());
+        }
+        bondIndices[i].push_back( particle1 );
+        bondIndices[i].push_back( particle2 );
+        bondLengths[i] = bondLength;
+    }
+
+
+    // load 1-2 indicies for each atom 
+
+    std::vector<std::vector<int> > bonded12(numberOfParticles);
+
+    for (int i = 0; i < (int) bondIndices.size(); ++i) {
+        bonded12[bondIndices[i][0]].push_back(i);
+        bonded12[bondIndices[i][1]].push_back(i);
+    }
+
+    int errors = 0;
+
+    // compute scaled radii (Eq. 5 of Labute paper [JCC 29 p. 1693-1698 2008])
+
+    for (int j = 0; j < (int) bonded12.size(); ++j){
+
+        double radiusJ = radii[j];
+        double scaledRadiusJ;
+        if(  bonded12[j].size() == 0 ){
+            if( numberOfParticles > 1 ){
+                (void) fprintf( errorLog, "Warning GBVIForceImpl::findScaledRadii atom %d has no covalent bonds; using atomic radius=%.3f.\n", j, radiusJ );
+            }
+            scaledRadiusJ = radiusJ;
+//             errors++;
+        } else {
+
+            double rJ2    = radiusJ*radiusJ;
+    
+            // loop over bonded neighbors of atom j, applying Eq. 5 in Labute
+
+            scaledRadiusJ = 0.0;
+            for (int i = 0; i < (int) bonded12[j].size(); ++i){
+    
+               int index            = bonded12[j][i];
+               int bondedAtomIndex  = (j == bondIndices[index][0]) ? bondIndices[index][1] : bondIndices[index][0];
+              
+               double radiusI       = radii[bondedAtomIndex];
+               double rI2           = radiusI*radiusI;
+    
+               double a_ij          = (radiusI - bondLengths[index]);
+                      a_ij         *= a_ij;
+                      a_ij          = (rJ2 - a_ij)/(2.0*bondLengths[index]);
+    
+               double a_ji          = radiusJ - bondLengths[index];
+                      a_ji         *= a_ji;
+                      a_ji          = (rI2 - a_ji)/(2.0*bondLengths[index]);
+    
+               scaledRadiusJ       += a_ij*a_ij*(3.0*radiusI - a_ij) + a_ji*a_ji*( 3.0*radiusJ - a_ji );
+            }
+    
+            scaledRadiusJ  = (radiusJ*radiusJ*radiusJ) - 0.125*scaledRadiusJ; 
+            if( scaledRadiusJ > 0.0 ){
+                scaledRadiusJ  = 0.95*pow( scaledRadiusJ, (1.0/3.0) );
+            } else {
+                scaledRadiusJ  = 0.0;
+            }
+        }
+        if( log ){
+            //(void) fprintf( stderr, "scaledRadii %d %12.4f\n", j, scaledRadiusJ );
+        }
+        scaledRadii[j] = scaledRadiusJ;
+
+    }
+
+    // abort if errors
+
+    if( errors ){
+        throw OpenMMException("findScaledRadii errors -- aborting");
+    }
+
+    if( log ){
+        (void) fprintf( log, "                  R              q          gamma   scaled radii no. bnds\n" );
+        double totalQ = 0.0;
+        for( int i = 0; i < (int) scaledRadii.size(); i++ ){
+    
+            double charge;
+            double gamma;
+            double radiusI;
+         
+            gbviForce.getParticleParameters(i, charge, radiusI, gamma); 
+            totalQ += charge;
+            (void) fprintf( log, "%4d %14.5e %14.5e %14.5e %14.5e %d\n", i, radiusI, charge, gamma, scaledRadii[i], (int) bonded12[i].size() );
+        }
+        (void) fprintf( log, "Total charge=%e\n", totalQ );
+        (void) fflush( log );
+    }
+
+    return;
+
+}
+
+// load parameters from gbviForce to customGbviForce
+// findScaledRadii() is called to calculate the scaled radii (S)
+// S is derived quantity in GBVIForce, not a parameter is the case here
+
+#ifdef USE_SOFTCORE
+static void loadGbviParameters( const GBVISoftcoreForce& gbviSoftcoreForce, CustomGBForce& customGbviForce, FILE* log ) {
+    vector<double> params(5);
+    double lambda;
+#else
+static void loadGbviParameters( const GBVIForce& gbviSoftcoreForce, CustomGBForce& customGbviForce,  FILE* log ) {
+    vector<double> params(4);
+#endif
+
+    int numParticles = gbviSoftcoreForce.getNumParticles();
+
+    // get scaled radii
+
+    std::vector<double> scaledRadii( numParticles );
+    findScaledRadii( gbviSoftcoreForce, scaledRadii, log);
+
+    for( int ii = 0; ii < numParticles; ii++) {
+        double charge, radius, gamma;
+#ifdef USE_SOFTCORE
+        gbviSoftcoreForce.getParticleParameters(ii, charge, radius, gamma, lambda);
+        params[4] = lambda;
+#else
+        gbviSoftcoreForce.getParticleParameters(ii, charge, radius, gamma);
+#endif
+        params[0] = charge;
+        params[1] = radius;
+        params[2] = scaledRadii[ii];
+        params[3] = gamma;
+        customGbviForce.addParticle(params);
+    }
+
+}
+
+// create custom GB/VI force
+
+#ifdef USE_SOFTCORE
+static void createCustomGBVI( CustomGBForce& customGbviForce, const GBVISoftcoreForce& gbviSoftcoreForce, FILE* log ){
+#else
+static void createCustomGBVI( CustomGBForce& customGbviForce, const GBVIForce& gbviSoftcoreForce, FILE* log ){
+#endif
+
+    customGbviForce.setCutoffDistance( gbviSoftcoreForce.getCutoffDistance() );
+
+    customGbviForce.addPerParticleParameter("q");
+    customGbviForce.addPerParticleParameter("radius");
+    customGbviForce.addPerParticleParameter("scaleFactor"); // derived in GBVIForceImpl implmentation, but parameter here
+    customGbviForce.addPerParticleParameter("gamma");
+
+    customGbviForce.addGlobalParameter("solventDielectric", gbviSoftcoreForce.getSolventDielectric() );
+    customGbviForce.addGlobalParameter("soluteDielectric",  gbviSoftcoreForce.getSoluteDielectric() );
+
+#ifdef USE_SOFTCORE
+    customGbviForce.addPerParticleParameter("lambda");
+    customGbviForce.addComputedValue("V", "                lambda2*(uL - lL + factor3/(radius1*radius1*radius1));"
+                                      "uL                   = 1.5*x2uI*(0.25*rI-0.33333*xuI+0.125*(r2-S2)*rI*x2uI);"
+                                      "lL                   = 1.5*x2lI*(0.25*rI-0.33333*xlI+0.125*(r2-S2)*rI*x2lI);"
+                                      "x2lI                 = 1.0/(xl*xl);"
+                                      "xlI                  = 1.0/(xl);"
+                                      "xuI                  = 1.0/(xu);"
+                                      "x2uI                 = 1.0/(xu*xu);"
+                                      "xu                   = (r+scaleFactor2);"
+                                      "rI                   = 1.0/(r);"
+                                      "r2                   = (r*r);"
+                                      "xl                   = factor1*lMax + factor2*xuu + factor3*(r-scaleFactor2);"
+                                      "xuu                  = (r+scaleFactor2);"
+                                      "S2                   = (scaleFactor2*scaleFactor2);"
+                                      "factor1              = step(r-absRadiusScaleDiff);"
+                                      "absRadiusScaleDiff   = abs(radiusScaleDiff);"
+                                      "radiusScaleDiff      = (radius1-scaleFactor2);"
+                                      "factor2              = step(radius1-scaleFactor2-r);"
+                                      "factor3              = step(scaleFactor2-radius1-r);"
+                                      "lMax                 = max(radius1,r-scaleFactor2);"
+                                      , CustomGBForce::ParticlePairNoExclusions);
+
+    customGbviForce.addComputedValue("B", "(1.0/(radius*radius*radius)-V)^(-0.33333333)", CustomGBForce::SingleParticle);
+
+    // nonpolar term + polar self energy
+
+    customGbviForce.addEnergyTerm("(-138.935485*0.5*((1.0/soluteDielectric)-(1.0/solventDielectric))*q^2/B)-((1.0/soluteDielectric)-(1.0/solventDielectric))*((gamma*(radius/B)^3))", CustomGBForce::SingleParticle);
+
+    // polar pair energy
+
+    customGbviForce.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+                                   "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
+
+#else
+
+    customGbviForce.addComputedValue("V", "                uL - lL + factor3/(radius1*radius1*radius1);"
+                                      "uL                   = 1.5*x2uI*(0.25*rI-0.33333*xuI+0.125*(r2-S2)*rI*x2uI);"
+                                      "lL                   = 1.5*x2lI*(0.25*rI-0.33333*xlI+0.125*(r2-S2)*rI*x2lI);"
+                                      "x2lI                 = 1.0/(xl*xl);"
+                                      "xlI                  = 1.0/(xl);"
+                                      "xuI                  = 1.0/(xu);"
+                                      "x2uI                 = 1.0/(xu*xu);"
+                                      "xu                   = (r+scaleFactor2);"
+                                      "rI                   = 1.0/(r);"
+                                      "r2                   = (r*r);"
+                                      "xl                   = factor1*lMax + factor2*xuu + factor3*(r-scaleFactor2);"
+                                      "xuu                  = (r+scaleFactor2);"
+                                      "S2                   = (scaleFactor2*scaleFactor2);"
+                                      "factor1              = step(r-absRadiusScaleDiff);"
+                                      "absRadiusScaleDiff   = abs(radiusScaleDiff);"
+                                      "radiusScaleDiff      = (radius1-scaleFactor2);"
+                                      "factor2              = step(radius1-scaleFactor2-r);"
+                                      "factor3              = step(scaleFactor2-radius1-r);"
+                                      "lMax                 = max(radius1,r-scaleFactor2);"
+                                      , CustomGBForce::ParticlePairNoExclusions);
+
+    customGbviForce.addComputedValue("B", "(1.0/(radius*radius*radius)-V)^(-0.33333333)", CustomGBForce::SingleParticle);
+
+    // nonpolar term + polar self energy
+
+    customGbviForce.addEnergyTerm("(-138.935485*0.5*((1.0/soluteDielectric)-(1.0/solventDielectric))*q^2/B)-((1.0/soluteDielectric)-(1.0/solventDielectric))*((gamma*(radius/B)^3))", CustomGBForce::SingleParticle);
+
+    // polar pair energy
+
+    customGbviForce.addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+                                   "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
+
+#endif
+    // load energies
+
+    loadGbviParameters( gbviSoftcoreForce, customGbviForce, log );
+
+    return;
+}
+
+void testGBVISoftcore( MapStringToDouble inputArgumentMap, FILE* log ){
+
+    double lambda1                       = 1.0;
+    double lambda2                       = 1.0;
+    int nonbondedMethod                  = 0;
+    int numMolecules                     = 1;
+    int numParticlesPerMolecule          = 2;
+    int useQuinticSpline                 = 1;
+    int applyAssert                      = 1;
+    int positionPlacementMethod          = 0;
+    int serialize                        = 0;
+    double boxSize                       = 10.0;
+    double relativeTolerance             = 1.0e-04;
+
+    setDoubleFromMapStringToDouble( inputArgumentMap, "lambda1",                      lambda1 );
+    setDoubleFromMapStringToDouble( inputArgumentMap, "lambda2",                      lambda2 );
+    setDoubleFromMapStringToDouble( inputArgumentMap, "boxSize",                      boxSize );
+    double cutoffDistance                = boxSize*0.4;;
+    setDoubleFromMapStringToDouble( inputArgumentMap, "cutoffDistance",               cutoffDistance);
+    setDoubleFromMapStringToDouble( inputArgumentMap, "relativeTolerance",            relativeTolerance );
+
+    setIntFromMapStringToDouble(    inputArgumentMap, "positionPlacementMethod",      positionPlacementMethod ) ;
+    setIntFromMapStringToDouble(    inputArgumentMap, "nonbondedMethod",              nonbondedMethod );
+    setIntFromMapStringToDouble(    inputArgumentMap, "numMolecules",                 numMolecules );
+    setIntFromMapStringToDouble(    inputArgumentMap, "numParticlesPerMolecule",      numParticlesPerMolecule );
+    setIntFromMapStringToDouble(    inputArgumentMap, "serialize",                    serialize );
+
+    int numParticles                     = numMolecules*numParticlesPerMolecule;
+    int includeGbvi                      = 1;
+    double reactionFieldDielectric       = 80.0;
+
+    if( log ){
+        double particleDensity = static_cast<double>(numParticles)/(boxSize*boxSize*boxSize);
+        double particleCube    = pow( particleDensity, (-1.0/3.0) );
+
+        (void) fprintf( log, "\n--------------------------------------------------------------------------------------\n" );
+        (void) fprintf( log, "Input arguments\n" );
+        (void) fflush( log );
+        (void) fprintf( log, "    includeGbvi                 %d\n", includeGbvi );
+        (void) fprintf( log, "    nonbondedMethod             %d\n", nonbondedMethod );
+        (void) fprintf( log, "    numParticles                %d\n", numParticles );
+        (void) fprintf( log, "    numMolecules                %d\n", numMolecules );
+        (void) fprintf( log, "    numParticlesPerMolecule     %d\n", numParticlesPerMolecule );
+        (void) fprintf( log, "    useQuinticSpline            %d\n", useQuinticSpline );
+        (void) fprintf( log, "    positionPlacementMethod     %d\n", positionPlacementMethod);
+
+#ifdef USE_SOFTCORE
+        (void) fprintf( log, "    lambda1                     %8.3f\n", lambda1 );
+        (void) fprintf( log, "    lambda2                     %8.3f\n", lambda2 );
+#endif
+        (void) fprintf( log, "    boxSize                     %8.3f\n", boxSize );
+        (void) fprintf( log, "    cutoffDistance              %8.3f\n", cutoffDistance );
+        (void) fprintf( log, "    reactionFieldDielectric     %8.3f\n", reactionFieldDielectric );
+        (void) fprintf( log, "    relativeTolerance           %8.1e\n", relativeTolerance );
+        (void) fprintf( log, "    particleDensity             %8.2e\n", particleDensity );
+        (void) fprintf( log, "    particleCube                %8.2e\n", particleCube );
+    }
+
+    // set positions
+
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    PositionGenerator positionGenerator( numMolecules, numParticlesPerMolecule, boxSize );
+    if( log ){
+        positionGenerator.setLog( log );
+    }
+    if( positionPlacementMethod == 1 ){
+        positionGenerator.setPositions( PositionGenerator::SimpleGrid, sfmt, positions );
+    } else {
+        positionGenerator.setBondDistance( 0.3 );
+        positionGenerator.setPositions( PositionGenerator::Random, sfmt, positions );
+    }
+
+    // create GBSAGBVISoftcoreForce and populate w/ parameters
+
+#ifdef USE_SOFTCORE
+    GBVISoftcoreForce* gbviSoftcoreForce = new GBVISoftcoreForce();
+#else
+    GBVIForce* gbviSoftcoreForce         = new GBVIForce();
+#endif
+    gbviSoftcoreForce->setSolventDielectric( 78.3 );
+    //gbviSoftcoreForce.setSolventDielectric( 1.0e+10 );
+    //gbviSoftcoreForce.setSolventDielectric( 1.0 );
+    gbviSoftcoreForce->setSoluteDielectric( 1.0 );
+    gbviSoftcoreForce->setCutoffDistance( cutoffDistance );
+
+    const int numberOfParameters             = 4;
+
+    const int ChargeIndex                    = 0;
+    const int SigmaIndex                     = 1;
+    const int GammaIndex                     = 2;
+    const int LambdaIndex                    = 3;
+
+    std::vector<double> parameterLowerBound( numberOfParameters, 0.0 );
+
+    double fixedCharge                       = 1.0;
+    parameterLowerBound[ChargeIndex]         = fixedCharge;  // charge
+    parameterLowerBound[SigmaIndex]          = 0.1;          // sigma
+    parameterLowerBound[GammaIndex]          = 0.1;          // gamma
+    parameterLowerBound[LambdaIndex]         = lambda1;      // lambda
+
+    std::vector<double> parameterUpperBound( parameterLowerBound );
+    parameterUpperBound[ChargeIndex]         = fixedCharge;  // charge
+    parameterUpperBound[SigmaIndex]          = 0.3;          // sigma
+    parameterUpperBound[GammaIndex]          = 40.0;         // gamma
+
+    std::vector<double> parameters( numberOfParameters );
+    double charge                            = fixedCharge;
+
+    for( int ii = 0; ii < numMolecules; ii++) {
+
+        charge       *= -1.0;
+
+        double lambda =  ii < (numMolecules/2) ? lambda1 : lambda2;
+        randomizeParameters( parameterLowerBound, parameterUpperBound, sfmt, parameters );
+
+#ifdef USE_SOFTCORE
+        gbviSoftcoreForce->addParticle( charge,  parameters[SigmaIndex],  parameters[GammaIndex],  lambda );
+#else
+        gbviSoftcoreForce->addParticle( charge,  parameters[SigmaIndex],  parameters[GammaIndex] );
+#endif
+
+        int baseParticleIndex = ii*numParticlesPerMolecule;
+        for( int jj = 1; jj < numParticlesPerMolecule; jj++) {
+
+            // alternate charges
+
+            charge *= -1.0;
+
+            randomizeParameters( parameterLowerBound, parameterUpperBound, sfmt, parameters );
+
+#ifdef USE_SOFTCORE
+            gbviSoftcoreForce->addParticle( charge,  parameters[SigmaIndex],  parameters[GammaIndex],  lambda );
+#else
+            gbviSoftcoreForce->addParticle( charge,  parameters[SigmaIndex],  parameters[GammaIndex] );
+#endif
+
+#if IMPLICIT_SOLVENT == GBVI_FLAG
+            double bondDistance  = positionGenerator.getDistance( baseParticleIndex, baseParticleIndex+jj, positions );
+            gbviSoftcoreForce->addBond( baseParticleIndex, baseParticleIndex+jj,  bondDistance );
+#endif
+        }
+
+        // alternate charge if numParticlesPerMolecule is odd
+
+        if( (numParticlesPerMolecule % 2) ){
+            charge *= -1.0;
+        }
+    }
+
+    // Create system
+
+    System standardSystem;
+    for (int i = 0; i < numParticles; i++) {
+        standardSystem.addParticle(1.0);
+    }
+    standardSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    standardSystem.addForce(gbviSoftcoreForce);
+
+    // copy system and forces
+
+    System systemCopy;
+    copySystem( standardSystem, systemCopy );
+    CustomGBForce* customGbviForce = new CustomGBForce();
+    createCustomGBVI( *customGbviForce, *gbviSoftcoreForce, log );
+    systemCopy.addForce(customGbviForce);
+
+    // perform comparison
+
+    std::stringstream idString;
+    idString << "Nb " << nonbondedMethod << " l2 " << std::fixed << setprecision(2) << lambda2;
+    runSystemComparisonTest( standardSystem, systemCopy, "Reference", "Reference", positions, inputArgumentMap, idString.str(), log );
+
+    // serialize
+
+    std::stringstream baseFileName;
+    if( serialize ){
+        baseFileName  << "_N"     << positions.size();
+        baseFileName  << "_Nb"    << nonbondedMethod;
+        serializeSystemAndPositions( standardSystem, positions, baseFileName.str(), log);
+    }
+
+}
+
 int main() {
     try {
-        testSingleParticle();
-        testEnergyEthaneSwitchingFunction( 0 );
-        testEnergyEthaneSwitchingFunction( 1 );
-    }
-    catch(const exception& e) {
+        //FILE* log = stderr;
+        FILE* log = NULL;
+        //testSingleParticle();
+        //testEnergyEthaneSwitchingFunction( 0 );
+        //testEnergyEthaneSwitchingFunction( 1 );
+
+        MapStringToDouble inputArgumentMap;
+        inputArgumentMap["lambda2"]                         = 0.5;
+        inputArgumentMap["nonbondedMethod"]                 = 0;
+        inputArgumentMap["numMolecules"]                    = 10;
+        inputArgumentMap["boxSize"]                         = 5.0;
+        inputArgumentMap["positionPlacementMethod"]         = 0;
+        inputArgumentMap["cutoffDistance"]                  = 0.3*inputArgumentMap["boxSize"];
+        //inputArgumentMap["cutoffDistance"]                  = 1.0;
+        inputArgumentMap["relativeTolerance"]               = 5.0e-04;
+        inputArgumentMap["serialize"]                       = 1;
+        //inputArgumentMap["numParticlesPerMolecule"]         = 2;
+
+        testGBVISoftcore( inputArgumentMap, log );
+    } catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
         return 1;
     }

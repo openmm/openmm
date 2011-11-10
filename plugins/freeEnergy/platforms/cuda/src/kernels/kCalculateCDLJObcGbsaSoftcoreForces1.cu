@@ -38,7 +38,6 @@
 #include <sstream>
 
 #define USE_SOFTCORE_LJ
-//#define DEBUG
 
 struct Atom {
     float x;
@@ -134,52 +133,11 @@ void kCalculateCDLJObcGbsaSoftcoreForces1( freeEnergyGpuContext freeEnergyGpu )
     }   
     threadsPerBlock = threadsPerBlockPerMethod[methodIndex];
 
-
-#ifdef DEBUG 
-fprintf( stderr, "kCalculateCDLJObcGbsaSoftcoreForces1 blks=%u thread/block=%u %u shMem=%u nbMethod==%d warp=%u\n",
-         gpu->sim.nonbond_blocks, threadsPerBlock, gpu->sim.nonbond_threads_per_block, sizeof(Atom)*threadsPerBlock,
-         freeEnergyGpu->freeEnergySim.nonbondedMethod, gpu->bOutputBufferPerWarp);
-
-int psize = gpu->sim.paddedNumberOfAtoms;
-CUDAStream<float4>* pdE1 = new CUDAStream<float4>( psize, 1, "pdE");
-CUDAStream<float4>* pdE2 = new CUDAStream<float4>( psize, 1, "pdE");
-float bF,bR;
-float bF1,b2;
-float ratio;
-float atomicRadii;
-showWorkUnitsFreeEnergy( freeEnergyGpu, 1 );
-for( int ii = 0; ii < psize; ii++ ){
-
-pdE1->_pSysData[ii].x = 0.0f;
-pdE1->_pSysData[ii].y = 0.001f;
-pdE1->_pSysData[ii].z = 0.001f;
-pdE1->_pSysData[ii].w = 0.001f;
-
-pdE2->_pSysData[ii].x = 0.0f;
-pdE2->_pSysData[ii].y = 0.001f;
-pdE2->_pSysData[ii].z = 0.001f;
-pdE2->_pSysData[ii].w = 0.001f;
-}
-pdE1->Upload();
-pdE2->Upload();
-#endif
-
     switch( freeEnergyGpu->freeEnergySim.nonbondedMethod )
     {
         case FREE_ENERGY_NO_CUTOFF:
 
             // use softcore LJ potential
-#ifdef DEBUG
-            (void) fprintf( stderr, "kCalculateCDLJObcGbsaSoftcoreForces1 ver=%u blks=%u threadsPerBlock=%u shMem=%u %u wrp=%u\n", gpu->sm_version,
-                            gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Atom)*threadsPerBlock, gpu->sharedMemoryPerBlock, gpu->bOutputBufferPerWarp ); fflush( stderr );
-
-            if (gpu->bOutputBufferPerWarp)
-                   kCalculateCDLJObcGbsaSoftcoreN2ByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                           sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit,pdE1->_pDevData, pdE2->_pDevData);
-            else
-                   kCalculateCDLJObcGbsaSoftcoreN2Forces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                           sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-#else   
             if (gpu->bOutputBufferPerWarp)
                    kCalculateCDLJObcGbsaSoftcoreN2ByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                            sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit );
@@ -187,33 +145,17 @@ pdE2->Upload();
                    kCalculateCDLJObcGbsaSoftcoreN2Forces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                            sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit );
    
-
-#endif
             LAUNCHERROR("kCalculateCDLJObcGbsaSoftcoreForces1");
             break;
 
         case FREE_ENERGY_CUTOFF:
 
-#ifdef DEBUG
-            (void) fprintf( stderr, "kCalculateCDLJObcGbsaSoftcoreCutoffForces1 %6d blks=%u nonbond_threads_per_block=%5u shMem=%5u\n",
-                            gpu->natoms, gpu->sim.nonbond_blocks, threadsPerBlock, (sizeof(Atom)+sizeof(float))*threadsPerBlock);
-            (void) fflush( stderr );
-
-
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJObcGbsaSoftcoreCutoffByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-            else
-                kCalculateCDLJObcGbsaSoftcoreCutoffForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-#else
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaSoftcoreCutoffByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit );
             else
                 kCalculateCDLJObcGbsaSoftcoreCutoffForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit );
-#endif
 
             LAUNCHERROR("kCalculateCDLJObcGbsaSoftcoreCutoffForces1");
 
@@ -221,85 +163,15 @@ pdE2->Upload();
 
         case FREE_ENERGY_PERIODIC:
 
-#ifdef DEBUG
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJObcGbsaSoftcorePeriodicByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-            else
-                kCalculateCDLJObcGbsaSoftcorePeriodicForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-
-#else
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaSoftcorePeriodicByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
             else
                 kCalculateCDLJObcGbsaSoftcorePeriodicForces1_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
-#endif
 
             LAUNCHERROR("kCalculateCDLJObcGbsaSoftcorePeriodicForces1");
             break;
     }
-
-
-
-#ifdef DEBUG 
-/*
-gpu->psBornForce->Download();
-freeEnergyGpu->psSwitchDerivative->Download();
-gpu->psBornRadii->Download();
-fprintf( stderr, "XX bR=%15.7e swd=%15.7e\n", gpu->psBornRadii->_pSysData[0], freeEnergyGpu->psSwitchDerivative->_pSysData[0] );
-for( int ii = 0; ii < gpu->sim.nonbondOutputBuffers; ii++ ){
-    fprintf( stderr, "strx %4d %15.7e %15.7e %15.7e %15.7e\n", ii, 
-             gpu->psBornForce->_pSysStream[ii][0],
-             gpu->psBornForce->_pSysStream[ii][1],
-             gpu->psBornForce->_pSysStream[ii][2],
-             gpu->psBornForce->_pSysStream[ii][3] );
-    if(  gpu->natoms > 1984 ){
-    int idx = 1983;
-    fprintf( stderr, "stry %4d %15.7e %15.7e %15.7e %15.7e %5d\n", ii, 
-             gpu->psBornForce->_pSysStream[ii][idx+0],
-             gpu->psBornForce->_pSysStream[ii][idx+1],
-             gpu->psBornForce->_pSysStream[ii][idx+2],
-             gpu->psBornForce->_pSysStream[ii][idx+3], idx );
-    }
-}
-int bufferI = 62;
-if(  bufferI < gpu->sim.nonbondOutputBuffers ){
-    fprintf( stderr, "BufferI %4d \n", bufferI );
-for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
-    fprintf( stderr, "strz %4d %15.7e\n",  ii, gpu->psBornForce->_pSysStream[bufferI][ii] );
-}
-}
-*/
-pdE1->Download();
-pdE2->Download();
-gpu->psPosq4->Download();
-gpu->psGBVIData->Download();
-gpu->psBornRadii->Download();
-gpu->psBornForce->Download();
-freeEnergyGpu->psSwitchDerivative->Download();
-fprintf( stderr, "PdeCud %d\n", TARGET );
-bF = 0.0;
-int count =0;
-for( int ii = 0; ii < psize; ii++ ){
-bF += pdE1->_pSysData[ii].x;
-if( fabs( pdE1->_pSysData[ii].w ) > 1.0e-03 && fabs( pdE1->_pSysData[ii].x ) > 0.0 ){
-count++;
-fprintf( stderr, "%4d %4d %15.7e %15.7e %15.7e %15.7e    %15.7e %15.7e %15.7e %15.7e bF=%15.7e swd=%15.7e\n", count, ii, 
-         pdE1->_pSysData[ii].x, pdE1->_pSysData[ii].y, pdE1->_pSysData[ii].z, pdE1->_pSysData[ii].w,
-         pdE2->_pSysData[ii].x, pdE2->_pSysData[ii].y, pdE2->_pSysData[ii].z, pdE2->_pSysData[ii].w, gpu->psBornForce->_pSysData[ii],
-         freeEnergyGpu->psSwitchDerivative->_pSysData[ii] );
-}
-}
-bR      = gpu->psBornRadii->_pSysData[TARGET];
-atomicRadii = gpu->psGBVIData->_pSysData[TARGET].x; 
-ratio   = (atomicRadii/bR);
-bF1     = bF + (3.0f*gpu->psGBVIData->_pSysData[TARGET].z*ratio*ratio*ratio)/bR; 
-b2      = bR*bR;
-bF1     *= (1.0f/3.0f)*b2*b2;
-fprintf( stderr, "sumbF Cud %6d count=%d %15.7e %15.7e %15.7e\n", TARGET, count, bF, bF1, bR);
-#endif
 
 }

@@ -29,7 +29,7 @@
 #include <cudatypes.h>
 #include "kSoftcoreLJ.h"
 
-#define PARAMETER_PRINT 1
+#define PARAMETER_PRINT 0
 #define MAX_PARAMETER_PRINT 10
 
 static __constant__ cudaGmxSimulation cSim;

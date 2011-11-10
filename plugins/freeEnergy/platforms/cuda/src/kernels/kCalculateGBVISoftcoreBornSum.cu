@@ -39,7 +39,6 @@
 
 #define PARAMETER_PRINT 0
 #define MAX_PARAMETER_PRINT 10
-//#define DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaFreeEnergyGmxSimulation gbviSimDev;
@@ -525,35 +524,6 @@ void kCalculateGBVISoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
     }   
     threadsPerBlock = threadsPerBlockPerMethod[methodIndex];
 
-
-#ifdef DEBUG
-fprintf( stderr, "kCalculateGBVISoftcoreBornSum blks=%u threadsPerBlock=%u %u  shMem=%u\n",
-         gpu->sim.nonbond_blocks, threadsPerBlock, gpu->sim.nonbond_threads_per_block, (sizeof(Atom)+sizeof(float))*threadsPerBlock ); fflush( stderr );
-
-int psize = gpu->sim.paddedNumberOfAtoms;
-CUDAStream<float4>* pdE1 = new CUDAStream<float4>( psize, 1, "pdE");
-CUDAStream<float4>* pdE2 = new CUDAStream<float4>( psize, 1, "pdE");
-float bF; 
-float bF1; 
-showWorkUnitsFreeEnergy( freeEnergyGpu, 1 );
-
-for( int ii = 0; ii < psize; ii++ ){
-
-pdE1->_pSysData[ii].x = 0.0f;
-pdE1->_pSysData[ii].y = 0.001f;
-pdE1->_pSysData[ii].z = 0.001f;
-pdE1->_pSysData[ii].w = 0.001f;
-
-pdE2->_pSysData[ii].x = 0.001f;
-pdE2->_pSysData[ii].y = 0.001f;
-pdE2->_pSysData[ii].z = 0.001f;
-pdE2->_pSysData[ii].w = 0.001f;
-}
-pdE1->Upload();
-pdE2->Upload();
-
-#endif
-
     kClearGBVISoftcoreBornSum( gpu );
     LAUNCHERROR("kClearGBVIBornSum from kCalculateGBVISoftcoreBornSum");
 
@@ -561,15 +531,6 @@ pdE2->Upload();
     {   
         case FREE_ENERGY_NO_CUTOFF:
 
-#ifdef DEBUG
-            if (gpu->bOutputBufferPerWarp){
-                kCalculateGBVISoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-            } else {
-                kCalculateGBVISoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-            }
-#else
             if (gpu->bOutputBufferPerWarp){
                 kCalculateGBVISoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit);
@@ -577,8 +538,6 @@ pdE2->Upload();
                 kCalculateGBVISoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         sizeof(Atom)*threadsPerBlock>>>(gpu->sim.pWorkUnit);
             }
-#endif
-
             break;
 
         case FREE_ENERGY_CUTOFF:
@@ -591,27 +550,13 @@ pdE2->Upload();
             kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                     sizeof(unsigned int)*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
 
-#ifdef DEBUG
-            (void) fprintf( stderr, "kCalculateGBVISoftcoreBornSum cutoff=%15.7e warp=%u GridBoundingBox.length=%u interaction_blocks=%u interaction_threads_per_block=%u nonbond_blocks=%u nonbond_threads_per_block=%u\n",
-                            gpu->sim.nonbondedCutoffSqr, gpu->bOutputBufferPerWarp, gpu->psGridBoundingBox->_length, gpu->sim.interaction_blocks,
-                            gpu->sim.interaction_threads_per_block, gpu->sim.nonbond_blocks, threadsPerBlock ); fflush( stderr );
-
-
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateGBVISoftcoreCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData);
-            else
-                kCalculateGBVISoftcoreCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData );
-
-#else
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVISoftcoreCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
             else
                 kCalculateGBVISoftcoreCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit );
-#endif
+
             break;
 
         case FREE_ENERGY_PERIODIC:
@@ -624,21 +569,13 @@ pdE2->Upload();
             kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                     sizeof(unsigned int)*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit);
 
-#ifdef DEBUG
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateGBVISoftcorePeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData  );
-            else
-                kCalculateGBVISoftcorePeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
-                        (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit, pdE1->_pDevData, pdE2->_pDevData  );
-#else
             if (gpu->bOutputBufferPerWarp)
                 kCalculateGBVISoftcorePeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit );
             else
                 kCalculateGBVISoftcorePeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock,
                         (sizeof(Atom)+sizeof(float))*threadsPerBlock>>>(gpu->sim.pInteractingWorkUnit );
-#endif
+
             break;
 
         default:
@@ -647,23 +584,4 @@ pdE2->Upload();
     }
     LAUNCHERROR("kCalculateGBVISoftcoreBornSum");
 
-#ifdef DEBUG
-pdE1->Download();
-pdE2->Download();
-fprintf( stderr, "bSum Cud method=%u warp=%u\n", freeEnergyGpu->freeEnergySim.nonbondedMethod, gpu->bOutputBufferPerWarp );
-bF  = 0.0;
-bF1 = 0.0;
-for( int ii = 0; ii < gpu->natoms; ii++ ){
-    if( fabsf( pdE1->_pSysData[ii].w ) > 0.002 ){
-        bF1 += pdE1->_pSysData[ii].x;
-        if( fabsf( pdE1->_pSysData[ii].x ) > 0.001 ){
-            fprintf( stderr, "%4d %15.7e %15.7e %15.7e %15.7e    %15.7e %15.7e %15.7e %15.7e\n", ii,
-                     pdE1->_pSysData[ii].x, pdE1->_pSysData[ii].y, pdE1->_pSysData[ii].z, pdE1->_pSysData[ii].w,
-                     pdE2->_pSysData[ii].x, pdE2->_pSysData[ii].y, pdE2->_pSysData[ii].z, pdE2->_pSysData[ii].w );
-        }
-    }
-    bF += pdE1->_pSysData[ii].x;
-}
-fprintf( stderr, "bSum Cud %6d %15.7e %15.7e\n", TARGET, bF, bF1 );
-#endif
 }

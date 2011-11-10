@@ -77,7 +77,7 @@ void testOBCSoftcore( double lambda1, double lambda2 ){
     custom->addGlobalParameter("solventDielectric", obc->getSolventDielectric());
     custom->addGlobalParameter("soluteDielectric", obc->getSoluteDielectric());
 
-    custom->addComputedValue("I", "lambda1*lambda2*step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
+    custom->addComputedValue("I", "lambda2*step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
                                   "U=r+sr2;"
                                   "C=2*(1/or1-1/L)*step(sr2-r-or1);"
                                   "L=max(or1, D);"
@@ -86,8 +86,8 @@ void testOBCSoftcore( double lambda1, double lambda2 ){
                                   "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
     custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
                                   "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
-    custom->addEnergyTerm("lambda*28.3919551*(radius+0.14)^2*(radius/B)^6-lambda*lambda*0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce::SingleParticle);
-    custom->addEnergyTerm("-138.935485*lambda1*lambda2*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+    custom->addEnergyTerm("lambda*28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce::SingleParticle);
+    custom->addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
 
     vector<Vec3> positions(numParticles);
@@ -103,14 +103,14 @@ void testOBCSoftcore( double lambda1, double lambda2 ){
             obc->addParticle( charge*lambda1, 0.2, 0.5,  lambda1);
             obc->addParticle(-charge*lambda1, 0.1, 0.5, lambda1);
 
-            params[0] = charge;
+            params[0] = charge*lambda1;
             params[1] = 0.2;
             params[2] = 0.5;
             params[3] = lambda1;
 
             custom->addParticle(params);
 
-            params[0] = -charge;
+            params[0] = -charge*lambda1;
             params[1] = 0.1;
             custom->addParticle(params);
 
@@ -119,13 +119,13 @@ void testOBCSoftcore( double lambda1, double lambda2 ){
             obc->addParticle( charge*lambda2, 0.2, 0.8, lambda2);
             obc->addParticle(-charge*lambda2, 0.1, 0.8, lambda2);
 
-            params[0] = charge;
+            params[0] = charge*lambda2;
             params[1] = 0.2;
             params[2] = 0.8;
             params[3] = lambda2;
             custom->addParticle(params);
 
-            params[0] = -charge;
+            params[0] = -charge*lambda2;
             params[1] = 0.1;
             custom->addParticle(params);
         }
