@@ -91,7 +91,7 @@ class AmberPrmtopFile(object):
                          ff.HBonds:'h-bonds',
                          ff.AllBonds:'all-bonds',
                          ff.HAngles:'h-angles'}
-        if constraints == ff.NoConstraints:
+        if constraints is None:
             constraintString = None
         elif constraints in constraintMap:
             constraintString = constraintMap[constraints]
