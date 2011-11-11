@@ -824,7 +824,7 @@ void PositionGenerator::getSortedDistances( int periodicBoundaryConditions, int 
     for( unsigned int ii = 0; ii < positions.size(); ii++ ){
         if( ii == positionIndex )continue;
         double distance = periodicBoundaryConditions ? getPeriodicDistance( positionIndex, ii, positions) :  getDistance( positionIndex, ii, positions);
-        sortVector.push_back( IntDoublePair(ii,sqrt(distance) ) );
+        sortVector.push_back( IntDoublePair( ii, distance ) );
     }    
 
     std::sort( sortVector.begin(), sortVector.end(), TestIntDoublePair );
@@ -1803,7 +1803,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     Force* forceCopy = NULL;
     try {
         const CMAPTorsionForce& castForce = dynamic_cast<const CMAPTorsionForce&>(force);
-        forceCopy = new CMAPTorsionForce( castForce );
+        forceCopy                         = new CMAPTorsionForce( castForce );
     } catch( std::bad_cast ){
     }
 
@@ -1811,7 +1811,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
             const CustomAngleForce& castForce = dynamic_cast<const CustomAngleForce&>(force);
-            forceCopy = new CustomAngleForce( castForce );
+            forceCopy                         = new CustomAngleForce( castForce );
         } catch( std::bad_cast ){
         }    
     }
@@ -1820,7 +1820,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const CustomBondForce& castForce = dynamic_cast<const CustomBondForce&>(force);
-           forceCopy                  = new CustomBondForce( castForce );
+           forceCopy                        = new CustomBondForce( castForce );
         } catch( std::bad_cast ){
         }    
     }
@@ -1829,7 +1829,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const CustomExternalForce& castForce = dynamic_cast<const CustomExternalForce&>(force);
-           forceCopy                      = new CustomExternalForce( castForce );
+           forceCopy                            = new CustomExternalForce( castForce );
         } catch( std::bad_cast ){
         }    
     }
@@ -1838,7 +1838,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const CustomGBForce& castForce = dynamic_cast<const CustomGBForce&>(force);
-           forceCopy                = new CustomGBForce( castForce ); 
+           forceCopy                      = new CustomGBForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1847,7 +1847,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const CustomHbondForce& castForce = dynamic_cast<const CustomHbondForce&>(force);
-           forceCopy          = new CustomHbondForce( castForce ); 
+           forceCopy                         = new CustomHbondForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1856,7 +1856,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const CustomNonbondedForce& castForce = dynamic_cast<const CustomNonbondedForce&>(force);
-           forceCopy          = new CustomNonbondedForce( castForce ); 
+           forceCopy                             = new CustomNonbondedForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1866,7 +1866,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const CustomTorsionForce& castForce = dynamic_cast<const CustomTorsionForce&>(force);
-           forceCopy          = new CustomTorsionForce( castForce ); 
+           forceCopy                           = new CustomTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1876,7 +1876,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const GBSAOBCForce& castForce = dynamic_cast<const GBSAOBCForce&>(force);
-           forceCopy          = new GBSAOBCForce( castForce ); 
+           forceCopy                     = new GBSAOBCForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1885,7 +1885,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const GBVIForce& castForce = dynamic_cast<const GBVIForce&>(force);
-           forceCopy          = new GBVIForce( castForce ); 
+           forceCopy                  = new GBVIForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1894,7 +1894,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const HarmonicAngleForce& castForce = dynamic_cast<const HarmonicAngleForce&>(force);
-           forceCopy          = new HarmonicAngleForce( castForce ); 
+           forceCopy                           = new HarmonicAngleForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1902,7 +1902,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const HarmonicBondForce& castForce = dynamic_cast<const HarmonicBondForce&>(force);
-           forceCopy          = new HarmonicBondForce( castForce ); 
+           forceCopy                          = new HarmonicBondForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1910,7 +1910,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const NonbondedForce& castForce = dynamic_cast<const NonbondedForce&>(force);
-           forceCopy          = new NonbondedForce( castForce ); 
+           forceCopy                       = new NonbondedForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1919,7 +1919,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const PeriodicTorsionForce& castForce = dynamic_cast<const PeriodicTorsionForce&>(force);
-           forceCopy          = new PeriodicTorsionForce( castForce ); 
+           forceCopy                             = new PeriodicTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1928,7 +1928,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const RBTorsionForce& castForce = dynamic_cast<const RBTorsionForce&>(force);
-           forceCopy          = new RBTorsionForce( castForce ); 
+           forceCopy                       = new RBTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1937,7 +1937,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const MonteCarloBarostat& castForce = dynamic_cast<const MonteCarloBarostat&>(force);
-           forceCopy                     = new MonteCarloBarostat( castForce ); 
+           forceCopy                           = new MonteCarloBarostat( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1946,7 +1946,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AndersenThermostat& castForce = dynamic_cast<const AndersenThermostat&>(force);
-           forceCopy          = new AndersenThermostat( castForce ); 
+           forceCopy                           = new AndersenThermostat( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1956,7 +1956,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const GBSAOBCSoftcoreForce& castForce = dynamic_cast<const GBSAOBCSoftcoreForce&>(force);
-           forceCopy          = new GBSAOBCSoftcoreForce( castForce ); 
+           forceCopy                             = new GBSAOBCSoftcoreForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1964,7 +1964,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const GBVISoftcoreForce& castForce = dynamic_cast<const GBVISoftcoreForce&>(force);
-           forceCopy          = new GBVISoftcoreForce( castForce ); 
+           forceCopy                          = new GBVISoftcoreForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1972,7 +1972,7 @@ static Force* copyForce( const Force& force, FILE* log ){
     if( forceCopy == NULL ){
         try {
            const NonbondedSoftcoreForce& castForce = dynamic_cast<const NonbondedSoftcoreForce&>(force);
-           forceCopy          = new NonbondedSoftcoreForce( castForce ); 
+           forceCopy                               = new NonbondedSoftcoreForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1984,7 +1984,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaHarmonicBondForce& castForce = dynamic_cast<const AmoebaHarmonicBondForce&>(force);
-           forceCopy          = new AmoebaHarmonicBondForce( castForce ); 
+           forceCopy                                = new AmoebaHarmonicBondForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -1993,7 +1993,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaHarmonicAngleForce& castForce = dynamic_cast<const AmoebaHarmonicAngleForce&>(force);
-           forceCopy          = new AmoebaHarmonicAngleForce( castForce ); 
+           forceCopy                                 = new AmoebaHarmonicAngleForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2002,7 +2002,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaHarmonicInPlaneAngleForce& castForce = dynamic_cast<const AmoebaHarmonicInPlaneAngleForce&>(force);
-           forceCopy          = new AmoebaHarmonicInPlaneAngleForce( castForce ); 
+           forceCopy                                        = new AmoebaHarmonicInPlaneAngleForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2011,7 +2011,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaMultipoleForce& castForce = dynamic_cast<const AmoebaMultipoleForce&>(force);
-           forceCopy          = new AmoebaMultipoleForce( castForce ); 
+           forceCopy                             = new AmoebaMultipoleForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2020,7 +2020,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaOutOfPlaneBendForce& castForce = dynamic_cast<const AmoebaOutOfPlaneBendForce&>(force);
-           forceCopy          = new AmoebaOutOfPlaneBendForce( castForce ); 
+           forceCopy                                  = new AmoebaOutOfPlaneBendForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2029,7 +2029,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaPiTorsionForce& castForce = dynamic_cast<const AmoebaPiTorsionForce&>(force);
-           forceCopy          = new AmoebaPiTorsionForce( castForce ); 
+           forceCopy                             = new AmoebaPiTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2038,7 +2038,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaStretchBendForce& castForce = dynamic_cast<const AmoebaStretchBendForce&>(force);
-           forceCopy          = new AmoebaStretchBendForce( castForce ); 
+           forceCopy                               = new AmoebaStretchBendForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2047,7 +2047,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaTorsionForce& castForce = dynamic_cast<const AmoebaTorsionForce&>(force);
-           forceCopy          = new AmoebaTorsionForce( castForce ); 
+           forceCopy                           = new AmoebaTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2056,7 +2056,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaTorsionTorsionForce& castForce = dynamic_cast<const AmoebaTorsionTorsionForce&>(force);
-           forceCopy          = new AmoebaTorsionTorsionForce( castForce ); 
+           forceCopy                                  = new AmoebaTorsionTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2065,7 +2065,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaUreyBradleyForce& castForce = dynamic_cast<const AmoebaUreyBradleyForce&>(force);
-           forceCopy          = new AmoebaUreyBradleyForce( castForce ); 
+           forceCopy                               = new AmoebaUreyBradleyForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2074,7 +2074,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaVdwForce& castForce = dynamic_cast<const AmoebaVdwForce&>(force);
-           forceCopy          = new AmoebaVdwForce( castForce ); 
+           forceCopy                       = new AmoebaVdwForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2083,7 +2083,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaWcaDispersionForce& castForce = dynamic_cast<const AmoebaWcaDispersionForce&>(force);
-           forceCopy          = new AmoebaWcaDispersionForce( castForce ); 
+           forceCopy                                 = new AmoebaWcaDispersionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2092,7 +2092,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaGeneralizedKirkwoodForce& castForce = dynamic_cast<const AmoebaGeneralizedKirkwoodForce&>(force);
-           forceCopy          = new AmoebaGeneralizedKirkwoodForce( castForce ); 
+           forceCopy                                       = new AmoebaGeneralizedKirkwoodForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2101,7 +2101,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
         try {
            const AmoebaTorsionTorsionForce& castForce = dynamic_cast<const AmoebaTorsionTorsionForce&>(force);
-           forceCopy          = new AmoebaTorsionTorsionForce( castForce ); 
+           forceCopy                                  = new AmoebaTorsionTorsionForce( castForce ); 
         } catch( std::bad_cast ){
         }    
     }
@@ -2113,158 +2113,6 @@ static Force* copyForce( const Force& force, FILE* log ){
     }
 
     return forceCopy;
-}
-
-/**---------------------------------------------------------------------------------------
- *
- * Copy NonbondedSoftcoreForce
- * 
- * @param  nonbondedSoftcoreForce  NonbondedSoftcoreForce to copy
- *
- * @return copy of nonbondedSoftcoreForce
- *
-   --------------------------------------------------------------------------------------- */
-
-#ifdef USE_SOFTCORE
-static NonbondedSoftcoreForce* copyNonbondedSoftcoreForce( const NonbondedSoftcoreForce& nonbondedSoftcoreForce ){
-
-    NonbondedSoftcoreForce* copyNonbondedSoftcoreForce = new NonbondedSoftcoreForce( nonbondedSoftcoreForce );
-
-/*
-    copyNonbondedSoftcoreForce->setNonbondedMethod( nonbondedSoftcoreForce.getNonbondedMethod() );
-    copyNonbondedSoftcoreForce->setCutoffDistance( nonbondedSoftcoreForce.getCutoffDistance() );
-    copyNonbondedSoftcoreForce->setReactionFieldDielectric( nonbondedSoftcoreForce.getReactionFieldDielectric() );
-
-    // particle parameters
-
-    for( unsigned int ii = 0; ii < nonbondedSoftcoreForce.getNumParticles(); ii++ ){
-
-        double charge;
-        double sigma;
-        double epsilon;
-        double softcoreLJLambda;
-        nonbondedSoftcoreForce.getParticleParameters(ii, charge, sigma, epsilon, softcoreLJLambda);
-        copyNonbondedSoftcoreForce->addParticle( charge, sigma, epsilon, softcoreLJLambda);
-    }
-
-    // exceptions
-
-    for( unsigned int ii = 0; ii < nonbondedSoftcoreForce.getNumExceptions(); ii++ ){
-
-        int particle1, particle2;
-        double chargeProd;
-        double sigma;
-        double epsilon;
-        double softcoreLJLambda;
-        nonbondedSoftcoreForce.getExceptionParameters( ii, particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda );
-        copyNonbondedSoftcoreForce->addException( particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda );
-    }
-*/
-
-    return copyNonbondedSoftcoreForce;
-}
-
-static GBVISoftcoreForce* copyGbviSoftcoreForce( const GBVISoftcoreForce& gbviSoftcoreForce ){
-
-    GBVISoftcoreForce* copyGbviSoftcoreForce = new GBVISoftcoreForce(gbviSoftcoreForce);
-/*
-    GBVISoftcoreForce* copyGbviSoftcoreForce = new GBVISoftcoreForce();
-
-    copyGbviSoftcoreForce->setNonbondedMethod( gbviSoftcoreForce.getNonbondedMethod() );
-
-    copyGbviSoftcoreForce->setCutoffDistance( gbviSoftcoreForce.getCutoffDistance() );
-
-    copyGbviSoftcoreForce->setSolventDielectric( gbviSoftcoreForce.getSolventDielectric() );
-    copyGbviSoftcoreForce->setSoluteDielectric( gbviSoftcoreForce.getSoluteDielectric() );
-
-    copyGbviSoftcoreForce->setBornRadiusScalingMethod( gbviSoftcoreForce.getBornRadiusScalingMethod() );
-    copyGbviSoftcoreForce->setQuinticLowerLimitFactor( gbviSoftcoreForce.getQuinticLowerLimitFactor() );
-    copyGbviSoftcoreForce->setQuinticUpperBornRadiusLimit( gbviSoftcoreForce.getQuinticUpperBornRadiusLimit() );
-
-    // particle parameters
-
-    for( unsigned int ii = 0; ii < gbviSoftcoreForce.getNumParticles(); ii++ ){
-
-        double charge;
-        double sigma;
-        double gamma;
-        double softcoreLJLambda;
-        gbviSoftcoreForce.getParticleParameters(ii, charge, sigma, gamma, softcoreLJLambda);
-        copyGbviSoftcoreForce->addParticle( charge, sigma, gamma, softcoreLJLambda);
-    }
-
-    // bonds
-
-    for( unsigned int ii = 0; ii < gbviSoftcoreForce.getNumBonds(); ii++ ){
-        int particle1, particle2;
-        double distance;
-        gbviSoftcoreForce.getBondParameters( ii, particle1, particle2, distance);
-        copyGbviSoftcoreForce->addBond( particle1, particle2, distance );
-    }
-*/
-    return copyGbviSoftcoreForce;
-}
-
-static GBSAOBCSoftcoreForce* copyGBSAOBCSoftcoreForce( const GBSAOBCSoftcoreForce& gbviSoftcoreForce ){
-    return new GBSAOBCSoftcoreForce(gbviSoftcoreForce);
-}
-
-#endif
-
-/**---------------------------------------------------------------------------------------
- *
- * Copy NonbondedForce
- * 
- * @param  nonbondedForce  NonbondedForce to copy
- *
- * @return copy of nonbondedForce
- *
-   --------------------------------------------------------------------------------------- */
-
-static NonbondedForce* copyNonbondedForce( const NonbondedForce& nonbondedForce ){
-
-    NonbondedForce* copyNonbondedForce = new NonbondedForce( nonbondedForce );
-
-/*
-    copyNonbondedForce->setNonbondedMethod( nonbondedForce.getNonbondedMethod() );
-    copyNonbondedForce->setCutoffDistance( nonbondedForce.getCutoffDistance() );
-    copyNonbondedForce->setReactionFieldDielectric( nonbondedForce.getReactionFieldDielectric() );
-
-    // particle parameters
-
-    for( unsigned int ii = 0; ii < nonbondedForce.getNumParticles(); ii++ ){
-
-        double charge;
-        double sigma;
-        double epsilon;
-        double softcoreLJLambda;
-        nonbondedForce.getParticleParameters(ii, charge, sigma, epsilon, softcoreLJLambda);
-        copyNonbondedForce->addParticle( charge, sigma, epsilon, softcoreLJLambda);
-    }
-
-    // exceptions
-
-    for( unsigned int ii = 0; ii < nonbondedForce.getNumExceptions(); ii++ ){
-
-        int particle1, particle2;
-        double chargeProd;
-        double sigma;
-        double epsilon;
-        double softcoreLJLambda;
-        nonbondedForce.getExceptionParameters( ii, particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda );
-        copyNonbondedForce->addException( particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda );
-    }
-*/
-
-    return copyNonbondedForce;
-}
-
-static GBVIForce* copyGbviForce( const GBVIForce& gbviForce ){
-    return new GBVIForce(gbviForce);
-}
-
-static GBSAOBCForce* copyGbsaObcForce( const GBSAOBCForce& gbviForce ){
-    return new GBSAOBCForce(gbviForce);
 }
 
 /** 
@@ -2892,6 +2740,25 @@ static void getPlatformName( int platformId, std::string& platformName ){
 }
 
 /** 
+ * Get lib name
+ *
+ * @param libPrefix                lib prefix (lib or "")
+ * @param libSuffix                lib suffix (.so, .dylib, .dll)
+ * @param baseName                 base name
+ *
+ * @return libname
+ *
+ */
+ 
+static std::string getLibName( const std::string& libPrefix, const std::string& libSuffix, const std::string& baseName ){
+
+    std::string fullName = libPrefix; 
+    fullName.append( baseName );
+    fullName.append( libSuffix );
+    return fullName;
+}
+
+/** 
  * Get nonbonded method name
  *
  * @param nonbondedMethod          nonbonded method flag
@@ -3044,9 +2911,9 @@ void runSystemComparisonTest( System& system1, System& system2,
 
     Platform& platform2 = Platform::getPlatformByName( platformName2 );
     if( deviceId2 ){
-    setDeviceIdUsingEnvVariable( platform2, log );
         setDeviceId( platform2, deviceId2, log );
     }
+    setDeviceIdUsingEnvVariable( platform2, log );
     Context context2( system2, integrator2, platform2 );
     context2.setPositions(positions);
 
@@ -3298,22 +3165,21 @@ void runTests( MapStringToDouble& inputArgumentMap, FILE* log ){
         double distanceTolerance             = 1.0e-04;
         IntVector positionIndexVector;
         positionIndexVector.push_back( 0 );
-        positionIndexVector.push_back( 2266 );
-        positionIndexVector.push_back( 2656 );
+        positionIndexVector.push_back( 5713 );
+        positionIndexVector.push_back( 6291 );
+        positionIndexVector.push_back( 3191 );
+        positionIndexVector.push_back( 3769 );
         positionIndexVector.push_back( static_cast<int>(positions.size())-1 );
-        //positionGenerator.showMinMaxDistances( positions, periodicBoundaryConditions, showIndex, positionIndexVector);
+        positionGenerator.showMinMaxDistances( positions, periodicBoundaryConditions, showIndex, positionIndexVector);
         positionGenerator.showMinMaxDistances( positions, periodicBoundaryConditions, showIndex );
-        positionGenerator.showParticlesWithinDistance( positions, periodicBoundaryConditions, 2266, cutoffDistance, distanceTolerance );
+        positionGenerator.showParticlesWithinDistance( positions, periodicBoundaryConditions, 5713, cutoffDistance, distanceTolerance );
+        positionGenerator.showParticlesWithinDistance( positions, periodicBoundaryConditions, 6291, cutoffDistance, distanceTolerance );
 
         IntIntPairVector pairs;
-        pairs.push_back( IntIntPair( 2266, 2656 ) );
-        pairs.push_back( IntIntPair( 2266, 2264 ) );
-        pairs.push_back( IntIntPair( 2266, 2292 ) );
-        pairs.push_back( IntIntPair( 2266, 1872 ) );
-        pairs.push_back( IntIntPair( 2266, 1847 ) );
-        pairs.push_back( IntIntPair( 2266, 2658 ) );
-        pairs.push_back( IntIntPair( 2266, 2294 ) );
-        pairs.push_back( IntIntPair( 2266, 2236 ) );
+        pairs.push_back( IntIntPair( 5713, 6291 ) );
+        pairs.push_back( IntIntPair( 5713, 3191 ) );
+        pairs.push_back( IntIntPair( 5713, 3769 ) );
+        pairs.push_back( IntIntPair( 6291, 3191 ) );
         positionGenerator.showDistances( pairs, positions );
     }    
 
@@ -3431,17 +3297,17 @@ void runTests( MapStringToDouble& inputArgumentMap, FILE* log ){
     System systemCopy;
     copySystem( standardSystem, systemCopy, log );
 
-    // perform comparison
-
-    std::stringstream idString;
-    idString << "Nb " << nonbondedMethod << " l2 " << std::fixed << setprecision(2) << lambda2;
-    runSystemComparisonTest( standardSystem, systemCopy, positions, inputArgumentMap, idString.str(), log );
-
     // serialize
 
     baseFileName  << "_N"     << positions.size();
     baseFileName  << "_Nb"    << nonbondedMethod;
     serializeSystemAndPositions( standardSystem, positions, baseFileName.str(), log);
+
+    // perform comparison
+
+    std::stringstream idString;
+    idString << "Nb " << nonbondedMethod << " l2 " << std::fixed << setprecision(2) << lambda2;
+    runSystemComparisonTest( standardSystem, systemCopy, positions, inputArgumentMap, idString.str(), log );
 
 }
 
@@ -3505,9 +3371,9 @@ int main() {
         }   
 
         DoubleVector nonbondedMethod;
-        //nonbondedMethod.push_back( NoCutoff_OpenMMTest );
+        nonbondedMethod.push_back( NoCutoff_OpenMMTest );
         nonbondedMethod.push_back( CutoffNonPeriodic_OpenMMTest );
-        //nonbondedMethod.push_back( CutoffPeriodic_OpenMMTest );
+        nonbondedMethod.push_back( CutoffPeriodic_OpenMMTest );
 #if IMPLICIT_SOLVENT == TEST_NONBONDED
         nonbondedMethod.push_back( Ewald_OpenMMTest );
         nonbondedMethod.push_back( PME_OpenMMTest );
@@ -3529,16 +3395,26 @@ int main() {
         // check that required libs are available for platform to be tested
         // if unavailable, skip tests
 
+        std::string libPrefix = "lib";
+        std::string libSuffix = ".so";
+#ifdef _MSC_VER
+        libPrefix = "";
+        libSuffix = ".dll";
+#endif
+#ifdef __APPLE__
+        libSuffix = ".dylib";
+#endif
+
         StringVector requiredLibs;
         for( unsigned int kk = 0; kk < platformId2s.size(); kk++ ){
             if( platformId2s[kk] == OpenCL_OpenMMTest ){
-                requiredLibs.push_back( "libOpenMMOpenCL.so" );
+                requiredLibs.push_back( getLibName( libPrefix, libSuffix, "OpenMMOpenCL" ) );
             }
             if( platformId2s[kk] == Cuda_OpenMMTest ){
-                requiredLibs.push_back( "libOpenMMCuda.so" );
+                requiredLibs.push_back( getLibName( libPrefix, libSuffix, "OpenMMCuda") );
 #ifdef USE_SOFTCORE
-                requiredLibs.push_back( "libOpenMMFreeEnergy.so" );
-                requiredLibs.push_back( "libOpenMMFreeEnergyCuda.so" );
+                requiredLibs.push_back( getLibName( libPrefix, libSuffix, "OpenMMFreeEnergy" ) );
+                requiredLibs.push_back( getLibName( libPrefix, libSuffix, "OpenMMFreeEnergyCuda" ) );
 #endif
             }
         }

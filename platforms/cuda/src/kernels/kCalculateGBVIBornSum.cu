@@ -242,6 +242,10 @@ void kReduceGBVIBornSum(gpuContext gpu)
     LAUNCHERROR("kReduceGBVIBornSum");
 }
 
+static int isNanOrInfinity( float number ){
+    return (number != number || number == std::numeric_limits<float>::infinity() || number == -std::numeric_limits<float>::infinity()) ? 1 : 0; 
+}
+
 void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
 {
 
@@ -252,13 +256,33 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
     gpu->psPosq4->Download();
     gpu->psSigEps2->Download();
 
-    (void) fprintf( log, "kPrintGBVI Cuda comp bR bF prm    sigeps2\n" );
-    (void) fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
-                    gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
-                    sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
-    (void) fprintf( stderr, "bR bF swd r scR ...\n" );
-    for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
-        (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e\n", ii,
+    int printOnlyOnNan = 1;
+    int foundNan       = 0;
+    if( printOnlyOnNan ){
+        for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms && foundNan == 0; ii++ ){
+            foundNan  += isNanOrInfinity( gpu->psBornRadii->_pSysData[ii] );
+            foundNan  += isNanOrInfinity( gpu->psBornForce->_pSysData[ii] );
+            foundNan  += isNanOrInfinity( gpu->psGBVISwitchDerivative->_pSysData[ii] );
+        }
+        if( foundNan ){
+            log = stderr;
+            (void) fprintf( log, "kPrintGBVI found nan \n", gpu->sim.paddedNumberOfAtoms );
+            for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+                (void) fprintf( log, "%6d %15.7e %15.7e %15.7e\n", ii,
+                                gpu->psPosq4->_pSysData[ii].x,
+                                gpu->psPosq4->_pSysData[ii].y,
+                                gpu->psPosq4->_pSysData[ii].z );
+            }
+        }
+    }
+    if( !printOnlyOnNan || foundNan ){
+        (void) fprintf( log, "kPrintGBVI Cuda comp bR bF prm    sigeps2\n" );
+        (void) fprintf( stderr, "kCalculateGBVIBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
+                        gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
+        (void) fprintf( stderr, "bR bF swd r scR ...\n" );
+        for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+            (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e\n", ii,
                         gpu->psBornRadii->_pSysData[ii],
                         gpu->psBornForce->_pSysData[ii],
                         gpu->psGBVISwitchDerivative->_pSysData[ii],
@@ -270,6 +294,10 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
                         gpu->psSigEps2->_pSysData[ii].x,
                         gpu->psSigEps2->_pSysData[ii].y );
 
+        }   
+        if( foundNan ){
+            exit(0);
+        }
     }   
 
 }
