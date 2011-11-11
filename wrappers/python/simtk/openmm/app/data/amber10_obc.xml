@@ -2,6 +2,7 @@
  <GBSAOBCForce>
    <Atom type="0" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="1" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="2" charge="0.0337" radius="0.19" scale="0.72"/>
    <Atom type="3" charge="0.0823" radius="0.125" scale="0.85"/>
    <Atom type="4" charge="-0.1825" radius="0.19" scale="0.72"/>
    <Atom type="5" charge="0.0603" radius="0.125" scale="0.85"/>
@@ -9,6 +10,7 @@
    <Atom type="7" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="8" charge="-0.3479" radius="0.1706" scale="0.79"/>
    <Atom type="9" charge="0.2747" radius="0.115" scale="0.85"/>
+   <Atom type="10" charge="-0.2637" radius="0.19" scale="0.72"/>
    <Atom type="11" charge="0.156" radius="0.125" scale="0.85"/>
    <Atom type="12" charge="-0.0007" radius="0.19" scale="0.72"/>
    <Atom type="13" charge="0.0327" radius="0.125" scale="0.85"/>
@@ -27,6 +29,7 @@
    <Atom type="26" charge="-0.5894" radius="0.148" scale="0.85"/>
    <Atom type="27" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="28" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="29" charge="0.0341" radius="0.19" scale="0.72"/>
    <Atom type="30" charge="0.0864" radius="0.125" scale="0.85"/>
    <Atom type="31" charge="-0.0316" radius="0.19" scale="0.72"/>
    <Atom type="32" charge="0.0488" radius="0.125" scale="0.85"/>
@@ -38,6 +41,7 @@
    <Atom type="38" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="39" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="40" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="41" charge="0.0143" radius="0.19" scale="0.72"/>
    <Atom type="42" charge="0.1048" radius="0.125" scale="0.85"/>
    <Atom type="43" charge="-0.2041" radius="0.19" scale="0.72"/>
    <Atom type="44" charge="0.0797" radius="0.125" scale="0.85"/>
@@ -49,6 +53,7 @@
    <Atom type="50" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="51" charge="-0.5163" radius="0.1706" scale="0.79"/>
    <Atom type="52" charge="0.2936" radius="0.115" scale="0.85"/>
+   <Atom type="53" charge="0.0381" radius="0.19" scale="0.72"/>
    <Atom type="54" charge="0.088" radius="0.125" scale="0.85"/>
    <Atom type="55" charge="-0.0303" radius="0.19" scale="0.72"/>
    <Atom type="56" charge="-0.0122" radius="0.125" scale="0.85"/>
@@ -59,6 +64,7 @@
    <Atom type="61" charge="-0.5819" radius="0.148" scale="0.85"/>
    <Atom type="62" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="63" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="64" charge="-0.0351" radius="0.19" scale="0.72"/>
    <Atom type="65" charge="0.0508" radius="0.125" scale="0.85"/>
    <Atom type="66" charge="-0.2413" radius="0.19" scale="0.72"/>
    <Atom type="67" charge="0.1122" radius="0.125" scale="0.85"/>
@@ -67,6 +73,7 @@
    <Atom type="70" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="71" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="72" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="73" charge="0.0213" radius="0.19" scale="0.72"/>
    <Atom type="74" charge="0.1124" radius="0.125" scale="0.85"/>
    <Atom type="75" charge="-0.1231" radius="0.19" scale="0.72"/>
    <Atom type="76" charge="0.1112" radius="0.125" scale="0.85"/>
@@ -76,6 +83,7 @@
    <Atom type="80" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="81" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="82" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="83" charge="0.0429" radius="0.19" scale="0.72"/>
    <Atom type="84" charge="0.0766" radius="0.125" scale="0.85"/>
    <Atom type="85" charge="-0.079" radius="0.19" scale="0.72"/>
    <Atom type="86" charge="0.091" radius="0.125" scale="0.85"/>
@@ -84,6 +92,7 @@
    <Atom type="89" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="90" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="91" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="92" charge="0.0145" radius="0.19" scale="0.72"/>
    <Atom type="93" charge="0.0779" radius="0.125" scale="0.85"/>
    <Atom type="94" charge="-0.0071" radius="0.19" scale="0.72"/>
    <Atom type="95" charge="0.0256" radius="0.125" scale="0.85"/>
@@ -97,6 +106,7 @@
    <Atom type="103" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="104" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="105" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="106" charge="-0.0031" radius="0.19" scale="0.72"/>
    <Atom type="107" charge="0.085" radius="0.125" scale="0.85"/>
    <Atom type="108" charge="-0.0036" radius="0.19" scale="0.72"/>
    <Atom type="109" charge="0.0171" radius="0.125" scale="0.85"/>
@@ -110,6 +120,7 @@
    <Atom type="117" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="118" charge="-0.5163" radius="0.1706" scale="0.79"/>
    <Atom type="119" charge="0.2936" radius="0.115" scale="0.85"/>
+   <Atom type="120" charge="0.0397" radius="0.19" scale="0.72"/>
    <Atom type="121" charge="0.1105" radius="0.125" scale="0.85"/>
    <Atom type="122" charge="0.056" radius="0.19" scale="0.72"/>
    <Atom type="123" charge="-0.0173" radius="0.125" scale="0.85"/>
@@ -122,11 +133,13 @@
    <Atom type="130" charge="-0.5819" radius="0.148" scale="0.85"/>
    <Atom type="131" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="132" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="133" charge="-0.0252" radius="0.19" scale="0.72"/>
    <Atom type="134" charge="0.0698" radius="0.125" scale="0.85"/>
    <Atom type="135" charge="0.5973" radius="0.1875" scale="0.72"/>
    <Atom type="136" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="137" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="138" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="139" charge="0.0188" radius="0.19" scale="0.72"/>
    <Atom type="140" charge="0.0881" radius="0.125" scale="0.85"/>
    <Atom type="141" charge="-0.0462" radius="0.19" scale="0.72"/>
    <Atom type="142" charge="0.0402" radius="0.125" scale="0.85"/>
@@ -142,6 +155,7 @@
    <Atom type="152" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="153" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="154" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="155" charge="-0.0581" radius="0.19" scale="0.72"/>
    <Atom type="156" charge="0.136" radius="0.125" scale="0.85"/>
    <Atom type="157" charge="-0.0074" radius="0.19" scale="0.72"/>
    <Atom type="158" charge="0.0367" radius="0.125" scale="0.85"/>
@@ -157,6 +171,7 @@
    <Atom type="168" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="169" charge="-0.3479" radius="0.1706" scale="0.79"/>
    <Atom type="170" charge="0.2747" radius="0.115" scale="0.85"/>
+   <Atom type="171" charge="-0.1354" radius="0.19" scale="0.72"/>
    <Atom type="172" charge="0.1212" radius="0.125" scale="0.85"/>
    <Atom type="173" charge="-0.0414" radius="0.19" scale="0.72"/>
    <Atom type="174" charge="0.081" radius="0.125" scale="0.85"/>
@@ -173,6 +188,7 @@
    <Atom type="185" charge="-0.5894" radius="0.148" scale="0.85"/>
    <Atom type="186" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="187" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="188" charge="-0.0597" radius="0.19" scale="0.72"/>
    <Atom type="189" charge="0.0869" radius="0.125" scale="0.85"/>
    <Atom type="190" charge="0.1303" radius="0.19" scale="0.72"/>
    <Atom type="191" charge="0.0187" radius="0.125" scale="0.85"/>
@@ -186,6 +202,7 @@
    <Atom type="199" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="200" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="201" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="202" charge="-0.0518" radius="0.19" scale="0.72"/>
    <Atom type="203" charge="0.0922" radius="0.125" scale="0.85"/>
    <Atom type="204" charge="-0.1102" radius="0.19" scale="0.72"/>
    <Atom type="205" charge="0.0457" radius="0.125" scale="0.85"/>
@@ -199,6 +216,7 @@
    <Atom type="213" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="214" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="215" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="216" charge="-0.07206" radius="0.19" scale="0.72"/>
    <Atom type="217" charge="0.0994" radius="0.125" scale="0.85"/>
    <Atom type="218" charge="-0.04845" radius="0.19" scale="0.72"/>
    <Atom type="219" charge="0.034" radius="0.125" scale="0.85"/>
@@ -214,6 +232,7 @@
    <Atom type="229" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="230" charge="-0.3479" radius="0.1706" scale="0.79"/>
    <Atom type="231" charge="0.2747" radius="0.115" scale="0.85"/>
+   <Atom type="232" charge="-0.24" radius="0.19" scale="0.72"/>
    <Atom type="233" charge="0.1426" radius="0.125" scale="0.85"/>
    <Atom type="234" charge="-0.0094" radius="0.19" scale="0.72"/>
    <Atom type="235" charge="0.0362" radius="0.125" scale="0.85"/>
@@ -229,6 +248,7 @@
    <Atom type="245" charge="-0.5894" radius="0.148" scale="0.85"/>
    <Atom type="246" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="247" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="248" charge="-0.0237" radius="0.19" scale="0.72"/>
    <Atom type="249" charge="0.088" radius="0.125" scale="0.85"/>
    <Atom type="250" charge="0.0342" radius="0.19" scale="0.72"/>
    <Atom type="251" charge="0.0241" radius="0.125" scale="0.85"/>
@@ -241,6 +261,7 @@
    <Atom type="258" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="259" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="260" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="261" charge="-0.0024" radius="0.19" scale="0.72"/>
    <Atom type="262" charge="0.0978" radius="0.125" scale="0.85"/>
    <Atom type="263" charge="-0.0343" radius="0.19" scale="0.72"/>
    <Atom type="264" charge="0.0295" radius="0.125" scale="0.85"/>
@@ -264,11 +285,13 @@
    <Atom type="282" charge="0.0213" radius="0.125" scale="0.85"/>
    <Atom type="283" charge="-0.007" radius="0.19" scale="0.72"/>
    <Atom type="284" charge="0.0253" radius="0.125" scale="0.85"/>
+   <Atom type="285" charge="-0.0266" radius="0.19" scale="0.72"/>
    <Atom type="286" charge="0.0641" radius="0.125" scale="0.85"/>
    <Atom type="287" charge="0.5896" radius="0.1875" scale="0.72"/>
    <Atom type="288" charge="-0.5748" radius="0.148" scale="0.85"/>
    <Atom type="289" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="290" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="291" charge="-0.0249" radius="0.19" scale="0.72"/>
    <Atom type="292" charge="0.0843" radius="0.125" scale="0.85"/>
    <Atom type="293" charge="0.2117" radius="0.19" scale="0.72"/>
    <Atom type="294" charge="0.0352" radius="0.125" scale="0.85"/>
@@ -278,6 +301,7 @@
    <Atom type="298" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="299" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="300" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="301" charge="-0.0389" radius="0.19" scale="0.72"/>
    <Atom type="302" charge="0.1007" radius="0.125" scale="0.85"/>
    <Atom type="303" charge="0.3654" radius="0.19" scale="0.72"/>
    <Atom type="304" charge="0.0043" radius="0.125" scale="0.85"/>
@@ -289,6 +313,7 @@
    <Atom type="310" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="311" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="312" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="313" charge="-0.0275" radius="0.19" scale="0.72"/>
    <Atom type="314" charge="0.1123" radius="0.125" scale="0.85"/>
    <Atom type="315" charge="-0.005" radius="0.19" scale="0.72"/>
    <Atom type="316" charge="0.0339" radius="0.125" scale="0.85"/>
@@ -311,6 +336,7 @@
    <Atom type="333" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="334" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="335" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="336" charge="-0.0014" radius="0.19" scale="0.72"/>
    <Atom type="337" charge="0.0876" radius="0.125" scale="0.85"/>
    <Atom type="338" charge="-0.0152" radius="0.19" scale="0.72"/>
    <Atom type="339" charge="0.0295" radius="0.125" scale="0.85"/>
@@ -330,6 +356,7 @@
    <Atom type="353" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="354" charge="-0.4157" radius="0.1706" scale="0.79"/>
    <Atom type="355" charge="0.2719" radius="0.115" scale="0.85"/>
+   <Atom type="356" charge="-0.0875" radius="0.19" scale="0.72"/>
    <Atom type="357" charge="0.0969" radius="0.125" scale="0.85"/>
    <Atom type="358" charge="0.2985" radius="0.19" scale="0.72"/>
    <Atom type="359" charge="-0.0297" radius="0.125" scale="0.85"/>
@@ -341,6 +368,7 @@
    <Atom type="365" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="366" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="367" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="368" charge="-0.1747" radius="0.19" scale="0.72"/>
    <Atom type="369" charge="0.1067" radius="0.125" scale="0.85"/>
    <Atom type="370" charge="-0.2093" radius="0.19" scale="0.72"/>
    <Atom type="371" charge="0.0764" radius="0.125" scale="0.85"/>
@@ -349,6 +377,7 @@
    <Atom type="374" charge="-0.8055" radius="0.148" scale="0.85"/>
    <Atom type="375" charge="-0.3481" radius="0.1706" scale="0.79"/>
    <Atom type="376" charge="0.2764" radius="0.115" scale="0.85"/>
+   <Atom type="377" charge="-0.3068" radius="0.19" scale="0.72"/>
    <Atom type="378" charge="0.1447" radius="0.125" scale="0.85"/>
    <Atom type="379" charge="-0.0374" radius="0.19" scale="0.72"/>
    <Atom type="380" charge="0.0371" radius="0.125" scale="0.85"/>
@@ -368,6 +397,7 @@
    <Atom type="394" charge="-0.8266" radius="0.148" scale="0.85"/>
    <Atom type="395" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="396" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="397" charge="-0.208" radius="0.19" scale="0.72"/>
    <Atom type="398" charge="0.1358" radius="0.125" scale="0.85"/>
    <Atom type="399" charge="-0.2299" radius="0.19" scale="0.72"/>
    <Atom type="400" charge="0.1023" radius="0.125" scale="0.85"/>
@@ -380,6 +410,7 @@
    <Atom type="407" charge="-0.8147" radius="0.148" scale="0.85"/>
    <Atom type="408" charge="-0.5192" radius="0.1706" scale="0.79"/>
    <Atom type="409" charge="0.3055" radius="0.115" scale="0.85"/>
+   <Atom type="410" charge="-0.1817" radius="0.19" scale="0.72"/>
    <Atom type="411" charge="0.1046" radius="0.125" scale="0.85"/>
    <Atom type="412" charge="-0.0677" radius="0.19" scale="0.72"/>
    <Atom type="413" charge="-0.0212" radius="0.125" scale="0.85"/>
@@ -391,6 +422,7 @@
    <Atom type="419" charge="-0.7887" radius="0.148" scale="0.85"/>
    <Atom type="420" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="421" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="422" charge="-0.1635" radius="0.19" scale="0.72"/>
    <Atom type="423" charge="0.1396" radius="0.125" scale="0.85"/>
    <Atom type="424" charge="-0.1996" radius="0.19" scale="0.72"/>
    <Atom type="425" charge="0.1437" radius="0.125" scale="0.85"/>
@@ -401,6 +433,7 @@
    <Atom type="430" charge="-0.7981" radius="0.148" scale="0.85"/>
    <Atom type="431" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="432" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="433" charge="-0.1318" radius="0.19" scale="0.72"/>
    <Atom type="434" charge="0.0938" radius="0.125" scale="0.85"/>
    <Atom type="435" charge="-0.1943" radius="0.19" scale="0.72"/>
    <Atom type="436" charge="0.1228" radius="0.125" scale="0.85"/>
@@ -410,6 +443,7 @@
    <Atom type="440" charge="-0.8041" radius="0.148" scale="0.85"/>
    <Atom type="441" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="442" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="443" charge="-0.2248" radius="0.19" scale="0.72"/>
    <Atom type="444" charge="0.1232" radius="0.125" scale="0.85"/>
    <Atom type="445" charge="-0.0664" radius="0.19" scale="0.72"/>
    <Atom type="446" charge="0.0452" radius="0.125" scale="0.85"/>
@@ -424,6 +458,7 @@
    <Atom type="455" charge="-0.8042" radius="0.148" scale="0.85"/>
    <Atom type="456" charge="-0.5192" radius="0.1706" scale="0.79"/>
    <Atom type="457" charge="0.3055" radius="0.115" scale="0.85"/>
+   <Atom type="458" charge="-0.2059" radius="0.19" scale="0.72"/>
    <Atom type="459" charge="0.1399" radius="0.125" scale="0.85"/>
    <Atom type="460" charge="0.0071" radius="0.19" scale="0.72"/>
    <Atom type="461" charge="-0.0078" radius="0.125" scale="0.85"/>
@@ -437,12 +472,14 @@
    <Atom type="469" charge="-0.793" radius="0.148" scale="0.85"/>
    <Atom type="470" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="471" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="472" charge="-0.2493" radius="0.19" scale="0.72"/>
    <Atom type="473" charge="0.1056" radius="0.125" scale="0.85"/>
    <Atom type="474" charge="0.7231" radius="0.1875" scale="0.72"/>
    <Atom type="475" charge="-0.7855" radius="0.148" scale="0.85"/>
    <Atom type="476" charge="-0.7855" radius="0.148" scale="0.85"/>
    <Atom type="477" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="478" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="479" charge="-0.1739" radius="0.19" scale="0.72"/>
    <Atom type="480" charge="0.11" radius="0.125" scale="0.85"/>
    <Atom type="481" charge="-0.1046" radius="0.19" scale="0.72"/>
    <Atom type="482" charge="0.0565" radius="0.125" scale="0.85"/>
@@ -459,6 +496,7 @@
    <Atom type="493" charge="-0.8016" radius="0.148" scale="0.85"/>
    <Atom type="494" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="495" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="496" charge="-0.2699" radius="0.19" scale="0.72"/>
    <Atom type="497" charge="0.165" radius="0.125" scale="0.85"/>
    <Atom type="498" charge="-0.1068" radius="0.19" scale="0.72"/>
    <Atom type="499" charge="0.062" radius="0.125" scale="0.85"/>
@@ -475,6 +513,7 @@
    <Atom type="510" charge="-0.8065" radius="0.148" scale="0.85"/>
    <Atom type="511" charge="-0.3481" radius="0.1706" scale="0.79"/>
    <Atom type="512" charge="0.2764" radius="0.115" scale="0.85"/>
+   <Atom type="513" charge="-0.1445" radius="0.19" scale="0.72"/>
    <Atom type="514" charge="0.1115" radius="0.125" scale="0.85"/>
    <Atom type="515" charge="-0.08" radius="0.19" scale="0.72"/>
    <Atom type="516" charge="0.0868" radius="0.125" scale="0.85"/>
@@ -492,6 +531,7 @@
    <Atom type="528" charge="-0.8177" radius="0.148" scale="0.85"/>
    <Atom type="529" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="530" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="531" charge="-0.31" radius="0.19" scale="0.72"/>
    <Atom type="532" charge="0.1375" radius="0.125" scale="0.85"/>
    <Atom type="533" charge="0.0363" radius="0.19" scale="0.72"/>
    <Atom type="534" charge="0.0766" radius="0.125" scale="0.85"/>
@@ -506,6 +546,7 @@
    <Atom type="543" charge="-0.819" radius="0.148" scale="0.85"/>
    <Atom type="544" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="545" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="546" charge="-0.2847" radius="0.19" scale="0.72"/>
    <Atom type="547" charge="0.1346" radius="0.125" scale="0.85"/>
    <Atom type="548" charge="-0.2469" radius="0.19" scale="0.72"/>
    <Atom type="549" charge="0.0974" radius="0.125" scale="0.85"/>
@@ -520,6 +561,7 @@
    <Atom type="558" charge="-0.8199" radius="0.148" scale="0.85"/>
    <Atom type="559" charge="-0.3481" radius="0.1706" scale="0.79"/>
    <Atom type="560" charge="0.2764" radius="0.115" scale="0.85"/>
+   <Atom type="561" charge="-0.2903" radius="0.19" scale="0.72"/>
    <Atom type="562" charge="0.1438" radius="0.125" scale="0.85"/>
    <Atom type="563" charge="-0.0538" radius="0.19" scale="0.72"/>
    <Atom type="564" charge="0.0482" radius="0.125" scale="0.85"/>
@@ -536,6 +578,7 @@
    <Atom type="575" charge="-0.8252" radius="0.148" scale="0.85"/>
    <Atom type="576" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="577" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="578" charge="-0.2597" radius="0.19" scale="0.72"/>
    <Atom type="579" charge="0.1277" radius="0.125" scale="0.85"/>
    <Atom type="580" charge="-0.0236" radius="0.19" scale="0.72"/>
    <Atom type="581" charge="0.048" radius="0.125" scale="0.85"/>
@@ -549,6 +592,7 @@
    <Atom type="589" charge="-0.8105" radius="0.148" scale="0.85"/>
    <Atom type="590" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="591" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="592" charge="-0.1825" radius="0.19" scale="0.72"/>
    <Atom type="593" charge="0.1098" radius="0.125" scale="0.85"/>
    <Atom type="594" charge="-0.0959" radius="0.19" scale="0.72"/>
    <Atom type="595" charge="0.0443" radius="0.125" scale="0.85"/>
@@ -573,12 +617,14 @@
    <Atom type="614" charge="0.0172" radius="0.125" scale="0.85"/>
    <Atom type="615" charge="-0.0543" radius="0.19" scale="0.72"/>
    <Atom type="616" charge="0.0381" radius="0.125" scale="0.85"/>
+   <Atom type="617" charge="-0.1336" radius="0.19" scale="0.72"/>
    <Atom type="618" charge="0.0776" radius="0.125" scale="0.85"/>
    <Atom type="619" charge="0.6631" radius="0.1875" scale="0.72"/>
    <Atom type="620" charge="-0.7697" radius="0.148" scale="0.85"/>
    <Atom type="621" charge="-0.7697" radius="0.148" scale="0.85"/>
    <Atom type="622" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="623" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="624" charge="-0.2722" radius="0.19" scale="0.72"/>
    <Atom type="625" charge="0.1304" radius="0.125" scale="0.85"/>
    <Atom type="626" charge="0.1123" radius="0.19" scale="0.72"/>
    <Atom type="627" charge="0.0813" radius="0.125" scale="0.85"/>
@@ -589,6 +635,7 @@
    <Atom type="632" charge="-0.8132" radius="0.148" scale="0.85"/>
    <Atom type="633" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="634" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="635" charge="-0.242" radius="0.19" scale="0.72"/>
    <Atom type="636" charge="0.1207" radius="0.125" scale="0.85"/>
    <Atom type="637" charge="0.3025" radius="0.19" scale="0.72"/>
    <Atom type="638" charge="0.0078" radius="0.125" scale="0.85"/>
@@ -601,6 +648,7 @@
    <Atom type="645" charge="-0.8044" radius="0.148" scale="0.85"/>
    <Atom type="646" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="647" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="648" charge="-0.2084" radius="0.19" scale="0.72"/>
    <Atom type="649" charge="0.1272" radius="0.125" scale="0.85"/>
    <Atom type="650" charge="-0.0742" radius="0.19" scale="0.72"/>
    <Atom type="651" charge="0.0497" radius="0.125" scale="0.85"/>
@@ -624,6 +672,7 @@
    <Atom type="669" charge="-0.8011" radius="0.148" scale="0.85"/>
    <Atom type="670" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="671" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="672" charge="-0.2015" radius="0.19" scale="0.72"/>
    <Atom type="673" charge="0.1092" radius="0.125" scale="0.85"/>
    <Atom type="674" charge="-0.0752" radius="0.19" scale="0.72"/>
    <Atom type="675" charge="0.049" radius="0.125" scale="0.85"/>
@@ -644,6 +693,7 @@
    <Atom type="690" charge="-0.807" radius="0.148" scale="0.85"/>
    <Atom type="691" charge="-0.3821" radius="0.1706" scale="0.79"/>
    <Atom type="692" charge="0.2681" radius="0.115" scale="0.85"/>
+   <Atom type="693" charge="-0.3438" radius="0.19" scale="0.72"/>
    <Atom type="694" charge="0.1438" radius="0.125" scale="0.85"/>
    <Atom type="695" charge="0.194" radius="0.19" scale="0.72"/>
    <Atom type="696" charge="0.0308" radius="0.125" scale="0.85"/>
@@ -666,6 +716,7 @@
    <Atom type="713" charge="-0.5679" radius="0.148" scale="0.85"/>
    <Atom type="714" charge="0.1414" radius="0.1625" scale="0.79"/>
    <Atom type="715" charge="0.1997" radius="0.115" scale="0.85"/>
+   <Atom type="716" charge="0.0962" radius="0.19" scale="0.72"/>
    <Atom type="717" charge="0.0889" radius="0.125" scale="0.85"/>
    <Atom type="718" charge="-0.0597" radius="0.19" scale="0.72"/>
    <Atom type="719" charge="0.03" radius="0.125" scale="0.85"/>
@@ -673,6 +724,7 @@
    <Atom type="721" charge="-0.5722" radius="0.148" scale="0.85"/>
    <Atom type="722" charge="0.1305" radius="0.1625" scale="0.79"/>
    <Atom type="723" charge="0.2083" radius="0.115" scale="0.85"/>
+   <Atom type="724" charge="-0.0223" radius="0.19" scale="0.72"/>
    <Atom type="725" charge="0.1242" radius="0.125" scale="0.85"/>
    <Atom type="726" charge="0.0118" radius="0.19" scale="0.72"/>
    <Atom type="727" charge="0.0226" radius="0.125" scale="0.85"/>
@@ -691,6 +743,7 @@
    <Atom type="740" charge="-0.6013" radius="0.148" scale="0.85"/>
    <Atom type="741" charge="0.1801" radius="0.1625" scale="0.79"/>
    <Atom type="742" charge="0.1921" radius="0.115" scale="0.85"/>
+   <Atom type="743" charge="0.0368" radius="0.19" scale="0.72"/>
    <Atom type="744" charge="0.1231" radius="0.125" scale="0.85"/>
    <Atom type="745" charge="-0.0283" radius="0.19" scale="0.72"/>
    <Atom type="746" charge="0.0515" radius="0.125" scale="0.85"/>
@@ -702,6 +755,7 @@
    <Atom type="752" charge="-0.5722" radius="0.148" scale="0.85"/>
    <Atom type="753" charge="0.0782" radius="0.1625" scale="0.79"/>
    <Atom type="754" charge="0.22" radius="0.115" scale="0.85"/>
+   <Atom type="755" charge="0.0292" radius="0.19" scale="0.72"/>
    <Atom type="756" charge="0.1141" radius="0.125" scale="0.85"/>
    <Atom type="757" charge="-0.0235" radius="0.19" scale="0.72"/>
    <Atom type="758" charge="-0.0169" radius="0.125" scale="0.85"/>
@@ -712,6 +766,7 @@
    <Atom type="763" charge="-0.5889" radius="0.148" scale="0.85"/>
    <Atom type="764" charge="0.1325" radius="0.1625" scale="0.79"/>
    <Atom type="765" charge="0.2023" radius="0.115" scale="0.85"/>
+   <Atom type="766" charge="0.0927" radius="0.19" scale="0.72"/>
    <Atom type="767" charge="0.1411" radius="0.125" scale="0.85"/>
    <Atom type="768" charge="-0.1195" radius="0.19" scale="0.72"/>
    <Atom type="769" charge="0.1188" radius="0.125" scale="0.85"/>
@@ -721,6 +776,7 @@
    <Atom type="773" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="774" charge="0.2069" radius="0.1625" scale="0.79"/>
    <Atom type="775" charge="0.1815" radius="0.115" scale="0.85"/>
+   <Atom type="776" charge="0.1055" radius="0.19" scale="0.72"/>
    <Atom type="777" charge="0.0922" radius="0.125" scale="0.85"/>
    <Atom type="778" charge="-0.0277" radius="0.19" scale="0.72"/>
    <Atom type="779" charge="0.068" radius="0.125" scale="0.85"/>
@@ -729,6 +785,7 @@
    <Atom type="782" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="783" charge="0.1493" radius="0.1625" scale="0.79"/>
    <Atom type="784" charge="0.1996" radius="0.115" scale="0.85"/>
+   <Atom type="785" charge="0.0536" radius="0.19" scale="0.72"/>
    <Atom type="786" charge="0.1015" radius="0.125" scale="0.85"/>
    <Atom type="787" charge="0.0651" radius="0.19" scale="0.72"/>
    <Atom type="788" charge="0.005" radius="0.125" scale="0.85"/>
@@ -742,6 +799,7 @@
    <Atom type="796" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="797" charge="0.0017" radius="0.1625" scale="0.79"/>
    <Atom type="798" charge="0.2391" radius="0.115" scale="0.85"/>
+   <Atom type="799" charge="0.0588" radius="0.19" scale="0.72"/>
    <Atom type="800" charge="0.1202" radius="0.125" scale="0.85"/>
    <Atom type="801" charge="0.0909" radius="0.19" scale="0.72"/>
    <Atom type="802" charge="-0.0232" radius="0.125" scale="0.85"/>
@@ -754,11 +812,13 @@
    <Atom type="809" charge="-0.5889" radius="0.148" scale="0.85"/>
    <Atom type="810" charge="0.2943" radius="0.1625" scale="0.79"/>
    <Atom type="811" charge="0.1642" radius="0.115" scale="0.85"/>
+   <Atom type="812" charge="-0.01" radius="0.19" scale="0.72"/>
    <Atom type="813" charge="0.0895" radius="0.125" scale="0.85"/>
    <Atom type="814" charge="0.6163" radius="0.1875" scale="0.72"/>
    <Atom type="815" charge="-0.5722" radius="0.148" scale="0.85"/>
    <Atom type="816" charge="0.1542" radius="0.1625" scale="0.79"/>
    <Atom type="817" charge="0.1963" radius="0.115" scale="0.85"/>
+   <Atom type="818" charge="0.0964" radius="0.19" scale="0.72"/>
    <Atom type="819" charge="0.0958" radius="0.125" scale="0.85"/>
    <Atom type="820" charge="0.0259" radius="0.19" scale="0.72"/>
    <Atom type="821" charge="0.0209" radius="0.125" scale="0.85"/>
@@ -774,6 +834,7 @@
    <Atom type="831" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="832" charge="0.1472" radius="0.1625" scale="0.79"/>
    <Atom type="833" charge="0.2016" radius="0.115" scale="0.85"/>
+   <Atom type="834" charge="0.0236" radius="0.19" scale="0.72"/>
    <Atom type="835" charge="0.138" radius="0.125" scale="0.85"/>
    <Atom type="836" charge="0.0489" radius="0.19" scale="0.72"/>
    <Atom type="837" charge="0.0223" radius="0.125" scale="0.85"/>
@@ -789,6 +850,7 @@
    <Atom type="847" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="848" charge="0.256" radius="0.1625" scale="0.79"/>
    <Atom type="849" charge="0.1704" radius="0.115" scale="0.85"/>
+   <Atom type="850" charge="0.0581" radius="0.19" scale="0.72"/>
    <Atom type="851" charge="0.1047" radius="0.125" scale="0.85"/>
    <Atom type="852" charge="0.0484" radius="0.19" scale="0.72"/>
    <Atom type="853" charge="0.0531" radius="0.125" scale="0.85"/>
@@ -805,6 +867,7 @@
    <Atom type="864" charge="-0.6013" radius="0.148" scale="0.85"/>
    <Atom type="865" charge="0.0311" radius="0.1625" scale="0.79"/>
    <Atom type="866" charge="0.2329" radius="0.115" scale="0.85"/>
+   <Atom type="867" charge="0.0257" radius="0.19" scale="0.72"/>
    <Atom type="868" charge="0.1031" radius="0.125" scale="0.85"/>
    <Atom type="869" charge="0.1885" radius="0.19" scale="0.72"/>
    <Atom type="870" charge="0.0213" radius="0.125" scale="0.85"/>
@@ -818,6 +881,7 @@
    <Atom type="878" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="879" charge="0.101" radius="0.1625" scale="0.79"/>
    <Atom type="880" charge="0.2148" radius="0.115" scale="0.85"/>
+   <Atom type="881" charge="0.0104" radius="0.19" scale="0.72"/>
    <Atom type="882" charge="0.1053" radius="0.125" scale="0.85"/>
    <Atom type="883" charge="-0.0244" radius="0.19" scale="0.72"/>
    <Atom type="884" charge="0.0256" radius="0.125" scale="0.85"/>
@@ -831,6 +895,7 @@
    <Atom type="892" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="893" charge="0.0966" radius="0.1625" scale="0.79"/>
    <Atom type="894" charge="0.2165" radius="0.115" scale="0.85"/>
+   <Atom type="895" charge="-0.0015" radius="0.19" scale="0.72"/>
    <Atom type="896" charge="0.118" radius="0.125" scale="0.85"/>
    <Atom type="897" charge="0.0212" radius="0.19" scale="0.72"/>
    <Atom type="898" charge="0.0283" radius="0.125" scale="0.85"/>
@@ -846,6 +911,7 @@
    <Atom type="908" charge="-0.6013" radius="0.148" scale="0.85"/>
    <Atom type="909" charge="0.1592" radius="0.1625" scale="0.79"/>
    <Atom type="910" charge="0.1984" radius="0.115" scale="0.85"/>
+   <Atom type="911" charge="0.0221" radius="0.19" scale="0.72"/>
    <Atom type="912" charge="0.1116" radius="0.125" scale="0.85"/>
    <Atom type="913" charge="0.0865" radius="0.19" scale="0.72"/>
    <Atom type="914" charge="0.0125" radius="0.125" scale="0.85"/>
@@ -858,6 +924,7 @@
    <Atom type="921" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="922" charge="0.1737" radius="0.1625" scale="0.79"/>
    <Atom type="923" charge="0.1921" radius="0.115" scale="0.85"/>
+   <Atom type="924" charge="0.0733" radius="0.19" scale="0.72"/>
    <Atom type="925" charge="0.1041" radius="0.125" scale="0.85"/>
    <Atom type="926" charge="0.033" radius="0.19" scale="0.72"/>
    <Atom type="927" charge="0.0104" radius="0.125" scale="0.85"/>
@@ -882,11 +949,13 @@
    <Atom type="946" charge="0.1" radius="0.125" scale="0.85"/>
    <Atom type="947" charge="-0.115" radius="0.19" scale="0.72"/>
    <Atom type="948" charge="0.1" radius="0.125" scale="0.85"/>
+   <Atom type="949" charge="0.1" radius="0.19" scale="0.72"/>
    <Atom type="950" charge="0.1" radius="0.125" scale="0.85"/>
    <Atom type="951" charge="0.526" radius="0.1875" scale="0.72"/>
    <Atom type="952" charge="-0.5" radius="0.148" scale="0.85"/>
    <Atom type="953" charge="0.1849" radius="0.1625" scale="0.79"/>
    <Atom type="954" charge="0.1898" radius="0.115" scale="0.85"/>
+   <Atom type="955" charge="0.0567" radius="0.19" scale="0.72"/>
    <Atom type="956" charge="0.0782" radius="0.125" scale="0.85"/>
    <Atom type="957" charge="0.2596" radius="0.19" scale="0.72"/>
    <Atom type="958" charge="0.0273" radius="0.125" scale="0.85"/>
@@ -896,6 +965,7 @@
    <Atom type="962" charge="-0.5722" radius="0.148" scale="0.85"/>
    <Atom type="963" charge="0.1812" radius="0.1625" scale="0.79"/>
    <Atom type="964" charge="0.1934" radius="0.115" scale="0.85"/>
+   <Atom type="965" charge="0.0034" radius="0.19" scale="0.72"/>
    <Atom type="966" charge="0.1087" radius="0.125" scale="0.85"/>
    <Atom type="967" charge="0.4514" radius="0.19" scale="0.72"/>
    <Atom type="968" charge="-0.0323" radius="0.125" scale="0.85"/>
@@ -907,6 +977,7 @@
    <Atom type="974" charge="-0.5722" radius="0.148" scale="0.85"/>
    <Atom type="975" charge="0.1913" radius="0.1625" scale="0.79"/>
    <Atom type="976" charge="0.1888" radius="0.115" scale="0.85"/>
+   <Atom type="977" charge="0.0421" radius="0.19" scale="0.72"/>
    <Atom type="978" charge="0.1162" radius="0.125" scale="0.85"/>
    <Atom type="979" charge="0.0543" radius="0.19" scale="0.72"/>
    <Atom type="980" charge="0.0222" radius="0.125" scale="0.85"/>
@@ -929,6 +1000,7 @@
    <Atom type="997" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="998" charge="0.194" radius="0.1625" scale="0.79"/>
    <Atom type="999" charge="0.1873" radius="0.115" scale="0.85"/>
+   <Atom type="1000" charge="0.057" radius="0.19" scale="0.72"/>
    <Atom type="1001" charge="0.0983" radius="0.125" scale="0.85"/>
    <Atom type="1002" charge="0.0659" radius="0.19" scale="0.72"/>
    <Atom type="1003" charge="0.0102" radius="0.125" scale="0.85"/>
@@ -948,6 +1020,7 @@
    <Atom type="1017" charge="-0.5713" radius="0.148" scale="0.85"/>
    <Atom type="1018" charge="0.0577" radius="0.1625" scale="0.79"/>
    <Atom type="1019" charge="0.2272" radius="0.115" scale="0.85"/>
+   <Atom type="1020" charge="-0.0054" radius="0.19" scale="0.72"/>
    <Atom type="1021" charge="0.1093" radius="0.125" scale="0.85"/>
    <Atom type="1022" charge="0.3196" radius="0.19" scale="0.72"/>
    <Atom type="1023" charge="-0.0221" radius="0.125" scale="0.85"/>
