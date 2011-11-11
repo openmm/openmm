@@ -457,6 +457,9 @@ __kernel void computeGBSAForce1(
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
                 bool computeSubset = false;
+#ifdef USE_APPLE_WORKAROUND
+                computeSubset = (flags == 0); // Workaround for a compiler bug in Apple's OpenCL on Lion
+#else
                 if (flags != 0xFFFFFFFF) {
                     if (tgx < 2)
                         exclusionRange[2*localGroupIndex+tgx] = exclusionRowIndices[x+tgx];
@@ -467,6 +470,7 @@ __kernel void computeGBSAForce1(
                             exclusionIndex[localGroupIndex] = i*TILE_SIZE;
                     computeSubset = (exclusionIndex[localGroupIndex] == -1);
                 }
+#endif
                 if (computeSubset) {
                     if (flags == 0) {
                         // No interactions in this tile.

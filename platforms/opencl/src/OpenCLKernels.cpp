@@ -1530,6 +1530,9 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
         defines["FORCE_WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(nb.getForceThreadBlockSize());
+        string platformVendor = cl::Platform(cl.getDevice().getInfo<CL_DEVICE_PLATFORM>()).getInfo<CL_PLATFORM_VENDOR>();
+        if (platformVendor == "Apple")
+            defines["USE_APPLE_WORKAROUND"] = "1";
         string file;
         if (deviceIsCpu)
             file = OpenCLKernelSources::gbsaObc_cpu;
