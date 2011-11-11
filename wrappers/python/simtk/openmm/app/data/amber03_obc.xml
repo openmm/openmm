@@ -140,6 +140,7 @@
    <Atom type="137" charge="-0.374282" radius="0.1706" scale="0.79"/>
    <Atom type="138" charge="0.253981" radius="0.115" scale="0.85"/>
    <Atom type="139" charge="-0.128844" radius="0.19" scale="0.72"/>
+   <Atom type="140" charge="0.088859" radius="0.125" scale="0.85"/>
    <Atom type="141" charge="0.580584" radius="0.1875" scale="0.72"/>
    <Atom type="142" charge="-0.509157" radius="0.148" scale="0.85"/>
    <Atom type="143" charge="-0.506799" radius="0.1706" scale="0.79"/>
