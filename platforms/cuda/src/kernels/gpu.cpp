@@ -1108,18 +1108,14 @@ void gpuSetGBVIParameters(gpuContext gpu, float innerDielectric, float solventDi
             (*gpu->psGBVIData)[i].w            = 1.0f;
             (*gpu->psGBVISwitchDerivative)[i]  = 1.0f;
 
-(*gpu->psObcData)[i].x  = radius[i];
-(*gpu->psObcData)[i].y  = 0.9f*radius[i];
-
-#undef DUMP_PARAMETERS
 #define DUMP_PARAMETERS 0
 #if (DUMP_PARAMETERS == 1)
-        (void) fprintf( stderr,"GBVI param: %5u R=%14.7e scaledR=%14.7e gamma*tau=%14.7e bornRadiusScaleFactor=%14.7e\n",
-                        i, (*gpu->psGBVIData)[i].x, (*gpu->psGBVIData)[i].y,
+        (void) fprintf( stderr,"GBVI param: %5u R=%15.7e scaledR=%15.7e R-S=%15.7e gamma*tau=%15.7e bornRadiusScaleFactor=%15.7e\n",
+                        i, (*gpu->psGBVIData)[i].x, (*gpu->psGBVIData)[i].y,  (*gpu->psGBVIData)[i].x - (*gpu->psGBVIData)[i].y,
                         (*gpu->psGBVIData)[i].z, (*gpu->psGBVIData)[i].w ); 
 #endif
+#undef DUMP_PARAMETERS
     }
-//(void) fprintf( stderr, "gpuSetGBVIParameters: setting Obc parameters!!!! should be removed.\n" );
     // Dummy out extra atom data
     for (unsigned int i = atoms; i < gpu->sim.paddedNumberOfAtoms; i++)
     {
