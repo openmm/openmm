@@ -357,8 +357,6 @@ RealOpenMM CpuGBVI::dL_dr( RealOpenMM r, RealOpenMM x, RealOpenMM S ){
 
     // ---------------------------------------------------------------------------------------
 
-    // static const char* methodName = "\nCpuGBVI::dL_dr";
-
     static const RealOpenMM one           = static_cast<RealOpenMM>( 1.0 );
     static const RealOpenMM threeHalves   = static_cast<RealOpenMM>( 1.5 );
     static const RealOpenMM threeEights   = static_cast<RealOpenMM>( 0.375 );
@@ -395,8 +393,6 @@ RealOpenMM CpuGBVI::dL_dr( RealOpenMM r, RealOpenMM x, RealOpenMM S ){
 RealOpenMM CpuGBVI::dL_dx( RealOpenMM r, RealOpenMM x, RealOpenMM S ){
 
     // ---------------------------------------------------------------------------------------
-
-    // static const char* methodName = "CpuGBVI::dL_dx";
 
     static const RealOpenMM one           = static_cast<RealOpenMM>(  1.0 );
     static const RealOpenMM half          = static_cast<RealOpenMM>(  0.5 );
@@ -693,14 +689,15 @@ void CpuGBVI::computeBornForces( std::vector<RealVec>& atomCoordinates, const Re
    
                 // find dRb/dr, where Rb is the Born radius
    
-                de = CpuGBVI::dL_dr( r, r+S, S ) + CpuGBVI::dL_dx( r, r+S, S );   
                 if( FABS( diff ) < r ){
+                    de = CpuGBVI::dL_dr( r, r+S, S ) + CpuGBVI::dL_dx( r, r+S, S );   
                     if( R > (r - S) ){
                        de -= CpuGBVI::dL_dr( r, R, S );  
                     } else {
                        de -= ( CpuGBVI::dL_dr( r, (r-S), S ) + CpuGBVI::dL_dx( r, (r-S), S ) );
                     }
                 } else if( r < (S - R) ){
+                    de  = CpuGBVI::dL_dr( r, r+S, S ) + CpuGBVI::dL_dx( r, r+S, S );   
                     de -= ( CpuGBVI::dL_dr( r, r-S, S ) + CpuGBVI::dL_dx( r, r-S, S ) );   
                 }
    
