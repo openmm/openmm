@@ -33,7 +33,7 @@
 __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned int* workUnit)
 {
     extern __shared__ float stack[];
-    Atom* sA = (Atom*) &stack[cSim.customExpressionStackSize*blockDim.x];
+    volatile Atom* sA = (volatile Atom*) &stack[cSim.customExpressionStackSize*blockDim.x];
     float* variables = (float*) &sA[blockDim.x];
     unsigned int totalWarps = gridDim.x*blockDim.x/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
@@ -42,7 +42,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
     unsigned int end = (warp+1)*numWorkUnits/totalWarps;
     float totalEnergy = 0.0f;
 #ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &variables[9*blockDim.x];
+    volatile float3* tempBuffer = (volatile float3*) &variables[9*blockDim.x];
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
@@ -58,7 +58,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
         unsigned int tj = tgx;
-        Atom* psA = &sA[tbx];
+        volatile Atom* psA = &sA[tbx];
         unsigned int i      = x + tgx;
         apos                = cSim.pPosq[i];
         float4 params       = cSim.pCustomParams[i];
@@ -71,7 +71,10 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
             sA[threadIdx.x].x   = apos.x;
             sA[threadIdx.x].y   = apos.y;
             sA[threadIdx.x].z   = apos.z;
-            sA[threadIdx.x].params = params;
+            sA[threadIdx.x].params.x = params.x;
+            sA[threadIdx.x].params.y = params.y;
+            sA[threadIdx.x].params.z = params.z;
+            sA[threadIdx.x].params.w = params.w;
             unsigned int xi   = x>>GRIDBITS;
             unsigned int cell = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
             unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
@@ -145,7 +148,10 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 sA[threadIdx.x].x       = temp.x;
                 sA[threadIdx.x].y       = temp.y;
                 sA[threadIdx.x].z       = temp.z;
-                sA[threadIdx.x].params  = cSim.pCustomParams[j];
+                sA[threadIdx.x].params.x = cSim.pCustomParams[j].x;
+                sA[threadIdx.x].params.y = cSim.pCustomParams[j].y;
+                sA[threadIdx.x].params.z = cSim.pCustomParams[j].z;
+                sA[threadIdx.x].params.w = cSim.pCustomParams[j].w;
             }
             sA[threadIdx.x].fx      = 0.0f;
             sA[threadIdx.x].fy      = 0.0f;
