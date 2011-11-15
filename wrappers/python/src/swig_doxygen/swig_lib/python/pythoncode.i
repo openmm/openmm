@@ -80,11 +80,11 @@ class State(_object):
     def getPeriodicBoxVectors(self, asNumpy=False):
         """Get the three periodic box vectors if this state is from a
            simulation using PBC ."""
-        if not self._periodicBoxVectorsList:
+        if self._periodicBoxVectorsList is None:
             raise TypeError('periodic box vectors were not available.')
 
         if asNumpy:
-            if not self._periodicBoxVectorsListNumpy:
+            if self._periodicBoxVectorsListNumpy is None:
                 self._periodicBoxVectorsListNumpy = \
                      numpy.array(self._periodicBoxVectorsList)
             returnValue=self._periodicBoxVectorsListNumpy
@@ -104,11 +104,11 @@ class State(_object):
            or unit.nanometer.  See the following for details:
            https://simtk.org/home/python_units
            """
-        if not self._coordList:
+        if self._coordList is None:
             raise TypeError('Positions were not requested in getState() call, so are not available.')
 
         if asNumpy:
-            if not self._coordListNumpy:
+            if self._coordListNumpy is None:
                 self._coordListNumpy=numpy.array(self._coordList)
             returnValue=self._coordListNumpy
         else:
@@ -128,11 +128,11 @@ class State(_object):
            etc.  See the following for details:
            https://simtk.org/home/python_units
            """
-        if not self._velList:
+        if self._velList is None:
             raise TypeError('Velocities were not requested in getState() call, so are not available.')
 
         if asNumpy:
-            if not self._velListNumpy:
+            if self._velListNumpy is None:
                 self._velListNumpy=numpy.array(self._velList)
             returnValue=self._velListNumpy
         else:
@@ -153,11 +153,11 @@ class State(_object):
            See the following for details:
            https://simtk.org/home/python_units
            """
-        if not self._forceList:
+        if self._forceList is None:
             raise TypeError('Forces were not requested in getState() call, so are not available.')
 
         if asNumpy:
-            if not self._forceListNumpy:
+            if self._forceListNumpy is None:
                 self._forceListNumpy=numpy.array(self._forceList)
             returnValue=self._forceListNumpy
         else:
