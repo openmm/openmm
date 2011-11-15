@@ -47,7 +47,7 @@ public:
         return name;
     }
     double getSpeed() const {
-        return 50;
+        return 100;
     }
     bool supportsDoublePrecision() const;
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
