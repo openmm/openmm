@@ -394,7 +394,7 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
                 // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
                 float4 sum1 = forceBuffers[offset1];
                 float4 sum2 = forceBuffers[offset2];
-                float global_sum1 = global_bornForce[offset2];
+                float global_sum1 = global_bornForce[offset1];
                 float global_sum2 = global_bornForce[offset2];
                 sum1.xyz += force.xyz + tempBuffer[tgx].xyz;
                 global_sum1 += force.w + tempBuffer[tgx].w;
