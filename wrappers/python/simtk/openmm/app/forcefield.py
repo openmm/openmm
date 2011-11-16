@@ -1344,7 +1344,6 @@ class AmoebaHarmonicBondGenerator:
         self.hasBeenCalled = 1
 
         countConstraint(data)
-        print "In AmoebaHarmonicBondForce generator"
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.AmoebaHarmonicBondForce]
