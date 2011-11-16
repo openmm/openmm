@@ -48,6 +48,7 @@ enum CudaAmoebaNonbondedMethod
 };
 
 static const int AMOEBA_PME_ORDER = 5;
+static const int AMOEBA_MAX_TORSION_TORSION_GRIDS = 12;
 
 struct cudaAmoebaGmxSimulation {
 
@@ -120,10 +121,10 @@ struct cudaAmoebaGmxSimulation {
     unsigned int    amoebaTorsionTorsion_offset;    // Offset to end of torsion torsions
 
                                                     // grids
-    int   amoebaTorTorGridOffset[4];                // grid offset
-    int   amoebaTorTorGridNy[4];                    // 25
-    float amoebaTorTorGridBegin[4];                 // -180.0
-    float amoebaTorTorGridDelta[4];                 // 15.0
+    int   amoebaTorTorGridOffset[AMOEBA_MAX_TORSION_TORSION_GRIDS];                // grid offset
+    int   amoebaTorTorGridNy[AMOEBA_MAX_TORSION_TORSION_GRIDS];                    // 25
+    float amoebaTorTorGridBegin[AMOEBA_MAX_TORSION_TORSION_GRIDS];                 // -180.0
+    float amoebaTorTorGridDelta[AMOEBA_MAX_TORSION_TORSION_GRIDS];                 // 15.0
     float4*          pAmoebaTorsionTorsionGrids;    // torsion torsion grids
 
     unsigned int    amoebaUreyBradleys;             // Number of UB ixns

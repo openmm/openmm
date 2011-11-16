@@ -50,8 +50,8 @@ using namespace std;
  * -------------------------------------------------------------------------- */
 
 static void computeAmoebaLocalForces( AmoebaCudaData& data ) {
-    amoebaGpuContext gpu = data.getAmoebaGpu();
 
+    amoebaGpuContext gpu = data.getAmoebaGpu();
     if( 0 && data.getLog() ){
         (void) fprintf( data.getLog(), "computeAmoebaLocalForces\n" ); (void) fflush( data.getLog() );
     }
@@ -755,7 +755,9 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
             AmoebaTorsionTorsionForceImpl::reorderGrid( grid, reorderedGrid );
             reorder = 1;
             if( data.getLog() ){
-                (void) fprintf( data.getLog(), "CudaCalcAmoebaTorsionTorsionForceKernel::initialize: reordering torsion-torsion grid %d.\n", gridIndex );
+                (void) fprintf( data.getLog(), "CudaCalcAmoebaTorsionTorsionForceKernel Reordered torsion-torsion grid %4d [%u %u] %12.3f %12.3f   [%u %u] %12.3f %12.3f.\n",
+                                gridIndex, static_cast<unsigned int>(grid.size()), static_cast<unsigned int>(grid[0].size()), grid[0][0][0], grid[0][1][0],
+                                static_cast<unsigned int>(reorderedGrid.size() ),  static_cast<unsigned int>(reorderedGrid[0].size() ), reorderedGrid[0][0][0], reorderedGrid[0][1][0] );
             }
         }
         for (unsigned int ii = 0; ii < grid.size(); ii++) {
@@ -765,9 +767,11 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
 
                 floatGrids[gridIndex][ii][jj].resize( grid[ii][jj].size() );
                 if( reorder ){
+
                     for( unsigned int kk = 0; kk < grid[ii][jj].size(); kk++) {
                         floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(reorderedGrid[ii][jj][kk]);
                     }
+
                 } else {
                     for( unsigned int kk = 0; kk < grid[ii][jj].size(); kk++) {
                         floatGrids[gridIndex][ii][jj][kk] = static_cast<float>(grid[ii][jj][kk]);
@@ -1121,7 +1125,6 @@ static void computeAmoebaVdwForce( AmoebaCudaData& data ) {
     data.initializeGpu();
 
     // Vdw14_7F
-
     kCalculateAmoebaVdw14_7Forces(gpu, data.getUseVdwNeighborList());
 }
 

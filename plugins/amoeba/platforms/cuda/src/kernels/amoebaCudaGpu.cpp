@@ -1170,6 +1170,11 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     unsigned int torsionTorsionGrids                     = floatGrids.size(); // number of grids
     unsigned int totalGridEntries                        = 0;                 // total number of entries over all grids
                                                                               // used to allocate single memory buffer for grids 
+    if( floatGrids.size() > AMOEBA_MAX_TORSION_TORSION_GRIDS ){
+        std::stringstream message;
+        message  << "Number of slots for TorsionTorsionGrids is too small -- should be increased to at least " << floatGrids.size();
+        throw OpenMM::OpenMMException( message.str() );
+    }
 
     // 4 (grids) * (25 *25 grid)*(2 +4 a1, a2, f, f1,f2, f12) = 15000
 
@@ -1178,9 +1183,11 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
 
     for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
 
+        unsigned int lastIndex                          = floatGrids[ii][0].size()-1;
+        float range                                     = floatGrids[ii][0][lastIndex][1] - floatGrids[ii][0][0][1];
         amoebaGpu->amoebaSim.amoebaTorTorGridOffset[ii] = (totalGridEntries/4);
         amoebaGpu->amoebaSim.amoebaTorTorGridBegin[ii]  = floatGrids[ii][0][0][0];
-        amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii]  = 360.0f/static_cast<float>(floatGrids[ii].size()-1);
+        amoebaGpu->amoebaSim.amoebaTorTorGridDelta[ii]  = range/static_cast<float>(floatGrids[ii].size()-1);
         amoebaGpu->amoebaSim.amoebaTorTorGridNy[ii]     = floatGrids[ii].size();
 
         for (unsigned int jj = 0; jj < floatGrids[ii].size(); jj++) {
