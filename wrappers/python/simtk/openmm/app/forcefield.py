@@ -44,7 +44,7 @@ class ForceField(object):
         self._atomTypes = {}
         self._templates = {}
         self._templateSignatures = {}
-        self._atomClasses = {}
+        self._atomClasses = {'':set()}
         self._forces = []
         for file in files:
             try:
@@ -95,7 +95,7 @@ class ForceField(object):
                     typeSet = set()
                     self._atomClasses[atomClass] = typeSet
                 typeSet.add(type)
-            self._atomClasses[''] = self._atomTypes.keys()
+                self._atomClasses[''].add(type)
             
             # Load force definitions
             
