@@ -3230,6 +3230,16 @@ class AmoebaMultipoleGenerator:
                                   if (ky == 0):
                                       zaxis = bondedAtomZIndex
                                       xaxis = bondedAtomXIndex
+                                      if( bondedAtomXType == bondedAtomZType and xaxis < zaxis ):
+                                          swapI = zaxis
+                                          zaxis = xaxis
+                                          xaxis = swapI
+                                      else:
+                                          for bondedAtomXIndex in bondedAtomIndices:
+                                              bondedAtomX1Type = int(data.atomType[data.atoms[bondedAtomXIndex]])
+                                              if( bondedAtomX1Type == kx and bondedAtomXIndex != bondedAtomZIndex and bondedAtomXIndex < xaxis ):
+                                                  xaxis = bondedAtomXIndex
+
                                       savedMultipoleDict = multipoleDict
                                       hit = 1
                                   else:
@@ -3286,6 +3296,14 @@ class AmoebaMultipoleGenerator:
                                   if (ky == 0):
                                       zaxis = bondedAtomZIndex
                                       xaxis = bondedAtomXIndex
+
+                                      # select xaxis w/ smallest index
+
+                                      for bondedAtomXIndex in bondedAtom13Indices:
+                                          bondedAtomX1Type = int(data.atomType[data.atoms[bondedAtomXIndex]])
+                                          if( bondedAtomX1Type == kx and bondedAtomXIndex != bondedAtomZIndex and bondedAtomZIndex in bonded12ParticleSets[bondedAtomXIndex] and bondedAtomXIndex < xaxis ):
+                                              xaxis = bondedAtomXIndex
+
                                       savedMultipoleDict = multipoleDict
                                       hit = 3
                                   else:
@@ -3731,7 +3749,8 @@ class AmoebaGeneralizedKirkwoodGenerator:
                 radius = self.getAmoebaTypeRadius(data, bonded12ParticleSets[atomIndex], atomIndex)
             else:
                 radius = self.getBondiTypeRadius(data, bonded12ParticleSets[atomIndex], atomIndex)
-            shct = self.getObcShct(data, atomIndex)
+            #shct = self.getObcShct(data, atomIndex)
+            shct = 0.69
             force.addParticle(multipoleParameters[0], radius, shct)
 
 parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.parseElement
