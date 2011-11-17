@@ -993,7 +993,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
                                     static_cast<float>( force.getCutoffDistance()),
                                     static_cast<float>( force.getAEwald()) );
     if (nonbondedMethod == AmoebaMultipoleForce::PME) {
-        double alpha;
+        double alpha = force.getAEwald();
         int xsize, ysize, zsize;
         NonbondedForce nb;
         nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
@@ -1001,7 +1001,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         std::vector<int> pmeGridDimension;
         force.getPmeGridDimensions( pmeGridDimension );
         int pmeParametersSetBasedOnEwaldErrorTolerance;
-        if( pmeGridDimension[0] == 0 ){
+        if( pmeGridDimension[0] == 0 || alpha == 0.0 ){
             NonbondedForceImpl::calcPMEParameters(system, nb, alpha, xsize, ysize, zsize);
             pmeParametersSetBasedOnEwaldErrorTolerance = 1;
         } else {
