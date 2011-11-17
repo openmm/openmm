@@ -541,7 +541,7 @@ void CpuObc::printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
     (void) fprintf( log, "Reference Obc      %s atoms=%d\n", idString.c_str(), numberOfAtoms );
     if( comparisonFormat ){    
         (void) fprintf( log, "Reference Obc  %s atoms=%d Chain/Radii/Force\n", idString.c_str(), numberOfAtoms );
-        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+        for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
             (void) fprintf( log, "%6d ", atomI );
             if( obcChain.size() > atomI ){
                  (void) fprintf( log, " %15.7e", obcChain[atomI] );
@@ -562,7 +562,7 @@ void CpuObc::printObc( const std::vector<OpenMM::RealVec>& atomCoordinates,
         (void) fprintf( log, "    beta           %15.7e\n", betaObc);
         (void) fprintf( log, "    gamma          %15.7e\n", gammaObc );
      
-        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+        for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
             (void) fprintf( log, "%6d r=%15.7e q=%6.3f", atomI,
                             atomicRadii[atomI], partialCharges[atomI] );
             if( obcChain.size() > atomI ){

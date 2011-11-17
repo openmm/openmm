@@ -783,7 +783,7 @@ void CpuGBVI::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, co
  
     if( useComparisonFormat ){
         (void) fprintf( log, "  br bF swd r scR tau*gamma q)\n" );
-        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+        for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
             (void) fprintf( log, "%6d ", atomI );
             if( bornRadii.size() > atomI ){
                  (void) fprintf( log, "%15.7e ", bornRadii[atomI] );
@@ -800,7 +800,7 @@ void CpuGBVI::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordinates, co
             (void) fprintf( log, "\n" );
         }   
     } else {
-        for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+        for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
             (void) fprintf( log, "%6d r=%15.7e rSc=%15.7e swd=%15.7e tau*gam=%15.7e q=%15.7e", atomI,
                             atomicRadii[atomI],    
                             scaledRadii[atomI],    
