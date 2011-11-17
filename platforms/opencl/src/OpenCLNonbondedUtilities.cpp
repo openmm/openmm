@@ -375,6 +375,8 @@ void OpenCLNonbondedUtilities::setTileRange(int startTileIndex, int numTiles) {
         findInteractingBlocksKernel.setArg<cl_uint>(10, startTileIndex);
         findInteractingBlocksKernel.setArg<cl_uint>(11, startTileIndex+numTiles);
     }
+    else
+        forceKernel.setArg<cl_uint>(9, numTiles);
 }
 
 cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const {

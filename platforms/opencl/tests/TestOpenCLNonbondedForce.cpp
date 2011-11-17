@@ -676,7 +676,7 @@ void testDispersionCorrection() {
     ASSERT_EQUAL_TOL(expected, energy1-energy2, 1e-4);
 }
 
-void testParallelComputation() {
+void testParallelComputation(bool useCutoff) {
     OpenCLPlatform platform;
     System system;
     const int numParticles = 200;
@@ -685,6 +685,8 @@ void testParallelComputation() {
     NonbondedForce* force = new NonbondedForce();
     for (int i = 0; i < numParticles; i++)
         force->addParticle(i%2-0.5, 0.5, 1.0);
+    if (useCutoff)
+        force->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     system.addForce(force);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -725,7 +727,8 @@ int main() {
         testBlockInteractions(false);
         testBlockInteractions(true);
         testDispersionCorrection();
-        testParallelComputation();
+        testParallelComputation(false);
+        testParallelComputation(true);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
