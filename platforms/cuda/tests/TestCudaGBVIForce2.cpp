@@ -1980,7 +1980,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
 #ifdef INCLUDE_AMOEBA_FORCES
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaHarmonicBondForce& castForce = dynamic_cast<const AmoebaHarmonicBondForce&>(force);
@@ -1989,7 +1989,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaHarmonicAngleForce& castForce = dynamic_cast<const AmoebaHarmonicAngleForce&>(force);
@@ -1998,7 +1998,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaHarmonicInPlaneAngleForce& castForce = dynamic_cast<const AmoebaHarmonicInPlaneAngleForce&>(force);
@@ -2007,7 +2007,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaMultipoleForce& castForce = dynamic_cast<const AmoebaMultipoleForce&>(force);
@@ -2016,7 +2016,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaOutOfPlaneBendForce& castForce = dynamic_cast<const AmoebaOutOfPlaneBendForce&>(force);
@@ -2025,7 +2025,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaPiTorsionForce& castForce = dynamic_cast<const AmoebaPiTorsionForce&>(force);
@@ -2034,7 +2034,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaStretchBendForce& castForce = dynamic_cast<const AmoebaStretchBendForce&>(force);
@@ -2043,7 +2043,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaTorsionForce& castForce = dynamic_cast<const AmoebaTorsionForce&>(force);
@@ -2052,7 +2052,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaTorsionTorsionForce& castForce = dynamic_cast<const AmoebaTorsionTorsionForce&>(force);
@@ -2061,7 +2061,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaUreyBradleyForce& castForce = dynamic_cast<const AmoebaUreyBradleyForce&>(force);
@@ -2070,7 +2070,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaVdwForce& castForce = dynamic_cast<const AmoebaVdwForce&>(force);
@@ -2079,7 +2079,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaWcaDispersionForce& castForce = dynamic_cast<const AmoebaWcaDispersionForce&>(force);
@@ -2088,7 +2088,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaGeneralizedKirkwoodForce& castForce = dynamic_cast<const AmoebaGeneralizedKirkwoodForce&>(force);
@@ -2097,7 +2097,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaTorsionTorsionForce& castForce = dynamic_cast<const AmoebaTorsionTorsionForce&>(force);
