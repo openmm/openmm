@@ -61,7 +61,8 @@ public:
     }
     std::vector<std::string> getKernelNames();
 
-    static void reorderGrid( const TorsionTorsionGrid& grid, TorsionTorsionGrid& reorderedGrid );
+    OPENMM_EXPORT static void reorderGrid( const TorsionTorsionGrid& grid, TorsionTorsionGrid& reorderedGrid );
+
 private:
     AmoebaTorsionTorsionForce& owner;
     Kernel kernel;

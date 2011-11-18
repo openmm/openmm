@@ -200,6 +200,7 @@ public:
            buffer << "TorsionInfo::copyTorsionParameter: input torsionParameter index(=" << index << ") is not in range [0," << maxTorsions << ")!";
            throw OpenMMException( buffer.str() );
         }
+        return 0;
     }
 };
 

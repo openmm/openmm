@@ -1594,6 +1594,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
     RealOpenMM vector[LastVectorIndex][3];
     RealOpenMM angles[LastVectorIndex][2];
 
+    static const RealOpenMM zero        = 0.0;
     static const RealOpenMM one         = 1.0;
     static const RealOpenMM two         = 2.0;
  
@@ -1629,22 +1630,22 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
     norms[VW]                     = AmoebaReferenceForce::normalizeVector3( vector[VW] );
 
     angles[UV][0]                 = AmoebaReferenceForce::getDotProduct3( vector[U], vector[V] );
-    angles[UV][1]                 = sqrtf( 1.0f - angles[UV][0]*angles[UV][0]);
+    angles[UV][1]                 = SQRT( one - angles[UV][0]*angles[UV][0]);
     
     angles[UW][0]                 = AmoebaReferenceForce::getDotProduct3( vector[U], vector[W] );
-    angles[UW][1]                 = sqrtf( 1.0f - angles[UW][0]*angles[UW][0]);
+    angles[UW][1]                 = SQRT( one - angles[UW][0]*angles[UW][0]);
 
     angles[VW][0]                 = AmoebaReferenceForce::getDotProduct3( vector[V], vector[W] );
-    angles[VW][1]                 = sqrtf( 1.0f - angles[VW][0]*angles[VW][0]);
+    angles[VW][1]                 = SQRT( one - angles[VW][0]*angles[VW][0]);
 
-    float dphi[3];
+    RealOpenMM dphi[3];
     dphi[U]                       = AmoebaReferenceForce::getDotProduct3( vector[U], torque );
     dphi[V]                       = AmoebaReferenceForce::getDotProduct3( vector[V], torque );
     dphi[W]                       = AmoebaReferenceForce::getDotProduct3( vector[W], torque );
 
-    dphi[U]                      *= -1.0f;
-    dphi[V]                      *= -1.0f;
-    dphi[W]                      *= -1.0f;
+    dphi[U]                      *= -one;
+    dphi[V]                      *= -one;
+    dphi[W]                      *= -one;
 
     // branch based on axis type
  
@@ -1653,20 +1654,21 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
 
     if( axisType == AmoebaMultipoleForce::ZThenX || axisType == AmoebaMultipoleForce::Bisector ){
  
-        float factor1;
-        float factor2;
-        float factor3;
-        float factor4;
+        RealOpenMM factor1;
+        RealOpenMM factor2;
+        RealOpenMM factor3;
+        RealOpenMM factor4;
+        RealOpenMM half = 0.5;
     
         factor1                 =  dphi[V]/(norms[U]*angles[UV][1]);
         factor2                 =  dphi[W]/(norms[U]);
         factor3                 = -dphi[U]/(norms[V]*angles[UV][1]);
     
         if( axisType == AmoebaMultipoleForce::Bisector ){ 
-            factor2    *= 0.5f;
-            factor4     = 0.5f*dphi[W]/(norms[V]);
+            factor2    *= half;
+            factor4     = half*dphi[W]/(norms[V]);
         } else {
-            factor4     = 0.0f;
+            factor4     = zero;
         }
  
         for( int ii = 0; ii < 3; ii++ ){
@@ -1701,16 +1703,16 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
         norms[WS]                 = AmoebaReferenceForce::normalizeVector3( vector[WS] );
 
         angles[UR][0]             = AmoebaReferenceForce::getDotProduct3( vector[U], vector[R] );
-        angles[UR][1]             = sqrtf( 1.0f - angles[UR][0]*angles[UR][0]);
+        angles[UR][1]             = SQRT( one - angles[UR][0]*angles[UR][0]);
 
         angles[US][0]             = AmoebaReferenceForce::getDotProduct3( vector[U], vector[S] );
-        angles[US][1]             = sqrtf( 1.0f - angles[US][0]*angles[US][0]);
+        angles[US][1]             = SQRT( one - angles[US][0]*angles[US][0]);
 
         angles[VS][0]             = AmoebaReferenceForce::getDotProduct3( vector[V], vector[S] );
-        angles[VS][1]             = sqrtf( 1.0f - angles[VS][0]*angles[VS][0]);
+        angles[VS][1]             = SQRT( one - angles[VS][0]*angles[VS][0]);
 
         angles[WS][0]             = AmoebaReferenceForce::getDotProduct3( vector[W], vector[S] );
-        angles[WS][1]             = sqrtf( 1.0f - angles[WS][0]*angles[WS][0]);
+        angles[WS][1]             = SQRT( one - angles[WS][0]*angles[WS][0]);
  
         RealOpenMM t1[3];
         RealOpenMM t2[3];
@@ -1726,13 +1728,13 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce( const MultipoleParticleDat
               notUsed             = AmoebaReferenceForce::normalizeVector3( t2 );
 
         RealOpenMM ut1cos         = AmoebaReferenceForce::getDotProduct3( vector[U], t1 );
-        RealOpenMM ut1sin         = sqrtf( 1.0f - ut1cos*ut1cos);
+        RealOpenMM ut1sin         = SQRT( one - ut1cos*ut1cos);
 
         RealOpenMM ut2cos         = AmoebaReferenceForce::getDotProduct3( vector[U], t2 );
-        RealOpenMM ut2sin         = sqrtf( 1.0f - ut2cos*ut2cos);
+        RealOpenMM ut2sin         = SQRT( one - ut2cos*ut2cos);
 
-        RealOpenMM dphiR          = -1.0f*AmoebaReferenceForce::getDotProduct3( vector[R], torque );
-        RealOpenMM dphiS          = -1.0f*AmoebaReferenceForce::getDotProduct3( vector[S], torque );
+        RealOpenMM dphiR          = -one*AmoebaReferenceForce::getDotProduct3( vector[R], torque );
+        RealOpenMM dphiS          = -one*AmoebaReferenceForce::getDotProduct3( vector[S], torque );
 
         RealOpenMM factor1        = dphiR/(norms[U]*angles[UR][1]);
         RealOpenMM factor2        = dphiS/(norms[U]);

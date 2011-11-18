@@ -1037,7 +1037,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         data.cudaPlatformData.nonbondedMethod = PARTICLE_MESH_EWALD;
         amoebaGpuContext amoebaGpu            = data.getAmoebaGpu();
         gpuContext gpu                        = amoebaGpu->gpuContext;
-        gpu->sim.nonbondedCutoffSqr           = force.getCutoffDistance()*force.getCutoffDistance();
+        gpu->sim.nonbondedCutoffSqr           = static_cast<float>(force.getCutoffDistance()*force.getCutoffDistance());
         gpu->sim.nonbondedMethod              = PARTICLE_MESH_EWALD;
     }
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
