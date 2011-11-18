@@ -12,7 +12,7 @@ import struct
 
 from distutils.core import setup
 
-MAJOR_VERSION_NUM='3'
+MAJOR_VERSION_NUM='4'
 MINOR_VERSION_NUM='0'
 BUILD_INFO='0'
 
