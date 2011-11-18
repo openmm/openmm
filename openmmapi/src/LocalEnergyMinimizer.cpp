@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2011 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -111,28 +111,28 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
     param.max_iterations = maxIterations;
     param.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
 
+    // Make sure the initial configuration satisfies all constraints.
+
+    context.applyConstraints(constraintTol);
+
+    // Record the initial positions and determine a normalization constant for scaling the tolerance.
+
+    vector<Vec3> initialPos = context.getState(State::Positions).getPositions();
+    double norm = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        x[3*i] = initialPos[i][0];
+        x[3*i+1] = initialPos[i][1];
+        x[3*i+2] = initialPos[i][2];
+        norm += initialPos[i].dot(initialPos[i]);
+    }
+    norm /= numParticles;
+    norm = (norm < 1 ? 1 : sqrt(norm));
+    param.epsilon = tolerance/norm;
+
     // Repeatedly minimize, steadily increasing the strength of the springs until all constraints are satisfied.
 
     double prevMaxError = 1e10;
     while (true) {
-        // Make sure the initial configuration satisfies all constraints.
-
-        context.applyConstraints(constraintTol);
-
-        // Record the initial positions and determine a normalization constant for scaling the tolerance.
-
-        vector<Vec3> positions = context.getState(State::Positions).getPositions();
-        double norm = 0.0;
-        for (int i = 0; i < numParticles; i++) {
-            x[3*i] = positions[i][0];
-            x[3*i+1] = positions[i][1];
-            x[3*i+2] = positions[i][2];
-            norm += positions[i].dot(positions[i]);
-        }
-        norm /= numParticles;
-        norm = (norm < 1 ? 1 : sqrt(norm));
-        param.epsilon = tolerance/norm;
-
         // Perform the minimization.
 
         lbfgsfloatval_t fx;
@@ -141,7 +141,7 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
 
         // Check whether all constraints are satisfied.
 
-        positions = context.getState(State::Positions).getPositions();
+        vector<Vec3> positions = context.getState(State::Positions).getPositions();
         int numConstraints = system.getNumConstraints();
         double maxError = 0.0;
         for (int i = 0; i < numConstraints; i++) {
@@ -156,13 +156,9 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
         }
         if (maxError <= constraintTol)
             break; // All constraints are satisfied.
-        if (maxError >= prevMaxError) {
-            // Further tightening the springs doesn't seem to be helping, so just to a final
-            // constraint application and return.
-
-            context.applyConstraints(constraintTol);
-            break;
-        }
+        context.setPositions(initialPos);
+        if (maxError >= prevMaxError)
+            break; // Further tightening the springs doesn't seem to be helping, so just give up.
         prevMaxError = maxError;
         k *= 10;
     }
