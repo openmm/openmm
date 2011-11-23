@@ -527,9 +527,9 @@ int PositionGenerator::setPositions( GenerationMethod method, OpenMM_SFMT::SFMT&
     int errorFlag = 0;
     positions.resize( _numParticles );
     if( method == Random ){
-        for( unsigned int ii = 0; ii < _numParticles; ii += _numParticlesPerMolecule ){ 
+        for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numParticles); ii += _numParticlesPerMolecule ){ 
             positions[ii]    = Vec3(_boxSize*genrand_real2(sfmt), _boxSize*genrand_real2(sfmt), _boxSize*genrand_real2(sfmt));
-            for( unsigned int jj = 1; jj < _numParticlesPerMolecule; jj++) { 
+            for( unsigned int jj = 1; jj < static_cast<unsigned int>(_numParticlesPerMolecule); jj++) { 
                 positions[ii+jj]  = positions[ii] + Vec3(_bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt));
             }
         }
@@ -597,13 +597,12 @@ int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDi
 
     // place molecule centers on grid
 
-    for( unsigned int ii = 0; ii < _numParticles; ii += _numParticlesPerMolecule ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numParticles); ii += _numParticlesPerMolecule ){
         array[ii]  = Vec3(start);
         bool done  = false;
         for( unsigned int jj = 0; jj < 3 && !done; jj++ ){
             start[jj]  += spacing[jj];
             if( (start[jj]+4.0*bondDistance) > boxDimensions[jj] ){
-//fprintf( stderr, "setParticlesOnGrid %6u %2u %15.7e %15.7e %15.7e\n", ii, jj, start[0], start[1], start[2] );
                 start[jj] = origin[jj];
             } else {
                 done = true;
@@ -618,9 +617,9 @@ int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDi
 
     // add molecule atoms
 
-    for( unsigned int ii = 0; ii < _numMolecules; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numMolecules); ii++ ){
         int molecularIndex = ii*_numParticlesPerMolecule;
-        for( unsigned int jj = 1; jj < _numParticlesPerMolecule; jj++ ){
+        for( unsigned int jj = 1; jj < static_cast<unsigned int>(_numParticlesPerMolecule); jj++ ){
             double theta             = genrand_real2(sfmt)*pi2;
             double phi               = genrand_real2(sfmt)*pi;
             array[molecularIndex+jj] = array[molecularIndex] + Vec3(_bondDistance*cos(theta)*cos(phi), _bondDistance*cos(theta)*sin(phi), _bondDistance*sin(theta) );
@@ -691,12 +690,12 @@ void PositionGenerator::showMinMaxDistances( const std::vector<Vec3>& positions,
                     (box[1][0] - box[0][0]), (box[1][1] - box[0][1]), (box[1][2] - box[0][2]) );
 
     for( unsigned int ii = 0; ii < positionIndexVector.size(); ii++ ){
-        if( positionIndexVector[ii] < positions.size() ){
+        if( positionIndexVector[ii] < static_cast<int>(positions.size()) ){
             int positionIndex = positionIndexVector[ii];
             IntDoublePairVector sortVector;
             getSortedDistances( periodicBoundaryConditions, positionIndex, positions, sortVector );
             (void) fprintf( _log, "Min/max distance from %6d:\n    ", positionIndex );
-            for( unsigned int jj = 0; jj < sortVector.size() && jj < showIndex; jj++ ){
+            for( unsigned int jj = 0; jj < sortVector.size() && jj < static_cast<unsigned int>(showIndex); jj++ ){
                 IntDoublePair pair = sortVector[jj];
                 (void) fprintf( _log, "[%6d %15.7e] ", pair.first, pair.second);
             }   
@@ -751,7 +750,7 @@ void PositionGenerator::showMinMaxDistances( const std::vector<Vec3>& positions,
     std::sort( hitVector.begin(), hitVector.end(), TestIntDoublePair );
             
     (void) fprintf( _log, "Min distances pbc=%d\n", periodicBoundaryConditions );
-    for( unsigned int jj = 0; jj < hitVector.size() && jj < showIndex; jj++ ){
+    for( unsigned int jj = 0; jj < hitVector.size() && jj < static_cast<unsigned int>(showIndex); jj++ ){
         IntDoublePair pair  = hitVector[jj];
         int index           = pair.first;
         int iIndex          = static_cast<int>(index/positions.size());
@@ -801,7 +800,7 @@ void PositionGenerator::showParticlesWithinDistance( const std::vector<Vec3>& po
 void PositionGenerator::showDistances( const IntIntPairVector& pairs, const std::vector<Vec3>& positions ) const {
 
     for( IntIntPairVectorCI ii = pairs.begin(); ii != pairs.end(); ii++ ){
-        if( ii->first < positions.size() && ii->second < positions.size() ){
+        if( ii->first < static_cast<int>(positions.size()) && ii->second < static_cast<int>(positions.size()) ){
              double d = getDistance( ii->first, ii->second, positions );
              (void) fprintf( _log, "Distance %6d %6d  %15.7e d2=%15.7e\n", ii->first, ii->second,  d, d*d );
         }   
@@ -1982,7 +1981,7 @@ static Force* copyForce( const Force& force, FILE* log ){
 
 #ifdef INCLUDE_AMOEBA_FORCES
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaHarmonicBondForce& castForce = dynamic_cast<const AmoebaHarmonicBondForce&>(force);
@@ -1991,7 +1990,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaHarmonicAngleForce& castForce = dynamic_cast<const AmoebaHarmonicAngleForce&>(force);
@@ -2000,7 +1999,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaHarmonicInPlaneAngleForce& castForce = dynamic_cast<const AmoebaHarmonicInPlaneAngleForce&>(force);
@@ -2009,7 +2008,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaMultipoleForce& castForce = dynamic_cast<const AmoebaMultipoleForce&>(force);
@@ -2018,7 +2017,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaOutOfPlaneBendForce& castForce = dynamic_cast<const AmoebaOutOfPlaneBendForce&>(force);
@@ -2027,7 +2026,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaPiTorsionForce& castForce = dynamic_cast<const AmoebaPiTorsionForce&>(force);
@@ -2036,7 +2035,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaStretchBendForce& castForce = dynamic_cast<const AmoebaStretchBendForce&>(force);
@@ -2045,7 +2044,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaTorsionForce& castForce = dynamic_cast<const AmoebaTorsionForce&>(force);
@@ -2054,7 +2053,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaTorsionTorsionForce& castForce = dynamic_cast<const AmoebaTorsionTorsionForce&>(force);
@@ -2063,7 +2062,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaUreyBradleyForce& castForce = dynamic_cast<const AmoebaUreyBradleyForce&>(force);
@@ -2072,7 +2071,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaVdwForce& castForce = dynamic_cast<const AmoebaVdwForce&>(force);
@@ -2081,7 +2080,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaWcaDispersionForce& castForce = dynamic_cast<const AmoebaWcaDispersionForce&>(force);
@@ -2090,7 +2089,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaGeneralizedKirkwoodForce& castForce = dynamic_cast<const AmoebaGeneralizedKirkwoodForce&>(force);
@@ -2099,7 +2098,7 @@ static Force* copyForce( const Force& force, FILE* log ){
         }    
     }
 
-    if( forceCopy != NULL ){
+    if( forceCopy == NULL ){
 
         try {
            const AmoebaTorsionTorsionForce& castForce = dynamic_cast<const AmoebaTorsionTorsionForce&>(force);
@@ -2130,7 +2129,7 @@ static void copySystem( const System& inputSystem, System& systemCopy, FILE* log
 
     // add particle/mass
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumParticles(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumParticles()); ii++ ){
         systemCopy.addParticle( inputSystem.getParticleMass( static_cast<int>(ii) ) );
     }
 
@@ -2144,8 +2143,7 @@ static void copySystem( const System& inputSystem, System& systemCopy, FILE* log
 
     // copy constraints
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumConstraints(); ii++ ){
-        int index;
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumConstraints()); ii++ ){
         int particle1, particle2;
         double distance;
         inputSystem.getConstraintParameters( ii, particle1, particle2, distance);
@@ -2154,7 +2152,7 @@ static void copySystem( const System& inputSystem, System& systemCopy, FILE* log
 
     // copy forces
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumForces(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumForces()); ii++ ){
         systemCopy.addForce( copyForce( inputSystem.getForce(ii), log) );
     }
 
@@ -3361,8 +3359,8 @@ int main() {
 #endif
 
         DoubleVector numberOfMolecules;
-//        numberOfMolecules.push_back( 10 );
-//        numberOfMolecules.push_back( 100 );
+        numberOfMolecules.push_back( 10 );
+        numberOfMolecules.push_back( 100 );
         numberOfMolecules.push_back( 1000 );
         numberOfMolecules.push_back( 2000 );
         numberOfMolecules.push_back( 4000 );

@@ -83,7 +83,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getSlevy(),   force2.getSlevy());
 
     ASSERT_EQUAL(force1.getNumParticles(), force2.getNumParticles());
-    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
         double radius1, epsilon1;
         double radius2, epsilon2;

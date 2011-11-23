@@ -84,7 +84,7 @@ void testSerialization() {
 
     ASSERT_EQUAL(force1.getNumParticles(),          force2.getNumParticles());
 
-    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
         int ivIndex1, classIndex1;
         int ivIndex2, classIndex2;
@@ -101,7 +101,7 @@ void testSerialization() {
         ASSERT_EQUAL(epsilon1,          epsilon2);
         ASSERT_EQUAL(reductionFactor1,  reductionFactor2);
     }
-    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
         std::vector< int > exclusions1;
         std::vector< int > exclusions2;

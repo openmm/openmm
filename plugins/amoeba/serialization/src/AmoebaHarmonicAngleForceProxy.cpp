@@ -52,7 +52,7 @@ void AmoebaHarmonicAngleForceProxy::serialize(const void* object, SerializationN
     node.setDoubleProperty("HarmonicAngleSextic",  force.getAmoebaGlobalHarmonicAngleSextic());
 
     SerializationNode& bonds = node.createChildNode("Angles").setIntProperty( "size", force.getNumAngles() );
-    for (unsigned int ii = 0; ii < force.getNumAngles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumAngles()); ii++) {
         int particle1, particle2, particle3;
         double distance, k;
         force.getAngleParameters(ii, particle1, particle2, particle3, distance, k);

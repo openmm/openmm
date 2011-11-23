@@ -110,6 +110,7 @@ public:
      int _particle2;
      double _distance;
 };
+
 BondInfo_OpenMMTest::BondInfo_OpenMMTest( int particle1, int particle2, double distance ){
     _particle1 = particle1;
     _particle2 = particle2;
@@ -279,13 +280,14 @@ public:
      * @param boxDimensions             box dimensions
      * @param spacing                   spacing
      * @param sfmt                      input random number generator
+     * @param bondDistance              input bond distance
      * @param array                     output vector of grid values
      *
      * @return -1 if particles will not fit on grid; 0 if they do
      */
      
     int setParticlesOnGrid( const Vec3& origin, const Vec3& boxDimensions, const Vec3& spacing, 
-                            OpenMM_SFMT::SFMT& sfmt, std::vector<Vec3>& array ) const;
+                            OpenMM_SFMT::SFMT& sfmt, double bondDistance, std::vector<Vec3>& array ) const;
     
     /** 
      * Set bond distance
@@ -525,9 +527,9 @@ int PositionGenerator::setPositions( GenerationMethod method, OpenMM_SFMT::SFMT&
     int errorFlag = 0;
     positions.resize( _numParticles );
     if( method == Random ){
-        for( unsigned int ii = 0; ii < _numParticles; ii += _numParticlesPerMolecule ){ 
+        for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numParticles); ii += _numParticlesPerMolecule ){ 
             positions[ii]    = Vec3(_boxSize*genrand_real2(sfmt), _boxSize*genrand_real2(sfmt), _boxSize*genrand_real2(sfmt));
-            for( unsigned int jj = 1; jj < _numParticlesPerMolecule; jj++) { 
+            for( unsigned int jj = 1; jj < static_cast<unsigned int>(_numParticlesPerMolecule); jj++) { 
                 positions[ii+jj]  = positions[ii] + Vec3(_bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt));
             }
         }
@@ -540,7 +542,7 @@ int PositionGenerator::setPositions( GenerationMethod method, OpenMM_SFMT::SFMT&
             double particlesPerDimension  = pow( static_cast<double>(_numMolecules), (1.0/3.0) ); 
             int particlesPerDimensionI    = static_cast<int>(particlesPerDimension+0.999999); 
             double boxSize                = _boxSize;
-            double spacingPerDimension    = boxSize/(particlesPerDimension+1.0);
+            double spacingPerDimension    = (boxSize-_bondDistance)/(particlesPerDimension+1.0);
             spacing                       = Vec3(spacingPerDimension, spacingPerDimension, spacingPerDimension );
             boxDimensions                 = Vec3(boxSize, boxSize, boxSize );
 
@@ -561,7 +563,7 @@ int PositionGenerator::setPositions( GenerationMethod method, OpenMM_SFMT::SFMT&
             (void) fprintf( _log, "SimpleGrid %s\n", msg.str().c_str() );
         }
 
-        errorFlag = setParticlesOnGrid( origin, boxDimensions, spacing, sfmt, positions );
+        errorFlag = setParticlesOnGrid( origin, boxDimensions, spacing, sfmt, _bondDistance, positions );
     }
 
     return errorFlag;
@@ -579,7 +581,7 @@ int PositionGenerator::setPositions( GenerationMethod method, OpenMM_SFMT::SFMT&
  */
  
 int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDimensions, const Vec3& spacing, OpenMM_SFMT::SFMT& sfmt,
-                                           std::vector<Vec3>& array ) const {
+                                           double bondDistance, std::vector<Vec3>& array ) const {
 
     const double pi  = 3.14159265358979323846;
     const double pi2 = 2.0*pi;
@@ -595,12 +597,12 @@ int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDi
 
     // place molecule centers on grid
 
-    for( unsigned int ii = 0; ii < _numParticles; ii += _numParticlesPerMolecule ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numParticles); ii += _numParticlesPerMolecule ){
         array[ii]  = Vec3(start);
         bool done  = false;
         for( unsigned int jj = 0; jj < 3 && !done; jj++ ){
             start[jj]  += spacing[jj];
-            if( start[jj] > boxDimensions[jj] ){
+            if( (start[jj]+4.0*bondDistance) > boxDimensions[jj] ){
                 start[jj] = origin[jj];
             } else {
                 done = true;
@@ -615,9 +617,9 @@ int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDi
 
     // add molecule atoms
 
-    for( unsigned int ii = 0; ii < _numMolecules; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numMolecules); ii++ ){
         int molecularIndex = ii*_numParticlesPerMolecule;
-        for( unsigned int jj = 1; jj < _numParticlesPerMolecule; jj++ ){
+        for( unsigned int jj = 1; jj < static_cast<unsigned int>(_numParticlesPerMolecule); jj++ ){
             double theta             = genrand_real2(sfmt)*pi2;
             double phi               = genrand_real2(sfmt)*pi;
             array[molecularIndex+jj] = array[molecularIndex] + Vec3(_bondDistance*cos(theta)*cos(phi), _bondDistance*cos(theta)*sin(phi), _bondDistance*sin(theta) );
@@ -688,12 +690,12 @@ void PositionGenerator::showMinMaxDistances( const std::vector<Vec3>& positions,
                     (box[1][0] - box[0][0]), (box[1][1] - box[0][1]), (box[1][2] - box[0][2]) );
 
     for( unsigned int ii = 0; ii < positionIndexVector.size(); ii++ ){
-        if( positionIndexVector[ii] < positions.size() ){
+        if( positionIndexVector[ii] < static_cast<int>(positions.size()) ){
             int positionIndex = positionIndexVector[ii];
             IntDoublePairVector sortVector;
             getSortedDistances( periodicBoundaryConditions, positionIndex, positions, sortVector );
             (void) fprintf( _log, "Min/max distance from %6d:\n    ", positionIndex );
-            for( unsigned int jj = 0; jj < sortVector.size() && jj < showIndex; jj++ ){
+            for( unsigned int jj = 0; jj < sortVector.size() && jj < static_cast<unsigned int>(showIndex); jj++ ){
                 IntDoublePair pair = sortVector[jj];
                 (void) fprintf( _log, "[%6d %15.7e] ", pair.first, pair.second);
             }   
@@ -748,7 +750,7 @@ void PositionGenerator::showMinMaxDistances( const std::vector<Vec3>& positions,
     std::sort( hitVector.begin(), hitVector.end(), TestIntDoublePair );
             
     (void) fprintf( _log, "Min distances pbc=%d\n", periodicBoundaryConditions );
-    for( unsigned int jj = 0; jj < hitVector.size() && jj < showIndex; jj++ ){
+    for( unsigned int jj = 0; jj < hitVector.size() && jj < static_cast<unsigned int>(showIndex); jj++ ){
         IntDoublePair pair  = hitVector[jj];
         int index           = pair.first;
         int iIndex          = static_cast<int>(index/positions.size());
@@ -798,7 +800,7 @@ void PositionGenerator::showParticlesWithinDistance( const std::vector<Vec3>& po
 void PositionGenerator::showDistances( const IntIntPairVector& pairs, const std::vector<Vec3>& positions ) const {
 
     for( IntIntPairVectorCI ii = pairs.begin(); ii != pairs.end(); ii++ ){
-        if( ii->first < positions.size() && ii->second < positions.size() ){
+        if( ii->first < static_cast<int>(positions.size()) && ii->second < static_cast<int>(positions.size()) ){
              double d = getDistance( ii->first, ii->second, positions );
              (void) fprintf( _log, "Distance %6d %6d  %15.7e d2=%15.7e\n", ii->first, ii->second,  d, d*d );
         }   
@@ -975,7 +977,6 @@ static int setDoubleFromMapStringToDouble( MapStringToDouble& argumentMap, std::
    }
    return 0;
 }
-
 
 /**---------------------------------------------------------------------------------------
  *
@@ -2128,7 +2129,7 @@ static void copySystem( const System& inputSystem, System& systemCopy, FILE* log
 
     // add particle/mass
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumParticles(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumParticles()); ii++ ){
         systemCopy.addParticle( inputSystem.getParticleMass( static_cast<int>(ii) ) );
     }
 
@@ -2142,8 +2143,7 @@ static void copySystem( const System& inputSystem, System& systemCopy, FILE* log
 
     // copy constraints
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumConstraints(); ii++ ){
-        int index;
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumConstraints()); ii++ ){
         int particle1, particle2;
         double distance;
         inputSystem.getConstraintParameters( ii, particle1, particle2, distance);
@@ -2152,7 +2152,7 @@ static void copySystem( const System& inputSystem, System& systemCopy, FILE* log
 
     // copy forces
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumForces(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumForces()); ii++ ){
         systemCopy.addForce( copyForce( inputSystem.getForce(ii), log) );
     }
 

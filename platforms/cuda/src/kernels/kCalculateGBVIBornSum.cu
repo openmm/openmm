@@ -259,7 +259,7 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
     int printOnlyOnNan = 1;
     int foundNan       = 0;
     if( printOnlyOnNan ){
-        for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms && foundNan == 0; ii++ ){
+        for( unsigned int ii = 0; ii < gpu->sim.paddedNumberOfAtoms && foundNan == 0; ii++ ){
             foundNan  += isNanOrInfinity( gpu->psBornRadii->_pSysData[ii] );
             foundNan  += isNanOrInfinity( gpu->psBornForce->_pSysData[ii] );
             foundNan  += isNanOrInfinity( gpu->psGBVISwitchDerivative->_pSysData[ii] );
@@ -267,7 +267,7 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
         if( foundNan ){
             log = stderr;
             (void) fprintf( log, "kPrintGBVI found nan \n", gpu->sim.paddedNumberOfAtoms );
-            for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+            for( unsigned int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
                 (void) fprintf( log, "%6d %15.7e %15.7e %15.7e\n", ii,
                                 gpu->psPosq4->_pSysData[ii].x,
                                 gpu->psPosq4->_pSysData[ii].y,
@@ -281,7 +281,7 @@ void kPrintGBVI( gpuContext gpu, std::string callId, int call, FILE* log)
                         gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
         (void) fprintf( stderr, "bR bF swd r scR ...\n" );
-        for( int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
+        for( unsigned int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
             (void) fprintf( log, "%6d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e\n", ii,
                         gpu->psBornRadii->_pSysData[ii],
                         gpu->psBornForce->_pSysData[ii],

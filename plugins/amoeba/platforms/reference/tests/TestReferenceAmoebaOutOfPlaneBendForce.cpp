@@ -439,7 +439,7 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));
     std::vector<Vec3> positions(numberOfParticles);
 
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(numberOfParticles); ii++ ){
         if( coordinates.find( particleIndices[ii] ) == coordinates.end() ){
 #ifdef AMOEBA_DEBUG
             if( log ){
@@ -480,7 +480,7 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
     computeAmoebaOutOfPlaneBendForce( 0, positions, *amoebaOutOfPlaneBendForce, forces, &energy, log );
 
     totalEnergy += energy;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(numberOfParticles); ii++ ){
         for( unsigned int jj = 0; jj < 3; jj++ ){
             totalForces[particleIndices[ii]][jj] += forces[ii][jj]; 
         }

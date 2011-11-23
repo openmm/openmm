@@ -793,7 +793,7 @@ void CpuGBVISoftcore::printGbvi( const std::vector<OpenMM::RealVec>& atomCoordin
                     gbviParameters->getBornRadiusScalingSoftcoreMethod(), GBVISoftcoreParameters::QuinticSpline );
     (void) fprintf( log, "    preFactor      %15.7e)\n", preFactor );
  
-    for( unsigned int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+    for( unsigned int atomI = 0; atomI < static_cast<unsigned int>(numberOfAtoms); atomI++ ){
         (void) fprintf( log, "%6d r=%15.7e rSc=%15.7e swd=%15.7e lmda=%4.2f tau*gam=%15.7e q=%15.7e", atomI,
                         atomicRadii[atomI],    
                         scaledRadii[atomI],    

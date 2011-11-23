@@ -1161,6 +1161,11 @@ static void testAmoebaTorsionTorsionGridLookup( amoebaGpuContext amoebaGpu, floa
     values[i++]   = grids[index++];
 }
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4297)
+#endif
+
 extern "C"
 void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vector< std::vector< std::vector< std::vector<float> > > >& floatGrids )
 {
@@ -1176,7 +1181,6 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
         throw OpenMM::OpenMMException( message.str() );
     }
 
-    // 4 (grids) * (25 *25 grid)*(2 +4 a1, a2, f, f1,f2, f12) = 15000
 
     // assumming uniform spacing of grid angle values, set offset in to memory, beginning angle, angle spacing (delta), 
     // and number of y-angles
@@ -1779,7 +1783,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     int maxTorqueBufferIndex         = 0;
 
     int chargeSize                   = static_cast<int>(charges.size());
-    for( int ii = 0; ii < chargeSize; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(chargeSize); ii++ ){
 
         // axis type & multipole particles ids
  
@@ -2106,7 +2110,7 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
     }    
 
     // Dummy out extra particles data
-    for (unsigned int i = particles; i < paddedNumberOfAtoms; i++) 
+    for (unsigned int i = particles; i < static_cast<unsigned int>(paddedNumberOfAtoms); i++) 
     {    
         (*gpu->psBornRadii)[i]     = 0.2f;
         (*gpu->psObcData)[i].x     = 0.01f;
@@ -2171,7 +2175,7 @@ void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu, float innerDielec
 
     // Dummy out extra particles data
 
-    for (unsigned int i = particles; i < paddedNumberOfAtoms; i++) 
+    for (unsigned int i = particles; i < static_cast<unsigned int>(paddedNumberOfAtoms); i++) 
     {    
         (*gpu->psBornRadii)[i]     = 0.2f;
         (*gpu->psObcData)[i].x     = 0.01f;
@@ -2398,7 +2402,7 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     psAmoebaVdwReduction->Upload();
 
     amoebaGpu->vdwExclusions.resize( gpu->natoms );
-    for( unsigned int ii = 0; ii < gpu->natoms; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(gpu->natoms); ii++ ){
         for (unsigned int jj = 0; jj < allExclusions[ii].size(); jj++){ 
             amoebaGpu->vdwExclusions[ii].push_back( allExclusions[ii][jj] );
         }
@@ -2411,7 +2415,7 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
         (void) fprintf( amoebaGpu->log, "%s particles=%d numberOfNonReductions=%d numberOfReductionsi=%d\n",
                         methodName, particles, numberOfNonReductions, numberOfReductions );
 #ifdef PARAMETER_PRINT
-        for( unsigned int ii = 0; ii < gpu->natoms; ii++ ){    
+        for( unsigned int ii = 0; ii < static_cast<unsigned int>(gpu->natoms); ii++ ){    
             (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e %15.7e Ex[", ii, sigmas[ii], epsilons[ii], reductionFactors[ii] );
             for( unsigned int jj = 0; jj < allExclusions[ii].size(); jj++ ){ 
                 (void) fprintf( amoebaGpu->log, "%6d ", allExclusions[ii][jj] );
@@ -2850,7 +2854,7 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
     
     // Dummy out extra particles data
 
-    for (unsigned int ii = particles; ii < paddedNumberOfAtoms; ii++) 
+    for (unsigned int ii = particles; ii < static_cast<unsigned int>(paddedNumberOfAtoms); ii++) 
     {    
         amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].x     = 1.0f;
         amoebaGpu->psWcaDispersionRadiusEpsilon->_pSysData[ii].y     = 0.0f;
@@ -2870,7 +2874,7 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
         (void) fprintf( amoebaGpu->log, "%s particles=%u total max dispersion energy=%14.5e eps[%14.5e %14.5e] rmin[%14.5e %14.5e] awtr=%14.5e shctd=%14.5e dispoff=%14.5e\n",
                         methodName, static_cast<unsigned int>(radii.size()), totalMaxWcaDispersionEnergy, epso, epsh, rmino, rminh, awater, shctd, dispoff );
 #ifdef PARAMETER_PRINT
-        for( unsigned int ii = 0; ii < gpu->natoms; ii++ ){    
+        for( unsigned int ii = 0; ii < static_cast<unsigned int>(gpu->natoms); ii++ ){    
             (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e\n", ii, radii[ii], epsilons[ii] );
             if( ii == maxPrint && ii < (paddedNumberOfAtoms - maxPrint) ){
                 (void) fprintf( amoebaGpu->log, "\n" );
@@ -3089,7 +3093,7 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu, int hasAmoebaGener
     // use the Cuda force output buffers for mapping torques onto forces, if max torque buffer count < number of buffers
 
      amoebaGpu->amoebaSim.maxTorqueBufferIndex++;
-    if( amoebaGpu->amoebaSim.maxTorqueBufferIndex > outputBuffers ){
+    if( static_cast<unsigned int>(amoebaGpu->amoebaSim.maxTorqueBufferIndex) > outputBuffers ){
         amoebaGpu->psTorqueMapForce4            = new CUDAStream<float4>(paddedNumberOfAtoms, amoebaGpu->amoebaSim.maxTorqueBufferIndex, "torqueMapForce");
         amoebaGpu->torqueMapForce4Delete        = 1;
     } else {
@@ -4714,7 +4718,7 @@ void initializeCudaFloatArray( int numberOfParticles, int entriesPerParticle,
 void zeroCUDAStreamFloat4( CUDAStream<float4>* streamToCopy )
 {
     for( unsigned int ii = 0; ii < streamToCopy->_stride; ii++ ){
-        for( int jj = 0; jj < streamToCopy->_subStreams; jj++ ){
+        for( unsigned int jj = 0; jj < streamToCopy->_subStreams; jj++ ){
             streamToCopy->_pSysStream[jj][ii].x = 0.0f;
             streamToCopy->_pSysStream[jj][ii].y = 0.0f;
             streamToCopy->_pSysStream[jj][ii].z = 0.0f;
@@ -4743,7 +4747,7 @@ void reduceAndCopyCUDAStreamFloat4( CUDAStream<float4>* streamToCopy, CUDAStream
         outputStream->_pSysData[indexOffset]    = streamToCopy->_pSysStream[0][ii].x;
         outputStream->_pSysData[indexOffset+1]  = streamToCopy->_pSysStream[0][ii].y;
         outputStream->_pSysData[indexOffset+2]  = streamToCopy->_pSysStream[0][ii].z;
-        for( int jj = 1; jj < streamToCopy->_subStreams; jj++ ){
+        for( unsigned int jj = 1; jj < streamToCopy->_subStreams; jj++ ){
             if(  streamToCopy->_pSysStream[jj][ii].x !=  streamToCopy->_pSysStream[jj][ii].x ||
                  streamToCopy->_pSysStream[jj][ii].y !=  streamToCopy->_pSysStream[jj][ii].y ||
                  streamToCopy->_pSysStream[jj][ii].z !=  streamToCopy->_pSysStream[jj][ii].z ){
@@ -4779,7 +4783,7 @@ void reduceAndCopyCUDAStreamFloat( CUDAStream<float>* streamToCopy, CUDAStream<f
     for( unsigned int ii = 0; ii < streamToCopy->_stride; ii++ ){
         outputStream->_pSysData[ii]    = streamToCopy->_pSysStream[0][ii];
 if( ii == 0 )(void) fprintf( stderr, "reduceAndCopyCUDAStreamFloat:%u %15.7e %u %u\n", ii, streamToCopy->_pSysStream[0][ii], streamToCopy->_stride, streamToCopy->_subStreams );
-        for( int jj = 1; jj < streamToCopy->_subStreams; jj++ ){
+        for( unsigned int jj = 1; jj < streamToCopy->_subStreams; jj++ ){
             if(  streamToCopy->_pSysStream[jj][ii] !=  streamToCopy->_pSysStream[jj][ii] ){
                 (void) fprintf( stderr, "Nan at particle=%d stream=%d\n", ii, jj );
             }
@@ -4828,3 +4832,8 @@ double getTimeOfDay( void ){
 #endif
 }
 
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
+    // 4 (grids) * (25 *25 grid)*(2 +4 a1, a2, f, f1,f2, f12) = 15000

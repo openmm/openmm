@@ -53,7 +53,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty(   "VdwPBC",                 force.getPBC());
 
     SerializationNode& particles = node.createChildNode("VdwParticles").setIntProperty("size", force.getNumParticles() );
-    for (unsigned int ii = 0; ii < force.getNumParticles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
 
         int ivIndex, classIndex;
         double sigma, epsilon, reductionFactor;

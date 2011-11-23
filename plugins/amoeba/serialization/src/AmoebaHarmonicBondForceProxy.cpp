@@ -49,7 +49,7 @@ void AmoebaHarmonicBondForceProxy::serialize(const void* object, SerializationNo
     node.setDoubleProperty("HarmonicBondQuartic", force.getAmoebaGlobalHarmonicBondQuartic());
 
     SerializationNode& bonds = node.createChildNode("Bonds").setIntProperty( "size", force.getNumBonds() );
-    for (unsigned int ii = 0; ii < force.getNumBonds(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumBonds()); ii++) {
         int particle1, particle2;
         double distance, k;
         force.getBondParameters(ii, particle1, particle2, distance, k);

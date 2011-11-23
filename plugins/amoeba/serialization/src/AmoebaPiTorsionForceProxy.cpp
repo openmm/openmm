@@ -45,7 +45,7 @@ void AmoebaPiTorsionForceProxy::serialize(const void* object, SerializationNode&
     node.setIntProperty("version", 1);
     const AmoebaPiTorsionForce& force = *reinterpret_cast<const AmoebaPiTorsionForce*>(object);
     SerializationNode& bonds = node.createChildNode("PiTorsion").setIntProperty( "size", force.getNumPiTorsions() );
-    for ( unsigned int ii = 0; ii < force.getNumPiTorsions(); ii++) {
+    for ( unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumPiTorsions()); ii++) {
         int particle1, particle2, particle3, particle4, particle5, particle6;
         double k;
         force.getPiTorsionParameters(ii, particle1, particle2, particle3, particle4, particle5, particle6, k);

@@ -60,7 +60,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicBondCubic(), force2.getAmoebaGlobalHarmonicBondCubic());
     ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicBondQuartic(), force2.getAmoebaGlobalHarmonicBondQuartic());
     ASSERT_EQUAL(force1.getNumBonds(), force2.getNumBonds());
-    for (unsigned int ii = 0; ii < force1.getNumBonds(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumBonds()); ii++) {
         int a1, a2, b1, b2;
         double da, db, ka, kb;
         force1.getBondParameters(ii, a1, a2, da, ka);

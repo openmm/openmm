@@ -64,9 +64,9 @@ static void compareGrids( const std::vector< std::vector< std::vector<double> > 
     ASSERT_EQUAL(grid1.size(), grid2.size());
     for (unsigned int ii = 0; ii < grid1.size(); ii++) {
         ASSERT_EQUAL(grid1[ii].size(), grid2[ii].size());
-        for (int jj = 0; jj < grid1[ii].size(); jj++) {
+        for (unsigned int jj = 0; jj < grid1[ii].size(); jj++) {
             ASSERT_EQUAL(grid1[ii][jj].size(), grid2[ii][jj].size());
-            for (int kk = 0; kk < grid1[ii][jj].size(); kk++) {
+            for (unsigned int kk = 0; kk < grid1[ii][jj].size(); kk++) {
                 ASSERT_EQUAL(grid1[ii][jj][kk], grid2[ii][jj][kk]);
             }
         }
@@ -105,7 +105,7 @@ void testSerialization() {
 
     AmoebaTorsionTorsionForce & force2 = *copy;
     ASSERT_EQUAL(force1.getNumTorsionTorsions(), force2.getNumTorsionTorsions());
-    for (unsigned int ii = 0; ii < force1.getNumTorsionTorsions(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsionTorsions()); ii++) {
 
         int a1, a2, a3, a4, a5, aChiral, aGridIndex, b1, b2, b3, b4, b5, bChiral, bGridIndex;
 
@@ -122,7 +122,7 @@ void testSerialization() {
     }
 
     ASSERT_EQUAL(force1.getNumTorsionTorsionGrids(), force2.getNumTorsionTorsionGrids());
-    for (unsigned int ii = 0; ii < force1.getNumTorsionTorsionGrids(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsionTorsionGrids()); ii++) {
         const std::vector< std::vector< std::vector<double> > >& grid1 = force1.getTorsionTorsionGrid( ii );
         const std::vector< std::vector< std::vector<double> > >& grid2 = force2.getTorsionTorsionGrid( ii );
         compareGrids(grid1, grid2 );

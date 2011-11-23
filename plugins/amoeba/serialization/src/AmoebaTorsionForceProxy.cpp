@@ -50,7 +50,7 @@ static void addTorsionValues( SerializationNode& torsion, const std::vector<doub
 static void loadTorsionValues( SerializationNode& torsion, std::vector<double>& torsionValues ){
     int size = torsion.getIntProperty("size");
     torsionValues.resize(size);
-    for (unsigned int jj = 0; jj < size; jj++) {
+    for (unsigned int jj = 0; jj < static_cast<unsigned int>(size); jj++) {
         torsionValues[jj] = ( torsion.getChildren()[jj].getDoubleProperty("v") );
     }
 }
@@ -60,7 +60,7 @@ void AmoebaTorsionForceProxy::serialize(const void* object, SerializationNode& n
     const AmoebaTorsionForce& force = *reinterpret_cast<const AmoebaTorsionForce*>(object);
 
     SerializationNode& bonds = node.createChildNode("Torsion").setIntProperty("size",  force.getNumTorsions() );
-    for (unsigned int ii = 0; ii < force.getNumTorsions(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumTorsions()); ii++) {
 
         int particle1, particle2, particle3, particle4;
         std::vector<double> torsion1;

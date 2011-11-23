@@ -419,9 +419,9 @@ int PositionGenerator::setPositions( GenerationMethod method, OpenMM_SFMT::SFMT&
     int errorFlag = 0;
     positions.resize( _numParticles );
     if( method == Random ){
-        for( unsigned int ii = 0; ii < _numParticles; ii += _numParticlesPerMolecule ){ 
+        for( unsigned int ii = 0; ii <  static_cast<unsigned int>(_numParticles); ii += _numParticlesPerMolecule ){ 
             positions[ii]    = Vec3(_boxSize*genrand_real2(sfmt), _boxSize*genrand_real2(sfmt), _boxSize*genrand_real2(sfmt));
-            for( unsigned int jj = 1; jj < _numParticlesPerMolecule; jj++) { 
+            for( unsigned int jj = 1; jj < static_cast<unsigned int>(_numParticlesPerMolecule); jj++) { 
                 positions[ii+jj]  = positions[ii] + Vec3(_bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt));
             }
         }
@@ -486,7 +486,7 @@ int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDi
 
     // place molecule centers on grid
 
-    for( unsigned int ii = 0; ii < _numParticles; ii += _numParticlesPerMolecule ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numParticles); ii += _numParticlesPerMolecule ){
         array[ii]  = Vec3(start);
         bool done  = false;
         for( unsigned int jj = 0; jj < 3 && !done; jj++ ){
@@ -507,9 +507,9 @@ int PositionGenerator::setParticlesOnGrid( const Vec3& origin, const Vec3& boxDi
     // add molecule atoms
 
     Vec3 bondOffset( 0.05, 0.05, 0.05 );
-    for( unsigned int ii = 0; ii < _numMolecules; ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(_numMolecules); ii++ ){
         int molecularIndex = ii*_numParticlesPerMolecule;
-        for( unsigned int jj = 1; jj < _numParticlesPerMolecule; jj++ ){
+        for( unsigned int jj = 1; jj < static_cast<unsigned int>(_numParticlesPerMolecule); jj++ ){
             array[molecularIndex+jj] = array[molecularIndex] + bondOffset + Vec3(_bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt), _bondDistance*genrand_real2(sfmt));
         }
     }
@@ -1321,7 +1321,7 @@ static NonbondedForce* copyNonbondedForce( const NonbondedForce& nonbondedForce 
  
 static void copySystem( const System& inputSystem, System& systemCopy ){
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumParticles(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumParticles()); ii++ ){
         systemCopy.addParticle( inputSystem.getParticleMass( static_cast<int>(ii) ) );
     }
 
@@ -1331,8 +1331,7 @@ static void copySystem( const System& inputSystem, System& systemCopy ){
     inputSystem.getDefaultPeriodicBoxVectors( a, b, c );
     systemCopy.setDefaultPeriodicBoxVectors( a, b, c );
 
-    for( unsigned int ii = 0; ii < inputSystem.getNumConstraints(); ii++ ){
-        int index;
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(inputSystem.getNumConstraints()); ii++ ){
         int particle1, particle2;
         double distance;
         inputSystem.getConstraintParameters( ii, particle1, particle2, distance);
@@ -1698,7 +1697,7 @@ static CustomNonbondedForce* buildCustomNonbondedSoftcoreForce(  const Nonbonded
     customNonbonded->addPerParticleParameter("lambda");
 
     vector<double> nonbondedParams(4);
-    for( unsigned int ii = 0; ii < nonbondedSoftcoreForce.getNumParticles(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(nonbondedSoftcoreForce.getNumParticles()); ii++ ){
 
         double charge;
         double sigma;
@@ -1751,7 +1750,7 @@ CustomBondForce* buildCustomBondForceForNonbondedExceptions( const NonbondedSoft
     customBond->addPerBondParameter("eps");
     customBond->addPerBondParameter("lambda");
 
-    for( unsigned int ii = 0; ii < nonbondedSoftcoreForce.getNumExceptions(); ii++ ){
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(nonbondedSoftcoreForce.getNumExceptions()); ii++ ){
 
         int particle1, particle2;
         double chargeProd;

@@ -49,7 +49,7 @@ void AmoebaUreyBradleyForceProxy::serialize(const void* object, SerializationNod
     node.setDoubleProperty("UreyBradleyQuartic", force.getAmoebaGlobalUreyBradleyQuartic());
 
     SerializationNode& bonds = node.createChildNode("UreyBradley").setIntProperty( "size", force.getNumInteractions() );
-    for (unsigned int ii = 0; ii < force.getNumInteractions(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumInteractions()); ii++) {
         int particle1, particle2;
         double distance, k;
         force.getUreyBradleyParameters(ii, particle1, particle2, distance, k);

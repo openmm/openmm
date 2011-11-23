@@ -130,7 +130,7 @@ void testSerialization() {
     }
     
     ASSERT_EQUAL(force1.getNumMultipoles(),  force2.getNumMultipoles());
-    for (unsigned int ii = 0; ii < force1.getNumMultipoles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumMultipoles()); ii++) {
 
         int axisType1, multipoleAtomZ1, multipoleAtomX1, multipoleAtomY1;
         int axisType2, multipoleAtomZ2, multipoleAtomX2, multipoleAtomY2;

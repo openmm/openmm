@@ -60,7 +60,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getAmoebaGlobalUreyBradleyCubic(), force2.getAmoebaGlobalUreyBradleyCubic());
     ASSERT_EQUAL(force1.getAmoebaGlobalUreyBradleyQuartic(), force2.getAmoebaGlobalUreyBradleyQuartic());
     ASSERT_EQUAL(force1.getNumInteractions(), force2.getNumInteractions());
-    for (unsigned int ii = 0; ii < force1.getNumInteractions(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumInteractions()); ii++) {
         int a1, a2, b1, b2;
         double da, db, ka, kb;
 

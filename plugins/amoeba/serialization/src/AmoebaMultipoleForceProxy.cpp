@@ -94,7 +94,7 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     getCovalentTypes( covalentTypes );
 
     SerializationNode& particles = node.createChildNode("MultipoleParticles").setIntProperty( "size", force.getNumMultipoles() );
-    for (unsigned int ii = 0; ii < force.getNumMultipoles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumMultipoles()); ii++) {
 
         int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
         double charge, thole, dampingFactor, polarity;

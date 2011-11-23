@@ -55,7 +55,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaStretchBendForce& force2 = *copy;
     ASSERT_EQUAL(force1.getNumStretchBends(), force2.getNumStretchBends());
-    for (unsigned int ii = 0; ii < force1.getNumStretchBends(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumStretchBends()); ii++) {
         int p11, p12, p13;
         int p21, p22, p23;
         double dAB1, dAB2;

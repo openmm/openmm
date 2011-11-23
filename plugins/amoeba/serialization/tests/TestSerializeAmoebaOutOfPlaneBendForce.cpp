@@ -68,7 +68,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getAmoebaGlobalOutOfPlaneBendSextic(), force2.getAmoebaGlobalOutOfPlaneBendSextic());
     ASSERT_EQUAL(force1.getNumOutOfPlaneBends(), force2.getNumOutOfPlaneBends());
 
-    for (unsigned int ii = 0; ii < force1.getNumOutOfPlaneBends(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumOutOfPlaneBends()); ii++) {
         int a1, a2, a3, a4, b1, b2, b3, b4;
         double ka, kb;
         force1.getOutOfPlaneBendParameters(ii, a1, a2, a3, a4, ka);

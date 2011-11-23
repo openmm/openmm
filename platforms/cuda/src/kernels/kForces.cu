@@ -291,7 +291,7 @@ double kReduceEnergy(gpuContext gpu)
     //printf("kReduceEnergy\n");
     gpu->psEnergy->Download();
     double sum = 0.0;
-    for (int i = 0; i < gpu->sim.energyOutputBuffers; i++){
+    for (int i = 0; i < static_cast<int>(gpu->sim.energyOutputBuffers); i++){
         sum += (*gpu->psEnergy)[i];
     }
 

@@ -68,7 +68,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getAmoebaGlobalHarmonicInPlaneAngleSextic(),   force2.getAmoebaGlobalHarmonicInPlaneAngleSextic());
     ASSERT_EQUAL(force1.getNumAngles(),                                force2.getNumAngles());
 
-    for ( unsigned int ii = 0; ii < force1.getNumAngles(); ii++) {
+    for ( unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumAngles()); ii++) {
         int a1, a2, a3, a4, b1, b2, b3, b4;
         double da, db, ka, kb;
         force1.getAngleParameters(ii, a1, a2, a3, a4, da, ka);

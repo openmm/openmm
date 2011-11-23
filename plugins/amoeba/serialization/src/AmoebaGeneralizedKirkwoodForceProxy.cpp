@@ -53,7 +53,7 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
     node.setIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm() );
 
     SerializationNode& particles = node.createChildNode("GeneralizedKirkwoodParticles").setIntProperty( "size", force.getNumParticles() );
-    for (unsigned int ii = 0; ii < force.getNumParticles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
         double radius, charge, scalingFactor;
         force.getParticleParameters( ii, charge, radius, scalingFactor );
         particles.createChildNode("Particle").setIntProperty("index", ii).setDoubleProperty("charge", charge).setDoubleProperty("radius", radius).setDoubleProperty("scaleFactor", scalingFactor);

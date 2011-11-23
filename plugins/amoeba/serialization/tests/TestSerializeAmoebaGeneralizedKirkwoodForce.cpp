@@ -77,7 +77,7 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getIncludeCavityTerm(),    force2.getIncludeCavityTerm());
 
     ASSERT_EQUAL(force1.getNumParticles(), force2.getNumParticles());
-    for (unsigned int ii = 0; ii < force1.getNumParticles(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
         double radius1, charge1, scaleFactor1;
         double radius2, charge2, scaleFactor2;

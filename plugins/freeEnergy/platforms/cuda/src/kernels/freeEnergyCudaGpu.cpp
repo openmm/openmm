@@ -276,12 +276,17 @@ void freeEnergyGpuSetPeriodicBoxSize( freeEnergyGpuContext freeEnergyGpu, float 
     gpuSetPeriodicBoxSize( freeEnergyGpu->gpuContext, xsize, ysize, zsize );
 }
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4297)
+#endif
+
 extern "C"
 void gpuSetNonbondedSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6,
                                         const std::vector<float>& c12, const std::vector<float>& q,
                                         const std::vector<float>& softcoreLJLambdaArray, const std::vector<char>& symbol,
                                         const std::vector<std::vector<int> >& exclusions, CudaFreeEnergyNonbondedMethod method,
-                                        float cutoffDistance, float solventDielectric ){
+                                        float cutoffDistance, float solventDielectric ) {
 
     unsigned int numberOfParticles                         = c6.size();
     gpuContext gpu                                         = freeEnergyGpu->gpuContext;
@@ -300,6 +305,10 @@ void gpuSetNonbondedSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, floa
         msg << "gpuSetNonbondedSoftcoreParameters: number of atoms in gpuContext does not match input count: " << freeEnergyGpu->gpuContext->sim.atoms << " " << numberOfParticles << ".";
         throw OpenMM::OpenMMException( msg.str() );
     }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
     freeEnergyGpu->freeEnergySim.epsfac                    = epsfac;
     freeEnergyGpu->freeEnergySim.nonbondedMethod           = method;
@@ -349,7 +358,7 @@ void gpuSetNonbondedSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, floa
 
     // Dummy out extra atom data
 
-    for( unsigned int ii = numberOfParticles; ii < paddedNumberOfAtoms; ii++ ){
+    for( int ii = numberOfParticles; ii < paddedNumberOfAtoms; ii++ ){
 
         (*freeEnergyGpu->psSigEps4)[ii].x              = 1.0f;
         (*freeEnergyGpu->psSigEps4)[ii].y              = 0.0f;
@@ -380,7 +389,7 @@ void gpuSetNonbondedSoftcoreParameters( freeEnergyGpuContext freeEnergyGpu, floa
         if( offset > 0 ){
             if( offset > numberOfParticles ){
                 (void) fprintf( freeEnergyGpu->log,"Dummy padded entries\n" );
-                for (unsigned int ii = offset; ii < paddedNumberOfAtoms; ii++){
+                for (int ii = offset; ii < paddedNumberOfAtoms; ii++){
                     (void) fprintf( freeEnergyGpu->log,"%6u sig[%14.7e %14.7e] lambda=%10.3f q=%10.3f\n",
                                     ii, 
                                     (*freeEnergyGpu->psSigEps4)[ii].x, (*freeEnergyGpu->psSigEps4)[ii].y, (*freeEnergyGpu->psSigEps4)[ii].z, (*freeEnergyGpu->psSigEps4)[ii].w );

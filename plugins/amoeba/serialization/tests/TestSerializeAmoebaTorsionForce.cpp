@@ -85,7 +85,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaTorsionForce& force2 = *copy;
     ASSERT_EQUAL(force1.getNumTorsions(), force2.getNumTorsions());
-    for (unsigned int ii = 0; ii < force1.getNumTorsions(); ii++) {
+    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsions()); ii++) {
 
         int a1, a2, a3, a4, b1, b2, b3, b4;
 
