@@ -1,6 +1,28 @@
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
@@ -34,9 +56,6 @@ void GetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext amoebaGpu)
     status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));    
     RTERROR(status, "GetCalculateAmoebaCudaWcaDispersionSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
-
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
 
 __device__ void zeroWcaDispersionSharedForce( struct WcaDispersionParticle* sA ) 
 {
@@ -105,14 +124,7 @@ __device__ void calculateWcaDispersionPairIxn_kernel( float4 atomCoordinatesI, f
                                                       float radiusI,  float radiusJ,
                                                       float rmixo,    float rmixh,
                                                       float emixo,    float emixh,
-                                                      float force[3], float* energy
-
-#ifdef AMOEBA_DEBUG
-               , float4* debugArray
-#endif
-
- )
-{
+                                                      float force[3], float* energy ) {
 
     const float pi         = 3.1415926535897f;
     const float shctd      = cAmoebaSim.shctd;
@@ -318,29 +330,6 @@ __device__ void calculateWcaDispersionPairIxn_kernel( float4 atomCoordinatesI, f
     force[1]                                    *= de;
     force[2]                                    *= de;
 
-#ifdef AMOEBA_DEBUG
-    debugArray[0].x                              = sum;
-    debugArray[0].y                              = sum;
-    debugArray[0].z                              = sum;
-    debugArray[0].w                              = sum;
-#if 0
-    debugArray[0].x                              = r;
-    debugArray[0].y                              = -r*de/awater;
-    debugArray[0].z                              = emixo;
-    debugArray[0].w                              = mask2;
-
-    debugArray[1].x                              = dl;
-    debugArray[1].y                              = du;
-    debugArray[1].z                              = lik;
-    debugArray[1].w                              = uik;
-
-    debugArray[2].x                              = du1;
-    debugArray[2].y                              = du2;
-    debugArray[2].z                              = term;
-    debugArray[2].w                              = sk;
-#endif
-
-#endif
 }
 
 // Include versions of the kernels for N^2 calculations.
@@ -384,16 +373,6 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
             maxThreads = 64;
        threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(WcaDispersionParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        methodName, gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(WcaDispersionParticle), sizeof(WcaDispersionParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-    }
-#endif
 
     if (gpu->bOutputBufferPerWarp){
 

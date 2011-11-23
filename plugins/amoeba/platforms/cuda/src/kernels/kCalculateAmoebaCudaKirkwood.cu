@@ -1,15 +1,34 @@
-//----------------------------------------------------------------------------------------- 
-//----------------------------------------------------------------------------------------- 
-//#include "amoebaGpuTypes.h"
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
+
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
-//#define INCLUDE_TORQUE
 #include "kCalculateAmoebaCudaKirkwoodParticle.h"
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
-
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -1638,26 +1657,6 @@ __device__ void zeroKirkwoodParticleSharedField( struct KirkwoodParticle* sA )
 // reduce psWorkArray_1_1 -> dBorn
 // reduce psWorkArray_1_2 -> dBornPolar
 
-#ifdef AMOEBA_DEBUG
-static void kReduce_dBorn(amoebaGpuContext amoebaGpu )
-{
-
-    gpuContext gpu = amoebaGpu->gpuContext;
-/*
-    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
-                           gpu->sim.paddedNumberOfAtoms, gpu->sim.outputBuffers,
-                           amoebaGpu->psWorkArray_1_1->_pDevData, amoebaGpu->psBorn->_pDevData, 0 );
-    LAUNCHERROR("kReduce_dBorn1");
-*/
-
-    kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
-                           gpu->sim.paddedNumberOfAtoms, gpu->sim.outputBuffers,
-                           amoebaGpu->psWorkArray_1_2->_pDevData, amoebaGpu->psBornPolar->_pDevData, 0 );
-
-    LAUNCHERROR("kReduce_dBorn2");
-}
-#endif
-
 __global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
@@ -1940,40 +1939,6 @@ static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
                                              amoebaGpu->gpuContext->psBornForce->_pDevData );
     }
     LAUNCHERROR("kReduceToBornForcePrefactor");
-
-//#define AMOEBA_DEBUG
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-
-        // kClearEnergy() should be called prior to kReduceToBornForcePrefactorAndSASA_kernel
-
-        double energy = kReduceEnergy( amoebaGpu->gpuContext );
-        (void) fprintf( amoebaGpu->log, "Born force w/ cavity energy=%15.7e.\n", energy ); (void) fflush( amoebaGpu->log );
-/*
-        for( int ii = 0; ii < amoebaGpu->gpuContext->natoms; ii++ ){
-           (void) fprintf( amoebaGpu->log, "%5d ", ii);
-           (void) fprintf( amoebaGpu->log,"bF %16.9e obc=%16.9e bR=%16.9e\n",
-                           amoebaGpu->gpuContext->psBornForce->_pSysData[ii],
-                           amoebaGpu->gpuContext->psObcData->_pSysData[ii].x,
-                           amoebaGpu->gpuContext->psBornRadii->_pSysData[ii] );
-        }
-        (void) fflush( amoebaGpu->log );
-*/
-        if( 0 ){
-            std::vector<int> fileId;
-            //fileId.push_back( 0 );
-            VectorOfDoubleVectors outputVector;
-            cudaLoadCudaFloat4Array( amoebaGpu->gpuContext->natoms,  3, amoebaGpu->gpuContext->psPosq4,       outputVector, NULL, 1.0f );
-            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornRadii,   outputVector, NULL, 1.0f );
-            cudaLoadCudaFloat2Array( amoebaGpu->gpuContext->natoms,  2, amoebaGpu->gpuContext->psObcData,     outputVector, NULL, 1.0f );
-            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornForce,   outputVector, NULL, 1.0f );
-            cudaWriteVectorOfDoubleVectorsToFile( "CudaBornForce", fileId, outputVector );
-        }
-
-    }
-#endif
-#undef AMOEBA_DEBUG
-
 }
 
 /**---------------------------------------------------------------------------------------
@@ -1988,44 +1953,11 @@ static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
 void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 {
 
-#ifdef AMOEBA_DEBUG
-    static const char* methodName       = "kCalculateAmoebaKirkwood";
-    static int timestep = 0;
-    std::vector<int> fileId;
-    timestep++;
-    fileId.resize( 2 );
-    fileId[0] = timestep;
-    fileId[1] = 1;
-#endif
-
     // ---------------------------------------------------------------------------------------
 
     gpuContext gpu = amoebaGpu->gpuContext;
 
     // apparently debug array can take up nontrivial no. registers
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
-                        methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
-                        amoebaGpu->scalingDistanceCutoff );
-    }
-    int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
-    debugArray->Upload();
-    unsigned int targetAtom                   = 0;
-
-    gpu->psBornRadii->Download();
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Kirkwood input\n" ); (void) fflush( amoebaGpu->log );
-        for( int ii = 0; ii < amoebaGpu->gpuContext->sim.paddedNumberOfAtoms; ii++ ){
-            (void) fprintf( amoebaGpu->log,"Born %6d %16.9e\n", ii,
-                            gpu->psBornRadii->_pSysData[ii] );
-        }
-    }
-#endif
-
     // on first pass, set threads/block and based on that setting the energy buffer array
 
     static unsigned int threadsPerBlock = 0;
@@ -2040,47 +1972,17 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
             maxThreads = 64;
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(KirkwoodParticle), gpu->sharedMemoryPerBlock ), maxThreads);
 
-#ifdef AMOEBA_DEBUG
-        if( amoebaGpu->log ){
-            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                            gpu->sim.nonbond_blocks, threadsPerBlock, maxThreads, gpu->bOutputBufferPerWarp,
-                            sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
-                            (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-            (void) fflush( amoebaGpu->log );
-        }
-#endif
-
     }
 
     kClearFields_1( amoebaGpu );
 
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodN2Forces%swarp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                        (gpu->bOutputBufferPerWarp ? " " : " no "), gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-    }
-#endif
-
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaCudaKirkwoodN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodParticle)*threadsPerBlock>>>(
-                                                                           gpu->psWorkUnit->_pDevData
-#ifdef AMOEBA_DEBUG
-                                                                           , debugArray->_pDevData, targetAtom );
-#else
-                                                                           );
-#endif
+                                                                           gpu->psWorkUnit->_pDevData);
     } else {
 
         kCalculateAmoebaCudaKirkwoodN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodParticle)*threadsPerBlock>>>(
-                                                                           gpu->psWorkUnit->_pDevData
-#ifdef AMOEBA_DEBUG
-                                                                           , debugArray->_pDevData, targetAtom );
-#else
-                                                                           );
-#endif
+                                                                           gpu->psWorkUnit->_pDevData);
     }
     LAUNCHERROR("kCalculateAmoebaCudaKirkwoodN2Forces");
 

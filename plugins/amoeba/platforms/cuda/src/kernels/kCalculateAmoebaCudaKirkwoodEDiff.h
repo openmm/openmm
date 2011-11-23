@@ -35,8 +35,7 @@ __launch_bounds__(96, 1)
 __launch_bounds__(32, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
-                            unsigned int* workUnit, float* outputTorque
-){
+                            unsigned int* workUnit, float* outputTorque){
 
     extern __shared__ KirkwoodEDiffParticle sA[];
 

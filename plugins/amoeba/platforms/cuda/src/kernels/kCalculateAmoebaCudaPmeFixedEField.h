@@ -37,16 +37,7 @@ __launch_bounds__(64, 1)
 void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
                             unsigned int* workUnit,
                             float* outputEField,
-                            float* outputEFieldPolar
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
-
-#ifdef AMOEBA_DEBUG
-    int maxPullIndex = 1;
-    float4 pullBack[12];
-#endif
+                            float* outputEFieldPolar){ 
 
     extern __shared__ FixedFieldParticle sA[];
 
@@ -118,11 +109,7 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
                 }
 
                 float4 ijField[3];
-                calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[j], dScaleValue, pScaleValue, ijField
-#ifdef AMOEBA_DEBUG
-                                            , pullBack
-#endif
-                );
+                calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[j], dScaleValue, pScaleValue, ijField);
 
                 // nan*0.0 = nan not 0.0, so explicitly exclude (atomI == atomJ) contribution
                 // by setting match flag
@@ -139,66 +126,6 @@ void METHOD_NAME(kCalculateAmoebaPmeDirectFixedE_Field, _kernel)(
                 fieldPolarSum[1]       += match ? 0.0f : ijField[1].z;
                 fieldPolarSum[2]       += match ? 0.0f : ijField[2].z;
 
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || targetAtom == (y+j) ){
-    unsigned int index                 = atomI == targetAtom ? (y + j) : atomI;
-    unsigned int indexI                = 0;
-    unsigned int indexJ                = indexI ? 0 : 2;
-    float flag                         = 7.0f;
-
-    debugArray[index].x                = (float) atomI;
-    debugArray[index].y                = (float) (y + j);
-    debugArray[index].z                = dScaleValue;
-    debugArray[index].w                = pScaleValue;
-/*
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = (float) bExclusionFlag;
-    debugArray[index].y                = (float) (tgx);
-    debugArray[index].z                = (float) j;
-    debugArray[index].w                = flag;
-
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = (float) dScaleMask;
-    debugArray[index].y                = (float) pScaleMask.x;
-    debugArray[index].z                = (float) pScaleMask.y;
-    debugArray[index].w                = flag;
-*/
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = match ? 0.0f : ijField[0].x;
-    debugArray[index].y                = match ? 0.0f : ijField[1].x;
-    debugArray[index].z                = match ? 0.0f : ijField[2].x;
-    debugArray[index].w                = flag + 1.0f;
-
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = match ? 0.0f : ijField[0].z;
-    debugArray[index].y                = match ? 0.0f : ijField[1].z;
-    debugArray[index].z                = match ? 0.0f : ijField[2].z;
-    debugArray[index].w                = flag + 2.0f;
-
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = match ? 0.0f : ijField[0].y;
-    debugArray[index].y                = match ? 0.0f : ijField[1].y;
-    debugArray[index].z                = match ? 0.0f : ijField[2].y;
-    debugArray[index].w                = flag + 3.0f;
-
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = match ? 0.0f : ijField[0].w;
-    debugArray[index].y                = match ? 0.0f : ijField[1].w;
-    debugArray[index].z                = match ? 0.0f : ijField[2].w;
-    debugArray[index].w                = flag + 4.0f;
-
-
-    for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullBack[pullIndex].x;
-        debugArray[index].y                = pullBack[pullIndex].y;
-        debugArray[index].z                = pullBack[pullIndex].z;
-        debugArray[index].w                = pullBack[pullIndex].w;
-    }   
-
-
-}
-#endif
             }
 
             // Write results
@@ -252,11 +179,7 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
                         }
 
                         float4 ijField[3];
-                        calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[jIdx], dScaleValue, pScaleValue, ijField
-    #ifdef AMOEBA_DEBUG
-                                                    , pullBack
-    #endif
-                        );
+                        calculateFixedFieldRealSpacePairIxn_kernel( localParticle, psA[jIdx], dScaleValue, pScaleValue, ijField);
 
                         unsigned int outOfBounds     = ( (atomI >= cSim.atoms) || ((y+jIdx) >= cSim.atoms) ) ? 1 : 0;
 
@@ -317,67 +240,8 @@ if( atomI == targetAtom || targetAtom == (y+j) ){
                             }
                         }
 
-#ifdef AMOEBA_DEBUG
-if( (atomI == targetAtom || (y + jIdx) == targetAtom) ){
-
-            unsigned int index                 = (atomI == targetAtom) ? (y + jIdx) : atomI;
-            unsigned int indexI                = (atomI == targetAtom) ? 0 : 2;
-            unsigned int indexJ                = (atomI == targetAtom) ? 2 : 0;
-
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) (y + jIdx);
-            debugArray[index].z                = dScaleValue;
-            debugArray[index].w                = pScaleValue;
-
-            float flag                         = 9.0f;
-/*
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = (float) bExclusionFlag;
-            debugArray[index].y                = (float) (tgx);
-            debugArray[index].z                = (float) j;
-            debugArray[index].w                = jIdx;
-        
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = (float) dScaleMask;
-            debugArray[index].y                = (float) pScaleMask.x;
-            debugArray[index].z                = (float) pScaleMask.y;
-            debugArray[index].w                = (float) flags;
- */       
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].x;
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].x;
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].x;
-            debugArray[index].w                =  flag + 1.0f;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].y;
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].y;
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].y;
-            debugArray[index].w                = flag + 2.0f;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].z;
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].z;
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].z;
-            debugArray[index].w                = flag + 3.0f;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                =  outOfBounds ? 0.0f : ijField[0].w;
-            debugArray[index].y                =  outOfBounds ? 0.0f : ijField[1].w;
-            debugArray[index].z                =  outOfBounds ? 0.0f : ijField[2].w;
-            debugArray[index].w                = flag + 4.0f;
-
-            for( int pullIndex = 0; pullIndex < maxPullIndex; pullIndex++ ){
-                index                             += cSim.paddedNumberOfAtoms;
-                debugArray[index].x                = pullBack[pullIndex].x;
-                debugArray[index].y                = pullBack[pullIndex].y;
-                debugArray[index].z                = pullBack[pullIndex].z;
-                debugArray[index].w                = pullBack[pullIndex].w;
-            }
-}        
-#endif
                     }
-                    tj                  = (tj + 1) & (GRID - 1);
+                    tj = (tj + 1) & (GRID - 1);
 
                 } // j-loop block
     

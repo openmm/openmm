@@ -39,9 +39,6 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
                             int sigmaCombiningRule,
                             int epsilonCombiningRule,
                             float* outputForce
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
 ){
 
     extern __shared__ Vdw14_7Particle sA[];
@@ -57,9 +54,6 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
     int exclusionMask;
     float totalEnergy            = 0.0f;
 
-#ifdef AMOEBA_DEBUG
-    float4 pullDebug[5];
-#endif
     while (pos < end)
     {
 
@@ -129,11 +123,7 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
                 }
 
                 float energy;
-                calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy
-#ifdef AMOEBA_DEBUG
-,  pullDebug
-#endif
-);
+                calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy);
                 // mask out excluded ixns
 
                 unsigned int mask  =  ( (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
@@ -148,41 +138,6 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
                 forceSum[1]            += mask ? ijForce[1]  : 0.0f;
                 forceSum[2]            += mask ? ijForce[2]  : 0.0f;
                 totalEnergy            += mask ? 0.5f*energy : 0.0f;
-
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || (y+j) == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? (y + j) : atomI;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + j); 
-        debugArray[index].z                = -1.0f;
-        debugArray[index].w                = (float) (mask + 1); 
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) tgx;
-        debugArray[index].w                = energy;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = pullDebug[0].y;
-        debugArray[index].z                = pullDebug[0].z;
-        debugArray[index].w                = pullDebug[0].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[1].x;
-        debugArray[index].y                = pullDebug[1].y;
-        debugArray[index].z                = pullDebug[1].z;
-        debugArray[index].w                = pullDebug[1].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? ijForce[0] : 0.0f;
-        debugArray[index].y                = mask ? ijForce[1] : 0.0f;
-        debugArray[index].z                = mask ? ijForce[2] : 0.0f;
-}
-#endif
-
             }
 
             // Write results
@@ -260,11 +215,7 @@ flags = 0xFFFFFFFF;
                             ijForce[1]   -= floor(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
                             ijForce[2]   -= floor(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
                         }
-                        calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy
-#ifdef AMOEBA_DEBUG
-            ,  pullDebug
-#endif
-               );
+                        calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy);
             
                         // mask out excluded ixns
         
@@ -328,40 +279,6 @@ flags = 0xFFFFFFFF;
 #endif
         
                 
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || (y+jIdx) == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? (y + jIdx) : atomI;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + jIdx); 
-        debugArray[index].z                = -3.0;
-        debugArray[index].w                = (float) (mask + 1); 
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) tgx;
-        debugArray[index].w                = energy;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = pullDebug[0].y;
-        debugArray[index].z                = pullDebug[0].z;
-        debugArray[index].w                = pullDebug[0].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[1].x;
-        debugArray[index].y                = pullDebug[1].y;
-        debugArray[index].z                = pullDebug[1].z;
-        debugArray[index].w                = pullDebug[1].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? ijForce[0] : 0.0f;
-        debugArray[index].y                = mask ? ijForce[1] : 0.0f;
-        debugArray[index].z                = mask ? ijForce[2] : 0.0f;
-}
-#endif
-
 #ifdef USE_CUTOFF
                     }
 #endif

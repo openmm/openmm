@@ -1,13 +1,33 @@
-///-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "amoebaGpuTypes.h"
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
-
-//#define AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -213,11 +233,7 @@ __device__ void calculateBn_kernel( float r, float4* bn, float* bn0, float *bn5 
 #undef SUB_METHOD_NAME
 
 __device__ void calculatePmeDirectElectrostaticPairIxnOrig_kernel( const PmeDirectElectrostaticParticle& atomI, const   PmeDirectElectrostaticParticle& atomJ,
-                                                                   const float* scalingFactors, float4 forceTorqueEnergy[3]
-#ifdef AMOEBA_DEBUG
-                                                               ,float4* debugArray
-#endif
- ){
+                                                                   const float* scalingFactors, float4 forceTorqueEnergy[3]){
 
     float xr    = atomJ.x - atomI.x;
     float yr    = atomJ.y - atomI.y;
@@ -909,132 +925,6 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrig_kernel( const PmeDire
         forceTorqueEnergy[2].y       =  (ttm32 + ttm3i2);
         forceTorqueEnergy[2].z       =  (ttm33 + ttm3i3);
 
-#ifdef AMOEBA_DEBUG
-    int debugIndex               = 0;
-    float idTracker              = 1.0f;
-/*
-    debugArray[debugIndex].x = atomI.labFrameDipole[0];
-    debugArray[debugIndex].y = atomI.labFrameDipole[1];
-    debugArray[debugIndex].z = atomI.labFrameDipole[2];
-    debugArray[debugIndex].w = r2;
-
-    debugIndex++;
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = atomJ.labFrameDipole[0];
-    debugArray[debugIndex].y = atomJ.labFrameDipole[1];
-    debugArray[debugIndex].z = atomJ.labFrameDipole[2];
-    debugArray[debugIndex].w = cSim.alphaEwald;
-
-    debugIndex++;
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = atomI.inducedDipole[0];
-    debugArray[debugIndex].y = atomI.inducedDipole[1];
-    debugArray[debugIndex].z = atomI.inducedDipole[2];
-    debugArray[debugIndex].w = idTracker;
-
-    debugIndex++;
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = atomJ.inducedDipole[0];
-    debugArray[debugIndex].y = atomJ.inducedDipole[1];
-    debugArray[debugIndex].z = atomJ.inducedDipole[2];
-    debugArray[debugIndex].w = idTracker;
-
-    debugIndex++;
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = atomI.inducedDipoleP[0];
-    debugArray[debugIndex].y = atomI.inducedDipoleP[1];
-    debugArray[debugIndex].z = atomI.inducedDipoleP[2];
-    debugArray[debugIndex].w = idTracker;
-
-    debugIndex++;
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = atomJ.inducedDipoleP[0];
-    debugArray[debugIndex].y = atomJ.inducedDipoleP[1];
-    debugArray[debugIndex].z = atomJ.inducedDipoleP[2];
-    debugArray[debugIndex].w = idTracker;
-
-    debugIndex++;
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = conversionFactor*ftm21;
-    debugArray[debugIndex].y = conversionFactor*ftm22;
-    debugArray[debugIndex].z = conversionFactor*ftm23;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 1.0;
-    debugArray[debugIndex].x = e;
-    debugArray[debugIndex].y = ei;
-    debugArray[debugIndex].z = erl;
-    debugArray[debugIndex].w = erli;
-    debugIndex++;
-*/
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = r2;
-    debugArray[debugIndex].y = cSim.alphaEwald;
-    debugArray[debugIndex].z = conversionFactor;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = conversionFactor*ftm21;
-    debugArray[debugIndex].y = conversionFactor*ftm22;
-    debugArray[debugIndex].z = conversionFactor*ftm23;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = conversionFactor*ftm2i1;
-    debugArray[debugIndex].y = conversionFactor*ftm2i2;
-    debugArray[debugIndex].z = conversionFactor*ftm2i3;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-/*
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = fridmp1;
-    debugArray[debugIndex].y = fridmp2;
-    debugArray[debugIndex].z = fridmp3;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = findmp1;
-    debugArray[debugIndex].y = findmp2;
-    debugArray[debugIndex].z = findmp3;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-*/
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = conversionFactor*ttm21;
-    debugArray[debugIndex].y = conversionFactor*ttm22;
-    debugArray[debugIndex].z = conversionFactor*ttm23;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = conversionFactor*ttm2i1;
-    debugArray[debugIndex].y = conversionFactor*ttm2i2;
-    debugArray[debugIndex].z = conversionFactor*ttm2i3;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = conversionFactor*ttm31;
-    debugArray[debugIndex].y = conversionFactor*ttm32;
-    debugArray[debugIndex].z = conversionFactor*ttm33;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-    idTracker               += 100.0;
-    debugArray[debugIndex].x = conversionFactor*ttm3i1;
-    debugArray[debugIndex].y = conversionFactor*ttm3i2;
-    debugArray[debugIndex].z = conversionFactor*ttm3i3;
-    debugArray[debugIndex].w = idTracker;
-    debugIndex++;
-
-#endif
-
     } else {
 
         forceTorqueEnergy[0].x  = 0.0f;
@@ -1050,15 +940,6 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrig_kernel( const PmeDire
         forceTorqueEnergy[2].z  = 0.0f;
 
         forceTorqueEnergy[0].w  = 0.0f;
-
-#ifdef AMOEBA_DEBUG
-for( int ii = 0; ii < 12; ii++ ){
-    debugArray[ii].x = 0.0f;
-    debugArray[ii].y = 0.0f;
-    debugArray[ii].z = 0.0f;
-    debugArray[ii].w = (float) (-ii);
-}
-#endif
 
     }
 
@@ -1351,35 +1232,11 @@ static void kReduceTorque(amoebaGpuContext amoebaGpu )
 void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 {
 
-#ifdef AMOEBA_DEBUG
-    static const char* methodName = "cudaComputeAmoebaPmeDirectElectrostatic";
-    static int timestep = 0;
-    std::vector<int> fileId;
-    timestep++;
-    fileId.resize( 2 );
-    fileId[0] = timestep;
-    fileId[1] = 1;
-#endif
-
     // ---------------------------------------------------------------------------------------
 
     gpuContext gpu = amoebaGpu->gpuContext;
 
     // apparently debug array can take up nontrivial no. registers
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-      (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
-                      methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
-    }
-    int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    int maxOffset                             = 20;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(maxOffset*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*maxOffset*paddedNumberOfAtoms);
-    debugArray->Upload();
-    unsigned int targetAtom                   = 49;
-#endif
-
     // on first pass, set threads/block
 
     static unsigned int threadsPerBlock = 0;
@@ -1403,37 +1260,16 @@ void cudaComputeAmoebaPmeDirectElectrostatic( amoebaGpuContext amoebaGpu )
 
     kClearFields_3( amoebaGpu, 1 );
 
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaPmeDirectElectrostaticCutoffForces: numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u maxL1=%d\n",
-                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(PmeDirectElectrostaticParticle), (sizeof(PmeDirectElectrostaticParticle))*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits, maxL1 );
-        (void) fflush( amoebaGpu->log );
-    }   
-#endif
-
     if (gpu->bOutputBufferPerWarp){
 
         kCalculateAmoebaPmeDirectElectrostaticCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                           gpu->sim.pInteractingWorkUnit,
-#ifdef AMOEBA_DEBUG
-                                                                          amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                          debugArray->_pDevData, targetAtom );
-#else
                                                                           amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
-
     } else {
 
         kCalculateAmoebaPmeDirectElectrostaticCutoffForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(PmeDirectElectrostaticParticle)*threadsPerBlock>>>(
                                                                     gpu->sim.pInteractingWorkUnit,
-#ifdef AMOEBA_DEBUG
-                                                                    amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                    debugArray->_pDevData, targetAtom );
-#else
                                                                     amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
     }
     LAUNCHERROR("kCalculateAmoebaPmeDirectElectrostaticCutoffForces");
 

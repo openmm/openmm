@@ -61,6 +61,17 @@
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "OpenMM.h"
 
+#if TEST_PLATFORM == TEST_OPENCL_PLATFORM
+#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
+#endif
+
+#if TEST_PLATFORM == TEST_CUDA_PLATFORM
+#include "ReferencePlatform.h"
+#include "CudaPlatform.h"
+#endif
+    
+
 #ifdef USE_SOFTCORE
 #include "OpenMMFreeEnergy.h"
 #include "openmm/freeEnergyKernels.h"
@@ -2900,23 +2911,32 @@ void runSystemComparisonTest( System& system1, System& system2,
         throw OpenMMException( msg.str() );
     }
  
+#if TEST_PLATFORM == TEST_OPENCL_PLATFORM
+    ReferencePlatform platform1;   
+    OpenCLPlatform platform2;
+#elif TEST_PLATFORM == TEST_CUDA_PLATFORM
+    ReferencePlatform platform1;   
+    CudaPlatform platform2;
+#else
     Platform& platform1 = Platform::getPlatformByName( platformName1 );
     if( deviceId1 ){
         setDeviceId( platform1, deviceId1, log );
     }
     setDeviceIdUsingEnvVariable( platform1, log );
-    Context context1( system1, integrator1, platform1 );
-    context1.setPositions(positions);
-    State state1 = context1.getState(State::Forces | State::Energy);
 
     Platform& platform2 = Platform::getPlatformByName( platformName2 );
     if( deviceId2 ){
         setDeviceId( platform2, deviceId2, log );
     }
     setDeviceIdUsingEnvVariable( platform2, log );
+#endif
+
+    Context context1( system1, integrator1, platform1 );
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+
     Context context2( system2, integrator2, platform2 );
     context2.setPositions(positions);
-
     State state2 = context2.getState(State::Forces | State::Energy);
 
     double energyDiff = 0.0;
@@ -3419,10 +3439,19 @@ int main() {
             }
         }
 
+        // if TEST_PLATFORM is not set, then check that required libs are available
+     
+#if TEST_PLATFORM != TEST_OPENCL_PLATFORM && TEST_PLATFORM != TEST_CUDA_PLATFORM
         envVariableIsSet = checkRequiredLibsAreAvailable( requiredLibs, loadedLibs, log );
         if( envVariableIsSet == 0 && log ){
             (void) fprintf( log, "Aborting tests due to missing libs.\n" );
         }
+#else
+
+        // unit test path: force tests to run
+        
+        envVariableIsSet = 1;
+#endif
 
         if( platformId2s.size() > 0 ){
             generativeArgumentMaps["platformId2"] = platformId2s;

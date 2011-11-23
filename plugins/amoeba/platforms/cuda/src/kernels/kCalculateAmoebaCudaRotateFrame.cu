@@ -1,6 +1,28 @@
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
@@ -50,8 +72,6 @@ __device__ static float normVector3( float* vector )
 
     return returnNorm;
 }
-
-#undef AMOEBA_DEBUG
 
 // ZThenX     == 0
 // Bisector   == 1
@@ -381,41 +401,10 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "computeCudaAmoebaLabFrameMoments";
-
-   // ---------------------------------------------------------------------------------------
-
     gpuContext gpu    = amoebaGpu->gpuContext;
 
     int numBlocks     = gpu->sim.blocks;
     int numThreads    = gpu->sim.threads_per_block;
-
-//#define AMOEBA_DEBUG  
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s: numBlocks/atoms=%d\n", methodName, numBlocks ); (void) fflush( amoebaGpu->log );
-        amoebaGpu->psMultipoleParticlesIdsAndAxisType->Download();
-        amoebaGpu->psMolecularDipole->Download();
-        amoebaGpu->psMultipoleParticlesTorqueBufferIndices->Download();
-        gpu->psPosq4->Download();
-        for( int ii = 0; ii < gpu->natoms; ii++ ){
-            int mIndex = 3*ii;
-             (void) fprintf( amoebaGpu->log,"%6d [%6d %6d %6d %6d] x[%16.9e %16.9e %16.9e] %s [%6d %6d %6d %6d]\n", ii,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].x,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].y,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].z,
-                             amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w,
-                             gpu->psPosq4->_pSysData[ii].x,
-                             gpu->psPosq4->_pSysData[ii].y,
-                             gpu->psPosq4->_pSysData[ii].z, (amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysData[ii].w > 1 ? " XXX" : ""),
-                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].x,
-                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].y,
-                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].z,
-                             amoebaGpu->psMultipoleParticlesTorqueBufferIndices->_pSysData[ii].w );
-            //if( ii == 30 )ii = gpu->natoms - 30;
-        }
-    }
-#endif
 
     // copy molecular moments to lab frame moment arrays
     // check if chiral center requires moments to have sign flipped
@@ -428,7 +417,7 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
     LAUNCHERROR("kCudaComputeCheckChiral");
 
     kCudaComputeLabFrameMoments_kernel<<< numBlocks, numThreads>>> ( );
-    LAUNCHERROR(methodName);
+    LAUNCHERROR("kCudaComputeLabFrameMoments");
 
 }
 
@@ -505,5 +494,3 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     }
 
 }
-
-#undef AMOEBA_DEBUG

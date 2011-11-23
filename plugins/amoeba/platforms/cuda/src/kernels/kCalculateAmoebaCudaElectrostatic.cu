@@ -1,12 +1,32 @@
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
-
-//#define AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -591,8 +611,7 @@ __device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& ato
 
 // reduce psWorkArray_3_1 -> torque
 
-static void kReduceTorque(amoebaGpuContext amoebaGpu )
-{
+static void kReduceTorque(amoebaGpuContext amoebaGpu ){
     gpuContext gpu = amoebaGpu->gpuContext;
     kReduceFields_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.bsf_reduce_threads_per_block>>>(
                                gpu->sim.paddedNumberOfAtoms*3, gpu->sim.outputBuffers,
@@ -609,41 +628,13 @@ static void kReduceTorque(amoebaGpuContext amoebaGpu )
 
    --------------------------------------------------------------------------------------- */
 
-void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueToForce )
-{
+void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueToForce ){
   
    // ---------------------------------------------------------------------------------------
-
-
-#ifdef AMOEBA_DEBUG
-    static const char* methodName = "cudaComputeAmoebaElectrostatic";
-    static int timestep = 0;
-    std::vector<int> fileId;
-    timestep++;
-    fileId.resize( 2 );
-    fileId[0] = timestep;
-    fileId[1] = 1;
-#endif
-
-    // ---------------------------------------------------------------------------------------
 
     gpuContext gpu = amoebaGpu->gpuContext;
 
     // apparently debug array can take up nontrivial no. registers
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
-                        methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
-    }   
-    static const int maxSlots                 =20;
-    int paddedNumberOfAtoms                   = gpu->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(maxSlots*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*maxSlots*paddedNumberOfAtoms);
-    debugArray->Upload();
-    //unsigned int targetAtom                   = 1137;
-    unsigned int targetAtom                   = 1;
-#endif
 
     // on first pass, set threads/block
 
@@ -662,20 +653,6 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueTo
 
     kClearFields_3( amoebaGpu, 1 );
 
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, (*gpu->psInteractionCount)[0], gpu->sim.workUnits ); (void) fflush( amoebaGpu->log );
-    }
-    if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
-                                                                           gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData, debugArray->_pDevData, targetAtom );
-    } else {
-        kCalculateAmoebaCudaElectrostaticN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
-                                                                           gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData, debugArray->_pDevData, targetAtom );
-    }
-#else
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
                                                                            gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
@@ -683,65 +660,7 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueTo
         kCalculateAmoebaCudaElectrostaticN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
                                                                            gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     }
-#endif
     LAUNCHERROR("kCalculateAmoebaCudaElectrostaticN2Forces");
-
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        debugArray->Download();
-        std::vector<double> conversions;
-        conversions.push_back( 0.1f/4.184f );
-        conversions.push_back( 0.1f/4.184f );
-        unsigned int kkBlocks = 4;
-        (void) fprintf( stderr, "\nTarget atom output %5u\n", targetAtom );
-        for( unsigned int ii = 0; ii < amoebaGpu->gpuContext->sim.paddedNumberOfAtoms; ii++ ){
-            double sum = 0.0;
-            for( unsigned int kk = 0; kk < kkBlocks && sum == 0.0; kk++ ){
-                unsigned int index = ii + kk*amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-                sum               += debugArray->_pSysData[index].x + debugArray->_pSysData[index].y + debugArray->_pSysData[index].z +  debugArray->_pSysData[index].w;
-            }
-            if( sum > 0.0 ){
-                (void) fprintf( stderr, "%5u", ii );
-                for( unsigned int kk = 0; kk < kkBlocks; kk++ ){
-                    unsigned int index = ii + kk*amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-                    (void) fprintf( stderr, " %15.7e %15.7e %15.7e %5.1f",
-                                    conversions[kk]*debugArray->_pSysData[index].x, conversions[kk]*debugArray->_pSysData[index].y, conversions[kk]*debugArray->_pSysData[index].z,
-                                    debugArray->_pSysData[index].w );
-                    if( ((kk+1) % 2) == 0 && (kk != (kkBlocks-1) ) ){
-                        (void) fprintf( stderr, "\n%5u", ii );
-                    }
-                }
-                (void) fprintf( stderr, "\n" );
-                if( kkBlocks > 2 ){
-                    (void) fprintf( stderr, "\n" );
-                }
-            }
-        }
-    }
-#endif
-
-#ifdef AMOEBA_DEBUG
-    if( 0 ){ 
-        VectorOfDoubleVectors outputVector;
-
-        std::vector<int> fileId;
-        static int call = 0; 
-        fileId.push_back( call++ );
-
-        int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "ElectrostaticTemp");
-
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector, NULL, 1.0f );
-        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
-
-        reduceAndCopyCUDAStreamFloat( amoebaGpu->psWorkArray_3_1, temp, 1.0 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
-
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaElectrostaticTorque", fileId, outputVector );
-        delete temp;
-    }    
-#endif
 
     if( addTorqueToForce ){
         kReduceTorque( amoebaGpu );

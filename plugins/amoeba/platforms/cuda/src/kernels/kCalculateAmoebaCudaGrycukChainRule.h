@@ -34,11 +34,7 @@ __launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
-void METHOD_NAME(kCalculateAmoebaGrycukChainRule, _kernel)( unsigned int* workUnit 
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
+void METHOD_NAME(kCalculateAmoebaGrycukChainRule, _kernel)( unsigned int* workUnit ){
 
     extern __shared__ GrycukChainRuleParticle sAChainRule[];
 
@@ -48,10 +44,6 @@ void METHOD_NAME(kCalculateAmoebaGrycukChainRule, _kernel)( unsigned int* workUn
     unsigned int pos             = warp*numWorkUnits/totalWarps;
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
-
-#ifdef AMOEBA_DEBUG
-    float4 pullDebug[5];
-#endif
 
     while (pos < end)
     {
@@ -85,11 +77,7 @@ void METHOD_NAME(kCalculateAmoebaGrycukChainRule, _kernel)( unsigned int* workUn
             for (unsigned int j = (tgx+1)&(GRID-1); j != tgx; j = (j+1)&(GRID-1))
             {
                 float localForce[3];
-                calculateGrycukChainRulePairIxn_kernel( localParticle, psAChainRule[j], localForce
-#ifdef AMOEBA_DEBUG
-,  pullDebug
-#endif
- );
+                calculateGrycukChainRulePairIxn_kernel( localParticle, psAChainRule[j], localForce);
                 if( (atomI != (y + j)) && (atomI < cSim.atoms) && ((y+j) < cSim.atoms) ){
 
                     localParticle.force[0]     -= localForce[0];
@@ -100,54 +88,6 @@ void METHOD_NAME(kCalculateAmoebaGrycukChainRule, _kernel)( unsigned int* workUn
                     psAChainRule[j].force[1]   += localForce[1];
                     psAChainRule[j].force[2]   += localForce[2];
 
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || (y+j) == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? (y + j) : atomI;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + j); 
-        debugArray[index].z                = -1.0f;
-        debugArray[index].w                = -1.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) tgx;
-        debugArray[index].w                = -2.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = pullDebug[0].y;
-        debugArray[index].z                = pullDebug[0].z;
-        debugArray[index].w                = pullDebug[0].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[1].x;
-        debugArray[index].y                = pullDebug[1].y;
-        debugArray[index].z                = pullDebug[1].z;
-        debugArray[index].w                = pullDebug[1].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = localForce[0];
-        debugArray[index].y                = localForce[1];
-        debugArray[index].z                = localForce[2];
-        debugArray[index].w                = -12.0f;
-
- calculateGrycukChainRulePairIxn_kernel( psAChainRule[j], localParticle, localForce ,  pullDebug );
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = pullDebug[0].y;
-        debugArray[index].z                = pullDebug[0].z;
-        debugArray[index].w                = -13.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = localForce[0];
-        debugArray[index].y                = localForce[1];
-        debugArray[index].z                = localForce[2];
-        debugArray[index].w                = -14.0f;
-}
-#endif
 
                 }
             }
@@ -181,11 +121,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
 
                 if( (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
                     float localForce[3];
-                    calculateGrycukChainRulePairIxn_kernel( localParticle, psAChainRule[tj], localForce 
-#ifdef AMOEBA_DEBUG
-,  pullDebug
-#endif
-);
+                    calculateGrycukChainRulePairIxn_kernel( localParticle, psAChainRule[tj], localForce );
     
                     localParticle.force[0]     -= localForce[0];
                     localParticle.force[1]     -= localForce[1];
@@ -195,54 +131,7 @@ if( atomI == targetAtom || (y+j) == targetAtom ){
                     psAChainRule[tj].force[1]  += localForce[1];
                     psAChainRule[tj].force[2]  += localForce[2];
     
-#ifdef AMOEBA_DEBUG
-unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-if( atomI == targetAtom || (y+tj) == targetAtom ){
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + tj); 
-        debugArray[index].z                = -1.0f;
-        debugArray[index].w                = -1.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) tgx;
-        debugArray[index].w                = -2.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = pullDebug[0].y;
-        debugArray[index].z                = pullDebug[0].z;
-        debugArray[index].w                = pullDebug[0].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[1].x;
-        debugArray[index].y                = pullDebug[1].y;
-        debugArray[index].z                = pullDebug[1].z;
-        debugArray[index].w                = pullDebug[1].w;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = localForce[0];
-        debugArray[index].y                = localForce[1];
-        debugArray[index].z                = localForce[2];
-        debugArray[index].w                = -10.0f;
-}
-#endif
-                    calculateGrycukChainRulePairIxn_kernel( psAChainRule[tj], localParticle, localForce
-#ifdef AMOEBA_DEBUG
-,  pullDebug
-#endif
- );
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom || (y+tj) == targetAtom ){
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = pullDebug[0].x;
-        debugArray[index].y                = localForce[1];
-        debugArray[index].z                = localForce[2];
-        debugArray[index].w                = -11.0f;
-}
-#endif
+                    calculateGrycukChainRulePairIxn_kernel( psAChainRule[tj], localParticle, localForce);
     
                     localParticle.force[0]     += localForce[0];
                     localParticle.force[1]     += localForce[1];

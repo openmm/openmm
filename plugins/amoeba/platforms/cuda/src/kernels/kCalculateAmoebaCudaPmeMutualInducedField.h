@@ -37,9 +37,6 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
                             unsigned int* workUnit,
                             float* outputField, float* outputFieldPolar
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
 ){
 
     extern __shared__ MutualInducedParticle sA[];
@@ -51,10 +48,6 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
     const float uscale           = 1.0f;
-
-#ifdef AMOEBA_DEBUG
-    float4 pullBack[4];
-#endif
 
     while (pos < end)
     {

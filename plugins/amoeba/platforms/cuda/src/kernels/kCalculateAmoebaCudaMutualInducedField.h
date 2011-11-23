@@ -36,11 +36,7 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaMutualInducedField, _kernel)(
                             unsigned int* workUnit,
-                            float* outputField, float* outputFieldPolar
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
+                            float* outputField, float* outputFieldPolar){
 
     extern __shared__ MutualInducedParticle sA[];
 
@@ -99,11 +95,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedField, _kernel)(
 
                 // load coords, charge, ...
 
-                calculateMutualInducedFieldPairIxn_kernel( localParticle, psA[j], ijField
-#ifdef AMOEBA_DEBUG
-,  debugArray
-#endif
-);
+                calculateMutualInducedFieldPairIxn_kernel( localParticle, psA[j], ijField);
 
                 unsigned int mask       =  ( (atomI == (y + j)) || (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
 
@@ -117,34 +109,6 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedField, _kernel)(
                 fieldPolarSum[1]       += mask ? ijField[1][1] : 0.0f;
                 fieldPolarSum[2]       += mask ? ijField[1][2] : 0.0f;
 
-#ifdef AMOEBA_DEBUG
-if( atomI == targetAtom ){
-        unsigned int index                 = y + j;
-        unsigned int indexI                = 0;
-        //unsigned int indexJ                = 2;
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + j);
-        //debugArray[index].z                = cAmoebaSim.pDampingFactorAndThole[atomI].x;
-        debugArray[index].z                = (float) cSim.atoms;
-        debugArray[index].w                = (float) (mask + 1);
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? ijField[indexI][0] : 0.0f;
-        debugArray[index].y                = mask ? ijField[indexI][1] : 0.0f;
-        debugArray[index].z                = mask ? ijField[indexI][2] : 0.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? ijField[indexI+1][0] : 0.0f;
-        debugArray[index].y                = mask ? ijField[indexI+1][1] : 0.0f;
-        debugArray[index].z                = mask ? ijField[indexI+1][2] : 0.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) 1.0f;
-}
-#endif
             }
 
             // Write results
@@ -161,9 +125,8 @@ if( atomI == targetAtom ){
 
 #endif
 
-        }
-        else        // 100% utilization
-        {
+        } else {
+
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
@@ -185,13 +148,9 @@ if( atomI == targetAtom ){
 
                 // load coords, charge, ...
 
-                calculateMutualInducedFieldPairIxn_kernel( localParticle, psA[tj], ijField
-#ifdef AMOEBA_DEBUG
-,  debugArray
-#endif
-   );
+                calculateMutualInducedFieldPairIxn_kernel( localParticle, psA[tj], ijField);
 
-                unsigned int mask   =  ( (atomI >= cSim.atoms) || ((y+tj) >= cSim.atoms) ) ? 0 : 1;
+                unsigned int mask         =  ( (atomI >= cSim.atoms) || ((y+tj) >= cSim.atoms) ) ? 0 : 1;
            
                 // add to field at atomI the field due atomJ's dipole
 
@@ -217,36 +176,8 @@ if( atomI == targetAtom ){
                 psA[tj].fieldPolar[1]    += mask ? ijField[3][1] : 0.0f;
                 psA[tj].fieldPolar[2]    += mask ? ijField[3][2] : 0.0f;
 
-#ifdef AMOEBA_DEBUG
-//#if 0
-if( atomI == targetAtom  || (y + tj) == targetAtom ){
-        unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-        unsigned int indexI                = (atomI == targetAtom) ? 0 : 2;
-        //unsigned int indexJ                = (atomI == targetAtom) ? 2 : 0;
 
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + tj);
-        debugArray[index].z                = cAmoebaSim.pDampingFactorAndThole[atomI].x;
-        debugArray[index].w                = (float) (mask+1);
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? ijField[indexI][0] : 0.0f;
-        debugArray[index].y                = mask ? ijField[indexI][1] : 0.0f;
-        debugArray[index].z                = mask ? ijField[indexI][2] : 0.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = mask ? ijField[indexI+1][0] : 0.0f;
-        debugArray[index].y                = mask ? ijField[indexI+1][1] : 0.0f;
-        debugArray[index].z                = mask ? ijField[indexI+1][2] : 0.0f;
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = (float) x;
-        debugArray[index].y                = (float) y;
-        debugArray[index].z                = (float) -1.0f;
-}
-#endif
-
-                tj                  = (tj + 1) & (GRID - 1);
+                tj                        = (tj + 1) & (GRID - 1);
 
             }
 

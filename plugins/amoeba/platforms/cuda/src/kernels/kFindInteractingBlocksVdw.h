@@ -25,56 +25,6 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This file contains the kernels for identifying interacting blocks.  It is included
- * several times in kCalculateCDLJForces.cu with different #defines to generate
- * different versions of the kernels.
- */
-
-/**
- * Find a bounding box for the atoms in each block.
- */
-/*
-__global__ void METHOD_NAME(kFindBlockBounds, _kernel)()
-{
-    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int base = pos << GRIDBITS;
-    if (base < cSim.atoms)
-    {
-        float4 apos = cSim.pPosq[base];
-#ifdef USE_PERIODIC
-        apos.x -= floor(apos.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
-        apos.y -= floor(apos.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
-        apos.z -= floor(apos.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
-        float4 firstPoint = apos;
-#endif
-        float minx = apos.x;
-        float maxx = apos.x;
-        float miny = apos.y;
-        float maxy = apos.y;
-        float minz = apos.z;
-        float maxz = apos.z;
-        for (unsigned int i = 1; i < GRID; i++)
-        {
-            apos = cSim.pPosq[base+i];
-#ifdef USE_PERIODIC
-            apos.x -= floor((apos.x-firstPoint.x)*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-            apos.y -= floor((apos.y-firstPoint.y)*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-            apos.z -= floor((apos.z-firstPoint.z)*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
-#endif
-            minx = min(minx, apos.x);
-            maxx = max(maxx, apos.x);
-            miny = min(miny, apos.y);
-            maxy = max(maxy, apos.y);
-            minz = min(minz, apos.z);
-            maxz = max(maxz, apos.z);
-        }
-        cSim.pGridBoundingBox[pos] = make_float4(0.5f*(maxx-minx), 0.5f*(maxy-miny), 0.5f*(maxz-minz), 0);
-        cSim.pGridCenter[pos] = make_float4(0.5f*(maxx+minx), 0.5f*(maxy+miny), 0.5f*(maxz+minz), 0);
-    }
-}
-*/
-
-/**
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */

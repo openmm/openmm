@@ -37,15 +37,7 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 void METHOD_NAME(kCalculateAmoebaFixedE_Field, Forces_kernel)(
                             unsigned int* workUnit,
                             float* outputEField,
-                            float* outputEFieldPolar
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
-
-#ifdef AMOEBA_DEBUG
-    float4 pullBack[12];
-#endif
+                            float* outputEFieldPolar){
 
     extern __shared__ FixedFieldParticle sA[];
 
@@ -106,11 +98,7 @@ void METHOD_NAME(kCalculateAmoebaFixedE_Field, Forces_kernel)(
 
                     float ijField[2][3];
 
-                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[j], ijField
-#ifdef AMOEBA_DEBUG
-                                                , pullBack
-#endif
-                    );
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[j], ijField);
 
                     unsigned int match      = (atomI == (y + j)) ? 1 : 0;
 
@@ -142,11 +130,7 @@ void METHOD_NAME(kCalculateAmoebaFixedE_Field, Forces_kernel)(
 
                     //loadFixedFieldParticleData( &(psA[j]), &jCoord, jDipole, jQuadrupole );
 
-                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[j], ijField
-#ifdef AMOEBA_DEBUG
-                                                , pullBack
-#endif
-                    );
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[j], ijField);
 
                     float dScaleVal;
                     float pScaleVal;
@@ -168,73 +152,6 @@ void METHOD_NAME(kCalculateAmoebaFixedE_Field, Forces_kernel)(
                     fieldPolarSum[1]       += match ? 0.0f : pScaleVal*ijField[0][1];
                     fieldPolarSum[2]       += match ? 0.0f : pScaleVal*ijField[0][2];
 
-#ifdef AMOEBA_DEBUG
-if( 0 && atomI == targetAtom ){
-            unsigned int index                 = atomI == targetAtom ? (y + j) : atomI;
-//            unsigned int pullBackIndex         = 0;
-            unsigned int indexI                = 0;
-            unsigned int indexJ                = indexI ? 0 : 1;
-
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) (y + j);
-            debugArray[index].z                = dScaleVal;
-            debugArray[index].w                = pScaleVal;
-/*
-            pullBackIndex                     += 2;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex++];
-            debugArray[index].y                = pullBack[pullBackIndex++];
-            debugArray[index].z                = pullBack[pullBackIndex++];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex++];
-            debugArray[index].y                = pullBack[pullBackIndex++];
-            debugArray[index].z                = pullBack[pullBackIndex++];
-*/
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ][0];
-            debugArray[index].y                = ijField[indexJ][1];
-            debugArray[index].z                = ijField[indexJ][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = match ? 0.0f : dScaleVal*ijField[indexI][0];
-            debugArray[index].y                = match ? 0.0f : dScaleVal*ijField[indexI][1];
-            debugArray[index].z                = match ? 0.0f : dScaleVal*ijField[indexI][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = match ? 0.0f : pScaleVal*ijField[indexI][0];
-            debugArray[index].y                = match ? 0.0f : pScaleVal*ijField[indexI][1];
-            debugArray[index].z                = match ? 0.0f : pScaleVal*ijField[indexI][2];
-/*
-            index                             += cSim.paddedNumberOfAtoms;
-            unsigned int mask                  = 1 << j;
-            unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
-            pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
-            debugArray[index].x                = (float) pScaleIndex;
-
-            debugArray[index].y                = scaleMask.x & mask ? 1.0f : -1.0f;
-            debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
-            debugArray[index].w                = pScaleVal + 10.0f;
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = jCoord.x;
-            debugArray[index].y                = jCoord.y;
-            debugArray[index].z                = jCoord.z;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = iCoord.x;
-            debugArray[index].y                = iCoord.y;
-            debugArray[index].z                = iCoord.z;
-*/
-
-}
-#endif
                 }
             }
 
@@ -274,11 +191,7 @@ if( 0 && atomI == targetAtom ){
 
                     float ijField[2][3];
     
-                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[tj], ijField
-#ifdef AMOEBA_DEBUG
-                                                 , pullBack
-#endif
-                    );
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[tj], ijField);
     
                     // add to field at atomI the field due atomJ's charge/dipole/quadrupole
 
@@ -300,74 +213,6 @@ if( 0 && atomI == targetAtom ){
                     psA[tj].eFieldP[1] += ijField[1][1];
                     psA[tj].eFieldP[2] += ijField[1][2];
 
-
-#ifdef AMOEBA_DEBUG
-if( 0 && (atomI == targetAtom  || (y + tj) == targetAtom) ){
-            unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-            unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-            unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
-//            unsigned int pullBackIndex         = 0;
-
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) (y + tj);
-/*
-            debugArray[index].z                = pullBack[pullBackIndex++];
-            debugArray[index].w                = pullBack[pullBackIndex++];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex++];
-            debugArray[index].y                = pullBack[pullBackIndex++];
-            debugArray[index].z                = pullBack[pullBackIndex++];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex++];
-            debugArray[index].y                = pullBack[pullBackIndex++];
-            debugArray[index].z                = pullBack[pullBackIndex++];
-*/
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ][0];
-            debugArray[index].y                = ijField[indexJ][1];
-            debugArray[index].z                = ijField[indexJ][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
-
-#if 0
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = jCoord.x;
-            debugArray[index].y                = jCoord.y;
-            debugArray[index].z                = jCoord.z;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = iCoord.x;
-            debugArray[index].y                = iCoord.y;
-            debugArray[index].z                = iCoord.z;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            unsigned int mask                  = 1 << j;
-            unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
-            pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
-            debugArray[index].x                = (float) pScaleIndex;
-
-            debugArray[index].y                = scaleMask.x & mask ? 1.0f : -1.0f;
-            debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
-            debugArray[index].w                = pScaleVal + 10.0f;
-#endif
-}
-#endif
-
                     tj                  = (tj + 1) & (GRID - 1);
 
                 }
@@ -388,11 +233,7 @@ if( 0 && (atomI == targetAtom  || (y + tj) == targetAtom) ){
 
                     float ijField[2][3];
 
-                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[tj], ijField
-#ifdef AMOEBA_DEBUG
-                                                , pullBack
-#endif
-                    );
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[tj], ijField);
 
                     float dScaleVal;
                     float pScaleVal;
@@ -418,79 +259,6 @@ if( 0 && (atomI == targetAtom  || (y + tj) == targetAtom) ){
                     psA[tj].eFieldP[0] += pScaleVal*ijField[1][0];
                     psA[tj].eFieldP[1] += pScaleVal*ijField[1][1];
                     psA[tj].eFieldP[2] += pScaleVal*ijField[1][2];
-
-
-#ifdef AMOEBA_DEBUG
-if( 0 && (atomI == targetAtom || (y + tj) == targetAtom) ){
-            unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-            unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-            unsigned int indexJ                = (atomI == targetAtom) ? 1 : 0;
-//            unsigned int pullBackIndex         = 0;
-
-            debugArray[index].x                = (float) atomI;
-            debugArray[index].y                = (float) (y + tj);
-            debugArray[index].z                = dScaleVal;
-            debugArray[index].w                = pScaleVal;
-/*
-            pullBackIndex                     += 2;
-
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex++];
-            debugArray[index].y                = pullBack[pullBackIndex++];
-            debugArray[index].z                = pullBack[pullBackIndex++];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pullBack[pullBackIndex++];
-            debugArray[index].y                = pullBack[pullBackIndex++];
-            debugArray[index].z                = pullBack[pullBackIndex++];
-*/
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexI][0];
-            debugArray[index].y                = ijField[indexI][1];
-            debugArray[index].z                = ijField[indexI][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = ijField[indexJ][0];
-            debugArray[index].y                = ijField[indexJ][1];
-            debugArray[index].z                = ijField[indexJ][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = dScaleVal*ijField[indexI][0];
-            debugArray[index].y                = dScaleVal*ijField[indexI][1];
-            debugArray[index].z                = dScaleVal*ijField[indexI][2];
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = pScaleVal*ijField[indexI][0];
-            debugArray[index].y                = pScaleVal*ijField[indexI][1];
-            debugArray[index].z                = pScaleVal*ijField[indexI][2];
-/*
-            index                             += cSim.paddedNumberOfAtoms;
-            unsigned int mask                  = 1 << j;
-            unsigned int pScaleIndex           = (scaleMask.x & mask) ? 1 : 0;
-            pScaleIndex                       += (scaleMask.y & mask) ? 2 : 0;
-            debugArray[index].x                = (float) pScaleIndex;
-
-            debugArray[index].y                = scaleMask.x & mask ? 1.0f : -1.0f;
-            debugArray[index].z                = scaleMask.y & mask ? 1.0f : -1.0f;
-            debugArray[index].w                = pScaleVal + 10.0f;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = jCoord.x;
-            debugArray[index].y                = jCoord.y;
-            debugArray[index].z                = jCoord.z;
-
-            index                             += cSim.paddedNumberOfAtoms;
-            debugArray[index].x                = iCoord.x;
-            debugArray[index].y                = iCoord.y;
-            debugArray[index].z                = iCoord.z;
-*/
-
-}
-#endif
-
-
 
                     tj                  = (tj + 1) & (GRID - 1);
                 }

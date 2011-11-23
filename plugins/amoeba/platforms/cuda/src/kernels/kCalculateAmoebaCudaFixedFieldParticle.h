@@ -151,11 +151,7 @@ __device__ static void zeroFixedFieldParticleSharedField( struct FixedFieldParti
 // body of fixed E-field calculation
 
 __device__ static void calculateFixedEFieldPairIxn_kernel( FixedFieldParticle& atomI, FixedFieldParticle& atomJ,
-                                                           float field[2][3]
-#ifdef AMOEBA_DEBUG
-                                                    , float4 debugArray[12]
-#endif
-)
+                                                           float field[2][3])
 {
 
  

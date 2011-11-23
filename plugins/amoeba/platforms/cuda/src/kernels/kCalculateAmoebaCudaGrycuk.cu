@@ -1,11 +1,31 @@
-//----------------------------------------------------------------------------------------- 
-//----------------------------------------------------------------------------------------- 
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
-
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -204,43 +224,11 @@ void kReduceGrycukGbsaBornSum( amoebaGpuContext amoebaGpu )
 void kCalculateAmoebaGrycukBornRadii( amoebaGpuContext amoebaGpu )
 {
 
-#ifdef AMOEBA_DEBUG
-    static const char* methodName       = "kCalculateAmoebaGrycukBornRadii";
-    static int timestep = 0;
-    std::vector<int> fileId;
-    timestep++;
-    fileId.resize( 2 );
-    fileId[0] = timestep;
-    fileId[1] = 1;
-#endif
-
     // ---------------------------------------------------------------------------------------
 
     gpuContext gpu = amoebaGpu->gpuContext;
 
     // apparently debug array can take up nontrivial no. registers
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
-                        methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
-                        amoebaGpu->scalingDistanceCutoff );
-    }
-    int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
-    debugArray->Upload();
-    unsigned int targetAtom                   = 0;
-
-    gpu->psBornRadii->Download();
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Grycuk input\n" ); (void) fflush( amoebaGpu->log );
-        for( int ii = 0; ii < amoebaGpu->gpuContext->sim.paddedNumberOfAtoms; ii++ ){
-            (void) fprintf( amoebaGpu->log,"Born %6d %16.9e\n", ii,
-                            gpu->psBornRadii->_pSysData[ii] );
-        }
-    }
-#endif
 
     // on first pass, set threads/block and based on that setting the energy buffer array
 
@@ -255,28 +243,7 @@ void kCalculateAmoebaGrycukBornRadii( amoebaGpuContext amoebaGpu )
         else
             maxThreads = 64;
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(GrycukParticle), gpu->sharedMemoryPerBlock ), maxThreads);
-
-#ifdef AMOEBA_DEBUG
-        if( amoebaGpu->log ){
-            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaGrycuk: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                            gpu->sim.nonbond_blocks, threadsPerBlock, maxThreads, gpu->bOutputBufferPerWarp,
-                            sizeof(GrycukParticle), sizeof(GrycukParticle)*threadsPerBlock,
-                            (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-            (void) fflush( amoebaGpu->log );
-        }
-#endif
-
     }
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaGrycukN2Forces%swarp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                        (gpu->bOutputBufferPerWarp ? " " : " no "), gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(GrycukParticle), sizeof(GrycukParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-    }
-#endif
 
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaGrycukBornRadiiN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(GrycukParticle)*threadsPerBlock>>>( gpu->psWorkUnit->_pDevData);
@@ -330,13 +297,7 @@ __device__ void zeroGrycukChainRuleParticleSharedField( struct GrycukChainRulePa
 
 }
 
-//#define AMOEBA_DEBUG
-
-__device__ void calculateGrycukChainRulePairIxn_kernel( GrycukChainRuleParticle& atomI, GrycukChainRuleParticle& atomJ, float force[3] 
-#ifdef AMOEBA_DEBUG
-,  float4 pullDebug[5]
-#endif
-){
+__device__ void calculateGrycukChainRulePairIxn_kernel( GrycukChainRuleParticle& atomI, GrycukChainRuleParticle& atomJ, float force[3] ){
 
     const float pi         = 3.1415926535897f;
     float third            = 1.0f/3.0f;
@@ -390,18 +351,6 @@ __device__ void calculateGrycukChainRulePairIxn_kernel( GrycukChainRuleParticle&
     float dbr  = term * de/r;
           de   = dbr*atomI.bornForce;
 
-#ifdef AMOEBA_DEBUG
-    pullDebug[0].x = de;
-    pullDebug[0].y = r;
-    pullDebug[0].z = factor;
-    pullDebug[0].w = -4.0f;
-
-    pullDebug[1].x = atomI.bornForce/4.184f;
-    pullDebug[1].y = atomI.bornRadius;
-    pullDebug[1].z = atomJ.bornForce/4.184f;
-    pullDebug[1].w = -5.0f;
-#endif
-
     force[0]   = xr*de;
     force[1]   = yr*de;
     force[2]   = zr*de;
@@ -430,42 +379,11 @@ __device__ void calculateGrycukChainRulePairIxn_kernel( GrycukChainRuleParticle&
 void kCalculateGrycukGbsaForces2( amoebaGpuContext amoebaGpu )
 {
 
-#ifdef AMOEBA_DEBUG
-    static const char* methodName       = "kCalculateGrycukGbsaForces2";
-    static int timestep = 0;
-    std::vector<int> fileId;
-    timestep++;
-    fileId.resize( 2 );
-    fileId[0] = timestep;
-    fileId[1] = 1;
-#endif
-
     // ---------------------------------------------------------------------------------------
 
     gpuContext gpu = amoebaGpu->gpuContext;
 
     // apparently debug array can take up nontrivial no. registers
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d ZZZ\n",
-                        methodName, gpu->natoms, amoebaGpu->maxCovalentDegreeSz );
-    }
-    int paddedNumberOfAtoms                   = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    CUDAStream<float4>* debugArray            = new CUDAStream<float4>(20*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*20*paddedNumberOfAtoms);
-    debugArray->Upload();
-    unsigned int targetAtom                   = 0;
-
-    gpu->psBornRadii->Download();
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Grycuk input\n" ); (void) fflush( amoebaGpu->log );
-        for( int ii = 0; ii < amoebaGpu->gpuContext->sim.paddedNumberOfAtoms; ii++ ){
-            (void) fprintf( amoebaGpu->log,"Born %6d %16.9e\n", ii,
-                            gpu->psBornRadii->_pSysData[ii] );
-        }
-    }
-#endif
 
     // on first pass, set threads/block and based on that setting the energy buffer array
 
@@ -480,63 +398,14 @@ void kCalculateGrycukGbsaForces2( amoebaGpuContext amoebaGpu )
         else
             maxThreads = 64;
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(GrycukChainRuleParticle), gpu->sharedMemoryPerBlock ), maxThreads);
-
-#ifdef AMOEBA_DEBUG
-        if( amoebaGpu->log ){
-            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaGrycuk: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                            gpu->sim.nonbond_blocks, threadsPerBlock, maxThreads, gpu->bOutputBufferPerWarp,
-                            sizeof(GrycukChainRuleParticle), sizeof(GrycukChainRuleParticle)*threadsPerBlock,
-                            (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-            (void) fflush( amoebaGpu->log );
-        }
-#endif
-
     }
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaGrycukN2Forces%swarp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu ixnCt=%lu workUnits=%u\n",
-                        (gpu->bOutputBufferPerWarp ? " " : " no "), gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(GrycukChainRuleParticle), sizeof(GrycukChainRuleParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-    }
-#endif
-
-//kClearForces( gpu );
 
     if (gpu->bOutputBufferPerWarp){
-        kCalculateAmoebaGrycukChainRuleN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(GrycukChainRuleParticle)*threadsPerBlock>>>( gpu->psWorkUnit->_pDevData
-#ifdef AMOEBA_DEBUG
-    ,debugArray->_pDevData, targetAtom
-#endif
-);
+        kCalculateAmoebaGrycukChainRuleN2ByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(GrycukChainRuleParticle)*threadsPerBlock>>>( gpu->psWorkUnit->_pDevData);
     } else {
-        kCalculateAmoebaGrycukChainRuleN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(GrycukChainRuleParticle)*threadsPerBlock>>>( gpu->psWorkUnit->_pDevData
-#ifdef AMOEBA_DEBUG
-    ,debugArray->_pDevData, targetAtom
-#endif
-);
+        kCalculateAmoebaGrycukChainRuleN2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(GrycukChainRuleParticle)*threadsPerBlock>>>( gpu->psWorkUnit->_pDevData);
     }
     LAUNCHERROR("kCalculateAmoebaCudaGrycukN2Forces");
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        debugArray->Download();
-        int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        for( int jj = 0; jj < gpu->natoms; jj++ ){
-            int debugIndex = jj; 
-            (void) fprintf( amoebaGpu->log,"%5d %5d DebugGrycukChain\n", targetAtom, jj );
-            for( int kk = 0; kk < 7; kk++ ){
-                (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
-                debugIndex += paddedNumberOfAtoms;
-            }   
-            (void) fprintf( amoebaGpu->log,"\n" );
-        }   
-    }   
-#endif
 
    if( 0 ){ 
         static int callId                    = 0;

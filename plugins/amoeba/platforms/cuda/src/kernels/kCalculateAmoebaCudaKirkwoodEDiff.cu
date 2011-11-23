@@ -1,14 +1,33 @@
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
-//#include "kCalculateAmoebaCudaKirkwoodParticle.h"
 #include "kCalculateAmoebaCudaKirkwoodEDiffParticle.h"
-
-//#define AMOEBA_DEBUG
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
@@ -865,19 +884,6 @@ __device__ void calculateKirkwoodEDiffPairIxn_kernel( KirkwoodEDiffParticle& ato
 
 #endif
 
-#ifdef AMOEBA_DEBUG
-__device__ static int debugAccumulate( unsigned int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
-{
-    index                             += cSim.paddedNumberOfAtoms;
-    debugArray[index].x                = addMask ? field[0] : 0.0f;
-    debugArray[index].y                = addMask ? field[1] : 0.0f;
-    debugArray[index].z                = addMask ? field[2] : 0.0f;
-    debugArray[index].w                = idLabel;
-
-    return index;
-}
-#endif
-
 __device__ void zeroKirkwoodEDiffParticleSharedField( struct KirkwoodEDiffParticle* sA )
 {
     // zero shared fields
@@ -931,22 +937,10 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
   
    // ---------------------------------------------------------------------------------------
 
-    static int timestep                 = 0;
-    timestep++;
-#ifdef AMOEBA_DEBUG
-    static const char* methodName       = "kCalculateAmoebaKirkwoodEDiff";
-    std::vector<int> fileId;
-    fileId.resize( 2 );
-    fileId[0] = timestep;
-    fileId[1] = 1;
-#endif
-
-    // ---------------------------------------------------------------------------------------
-
     gpuContext gpu = amoebaGpu->gpuContext;
 
     // apparently debug array can take up nontrivial no. registers
-    //
+
     static unsigned int threadsPerBlock = 0;
     if( threadsPerBlock == 0 ){
         unsigned int maxThreads;
@@ -960,23 +954,10 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
         threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle), gpu->sharedMemoryPerBlock ), maxThreads);
     }   
     
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces: blocks=%u threads=%u bffr/Warp=%u atm=%lu shrd=%lu"
-                                        " ixnCt=%lu workUnits=%u sm=%d device=%d sharedMemoryPerBlock=%u step=%d\n",
-                        gpu->sim.nonbond_blocks, threadsPerBlock, gpu->bOutputBufferPerWarp,
-                        sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sm_version, gpu->device, gpu->sharedMemoryPerBlock, timestep );
-        (void) fflush( amoebaGpu->log );
-    }   
-#endif
-
     if (gpu->bOutputBufferPerWarp){
         kCalculateAmoebaCudaKirkwoodEDiffN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
                                                                            gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
-
     } else {
-
         kCalculateAmoebaCudaKirkwoodEDiffN2Forces_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
                                                                            gpu->psWorkUnit->_pDevData, amoebaGpu->psWorkArray_3_1->_pDevData );
     }

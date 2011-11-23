@@ -39,11 +39,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
                             float* outputField,
                             float* outputFieldPolar,
                             float* outputFieldS,
-                            float* outputFieldPolarS
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
+                            float* outputFieldPolarS){
 
     extern __shared__ MutualInducedParticle sA[];
 
@@ -112,11 +108,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
 
                 // load coords, charge, ...
 
-                calculateMutualInducedAndGkFieldsPairIxn_kernel( localParticle, psA[j], ijField
-#ifdef AMOEBA_DEBUG
-,  debugArray
-#endif
-);
+                calculateMutualInducedAndGkFieldsPairIxn_kernel( localParticle, psA[j], ijField);
 
                 unsigned int mask       =  ( (atomI == (y + j)) || (atomI >= cSim.atoms) || ((y+j) >= cSim.atoms) ) ? 0 : 1;
 
@@ -138,27 +130,7 @@ void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
                 fieldPolarSumS[1]      += mask ? ijField[5][1] : 0.0f;
                 fieldPolarSumS[2]      += mask ? ijField[5][2] : 0.0f;
 
-//#ifdef AMOEBA_DEBUG
-#if 0
-unsigned int index                 = y + j;
-if( atomI == targetAtom ){
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + j);
-        debugArray[index].z                = bornRadii[atomI];
-        debugArray[index].w                = jBornRadius;
-
-        index                              = debugAccumulate( index, debugArray, ijField[0],   mask, 1.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[1],   mask, 2.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[4],   mask, 3.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[5],   mask, 4.0f );
-}
-#endif
-                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( localParticle, psA[j], ijField
-#ifdef AMOEBA_DEBUG
-                                                                   , debugArray
-#endif
-);
+                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( localParticle, psA[j], ijField);
 
                 // atomI == atomJ contribution included
 
@@ -171,24 +143,6 @@ if( atomI == targetAtom ){
                 fieldPolarSumS[1]      += mask ? ijField[2][1] : 0.0f;
                 fieldPolarSumS[2]      += mask ? ijField[2][2] : 0.0f;
 
-//#ifdef AMOEBA_DEBUG
-#if 0
-if( atomI == targetAtom ){
-
-        index                              = debugAccumulate( index, debugArray, ijField[0],   mask, 5.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[2],   mask, 6.0f );
-
-        index                              = debugAccumulate( index, debugArray, jDipoleS, 1, 7.0f );
-        index                              = debugAccumulate( index, debugArray, jDipolePolarS, 1, 8.0f );
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = bornRadii[atomI];
-        debugArray[index].y                = jBornRadius;
-        debugArray[index].w                = 9.0f;
-
-
-}
-#endif
             }
 
             // Write results
@@ -213,9 +167,8 @@ if( atomI == targetAtom ){
             load3dArray( offset, fieldPolarSumS,  outputFieldPolarS );
 #endif
 
-        }
-        else        // 100% utilization
-        {
+        } else {
+
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
@@ -235,11 +188,7 @@ if( atomI == targetAtom ){
 
                 // load coords, charge, ...
 
-                calculateMutualInducedAndGkFieldsPairIxn_kernel( localParticle, psA[tj], ijField
-#ifdef AMOEBA_DEBUG
-,  debugArray
-#endif
-   );
+                calculateMutualInducedAndGkFieldsPairIxn_kernel( localParticle, psA[tj], ijField);
 
                 if( (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
            
@@ -289,29 +238,7 @@ if( atomI == targetAtom ){
     
                 }
 
-//#ifdef AMOEBA_DEBUG
-#if 0
-unsigned int index                 = (atomI == targetAtom) ? (y + tj) : atomI;
-if( atomI == targetAtom  || (y + tj) == targetAtom ){
-        unsigned int indexI                = (atomI == targetAtom) ? 0 : 2;
-        unsigned int maskD                 = (atomI < cSim.atoms) && ((y+tj) < cSim.atoms);
-
-        debugArray[index].x                = (float) atomI;
-        debugArray[index].y                = (float) (y + tj);
-        debugArray[index].z                = bornRadii[atomI];
-        debugArray[index].w                = jBornRadius;
-
-        index                              = debugAccumulate( index, debugArray, ijField[indexI],   maskD, -1.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[indexI+1], maskD, -2.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[indexI+4], maskD, -3.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[indexI+5], maskD, -4.0f );
-}
-#endif
-                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( localParticle, psA[tj], ijField
-#ifdef AMOEBA_DEBUG
-,  debugArray
-#endif
-);
+                calculateMutualInducedAndGkFieldsGkPairIxn_kernel( localParticle, psA[tj], ijField);
 
 
                 if( (atomI < cSim.atoms) && ((y+tj) < cSim.atoms) ){
@@ -337,24 +264,6 @@ if( atomI == targetAtom  || (y + tj) == targetAtom ){
                     psA[tj].fieldPolarS[2] += ijField[3][2];
                 }
    
-//#ifdef AMOEBA_DEBUG
-#if 0
-if( atomI == targetAtom  || (y + tj) == targetAtom ){
-        unsigned int indexI                = (atomI == targetAtom) ? 0 : 1;
-        unsigned int maskD                 = (atomI < cSim.atoms) && ((y+tj) < cSim.atoms);
-
-        index                              = debugAccumulate( index, debugArray, ijField[indexI],   maskD, -5.0f );
-        index                              = debugAccumulate( index, debugArray, ijField[indexI+2], maskD, -6.0f );
-        index                              = debugAccumulate( index, debugArray, jDipoleS, 1, -7.0f );
-        index                              = debugAccumulate( index, debugArray, jDipolePolarS, 1, -8.0f );
-
-        index                             += cSim.paddedNumberOfAtoms;
-        debugArray[index].x                = bornRadii[atomI];
-        debugArray[index].y                = jBornRadius;
-        debugArray[index].w                = -9.0f;
-}
-#endif
-
                 tj                  = (tj + 1) & (GRID - 1);
 
             }

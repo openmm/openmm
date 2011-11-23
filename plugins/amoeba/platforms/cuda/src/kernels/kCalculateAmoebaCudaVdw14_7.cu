@@ -1,6 +1,28 @@
-//-----------------------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------------------
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
@@ -37,12 +59,6 @@ void GetCalculateAmoebaCudaVdw14_7Sim(amoebaGpuContext amoebaGpu)
     status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));    
     RTERROR(status, "GetCalculateAmoebaCudaVdw14_7Sim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
-
-//#define AMOEBA_DEBUG_PRINT
-#undef AMOEBA_DEBUG_PRINT
-
-//#define AMOEBA_DEBUG
-#undef AMOEBA_DEBUG
 
 __device__ void zeroVdw14_7SharedForce( struct Vdw14_7Particle* sA ) 
 {
@@ -101,11 +117,7 @@ __device__ void getVdw14_7CombindedSigmaEpsilon_kernel( int sigmaCombiningRule, 
 }
 
 __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float combindedEpsilon,
-                                                float force[3], float* energy
-#ifdef AMOEBA_DEBUG
-               , float4* debugArray
-#endif
-)
+                                                float force[3], float* energy)
 {
 
     const float deltaHalM1 = 0.07f;
@@ -120,14 +132,6 @@ __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float c
     float r2                                     = force[0]*force[0] + force[1]*force[1] + force[2]*force[2];
     if( r2 > cAmoebaSim.vdwCutoff2 ){
         *energy = force[0] = force[1] = force[2] = 0.0f;
-#ifdef AMOEBA_DEBUG
-        float rI                                     =  rsqrtf( r2 );
-        float r                                      =  1.0f/rI;
-        debugArray[0].x = r;
-        debugArray[0].y = debugArray[0].z = debugArray[0].w = 0.0f;
-        debugArray[1].x = debugArray[1].y = debugArray[1].z = 0.0f;
-        debugArray[1].w = r;
-#endif
         return;
     }
     float rI                                     =  rsqrtf( r2 );
@@ -156,17 +160,6 @@ __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float c
     force[1]                                    *= deltaE;
     force[2]                                    *= deltaE;
 
-#ifdef AMOEBA_DEBUG
-    debugArray[0].x                              = r;
-    debugArray[0].y                              = deltaE;
-    debugArray[0].z                              = combindedSigma;
-    debugArray[0].w                              = combindedEpsilon;
-
-    debugArray[1].x                              = tau;
-    debugArray[1].y                              = rho;
-    debugArray[1].z                              = gTau;
-    debugArray[1].w                              = r;
-#endif
 }
 
 // perform reduction of force on H's and add to heavy atom partner
@@ -504,22 +497,6 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
 
      gpuContext gpu    = amoebaGpu->gpuContext;
 
-#ifdef AMOEBA_DEBUG_PRINT
-    static const char* methodName = "kCalculateAmoebaVdw14_7Forces";
-    if( 1 && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s: \n", methodName );
-        (void) fflush( amoebaGpu->log );
-    }   
-#ifdef AMOEBA_DEBUG
-    int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    int maxSlots                               = 10;
-    CUDAStream<float4>* debugArray             = new CUDAStream<float4>(maxSlots*paddedNumberOfAtoms, 1, "DebugArray");
-    memset( debugArray->_pSysData,      0, sizeof( float )*4*maxSlots*paddedNumberOfAtoms);
-    debugArray->Upload();
-    int targetAtom                             = 1;
-#endif
-#endif
-
     // set threads/block first time through
 
     // on first pass, set threads/block
@@ -535,43 +512,8 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(Vdw14_7Particle), gpu->sharedMemoryPerBlock ), maxThreads);
     }    
 
-#ifdef AMOEBA_DEBUG_PRINT
-    if( 0 ){
-        static int iteration = 0;
-        checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, ++iteration, "\n\nzCoordPreCopyVdw", stderr );
-     }   
-#endif
-
     kCalculateAmoebaVdw14_7CopyCoordinates( amoebaGpu, gpu->psPosq4, amoebaGpu->psAmoebaVdwCoordinates );
     kCalculateAmoebaVdw14_7CoordinateReduction( amoebaGpu, amoebaGpu->psAmoebaVdwCoordinates, amoebaGpu->psAmoebaVdwCoordinates );
-
-#ifdef AMOEBA_DEBUG_PRINT
-    if( 1 && amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "Apply cutoff=%d warp=%d\n", applyCutoff, gpu->bOutputBufferPerWarp );
-        (void) fprintf( amoebaGpu->log, "numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u ixnCt=%u workUnits=%u\n",
-                        gpu->sim.nonbond_blocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(Vdw14_7Particle), sizeof(Vdw14_7Particle)*threadsPerBlock,
-                        (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        if( 0 ){  
-            gpu->psInteractionCount->Download();
-            amoebaGpu->psVdwWorkUnit->Download();
-            unsigned int totalWarps  = (gpu->sim.nonbond_blocks*threadsPerBlock)/GRID;
-            float        ratiof     = (float)totalWarps/(float)amoebaGpu->psVdwWorkUnit->_length;
-            (void) fprintf( amoebaGpu->log, "Ixn warps=%u count=%u\n", totalWarps, gpu->psInteractionCount->_pSysData[0] );
-            for( unsigned int ii = 0; ii < amoebaGpu->psVdwWorkUnit->_length; ii++ ){
-        
-                unsigned int x          = amoebaGpu->psVdwWorkUnit->_pSysData[ii];
-                unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-                unsigned int exclusions = (x & 0x1);
-                             x          = (x >> 17) << GRIDBITS;
-                float        warp       = (float)(ii)*ratiof; 
-                (void) fprintf( amoebaGpu->log, "GpuCell %8u  [%5u %5u %1u] %10u warp=%15.6f\n", ii, x,y,exclusions, warp );
-        
-            }           
-        }
-        (void) fflush( amoebaGpu->log );
-    }
-#endif
 
     // clear output arrays
 
@@ -588,33 +530,6 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
         LAUNCHERROR("kFindInteractionsWithinBlocksVdwPeriodic");
 
-#ifdef AMOEBA_DEBUG
-        if( 0 && amoebaGpu->log ){  
-            gpu->psInteractionCount->Download();
-            gpu->psInteractingWorkUnit->Download();
-            gpu->psInteractionFlag->Download();
-            amoebaGpu->psVdwWorkUnit->Download();
-            (void) fprintf( amoebaGpu->log, "Vdw Ixn count=%u\n", gpu->psInteractionCount->_pSysData[0] );
-
-            for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
-        
-                unsigned int x          = gpu->psInteractingWorkUnit->_pSysData[ii];
-                unsigned int y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-                unsigned int exclusions = (x & 0x1);
-                             x          = (x >> 17) << GRIDBITS;
-                (void) fprintf( amoebaGpu->log, "GpuCell %8u  %8u [%5u %5u %1u] %10u ", ii, gpu->psInteractingWorkUnit->_pSysData[ii], x,y,exclusions, gpu->psInteractionFlag->_pSysData[ii] );
-        
-                             x          = amoebaGpu->psVdwWorkUnit->_pSysData[ii];
-                             y          = ((x >> 2) & 0x7fff) << GRIDBITS;
-                             exclusions = (x & 0x1);
-                             x          = (x >> 17) << GRIDBITS;
-                (void) fprintf( amoebaGpu->log, "   AmGpu %8u [%5u %5u %1u]\n", amoebaGpu->psWorkUnit->_pSysData[ii], x,y,exclusions );
-            }    
-                (void) fflush( amoebaGpu->log );
-
-        }
-#endif
-
         if (gpu->bOutputBufferPerWarp){
             kCalculateAmoebaVdw14_7CutoffByWarp_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
                                                                 gpu->sim.pInteractingWorkUnit,
@@ -622,12 +537,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
                                                                 amoebaGpu->vdwSigmaCombiningRule,
                                                                 amoebaGpu->vdwEpsilonCombiningRule,
-#ifdef AMOEBA_DEBUG
-                                                                amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                debugArray->_pDevData, targetAtom );
-#else
                                                                 amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
         } else {
 
             kCalculateAmoebaVdw14_7Cutoff_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
@@ -636,13 +546,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
                                                                 amoebaGpu->vdwSigmaCombiningRule,
                                                                 amoebaGpu->vdwEpsilonCombiningRule,
-#ifdef AMOEBA_DEBUG
-                                                                amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                debugArray->_pDevData, targetAtom );
-#else
                                                                 amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
-    
         }
         LAUNCHERROR("kCalculateAmoebaVdw14_7Cutoff");  
 
@@ -656,12 +560,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
                                                                 amoebaGpu->vdwSigmaCombiningRule,
                                                                 amoebaGpu->vdwEpsilonCombiningRule,
-#ifdef AMOEBA_DEBUG
-                                                                amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                debugArray->_pDevData, targetAtom );
-#else
                                                                 amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
         } else {
 
             kCalculateAmoebaVdw14_7N2_kernel<<<gpu->sim.nonbond_blocks, threadsPerBlock, sizeof(Vdw14_7Particle)*threadsPerBlock>>>(
@@ -670,112 +569,15 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
                                                                 amoebaGpu->psVdwSigmaEpsilon->_pDevData,
                                                                 amoebaGpu->vdwSigmaCombiningRule,
                                                                 amoebaGpu->vdwEpsilonCombiningRule,
-#ifdef AMOEBA_DEBUG
-                                                                amoebaGpu->psWorkArray_3_1->_pDevData,
-                                                                debugArray->_pDevData, targetAtom );
-#else
                                                                 amoebaGpu->psWorkArray_3_1->_pDevData );
-#endif
     
         }
         LAUNCHERROR("kCalculateAmoebaVdw14_7N2");  
     }
 
-#ifdef AMOEBA_DEBUG_PRINT
-    if( amoebaGpu->log ){
-        static int iteration = 0;
-        (void) fprintf( amoebaGpu->log, "Finished 14-7 kernel execution step=%d\n", ++iteration );
-        (void) fflush( amoebaGpu->log );
-
-#ifdef AMOEBA_DEBUG
-        debugArray->Download();
-        int paddedNumberOfAtoms          = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        double cutOff                    = 1.0e+03;
-        for( int jj = 0; jj < gpu->natoms; jj++ ){
-            int debugIndex = jj;
-            (void) fprintf( amoebaGpu->log,"%5d %5d DebugVdw\n", targetAtom, jj );
-            for( int kk = 0; kk < 5; kk++ ){
-                (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
-                                debugArray->_pSysData[debugIndex].x, debugArray->_pSysData[debugIndex].y,
-                                debugArray->_pSysData[debugIndex].z, debugArray->_pSysData[debugIndex].w );
-                if( kk == 4 && ( fabs(  debugArray->_pSysData[debugIndex].x ) > cutOff ||
-                                 fabs(  debugArray->_pSysData[debugIndex].y ) > cutOff ||
-                                 fabs(  debugArray->_pSysData[debugIndex].z ) > cutOff ) ){
-                    (void) fprintf( amoebaGpu->log," XXXX\n" );
-                }
-                debugIndex += paddedNumberOfAtoms;
-            }
-            (void) fprintf( amoebaGpu->log,"\n" );
-        }
-#endif
-/*
-        amoebaGpu->psWorkArray_3_2->Download();
-        amoebaGpu->psWorkArray_3_1->Download();
-        //for( int jj = 0; jj < 3*gpu->natoms; jj += 3 )
-        for( int jj = 0; jj < 3*gpu->natoms; jj += 3 ){
-            for( int kk = 0; kk < gpu->sim.outputBuffers; kk++ ){
-                float delta = fabs(amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj+2] + 1.0f);
-                if( delta < 5.0e-06 || isNanOrInfinity( (double) amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj] ) || isNanOrInfinity( (double) amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj+2] )  )
-                (void) fprintf( amoebaGpu->log,"%6d %6d [%16.9e %16.9e %16.9e] [%16.9e %16.9e %16.9e]\n", jj, kk,
-                                amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj],
-                                amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj+1],
-                                amoebaGpu->psWorkArray_3_1->_pSysStream[kk][jj+2],
-                                amoebaGpu->psWorkArray_3_2->_pSysStream[kk][jj],
-                                amoebaGpu->psWorkArray_3_2->_pSysStream[kk][jj+1],
-                                amoebaGpu->psWorkArray_3_2->_pSysStream[kk][jj+2] );
-            }
-        }
-*/
-
-    }
-#endif
-
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        static int iteration = 0;
-        checkForNansFloat4( gpu->natoms, amoebaGpu->gpuContext->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "PreVdw", stderr );
-        checkForNansFloat4( gpu->natoms, gpu->psPosq4, gpu->psAtomIndex->_pSysData, iteration, "zCoordPreVdw", stderr );
-     }   
-#endif
-
     kReduceVdw14_7( amoebaGpu, amoebaGpu->psWorkArray_3_2 );
-
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        static int iteration = 0;
-        checkForNans( gpu->natoms, 3, amoebaGpu->psWorkArray_3_2, gpu->psAtomIndex->_pSysData, ++iteration, "Vdw32", stderr );
-     }   
-#endif
 
     kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
     kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, amoebaGpu->gpuContext->psForce4 );
 
-#ifdef AMOEBA_DEBUG
-    if( 0 ){
-        int paddedNumberOfAtoms             = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        CUDAStream<float4>* psTempForce     = new CUDAStream<float4>(paddedNumberOfAtoms, 1, "psTempForce");
-        kClearFloat4( amoebaGpu, paddedNumberOfAtoms, psTempForce );
-        //kCalculateAmoebaVdw14_7Reduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, psTempForce );
-        kCalculateAmoebaVdw14_7NonReduction( amoebaGpu, amoebaGpu->psWorkArray_3_2, psTempForce );
-        std::vector<int> fileId;
-        //fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloat4Array( gpu->natoms,  3, psTempForce, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaVdw", fileId, outputVector );
-        delete psTempForce;
-        //exit(0);
-     }
-
-    if( 0 ){
-        static int iteration = 0;
-        checkForNansFloat4( gpu->natoms, amoebaGpu->gpuContext->psForce4, gpu->psAtomIndex->_pSysData, ++iteration, "VdwForce", stderr );
-     }   
-#endif
-
-#ifdef AMOEBA_DEBUG
-    delete debugArray;
-#endif
-
-   // ---------------------------------------------------------------------------------------
 }

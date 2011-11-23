@@ -1,9 +1,31 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Scott Le Grand, Peter Eastman                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
 
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
-
-//#define AMOEBA_DEBUG
-#define BLOCK_SIZE 128
 
 using namespace std; 
 
@@ -469,41 +491,4 @@ void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext amoebaGpu, CUDASt
         amoebaAddMapTorqueForceToForce_kernel<<< gpu->sim.blocks, gpu->sim.threads_per_block>>> ( );
         LAUNCHERROR("amoebaAddMapTorqueForceToForce");
     }
-
-#ifdef AMOEBA_DEBUG
-    if( 0 ){  
-        VectorOfDoubleVectors outputVector;
-
-        std::vector<int> fileId;
-        static int call = 0;  
-        fileId.push_back( call++ );
-
-        int paddedNumberOfAtoms  = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-        CUDAStream<float>* temp  = new CUDAStream<float>(3*paddedNumberOfAtoms, 1, "TempMapTorqueAndAddToForce2");
-
-        reduceAndCopyCUDAStreamFloat4( gpu->psForce4, temp, 1.0 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
-
-        reduceAndCopyCUDAStreamFloat4( amoebaGpu->psTorqueMapForce4, temp, 1.0 );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, temp, outputVector, NULL, 1.0f/4.184f );
-        for( int pId = 0; pId < 5; pId++ ){
-        float sum[3] = { 0.0f,  0.0f,  0.0f };
-        (void) fprintf( stderr, "\n\nTorqueForceToForce for part=%d\n", pId );
-        for( int ii = 0; ii < amoebaGpu->amoebaSim.maxTorqueBufferIndex; ii++ ){
-            (void) fprintf( stderr, "%4d [%15.7e %15.7e %15.7e]\n", ii,
-                            amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].x,
-                            amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].y,
-                            amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].z );
-            sum[0] += amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].x;
-            sum[1] += amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].y;
-            sum[2] += amoebaGpu->psTorqueMapForce4->_pSysStream[ii][pId].z;
-        }
-        (void) fprintf( stderr, "TorqueForceToForce for partcle=%d [%15.7e %15.7e %15.7e]  [%15.7e %15.7e %15.7e]\n", pId, sum[0], sum[1], sum[2], sum[0]/4.184f, sum[1]/4.184f, sum[2]/4.184f );
-        }
-
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaElectrostatiPostTorqueForce", fileId, outputVector );
-        delete temp;
-    }
-#endif
-
 }

@@ -35,15 +35,7 @@ __launch_bounds__(128, 1)
 __launch_bounds__(64, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
-                            unsigned int* workUnit
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
-
-#ifdef AMOEBA_DEBUG
-    float4 pullBack[20];
-#endif
+                            unsigned int* workUnit){
 
     extern __shared__ KirkwoodParticle sA[];
 

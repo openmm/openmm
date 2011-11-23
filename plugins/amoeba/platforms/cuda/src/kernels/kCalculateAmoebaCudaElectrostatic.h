@@ -35,12 +35,7 @@ __launch_bounds__(128, 1)
 __launch_bounds__(64, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
-                            unsigned int* workUnit, float* outputTorque
-
-#ifdef AMOEBA_DEBUG
-                           , float4* debugArray, unsigned int targetAtom
-#endif
-){
+                            unsigned int* workUnit, float* outputTorque){
 
     extern __shared__ volatile ElectrostaticParticle sA[];
 
