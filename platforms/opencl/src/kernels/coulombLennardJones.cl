@@ -9,10 +9,13 @@ if (!isExcluded || needCorrection) {
 
         // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
         // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
-        // error of 2.5e-5.
+        // error of 3e-7.
 
-        const float t = 1.0f/(1.0f+0.47047f*alphaR);
-        const float erfcAlphaR = (t*(0.3480242f+t*(-0.0958798f+t*0.7478556f)))*expAlphaRSqr;
+        float t = 1.0f+(0.0705230784f+(0.0422820123f+(0.0092705272f+(0.0001520143f+(0.0002765672f+0.0000430638f*alphaR)*alphaR)*alphaR)*alphaR)*alphaR)*alphaR;
+        t *= t;
+        t *= t;
+        t *= t;
+        const float erfcAlphaR = RECIP(t*t);
         if (needCorrection) {
             // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
