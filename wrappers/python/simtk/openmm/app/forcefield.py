@@ -177,7 +177,7 @@ class ForceField(object):
             self.length = 0.0
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, **args):
+                     constraints=None, rigidWater=True, removeCMMotion=True, **args):
         """Construct an OpenMM System representing a Topology with this force field.
         
         Parameters:
@@ -188,6 +188,7 @@ class ForceField(object):
          - constraints (object=None) Specifies which bonds angles should be implemented with constraints.
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
+         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
          - Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
            particular force fields.
         Returns: the newly created System
@@ -341,6 +342,8 @@ class ForceField(object):
         
         for force in self._forces:
             force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
+        if removeCMMotion:
+            sys.addForce(mm.CMMotionRemover())
         return sys
 
 

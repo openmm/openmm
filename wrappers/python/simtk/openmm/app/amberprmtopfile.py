@@ -9,6 +9,7 @@ from simtk.openmm.app.internal import amber_file_parser
 import forcefield as ff
 import element as elem
 import simtk.unit as unit
+import simtk.openmm as mm
 
 # Enumerated values for implicit solvent model
 
@@ -63,7 +64,7 @@ class AmberPrmtopFile(object):
             top.addBond(bond[0], bond[1])
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, implicitSolvent=None):
+                     constraints=None, rigidWater=True, implicitSolvent=None, removeCMMotion=True):
         """Construct an OpenMM System representing the topology described by this prmtop file.
         
         Parameters:
@@ -74,6 +75,7 @@ class AmberPrmtopFile(object):
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
          - implicitSolvent (object=None) If not None, the implicit solvent model to use
+         - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
         Returns: the newly created System
         """
         methodMap = {ff.NoCutoff:'NoCutoff',
@@ -103,5 +105,8 @@ class AmberPrmtopFile(object):
             implicitString = 'OBC'
         else:
             raise ValueError('Illegal value for implicit solvent model')
-        return amber_file_parser.readAmberSystem(prmtop_loader=self.prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
+        sys = amber_file_parser.readAmberSystem(prmtop_loader=self.prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
                                                  nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString)
+        if removeCMMotion:
+            sys.addForce(mm.CMMotionRemover())
+        return sys
