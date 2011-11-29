@@ -80,7 +80,7 @@ public:
 
         // Work out the work group sizes for various kernels.
 
-        int maxGroupSize = context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+        int maxGroupSize = std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
         for (rangeKernelSize = 1; rangeKernelSize*2 <= maxGroupSize; rangeKernelSize *= 2)
             ;
         positionsKernelSize = rangeKernelSize;
