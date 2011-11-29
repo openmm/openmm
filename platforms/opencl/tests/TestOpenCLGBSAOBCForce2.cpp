@@ -3379,7 +3379,7 @@ int main() {
 #endif
 
         DoubleVector numberOfMolecules;
-        numberOfMolecules.push_back( 10 );
+        //numberOfMolecules.push_back( 10 );
         numberOfMolecules.push_back( 100 );
         numberOfMolecules.push_back( 1000 );
         numberOfMolecules.push_back( 2000 );
