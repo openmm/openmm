@@ -402,6 +402,12 @@ public:
         return supports64BitGlobalAtomics;
     }
     /**
+     * Get whether the device being used supports double precision math.
+     */
+    bool getSupportsDoublePrecision() {
+        return supportsDoublePrecision;
+    }
+    /**
      * Get the size of the periodic box.
      */
     mm_float4 getPeriodicBoxSize() const {
@@ -478,7 +484,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, atomsWereReordered;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, atomsWereReordered;
     mm_float4 periodicBoxSize;
     mm_float4 invPeriodicBoxSize;
     std::string defaultOptimizationOptions;

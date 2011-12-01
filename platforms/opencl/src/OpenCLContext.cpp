@@ -105,6 +105,7 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         compilationDefines["WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(ThreadBlockSize);
         defaultOptimizationOptions = "-cl-fast-relaxed-math";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
+        supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationDefines["WARPS_ARE_ATOMIC"] = "";
@@ -131,6 +132,8 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
             simdWidth = 1;
         if (supports64BitGlobalAtomics)
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
+        if (supportsDoublePrecision)
+            compilationDefines["SUPPORTS_DOUBLE_PRECISION"] = "";
         queue = cl::CommandQueue(context, device);
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);

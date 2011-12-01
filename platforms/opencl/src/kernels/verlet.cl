@@ -1,4 +1,4 @@
-#ifdef cl_khr_fp64
+#ifdef SUPPORTS_DOUBLE_PRECISION
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #endif
 
@@ -28,7 +28,7 @@ __kernel void integrateVerletPart1(int numAtoms, __global const float2* restrict
 
 __kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, __global float4* restrict posq, __global float4* restrict velm, __global const float4* restrict posDelta) {
     float2 stepSize = dt[0];
-#ifdef cl_khr_fp64
+#ifdef SUPPORTS_DOUBLE_PRECISION
     double oneOverDt = 1.0/stepSize.y;
 #else
     float oneOverDt = 1.0f/stepSize.y;
@@ -42,7 +42,7 @@ __kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, _
         float4 delta = posDelta[index];
         float4 velocity = velm[index];
         pos.xyz += delta.xyz;
-#ifdef cl_khr_fp64
+#ifdef SUPPORTS_DOUBLE_PRECISION
         velocity.xyz = convert_float4(convert_double4(delta)*oneOverDt).xyz;
 #else
         velocity.xyz = delta.xyz*oneOverDt;

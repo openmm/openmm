@@ -1,4 +1,4 @@
-#ifdef cl_khr_fp64
+#ifdef SUPPORTS_DOUBLE_PRECISION
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #endif
 
@@ -32,7 +32,7 @@ __kernel void integrateLangevinPart1(__global float4* restrict velm, __global co
  */
 
 __kernel void integrateLangevinPart2(__global float4* restrict posq, __global const float4* restrict posDelta, __global float4* restrict velm, __global const float2* restrict dt) {
-#ifdef cl_khr_fp64
+#ifdef SUPPORTS_DOUBLE_PRECISION
     double invStepSize = 1.0/dt[0].y;
 #else
     float invStepSize = 1.0f/dt[0].y;
@@ -43,7 +43,7 @@ __kernel void integrateLangevinPart2(__global float4* restrict posq, __global co
         float4 delta = posDelta[index];
         float4 vel = velm[index];
         pos.xyz += delta.xyz;
-#ifdef cl_khr_fp64
+#ifdef SUPPORTS_DOUBLE_PRECISION
         vel.xyz = convert_float4(invStepSize*convert_double4(delta)).xyz;
 #else
         vel.xyz = invStepSize*delta.xyz;

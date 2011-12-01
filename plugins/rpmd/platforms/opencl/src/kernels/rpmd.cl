@@ -1,7 +1,3 @@
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#endif
-
 float4 multiplyComplexRealPart(float2 c1, float4 c2r, float4 c2i) {
     return c1.x*c2r-c1.y*c2i;
 }
