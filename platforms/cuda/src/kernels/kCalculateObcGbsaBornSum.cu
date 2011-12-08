@@ -148,7 +148,7 @@ void kPrintObc( gpuContext gpu, std::string callId, int call, FILE* log)
     (void) fprintf( log, "kPrintObc Cuda bCh bR bF prm[2]   sigeps[2]\n" );
     (void) fprintf( stderr, "bOutputWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
                     gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
-                    sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
+                    static_cast<unsigned int>(sizeof(Atom)*gpu->sim.nonbond_threads_per_block) );
     for( unsigned int ii = 0; ii < gpu->sim.paddedNumberOfAtoms; ii++ ){
         (void) fprintf( log, "%6d %15.7e %15.7e %15.7e    %15.7e %15.7e   %15.7e %15.7e \n", ii, 
                         gpu->psObcChain->_pSysData[ii],
