@@ -83,7 +83,7 @@ __kernel void computeDonorForces(__global float4* restrict forceBuffers, __globa
             // Load the next block of acceptors into local memory.
 
             int blockSize = min((int) get_local_size(0), NUM_ACCEPTORS-acceptorStart);
-            if (get_local_id(0) < blockSize) {
+            if (get_local_id(0) < blockSize && acceptorStart+get_local_id(0) < NUM_ACCEPTORS) {
                 int4 atoms2 = acceptorAtoms[acceptorStart+get_local_id(0)];
                 posBuffer[3*get_local_id(0)] = posq[atoms2.x];
                 posBuffer[3*get_local_id(0)+1] = posq[atoms2.y];
@@ -168,7 +168,7 @@ __kernel void computeAcceptorForces(__global float4* restrict forceBuffers, __gl
             // Load the next block of donors into local memory.
 
             int blockSize = min((int) get_local_size(0), NUM_DONORS-donorStart);
-            if (get_local_id(0) < blockSize) {
+            if (get_local_id(0) < blockSize && donorStart+get_local_id(0) < NUM_DONORS) {
                 int4 atoms2 = donorAtoms[donorStart+get_local_id(0)];
                 posBuffer[3*get_local_id(0)] = posq[atoms2.x];
                 posBuffer[3*get_local_id(0)+1] = posq[atoms2.y];
