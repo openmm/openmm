@@ -3380,7 +3380,9 @@ int main() {
 
         DoubleVector numberOfMolecules;
         //numberOfMolecules.push_back( 10 );
+#if IMPLICIT_SOLVENT != TEST_NONBONDED
         numberOfMolecules.push_back( 100 );
+#endif
         numberOfMolecules.push_back( 1000 );
         numberOfMolecules.push_back( 2000 );
         numberOfMolecules.push_back( 4000 );
