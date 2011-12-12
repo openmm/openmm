@@ -58,7 +58,15 @@ extern "C" void SetCalculateObcGbsaSoftcoreBornSumSim( freeEnergyGpuContext free
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreBornSumSim copy to gbsaSimDev failed.");
 }
 
-__global__ void kClearObcGbsaSoftcoreBornSum_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kClearObcGbsaSoftcoreBornSum_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
@@ -68,7 +76,15 @@ __global__ void kClearObcGbsaSoftcoreBornSum_kernel()
     }
 }
 
-__global__ void kClearSoftcoreBornForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kClearSoftcoreBornForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
@@ -81,17 +97,25 @@ __global__ void kClearSoftcoreBornForces_kernel()
 void kClearSoftcoreBornForces(gpuContext gpu)
 {
   //  printf("kClearSoftcoreBornForces\n");
-    kClearSoftcoreBornForces_kernel<<<gpu->sim.blocks, 384>>>();
+    kClearSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>();
     LAUNCHERROR("kClearSoftcoreBornForces");
 }
 
 void kClearObcGbsaSoftcoreBornSum(gpuContext gpu)
 {
   //  printf("kClearObcGbsaBornSum\n");
-    kClearObcGbsaSoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+    kClearObcGbsaSoftcoreBornSum_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>();
 }
 
-__global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceObcGbsaSoftcoreBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     float energy     = 0.0f;
@@ -153,7 +177,7 @@ __global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
 
 void kReduceObcGbsaSoftcoreBornForces( gpuContext gpu ){
 
-    kReduceObcGbsaSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
+    kReduceObcGbsaSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>();
     LAUNCHERROR("kReduceObcGbsaSoftcoreBornForces");
 }
 
@@ -191,7 +215,15 @@ void kReduceObcGbsaSoftcoreBornForces( gpuContext gpu ){
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaSoftcoreBornSum.h"
 
-__global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceObcGbsaSoftcoreBornSum_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     
@@ -226,7 +258,7 @@ __global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
 void kReduceObcGbsaSoftcoreBornSum(gpuContext gpu)
 {
 //    printf("kReduceObcGbsaSoftcoreBornSum\n");
-    kReduceObcGbsaSoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+    kReduceObcGbsaSoftcoreBornSum_kernel<<<gpu->sim.blocks,  gpu->sim.threads_per_block>>>();
     gpu->bRecalculateBornRadii = false;
     LAUNCHERROR("kReduceObcGbsaSoftcoreBornSum");
 }

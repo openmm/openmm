@@ -162,7 +162,15 @@ struct Atom {
     float bornRadiusScaleFactor;
 };
 
-__global__ void kClearGBVISoftcoreBornSum_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kClearGBVISoftcoreBornSum_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
@@ -173,7 +181,7 @@ __global__ void kClearGBVISoftcoreBornSum_kernel()
 }
 
 void kClearGBVISoftcoreBornSum(gpuContext gpu) {
-    kClearGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+    kClearGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>();
 }
 
 __global__ 
@@ -284,7 +292,7 @@ void kReduceGBVISoftcoreBornSum_kernel()
 void kReduceGBVISoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
 {
     gpuContext gpu = freeEnergyGpu->gpuContext;
-    kReduceGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+    kReduceGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>();
     LAUNCHERROR("kReduceGBVISoftcoreBornSum");
 }
 
@@ -333,7 +341,15 @@ void kReduceGBVISoftcoreBornSum( freeEnergyGpuContext freeEnergyGpu )
    *outDerivative     = -30.0f*ratio2*( 1.0f + ratio*(ratio - 2.0f))/denominator;
 }
 
-__global__ void kReduceGBVIBornSumQuinticScaling_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceGBVIBornSumQuinticScaling_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     
@@ -380,7 +396,7 @@ __global__ void kReduceGBVIBornSumQuinticScaling_kernel()
 void kReduceGBVIBornSumQuinticScaling( freeEnergyGpuContext freeEnergyGpu )
 {
     gpuContext gpu = freeEnergyGpu->gpuContext;
-    kReduceGBVIBornSumQuinticScaling_kernel<<<gpu->sim.blocks, 384>>>();
+    kReduceGBVIBornSumQuinticScaling_kernel<<<gpu->sim.blocks, gpu->sim.threads_per_block>>>();
     LAUNCHERROR("kReduceGBVIBornSumQuinticScaling_kernel");
 }
 
