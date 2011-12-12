@@ -70,9 +70,9 @@ __kernel void computeDonorForces(__global float4* restrict forceBuffers, __globa
         float4 d1, d2, d3;
         if (donorIndex < NUM_DONORS) {
             atoms = donorAtoms[donorIndex];
-            d1 = posq[atoms.x];
-            d2 = posq[atoms.y];
-            d3 = posq[atoms.z];
+            d1 = (atoms.x > -1 ? posq[atoms.x] : (float4) 0);
+            d2 = (atoms.y > -1 ? posq[atoms.y] : (float4) 0);
+            d3 = (atoms.z > -1 ? posq[atoms.z] : (float4) 0);
 #ifdef USE_EXCLUSIONS
             exclusionIndices = exclusions[donorIndex];
 #endif
@@ -83,11 +83,11 @@ __kernel void computeDonorForces(__global float4* restrict forceBuffers, __globa
             // Load the next block of acceptors into local memory.
 
             int blockSize = min((int) get_local_size(0), NUM_ACCEPTORS-acceptorStart);
-            if (get_local_id(0) < blockSize && acceptorStart+get_local_id(0) < NUM_ACCEPTORS) {
+            if (get_local_id(0) < blockSize) {
                 int4 atoms2 = acceptorAtoms[acceptorStart+get_local_id(0)];
-                posBuffer[3*get_local_id(0)] = posq[atoms2.x];
-                posBuffer[3*get_local_id(0)+1] = posq[atoms2.y];
-                posBuffer[3*get_local_id(0)+2] = posq[atoms2.z];
+                posBuffer[3*get_local_id(0)] = (atoms2.x > -1 ? posq[atoms2.x] : (float4) 0);
+                posBuffer[3*get_local_id(0)+1] = (atoms2.y > -1 ? posq[atoms2.y] : (float4) 0);
+                posBuffer[3*get_local_id(0)+2] = (atoms2.z > -1 ? posq[atoms2.z] : (float4) 0);
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (donorIndex < NUM_DONORS) {
@@ -116,24 +116,26 @@ __kernel void computeDonorForces(__global float4* restrict forceBuffers, __globa
 
         // Write results
 
-        int4 bufferIndices = donorBufferIndices[donorIndex];
-        if (atoms.x > -1) {
-            unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
-            float4 force = forceBuffers[offset];
-            force.xyz += f1.xyz;
-            forceBuffers[offset] = force;
-        }
-        if (atoms.y > -1) {
-            unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
-            float4 force = forceBuffers[offset];
-            force.xyz += f2.xyz;
-            forceBuffers[offset] = force;
-        }
-        if (atoms.z > -1) {
-            unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
-            float4 force = forceBuffers[offset];
-            force.xyz += f3.xyz;
-            forceBuffers[offset] = force;
+        if (donorIndex < NUM_DONORS) {
+            int4 bufferIndices = donorBufferIndices[donorIndex];
+            if (atoms.x > -1) {
+                unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
+                float4 force = forceBuffers[offset];
+                force.xyz += f1.xyz;
+                forceBuffers[offset] = force;
+            }
+            if (atoms.y > -1) {
+                unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
+                float4 force = forceBuffers[offset];
+                force.xyz += f2.xyz;
+                forceBuffers[offset] = force;
+            }
+            if (atoms.z > -1) {
+                unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
+                float4 force = forceBuffers[offset];
+                force.xyz += f3.xyz;
+                forceBuffers[offset] = force;
+            }
         }
     }
     energyBuffer[get_global_id(0)] += energy;
@@ -155,9 +157,9 @@ __kernel void computeAcceptorForces(__global float4* restrict forceBuffers, __gl
         float4 a1, a2, a3;
         if (acceptorIndex < NUM_ACCEPTORS) {
             atoms = acceptorAtoms[acceptorIndex];
-            a1 = posq[atoms.x];
-            a2 = posq[atoms.y];
-            a3 = posq[atoms.z];
+            a1 = (atoms.x > -1 ? posq[atoms.x] : (float4) 0);
+            a2 = (atoms.y > -1 ? posq[atoms.y] : (float4) 0);
+            a3 = (atoms.z > -1 ? posq[atoms.z] : (float4) 0);
 #ifdef USE_EXCLUSIONS
             exclusionIndices = exclusions[acceptorIndex];
 #endif
@@ -168,11 +170,11 @@ __kernel void computeAcceptorForces(__global float4* restrict forceBuffers, __gl
             // Load the next block of donors into local memory.
 
             int blockSize = min((int) get_local_size(0), NUM_DONORS-donorStart);
-            if (get_local_id(0) < blockSize && donorStart+get_local_id(0) < NUM_DONORS) {
+            if (get_local_id(0) < blockSize) {
                 int4 atoms2 = donorAtoms[donorStart+get_local_id(0)];
-                posBuffer[3*get_local_id(0)] = posq[atoms2.x];
-                posBuffer[3*get_local_id(0)+1] = posq[atoms2.y];
-                posBuffer[3*get_local_id(0)+2] = posq[atoms2.z];
+                posBuffer[3*get_local_id(0)] = (atoms2.x > -1 ? posq[atoms2.x] : (float4) 0);
+                posBuffer[3*get_local_id(0)+1] = (atoms2.y > -1 ? posq[atoms2.y] : (float4) 0);
+                posBuffer[3*get_local_id(0)+2] = (atoms2.z > -1 ? posq[atoms2.z] : (float4) 0);
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (acceptorIndex < NUM_ACCEPTORS) {
@@ -201,24 +203,26 @@ __kernel void computeAcceptorForces(__global float4* restrict forceBuffers, __gl
 
         // Write results
 
-        int4 bufferIndices = acceptorBufferIndices[acceptorIndex];
-        if (atoms.x > -1) {
-            unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
-            float4 force = forceBuffers[offset];
-            force.xyz += f1.xyz;
-            forceBuffers[offset] = force;
-        }
-        if (atoms.y > -1) {
-            unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
-            float4 force = forceBuffers[offset];
-            force.xyz += f2.xyz;
-            forceBuffers[offset] = force;
-        }
-        if (atoms.z > -1) {
-            unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
-            float4 force = forceBuffers[offset];
-            force.xyz += f3.xyz;
-            forceBuffers[offset] = force;
+        if (acceptorIndex < NUM_ACCEPTORS) {
+            int4 bufferIndices = acceptorBufferIndices[acceptorIndex];
+            if (atoms.x > -1) {
+                unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
+                float4 force = forceBuffers[offset];
+                force.xyz += f1.xyz;
+                forceBuffers[offset] = force;
+            }
+            if (atoms.y > -1) {
+                unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
+                float4 force = forceBuffers[offset];
+                force.xyz += f2.xyz;
+                forceBuffers[offset] = force;
+            }
+            if (atoms.z > -1) {
+                unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
+                float4 force = forceBuffers[offset];
+                force.xyz += f3.xyz;
+                forceBuffers[offset] = force;
+            }
         }
     }
 }
