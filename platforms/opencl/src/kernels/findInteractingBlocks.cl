@@ -100,9 +100,20 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
 
         // Load an atom position and the bounding box the other block.
 
+        int box = (group == 0 ? x : y);
+        int atom = (group == 0 ? y : x)*TILE_SIZE+index;
+#ifdef MAC_AMD_WORKAROUND
+        __global float* bc = (__global float*) blockCenter;
+        __global float* bb = (__global float*) blockBoundingBox;
+        __global float* ps = (__global float*) posq;
+        center = (float4) (bc[4*box], bc[4*box+1], bc[4*box+2], 0.0f);
+        boxSize = (float4) (bb[4*box], bb[4*box+1], bb[4*box+2], 0.0f);
+        pos = (float4) (ps[4*atom], ps[4*atom+1], ps[4*atom+2], 0.0f);
+#else
         center = blockCenter[(group == 0 ? x : y)];
         boxSize = blockBoundingBox[(group == 0 ? x : y)];
         pos = posq[(group == 0 ? y : x)*TILE_SIZE+index];
+#endif
 
         // Find the distance of the atom from the bounding box.
 
@@ -182,14 +193,24 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
 
             // Find the distance between the bounding boxes of the two cells.
 
+#ifdef MAC_AMD_WORKAROUND
+            __global float* bc = (__global float*) blockCenter;
+            __global float* bb = (__global float*) blockBoundingBox;
+            float4 bcx = (float4) (bc[4*x], bc[4*x+1], bc[4*x+2], 0.0f);
+            float4 bcy = (float4) (bc[4*y], bc[4*y+1], bc[4*y+2], 0.0f);
+            float4 delta = bcx-bcy;
+            float4 boxSizea = (float4) (bb[4*x], bb[4*x+1], bb[4*x+2], 0.0f);
+            float4 boxSizeb = (float4) (bb[4*y], bb[4*y+1], bb[4*y+2], 0.0f);
+#else
             float4 delta = blockCenter[x]-blockCenter[y];
+            float4 boxSizea = blockBoundingBox[x];
+            float4 boxSizeb = blockBoundingBox[y];
+#endif
 #ifdef USE_PERIODIC
             delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
             delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
             delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-            float4 boxSizea = blockBoundingBox[x];
-            float4 boxSizeb = blockBoundingBox[y];
             delta.x = max(0.0f, fabs(delta.x)-boxSizea.x-boxSizeb.x);
             delta.y = max(0.0f, fabs(delta.y)-boxSizea.y-boxSizeb.y);
             delta.z = max(0.0f, fabs(delta.z)-boxSizea.z-boxSizeb.z);

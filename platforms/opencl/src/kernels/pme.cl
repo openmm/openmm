@@ -278,10 +278,29 @@ __kernel void gridInterpolateForce(__global const float4* restrict posq, __globa
                     float gridvalue = pmeGrid[index].x;
                     force.x += ddata[ix].x*data[iy].y*data[iz].z*gridvalue;
                     force.y += data[ix].x*ddata[iy].y*data[iz].z*gridvalue;
+#ifndef MAC_AMD_WORKAROUND
+                    force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
+#endif
+                }
+            }
+        }
+#ifdef MAC_AMD_WORKAROUND
+        for (int ix = 0; ix < PME_ORDER; ix++) {
+            int xindex = gridIndex.x+ix;
+            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            for (int iy = 0; iy < PME_ORDER; iy++) {
+                int yindex = gridIndex.y+iy;
+                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                for (int iz = 0; iz < PME_ORDER; iz++) {
+                    int zindex = gridIndex.z+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+                    int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
+                    float gridvalue = pmeGrid[index].x;
                     force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
                 }
             }
         }
+#endif
         float4 totalForce = forceBuffers[atom];
         float q = pos.w*EPSILON_FACTOR;
         totalForce.x -= q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x;

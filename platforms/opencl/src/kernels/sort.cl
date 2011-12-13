@@ -60,7 +60,12 @@ __kernel void assignElementsToBuckets(__global const TYPE* restrict data, int le
     float maxValue = dataRange.y;
     float bucketWidth = (maxValue-minValue)/numBuckets;
     for (int index = get_global_id(0); index < length; index += get_global_size(0)) {
+#ifdef MAC_AMD_WORKAROUND
+        __global int* d = (__global int*) data;
+        int2 element = (int2) (d[2*index], d[2*index+1]);
+#else
         TYPE element = data[index];
+#endif
         float value = getValue(element);
         int bucketIndex = min((int) ((value-minValue)/bucketWidth), numBuckets-1);
         offsetInBucket[index] = atom_inc(&bucketOffset[bucketIndex]);
