@@ -100,9 +100,9 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
 
         // Load an atom position and the bounding box the other block.
 
+#ifdef MAC_AMD_WORKAROUND
         int box = (group == 0 ? x : y);
         int atom = (group == 0 ? y : x)*TILE_SIZE+index;
-#ifdef MAC_AMD_WORKAROUND
         __global float* bc = (__global float*) blockCenter;
         __global float* bb = (__global float*) blockBoundingBox;
         __global float* ps = (__global float*) posq;
