@@ -272,6 +272,7 @@ void bbSortBody(T* dData,int size,int listOrder/*,float sliceStep,int sliceSize,
 	delete hBucketOfSlices;
 	delete hSliceCounts;
 	delete hBucketSizes;
+	delete hSliceOffsetInBucket;
 
 	CUDA_SAFE_CALL(cudaFree(dOffsetInSlice));
 	CUDA_SAFE_CALL(cudaFree(dSliceCounts));
