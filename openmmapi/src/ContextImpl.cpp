@@ -123,6 +123,10 @@ void ContextImpl::getForces(std::vector<Vec3>& forces) {
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getForces(*this, forces);
 }
 
+const std::map<std::string, double>& ContextImpl::getParameters() const {
+    return parameters;
+}
+
 double ContextImpl::getParameter(std::string name) {
     if (parameters.find(name) == parameters.end())
         throw OpenMMException("Called getParameter() with invalid parameter name");

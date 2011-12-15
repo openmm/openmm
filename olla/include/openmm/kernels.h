@@ -41,6 +41,7 @@
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
 #include "openmm/CustomHbondForce.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
@@ -143,7 +144,7 @@ public:
     /**
      * Set the positions of all particles.
      *
-     * @param positions  a vector containg the particle positions
+     * @param positions  a vector containing the particle positions
      */
     virtual void setPositions(ContextImpl& context, const std::vector<Vec3>& positions) = 0;
     /**
@@ -155,7 +156,7 @@ public:
     /**
      * Set the velocities of all particles.
      *
-     * @param velocities  a vector containg the particle velocities
+     * @param velocities  a vector containing the particle velocities
      */
     virtual void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) = 0;
     /**
@@ -780,6 +781,66 @@ public:
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
     virtual void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomIntegrator to take one time step.
+ */
+class IntegrateCustomStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateCustomStep";
+    }
+    IntegrateCustomStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the CustomIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    virtual void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) = 0;
+    /**
+     * Get the values of all global variables.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param values    on exit, this contains the values
+     */
+    virtual void getGlobalVariables(ContextImpl& context, std::vector<double>& values) const = 0;
+    /**
+     * Set the values of all global variables.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param values    a vector containing the values
+     */
+    virtual void setGlobalVariables(ContextImpl& context, const std::vector<double>& values) = 0;
+    /**
+     * Get the values of a per-DOF variable.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param variable  the index of the variable to get
+     * @param values    on exit, this contains the values
+     */
+    virtual void getPerDofVariable(ContextImpl& context, int variable, std::vector<Vec3>& values) const = 0;
+    /**
+     * Set the values of a per-DOF variable.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param variable  the index of the variable to get
+     * @param values    a vector containing the values
+     */
+    virtual void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values) = 0;
 };
 
 /**

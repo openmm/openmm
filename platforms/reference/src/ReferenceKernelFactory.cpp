@@ -86,6 +86,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceIntegrateVariableLangevinStepKernel(name, platform, data);
     if (name == IntegrateVariableVerletStepKernel::Name())
         return new ReferenceIntegrateVariableVerletStepKernel(name, platform, data);
+    if (name == IntegrateCustomStepKernel::Name())
+        return new ReferenceIntegrateCustomStepKernel(name, platform, data);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
     if (name == ApplyMonteCarloBarostatKernel::Name())

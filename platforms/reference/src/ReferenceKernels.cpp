@@ -40,6 +40,7 @@
 #include "SimTKReference/ReferenceCMAPTorsionIxn.h"
 #include "SimTKReference/ReferenceCustomAngleIxn.h"
 #include "SimTKReference/ReferenceCustomBondIxn.h"
+#include "SimTKReference/ReferenceCustomDynamics.h"
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
 #include "SimTKReference/ReferenceCustomGBIxn.h"
 #include "SimTKReference/ReferenceCustomHbondIxn.h"
@@ -1255,6 +1256,7 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
+    constraints->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
@@ -1318,6 +1320,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
         prevFriction = friction;
         prevStepSize = stepSize;
     }
+    constraints->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
@@ -1380,6 +1383,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
         prevFriction = friction;
         prevStepSize = stepSize;
     }
+    constraints->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
@@ -1439,6 +1443,7 @@ void ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context,
         prevFriction = friction;
         prevErrorTol = errorTol;
     }
+    constraints->setTolerance(integrator.getConstraintTolerance());
     RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses, maxStepSize);
     data.time += dynamics->getDeltaT();
@@ -1495,12 +1500,100 @@ void ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, c
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevErrorTol = errorTol;
     }
+    constraints->setTolerance(integrator.getConstraintTolerance());
     RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses, maxStepSize);
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
     data.stepCount++;
+}
+
+ReferenceIntegrateCustomStepKernel::~ReferenceIntegrateCustomStepKernel() {
+    if (dynamics)
+        delete dynamics;
+    if (constraints)
+        delete constraints;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
+}
+
+void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
+    numConstraints = system.getNumConstraints();
+    constraintIndices = allocateIntArray(numConstraints, 2);
+    constraintDistances = new RealOpenMM[numConstraints];
+    for (int i = 0; i < numConstraints; ++i) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
+    }
+    perDofValues.resize(integrator.getNumPerDofVariables());
+    for (int i = 0; i < (int) perDofValues.size(); i++)
+        perDofValues[i].resize(numParticles);
+}
+
+void ReferenceIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    if (dynamics == 0) {
+        // Create the computation objects.
+
+        dynamics = new ReferenceCustomDynamics(context.getSystem().getNumParticles(), integrator);
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        dynamics->setReferenceConstraintAlgorithm(constraints);
+    }
+    
+    // Record global variables.
+    
+    map<string, double> globals;
+    globals["dt"] = integrator.getStepSize();
+    for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
+        globals[integrator.getGlobalVariableName(i)] = globalValues[i];
+    
+    // Execute the step.
+    
+    constraints->setTolerance(integrator.getConstraintTolerance());
+    dynamics->update(context, context.getSystem().getNumParticles(), posData, velData, forceData, masses, globals, perDofValues, forcesAreValid);
+    
+    // Record changed global variables.
+    
+    integrator.setStepSize(globals["dt"]);
+    for (int i = 0; i < (int) globalValues.size(); i++)
+        globalValues[i] = globals[integrator.getGlobalVariableName(i)];
+    data.time += dynamics->getDeltaT();
+    data.stepCount++;
+}
+
+void ReferenceIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, vector<double>& values) const {
+    values = globalValues;
+}
+
+void ReferenceIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, const vector<double>& values) {
+    globalValues = values;
+}
+
+void ReferenceIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, int variable, vector<Vec3>& values) const {
+    values.resize(perDofValues[variable].size());
+    for (int i = 0; i < (int) values.size(); i++)
+        values[i] = perDofValues[variable][i];
+}
+
+void ReferenceIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int variable, const vector<Vec3>& values) {
+    perDofValues[variable].resize(values.size());
+    for (int i = 0; i < (int) values.size(); i++)
+        perDofValues[variable][i] = values[i];
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {

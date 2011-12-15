@@ -119,6 +119,10 @@ public:
      */
     void getForces(std::vector<Vec3>& forces);
     /**
+     * Get the set of all adjustable parameters and their values
+     */
+    const std::map<std::string, double>& getParameters() const;
+    /**
      * Get the value of an adjustable parameter.  If there is no parameter with the specified name, this
      * throws an exception.
      * 
