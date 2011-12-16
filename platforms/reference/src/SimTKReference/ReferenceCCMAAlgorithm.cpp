@@ -88,9 +88,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
    // work arrays
 
    if (_numberOfConstraints > 0) {
-       _r_ij                       = SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray( numberOfConstraints, threeI, NULL,
-                                                                                        1, zero, "r_ij" );
-
+       _r_ij.resize(numberOfConstraints);
        _d_ij2                      = SimTKOpenMMUtilities::allocateOneDRealOpenMMArray( numberOfConstraints, NULL, 1, zero, "dij_2" );
        _distanceTolerance          = SimTKOpenMMUtilities::allocateOneDRealOpenMMArray( numberOfConstraints, NULL, 1, zero, "distanceTolerance" );
        _reducedMasses              = SimTKOpenMMUtilities::allocateOneDRealOpenMMArray( numberOfConstraints, NULL, 1, zero, "reducedMasses" );
@@ -225,8 +223,6 @@ ReferenceCCMAAlgorithm::~ReferenceCCMAAlgorithm( ){
    // ---------------------------------------------------------------------------------------
 
     if (_numberOfConstraints > 0) {
-       SimTKOpenMMUtilities::freeTwoDRealOpenMMArray( _r_ij,  "r_ij" );
-
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _d_ij2, "d_ij2" );
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _distanceTolerance, "distanceTolerance" );
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _reducedMasses, "reducedMasses" );
@@ -348,7 +344,31 @@ void ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
 int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                          vector<RealVec>& atomCoordinatesP,
                                          vector<RealOpenMM>& inverseMasses ){
+    applyConstraints(numberOfAtoms, atomCoordinates, atomCoordinatesP, inverseMasses, false);
+}
 
+/**---------------------------------------------------------------------------------------
+
+   Apply constraint algorithm to velocities.
+
+   @param numberOfAtoms    number of atoms
+   @param atomCoordinates  atom coordinates
+   @param velocities       atom velocities
+   @param inverseMasses    1/mass
+
+   @return SimTKOpenMMCommon::DefaultReturn if converge; else
+    return SimTKOpenMMCommon::ErrorReturn
+
+   --------------------------------------------------------------------------------------- */
+
+int ReferenceCCMAAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
+    applyConstraints(numberOfAtoms, atomCoordinates, velocities, inverseMasses, true);
+}
+
+int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>& atomCoordinates,
+                                         vector<RealVec>& atomCoordinatesP,
+                                         vector<RealOpenMM>& inverseMasses, bool constrainingVelocities){
    // ---------------------------------------------------------------------------------------
 
    static const char* methodName = "\nReferenceCCMAAlgorithm::apply";
@@ -364,9 +384,8 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoord
 
    // temp arrays
 
-   RealOpenMM** r_ij                   = _r_ij;
+   vector<RealVec>& r_ij               = _r_ij;
    RealOpenMM* d_ij2                   = _d_ij2;
-   RealOpenMM* distanceTolerance       = _distanceTolerance;
    RealOpenMM* reducedMasses           = _reducedMasses;
 
    // calculate reduced masses on 1st pass
@@ -385,17 +404,10 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoord
    RealOpenMM tolerance     = getTolerance();
               tolerance    *= two;
    for( int ii = 0; ii < _numberOfConstraints; ii++ ){
-
       int atomI   = _atomIndices[ii][0];
       int atomJ   = _atomIndices[ii][1];
-      for( int jj = 0; jj < 3; jj++ ){
-         r_ij[ii][jj] = atomCoordinates[atomI][jj] - atomCoordinates[atomJ][jj];
-      }
-      d_ij2[ii]              = DOT3( r_ij[ii], r_ij[ii] );
-      distanceTolerance[ii]  = d_ij2[ii]*tolerance;
-      if( distanceTolerance[ii] > zero ){
-         distanceTolerance[ii] = one/distanceTolerance[ii];
-      }
+      r_ij[ii] = atomCoordinates[atomI] - atomCoordinates[atomJ];
+      d_ij2[ii] = r_ij[ii].dot(r_ij[ii]);
    }
    RealOpenMM lowerTol = one-two*getTolerance()+getTolerance()*getTolerance();
    RealOpenMM upperTol = one+two*getTolerance()+getTolerance()*getTolerance();
@@ -413,24 +425,28 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoord
          int atomI   = _atomIndices[ii][0];
          int atomJ   = _atomIndices[ii][1];
 
-         RealOpenMM rp_ij[3];
-         for( int jj = 0; jj < 3; jj++ ){
-            rp_ij[jj] = atomCoordinatesP[atomI][jj] - atomCoordinatesP[atomJ][jj];
+         RealVec rp_ij = atomCoordinatesP[atomI] - atomCoordinatesP[atomJ];
+         if (constrainingVelocities) {
+             RealOpenMM rrpr = rp_ij.dot(r_ij[ii]);
+             constraintDelta[ii] = -2*reducedMasses[ii]*rrpr/d_ij2[ii];
+             if (constraintDelta[ii] <= getTolerance())
+                numberConverged++;
          }
-         RealOpenMM rp2  = DOT3( rp_ij, rp_ij );
-         RealOpenMM dist2= _distance[ii]*_distance[ii];
-         RealOpenMM diff = dist2 - rp2;
-         constraintDelta[ii] = zero;
-         RealOpenMM rrpr  = DOT3(  rp_ij, r_ij[ii] );
-         if( rrpr <  d_ij2[ii]*epsilon6 ){
-             std::stringstream message;
-             message << iterations <<" "<<atomI<<" "<<atomJ<< " Error: sign of rrpr < 0?\n";
-             SimTKOpenMMLog::printMessage( message );
-         } else {
-             constraintDelta[ii] = reducedMasses[ii]*diff/rrpr;
-         }
-         if (rp2 >= lowerTol*dist2 && rp2 <= upperTol*dist2) {
-            numberConverged++;
+         else {
+             RealOpenMM rp2  = rp_ij.dot(rp_ij);
+             RealOpenMM dist2 = _distance[ii]*_distance[ii];
+             RealOpenMM diff = dist2 - rp2;
+             constraintDelta[ii] = zero;
+             RealOpenMM rrpr = DOT3(  rp_ij, r_ij[ii] );
+             if( rrpr <  d_ij2[ii]*epsilon6 ){
+                 std::stringstream message;
+                 message << iterations <<" "<<atomI<<" "<<atomJ<< " Error: sign of rrpr < 0?\n";
+                 SimTKOpenMMLog::printMessage( message );
+             } else {
+                 constraintDelta[ii] = reducedMasses[ii]*diff/rrpr;
+             }
+             if (rp2 >= lowerTol*dist2 && rp2 <= upperTol*dist2)
+                numberConverged++;
          }
       }
       if( numberConverged == _numberOfConstraints )
@@ -452,11 +468,9 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoord
 
          int atomI   = _atomIndices[ii][0];
          int atomJ   = _atomIndices[ii][1];
-         for( int jj = 0; jj < 3; jj++ ){
-            RealOpenMM dr                = constraintDelta[ii]*r_ij[ii][jj];
-            atomCoordinatesP[atomI][jj] += inverseMasses[atomI]*dr;
-            atomCoordinatesP[atomJ][jj] -= inverseMasses[atomJ]*dr;
-         }
+         RealVec dr = r_ij[ii]*constraintDelta[ii];
+         atomCoordinatesP[atomI] += dr*inverseMasses[atomI];
+         atomCoordinatesP[atomJ] -= dr*inverseMasses[atomJ];
       }
    }
 

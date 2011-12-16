@@ -72,7 +72,6 @@ vector<string> CustomIntegrator::getKernelNames() {
 void CustomIntegrator::step(int steps) {
     globalsAreCurrent = false;
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
         dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).execute(*context, *this, forcesAreValid);
     }
 }

@@ -68,6 +68,23 @@ public:
 
     virtual int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                      std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses) = 0;
+
+      /**---------------------------------------------------------------------------------------
+
+         Apply constraint algorithm to velocities.
+
+         @param numberOfAtoms    number of atoms
+         @param atomCoordinates  atom coordinates
+         @param velocities       atom velocities
+         @param inverseMasses    1/mass
+
+         @return SimTKOpenMMCommon::DefaultReturn if converge; else
+          return SimTKOpenMMCommon::ErrorReturn
+
+         --------------------------------------------------------------------------------------- */
+
+    virtual int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) = 0;
 };
 
 // ---------------------------------------------------------------------------------------

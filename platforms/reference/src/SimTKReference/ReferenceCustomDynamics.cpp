@@ -194,6 +194,11 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
             }
             case CustomIntegrator::ConstrainPositions: {
                 getReferenceConstraintAlgorithm()->apply(numberOfAtoms, atomCoordinates, atomCoordinates, inverseMasses);
+                break;
+            }
+            case CustomIntegrator::ConstrainVelocities: {
+                getReferenceConstraintAlgorithm()->applyToVelocities(numberOfAtoms, atomCoordinates, velocities, inverseMasses);
+                break;
             }
             case CustomIntegrator::UpdateContextState: {
                 recordChangedParameters(context, globals);

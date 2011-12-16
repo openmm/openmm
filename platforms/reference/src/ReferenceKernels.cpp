@@ -145,18 +145,22 @@ void ReferenceCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& forceData = extractForces(context);
     if (includeForces) {
         int numParticles = context.getSystem().getNumParticles();
-        vector<RealVec>& forceData = extractForces(context);
         for (int i = 0; i < numParticles; ++i) {
             forceData[i][0] = (RealOpenMM) 0.0;
             forceData[i][1] = (RealOpenMM) 0.0;
             forceData[i][2] = (RealOpenMM) 0.0;
         }
     }
+    else
+        savedForces = forceData;
 }
 
 double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!includeForces)
+        extractForces(context) = savedForces; // Restore the forces so computing the energy doesn't overwrite the forces with incorrect values.
     return 0.0;
 }
 

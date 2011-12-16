@@ -89,6 +89,8 @@ public:
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
     double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy);
+private:
+    std::vector<RealVec> savedForces;
 };
 
 /**

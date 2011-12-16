@@ -29,6 +29,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "ReferenceLincsAlgorithm.h"
 #include "ReferenceDynamics.h"
+#include "openmm/OpenMMException.h"
 
 using std::vector;
 using OpenMM::RealVec;
@@ -292,3 +293,21 @@ int ReferenceLincsAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
 
 }
 
+/**---------------------------------------------------------------------------------------
+
+   Apply constraint algorithm to velocities.
+
+   @param numberOfAtoms    number of atoms
+   @param atomCoordinates  atom coordinates
+   @param velocities       atom velocities
+   @param inverseMasses    1/mass
+
+   @return SimTKOpenMMCommon::DefaultReturn if converge; else
+    return SimTKOpenMMCommon::ErrorReturn
+
+   --------------------------------------------------------------------------------------- */
+
+int ReferenceLincsAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
+    throw OpenMM::OpenMMException("applyToVelocities is not implemented");
+}

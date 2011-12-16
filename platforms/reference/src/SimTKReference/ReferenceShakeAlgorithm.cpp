@@ -30,6 +30,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "ReferenceShakeAlgorithm.h"
 #include "ReferenceDynamics.h"
+#include "openmm/OpenMMException.h"
 
 using std::vector;
 using OpenMM::RealVec;
@@ -321,6 +322,25 @@ int ReferenceShakeAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoor
 
    return (done ? SimTKOpenMMCommon::DefaultReturn : SimTKOpenMMCommon::ErrorReturn);
 
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Apply constraint algorithm to velocities.
+
+   @param numberOfAtoms    number of atoms
+   @param atomCoordinates  atom coordinates
+   @param velocities       atom velocities
+   @param inverseMasses    1/mass
+
+   @return SimTKOpenMMCommon::DefaultReturn if converge; else
+    return SimTKOpenMMCommon::ErrorReturn
+
+   --------------------------------------------------------------------------------------- */
+
+int ReferenceShakeAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+               std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
+    throw OpenMM::OpenMMException("applyToVelocities is not implemented");
 }
 
 /**---------------------------------------------------------------------------------------

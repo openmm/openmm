@@ -152,6 +152,65 @@ void testConstraints() {
 }
 
 /**
+ * Test an integrator that applies constraints directly to velocities.
+ */
+void testVelocityConstraints() {
+    const int numParticles = 8;
+    const double temp = 500.0;
+    ReferencePlatform platform;
+    System system;
+    CustomIntegrator integrator(0.002);
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addConstrainPositions();
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    integrator.addConstrainVelocities();
+    integrator.setConstraintTolerance(1e-5);
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(i%2 == 0 ? 5.0 : 10.0);
+        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    }
+    for (int i = 0; i < numParticles-1; ++i)
+        system.addConstraint(i, i+1, 1.0);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    
+    // Simulate it and see whether the constraints remain satisfied.
+    
+    double initialEnergy = 0.0;
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Positions | State::Energy);
+        for (int j = 0; j < system.getNumConstraints(); ++j) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(j, particle1, particle2, distance);
+            Vec3 p1 = state.getPositions()[particle1];
+            Vec3 p2 = state.getPositions()[particle2];
+            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+            ASSERT_EQUAL_TOL(distance, dist, 2e-5);
+        }
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        if (i == 1)
+            initialEnergy = energy;
+        else if (i > 1)
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
+        integrator.step(2);
+    }
+}
+
+/**
  * Test an integrator with an AndersenThermostat to see if updateContextState()
  * is being handled correctly.
  */
@@ -254,6 +313,7 @@ int main() {
     try {
         testSingleBond();
         testConstraints();
+        testVelocityConstraints();
         testWithThermostat();
         testMonteCarlo();
     }
