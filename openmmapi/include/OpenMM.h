@@ -42,6 +42,7 @@
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
 #include "openmm/CustomHbondForce.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/Force.h"
 #include "openmm/GBSAOBCForce.h"

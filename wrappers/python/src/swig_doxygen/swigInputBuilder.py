@@ -392,12 +392,13 @@ class SwigInputBuilder:
                 key=(shortClassName, methName)
                 #print "key %s %s \n" % (shortClassName, methName)
                 addText=''
+                returnType = getText("type", memberNode)
 
                 if key in self.configModule.UNITS:
                     valueUnits=self.configModule.UNITS[key]
                 elif ("*", methName) in self.configModule.UNITS:
                     valueUnits=self.configModule.UNITS[("*", methName)]
-                elif methName.startswith('get'):
+                elif methName.startswith('get') and returnType not in ('void', 'int', 'std::string'):
                     s = 'do not know how to add units to %s::%s' \
                         % (shortClassName, methName)
                     raise Exception(s)
