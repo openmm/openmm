@@ -133,7 +133,7 @@ class PdbStructure(object):
                 self._current_model._finalize()
                 if not self.load_all_models:
                     break
-            elif (pdb_line.find("TER   ") == 0):
+            elif (pdb_line.find("TER") == 0 and pdb_line.split()[0] == "TER"):
                 self._current_model._current_chain._add_ter_record()
             elif (pdb_line.find("CRYST1") == 0):
                 self._unit_cell_dimensions = (float(pdb_line[6:15]), float(pdb_line[15:24]), float(pdb_line[24:33]))*unit.angstroms
