@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -260,10 +260,17 @@ public:
     /**
      * Set the value of a global variable.
      * 
-     * @param index   the index of the variable to get
+     * @param index   the index of the variable to set
      * @param value   the new value of the variable
      */
     void setGlobalVariable(int index, double value);
+    /**
+     * Set the value of a global variable, specified by name.
+     * 
+     * @param name    the name of the variable to set
+     * @param value   the new value of the variable
+     */
+    void setGlobalVariableByName(const std::string& name, double value);
     /**
      * Get the value of a per-DOF variable.
      * 
@@ -275,10 +282,17 @@ public:
     /**
      * Set the value of a per-DOF variable.
      * 
-     * @param index   the index of the variable to get
+     * @param index   the index of the variable to set
      * @param values  the new values of the variable for all degrees of freedom
      */
     void setPerDofVariable(int index, const std::vector<Vec3>& values);
+    /**
+     * Set the value of a per-DOF variable, specified by name.
+     * 
+     * @param name    the name of the variable to set
+     * @param values  the new values of the variable for all degrees of freedom
+     */
+    void setPerDofVariableByName(const std::string& name, const std::vector<Vec3>& values);
     /**
      * Add a step to the integration algorithm that computes a global value.
      * 

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -64,7 +64,7 @@ void CustomIntegrator::stateChanged(State::DataType changed) {
 }
 
 vector<string> CustomIntegrator::getKernelNames() {
-    std::vector<std::string> names;
+    vector<string> names;
     names.push_back(IntegrateCustomStepKernel::Name());
     return names;
 }
@@ -76,7 +76,7 @@ void CustomIntegrator::step(int steps) {
     }
 }
 
-int CustomIntegrator::addGlobalVariable(const std::string& name, double initialValue) {
+int CustomIntegrator::addGlobalVariable(const string& name, double initialValue) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
     globalNames.push_back(name);
@@ -84,13 +84,13 @@ int CustomIntegrator::addGlobalVariable(const std::string& name, double initialV
     return globalNames.size()-1;
 }
 
-std::string CustomIntegrator::getGlobalVariableName(int index) const {
+string CustomIntegrator::getGlobalVariableName(int index) const {
     if (index < 0 || index >= globalNames.size())
         throw OpenMMException("Index out of range");
     return globalNames[index];
 }
 
-int CustomIntegrator::addPerDofVariable(const std::string& name, double initialValue) {
+int CustomIntegrator::addPerDofVariable(const string& name, double initialValue) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
     perDofNames.push_back(name);
@@ -98,7 +98,7 @@ int CustomIntegrator::addPerDofVariable(const std::string& name, double initialV
     return perDofNames.size()-1;
 }
 
-std::string CustomIntegrator::getPerDofVariableName(int index) const {
+string CustomIntegrator::getPerDofVariableName(int index) const {
     if (index < 0 || index >= perDofNames.size())
         throw OpenMMException("Index out of range");
     return perDofNames[index];
@@ -125,7 +125,16 @@ void CustomIntegrator::setGlobalVariable(int index, double value) {
     dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setGlobalVariables(*context, globalValues);
 }
 
-void CustomIntegrator::getPerDofVariable(int index, std::vector<Vec3>& values) const {
+void CustomIntegrator::setGlobalVariableByName(const string& name, double value) {
+    for (int i = 0; i < (int) globalNames.size(); i++)
+        if (name == globalNames[i]) {
+            setGlobalVariable(i, value);
+            return;
+        }
+    throw OpenMMException("Illegal global variable name: "+name);
+}
+
+void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const {
     if (index < 0 || index >= perDofNames.size())
         throw OpenMMException("Index out of range");
     if (owner == NULL)
@@ -134,7 +143,7 @@ void CustomIntegrator::getPerDofVariable(int index, std::vector<Vec3>& values) c
         dynamic_cast<const IntegrateCustomStepKernel&>(kernel.getImpl()).getPerDofVariable(*context, index, values);
 }
 
-void CustomIntegrator::setPerDofVariable(int index, const std::vector<Vec3>& values) {
+void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {
     if (index < 0 || index >= perDofNames.size())
         throw OpenMMException("Index out of range");
     if (owner == NULL)
@@ -143,21 +152,30 @@ void CustomIntegrator::setPerDofVariable(int index, const std::vector<Vec3>& val
         dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setPerDofVariable(*context, index, values);
 }
 
-int CustomIntegrator::addComputeGlobal(const std::string& variable, const std::string& expression) {
+void CustomIntegrator::setPerDofVariableByName(const string& name, const vector<Vec3>& value) {
+    for (int i = 0; i < (int) perDofNames.size(); i++)
+        if (name == perDofNames[i]) {
+            setPerDofVariable(i, value);
+            return;
+        }
+    throw OpenMMException("Illegal per-DOF variable name: "+name);
+}
+
+int CustomIntegrator::addComputeGlobal(const string& variable, const string& expression) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
     computations.push_back(ComputationInfo(ComputeGlobal, variable, expression));
     return computations.size()-1;
 }
 
-int CustomIntegrator::addComputePerDof(const std::string& variable, const std::string& expression) {
+int CustomIntegrator::addComputePerDof(const string& variable, const string& expression) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
     computations.push_back(ComputationInfo(ComputePerDof, variable, expression));
     return computations.size()-1;
 }
 
-int CustomIntegrator::addComputeSum(const std::string& variable, const std::string& expression) {
+int CustomIntegrator::addComputeSum(const string& variable, const string& expression) {
     if (owner != NULL)
         throw OpenMMException("The integrator cannot be modified after it is bound to a context");
     computations.push_back(ComputationInfo(ComputeSum, variable, expression));
@@ -185,7 +203,7 @@ int CustomIntegrator::addUpdateContextState() {
     return computations.size()-1;
 }
 
-void CustomIntegrator::getComputationStep(int index, ComputationType& type, std::string& variable, std::string& expression) const {
+void CustomIntegrator::getComputationStep(int index, ComputationType& type, string& variable, string& expression) const {
     if (index < 0 || index >= computations.size())
         throw OpenMMException("Index out of range");
     type = computations[index].type;
