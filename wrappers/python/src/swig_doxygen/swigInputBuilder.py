@@ -11,20 +11,31 @@ import sys, os
 import time
 import getopt
 import re
-import xml.dom.minidom as minidom
-import xpath
+import xml.etree.ElementTree as etree
 
 #
 
 INDENT = "   ";
 
+def trimToSingleSpace(text):
+    if text is None or len(text) == 0:
+        return ""
+    t = text.strip()
+    if len(t) == 0:
+        return t
+    if text[0].isspace():
+        t = " %s" % t
+    if text[-1].isspace():
+        t = "%s " % t
+    return t
 
 def getText(subNodePath, node):
-    xPath="%s/text() | %s/ref/text()" % (subNodePath, subNodePath)
-    subNodes = xpath.find(xPath, node)
     s=""
-    for n in xpath.find(xPath, node):
-        s="%s%s" % (s, n.data)
+    for n in node.findall(subNodePath):
+        s = "%s%s" % (s, trimToSingleSpace(n.text))
+        for r in n.findall("ref"):
+            s = "%s%s%s" % (s, trimToSingleSpace(r.text), trimToSingleSpace(r.tail))
+        s = "%s%s" % (s, trimToSingleSpace(n.tail))
     return s.strip()
 
 OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
@@ -34,40 +45,48 @@ def stripOpenmmPrefix(name, rePattern=OPENMM_RE_PATTERN):
     rValue.strip()
     return rValue
 
+def findNodes(parent, path, **args):
+    nodes = []
+    for node in parent.findall(path):
+        match = True
+        for arg in args:
+            if arg not in node.attrib or node.attrib[arg] != args[arg]:
+                match = False
+        if match:
+            nodes.append(node)
+    return nodes
 
 def getClassMethodList(classNode, skipMethods):
     className = getText("compoundname", classNode)
     shortClassName=stripOpenmmPrefix(className)
-    xPath1 = "sectiondef[@kind='public-static-func']/memberdef[@kind='function' and @prot='public']"
-    xPath2 = "sectiondef[@kind='public-func']/memberdef[@kind='function' and @prot='public']"
     methodList=[]
-    for memberNode in xpath.find(xPath1, classNode) \
-                     +xpath.find(xPath2, classNode):
-        methDefinition = getText("definition", memberNode)
-        shortMethDefinition=stripOpenmmPrefix(methDefinition)
-        methName=shortMethDefinition.split()[-1]
-        if (shortClassName, methName) in skipMethods: continue
-        numParams=len(xpath.find('param', memberNode))
-        if (shortClassName, methName, numParams) in skipMethods: continue
-        for catchString in ['Factory', 'Impl', 'Info', 'Kernel']:
-            if shortClassName.endswith(catchString):
-                sys.stderr.write("Warning: Including class %s\n" %
-                                 shortClassName)
-                continue
-
-        if (shortClassName, methName) in skipMethods: continue
-
-        # set template info
-
-        templateType = getText("templateparamlist/param/type", memberNode)
-        templateName = getText("templateparamlist/param/declname", memberNode)
-
-        methodList.append( (shortClassName,
-                            memberNode,
-                            shortMethDefinition,
-                            methName,
-                            shortClassName==methName,
-                            '~'+shortClassName==methName, templateType, templateName ) )
+    for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
+        for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):    
+            methDefinition = getText("definition", memberNode)
+            shortMethDefinition=stripOpenmmPrefix(methDefinition)
+            methName=shortMethDefinition.split()[-1]
+            if (shortClassName, methName) in skipMethods: continue
+            numParams=len(findNodes(memberNode, 'param'))
+            if (shortClassName, methName, numParams) in skipMethods: continue
+            for catchString in ['Factory', 'Impl', 'Info', 'Kernel']:
+                if shortClassName.endswith(catchString):
+                    sys.stderr.write("Warning: Including class %s\n" %
+                                     shortClassName)
+                    continue
+    
+            if (shortClassName, methName) in skipMethods: continue
+    
+            # set template info
+    
+            templateType = getText("templateparamlist/param/type", memberNode)
+            templateName = getText("templateparamlist/param/declname", memberNode)
+    
+            methodList.append( (shortClassName,
+                                memberNode,
+                                shortMethDefinition,
+                                methName,
+                                shortClassName==methName,
+                                '~'+shortClassName==methName, templateType, templateName ) )
     return methodList
 
 
@@ -91,7 +110,7 @@ class SwigInputBuilder:
                 items[2]=int(items[2])
             self.skipMethods.append(tuple(items))
 
-        self.doc = minidom.parse(inputFilename)
+        self.doc = etree.parse(inputFilename)
 
         if outputFilename:
             self.fOut = open(outputFilename, 'w')
@@ -119,14 +138,13 @@ class SwigInputBuilder:
 
     def _getNodeByID(self, id):
         if id not in self.nodeByID:
-            xPath = "/doxygen/compounddef[@id='%s']" % id
-            self.nodeByID[id] = xpath.find(xPath, self.doc)[0]
+            for node in findNodes(self.doc.getroot(), "compounddef", id=id):
+                self.nodeByID[id] = node
         return self.nodeByID[id]
 
     def _buildOrderedClassNodes(self):
         orderedClassNodes=[]
-        xPath = "/doxygen/compounddef[@kind='class' and @prot='public']"
-        for node in xpath.find(xPath, self.doc):
+        for node in findNodes(self.doc.getroot(), "compounddef", kind="class", prot="public"):
             self._findBaseNodes(node, orderedClassNodes)
         return orderedClassNodes
 
@@ -135,10 +153,9 @@ class SwigInputBuilder:
         nodeName = getText("compoundname", node)
         if (nodeName.split("::")[-1],) in self.skipMethods:
             return
-        xPath = "basecompoundref[@prot='public']"
-        for baseNodePnt in xpath.find(xPath, node):
-            baseNodeID=baseNodePnt.getAttribute("refid")
-            baseNode=self._getNodeByID(baseNodeID)
+        for baseNodePnt in findNodes(node, "basecompoundref", prot="public"):
+            baseNodeID = baseNodePnt.attrib["refid"]
+            baseNode = self._getNodeByID(baseNodeID)
             self._findBaseNodes(baseNode, excludedClassNodes)
         excludedClassNodes.append(node)
 
@@ -146,17 +163,15 @@ class SwigInputBuilder:
     def writeForceSubclassList(self):
         self.fOut.write("\n/* Force subclasses */\n\n")
         forceSubclassList=[]
-        xPath = "/doxygen/compounddef[@kind='class' and @prot='public']"
-        for classNode in xpath.find(xPath, self.doc):
+        for classNode in findNodes(self.doc.getroot(), "compounddef", kind="class", prot="public"):
             className = getText("compoundname", classNode)
             shortClassName=stripOpenmmPrefix(className)
             if (className.split("::")[-1],) in self.skipMethods:
                 continue
             #print className
             #print classNode.toxml()
-            xPath = "basecompoundref[@prot='public']"
-            for baseNodePnt in xpath.find(xPath, classNode):
-                baseNodeID=baseNodePnt.getAttribute("refid")
+            for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
+                baseNodeID=baseNodePnt.attrib["refid"]
                 baseNode=self._getNodeByID(baseNodeID)
                 baseName = getText("compoundname", baseNode)
                 if baseName == 'OpenMM::Force':
@@ -173,13 +188,12 @@ class SwigInputBuilder:
 
     def writeGlobalConstants(self):
         self.fOut.write("/* Global Constants */\n\n")
-        xPath = "/doxygen/compounddef[@kind='namespace' and compoundname='OpenMM']"
-        node = xpath.find(xPath, self.doc)[0]
-        xPath="sectiondef[@kind='var']/memberdef[@kind='variable' and @mutable='no' and @prot='public' and @static='yes']"
-        for memberNode in xpath.find(xPath, node):
-            vDef = stripOpenmmPrefix(getText("definition", memberNode))
-            iDef = getText("initializer", memberNode)
-            self.fOut.write("static %s = %s;\n" % (vDef, iDef))
+        node = (x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM").next()
+        for section in findNodes(node, "sectiondef", kind="var"):
+            for memberNode in findNodes(section, "memberdef", kind="variable", mutable="no", prot="public", static="yes"):
+                vDef = stripOpenmmPrefix(getText("definition", memberNode))
+                iDef = getText("initializer", memberNode)
+                self.fOut.write("static %s = %s;\n" % (vDef, iDef))
         self.fOut.write("\n")
 
     def writeForwardDeclarations(self):
@@ -211,8 +225,7 @@ class SwigInputBuilder:
                 self.fOut.write(" : public %s" %
                                 self.configModule.MISSING_BASE_CLASSES[className])
 
-            xPath = "basecompoundref[@prot='public']"
-            for baseNodePnt in xpath.find(xPath, classNode):
+            for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
                 baseName = stripOpenmmPrefix(getText(".", baseNodePnt))
                 self.fOut.write(" : public %s" % baseName)
             self.fOut.write(" {\n")
@@ -223,8 +236,10 @@ class SwigInputBuilder:
         self.fOut.write("\n")
 
     def writeEnumerations(self, classNode):
-        xPath = "sectiondef[@kind='public-type']/memberdef[@kind='enum' and @prot='public']"
-        enumNodes=xpath.find(xPath, classNode)
+        enumNodes = []
+        for section in findNodes(classNode, "sectiondef", kind="public-type"):
+            for node in findNodes(section, "memberdef", kind="enum", prot="public"):
+                enumNodes.append(node)
         for enumNode in enumNodes:
             className = getText("compoundname", classNode)
             shortClassName=stripOpenmmPrefix(className)
@@ -235,7 +250,7 @@ class SwigInputBuilder:
                 self._enumByClassname[shortClassName]=[enumName]
             self.fOut.write("%senum %s {" % (INDENT, enumName))
             argSep="\n"
-            for valueNode in xpath.find("enumvalue[@prot='public']", enumNode):
+            for valueNode in findNodes(enumNode, "enumvalue", prot="public"):
                 vName = getText("name", valueNode)
                 vInit = getText("initializer", valueNode)
                 self.fOut.write("%s%s%s = %s" % (argSep, 2*INDENT, vName, vInit))
@@ -288,7 +303,7 @@ class SwigInputBuilder:
                 self.fOut.write('%%feature("autodoc", "%s") %s;\n' %
                                 (self.configModule.DOC_STRINGS[key], methName))
 
-            paramList=xpath.find('param', memberNode)
+            paramList=findNodes(memberNode, 'param')
             for pNode in paramList:
                 try:
                     pType = getText('type', pNode)
@@ -315,7 +330,7 @@ class SwigInputBuilder:
                 pExceptions = " %s" % getText('exceptions', memberNode)
             except IndexError:
                 pExceptions = ""
-            if memberNode.getAttribute("virt").strip()!='non-virtual':
+            if memberNode.attrib["virt"].strip()!='non-virtual':
                 if 'virtual' not in shortMethDefinition.split():
                     shortMethDefinition="virtual %s" % shortMethDefinition
             if( len(templateType) > 0 ):
@@ -356,7 +371,7 @@ class SwigInputBuilder:
             (shortClassName, memberNode,
              shortMethDefinition, methName,
              isConstructors, isDestructor, templateType, templateName) = items
-            paramList=xpath.find('param', memberNode)
+            paramList=findNodes(memberNode, 'param')
 
             #write pythonprepend blocks
             mArgsstring = getText("argsstring", memberNode)
@@ -458,7 +473,7 @@ class SwigInputBuilder:
                                              (shortClassName, methName,
                                               pName, unitType))
                             outputIndex+=1
-                    if memberNode.getAttribute("const")=="yes":
+                    if memberNode.attrib["const"]=="yes":
                         constString=' const'
                     else:
                         constString=''
@@ -474,7 +489,7 @@ class SwigInputBuilder:
              shortMethDefinition, methName,
              isConstructors, isDestructor, templateType, templateName ) = items
             if self.fOutDocstring:
-                for dNode in xpath.find('detaileddescription', memberNode):
+                for dNode in findNodes(memberNode, 'detaileddescription'):
                     dString=""
                     try:
                         description=getText('para', dNode)
@@ -483,7 +498,7 @@ class SwigInputBuilder:
                             dString=description
                     except IndexError:
                         pass
-                    for pNode in xpath.find('para/parameterlist/parameteritem', dNode):
+                    for pNode in findNodes(dNode, 'para/parameterlist/parameteritem'):
                         argName = getText('parameternamelist/parametername', pNode)
                         argDoc = getText('parameterdescription/para', pNode)
                         dString="%s\n   %s -- %s" % (dString, argName, argDoc)
