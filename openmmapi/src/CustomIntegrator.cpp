@@ -84,7 +84,7 @@ int CustomIntegrator::addGlobalVariable(const string& name, double initialValue)
     return globalNames.size()-1;
 }
 
-string CustomIntegrator::getGlobalVariableName(int index) const {
+const string& CustomIntegrator::getGlobalVariableName(int index) const {
     if (index < 0 || index >= globalNames.size())
         throw OpenMMException("Index out of range");
     return globalNames[index];
@@ -98,7 +98,7 @@ int CustomIntegrator::addPerDofVariable(const string& name, double initialValue)
     return perDofNames.size()-1;
 }
 
-string CustomIntegrator::getPerDofVariableName(int index) const {
+const string& CustomIntegrator::getPerDofVariableName(int index) const {
     if (index < 0 || index >= perDofNames.size())
         throw OpenMMException("Index out of range");
     return perDofNames[index];

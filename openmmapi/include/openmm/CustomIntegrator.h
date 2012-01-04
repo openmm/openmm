@@ -233,7 +233,7 @@ public:
      * @param index    the index of the variable to get
      * @return the name of the variable
      */
-    std::string getGlobalVariableName(int index) const;
+    const std::string& getGlobalVariableName(int index) const;
     /**
      * Define a new per-DOF variable.
      * 
@@ -249,7 +249,7 @@ public:
      * @param index    the index of the variable to get
      * @return the name of the variable
      */
-    std::string getPerDofVariableName(int index) const;
+    const std::string& getPerDofVariableName(int index) const;
     /**
      * Get the current value of a global variable.
      * 
