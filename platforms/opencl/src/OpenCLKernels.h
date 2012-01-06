@@ -878,6 +878,82 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomIntegrator to take one time step.
+ */
+class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
+public:
+    OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), perDofValues(NULL) {
+    }
+    ~OpenCLIntegrateCustomStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the CustomIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const CustomIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Get the values of all global variables.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param values    on exit, this contains the values
+     */
+    void getGlobalVariables(ContextImpl& context, std::vector<double>& values) const;
+    /**
+     * Set the values of all global variables.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param values    a vector containing the values
+     */
+    void setGlobalVariables(ContextImpl& context, const std::vector<double>& values);
+    /**
+     * Get the values of a per-DOF variable.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param variable  the index of the variable to get
+     * @param values    on exit, this contains the values
+     */
+    void getPerDofVariable(ContextImpl& context, int variable, std::vector<Vec3>& values) const;
+    /**
+     * Set the values of a per-DOF variable.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param variable  the index of the variable to get
+     * @param values    a vector containing the values
+     */
+    void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
+private:
+    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator);
+    OpenCLContext& cl;
+    double prevStepSize, energy;
+    int numGlobalVariables;
+    bool hasInitializedKernels, deviceValuesAreCurrent;
+    mutable bool localValuesAreCurrent;
+    OpenCLArray<cl_float>* globalValues;
+    OpenCLParameterSet* perDofValues;
+    mutable std::vector<std::vector<cl_float> > localPerDofValues;
+    std::vector<std::vector<cl::Kernel> > kernels;
+    std::vector<CustomIntegrator::ComputationType> stepType;
+    std::vector<bool> needsForces;
+    std::vector<bool> needsEnergy;
+    std::vector<bool> invalidatesForces;
+    std::vector<std::vector<int> > requiredRandoms;
+};
+
+/**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
