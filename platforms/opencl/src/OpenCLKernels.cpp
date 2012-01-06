@@ -3504,6 +3504,10 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
     if (globalValues != NULL)
         delete globalValues;
+    if (contextParameterValues != NULL)
+        delete contextParameterValues;
+    if (sumBuffer != NULL)
+        delete sumBuffer;
     if (perDofValues != NULL)
         delete perDofValues;
 }
@@ -3513,6 +3517,7 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
     globalValues = new OpenCLArray<cl_float>(cl, max(1, numGlobalVariables), "globalVariables", true);
+    sumBuffer = new OpenCLArray<cl_float>(cl, 3*system.getNumParticles(), "sumBuffer", true);
     perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables");
     prevStepSize = -1.0;
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
@@ -3526,7 +3531,14 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
         for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
             if (variable == integrator.getGlobalVariableName(i))
                 expressions["globals["+intToString(i)+"] = "] = expr;
+        for (int i = 0; i < (int) parameterNames.size(); i++)
+            if (variable == parameterNames[i]) {
+                expressions["params["+intToString(i)+"] = "] = expr;
+                modifiesParameters = true;
+            }
     }
+    if (expressions.size() == 0)
+        throw OpenMMException("Unknown global variable: "+variable);
     map<string, string> variables;
     variables["dt"] = "dt[0].y";
     variables["uniform"] = "uniform";
@@ -3534,6 +3546,8 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
     variables["energy"] = "energy";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+intToString(i)+"]";
+    for (int i = 0; i < (int) parameterNames.size(); i++)
+        variables[parameterNames[i]] = "params["+intToString(i)+"]";
     vector<pair<string, string> > functions;
     return OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
 }
@@ -3546,11 +3560,15 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
         expressions["position"+suffix+" = "] = expr;
     else if (variable == "v")
         expressions["velocity"+suffix+" = "] = expr;
+    else if (variable == "")
+        expressions["sum[3*index+"+intToString(component)+"] = "] = expr;
     else {
         for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
             if (variable == integrator.getPerDofVariableName(i))
                 expressions["perDof"+suffix.substr(1)+perDofValues->getParameterSuffix(i)+" = "] = expr;
     }
+    if (expressions.size() == 0)
+        throw OpenMMException("Unknown per-DOF variable: "+variable);
     map<string, string> variables;
     variables["x"] = "position"+suffix;
     variables["v"] = "velocity"+suffix;
@@ -3563,6 +3581,8 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
         variables[integrator.getGlobalVariableName(i)] = "globals["+intToString(i)+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
         variables[integrator.getPerDofVariableName(i)] = "perDof"+suffix.substr(1)+perDofValues->getParameterSuffix(i);
+    for (int i = 0; i < (int) parameterNames.size(); i++)
+        variables[parameterNames[i]] = "params["+intToString(i)+"]";
     vector<pair<string, string> > functions;
     return OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp"+intToString(component)+"_", "");
 }
@@ -3573,11 +3593,22 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     int numSteps = integrator.getNumComputations();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
+        
+        // Initialize various data structures.
+        
+        const map<string, double>& params = context.getParameters();
+        contextParameterValues = new OpenCLArray<cl_float>(cl, max(1, (int) params.size()), "contextParameters", true);
+        for (map<string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter) {
+            contextParameterValues->set(parameterNames.size(), (float) iter->second);
+            parameterNames.push_back(iter->first);
+        }
+        contextParameterValues->upload();
         kernels.resize(integrator.getNumComputations());
         requiredRandoms.resize(integrator.getNumComputations());
         needsForces.resize(numSteps, false);
         needsEnergy.resize(numSteps, false);
         invalidatesForces.resize(numSteps, false);
+        modifiesParameters = false;
         
         // Build a list of all variables that affect the forces, so we can tell which
         // steps invalidate them.
@@ -3591,6 +3622,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         }
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+        defines["WORK_GROUP_SIZE"] = intToString(OpenCLContext::ThreadBlockSize);
         
         // Loop over all steps and create the kernels for them.
         
@@ -3600,7 +3632,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             integrator.getComputationStep(step, type, variable, expression);
             stepType.push_back(type);
             invalidatesForces[step] = (type == CustomIntegrator::ConstrainPositions || affectsForce.find(variable) != affectsForce.end());
-            if (type == CustomIntegrator::ComputePerDof) {
+            if (type == CustomIntegrator::ComputePerDof || type == CustomIntegrator::ComputeSum) {
                 // Compute a per-DOF value.
                 
                 stringstream compute;
@@ -3614,7 +3646,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 needsForces[step] = usesVariable(expr, "f");
                 needsEnergy[step] = usesVariable(expr, "energy");
                 for (int i = 0; i < 3; i++)
-                    compute << createPerDofComputation(variable, expr, i, integrator);
+                    compute << createPerDofComputation(type == CustomIntegrator::ComputePerDof ? variable : "", expr, i, integrator);
                 if (variable == "x")
                     compute << "posq[index] = position;\n";
                 else if (variable == "v")
@@ -3647,10 +3679,37 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 kernel.setArg<cl::Buffer>(index++, cl.getForce().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, integration.getStepSize().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
+                kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
+                kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, integration.getRandom().getDeviceBuffer());
                 index += 2;
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     kernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
+                if (type == CustomIntegrator::ComputeSum) {
+                    // Create a second kernel for this step that sums the values.
+
+                    program = cl.createProgram(OpenCLKernelSources::customIntegratorSum, defines);
+                    kernel = cl::Kernel(program, "computeSum");
+                    kernels[step].push_back(kernel);
+                    index = 0;
+                    kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
+                    bool found = false;
+                    for (int j = 0; j < integrator.getNumGlobalVariables() && !found; j++)
+                        if (variable == integrator.getGlobalVariableName(j)) {
+                            kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
+                            kernel.setArg<cl_uint>(index++, j);
+                            found = true;
+                        }
+                    for (int j = 0; j < (int) parameterNames.size() && !found; j++)
+                        if (variable == parameterNames[j]) {
+                            kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
+                            kernel.setArg<cl_uint>(index++, j);
+                            found = true;
+                            modifiesParameters = true;
+                        }
+                    if (!found)
+                        throw OpenMMException("Unknown global variable: "+variable);
+                }
             }
             else if (type == CustomIntegrator::ComputeGlobal) {
                 // Compute a global value.
@@ -3668,9 +3727,13 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 int index = 0;
                 kernel.setArg<cl::Buffer>(index++, integration.getStepSize().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
+                kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
             }
         }
     }
+    
+    // Make sure all values (variables, parameters, etc.) stored on the device are up to date.
+    
     if (!deviceValuesAreCurrent) {
         perDofValues->setParameterValues(localPerDofValues);
         deviceValuesAreCurrent = true;
@@ -3682,6 +3745,16 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         integration.getStepSize().upload();
         prevStepSize = stepSize;
     }
+    bool paramsChanged = false;
+    for (int i = 0; i < (int) parameterNames.size(); i++) {
+        float value = (float) context.getParameter(parameterNames[i]);
+        if (value != contextParameterValues->get(i)) {
+            contextParameterValues->set(i, value);
+            paramsChanged = true;
+        }
+    }
+    if (paramsChanged)
+        contextParameterValues->upload();
 
     // Loop over computation steps in the integrator and execute them.
 
@@ -3703,32 +3776,53 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 if (j == i-1)
                     break;
             }
+            recordChangedParameters(context);
             RealOpenMM e = context.calcForcesAndEnergy(computeForce, computeEnergy);
             if (computeEnergy)
                 energy = e;
             forcesAreValid = true;
         }
         if (stepType[i] == CustomIntegrator::ComputePerDof) {
-            kernels[i][0].setArg<cl_uint>(7, integration.prepareRandomNumbers(requiredRandoms[i][0]));
-            kernels[i][0].setArg<cl_float>(8, energy);
+            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredRandoms[i][0]));
+            kernels[i][0].setArg<cl_float>(10, energy);
             cl.executeKernel(kernels[i][0], numAtoms);
         }
         else if (stepType[i] == CustomIntegrator::ComputeGlobal) {
-            kernels[i][0].setArg<cl_float>(2, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
-            kernels[i][0].setArg<cl_float>(3, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-            kernels[i][0].setArg<cl_float>(4, energy);
+            kernels[i][0].setArg<cl_float>(3, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
+            kernels[i][0].setArg<cl_float>(4, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            kernels[i][0].setArg<cl_float>(5, energy);
             cl.executeKernel(kernels[i][0], 1);
         }
-        else if (stepType[i] == CustomIntegrator::UpdateContextState)
+        else if (stepType[i] == CustomIntegrator::ComputeSum) {
+            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredRandoms[i][0]));
+            kernels[i][0].setArg<cl_float>(10, energy);
+            cl.executeKernel(kernels[i][0], numAtoms);
+            cl.executeKernel(kernels[i][1], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+        }
+        else if (stepType[i] == CustomIntegrator::UpdateContextState) {
+            recordChangedParameters(context);
             context.updateContextState();
+        }
         if (invalidatesForces[i])
             forcesAreValid = false;
     }
+    recordChangedParameters(context);
 
     // Update the time and step count.
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+}
+
+void OpenCLIntegrateCustomStepKernel::recordChangedParameters(ContextImpl& context) {
+    if (!modifiesParameters)
+        return;
+    contextParameterValues->download();
+    for (int i = 0; i < (int) parameterNames.size(); i++) {
+        float value = (float) context.getParameter(parameterNames[i]);
+        if (value != contextParameterValues->get(i))
+            context.setParameter(parameterNames[i], contextParameterValues->get(i));
+    }
 }
 
 void OpenCLIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, vector<double>& values) const {

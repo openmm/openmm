@@ -309,6 +309,76 @@ void testMonteCarlo() {
         ASSERT_USUALLY_EQUAL_TOL((double) counts[i]/numIterations, expected[i]/sum, 0.01);
 }
 
+/**
+ * Test the ComputeSum operation.
+ */
+void testSum() {
+    const int numParticles = 200;
+    const double boxSize = 10;
+    OpenCLPlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* nb = new NonbondedForce();
+    system.addForce(nb);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.5);
+        nb->addParticle(i%2 == 0 ? 1 : -1, 0.1, 1);
+        bool close = true;
+        while (close) {
+            positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+            close = false;
+            for (int j = 0; j < i; ++j) {
+                Vec3 delta = positions[i]-positions[j];
+                if (delta.dot(delta) < 0.1)
+                    close = true;
+            }
+        }
+    }
+    CustomIntegrator integrator(0.01);
+    integrator.addGlobalVariable("ke", 0);
+    integrator.addComputePerDof("v", "v+dt*f/m");
+    integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addComputeSum("ke", "m*v*v/2");
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    
+    // See if the sum is being computed correctly.
+    
+    State state = context.getState(State::Energy);
+    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
+    for (int i = 0; i < 100; ++i) {
+        state = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(state.getKineticEnergy(), integrator.getGlobalVariable(0), 1e-5);
+        integrator.step(1);
+    }
+}
+
+/**
+ * Test an integrator that both uses and modifies a context parameter.
+ */
+void testParameter() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    AndersenThermostat* thermostat = new AndersenThermostat(0.1, 0.1);
+    system.addForce(thermostat);
+    CustomIntegrator integrator(0.1);
+    integrator.addGlobalVariable("temp", 0);
+    integrator.addComputeGlobal("temp", "AndersenTemperature");
+    integrator.addComputeGlobal("AndersenTemperature", "temp*2");
+    Context context(system, integrator, platform);
+    
+    // See if the parameter is being used correctly.
+    
+    for (int i = 0; i < 10; i++) {
+        integrator.step(1);
+        ASSERT_EQUAL_TOL(context.getParameter("AndersenTemperature"), 0.1*(1<<(i+1)), 1e-5);
+    }
+}
+
 int main() {
     try {
         testSingleBond();
@@ -316,6 +386,8 @@ int main() {
 //        testVelocityConstraints();
         testWithThermostat();
         testMonteCarlo();
+        testSum();
+        testParameter();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

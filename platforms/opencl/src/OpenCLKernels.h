@@ -883,7 +883,7 @@ private:
 class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), perDofValues(NULL) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -937,12 +937,15 @@ public:
 private:
     std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator);
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator);
+    void recordChangedParameters(ContextImpl& context);
     OpenCLContext& cl;
     double prevStepSize, energy;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent;
+    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters;
     mutable bool localValuesAreCurrent;
     OpenCLArray<cl_float>* globalValues;
+    OpenCLArray<cl_float>* contextParameterValues;
+    OpenCLArray<cl_float>* sumBuffer;
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValues;
     std::vector<std::vector<cl::Kernel> > kernels;
@@ -951,6 +954,7 @@ private:
     std::vector<bool> needsEnergy;
     std::vector<bool> invalidatesForces;
     std::vector<std::vector<int> > requiredRandoms;
+    std::vector<std::string> parameterNames;
 };
 
 /**
