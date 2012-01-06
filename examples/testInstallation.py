@@ -24,7 +24,7 @@ print
 forces = [None]*numPlatforms
 for i in range(numPlatforms):
     platform = Platform.getPlatform(i)
-    print i, platform.getName(),
+    print i+1, platform.getName(),
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
     simulation = Simulation(pdb.topology, system, integrator, platform)
     simulation.context.setPositions(pdb.positions)
@@ -36,15 +36,16 @@ for i in range(numPlatforms):
 
 # See how well the platforms agree.
 
-print
-print "Maximum difference in forces between platforms:"
-print
-for i in range(numPlatforms):
-    for j in range(i):
-        if forces[i] is not None and forces[j] is not None:
-            maxError = 0.0
-            for f1, f2 in zip(forces[i], forces[j]):
-                d = f1-f2
-                error = sqrt((d[0]*d[0]+d[1]*d[1]+d[2]*d[2])/(f1[0]*f1[0]+f1[1]*f1[1]+f1[2]*f1[2]))
-                maxError = max(maxError, error)
-            print "%s vs. %s: %g" % (Platform.getPlatform(j).getName(), Platform.getPlatform(i).getName(), maxError)
+if numPlatforms > 1:
+    print
+    print "Median difference in forces between platforms:"
+    print
+    for i in range(numPlatforms):
+        for j in range(i):
+            if forces[i] is not None and forces[j] is not None:
+                errors = []
+                for f1, f2 in zip(forces[i], forces[j]):
+                    d = f1-f2
+                    error = sqrt((d[0]*d[0]+d[1]*d[1]+d[2]*d[2])/(f1[0]*f1[0]+f1[1]*f1[1]+f1[2]*f1[2]))
+                    errors.append(error)
+                print "%s vs. %s: %g" % (Platform.getPlatform(j).getName(), Platform.getPlatform(i).getName(), sorted(errors)[len(errors)/2])
