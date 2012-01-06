@@ -26,7 +26,7 @@ for i in range(numPlatforms):
     platform = Platform.getPlatform(i)
     print i, platform.getName(),
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
-    simulation = Simulation(pdb.topology, system, integrator)
+    simulation = Simulation(pdb.topology, system, integrator, platform)
     simulation.context.setPositions(pdb.positions)
     try:
         forces[i] = simulation.context.getState(getForces=True).getForces()
