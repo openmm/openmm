@@ -1303,7 +1303,6 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
                                         values[0], values[1], values[2], values[3] );
                         if( errors++ > 10 ){
                            (void) fflush( amoebaGpu->log );
-                           exit(0);
                         }
                     } 
             }
@@ -1312,7 +1311,6 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
     if( !errors ){
         (void) fprintf( amoebaGpu->log, "No errors in grid readback\n" );
     }
-exit(0);
 #endif
 
     psTorsionTorsionGrids->Upload();
@@ -2391,8 +2389,9 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                 psVdwReductionID->_pSysData[count].w   = ii;
             }
             if( ivMapping[ii].size() > 3 ){
-                (void) fprintf( stderr, "Atom %u has %u reductions -- invalid -- aborting", ii, static_cast<unsigned int>(ivMapping[ii].size()) );
-                exit(1);
+                std::stringstream buffer;
+                buffer << "Atom " << ii << " has " << ivMapping[ii].size() << " reductions: value should be < 3.";
+                throw OpenMM::OpenMMException( buffer.str() );
             }
             count++;
         }
@@ -3776,22 +3775,23 @@ unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int shared
 
 FILE* getWriteToFilePtr( const std::string& fname, int step )
 {
-   std::stringstream fileName;
-   fileName << fname;
-   fileName << "_" << step;
-   fileName << ".txt";
+    std::stringstream fileName;
+    fileName << fname;
+    fileName << "_" << step;
+    fileName << ".txt";
 
 #ifdef WIN32
-   FILE* filePtr;
-   fopen_s( &filePtr, fileName.str().c_str(), "w" );
+    FILE* filePtr;
+    fopen_s( &filePtr, fileName.str().c_str(), "w" );
 #else
-   FILE* filePtr = fopen( fileName.str().c_str(), "w" );
+    FILE* filePtr = fopen( fileName.str().c_str(), "w" );
 #endif
-   if( filePtr == NULL ){
-      (void) fprintf( stderr, "Could not open file=<%s> for writitng.", fileName.str().c_str() );
-      exit(-1);
-   }
-   return filePtr;
+    if( filePtr == NULL ){
+        std::stringstream buffer;
+        buffer << "Could not open file " << fileName.str() << " for writitng.";
+        throw OpenMM::OpenMMException( buffer.str() );
+    }
+    return filePtr;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -3820,8 +3820,9 @@ FILE* getWriteToFilePtrV( const std::string& fname, std::vector<int>& fileId )
     FILE* filePtr = fopen( fileName.str().c_str(), "w" );
  #endif
     if( filePtr == NULL ){
-       (void) fprintf( stderr, "Could not open file=<%s> for writing.", fileName.str().c_str() );
-       exit(-1);
+        std::stringstream buffer;
+        buffer << "Could not open file " << fileName.str() << " for writitng.";
+        throw OpenMM::OpenMMException( buffer.str() );
     }
     return filePtr;
 }
@@ -4077,7 +4078,7 @@ void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle,
    Check for nans in Cuda array
 
       (1) download data from gpu
-      (2) check for nans and large values (> 1.0e+08) in array, and report if any found and exit
+      (2) check for nans and large values (> 1.0e+08) in array, and report if any found
       (3) report largest entry in absolute value, if no problems detected 
       (4) also by editing 'targetParticle', can track values around that index
 
@@ -4133,7 +4134,6 @@ void checkForNans( int numberOfParticles, int entriesPerParticle,
         (void) fprintf( log, "%s %6d no errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
     } else {
         (void) fprintf( log, "%s %6d errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
-        exit(-1);
     }
 
 }
@@ -4143,7 +4143,7 @@ void checkForNans( int numberOfParticles, int entriesPerParticle,
    Check for nans in Cuda<float4> array
 
       (1) download data from gpu
-      (2) check for nans and large values (> 1.0e+08) in array, and report if any found and exit
+      (2) check for nans and large values (> 1.0e+08) in array, and report if any found
       (3) report largest entry in absolute value, if no problems detected 
       (4) also by editing 'targetParticle', can track values around that index
 
@@ -4203,7 +4203,6 @@ void checkForNansFloat4( int numberOfParticles, CUDAStream<float4>* array, int* 
         (void) fprintf( log, "%s %6d no errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
     } else {
         (void) fprintf( log, "%s %6d errors detected maxValue=%15.7e %6d.\n", idString.c_str(), iteration, maxValue, maxIndex );
-        exit(-1);
     }
 }
 
@@ -4615,9 +4614,9 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
             }
         }
         if( nansPresent ){
-            (void) fprintf( amoebaGpu->log, "epsilon nan - exiting\n" );
-            (void) fflush( amoebaGpu->log );
-            exit(-1);
+            std::stringstream buffer;
+            buffer << "epsilon nan exiting.";
+            throw OpenMM::OpenMMException( buffer.str() );
         }
 
     }

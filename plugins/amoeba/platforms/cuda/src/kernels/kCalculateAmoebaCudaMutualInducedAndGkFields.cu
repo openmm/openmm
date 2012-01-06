@@ -27,6 +27,7 @@
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
+#include "openmm/OpenMMException.h"
 
 #include <stdio.h>
 
@@ -586,10 +587,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         // check for nans
 
         if( currentEpsilon != currentEpsilon ){
-            (void) fprintf( stderr, "cudaComputeAmoebaMutualInducedAndGkFieldBySOR at timestep=%d iteration=%3d eps is nan -- exiting.\n",
-                            timestep, iteration );
-            (void) fflush( NULL );
-            exit(-1);
+             throw OpenMM::OpenMMException("GkFieldBySOR: Nans detected in induced dipole calculation.");
         }
 
         // converged?

@@ -27,6 +27,7 @@
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
+#include "openmm/OpenMMException.h"
 
 #include <stdio.h>
 
@@ -549,11 +550,10 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
             done = 1;
         }
 
-        // exit if nan
+        // throw exception if nan detected
 
         if( amoebaGpu->mutualInducedCurrentEpsilon != amoebaGpu->mutualInducedCurrentEpsilon ){
-            (void) fprintf( stderr, "PME MI iteration=%3d eps is nan -- exiting.\n", iteration );
-            exit(0);
+            throw OpenMM::OpenMMException("PME induced dipole calculation detected nans." );
         }
 
         iteration++;

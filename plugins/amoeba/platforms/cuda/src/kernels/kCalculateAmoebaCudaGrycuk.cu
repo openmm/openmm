@@ -423,7 +423,7 @@ void kCalculateGrycukGbsaForces2( amoebaGpuContext amoebaGpu )
         cudaLoadCudaFloatArray( gpu->natoms,  1, gpu->psBornRadii, outputVector, gpu->psAtomIndex->_pSysData, 1.0f ); 
         cudaWriteVectorOfDoubleVectorsToFile( "GryF", fileId, outputVector );
         delete temp;
-        exit(0);
+        //exit(0);
     }    
 
    // ---------------------------------------------------------------------------------------

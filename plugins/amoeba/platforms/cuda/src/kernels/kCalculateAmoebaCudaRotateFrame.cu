@@ -27,6 +27,7 @@
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
+#include "openmm/OpenMMException.h"
 
 #include <stdio.h>
 #include <cuda.h>
@@ -480,9 +481,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     // check if induce dipole calculation converged -- abort if it did not
 
     if( amoebaGpu->mutualInducedDone == 0 ){
-       (void) fprintf( stderr, "%s induced dipole calculation did not converge -- aborting!\n", methodName.c_str() );
-       (void) fflush( stderr );
-       exit(-1);
+       throw OpenMM::OpenMMException("Induced dipole calculation did not converge" );
     }
 
     // calculate electrostatic forces
