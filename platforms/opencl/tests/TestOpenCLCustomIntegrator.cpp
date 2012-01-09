@@ -381,8 +381,8 @@ void testParameter() {
 
 int main() {
     try {
-        testSingleBond();
-//        testConstraints();
+       testSingleBond();
+        testConstraints();
 //        testVelocityConstraints();
         testWithThermostat();
         testMonteCarlo();

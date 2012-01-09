@@ -54,9 +54,10 @@ public:
      * @param functions      defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param functionParams the variable name containing the parameters for each tabulated function
+     * @param tempType       the type of value to use for temporary variables (defaults to "float")
      */
     static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
+            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="float");
     /**
      * Generate the source code for calculating a set of expressions.
      *
@@ -66,9 +67,10 @@ public:
      * @param functions      defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param functionParams the variable name containing the parameters for each tabulated function
+     * @param tempType       the type of value to use for temporary variables (defaults to "float")
      */
     static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
+            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="float");
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
@@ -91,7 +93,7 @@ private:
     static void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
             const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams,
-            const std::vector<Lepton::ParsedExpression>& allExpressions);
+            const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
     static std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     static void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);

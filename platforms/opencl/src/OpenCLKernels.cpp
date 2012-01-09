@@ -3584,7 +3584,8 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     for (int i = 0; i < (int) parameterNames.size(); i++)
         variables[parameterNames[i]] = "params["+intToString(i)+"]";
     vector<pair<string, string> > functions;
-    return OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp"+intToString(component)+"_", "");
+    string tempType = (cl.getSupportsDoublePrecision() ? "double" : "float");
+    return OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp"+intToString(component)+"_", "", tempType);
 }
 
 void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -3624,15 +3625,43 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["WORK_GROUP_SIZE"] = intToString(OpenCLContext::ThreadBlockSize);
         
+        // Record information about all the computation steps.
+        
+        stepType.resize(numSteps);
+        vector<string> variable(numSteps);
+        vector<Lepton::ParsedExpression> expression(numSteps);
+        for (int step = 0; step < numSteps; step++) {
+            string expr;
+            integrator.getComputationStep(step, stepType[step], variable[step], expr);
+            if (expr.size() > 0)
+                expression[step] = Lepton::Parser::parse(expr).optimize();
+        }
+        
+        // Determine how each step will represent the position (as just a value, or a value plus a delta).
+        
+        vector<bool> storePosAsDelta(numSteps, false);
+        vector<bool> loadPosAsDelta(numSteps, false);
+        bool beforeConstrain = false;
+        for (int step = numSteps-1; step >= 0; step--) {
+            if (stepType[step] == CustomIntegrator::ConstrainPositions)
+                beforeConstrain = true;
+            else if (stepType[step] == CustomIntegrator::ComputePerDof && variable[step] == "x" && beforeConstrain)
+                storePosAsDelta[step] = true;
+        }
+        bool storedAsDelta = false;
+        for (int step = 0; step < numSteps; step++) {
+            loadPosAsDelta[step] = storedAsDelta;
+            if (storePosAsDelta[step] == true)
+                storedAsDelta = true;
+            if (stepType[step] == CustomIntegrator::ConstrainPositions)
+                storedAsDelta = false;
+        }
+        
         // Loop over all steps and create the kernels for them.
         
         for (int step = 0; step < numSteps; step++) {
-            CustomIntegrator::ComputationType type;
-            string variable, expression;
-            integrator.getComputationStep(step, type, variable, expression);
-            stepType.push_back(type);
-            invalidatesForces[step] = (type == CustomIntegrator::ConstrainPositions || affectsForce.find(variable) != affectsForce.end());
-            if (type == CustomIntegrator::ComputePerDof || type == CustomIntegrator::ComputeSum) {
+            invalidatesForces[step] = (stepType[step] == CustomIntegrator::ConstrainPositions || affectsForce.find(variable[step]) != affectsForce.end());
+            if (stepType[step] == CustomIntegrator::ComputePerDof || stepType[step] == CustomIntegrator::ComputeSum) {
                 // Compute a per-DOF value.
                 
                 stringstream compute;
@@ -3642,15 +3671,19 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     compute << buffer.getType()<<" perDofy"<<intToString(i+1)<<" = perDofValues"<<intToString(i+1)<<"[3*index+1];\n";
                     compute << buffer.getType()<<" perDofz"<<intToString(i+1)<<" = perDofValues"<<intToString(i+1)<<"[3*index+2];\n";
                 }
-                Lepton::ParsedExpression expr = Lepton::Parser::parse(expression).optimize();
-                needsForces[step] = usesVariable(expr, "f");
-                needsEnergy[step] = usesVariable(expr, "energy");
+                needsForces[step] = usesVariable(expression[step], "f");
+                needsEnergy[step] = usesVariable(expression[step], "energy");
                 for (int i = 0; i < 3; i++)
-                    compute << createPerDofComputation(type == CustomIntegrator::ComputePerDof ? variable : "", expr, i, integrator);
-                if (variable == "x")
-                    compute << "posq[index] = position;\n";
-                else if (variable == "v")
-                    compute << "velm[index] = velocity;\n";
+                    compute << createPerDofComputation(stepType[step] == CustomIntegrator::ComputePerDof ? variable[step] : "", expression[step], i, integrator);
+                string convert = (cl.getSupportsDoublePrecision() ? "convert_float4(" : "(");
+                if (variable[step] == "x") {
+                    if (storePosAsDelta[step])
+                        compute << "posDelta[index] = " << convert << "position-posq[index]);\n";
+                    else
+                        compute << "posq[index] = " << convert << "position);\n";
+                }
+                else if (variable[step] == "v")
+                    compute << "velm[index] = " << convert << "velocity);\n";
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
                     const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
                     compute << "perDofValues"<<intToString(i+1)<<"[3*index] = perDofx"<<intToString(i+1)<<";\n";
@@ -3666,12 +3699,16 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     args << ", __global " << buffer.getType() << "* restrict " << valueName;
                 }
                 replacements["PARAMETER_ARGUMENTS"] = args.str();
+                if (loadPosAsDelta[step])
+                    defines["LOAD_POS_AS_DELTA"] = "1";
+                else if (defines.find("LOAD_POS_AS_DELTA") != defines.end())
+                    defines.erase("LOAD_POS_AS_DELTA");
                 cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorPerDof, replacements), defines);
                 cl::Kernel kernel = cl::Kernel(program, "computePerDof");
                 kernels[step].push_back(kernel);
-                if (usesVariable(expr, "uniform"))
+                if (usesVariable(expression[step], "uniform"))
                     throw OpenMMException("OpenCL platform does not currently support per-DOF uniform random numbers");
-                requiredRandoms[step].push_back(numAtoms*usesVariable(expr, "gaussian"));
+                requiredRandoms[step].push_back(numAtoms*usesVariable(expression[step], "gaussian"));
                 int index = 0;
                 kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
@@ -3685,39 +3722,38 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 index += 2;
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     kernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
-                if (type == CustomIntegrator::ComputeSum) {
+                if (stepType[step] == CustomIntegrator::ComputeSum) {
                     // Create a second kernel for this step that sums the values.
 
-                    program = cl.createProgram(OpenCLKernelSources::customIntegratorSum, defines);
+                    program = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
                     kernel = cl::Kernel(program, "computeSum");
                     kernels[step].push_back(kernel);
                     index = 0;
                     kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
                     bool found = false;
                     for (int j = 0; j < integrator.getNumGlobalVariables() && !found; j++)
-                        if (variable == integrator.getGlobalVariableName(j)) {
+                        if (variable[step] == integrator.getGlobalVariableName(j)) {
                             kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
                             kernel.setArg<cl_uint>(index++, j);
                             found = true;
                         }
                     for (int j = 0; j < (int) parameterNames.size() && !found; j++)
-                        if (variable == parameterNames[j]) {
+                        if (variable[step] == parameterNames[j]) {
                             kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
                             kernel.setArg<cl_uint>(index++, j);
                             found = true;
                             modifiesParameters = true;
                         }
                     if (!found)
-                        throw OpenMMException("Unknown global variable: "+variable);
+                        throw OpenMMException("Unknown global variable: "+variable[step]);
                 }
             }
-            else if (type == CustomIntegrator::ComputeGlobal) {
+            else if (stepType[step] == CustomIntegrator::ComputeGlobal) {
                 // Compute a global value.
 
                 stringstream compute;
-                Lepton::ParsedExpression expr = Lepton::Parser::parse(expression).optimize();
-                needsEnergy[step] = usesVariable(expr, "energy");
-                compute << createGlobalComputation(variable, expr, integrator);
+                needsEnergy[step] = usesVariable(expression[step], "energy");
+                compute << createGlobalComputation(variable[step], expression[step], integrator);
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
                 stringstream args;
@@ -3728,6 +3764,16 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 kernel.setArg<cl::Buffer>(index++, integration.getStepSize().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, globalValues->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, contextParameterValues->getDeviceBuffer());
+            }
+            else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
+                // Apply position constraints.
+
+                cl::Program program = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
+                cl::Kernel kernel = cl::Kernel(program, "applyPositionDeltas");
+                kernels[step].push_back(kernel);
+                int index = 0;
+                kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+                kernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
             }
         }
     }
@@ -3802,6 +3848,10 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         else if (stepType[i] == CustomIntegrator::UpdateContextState) {
             recordChangedParameters(context);
             context.updateContextState();
+        }
+        else if (stepType[i] == CustomIntegrator::ConstrainPositions) {
+            cl.getIntegrationUtilities().applyConstraints(integrator.getConstraintTolerance());
+            cl.executeKernel(kernels[i][0], numAtoms);
         }
         if (invalidatesForces[i])
             forcesAreValid = false;

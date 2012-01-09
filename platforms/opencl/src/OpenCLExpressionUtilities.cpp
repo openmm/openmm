@@ -47,38 +47,38 @@ string OpenCLExpressionUtilities::intToString(int value) {
 }
 
 string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
-        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams) {
+        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams, const string& tempType) {
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
         variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
-    return createExpressions(expressions, variableNodes, functions, prefix, functionParams);
+    return createExpressions(expressions, variableNodes, functions, prefix, functionParams, tempType);
 }
 
 string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const vector<pair<ExpressionTreeNode, string> >& variables,
-        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams) {
+        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams, const string& tempType) {
     stringstream out;
     vector<ParsedExpression> allExpressions;
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter)
         allExpressions.push_back(iter->second);
     vector<pair<ExpressionTreeNode, string> > temps = variables;
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter) {
-        processExpression(out, iter->second.getRootNode(), temps, functions, prefix, functionParams, allExpressions);
+        processExpression(out, iter->second.getRootNode(), temps, functions, prefix, functionParams, allExpressions, tempType);
         out << iter->first << getTempName(iter->second.getRootNode(), temps) << ";\n";
     }
     return out.str();
 }
 
 void OpenCLExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
-        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams, const vector<ParsedExpression>& allExpressions) {
+        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams, const vector<ParsedExpression>& allExpressions, const string& tempType) {
     for (int i = 0; i < (int) temps.size(); i++)
         if (temps[i].first == node)
             return;
     for (int i = 0; i < (int) node.getChildren().size(); i++)
-        processExpression(out, node.getChildren()[i], temps, functions, prefix, functionParams, allExpressions);
+        processExpression(out, node.getChildren()[i], temps, functions, prefix, functionParams, allExpressions, tempType);
     string name = prefix+intToString(temps.size());
     bool hasRecordedNode = false;
     
-    out << "float " << name << " = ";
+    out << tempType << " " << name << " = ";
     switch (node.getOperation().getId()) {
         case Operation::CONSTANT:
             out << doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
@@ -108,7 +108,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             string derivName = name;
             if (valueNode != NULL && derivNode != NULL) {
                 string name2 = prefix+intToString(temps.size());
-                out << "float " << name2 << " = 0.0f;\n";
+                out << tempType << " " << name2 << " = 0.0f;\n";
                 if (isDeriv) {
                     valueName = name2;
                     temps.push_back(make_pair(*valueNode, name2));
@@ -266,7 +266,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                         string name2 = prefix+intToString(temps.size());
                         names.push_back(name2);
                         temps.push_back(make_pair(*iter->second, name2));
-                        out << "float " << name2 << " = 0.0f;\n";
+                        out << tempType << " " << name2 << " = 0.0f;\n";
                     }
                 }
                 out << "{\n";
