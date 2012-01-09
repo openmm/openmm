@@ -413,9 +413,9 @@ class SwigInputBuilder:
                     valueUnits=self.configModule.UNITS[key]
                 elif ("*", methName) in self.configModule.UNITS:
                     valueUnits=self.configModule.UNITS[("*", methName)]
-                elif methName.startswith('get') and returnType not in ('void', 'int', 'std::string'):
-                    s = 'do not know how to add units to %s::%s' \
-                        % (shortClassName, methName)
+                elif methName.startswith('get') and returnType not in ('void', 'int', 'std::string', 'const std::string &'):
+                    s = 'do not know how to add units to %s %s::%s' \
+                        % (returnType, shortClassName, methName)
                     raise Exception(s)
                 else:
                     valueUnits=[None, ()]
