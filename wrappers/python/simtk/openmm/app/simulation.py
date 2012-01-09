@@ -67,7 +67,11 @@ class Simulation(object):
                 if nextReport[i][0] > 0 and nextReport[i][0] <= nextSteps:
                     nextSteps = nextReport[i][0]
                     anyReport = True
-            self.integrator.step(nextSteps)
+            stepsToGo = nextSteps
+            while stepsToGo > 10:
+                self.integrator.step(10) # Only take 10 steps at a time, to give Python more chances to respond to a control-c.
+                stepsToGo -= 10
+            self.integrator.step(stepsToGo)
             self.currentStep += nextSteps
             if anyReport:
                 getPositions = False
