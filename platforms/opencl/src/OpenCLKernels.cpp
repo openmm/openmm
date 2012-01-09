@@ -3677,8 +3677,12 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     compute << createPerDofComputation(stepType[step] == CustomIntegrator::ComputePerDof ? variable[step] : "", expression[step], i, integrator);
                 string convert = (cl.getSupportsDoublePrecision() ? "convert_float4(" : "(");
                 if (variable[step] == "x") {
-                    if (storePosAsDelta[step])
-                        compute << "posDelta[index] = " << convert << "position-posq[index]);\n";
+                    if (storePosAsDelta[step]) {
+                        if (cl.getSupportsDoublePrecision())
+                            compute << "posDelta[index] = convert_float4(position-convert_double4(posq[index]));\n";
+                        else
+                            compute << "posDelta[index] = position-posq[index];\n";
+                    }
                     else
                         compute << "posq[index] = " << convert << "position);\n";
                 }
