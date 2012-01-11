@@ -117,7 +117,7 @@ namespace OpenMM {
  * integrator:
  * 
  * <tt><pre>
- * CustomIntegrator integrator;
+ * CustomIntegrator integrator(0.001);
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
  * integrator.addComputePerDof("x", "x+dt*v");
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
@@ -140,7 +140,7 @@ namespace OpenMM {
  * both these problems:
  * 
  * <tt><pre>
- * CustomIntegrator integrator;
+ * CustomIntegrator integrator(0.001);
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
  * integrator.addComputePerDof("x", "x+dt*v");
  * integrator.addConstrainPositions();
