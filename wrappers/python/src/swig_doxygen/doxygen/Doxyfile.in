@@ -614,7 +614,7 @@ EXCLUDE_SYMLINKS       = NO
 # for example use the pattern */test/*
 
 EXCLUDE_PATTERNS       = */tests/* \
-                         */src/* \
+                         */openmmapi/src/* \
                          */.svn/* \
                          *OpenMMFortranModule.f90 \
                          *OpenMMCWrapper.h
