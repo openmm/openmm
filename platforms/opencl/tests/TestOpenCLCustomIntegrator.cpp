@@ -155,8 +155,7 @@ void testConstraints() {
  * Test an integrator that applies constraints directly to velocities.
  */
 void testVelocityConstraints() {
-    const int numParticles = 8;
-    const double temp = 500.0;
+    const int numParticles = 10;
     OpenCLPlatform platform;
     System system;
     CustomIntegrator integrator(0.002);
@@ -171,7 +170,21 @@ void testVelocityConstraints() {
         system.addParticle(i%2 == 0 ? 5.0 : 10.0);
         forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    for (int i = 0; i < numParticles-1; ++i)
+    
+    // Constrain the first three particles with SHAKE.
+    
+    system.addConstraint(0, 1, 1.0);
+    system.addConstraint(1, 2, 1.0);
+    
+    // Constrain the next three with SETTLE.
+    
+    system.addConstraint(3, 4, 1.0);
+    system.addConstraint(5, 4, 1.0);
+    system.addConstraint(3, 5, sqrt(2.0));
+    
+    // Constraint the rest with CCMA.
+    
+    for (int i = 6; i < numParticles-1; ++i)
         system.addConstraint(i, i+1, 1.0);
     system.addForce(forceField);
     Context context(system, integrator, platform);
@@ -191,7 +204,8 @@ void testVelocityConstraints() {
     
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy);
+        integrator.step(2);
+        State state = context.getState(State::Positions | State::Velocities | State::Energy);
         for (int j = 0; j < system.getNumConstraints(); ++j) {
             int particle1, particle2;
             double distance;
@@ -200,13 +214,18 @@ void testVelocityConstraints() {
             Vec3 p2 = state.getPositions()[particle2];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 2e-5);
+            if (i > 0) {
+                Vec3 v1 = state.getVelocities()[particle1];
+                Vec3 v2 = state.getVelocities()[particle2];
+                double vel = (v1-v2).dot(p1-p2);
+                ASSERT_EQUAL_TOL(0.0, vel, 2e-5);
+            }
         }
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-        if (i == 1)
+        if (i == 0)
             initialEnergy = energy;
-        else if (i > 1)
+        else if (i > 0)
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
-        integrator.step(2);
     }
 }
 
@@ -383,7 +402,7 @@ int main() {
     try {
        testSingleBond();
         testConstraints();
-//        testVelocityConstraints();
+        testVelocityConstraints();
         testWithThermostat();
         testMonteCarlo();
         testSum();

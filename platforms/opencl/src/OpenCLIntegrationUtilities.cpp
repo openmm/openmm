@@ -91,7 +91,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
-        ccmaConvergedBuffer(NULL), hasInitializedConstraintKernels(false) {
+        ccmaConvergedBuffer(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
     // Create workspace arrays.
 
     posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
@@ -101,10 +101,15 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
     // Create kernels for enforcing constraints.
 
+    map<string, string> velocityDefines;
+    velocityDefines["CONSTRAIN_VELOCITIES"] = "1";
     cl::Program settleProgram = context.createProgram(OpenCLKernelSources::settle);
-    settleKernel = cl::Kernel(settleProgram, "applySettle");
+    settlePosKernel = cl::Kernel(settleProgram, "applySettle");
+    settleVelKernel = cl::Kernel(settleProgram, "constrainVelocities");
     cl::Program shakeProgram = context.createProgram(OpenCLKernelSources::shakeHydrogens);
-    shakeKernel = cl::Kernel(shakeProgram, "applyShakeToHydrogens");
+    shakePosKernel = cl::Kernel(shakeProgram, "applyShakeToHydrogens");
+    shakeProgram = context.createProgram(OpenCLKernelSources::shakeHydrogens, velocityDefines);
+    shakeVelKernel = cl::Kernel(shakeProgram, "applyShakeToHydrogens");
 
     // Record the set of constraints and how many constraints each atom is involved in.
 
@@ -502,9 +507,13 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(numAtoms);
         cl::Program ccmaProgram = context.createProgram(OpenCLKernelSources::ccma, defines);
         ccmaDirectionsKernel = cl::Kernel(ccmaProgram, "computeConstraintDirections");
-        ccmaForceKernel = cl::Kernel(ccmaProgram, "computeConstraintForce");
+        ccmaPosForceKernel = cl::Kernel(ccmaProgram, "computeConstraintForce");
         ccmaMultiplyKernel = cl::Kernel(ccmaProgram, "multiplyByConstraintMatrix");
-        ccmaUpdateKernel = cl::Kernel(ccmaProgram, "updateAtomPositions");
+        ccmaPosUpdateKernel = cl::Kernel(ccmaProgram, "updateAtomPositions");
+        defines["CONSTRAIN_VELOCITIES"] = "1";
+        ccmaProgram = context.createProgram(OpenCLKernelSources::ccma, defines);
+        ccmaVelForceKernel = cl::Kernel(ccmaProgram, "computeConstraintForce");
+        ccmaVelUpdateKernel = cl::Kernel(ccmaProgram, "updateAtomPositions");
     }
 }
 
@@ -550,39 +559,63 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
 }
 
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {
+    applyConstraints(false, tol);
+}
+
+void OpenCLIntegrationUtilities::applyVelocityConstraints(double tol) {
+    applyConstraints(true, tol);
+}
+
+void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, double tol) {
+    bool hasInitialized;
+    cl::Kernel settleKernel, shakeKernel, ccmaForceKernel, ccmaUpdateKernel;
+    if (constrainVelocities) {
+        hasInitialized = hasInitializedVelConstraintKernels;
+        settleKernel = settleVelKernel;
+        shakeKernel = shakeVelKernel;
+        ccmaForceKernel = ccmaVelForceKernel;
+        ccmaUpdateKernel = ccmaVelUpdateKernel;
+        hasInitializedVelConstraintKernels = true;
+    }
+    else {
+        hasInitialized = hasInitializedPosConstraintKernels;
+        settleKernel = settlePosKernel;
+        shakeKernel = shakePosKernel;
+        ccmaForceKernel = ccmaPosForceKernel;
+        ccmaUpdateKernel = ccmaPosUpdateKernel;
+        hasInitializedPosConstraintKernels = true;
+    }
     if (settleAtoms != NULL) {
-        if (!hasInitializedConstraintKernels) {
+        if (!hasInitialized) {
             settleKernel.setArg<cl_int>(0, settleAtoms->getSize());
             settleKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
             settleKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(5, context.getVelm().getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(6, settleAtoms->getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(7, settleParams->getDeviceBuffer());
+            settleKernel.setArg<cl::Buffer>(4, context.getVelm().getDeviceBuffer());
+            settleKernel.setArg<cl::Buffer>(5, settleAtoms->getDeviceBuffer());
+            settleKernel.setArg<cl::Buffer>(6, settleParams->getDeviceBuffer());
         }
         settleKernel.setArg<cl_float>(1, (cl_float) tol);
         context.executeKernel(settleKernel, settleAtoms->getSize());
     }
     if (shakeAtoms != NULL) {
-        if (!hasInitializedConstraintKernels) {
+        if (!hasInitialized) {
             shakeKernel.setArg<cl_int>(0, shakeAtoms->getSize());
             shakeKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(5, shakeAtoms->getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(6, shakeParams->getDeviceBuffer());
+            shakeKernel.setArg<cl::Buffer>(3, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
+            shakeKernel.setArg<cl::Buffer>(4, shakeAtoms->getDeviceBuffer());
+            shakeKernel.setArg<cl::Buffer>(5, shakeParams->getDeviceBuffer());
         }
         shakeKernel.setArg<cl_float>(1, (cl_float) tol);
         context.executeKernel(shakeKernel, shakeAtoms->getSize());
     }
     if (ccmaAtoms != NULL) {
-        if (!hasInitializedConstraintKernels) {
+        if (!hasInitialized) {
             ccmaDirectionsKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaDirectionsKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
             ccmaDirectionsKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
-            ccmaForceKernel.setArg<cl::Buffer>(2, posDelta->getDeviceBuffer());
+            ccmaForceKernel.setArg<cl::Buffer>(2, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(3, ccmaReducedMass->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(4, ccmaDelta1->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(5, ccmaConverged->getDeviceBuffer());
@@ -594,7 +627,7 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol) {
             ccmaUpdateKernel.setArg<cl::Buffer>(0, ccmaNumAtomConstraints->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(1, ccmaAtomConstraints->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(2, ccmaDistance->getDeviceBuffer());
-            ccmaUpdateKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
+            ccmaUpdateKernel.setArg<cl::Buffer>(3, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(4, context.getVelm().getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(5, ccmaDelta1->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(6, ccmaDelta2->getDeviceBuffer());
@@ -625,7 +658,6 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol) {
             }
         }
     }
-    hasInitializedConstraintKernels = true;
 }
 
 void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {

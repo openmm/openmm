@@ -2,7 +2,7 @@
  * Enforce constraints on SETTLE clusters
  */
 
-__kernel void applySettle(int numClusters, float tol, __global const float4* restrict oldPos, __global const float4* restrict posDelta, __global float4* restrict newDelta, __global const float4* restrict velm, __global const int4* restrict clusterAtoms, __global const float2* restrict clusterParams) {
+__kernel void applySettle(int numClusters, float tol, __global const float4* restrict oldPos, __global float4* restrict posDelta, __global const float4* restrict velm, __global const int4* restrict clusterAtoms, __global const float2* restrict clusterParams) {
     int index = get_global_id(0);
     while (index < numClusters) {
         // Load the data for this cluster.
@@ -151,9 +151,77 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
 
         // Record the new positions.
 
-        newDelta[atoms.x] = xp0;
-        newDelta[atoms.y] = xp1;
-        newDelta[atoms.z] = xp2;
+        posDelta[atoms.x] = xp0;
+        posDelta[atoms.y] = xp1;
+        posDelta[atoms.z] = xp2;
         index += get_global_size(0);
+    }
+}
+
+/**
+ * Enforce velocity constraints on SETTLE clusters
+ */
+
+__kernel void constrainVelocities(int numClusters, float tol, __global const float4* restrict oldPos, __global float4* restrict posDelta, __global float4* restrict velm, __global const int4* restrict clusterAtoms, __global const float2* restrict clusterParams) {
+    for (int index = get_global_id(0); index < numClusters; index++) {
+        // Load the data for this cluster.
+
+        int4 atoms = clusterAtoms[index];
+        float4 apos0 = oldPos[atoms.x];
+        float4 apos1 = oldPos[atoms.y];
+        float4 apos2 = oldPos[atoms.z];
+        float4 v0 = velm[atoms.x];
+        float4 v1 = velm[atoms.y];
+        float4 v2 = velm[atoms.z];
+        float m0 = RECIP(v0.w);
+        float m1 = RECIP(v1.w);
+        float m2 = RECIP(v2.w);
+        
+        // Compute offsets between atoms.
+        
+        float4 deltax1 = apos1-apos0;
+        float4 deltax2 = apos2-apos0;
+        float4 deltav1 = v1-v0;
+        float4 deltav2 = v2-v0;
+        
+        // Compute linear and angular momentum, and the inertia tensor.
+        
+        float4 p = v0*m0 + v1*m1 + v2*m2;
+        float4 L = m1*cross(deltax1, deltav1) + m2*cross(deltax2, deltav2);
+        float Ixx = m1*(deltax1.y*deltax1.y+deltax1.z*deltax1.z) + m2*(deltax2.y*deltax2.y+deltax2.z*deltax2.z);
+        float Iyy = m1*(deltax1.x*deltax1.x+deltax1.z*deltax1.z) + m2*(deltax2.x*deltax2.x+deltax2.z*deltax2.z);
+        float Izz = m1*(deltax1.x*deltax1.x+deltax1.y*deltax1.y) + m2*(deltax2.x*deltax2.x+deltax2.y*deltax2.y);
+        float Ixy = m1*deltax1.x*deltax1.y + m2*deltax2.x*deltax2.y;
+        float Ixz = m1*deltax1.x*deltax1.z + m2*deltax2.x*deltax2.z;
+        float Iyz = m1*deltax1.y*deltax1.z + m2*deltax2.y*deltax2.z;
+        float Iyx = Ixy;
+        float Izx = Ixz;
+        float Izy = Iyz;
+        
+        // Invert the inertia tensor and use it to compute the angular velocity.
+        
+        float Axx = Iyy*Izz - Iyz*Izy;
+        float Axy = Iyz*Izx - Iyx*Izz;
+        float Axz = Iyx*Izy - Iyy*Izx;
+        float Ayx = Izy*Ixz - Izz*Ixy;
+        float Ayy = Izz*Ixx - Izx*Ixz;
+        float Ayz = Izx*Ixy - Izy*Ixx;
+        float Azx = Ixy*Iyz - Ixz*Iyy;
+        float Azy = Ixz*Iyx - Ixx*Iyz;
+        float Azz = Ixx*Iyy - Ixy*Iyx;
+        float invDet = 1.0f/(Ixx*Axx + Ixy*Axy + Ixz*Axz);
+        float4 w = (float4) (invDet*(L.x*Axx + L.y*Axy + L.z*Axz),
+                             invDet*(L.x*Ayx + L.y*Ayy + L.z*Ayz),
+                             invDet*(L.x*Azx + L.y*Azy + L.z*Azz), 0.0f);
+        
+        // Compute the particle velocities from the molecule's linear and angular velocities.
+        
+        float4 v = p/(m0+m1+m2);
+        v0.xyz = v.xyz;
+        v1.xyz = v.xyz+cross(deltax1, w).xyz;
+        v2.xyz = v.xyz+cross(deltax2, w).xyz;
+        velm[atoms.x] = v0;
+        velm[atoms.y] = v1;
+        velm[atoms.z] = v2;
     }
 }

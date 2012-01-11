@@ -68,6 +68,12 @@ public:
      */
     void applyConstraints(double tol);
     /**
+     * Apply constraints to the atom velocities.
+     *
+     * @param tol             the constraint tolerance
+     */
+    void applyVelocityConstraints(double tol);
+    /**
      * Initialize the random number generator.
      */
     void initRandomNumberGenerator(unsigned int randomNumberSeed);
@@ -79,13 +85,14 @@ public:
      */
     int prepareRandomNumbers(int numValues);
 private:
+    void applyConstraints(bool constrainVelocities, double tol);
     OpenCLContext& context;
-    cl::Kernel settleKernel;
-    cl::Kernel shakeKernel;
+    cl::Kernel settlePosKernel, settleVelKernel;
+    cl::Kernel shakePosKernel, shakeVelKernel;
     cl::Kernel ccmaDirectionsKernel;
-    cl::Kernel ccmaForceKernel;
+    cl::Kernel ccmaPosForceKernel, ccmaVelForceKernel;
     cl::Kernel ccmaMultiplyKernel;
-    cl::Kernel ccmaUpdateKernel;
+    cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
     cl::Kernel randomKernel;
     OpenCLArray<mm_float4>* posDelta;
     OpenCLArray<mm_int4>* settleAtoms;
@@ -109,7 +116,7 @@ private:
     cl_int* ccmaConvergedMemory;
     int randomPos;
     int lastSeed;
-    bool hasInitializedConstraintKernels;
+    bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels;
     struct ShakeCluster;
     struct ConstraintOrderer;
 };

@@ -38,12 +38,24 @@ __kernel void computeConstraintForce(__global const int2* restrict constraintAto
         int2 atoms = constraintAtoms[index];
         float4 dir = constraintDistance[index];
         float4 rp_ij = atomPositions[atoms.x]-atomPositions[atoms.y];
+#ifndef CONSTRAIN_VELOCITIES
         rp_ij.xyz += dir.xyz;
+#endif
+        float rrpr = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
+        float d_ij2 = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
+#ifdef CONSTRAIN_VELOCITIES
+        delta1[index] = -2.0f*reducedMass[index]*rrpr/d_ij2;
+
+        // See whether it has converged.
+
+        if (groupConverged && fabs(delta1[index]) > tol) {
+            groupConverged = 0;
+            converged[iteration%2] = 0;
+        }
+#else
         float rp2 = rp_ij.x*rp_ij.x + rp_ij.y*rp_ij.y + rp_ij.z*rp_ij.z;
         float dist2 = dir.w*dir.w;
         float diff = dist2 - rp2;
-        float rrpr = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
-        float d_ij2 = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
         delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0.0f);
 
         // See whether it has converged.
@@ -52,6 +64,7 @@ __kernel void computeConstraintForce(__global const int2* restrict constraintAto
             groupConverged = 0;
             converged[iteration%2] = 0;
         }
+#endif
     }
 }
 

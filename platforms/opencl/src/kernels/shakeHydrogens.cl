@@ -2,7 +2,7 @@
  * Enforce constraints on SHAKE clusters
  */
 
-__kernel void applyShakeToHydrogens(int numClusters, float tol, __global const float4* restrict oldPos, __global const float4* restrict posDelta, __global float4* restrict newDelta, __global const int4* restrict clusterAtoms, __global const float4* restrict clusterParams) {
+__kernel void applyShakeToHydrogens(int numClusters, float tol, __global const float4* restrict oldPos, __global float4* restrict posDelta, __global const int4* restrict clusterAtoms, __global const float4* restrict clusterParams) {
     int index = get_global_id(0);
     while (index < numClusters) {
         // Load the data for this cluster.
@@ -48,6 +48,36 @@ __kernel void applyShakeToHydrogens(int numClusters, float tol, __global const f
         int iteration = 0;
         while (iteration < 15 && !converged) {
             converged = true;
+#ifdef CONSTRAIN_VELOCITIES
+            float4 rpij = xpi-xpj1;
+            float rrpr = rpij.x*rij1.x + rpij.y*rij1.y + rpij.z*rij1.z;
+            float delta = -2.0f*avgMass*rrpr/rij1sq;
+            float4 dr = rij1*delta;
+            xpi.xyz += dr.xyz*invMassCentral;
+            xpj1.xyz -= dr.xyz*invMassPeripheral;
+            if (fabs(delta) > tol)
+                converged = false;
+            if (atoms.z != -1) {
+                rpij = xpi-xpj2;
+                rrpr = rpij.x*rij2.x + rpij.y*rij2.y + rpij.z*rij2.z;
+                delta = -2.0f*avgMass*rrpr/rij2sq;
+                dr = rij2*delta;
+                xpi.xyz += dr.xyz*invMassCentral;
+                xpj2.xyz -= dr.xyz*invMassPeripheral;
+                if (fabs(delta) > tol)
+                    converged = false;
+            }
+            if (atoms.w != -1) {
+                rpij = xpi-xpj3;
+                rrpr = rpij.x*rij3.x + rpij.y*rij3.y + rpij.z*rij3.z;
+                delta = -2.0f*avgMass*rrpr/rij3sq;
+                dr = rij3*delta;
+                xpi.xyz += dr.xyz*invMassCentral;
+                xpj3.xyz -= dr.xyz*invMassPeripheral;
+                if (fabs(delta) > tol)
+                    converged = false;
+            }
+#else
             float4 rpij = xpi-xpj1;
             float rpsqij = rpij.x*rpij.x + rpij.y*rpij.y + rpij.z*rpij.z;
             float rrpr = rij1.x*rpij.x + rij1.y*rpij.y + rij1.z*rpij.z;
@@ -85,17 +115,18 @@ __kernel void applyShakeToHydrogens(int numClusters, float tol, __global const f
                     converged = false;
                 }
             }
+#endif
             iteration++;
         }
 
         // Record the new positions.
 
-        newDelta[atoms.x] = xpi;
-        newDelta[atoms.y] = xpj1;
+        posDelta[atoms.x] = xpi;
+        posDelta[atoms.y] = xpj1;
         if (atoms.z != -1)
-            newDelta[atoms.z] = xpj2;
+            posDelta[atoms.z] = xpj2;
         if (atoms.w != -1)
-            newDelta[atoms.w] = xpj3;
+            posDelta[atoms.w] = xpj3;
         index += get_global_size(0);
     }
 }

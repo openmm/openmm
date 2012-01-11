@@ -3857,6 +3857,9 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             cl.getIntegrationUtilities().applyConstraints(integrator.getConstraintTolerance());
             cl.executeKernel(kernels[i][0], numAtoms);
         }
+        else if (stepType[i] == CustomIntegrator::ConstrainVelocities) {
+            cl.getIntegrationUtilities().applyVelocityConstraints(integrator.getConstraintTolerance());
+        }
         if (invalidatesForces[i])
             forcesAreValid = false;
     }
