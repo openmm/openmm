@@ -19,5 +19,6 @@ __kernel void applyPositionDeltas(__global float4* restrict posq, __global float
         float4 position = posq[index];
         position.xyz += posDelta[index].xyz;
         posq[index] = position;
+        posDelta[index] = (float4) 0.0f;
     }
 }

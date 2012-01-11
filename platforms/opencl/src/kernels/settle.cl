@@ -176,24 +176,29 @@ __kernel void constrainVelocities(int numClusters, float tol, __global const flo
         float m0 = RECIP(v0.w);
         float m1 = RECIP(v1.w);
         float m2 = RECIP(v2.w);
-        
-        // Compute offsets between atoms.
-        
-        float4 deltax1 = apos1-apos0;
-        float4 deltax2 = apos2-apos0;
-        float4 deltav1 = v1-v0;
-        float4 deltav2 = v2-v0;
-        
-        // Compute linear and angular momentum, and the inertia tensor.
-        
+
+        // Compute the center of mass position and velocity, and atom positions and
+        // velocities relative to it.
+
+        float4 com = (apos0*m0 + apos1*m1 + apos2*m2)/(m0+m1+m2);
+        float4 deltax0 = apos0-com;
+        float4 deltax1 = apos1-com;
+        float4 deltax2 = apos2-com;
         float4 p = v0*m0 + v1*m1 + v2*m2;
-        float4 L = m1*cross(deltax1, deltav1) + m2*cross(deltax2, deltav2);
-        float Ixx = m1*(deltax1.y*deltax1.y+deltax1.z*deltax1.z) + m2*(deltax2.y*deltax2.y+deltax2.z*deltax2.z);
-        float Iyy = m1*(deltax1.x*deltax1.x+deltax1.z*deltax1.z) + m2*(deltax2.x*deltax2.x+deltax2.z*deltax2.z);
-        float Izz = m1*(deltax1.x*deltax1.x+deltax1.y*deltax1.y) + m2*(deltax2.x*deltax2.x+deltax2.y*deltax2.y);
-        float Ixy = m1*deltax1.x*deltax1.y + m2*deltax2.x*deltax2.y;
-        float Ixz = m1*deltax1.x*deltax1.z + m2*deltax2.x*deltax2.z;
-        float Iyz = m1*deltax1.y*deltax1.z + m2*deltax2.y*deltax2.z;
+        float4 v = p/(m0+m1+m2);
+        float4 deltav0 = v0-v;
+        float4 deltav1 = v1-v;
+        float4 deltav2 = v2-v;
+
+        // Compute linear and angular momentum, and the inertia tensor.
+
+        float4 L = cross(deltax0, deltav0)*m0 + cross(deltax1, deltav1)*m1 + cross(deltax2, deltav2)*m2;
+        float Ixx = m0*(deltax0.y*deltax0.y+deltax0.z*deltax0.z) + m1*(deltax1.y*deltax1.y+deltax1.z*deltax1.z) + m2*(deltax2.y*deltax2.y+deltax2.z*deltax2.z);
+        float Iyy = m0*(deltax0.x*deltax0.x+deltax0.z*deltax0.z) + m1*(deltax1.x*deltax1.x+deltax1.z*deltax1.z) + m2*(deltax2.x*deltax2.x+deltax2.z*deltax2.z);
+        float Izz = m0*(deltax0.x*deltax0.x+deltax0.y*deltax0.y) + m1*(deltax1.x*deltax1.x+deltax1.y*deltax1.y) + m2*(deltax2.x*deltax2.x+deltax2.y*deltax2.y);
+        float Ixy = -m0*deltax0.x*deltax0.y - m1*deltax1.x*deltax1.y - m2*deltax2.x*deltax2.y;
+        float Ixz = -m0*deltax0.x*deltax0.z - m1*deltax1.x*deltax1.z - m2*deltax2.x*deltax2.z;
+        float Iyz = -m0*deltax0.y*deltax0.z - m1*deltax1.y*deltax1.z - m2*deltax2.y*deltax2.z;
         float Iyx = Ixy;
         float Izx = Ixz;
         float Izy = Iyz;
@@ -216,10 +221,9 @@ __kernel void constrainVelocities(int numClusters, float tol, __global const flo
         
         // Compute the particle velocities from the molecule's linear and angular velocities.
         
-        float4 v = p/(m0+m1+m2);
-        v0.xyz = v.xyz;
-        v1.xyz = v.xyz+cross(deltax1, w).xyz;
-        v2.xyz = v.xyz+cross(deltax2, w).xyz;
+        v0.xyz = v.xyz+cross(w, deltax0).xyz;
+        v1.xyz = v.xyz+cross(w, deltax1).xyz;
+        v2.xyz = v.xyz+cross(w, deltax2).xyz;
         velm[atoms.x] = v0;
         velm[atoms.y] = v1;
         velm[atoms.z] = v2;
