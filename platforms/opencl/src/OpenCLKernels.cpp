@@ -107,8 +107,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
 double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
     cl.getBondedUtilities().computeInteractions();
     cl.getNonbondedUtilities().computeInteractions();
-    if (includeForces)
-        cl.reduceForces();
+    cl.reduceForces();
     double sum = 0.0f;
     if (includeEnergy) {
         OpenCLArray<cl_float>& energy = cl.getEnergyBuffer();
