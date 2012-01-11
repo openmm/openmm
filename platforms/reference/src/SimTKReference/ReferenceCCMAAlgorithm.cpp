@@ -429,7 +429,7 @@ int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>&
          if (constrainingVelocities) {
              RealOpenMM rrpr = rp_ij.dot(r_ij[ii]);
              constraintDelta[ii] = -2*reducedMasses[ii]*rrpr/d_ij2[ii];
-             if (constraintDelta[ii] <= getTolerance())
+             if (fabs(constraintDelta[ii]) <= getTolerance())
                 numberConverged++;
          }
          else {

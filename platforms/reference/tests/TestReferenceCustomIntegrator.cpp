@@ -156,7 +156,6 @@ void testConstraints() {
  */
 void testVelocityConstraints() {
     const int numParticles = 8;
-    const double temp = 500.0;
     ReferencePlatform platform;
     System system;
     CustomIntegrator integrator(0.002);
@@ -191,7 +190,7 @@ void testVelocityConstraints() {
     
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy);
+        State state = context.getState(State::Positions | State::Velocities | State::Energy);
         for (int j = 0; j < system.getNumConstraints(); ++j) {
             int particle1, particle2;
             double distance;
@@ -200,6 +199,12 @@ void testVelocityConstraints() {
             Vec3 p2 = state.getPositions()[particle2];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 2e-5);
+            if (i > 0) {
+                Vec3 v1 = state.getVelocities()[particle1];
+                Vec3 v2 = state.getVelocities()[particle2];
+                double vel = (v1-v2).dot(p1-p2);
+                ASSERT_EQUAL_TOL(0.0, vel, 2e-5);
+            }
         }
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         if (i == 1)
