@@ -883,7 +883,8 @@ private:
 class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), energy(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), energy(NULL),
+            uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -947,16 +948,19 @@ private:
     OpenCLArray<cl_float>* contextParameterValues;
     OpenCLArray<cl_float>* sumBuffer;
     OpenCLArray<cl_float>* energy;
+    OpenCLArray<mm_float4>* uniformRandoms;
+    OpenCLArray<mm_int4>* randomSeed;
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValues;
     std::vector<std::vector<cl::Kernel> > kernels;
-    cl::Kernel sumEnergyKernel;
+    cl::Kernel sumEnergyKernel, randomKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
     std::vector<bool> invalidatesForces;
     std::vector<bool> merged;
-    std::vector<std::vector<int> > requiredRandoms;
+    std::vector<int> requiredGaussian;
+    std::vector<int> requiredUniform;
     std::vector<std::string> parameterNames;
 };
 

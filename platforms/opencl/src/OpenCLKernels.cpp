@@ -3509,6 +3509,10 @@ OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
         delete sumBuffer;
     if (energy != NULL)
         delete energy;
+    if (uniformRandoms != NULL)
+        delete uniformRandoms;
+    if (randomSeed != NULL)
+        delete randomSeed;
     if (perDofValues != NULL)
         delete perDofValues;
 }
@@ -3576,6 +3580,7 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     variables["v"] = "velocity"+suffix;
     variables["f"] = "f"+suffix;
     variables["gaussian"] = "gaussian"+suffix;
+    variables["uniform"] = "uniform"+suffix;
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
     variables["energy"] = "energy[0]";
@@ -3607,12 +3612,34 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         }
         contextParameterValues->upload();
         kernels.resize(integrator.getNumComputations());
-        requiredRandoms.resize(integrator.getNumComputations());
+        requiredGaussian.resize(integrator.getNumComputations(), 0);
+        requiredUniform.resize(integrator.getNumComputations(), 0);
         needsForces.resize(numSteps, false);
         needsEnergy.resize(numSteps, false);
         invalidatesForces.resize(numSteps, false);
         merged.resize(numSteps, false);
         modifiesParameters = false;
+        map<string, string> defines;
+        defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+        defines["WORK_GROUP_SIZE"] = intToString(OpenCLContext::ThreadBlockSize);
+        
+        // Initialize the random number generator.
+        
+        uniformRandoms = new OpenCLArray<mm_float4>(cl, cl.getNumAtoms(), "uniformRandoms");
+        randomSeed = new OpenCLArray<mm_int4>(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
+        vector<mm_int4> seed(randomSeed->getSize());
+        unsigned int r = integrator.getRandomNumberSeed()+1;
+        for (int i = 0; i < randomSeed->getSize(); i++) {
+            seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        }
+        randomSeed->upload(seed);
+        cl::Program randomProgram = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
+        randomKernel = cl::Kernel(randomProgram, "generateRandomNumbers");
+        randomKernel.setArg<cl::Buffer>(0, uniformRandoms->getDeviceBuffer());
+        randomKernel.setArg<cl::Buffer>(1, randomSeed->getDeviceBuffer());
         
         // Build a list of all variables that affect the forces, so we can tell which
         // steps invalidate them.
@@ -3624,9 +3651,6 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             for (map<string, double>::const_iterator param = params.begin(); param != params.end(); ++param)
                 affectsForce.insert(param->first);
         }
-        map<string, string> defines;
-        defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-        defines["WORK_GROUP_SIZE"] = intToString(OpenCLContext::ThreadBlockSize);
         
         // Record information about all the computation steps.
         
@@ -3672,7 +3696,8 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
                 merged[step] = true;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof &&
-                    storePosAsDelta[step-1] == storePosAsDelta[step] && loadPosAsDelta[step-1] == loadPosAsDelta[step])
+                    storePosAsDelta[step-1] == storePosAsDelta[step] && loadPosAsDelta[step-1] == loadPosAsDelta[step] &&
+                    !usesVariable(expression[step], "uniform"))
                 merged[step] = true;
         }
         
@@ -3690,7 +3715,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     compute << buffer.getType()<<" perDofz"<<intToString(i+1)<<" = perDofValues"<<intToString(i+1)<<"[3*index+2];\n";
                 }
                 string convert = (cl.getSupportsDoublePrecision() ? "convert_float4(" : "(");
-                int randoms = 0;
+                int numGaussian = 0, numUniform = 0;
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     compute << "{\n";
                     for (int i = 0; i < 3; i++)
@@ -3714,7 +3739,8 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                         compute << "perDofValues"<<intToString(i+1)<<"[3*index+2] = perDofz"<<intToString(i+1)<<";\n";
                     }
                     compute << "}\n";
-                    randoms += numAtoms*usesVariable(expression[j], "gaussian");
+                    numGaussian += numAtoms*usesVariable(expression[j], "gaussian");
+                    numUniform += numAtoms*usesVariable(expression[j], "uniform");
                 }
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
@@ -3732,9 +3758,8 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorPerDof, replacements), defines);
                 cl::Kernel kernel = cl::Kernel(program, "computePerDof");
                 kernels[step].push_back(kernel);
-                if (usesVariable(expression[step], "uniform"))
-                    throw OpenMMException("OpenCL platform does not currently support per-DOF uniform random numbers");
-                requiredRandoms[step].push_back(randoms);
+                requiredGaussian[step] = numGaussian;
+                requiredUniform[step] = numUniform;
                 int index = 0;
                 kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
@@ -3746,6 +3771,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, integration.getRandom().getDeviceBuffer());
                 index++;
+                kernel.setArg<cl::Buffer>(index++, uniformRandoms->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, energy->getDeviceBuffer());
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     kernel.setArg<cl::Memory>(index++, perDofValues->getBuffers()[i].getMemory());
@@ -3867,7 +3893,9 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             forcesAreValid = true;
         }
         if (stepType[i] == CustomIntegrator::ComputePerDof && !merged[i]) {
-            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredRandoms[i][0]));
+            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[i]));
+            if (requiredUniform[i] > 0)
+                cl.executeKernel(randomKernel, numAtoms);
             cl.executeKernel(kernels[i][0], numAtoms);
         }
         else if (stepType[i] == CustomIntegrator::ComputeGlobal && !merged[i]) {
@@ -3876,7 +3904,9 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             cl.executeKernel(kernels[i][0], 1);
         }
         else if (stepType[i] == CustomIntegrator::ComputeSum) {
-            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredRandoms[i][0]));
+            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[i]));
+            if (requiredUniform[i] > 0)
+                cl.executeKernel(randomKernel, numAtoms);
             cl.executeKernel(kernels[i][0], numAtoms);
             cl.executeKernel(kernels[i][1], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
         }
@@ -3934,7 +3964,7 @@ void OpenCLIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, in
     values.resize(perDofValues->getNumObjects()/3);
     for (int i = 0; i < (int) values.size(); i++)
         for (int j = 0; j < 3; j++)
-            values[i][j] = localPerDofValues[variable][3*i+j];
+            values[i][j] = localPerDofValues[3*i+j][variable];
 }
 
 void OpenCLIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int variable, const vector<Vec3>& values) {
@@ -3944,7 +3974,7 @@ void OpenCLIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, in
     }
     for (int i = 0; i < (int) values.size(); i++)
         for (int j = 0; j < 3; j++)
-            localPerDofValues[variable][3*i+j] = (float) values[i][j];
+            localPerDofValues[3*i+j][variable] = (float) values[i][j];
     deviceValuesAreCurrent = false;
 }
 

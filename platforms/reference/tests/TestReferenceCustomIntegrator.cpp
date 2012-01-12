@@ -384,6 +384,75 @@ void testParameter() {
     }
 }
 
+/**
+ * Test random number distributions.
+ */
+void testRandomDistributions() {
+    const int numParticles = 100;
+    const int numBins = 20;
+    const int numSteps = 100;
+    ReferencePlatform platform;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    CustomIntegrator integrator(0.1);
+    integrator.addPerDofVariable("a", 0);
+    integrator.addPerDofVariable("b", 0);
+    integrator.addComputePerDof("a", "uniform");
+    integrator.addComputePerDof("b", "gaussian");
+    Context context(system, integrator, platform);
+    
+    // See if the random numbers are distributed correctly.
+    
+    vector<int> bins(numBins);
+    double mean = 0.0;
+    double var = 0.0;
+    double skew = 0.0;
+    double kurtosis = 0.0;
+    vector<Vec3> values;
+    for (int i = 0; i < numSteps; i++) {
+        integrator.step(1);
+        integrator.getPerDofVariable(0, values);
+        for (int i = 0; i < numParticles; i++)
+            for (int j = 0; j < 3; j++) {
+                double v = values[i][j];
+                ASSERT(v >= 0 && v < 1);
+                bins[(int) (v*numBins)]++;
+            }
+        integrator.getPerDofVariable(1, values);
+        for (int i = 0; i < numParticles; i++)
+            for (int j = 0; j < 3; j++) {
+                double v = values[i][j];
+                mean += v;
+                var += v*v;
+                skew += v*v*v;
+                kurtosis += v*v*v*v;
+            }
+    }
+    
+    // Check the distribution of uniform randoms.
+    
+    int numValues = numParticles*numSteps*3;
+    double expected = numValues/(double) numBins;
+    double tol = 4*sqrt(expected);
+    for (int i = 0; i < numBins; i++)
+        ASSERT(bins[i] >= expected-tol && bins[i] <= expected+tol);
+    
+    // Check the distribution of gaussian randoms.
+    
+    mean /= numValues;
+    var /= numValues;
+    skew /= numValues;
+    kurtosis /= numValues;
+    double c2 = var-mean*mean;
+    double c3 = skew-3*var*mean+2*mean*mean*mean;
+    double c4 = kurtosis-4*skew*mean-3*var*var+12*var*mean*mean-6*mean*mean*mean*mean;
+    ASSERT_EQUAL_TOL(0.0, mean, 3.0/sqrt((double) numValues));
+    ASSERT_EQUAL_TOL(1.0, c2, 3.0/pow(numValues, 1.0/3.0));
+    ASSERT_EQUAL_TOL(0.0, c3, 3.0/pow(numValues, 1.0/4.0));
+    ASSERT_EQUAL_TOL(0.0, c4, 3.0/pow(numValues, 1.0/4.0));
+}
+
 int main() {
     try {
         testSingleBond();
@@ -393,6 +462,7 @@ int main() {
         testMonteCarlo();
         testSum();
         testParameter();
+        testRandomDistributions();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

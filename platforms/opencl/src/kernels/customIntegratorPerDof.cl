@@ -4,8 +4,8 @@
 
 __kernel void computePerDof(__global float4* restrict posq, __global float4* restrict posDelta, __global float4* restrict velm,
         __global const float4* restrict force, __global const float2* restrict dt, __global const float* restrict globals,
-        __global const float* restrict params, __global float* restrict sum, __global const float4* restrict random,
-        unsigned int randomIndex, __global const float* restrict energy
+        __global const float* restrict params, __global float* restrict sum, __global const float4* restrict gaussianValues,
+        unsigned int randomIndex, __global const float4* restrict uniformValues, __global const float* restrict energy
         PARAMETER_ARGUMENTS) {
     float stepSize = dt[0].y;
     int index = get_global_id(0);
@@ -30,7 +30,8 @@ __kernel void computePerDof(__global float4* restrict posq, __global float4* res
         float4 f = force[index];
         float mass = 1.0f/velocity.w;
 #endif
-        float4 gaussian = random[randomIndex];
+        float4 gaussian = gaussianValues[randomIndex];
+        float4 uniform = uniformValues[index];
         COMPUTE_STEP
         randomIndex += get_global_size(0);
         index += get_global_size(0);

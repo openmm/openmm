@@ -55,8 +55,11 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     kernel = context->getPlatform().createKernel(IntegrateCustomStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
     dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setGlobalVariables(contextRef, globalValues);
-    for (int i = 0; i < (int) perDofValues.size(); i++)
+    for (int i = 0; i < (int) perDofValues.size(); i++) {
+        if (perDofValues[i].size() == 1)
+            perDofValues[i].resize(context->getSystem().getNumParticles(), perDofValues[i][0]);
         dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setPerDofVariable(contextRef, i, perDofValues[i]);
+    }
 }
 
 void CustomIntegrator::stateChanged(State::DataType changed) {
@@ -146,6 +149,8 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
 void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {
     if (index < 0 || index >= perDofNames.size())
         throw OpenMMException("Index out of range");
+    if (values.size() != context->getSystem().getNumParticles())
+        throw OpenMMException("setPerDofVariable() called with wrong number of values");
     if (owner == NULL)
         perDofValues[index] = values;
     else

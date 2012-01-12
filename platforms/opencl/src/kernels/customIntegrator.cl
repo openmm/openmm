@@ -22,3 +22,47 @@ __kernel void applyPositionDeltas(__global float4* restrict posq, __global float
         posDelta[index] = (float4) 0.0f;
     }
 }
+
+__kernel void generateRandomNumbers(__global float4* restrict random, __global uint4* restrict seed) {
+    uint4 state = seed[get_global_id(0)];
+    unsigned int carry = 0;
+    for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
+        // Generate three uniform random numbers.
+
+        state.x = state.x * 69069 + 1;
+        state.y ^= state.y << 13;
+        state.y ^= state.y >> 17;
+        state.y ^= state.y << 5;
+        unsigned int k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
+        unsigned int m = state.w + state.w + state.z + carry;
+        state.z = state.w;
+        state.w = m;
+        carry = k >> 30;
+        float x1 = (float)max(state.x + state.y + state.w, 0x00000001u) / (float)0xffffffff;
+        state.x = state.x * 69069 + 1;
+        state.y ^= state.y << 13;
+        state.y ^= state.y >> 17;
+        state.y ^= state.y << 5;
+        k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
+        m = state.w + state.w + state.z + carry;
+        state.z = state.w;
+        state.w = m;
+        carry = k >> 30;
+        float x2 = (float)max(state.x + state.y + state.w, 0x00000001u) / (float)0xffffffff;
+        state.x = state.x * 69069 + 1;
+        state.y ^= state.y << 13;
+        state.y ^= state.y >> 17;
+        state.y ^= state.y << 5;
+        k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
+        m = state.w + state.w + state.z + carry;
+        state.z = state.w;
+        state.w = m;
+        carry = k >> 30;
+        float x3 = (float)max(state.x + state.y + state.w, 0x00000001u) / (float)0xffffffff;
+
+        // Record the values.
+
+        random[index] = (float4) (x1, x2, x3, 0.0f);
+    }
+    seed[get_global_id(0)] = state;
+}
