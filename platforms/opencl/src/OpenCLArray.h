@@ -90,13 +90,13 @@ public:
     /**
      * Get the size of the array.
      */
-    int getSize() {
+    int getSize() const {
         return size;
     }
     /**
      * Get the name of the array.
      */
-    const std::string& getName() {
+    const std::string& getName() const {
         return name;
     }
     /**

@@ -1077,10 +1077,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         pmeBsplineTheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineTheta");
         bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
         if (deviceIsCpu)
-            pmeBsplineDTheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineTheta");
+            pmeBsplineDTheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineDTheta");
         pmeAtomRange = new OpenCLArray<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
         pmeAtomGridIndex = new OpenCLArray<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
-        sort = new OpenCLSort<mm_int2>(cl, cl.getNumAtoms(), "int2", "value.y");
+        sort = new OpenCLSort<SortTrait>(cl, cl.getNumAtoms());
         fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
 
         // Initialize the b-spline moduli.

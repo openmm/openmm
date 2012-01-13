@@ -131,7 +131,7 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         else
             simdWidth = 1;
         if (platforms[0].getInfo<CL_PLATFORM_VENDOR>() == "Apple" && vendor == "AMD")
-            compilationDefines["MAC_AMD_WORKAROUND"] == "";
+            compilationDefines["MAC_AMD_WORKAROUND"] = "";
         if (supports64BitGlobalAtomics)
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
         if (supportsDoublePrecision)

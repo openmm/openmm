@@ -481,6 +481,16 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
+    struct SortTrait {
+        typedef mm_int2 DataType;
+        typedef cl_int KeyType;
+        static const char* clDataType() {return "int2";}
+        static const char* clKeyType() {return "int";}
+        static const char* clMinKey() {return "INT_MIN";}
+        static const char* clMaxKey() {return "INT_MAX";}
+        static const char* clMaxValue() {return "(int2) (INT_MAX, INT_MAX)";}
+        static const char* clSortKey() {return "value.y";}
+    };
     OpenCLContext& cl;
     bool hasInitializedKernel;
     OpenCLArray<mm_float2>* sigmaEpsilon;
@@ -495,7 +505,7 @@ private:
     OpenCLArray<mm_float4>* pmeBsplineDTheta;
     OpenCLArray<cl_int>* pmeAtomRange;
     OpenCLArray<mm_int2>* pmeAtomGridIndex;
-    OpenCLSort<mm_int2>* sort;
+    OpenCLSort<SortTrait>* sort;
     OpenCLFFT3D* fft;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;

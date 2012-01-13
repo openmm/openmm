@@ -46,6 +46,17 @@
 using namespace OpenMM;
 using namespace std;
 
+struct SortTrait {
+    typedef cl_float DataType;
+    typedef cl_float KeyType;
+    static const char* clDataType() {return "float";}
+    static const char* clKeyType() {return "float";}
+    static const char* clMinKey() {return "-MAXFLOAT";}
+    static const char* clMaxKey() {return "MAXFLOAT";}
+    static const char* clMaxValue() {return "MAXFLOAT";}
+    static const char* clSortKey() {return "value";}
+};
+
 void verifySorting(vector<float> array) {
     // Sort the array.
 
@@ -56,7 +67,7 @@ void verifySorting(vector<float> array) {
     context.initialize(system);
     OpenCLArray<float> data(context, array.size(), "sortData");
     data.upload(array);
-    OpenCLSort<float> sort(context, array.size(), "float", "value");
+    OpenCLSort<SortTrait> sort(context, array.size());
     sort.sort(data);
     vector<float> sorted;
     data.download(sorted);
