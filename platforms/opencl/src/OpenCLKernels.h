@@ -946,6 +946,7 @@ public:
      */
     void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
 private:
+    class ReorderListener;
     std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator);
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator);
     void recordChangedParameters(ContextImpl& context);

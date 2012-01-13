@@ -203,6 +203,8 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
 OpenCLContext::~OpenCLContext() {
     for (int i = 0; i < (int) forces.size(); i++)
         delete forces[i];
+    for (int i = 0; i < (int) reorderListeners.size(); i++)
+        delete reorderListeners[i];
     if (posq != NULL)
         delete posq;
     if (velm != NULL)
@@ -728,6 +730,12 @@ void OpenCLContext::reorderAtoms() {
     posq->upload();
     velm->upload();
     atomIndex->upload();
+    for (int i = 0; i < (int) reorderListeners.size(); i++)
+        reorderListeners[i]->execute();
+}
+
+void OpenCLContext::addReorderListener(ReorderListener* listener) {
+    reorderListeners.push_back(listener);
 }
 
 struct OpenCLContext::WorkThread::ThreadData {

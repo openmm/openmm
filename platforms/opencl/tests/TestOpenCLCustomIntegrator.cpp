@@ -467,6 +467,63 @@ void testRandomDistributions() {
     ASSERT_EQUAL_TOL(0.0, c4, 3.0/pow(numValues, 1.0/4.0));
 }
 
+/**
+ * Test getting and setting per-DOF variables.
+ */
+void testPerDofVariables() {
+    const int numParticles = 200;
+    const double boxSize = 10;
+    OpenCLPlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* nb = new NonbondedForce();
+    system.addForce(nb);
+    nb->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.5);
+        nb->addParticle(i%2 == 0 ? 1 : -1, 0.1, 1);
+        bool close = true;
+        while (close) {
+            positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+            close = false;
+            for (int j = 0; j < i; ++j) {
+                Vec3 delta = positions[i]-positions[j];
+                if (delta.dot(delta) < 0.1)
+                    close = true;
+            }
+        }
+    }
+    CustomIntegrator integrator(0.01);
+    integrator.addPerDofVariable("temp", 0);
+    integrator.addPerDofVariable("pos", 0);
+    integrator.addComputePerDof("v", "v+dt*f/m");
+    integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addComputePerDof("pos", "x");
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    vector<Vec3> initialValues(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        initialValues[i] = Vec3(i+0.1, i+0.2, i+0.3);
+    integrator.setPerDofVariable(0, initialValues);
+    
+    // Run a simulation, then query per-DOF values and see if they are correct.
+    
+    vector<Vec3> values;
+    for (int i = 0; i < 100; ++i) {
+        integrator.step(1);
+        State state = context.getState(State::Positions);
+        integrator.getPerDofVariable(0, values);
+        for (int j = 0; j < numParticles; j++)
+            ASSERT_EQUAL_VEC(initialValues[j], values[j], 1e-5);
+        integrator.getPerDofVariable(1, values);
+        for (int j = 0; j < numParticles; j++)
+            ASSERT_EQUAL_VEC(state.getPositions()[j], values[j], 1e-5);
+    }
+}
+
 int main() {
     try {
         testSingleBond();
@@ -477,6 +534,7 @@ int main() {
         testSum();
         testParameter();
         testRandomDistributions();
+        testPerDofVariables();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

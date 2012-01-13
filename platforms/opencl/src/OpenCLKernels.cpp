@@ -3500,6 +3500,43 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     cl.setStepCount(cl.getStepCount()+1);
 }
 
+class OpenCLIntegrateCustomStepKernel::ReorderListener : public OpenCLContext::ReorderListener {
+public:
+    ReorderListener(OpenCLContext& cl, OpenCLParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValues) :
+            cl(cl), perDofValues(perDofValues), localPerDofValues(localPerDofValues) {
+        int numAtoms = cl.getNumAtoms();
+        lastAtomOrder.resize(numAtoms);
+        for (int i = 0; i < numAtoms; i++)
+            lastAtomOrder[i] = cl.getAtomIndex()[i];
+    }
+    void execute() {
+        // Reorder the per-DOF variables to reflect the new atom order.
+
+        int numAtoms = cl.getNumAtoms();
+        perDofValues.getParameterValues(localPerDofValues);
+        vector<vector<cl_float> > swap(3*numAtoms);
+        for (int i = 0; i < numAtoms; i++) {
+            swap[3*lastAtomOrder[i]] = localPerDofValues[3*i];
+            swap[3*lastAtomOrder[i]+1] = localPerDofValues[3*i+1];
+            swap[3*lastAtomOrder[i]+2] = localPerDofValues[3*i+2];
+        }
+        OpenCLArray<cl_int>& order = cl.getAtomIndex();
+        for (int i = 0; i < numAtoms; i++) {
+            localPerDofValues[3*i] = swap[3*order[i]];
+            localPerDofValues[3*i+1] = swap[3*order[i]+1];
+            localPerDofValues[3*i+2] = swap[3*order[i]+2];
+        }
+        perDofValues.setParameterValues(localPerDofValues);
+        for (int i = 0; i < numAtoms; i++)
+            lastAtomOrder[i] = order[i];
+    }
+private:
+    OpenCLContext& cl;
+    OpenCLParameterSet& perDofValues;
+    vector<vector<cl_float> >& localPerDofValues;
+    std::vector<int> lastAtomOrder;
+};
+
 OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
     if (globalValues != NULL)
         delete globalValues;
@@ -3619,6 +3656,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         invalidatesForces.resize(numSteps, false);
         merged.resize(numSteps, false);
         modifiesParameters = false;
+        cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValues));
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["WORK_GROUP_SIZE"] = intToString(OpenCLContext::ThreadBlockSize);
@@ -3962,9 +4000,10 @@ void OpenCLIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, in
         localValuesAreCurrent = true;
     }
     values.resize(perDofValues->getNumObjects()/3);
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     for (int i = 0; i < (int) values.size(); i++)
         for (int j = 0; j < 3; j++)
-            values[i][j] = localPerDofValues[3*i+j][variable];
+            values[order[i]][j] = localPerDofValues[3*i+j][variable];
 }
 
 void OpenCLIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int variable, const vector<Vec3>& values) {
@@ -3972,9 +4011,10 @@ void OpenCLIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, in
         perDofValues->getParameterValues(localPerDofValues);
         localValuesAreCurrent = true;
     }
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     for (int i = 0; i < (int) values.size(); i++)
         for (int j = 0; j < 3; j++)
-            localPerDofValues[3*i+j][variable] = (float) values[i][j];
+            localPerDofValues[3*i+j][variable] = (float) values[order[i]][j];
     deviceValuesAreCurrent = false;
 }
 

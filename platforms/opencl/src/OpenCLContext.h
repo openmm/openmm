@@ -143,6 +143,7 @@ class OPENMM_EXPORT OpenCLContext {
 public:
     class WorkTask;
     class WorkThread;
+    class ReorderListener;
     static const int ThreadBlockSize;
     static const int TileSize;
     OpenCLContext(int numParticles, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
@@ -467,6 +468,11 @@ public:
      * together in the arrays.
      */
     void reorderAtoms();
+    /**
+     * Add a listener that should be called whenever atoms get reordered.  The OpenCLContext
+     * assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addReorderListener(ReorderListener* listener);
 private:
     struct Molecule;
     struct MoleculeGroup;
@@ -513,6 +519,7 @@ private:
     OpenCLArray<cl_int>* atomIndex;
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
+    std::vector<ReorderListener*> reorderListeners;
     OpenCLIntegrationUtilities* integration;
     OpenCLBondedUtilities* bonded;
     OpenCLNonbondedUtilities* nonbonded;
@@ -560,6 +567,16 @@ private:
     pthread_mutex_t queueLock;
     pthread_cond_t waitForTaskCondition, queueEmptyCondition;
     pthread_t thread;
+};
+
+/**
+ * This abstract class defines a function to be executed whenever atoms get reordered.
+ * Objects that need to know when reordering happens should create a reorderListener
+ * and register it by calling addReorderListener().
+ */
+class OpenCLContext::ReorderListener {
+public:
+    virtual void execute() = 0;
 };
 
 } // namespace OpenMM
