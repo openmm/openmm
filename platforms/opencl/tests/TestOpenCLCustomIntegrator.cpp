@@ -512,7 +512,8 @@ void testPerDofVariables() {
     // Run a simulation, then query per-DOF values and see if they are correct.
     
     vector<Vec3> values;
-    for (int i = 0; i < 100; ++i) {
+    context.getState(State::Forces); // Cause atom reordering to happen before the first step
+    for (int i = 0; i < 200; ++i) {
         integrator.step(1);
         State state = context.getState(State::Positions);
         integrator.getPerDofVariable(0, values);

@@ -3502,8 +3502,8 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
 class OpenCLIntegrateCustomStepKernel::ReorderListener : public OpenCLContext::ReorderListener {
 public:
-    ReorderListener(OpenCLContext& cl, OpenCLParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValues) :
-            cl(cl), perDofValues(perDofValues), localPerDofValues(localPerDofValues) {
+    ReorderListener(OpenCLContext& cl, OpenCLParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValues, bool& deviceValuesAreCurrent) :
+            cl(cl), perDofValues(perDofValues), localPerDofValues(localPerDofValues), deviceValuesAreCurrent(deviceValuesAreCurrent) {
         int numAtoms = cl.getNumAtoms();
         lastAtomOrder.resize(numAtoms);
         for (int i = 0; i < numAtoms; i++)
@@ -3513,7 +3513,8 @@ public:
         // Reorder the per-DOF variables to reflect the new atom order.
 
         int numAtoms = cl.getNumAtoms();
-        perDofValues.getParameterValues(localPerDofValues);
+        if (deviceValuesAreCurrent)
+            perDofValues.getParameterValues(localPerDofValues);
         vector<vector<cl_float> > swap(3*numAtoms);
         for (int i = 0; i < numAtoms; i++) {
             swap[3*lastAtomOrder[i]] = localPerDofValues[3*i];
@@ -3529,11 +3530,13 @@ public:
         perDofValues.setParameterValues(localPerDofValues);
         for (int i = 0; i < numAtoms; i++)
             lastAtomOrder[i] = order[i];
+        deviceValuesAreCurrent = true;
     }
 private:
     OpenCLContext& cl;
     OpenCLParameterSet& perDofValues;
     vector<vector<cl_float> >& localPerDofValues;
+    bool& deviceValuesAreCurrent;
     std::vector<int> lastAtomOrder;
 };
 
@@ -3562,6 +3565,7 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     sumBuffer = new OpenCLArray<cl_float>(cl, 3*system.getNumParticles(), "sumBuffer");
     energy = new OpenCLArray<cl_float>(cl, 1, "energy");
     perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables");
+    cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValues, deviceValuesAreCurrent));
     prevStepSize = -1.0;
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
@@ -3656,7 +3660,6 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         invalidatesForces.resize(numSteps, false);
         merged.resize(numSteps, false);
         modifiesParameters = false;
-        cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValues));
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["WORK_GROUP_SIZE"] = intToString(OpenCLContext::ThreadBlockSize);
