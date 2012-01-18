@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,56 +29,77 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/Force.h"
+#include "openmm/VirtualSite.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/System.h"
+#include <vector>
 
 using namespace OpenMM;
+using namespace std;
 
-System::System() {
-    periodicBoxVectors[0] = Vec3(2, 0, 0);
-    periodicBoxVectors[1] = Vec3(0, 2, 0);
-    periodicBoxVectors[2] = Vec3(0, 0, 2);
+void VirtualSite::setParticles(const vector<int>& particleIndices) {
+    particles = particleIndices;
 }
 
-System::~System() {
-    for (int i = 0; i < (int) forces.size(); ++i)
-        delete forces[i];
-    for (int i = 0; i < (int) virtualSites.size(); ++i)
-        delete virtualSites[i];
+int VirtualSite::getNumParticles() const {
+    return particles.size();
 }
 
-int System::addConstraint(int particle1, int particle2, double distance) {
-    constraints.push_back(ConstraintInfo(particle1, particle2, distance));
-    return constraints.size()-1;
+int VirtualSite::getParticle(int particle) const {
+    return particles[particle];
 }
 
-void System::getConstraintParameters(int index, int& particle1, int& particle2, double& distance) const {
-    particle1 = constraints[index].particle1;
-    particle2 = constraints[index].particle2;
-    distance = constraints[index].distance;
+VirtualSite::TwoParticleAverage::TwoParticleAverage(int particle1, int particle2, double weight1, double weight2) :
+        weight1(weight1), weight2(weight2) {
+    vector<int> particles(2);
+    particles[0] = particle1;
+    particles[1] = particle2;
+    setParticles(particles);
 }
 
-void System::setConstraintParameters(int index, int particle1, int particle2, double distance) {
-    constraints[index].particle1 = particle1;
-    constraints[index].particle2 = particle2;
-    constraints[index].distance = distance;
+double VirtualSite::TwoParticleAverage::getWeight(int particle) const {
+    if (particle == 0)
+        return weight1;
+    if (particle == 1)
+        return weight2;
+    throw OpenMMException("Illegal index for particle");
 }
 
-void System::getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
-    a = periodicBoxVectors[0];
-    b = periodicBoxVectors[1];
-    c = periodicBoxVectors[2];
+VirtualSite::ThreeParticleAverage::ThreeParticleAverage(int particle1, int particle2, int particle3, double weight1, double weight2, double weight3) :
+        weight1(weight1), weight2(weight2), weight3(weight3) {
+    vector<int> particles(3);
+    particles[0] = particle1;
+    particles[1] = particle2;
+    particles[2] = particle3;
+    setParticles(particles);
 }
 
-void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
-    if (a[1] != 0.0 || a[2] != 0.0)
-        throw OpenMMException("First periodic box vector must be parallel to x.");
-    if (b[0] != 0.0 || b[2] != 0.0)
-        throw OpenMMException("Second periodic box vector must be parallel to y.");
-    if (c[0] != 0.0 || c[1] != 0.0)
-        throw OpenMMException("Third periodic box vector must be parallel to z.");
-    periodicBoxVectors[0] = a;
-    periodicBoxVectors[1] = b;
-    periodicBoxVectors[2] = c;
+double VirtualSite::ThreeParticleAverage::getWeight(int particle) const {
+    if (particle == 0)
+        return weight1;
+    if (particle == 1)
+        return weight2;
+    if (particle == 2)
+        return weight3;
+    throw OpenMMException("Illegal index for particle");
+}
+
+VirtualSite::OutOfPlane::OutOfPlane(int particle1, int particle2, int particle3, double weight12, double weight13, double weightCross) :
+        weight12(weight12), weight13(weight13), weightCross(weightCross) {
+    vector<int> particles(3);
+    particles[0] = particle1;
+    particles[1] = particle2;
+    particles[2] = particle3;
+    setParticles(particles);
+}
+
+double VirtualSite::OutOfPlane::getWeight12() const {
+    return weight12;
+}
+
+double VirtualSite::OutOfPlane::getWeight13() const {
+    return weight13;
+}
+
+double VirtualSite::OutOfPlane::getWeightCross() const {
+    return weightCross;
 }

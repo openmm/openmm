@@ -79,6 +79,10 @@ namespace OpenMM {
  * velocity along any constrained distance is 0.</li>
  * </ul>
  * 
+ * Like all integrators, CustomIntegrator ignores any particle whose mass is 0.
+ * It is skipped when doing per-DOF computations, and is not included when
+ * computing sums over degrees of freedom.
+ * 
  * In addition to the variables you define by calling addGlobalVariable() and
  * addPerDofVariable(), the integrator provides the following pre-defined
  * variables:

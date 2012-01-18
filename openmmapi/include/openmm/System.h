@@ -39,6 +39,7 @@
 namespace OpenMM {
 
 class OPENMM_EXPORT Force;
+class OPENMM_EXPORT VirtualSite;
 
 /**
  * This class represents a molecular system.  The definition of a System involves
@@ -55,6 +56,11 @@ class OPENMM_EXPORT Force;
  * forces are defined by objects that extend the Force class.  After creating a
  * System, call addParticle() once for each particle, addConstraint() for each constraint,
  * and addForce() for each Force.
+ * 
+ * In addition, particles may be designated as "virtual sites".  These are particles
+ * whose positions are computed automatically based on the positions of other particles.
+ * To define a virtual site, call addVirtualSite(), passing in a VirtualSite object
+ * that defines the rules for computing its position.
  */
 
 class OPENMM_EXPORT System {
@@ -71,7 +77,10 @@ public:
         return masses.size();
     }
     /**
-     * Add a particle to the System.
+     * Add a particle to the System.  If the mass is 0, Integrators will ignore
+     * the particle and not modify its position or velocity.  This is most often
+     * used for virtual sites, but can also be used as a way to prevent a particle
+     * from moving.
      *
      * @param mass   the mass of the particle (in atomic mass units)
      * @return the index of the particle that was added
@@ -81,7 +90,10 @@ public:
         return masses.size()-1;
     }
     /**
-     * Get the mass (in atomic mass units) of a particle.
+     * Get the mass (in atomic mass units) of a particle.  If the mass is 0, Integrators will ignore
+     * the particle and not modify its position or velocity.  This is most often
+     * used for virtual sites, but can also be used as a way to prevent a particle
+     * from moving.
      * 
      * @param index the index of the particle for which to get the mass
      */
@@ -89,7 +101,10 @@ public:
         return masses[index];
     }
     /**
-     * Set the mass (in atomic mass units) of a particle.
+     * Set the mass (in atomic mass units) of a particle.  If the mass is 0, Integrators will ignore
+     * the particle and not modify its position or velocity.  This is most often
+     * used for virtual sites, but can also be used as a way to prevent a particle
+     * from moving.
      * 
      * @param index  the index of the particle for which to set the mass
      * @param mass   the mass of the particle
@@ -104,7 +119,8 @@ public:
         return constraints.size();
     }
     /**
-     * Add a constraint to the System.
+     * Add a constraint to the System.  Particles whose mass is 0 cannot participate
+     * in constraints.
      *
      * @param particle1 the index of the first particle involved in the constraint
      * @param particle2 the index of the second particle involved in the constraint
@@ -122,7 +138,8 @@ public:
      */
     void getConstraintParameters(int index, int& particle1, int& particle2, double& distance) const;
     /**
-     * Set the parameters defining a distance constraint.
+     * Set the parameters defining a distance constraint.  Particles whose mass is 0 cannot participate
+     * in constraints.
      * 
      * @param index     the index of the constraint for which to set parameters
      * @param particle1 the index of the first particle involved in the constraint
@@ -165,6 +182,32 @@ public:
         return *forces[index];
     }
     /**
+     * Add a VirtualSite to the System.  The VirtualSite should have been created on the heap with the
+     * "new" operator.  The System takes over ownership of it, and deletes the VirtualSite when the
+     * System itself is deleted.
+     *
+     * @param virtualSite   a pointer to the VirtualSite object to be added
+     * @return the index within the System of the VirtualSite that was added
+     */
+    int addVirtualSite(VirtualSite* virtualSite) {
+        virtualSites.push_back(virtualSite);
+        return virtualSites.size()-1;
+    }
+    /**
+     * Get the number of VirtualSite objects that have been added to the System.
+     */
+    int getNumVirtualSites() const {
+        return virtualSites.size();
+    }
+    /**
+     * Get a const reference to one of the VirtualSites in this System.
+     * 
+     * @param index  the index of the VirtualSite to get
+     */
+    const VirtualSite& getVirtualSite(int index) const {
+        return *virtualSites[index];
+    }
+    /**
      * Get the default values of the vectors defining the axes of the periodic box (measured in nm).  Any newly
      * created Context will have its box vectors set to these.  They will affect
      * any Force added to the System that uses periodic boundary conditions.
@@ -196,6 +239,7 @@ private:
     std::vector<double> masses;
     std::vector<ConstraintInfo> constraints;
     std::vector<Force*> forces;
+    std::vector<VirtualSite*> virtualSites;
 };
 
 /**
