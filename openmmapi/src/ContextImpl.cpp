@@ -37,6 +37,7 @@
 #include "openmm/internal/ForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/State.h"
+#include "openmm/VirtualSite.h"
 #include <map>
 #include <utility>
 #include <vector>
@@ -51,6 +52,29 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
          owner(owner), system(system), integrator(integrator), hasInitializedForces(false), platform(platform), platformData(NULL) {
     if (system.getNumParticles() == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");
+    
+    // Check for errors in virtual sites and massless particles.
+    
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        if (system.isVirtualSite(i)) {
+            if (system.getParticleMass(i) != 0.0)
+                throw OpenMMException("Virtual site has nonzero mass");
+            const VirtualSite& site = system.getVirtualSite(i);
+            for (int j = 0; j < site.getNumParticles(); j++)
+                if (system.isVirtualSite(site.getParticle(j)))
+                    throw OpenMMException("A virtual site cannot depend on another virtual site");
+        }
+    }
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        if (system.getParticleMass(particle1) == 0.0 || system.getParticleMass(particle2) == 0.0)
+            throw OpenMMException("A constraint cannot involve a massless particle");
+    }
+    
+    // Find the list of kernels required.
+    
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
@@ -69,6 +93,9 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
         this->platform = platform = &Platform::findPlatform(kernelNames);
     else if (!platform->supportsKernels(kernelNames))
         throw OpenMMException("Specified a Platform for a Context which does not support all required kernels");
+    
+    // Create and initialize kernels and other objects.
+    
     platform->contextCreated(*this, properties);
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
     dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl()).initialize(system);

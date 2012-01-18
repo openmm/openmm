@@ -41,7 +41,7 @@ namespace OpenMM {
  * A VirtualSite describes the rules for computing a particle's position based on
  * other particles.  This is an abstract class.  Subclasses define particular rules.
  * To define a virtual site, create an instance of a VirtualSite subclass and then
- * call addVirtualSite() on the System.
+ * call setVirtualSite() on the System.
  */
 
 class OPENMM_EXPORT VirtualSite {

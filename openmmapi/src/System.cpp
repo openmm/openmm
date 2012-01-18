@@ -48,6 +48,18 @@ System::~System() {
         delete virtualSites[i];
 }
 
+void System::setVirtualSite(int index, VirtualSite* virtualSite) {
+    if (index >= virtualSites.size())
+        virtualSites.resize(getNumParticles(), NULL);
+    virtualSites[index] = virtualSite;
+}
+
+const VirtualSite& System::getVirtualSite(int index) const {
+    if (index >= virtualSites.size() || virtualSites[index] == NULL)
+        throw OpenMMException("This particle is not a virtual site");
+    return *virtualSites[index];
+}
+
 int System::addConstraint(int particle1, int particle2, double distance) {
     constraints.push_back(ConstraintInfo(particle1, particle2, distance));
     return constraints.size()-1;

@@ -59,7 +59,7 @@ class OPENMM_EXPORT VirtualSite;
  * 
  * In addition, particles may be designated as "virtual sites".  These are particles
  * whose positions are computed automatically based on the positions of other particles.
- * To define a virtual site, call addVirtualSite(), passing in a VirtualSite object
+ * To define a virtual site, call setVirtualSite(), passing in a VirtualSite object
  * that defines the rules for computing its position.
  */
 
@@ -112,6 +112,31 @@ public:
     void setParticleMass(int index, double mass) {
         masses[index] = mass;
     }
+    /**
+     * Set a particle to be a virtual site.  The VirtualSite object should have
+     * been created on the heap with the "new" operator.  The System takes over
+     * ownership of it, and deletes it when the System itself is deleted.
+     *
+     * @param index        the index of the particle that should be treated as a
+     *                     virtual site
+     * @param virtualSite  a pointer to the VirtualSite object describing it
+     */
+    void setVirtualSite(int index, VirtualSite* virtualSite);
+    /**
+     * Get whether a particle is a VirtualSite.
+     * 
+     * @param index  the index of the particle to check
+     */
+    bool isVirtualSite(int index) const {
+        return (index < virtualSites.size() && virtualSites[index] != NULL);
+    }
+    /**
+     * Get VirtualSite object for a particle.  If the particle is not a virtual
+     * site, this throws an exception.
+     * 
+     * @param index  the index of the particle to get
+     */
+    const VirtualSite& getVirtualSite(int index) const;
     /**
      * Get the number of distance constraints in this System.
      */
@@ -180,32 +205,6 @@ public:
      */
     Force& getForce(int index) {
         return *forces[index];
-    }
-    /**
-     * Add a VirtualSite to the System.  The VirtualSite should have been created on the heap with the
-     * "new" operator.  The System takes over ownership of it, and deletes the VirtualSite when the
-     * System itself is deleted.
-     *
-     * @param virtualSite   a pointer to the VirtualSite object to be added
-     * @return the index within the System of the VirtualSite that was added
-     */
-    int addVirtualSite(VirtualSite* virtualSite) {
-        virtualSites.push_back(virtualSite);
-        return virtualSites.size()-1;
-    }
-    /**
-     * Get the number of VirtualSite objects that have been added to the System.
-     */
-    int getNumVirtualSites() const {
-        return virtualSites.size();
-    }
-    /**
-     * Get a const reference to one of the VirtualSites in this System.
-     * 
-     * @param index  the index of the VirtualSite to get
-     */
-    const VirtualSite& getVirtualSite(int index) const {
-        return *virtualSites[index];
     }
     /**
      * Get the default values of the vectors defining the axes of the periodic box (measured in nm).  Any newly
