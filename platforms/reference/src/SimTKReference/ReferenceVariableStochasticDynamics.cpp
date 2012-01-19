@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceVariableStochasticDynamics.h"
+#include "ReferenceVirtualSites.h"
 
 #include <cstdio>
 
@@ -164,26 +165,13 @@ void ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, vector
    // first-time-through initialization
 
    if( getTimeStep() == 0 ){
-
-      std::stringstream message;
-      message << methodName;
-      int errors = 0;
-
       // invert masses
 
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         if( masses[ii] <= 0 ){
-            message << "mass at atom index=" << ii << " (" << masses[ii] << ") is <= 0" << std::endl;
-            errors++;
-         } else {
-            inverseMasses[ii] = 1/masses[ii];
-         }
-      }
-
-      // exit if errors
-
-      if( errors ){
-         SimTKOpenMMLog::printError( message );
+         if (masses[ii] == 0)
+             inverseMasses[ii] = 0;
+         else
+             inverseMasses[ii] = 1/masses[ii];
       }
    }
 
@@ -214,10 +202,12 @@ void ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, vector
    const RealOpenMM noisescale = SQRT(2*kT/tau)*SQRT(0.5*(1-vscale*vscale)*tau);
 
    for (int ii = 0; ii < numberOfAtoms; ii++) {
-      RealOpenMM sqrtInvMass = SQRT(inverseMasses[ii]);
-      for (int jj = 0; jj < 3; jj++) {
-           velocities[ii][jj]  = vscale*velocities[ii][jj] + fscale*inverseMasses[ii]*forces[ii][jj] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-      }
+       if (masses[ii] != 0) {
+           RealOpenMM sqrtInvMass = SQRT(inverseMasses[ii]);
+           for (int jj = 0; jj < 3; jj++) {
+               velocities[ii][jj]  = vscale*velocities[ii][jj] + fscale*inverseMasses[ii]*forces[ii][jj] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+           }
+       }
    }
 
 }
@@ -248,9 +238,9 @@ void ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector
    // perform second update
 
    for (int ii = 0; ii < numberOfAtoms; ii++) {
-      for (int jj = 0; jj < 3; jj++) {
-         xPrime[ii][jj] = atomCoordinates[ii][jj]+getDeltaT()*velocities[ii][jj];
-      }
+       if (inverseMasses[ii] != 0.0)
+           for (int jj = 0; jj < 3; jj++)
+               xPrime[ii][jj] = atomCoordinates[ii][jj]+getDeltaT()*velocities[ii][jj];
    }
 
 }
@@ -260,7 +250,7 @@ void ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector
    Update -- driver routine for performing stochastic dynamics update of coordinates
    and velocities
 
-   @param numberOfAtoms       number of atoms
+   @param system              the System to be integrated
    @param atomCoordinates     atom coordinates
    @param velocities          velocities
    @param forces              forces
@@ -268,7 +258,7 @@ void ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, vector
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableStochasticDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize ){
 
@@ -280,6 +270,7 @@ void ReferenceVariableStochasticDynamics::update( int numberOfAtoms, vector<Real
 
    // 1st update
 
+   int numberOfAtoms = system.getNumParticles();
    updatePart1( numberOfAtoms, atomCoordinates, velocities, forces, masses, inverseMasses, xPrime, maxStepSize );
 
    // 2nd update
@@ -294,12 +285,14 @@ void ReferenceVariableStochasticDynamics::update( int numberOfAtoms, vector<Real
 
    // copy xPrime -> atomCoordinates
 
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      atomCoordinates[ii][0] = xPrime[ii][0];
-      atomCoordinates[ii][1] = xPrime[ii][1];
-      atomCoordinates[ii][2] = xPrime[ii][2];
+   for( int ii = 0; ii < numberOfAtoms; ii++ ) {
+       if (masses[ii] != 0.0) {
+           atomCoordinates[ii][0] = xPrime[ii][0];
+           atomCoordinates[ii][1] = xPrime[ii][1];
+           atomCoordinates[ii][2] = xPrime[ii][2];
+       }
    }
 
+   ReferenceVirtualSites::computePositions(system, atomCoordinates);
    incrementTimeStep();
-
 }

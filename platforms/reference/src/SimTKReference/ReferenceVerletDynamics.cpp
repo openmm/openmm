@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2008 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceVerletDynamics.h"
+#include "ReferenceVirtualSites.h"
 
 #include <cstdio>
 
@@ -84,7 +85,7 @@ ReferenceVerletDynamics::~ReferenceVerletDynamics( ){
    Update -- driver routine for performing Verlet dynamics update of coordinates
    and velocities
 
-   @param numberOfAtoms       number of atoms
+   @param system              the System to be integrated
    @param atomCoordinates     atom coordinates
    @param velocities          velocities
    @param forces              forces
@@ -92,7 +93,7 @@ ReferenceVerletDynamics::~ReferenceVerletDynamics( ){
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
@@ -107,37 +108,26 @@ void ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCo
 
    // first-time-through initialization
 
+   int numberOfAtoms = system.getNumParticles();
    if( getTimeStep() == 0 ){
-
-      std::stringstream message;
-      message << methodName;
-      int errors = 0;
-
       // invert masses
 
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         if( masses[ii] <= zero ){
-            message << "mass at atom index=" << ii << " (" << masses[ii] << ") is <= 0" << std::endl;
-            errors++;
-         } else {
-            inverseMasses[ii] = one/masses[ii];
-         }
-      }
-
-      // exit if errors
-
-      if( errors ){
-         SimTKOpenMMLog::printError( message );
+         if (masses[ii] == zero)
+             inverseMasses[ii] = zero;
+         else
+             inverseMasses[ii] = one/masses[ii];
       }
    }
    
    // Perform the integration.
    
    for (int i = 0; i < numberOfAtoms; ++i) {
-       for (int j = 0; j < 3; ++j) {
-           velocities[i][j] += inverseMasses[i]*forces[i][j]*getDeltaT();
-           xPrime[i][j] = atomCoordinates[i][j] + velocities[i][j]*getDeltaT();
-       }
+       if (masses[i] != zero)
+           for (int j = 0; j < 3; ++j) {
+               velocities[i][j] += inverseMasses[i]*forces[i][j]*getDeltaT();
+               xPrime[i][j] = atomCoordinates[i][j] + velocities[i][j]*getDeltaT();
+           }
    }
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
    if( referenceConstraintAlgorithm )
@@ -147,11 +137,13 @@ void ReferenceVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCo
    
    RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/getDeltaT() );
    for (int i = 0; i < numberOfAtoms; ++i) {
-       for (int j = 0; j < 3; ++j) {
-           velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
-           atomCoordinates[i][j] = xPrime[i][j];
-       }
+       if (masses[i] != zero)
+           for (int j = 0; j < 3; ++j) {
+               velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
+               atomCoordinates[i][j] = xPrime[i][j];
+           }
    }
 
+   ReferenceVirtualSites::computePositions(system, atomCoordinates);
    incrementTimeStep();
 }

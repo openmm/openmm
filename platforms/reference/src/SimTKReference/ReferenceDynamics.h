@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,6 +27,7 @@
 
 #include "ReferenceConstraintAlgorithm.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "openmm/System.h"
 #include <cstddef>
 #include <vector>
 
@@ -134,24 +135,12 @@ class OPENMM_EXPORT ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
     
       RealOpenMM getTemperature( void ) const;
-    
-      /**---------------------------------------------------------------------------------------
-      
-         Remove total linear momentum
-      
-         @param numberOfAtoms      number of atoms
-         @param masses             masses
-         @param velocities         velocities
-      
-         --------------------------------------------------------------------------------------- */
-      
-      void removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses, std::vector<OpenMM::RealVec>& velocities ) const;
 
       /**---------------------------------------------------------------------------------------
       
          Update
       
-         @param numberOfAtoms       number of atoms
+         @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param forces              forces
@@ -159,8 +148,8 @@ class OPENMM_EXPORT ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                          std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses );
+      virtual void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
+                          std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses);
 
       /**---------------------------------------------------------------------------------------
       

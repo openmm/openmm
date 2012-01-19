@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,6 +56,7 @@
 #include "SimTKReference/ReferenceVariableStochasticDynamics.h"
 #include "SimTKReference/ReferenceVariableVerletDynamics.h"
 #include "SimTKReference/ReferenceVerletDynamics.h"
+#include "SimTKReference/ReferenceVirtualSites.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
@@ -161,6 +162,8 @@ void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, 
 double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (!includeForces)
         extractForces(context) = savedForces; // Restore the forces so computing the energy doesn't overwrite the forces with incorrect values.
+    else
+        ReferenceVirtualSites::distributeForces(context.getSystem(), extractPositions(context), extractForces(context));
     return 0.0;
 }
 
@@ -272,6 +275,7 @@ void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     vector<RealVec>& positions = extractPositions(context);
     constraints->setTolerance(tol);
     constraints->apply(data.numParticles, positions, positions, inverseMasses);
+    ReferenceVirtualSites::computePositions(context.getSystem(), positions);
 }
 
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
@@ -1261,7 +1265,7 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
         prevStepSize = stepSize;
     }
     constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
 }
@@ -1325,7 +1329,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
         prevStepSize = stepSize;
     }
     constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
 }
@@ -1388,7 +1392,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
         prevStepSize = stepSize;
     }
     constraints->setTolerance(integrator.getConstraintTolerance());
-    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
 }
@@ -1449,7 +1453,7 @@ void ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context,
     }
     constraints->setTolerance(integrator.getConstraintTolerance());
     RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
-    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses, maxStepSize);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize);
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
@@ -1506,7 +1510,7 @@ void ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, c
     }
     constraints->setTolerance(integrator.getConstraintTolerance());
     RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
-    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses, maxStepSize);
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize);
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
@@ -1676,10 +1680,10 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
     RealOpenMM momentum[] = {0.0, 0.0, 0.0};
     RealOpenMM mass = 0.0;
     for (size_t i = 0; i < masses.size(); ++i) {
-        momentum[0] += static_cast<RealOpenMM>( masses[i]*velData[i][0] );
-        momentum[1] += static_cast<RealOpenMM>( masses[i]*velData[i][1] );
-        momentum[2] += static_cast<RealOpenMM>( masses[i]*velData[i][2] );
-        mass += static_cast<RealOpenMM>( masses[i] );
+        momentum[0] += static_cast<RealOpenMM>(masses[i]*velData[i][0]);
+        momentum[1] += static_cast<RealOpenMM>(masses[i]*velData[i][1]);
+        momentum[2] += static_cast<RealOpenMM>(masses[i]*velData[i][2]);
+        mass += static_cast<RealOpenMM>(masses[i]);
     }
     
     // Adjust the particle velocities.
@@ -1688,8 +1692,10 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
     momentum[1] /= mass;
     momentum[2] /= mass;
     for (size_t i = 0; i < masses.size(); ++i) {
-        velData[i][0] -= momentum[0];
-        velData[i][1] -= momentum[1];
-        velData[i][2] -= momentum[2];
+        if (masses[i] != 0.0) {
+            velData[i][0] -= momentum[0];
+            velData[i][1] -= momentum[1];
+            velData[i][2] -= momentum[2];
+        }
     }
 }

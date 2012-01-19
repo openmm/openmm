@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -80,7 +80,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          Update
 
-         @param numberOfAtoms       number of atoms
+         @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param forces              forces
@@ -89,7 +89,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
          --------------------------------------------------------------------------------------- */
 
-      void update( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void update(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates,
                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses, RealOpenMM maxStepSize );
 
 };

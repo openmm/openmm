@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceVariableVerletDynamics.h"
+#include "ReferenceVirtualSites.h"
 
 using std::vector;
 using OpenMM::RealVec;
@@ -45,18 +46,8 @@ using OpenMM::RealVec;
 
 ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics( int numberOfAtoms, RealOpenMM accuracy ) :
            ReferenceDynamics( numberOfAtoms, 0.0f, 0.0f ), _accuracy(accuracy) {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   xPrime.resize(numberOfAtoms);
-   inverseMasses.resize(numberOfAtoms);
+    xPrime.resize(numberOfAtoms);
+    inverseMasses.resize(numberOfAtoms);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -102,7 +93,7 @@ void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
    Update -- driver routine for performing Verlet dynamics update of coordinates
    and velocities
 
-   @param numberOfAtoms       number of atoms
+   @param system              the System to be integrated
    @param atomCoordinates     atom coordinates
    @param velocities          velocities
    @param forces              forces
@@ -111,7 +102,7 @@ void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses, RealOpenMM maxStepSize ){
 
@@ -126,27 +117,15 @@ void ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>
 
     // first-time-through initialization
 
+    int numberOfAtoms = system.getNumParticles();
     if( getTimeStep() == 0 ){
-
-       std::stringstream message;
-       message << methodName;
-       int errors = 0;
-
        // invert masses
 
        for( int ii = 0; ii < numberOfAtoms; ii++ ){
-          if( masses[ii] <= zero ){
-             message << "mass at atom index=" << ii << " (" << masses[ii] << ") is <= 0" << std::endl;
-             errors++;
-          } else {
-             inverseMasses[ii] = one/masses[ii];
-          }
-       }
-
-       // exit if errors
-
-       if( errors ){
-          SimTKOpenMMLog::printError( message );
+          if (masses[ii] == zero)
+              inverseMasses[ii] = zero;
+          else
+              inverseMasses[ii] = one/masses[ii];
        }
     }
 
@@ -168,10 +147,11 @@ void ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>
     RealOpenMM vstep = 0.5f*(newStepSize+getDeltaT()); // The time interval by which to advance the velocities
     setDeltaT(newStepSize);
     for (int i = 0; i < numberOfAtoms; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            RealOpenMM vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*vstep;
-            xPrime[i][j] = atomCoordinates[i][j] + vPrime*getDeltaT();
-        }
+        if (masses[i] != zero)
+            for (int j = 0; j < 3; ++j) {
+                RealOpenMM vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*vstep;
+                xPrime[i][j] = atomCoordinates[i][j] + vPrime*getDeltaT();
+            }
     }
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (referenceConstraintAlgorithm)
@@ -181,12 +161,13 @@ void ReferenceVariableVerletDynamics::update( int numberOfAtoms, vector<RealVec>
 
    RealOpenMM velocityScale = one/getDeltaT();
    for (int i = 0; i < numberOfAtoms; ++i) {
-       for (int j = 0; j < 3; ++j) {
-           velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
-           atomCoordinates[i][j] = xPrime[i][j];
-       }
+       if (masses[i] != zero)
+           for (int j = 0; j < 3; ++j) {
+               velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
+               atomCoordinates[i][j] = xPrime[i][j];
+           }
    }
-
+   ReferenceVirtualSites::computePositions(system, atomCoordinates);
    incrementTimeStep();
 }
 

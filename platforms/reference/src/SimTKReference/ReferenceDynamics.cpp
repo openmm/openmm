@@ -241,10 +241,10 @@ void ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgo
 
 /**---------------------------------------------------------------------------------------
 
-   Update -- driver routine for performing stochastic dynamics update of coordinates
+   Update -- driver routine for performing dynamics update of coordinates
    and velocities
 
-   @param numberOfAtoms       number of atoms
+   @param system              the System to be integrated
    @param atomCoordinates     atom coordinates
    @param velocities          velocities
    @param forces              forces
@@ -252,7 +252,7 @@ void ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgo
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
                                vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
    // ---------------------------------------------------------------------------------------
@@ -263,50 +263,4 @@ void ReferenceDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordina
    static const RealOpenMM one        =  1.0;
 
    // ---------------------------------------------------------------------------------------
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Remove total linear momentum
-
-   @param numberOfAtoms      number of atoms
-   @param masses             masses
-   @param velocities         velocities
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses,
-                                                  vector<RealVec>& velocities ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceDynamics::removeTotalLinearMomentum";
-
-   static const RealOpenMM zero        = 0.0;
-   static const RealOpenMM one         = 1.0;
-
-   // ---------------------------------------------------------------------------------------
-
-   RealOpenMM totalMass          = zero;
-   RealOpenMM linearMomentum[3]  = { zero, zero, zero };
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      totalMass          += masses[ii];
-      linearMomentum[0]  += masses[ii]*velocities[ii][0];
-      linearMomentum[1]  += masses[ii]*velocities[ii][1];
-      linearMomentum[2]  += masses[ii]*velocities[ii][2];
-   }
-
-   if( totalMass > zero ){
-
-      RealOpenMM totalMassI      = one/totalMass;
-      linearMomentum[0]         *= totalMassI;
-      linearMomentum[1]         *= totalMassI;
-      linearMomentum[2]         *= totalMassI;
-
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         velocities[ii][0]     -= linearMomentum[0];
-         velocities[ii][1]     -= linearMomentum[1];
-         velocities[ii][2]     -= linearMomentum[2];
-      }
-   }
 }

@@ -25,13 +25,14 @@
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "openmm/OpenMMException.h"
-#include "lepton/Parser.h"
+#include "ReferenceVirtualSites.h"
 #include "ReferenceCustomDynamics.h"
-#include "lepton/ParsedExpression.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ForceImpl.h"
 #include "lepton/Operation.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/Parser.h"
 #include <set>
 
 using namespace std;
@@ -126,8 +127,12 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         // Build the list of inverse masses.
         
         inverseMasses.resize(numberOfAtoms);
-        for (int i = 0; i < numberOfAtoms; i++)
-            inverseMasses[i] = 1.0/masses[i];
+        for (int i = 0; i < numberOfAtoms; i++) {
+            if (masses[i] == 0.0)
+                inverseMasses[i] = 0.0;
+            else
+                inverseMasses[i] = 1.0/masses[i];
+        }
     }
     
     // Loop over steps and execute them.
@@ -188,7 +193,8 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, forces, masses, globals, perDof, stepExpression[i]);
                 RealOpenMM sum = 0.0;
                 for (int j = 0; j < numberOfAtoms; j++)
-                    sum += sumBuffer[j][0]+sumBuffer[j][1]+sumBuffer[j][2];
+                    if (masses[j] != 0.0)
+                        sum += sumBuffer[j][0]+sumBuffer[j][1]+sumBuffer[j][2];
                 globals[stepVariable[i]] = sum;
                 break;
             }
@@ -209,6 +215,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         if (invalidatesForces[i])
             forcesAreValid = false;
     }
+    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();
     recordChangedParameters(context, globals);
 }
@@ -220,18 +227,20 @@ RealOpenMM ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<Real
     
     map<string, RealOpenMM> variables = globals;
     for (int i = 0; i < numberOfAtoms; i++) {
-        variables["m"] = masses[i];
-        for (int j = 0; j < 3; j++) {
-            // Compute the expression.
-            
-            variables["x"] = atomCoordinates[i][j];
-            variables["v"] = velocities[i][j];
-            variables["f"] = forces[i][j];
-            variables["uniform"] = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
-            variables["gaussian"] = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-            for (int k = 0; k < (int) perDof.size(); k++)
-                variables[integrator.getPerDofVariableName(k)] = perDof[k][i][j];
-            results[i][j] = expression.evaluate(variables);
+        if (masses[i] != 0.0) {
+            variables["m"] = masses[i];
+            for (int j = 0; j < 3; j++) {
+                // Compute the expression.
+
+                variables["x"] = atomCoordinates[i][j];
+                variables["v"] = velocities[i][j];
+                variables["f"] = forces[i][j];
+                variables["uniform"] = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+                variables["gaussian"] = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                for (int k = 0; k < (int) perDof.size(); k++)
+                    variables[integrator.getPerDofVariableName(k)] = perDof[k][i][j];
+                results[i][j] = expression.evaluate(variables);
+            }
         }
     }
 }

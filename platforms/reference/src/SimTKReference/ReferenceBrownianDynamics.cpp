@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2008 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceBrownianDynamics.h"
+#include "ReferenceVirtualSites.h"
 
 #include <cstdio>
 
@@ -114,7 +115,7 @@ RealOpenMM ReferenceBrownianDynamics::getFriction( void ) const {
    Update -- driver routine for performing Brownian dynamics update of coordinates
    and velocities
 
-   @param numberOfAtoms       number of atoms
+   @param system              the System to be integrated
    @param atomCoordinates     atom coordinates
    @param velocities          velocities
    @param forces              forces
@@ -122,7 +123,7 @@ RealOpenMM ReferenceBrownianDynamics::getFriction( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<RealVec>& atomCoordinates,
                                           vector<RealVec>& velocities,
                                           vector<RealVec>& forces, vector<RealOpenMM>& masses ){
 
@@ -137,27 +138,15 @@ void ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atom
 
    // first-time-through initialization
 
+   int numberOfAtoms = system.getNumParticles();
    if( getTimeStep() == 0 ){
-
-      std::stringstream message;
-      message << methodName;
-      int errors = 0;
-
       // invert masses
 
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         if( masses[ii] <= zero ){
-            message << "mass at atom index=" << ii << " (" << masses[ii] << ") is <= 0" << std::endl;
-            errors++;
-         } else {
-            inverseMasses[ii] = one/masses[ii];
-         }
-      }
-
-      // exit if errors
-
-      if( errors ){
-         SimTKOpenMMLog::printError( message );
+         if (masses[ii] == zero)
+             inverseMasses[ii] == zero;
+         else
+             inverseMasses[ii] = one/masses[ii];
       }
    }
    
@@ -166,9 +155,10 @@ void ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atom
    const RealOpenMM noiseAmplitude = static_cast<RealOpenMM>( sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction()) );
    const RealOpenMM forceScale = getDeltaT()/getFriction();
    for (int i = 0; i < numberOfAtoms; ++i) {
-       for (int j = 0; j < 3; ++j) {
-           xPrime[i][j] = atomCoordinates[i][j] + forceScale*inverseMasses[i]*forces[i][j] + noiseAmplitude*SQRT(inverseMasses[i])*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-       }
+       if (masses[i] != zero)
+           for (int j = 0; j < 3; ++j) {
+               xPrime[i][j] = atomCoordinates[i][j] + forceScale*inverseMasses[i]*forces[i][j] + noiseAmplitude*SQRT(inverseMasses[i])*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+           }
    }
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
    if( referenceConstraintAlgorithm )
@@ -178,12 +168,12 @@ void ReferenceBrownianDynamics::update( int numberOfAtoms, vector<RealVec>& atom
    
    RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/getDeltaT() );
    for (int i = 0; i < numberOfAtoms; ++i) {
-       for (int j = 0; j < 3; ++j) {
-           velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
-           atomCoordinates[i][j] = xPrime[i][j];
-       }
+       if (masses[i] != zero)
+           for (int j = 0; j < 3; ++j) {
+               velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
+               atomCoordinates[i][j] = xPrime[i][j];
+           }
    }
-
+   ReferenceVirtualSites::computePositions(system, atomCoordinates);
    incrementTimeStep();
-
 }
