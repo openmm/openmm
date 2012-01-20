@@ -65,6 +65,7 @@
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/Vec3.h"
 #include "openmm/VerletIntegrator.h"
+#include "openmm/VirtualSite.h"
 #include "openmm/Platform.h"
 
 #endif /*OPENMM_H_*/

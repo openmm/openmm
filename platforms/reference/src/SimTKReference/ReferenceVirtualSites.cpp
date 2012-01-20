@@ -38,26 +38,26 @@ using namespace std;
 void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vector<OpenMM::RealVec>& atomCoordinates) {
     for (int i = 0; i < system.getNumParticles(); i++)
         if (system.isVirtualSite(i)) {
-            if (dynamic_cast<const VirtualSite::TwoParticleAverage*>(&system.getVirtualSite(i)) != NULL) {
+            if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A two particle average.
                 
-                const VirtualSite::TwoParticleAverage& site = dynamic_cast<const VirtualSite::TwoParticleAverage&>(system.getVirtualSite(i));
+                const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1);
                 RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1);
                 atomCoordinates[i] = atomCoordinates[p1]*w1 + atomCoordinates[p2]*w2;
             }
-            else if (dynamic_cast<const VirtualSite::ThreeParticleAverage*>(&system.getVirtualSite(i)) != NULL) {
+            else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A three particle average.
                 
-                const VirtualSite::ThreeParticleAverage& site = dynamic_cast<const VirtualSite::ThreeParticleAverage&>(system.getVirtualSite(i));
+                const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
                 RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1), w3 = site.getWeight(2);
                 atomCoordinates[i] = atomCoordinates[p1]*w1 + atomCoordinates[p2]*w2 + atomCoordinates[p3]*w3;
             }
-            else if (dynamic_cast<const VirtualSite::OutOfPlane*>(&system.getVirtualSite(i)) != NULL) {
+            else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
                 // An out of plane site.
                 
-                const VirtualSite::OutOfPlane& site = dynamic_cast<const VirtualSite::OutOfPlane&>(system.getVirtualSite(i));
+                const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
                 RealOpenMM w12 = site.getWeight12(), w13 = site.getWeight13(), wcross = site.getWeightCross();
                 RealVec v12 = atomCoordinates[p2]-atomCoordinates[p1];
@@ -73,29 +73,29 @@ void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const
     for (int i = 0; i < system.getNumParticles(); i++)
         if (system.isVirtualSite(i)) {
             RealVec f = forces[i];
-            if (dynamic_cast<const VirtualSite::TwoParticleAverage*>(&system.getVirtualSite(i)) != NULL) {
+            if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A two particle average.
                 
-                const VirtualSite::TwoParticleAverage& site = dynamic_cast<const VirtualSite::TwoParticleAverage&>(system.getVirtualSite(i));
+                const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1);
                 RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1);
                 forces[p1] += f*w1;
                 forces[p2] += f*w2;
             }
-            else if (dynamic_cast<const VirtualSite::ThreeParticleAverage*>(&system.getVirtualSite(i)) != NULL) {
+            else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A three particle average.
                 
-                const VirtualSite::ThreeParticleAverage& site = dynamic_cast<const VirtualSite::ThreeParticleAverage&>(system.getVirtualSite(i));
+                const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
                 RealOpenMM w1 = site.getWeight(0), w2 = site.getWeight(1), w3 = site.getWeight(2);
                 forces[p1] += f*w1;
                 forces[p2] += f*w2;
                 forces[p3] += f*w3;
             }
-            else if (dynamic_cast<const VirtualSite::OutOfPlane*>(&system.getVirtualSite(i)) != NULL) {
+            else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
                 // An out of plane site.
                 
-                const VirtualSite::OutOfPlane& site = dynamic_cast<const VirtualSite::OutOfPlane&>(system.getVirtualSite(i));
+                const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
                 int p1 = site.getParticle(0), p2 = site.getParticle(1), p3 = site.getParticle(2);
                 RealOpenMM w12 = site.getWeight12(), w13 = site.getWeight13(), wcross = site.getWeightCross();
                 RealVec v12 = atomCoordinates[p2]-atomCoordinates[p1];

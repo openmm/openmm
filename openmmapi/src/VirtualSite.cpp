@@ -48,7 +48,7 @@ int VirtualSite::getParticle(int particle) const {
     return particles[particle];
 }
 
-VirtualSite::TwoParticleAverage::TwoParticleAverage(int particle1, int particle2, double weight1, double weight2) :
+TwoParticleAverageSite::TwoParticleAverageSite(int particle1, int particle2, double weight1, double weight2) :
         weight1(weight1), weight2(weight2) {
     vector<int> particles(2);
     particles[0] = particle1;
@@ -56,7 +56,7 @@ VirtualSite::TwoParticleAverage::TwoParticleAverage(int particle1, int particle2
     setParticles(particles);
 }
 
-double VirtualSite::TwoParticleAverage::getWeight(int particle) const {
+double TwoParticleAverageSite::getWeight(int particle) const {
     if (particle == 0)
         return weight1;
     if (particle == 1)
@@ -64,7 +64,7 @@ double VirtualSite::TwoParticleAverage::getWeight(int particle) const {
     throw OpenMMException("Illegal index for particle");
 }
 
-VirtualSite::ThreeParticleAverage::ThreeParticleAverage(int particle1, int particle2, int particle3, double weight1, double weight2, double weight3) :
+ThreeParticleAverageSite::ThreeParticleAverageSite(int particle1, int particle2, int particle3, double weight1, double weight2, double weight3) :
         weight1(weight1), weight2(weight2), weight3(weight3) {
     vector<int> particles(3);
     particles[0] = particle1;
@@ -73,7 +73,7 @@ VirtualSite::ThreeParticleAverage::ThreeParticleAverage(int particle1, int parti
     setParticles(particles);
 }
 
-double VirtualSite::ThreeParticleAverage::getWeight(int particle) const {
+double ThreeParticleAverageSite::getWeight(int particle) const {
     if (particle == 0)
         return weight1;
     if (particle == 1)
@@ -83,7 +83,7 @@ double VirtualSite::ThreeParticleAverage::getWeight(int particle) const {
     throw OpenMMException("Illegal index for particle");
 }
 
-VirtualSite::OutOfPlane::OutOfPlane(int particle1, int particle2, int particle3, double weight12, double weight13, double weightCross) :
+OutOfPlaneSite::OutOfPlaneSite(int particle1, int particle2, int particle3, double weight12, double weight13, double weightCross) :
         weight12(weight12), weight13(weight13), weightCross(weightCross) {
     vector<int> particles(3);
     particles[0] = particle1;
@@ -92,14 +92,14 @@ VirtualSite::OutOfPlane::OutOfPlane(int particle1, int particle2, int particle3,
     setParticles(particles);
 }
 
-double VirtualSite::OutOfPlane::getWeight12() const {
+double OutOfPlaneSite::getWeight12() const {
     return weight12;
 }
 
-double VirtualSite::OutOfPlane::getWeight13() const {
+double OutOfPlaneSite::getWeight13() const {
     return weight13;
 }
 
-double VirtualSite::OutOfPlane::getWeightCross() const {
+double OutOfPlaneSite::getWeightCross() const {
     return weightCross;
 }

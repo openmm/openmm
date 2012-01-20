@@ -88,7 +88,7 @@ void testMasslessParticle() {
 }
 
 /**
- * Test a TwoParticleAverage virtual site.
+ * Test a TwoParticleAverageSite virtual site.
  */
 void testTwoParticleAverage() {
     ReferencePlatform platform;
@@ -96,7 +96,7 @@ void testTwoParticleAverage() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(0.0);
-    system.setVirtualSite(2, new VirtualSite::TwoParticleAverage(0, 1, 0.8, 0.2));
+    system.setVirtualSite(2, new TwoParticleAverageSite(0, 1, 0.8, 0.2));
     CustomExternalForce* forceField = new CustomExternalForce("-a*x");
     system.addForce(forceField);
     forceField->addPerParticleParameter("a");
@@ -124,7 +124,7 @@ void testTwoParticleAverage() {
 }
 
 /**
- * Test a ThreeParticleAverage virtual site.
+ * Test a ThreeParticleAverageSite virtual site.
  */
 void testThreeParticleAverage() {
     ReferencePlatform platform;
@@ -133,7 +133,7 @@ void testThreeParticleAverage() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(0.0);
-    system.setVirtualSite(3, new VirtualSite::ThreeParticleAverage(0, 1, 2, 0.2, 0.3, 0.5));
+    system.setVirtualSite(3, new ThreeParticleAverageSite(0, 1, 2, 0.2, 0.3, 0.5));
     CustomExternalForce* forceField = new CustomExternalForce("-a*x");
     system.addForce(forceField);
     forceField->addPerParticleParameter("a");
@@ -165,7 +165,7 @@ void testThreeParticleAverage() {
 }
 
 /**
- * Test an OutOfPlane virtual site.
+ * Test an OutOfPlaneSite virtual site.
  */
 void testOutOfPlane() {
     ReferencePlatform platform;
@@ -174,7 +174,7 @@ void testOutOfPlane() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(0.0);
-    system.setVirtualSite(3, new VirtualSite::OutOfPlane(0, 1, 2, 0.3, 0.4, 0.5));
+    system.setVirtualSite(3, new OutOfPlaneSite(0, 1, 2, 0.3, 0.4, 0.5));
     CustomExternalForce* forceField = new CustomExternalForce("-a*x");
     system.addForce(forceField);
     forceField->addPerParticleParameter("a");
@@ -228,7 +228,7 @@ void testConservationLaws() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(0.0);
-    system.setVirtualSite(2, new VirtualSite::TwoParticleAverage(0, 1, 0.4, 0.6));
+    system.setVirtualSite(2, new TwoParticleAverageSite(0, 1, 0.4, 0.6));
     system.addConstraint(0, 1, 2.0);
     for (int i = 0; i < 3; i++) {
         forceField->addParticle(0, 1, 10);
@@ -245,7 +245,7 @@ void testConservationLaws() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(0.0);
-    system.setVirtualSite(6, new VirtualSite::ThreeParticleAverage(3, 4, 5, 0.3, 0.5, 0.2));
+    system.setVirtualSite(6, new ThreeParticleAverageSite(3, 4, 5, 0.3, 0.5, 0.2));
     system.addConstraint(3, 4, 1.0);
     system.addConstraint(3, 5, 1.0);
     system.addConstraint(4, 5, sqrt(2.0));
@@ -265,7 +265,7 @@ void testConservationLaws() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(0.0);
-    system.setVirtualSite(10, new VirtualSite::OutOfPlane(7, 8, 9, 0.3, 0.5, 0.2));
+    system.setVirtualSite(10, new OutOfPlaneSite(7, 8, 9, 0.3, 0.5, 0.2));
     system.addConstraint(7, 8, 1.0);
     system.addConstraint(7, 9, 1.0);
     system.addConstraint(8, 9, sqrt(2.0));
@@ -294,9 +294,9 @@ void testConservationLaws() {
         const vector<Vec3>& vel = state.getVelocities();
         const vector<Vec3>& f = state.getForces();
         double energy = state.getPotentialEnergy();
-        for (int i = 0; i < numParticles; i++) {
-            Vec3 v = vel[i] + f[i]*0.5*integrator.getStepSize();
-            energy += 0.5*system.getParticleMass(i)*v.dot(v);
+        for (int j = 0; j < numParticles; j++) {
+            Vec3 v = vel[j] + f[j]*0.5*integrator.getStepSize();
+            energy += 0.5*system.getParticleMass(j)*v.dot(v);
         }
         if (i == 0)
             initialEnergy = energy;
