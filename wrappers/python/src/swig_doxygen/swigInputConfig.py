@@ -215,6 +215,10 @@ UNITS = {
 ("*", "getUseDispersionCorrection") : (None, ()),
 ("*", "getTemperature") : ("unit.kelvin", ()),
 ("*", "getUseDispersionCorrection") : (None, ()),
+("*", "getWeight") : (None, ()),
+("*", "getWeight12") : (None, ()),
+("*", "getWeight13") : (None, ()),
+("*", "getWeightCross") : (None, ()),
 ("SerializationNode", "getChildren") : (None, ()),
 ("SerializationNode", "getChildNode") : (None, ()),
 ("SerializationNode", "getProperties") : (None, ()),
@@ -466,9 +470,8 @@ UNITS = {
 ("RBTorsionForce", "getTorsionParameters")
  : (None, (None, None, None, None,
            None, None, None, None, None, None)),
-("System", "getConstraintParameters")
- : (None, (None, None, 'unit.nanometer')),
-("System", "getForce")
- : (None, ()),
+("System", "getConstraintParameters") : (None, (None, None, 'unit.nanometer')),
+("System", "getForce") : (None, ()),
+("System", "getVirtualSite") : (None, ()),
 }
 
