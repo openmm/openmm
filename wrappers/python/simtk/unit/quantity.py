@@ -383,6 +383,8 @@ class Quantity(object):
             return self * pow(other, -1.0)
             # return Quantity(self._value / other, self.unit)
 
+    __div__ = __truediv__
+
     def __rtruediv__(self, other):
         """Divide a scalar by a quantity.
         
@@ -397,6 +399,8 @@ class Quantity(object):
             # print "R scalar / quantity"
             return other * pow(self, -1.0)
             # return Quantity(other / self._value, pow(self.unit, -1.0))
+
+    __rdiv__ = __rtruediv__
 
     def __pow__(self, exponent):
         """Raise a Quantity to a power.

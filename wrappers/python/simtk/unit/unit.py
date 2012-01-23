@@ -187,6 +187,8 @@ class Unit(object):
         """
         return self * pow(other, -1)
 
+    __div__ = __truediv__
+
     # def __rtruediv__(self, other):
     # Because rtruediv returns a Quantity, look in quantity.py for definition of Unit.__rtruediv__
 

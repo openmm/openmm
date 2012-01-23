@@ -44,6 +44,7 @@ def _unit_class_rdiv(self, other):
         return Quantity(value, unit).reduce_unit(self)
 
 Unit.__rtruediv__ = _unit_class_rdiv
+Unit.__rdiv__ = _unit_class_rdiv
 
 
 def _unit_class_mul(self, other):
