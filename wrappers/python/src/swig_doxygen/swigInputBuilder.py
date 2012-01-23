@@ -188,7 +188,7 @@ class SwigInputBuilder:
 
     def writeGlobalConstants(self):
         self.fOut.write("/* Global Constants */\n\n")
-        node = (x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM").next()
+        node = next((x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM"))
         for section in findNodes(node, "sectiondef", kind="var"):
             for memberNode in findNodes(section, "memberdef", kind="variable", mutable="no", prot="public", static="yes"):
                 vDef = stripOpenmmPrefix(getText("definition", memberNode))

@@ -69,6 +69,11 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                            build_info=BUILD_INFO):
     from distutils.core import Extension
     setupKeywords = {}
+    try:
+        from distutils.command.build_py import build_py_2to3 as build_py
+    except ImportError:
+        from distutils.command.build_py import build_py
+    setupKeywords["cmdclass"]          = {'build_py': build_py}
     setupKeywords["name"]              = "OpenMM"
     setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
                                                        minor_version_num,
@@ -158,11 +163,11 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     outputString = ''
     firstTab     = 40
     secondTab    = 60
-    for key in sorted( setupKeywords.iterkeys() ):
+    for key in sorted(iter(setupKeywords)):
          value         = setupKeywords[key]
          outputString += key.rjust(firstTab) + str( value ).rjust(secondTab) + "\n"
     
-    print "%s" % outputString
+    sys.stdout.write("%s" % outputString)
 
     return setupKeywords
     
@@ -170,8 +175,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
 def main():
     if sys.version_info < (2, 6):
         reportError("OpenMM requires Python 2.6 or better.")
-    if sys.version_info >= (3,):
-        reportError("OpenMM has not been tested with Python 3.0 or higher.")
     if platform.system() == 'Darwin':
         macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
         if tuple(macVersion) < (10, 5):

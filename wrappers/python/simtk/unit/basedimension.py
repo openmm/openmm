@@ -44,15 +44,15 @@ class BaseDimension(object):
             BaseDimension._next_unused_index += 1
         self._index = BaseDimension._index_by_name[name]
         
-    def __cmp__(self, other):
+    def __lt__(self, other):
         """
         The implicit order of BaseDimensions is the order in which they were created.
         This method is used for using BaseDimensions as hash keys, and also affects
         the order in which units appear in multi-dimensional Quantities.
         
-        Returns 0 if self == other, -1 if self < other, and 1 if self > other.
+        Returns True if self < other, False otherwise.
         """
-        return cmp(self._index, other._index)
+        return self._index < other._index
         
     def __hash__(self):
         """

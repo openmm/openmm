@@ -250,9 +250,9 @@ def stripUnits(args):
     newArgList=[]
     for arg in args:
         if unit.is_quantity(arg):
-	    # JDC: Ugly workaround for OpenMM using 'bar' for fundamental pressure unit.
+            # JDC: Ugly workaround for OpenMM using 'bar' for fundamental pressure unit.
             if arg.unit.is_compatible(unit.bar):
-	        arg = arg / unit.bar
+                arg = arg / unit.bar
             else:
                 arg=arg.value_in_unit_system(unit.md_unit_system)                
             # JDC: End workaround.

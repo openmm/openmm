@@ -5,6 +5,8 @@ Module simtk.unit
 Contains classes Unit and ScaledUnit.
 """
 
+from __future__ import division
+
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
 
@@ -149,17 +151,16 @@ class Unit(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         """Compare two Units.
         
         Raises a TypeError if the units have different dimensions.
         
-        Returns 0 if the Units are equal, -1 if the first Unit is smaller, 
-        and returns 1 if the first Unit is larger.
+        Returns True if self < other, False otherwise.
         """
         if not self.is_compatible(other):
             raise TypeError('Unit "%s" is not compatible with Unit "%s".', (self, other))
-        return cmp(self.conversion_factor_to(other), 1.0)
+        return self.conversion_factor_to(other) < 1.0
 
     def __hash__(self):
         """
@@ -175,7 +176,7 @@ class Unit(object):
     # def __mul__(self, other):
     # See unit_operators.py for Unit.__mul__ operator
     
-    def __div__(self, other):
+    def __truediv__(self, other):
         """Divide a Unit by another object.
         
         Returns a composite Unit if other is another Unit.
@@ -186,8 +187,8 @@ class Unit(object):
         """
         return self * pow(other, -1)
 
-    # def __rdiv__(self, other):
-    # Because rdiv returns a Quantity, look in quantity.py for definition of Unit.__rdiv__
+    # def __rtruediv__(self, other):
+    # Because rtruediv returns a Quantity, look in quantity.py for definition of Unit.__rtruediv__
 
     _pow_cache = {}
 
@@ -522,6 +523,11 @@ class ScaledUnit(object):
         else:
             other_u = Unit({other: 1.0})
         return self.factor * Unit(u).conversion_factor_to(other_u)
+
+    def __lt__(self, other):
+        """Compare two ScaledUnits.
+        """
+        return hash(self) < hash(other)
         
     def __str__(self):
         """Returns a string with the name of this ScaledUnit
@@ -569,7 +575,7 @@ class UnitSystem(object):
                 to_base_units[m][n] = power
         try:
             self.from_base_units = ~to_base_units
-        except ArithmeticError, e:
+        except ArithmeticError as e:
         # for compatibility between python 2.5 and python 3.0,
         # try replacing line above with the following two lines:
         # except ArithmeticError:

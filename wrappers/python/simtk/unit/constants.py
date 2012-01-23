@@ -3,6 +3,8 @@
 Module simtk.unit.constants
 """
 
+from __future__ import division
+
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
 

@@ -4,6 +4,8 @@ Module simtk.unit.unit_definitions
 
 """
 
+from __future__ import division
+
 __author__ = "Christopher M. Bruns"
 __version__ = "0.6"
 

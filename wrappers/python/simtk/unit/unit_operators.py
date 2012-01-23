@@ -36,14 +36,14 @@ def _unit_class_rdiv(self, other):
     of the inverse of self.
     """
     if is_unit(other):
-        raise NotImplementedError('programmer is surprised __rdiv__ was called instead of __div__')
+        raise NotImplementedError('programmer is surprised __rtruediv__ was called instead of __truediv__')
     else:
         # print "R scalar / unit"
         unit = pow(self, -1.0)
         value = other
         return Quantity(value, unit).reduce_unit(self)
 
-Unit.__rdiv__ = _unit_class_rdiv
+Unit.__rtruediv__ = _unit_class_rdiv
 
 
 def _unit_class_mul(self, other):

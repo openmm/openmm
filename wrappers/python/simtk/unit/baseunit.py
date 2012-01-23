@@ -37,15 +37,15 @@ class BaseUnit(object):
         self._conversion_factor_to_by_name = {}
         self._conversion_factor_to_by_name[self.name] = 1.0
     
-    def __cmp__(self, other):
+    def __lt__(self, other):
         """
         Comparison function that sorts BaseUnits by BaseDimension
         """
         # First sort on dimension
-        c = cmp(self.dimension, other.dimension)
-        if c != 0: return c
+        if self.dimension != other.dimension:
+            return self.dimension < other.dimension
         # Second on conversion factor
-        return cmp(self.conversion_factor_to(other), 1.0)
+        return self.conversion_factor_to(other) < 1.0
 
     def iter_base_dimensions(self):
         """

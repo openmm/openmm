@@ -5,6 +5,8 @@ Module simtk.unit.math
 Arithmetic methods on Quantities and Units
 """
 
+from __future__ import division
+
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
 
@@ -69,7 +71,7 @@ def acos(x):
     """
     >>> acos(1.0)
     Quantity(value=0.0, unit=radian)
-    >>> print acos(1.0)
+    >>> print(acos(1.0))
     0.0 rad
     """
     return math.acos(x) * radians
@@ -100,7 +102,7 @@ def sqrt(val):
     """
     >>> sqrt(9.0)
     3.0
-    >>> print sqrt(meter*meter)
+    >>> print(sqrt(meter*meter))
     meter
     >>> sqrt(9.0*meter*meter)
     Quantity(value=3.0, unit=meter)

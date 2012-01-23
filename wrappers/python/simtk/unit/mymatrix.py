@@ -8,7 +8,7 @@ def eye(size):
     """
     Returns identity matrix.
     
-    >>> print eye(3)
+    >>> print(eye(3))
     [[1, 0, 0]
      [0, 1, 0]
      [0, 0, 1]]
@@ -28,7 +28,7 @@ def zeros(m, n=None):
     """
     Returns matrix of zeroes
     
-    >>> print zeros(3)
+    >>> print(zeros(3))
     [[0, 0, 0]
      [0, 0, 0]
      [0, 0, 0]]
@@ -94,13 +94,13 @@ class MyMatrix(MyVector):
     Pure python linear algebra matrix for internal matrix inversion in UnitSystem.
     
     >>> m = MyMatrix([[1,0,],[0,1,]])
-    >>> print m
+    >>> print(m)
     [[1, 0]
      [0, 1]]
-    >>> print ~m
+    >>> print(~m)
     [[1.0, 0.0]
      [0.0, 1.0]]
-    >>> print eye(5)
+    >>> print(eye(5))
     [[1, 0, 0, 0, 0]
      [0, 1, 0, 0, 0]
      [0, 0, 1, 0, 0]
@@ -111,18 +111,18 @@ class MyMatrix(MyVector):
     1
     >>> m[1:4]
     MyMatrixTranspose([[0, 0, 0],[1, 0, 0],[0, 1, 0],[0, 0, 1],[0, 0, 0]])
-    >>> print m[1:4]
+    >>> print(m[1:4])
     [[0, 0, 0]
      [1, 0, 0]
      [0, 1, 0]
      [0, 0, 1]
      [0, 0, 0]]
-    >>> print m[1:4][0:2]
+    >>> print(m[1:4][0:2])
     [[0, 1]
      [0, 0]
      [0, 0]]
     >>> m[1:4][0:2] = [[9,8],[7,6],[5,4]]
-    >>> print m
+    >>> print(m)
     [[1, 0, 0, 0, 0]
      [9, 8, 0, 0, 0]
      [7, 6, 1, 0, 0]
@@ -182,13 +182,13 @@ class MyMatrix(MyVector):
         
         >>> a = MyMatrix([[1,2],[3,4]])
         >>> b = MyMatrix([[5,6],[7,8]])
-        >>> print a
+        >>> print(a)
         [[1, 2]
          [3, 4]]
-        >>> print b
+        >>> print(b)
         [[5, 6]
          [7, 8]]
-        >>> print a*b
+        >>> print(a*b)
         [[19, 22]
          [43, 50]]
         
@@ -209,7 +209,7 @@ class MyMatrix(MyVector):
         """
         Matrix addition.
         
-        >>> print MyMatrix([[1, 2],[3, 4]]) + MyMatrix([[5, 6],[7, 8]])
+        >>> print(MyMatrix([[1, 2],[3, 4]]) + MyMatrix([[5, 6],[7, 8]]))
         [[6, 8]
          [10, 12]]
         """
@@ -227,7 +227,7 @@ class MyMatrix(MyVector):
         """
         Matrix subtraction.
         
-        >>> print MyMatrix([[1, 2],[3, 4]]) - MyMatrix([[5, 6],[7, 8]])
+        >>> print(MyMatrix([[1, 2],[3, 4]]) - MyMatrix([[5, 6],[7, 8]]))
         [[-4, -4]
          [-4, -4]]
         """
@@ -256,32 +256,32 @@ class MyMatrix(MyVector):
     def __invert__(self):
         """
         >>> m = MyMatrix([[1,1],[0,1]])
-        >>> print m
+        >>> print(m)
         [[1, 1]
          [0, 1]]
-        >>> print ~m
+        >>> print(~m)
         [[1.0, -1.0]
          [0.0, 1.0]]
-        >>> print m*~m
+        >>> print(m*~m)
         [[1.0, 0.0]
          [0.0, 1.0]]
-        >>> print ~m*m
+        >>> print(~m*m)
         [[1.0, 0.0]
          [0.0, 1.0]]
         >>> m = MyMatrix([[1,0,0],[0,0,1],[0,-1,0]])
-        >>> print m
+        >>> print(m)
         [[1, 0, 0]
          [0, 0, 1]
          [0, -1, 0]]
-        >>> print ~m
+        >>> print(~m)
         [[1.0, 0.0, 0.0]
          [0.0, 0.0, -1.0]
          [0.0, 1.0, 0.0]]
-        >>> print m*~m
+        >>> print(m*~m)
         [[1.0, 0.0, 0.0]
          [0.0, 1.0, 0.0]
          [0.0, 0.0, 1.0]]
-        >>> print ~m*m
+        >>> print(~m*m)
         [[1.0, 0.0, 0.0]
          [0.0, 1.0, 0.0]
          [0.0, 0.0, 1.0]]

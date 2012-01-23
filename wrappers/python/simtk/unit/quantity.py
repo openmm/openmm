@@ -39,6 +39,8 @@ Two possible enhancements that have not been implemented are
   2) Incorporate offsets for celsius <-> kelvin conversion
 """
 
+from __future__ import division
+
 __author__ = "Christopher M. Bruns"
 __version__ = "0.5"
 
@@ -232,25 +234,23 @@ class Quantity(object):
         """
         if not is_quantity(other):
             return False
-        else:
-            return NotImplemented # punt to cmp
+        if not self.unit.is_compatible(other.unit):
+            return False
+        return self.value_in_unit(other.unit) == other._value
             
     def __ne__(self, other):
         """
         """
-        if not is_quantity(other):
-            return True
-        else:
-            return NotImplemented # punt to cmp
+        return not self.__eq__(other)
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         """Compares two quantities.
         
         Raises TypeError if the Quantities are of different dimension (e.g. length vs. mass)
         
-        Returns -1 if self < other, 0 if self == other, and 1 if self > other.
+        Returns True if self < other, False otherwise.
         """
-        return cmp(self._value, (other.value_in_unit(self.unit)))       
+        return self._value < other.value_in_unit(self.unit)
 
     def __ge__(self, other):
         return self._value >= (other.value_in_unit(self.unit))     
@@ -363,7 +363,7 @@ class Quantity(object):
             return self._change_units_with_factor(self.unit, other, post_multiply=True)
             # return Quantity(other * self._value, self.unit)
         
-    def __div__(self, other):
+    def __truediv__(self, other):
         """Divide a Quantity by another object
 
         Returns a new Quantity, unless the resulting unit type is dimensionless,
@@ -383,16 +383,16 @@ class Quantity(object):
             return self * pow(other, -1.0)
             # return Quantity(self._value / other, self.unit)
 
-    def __rdiv__(self, other):
+    def __rtruediv__(self, other):
         """Divide a scalar by a quantity.
         
         Returns a new Quantity.  The resulting units are the inverse of the self argument units.
         """
         if is_unit(other):
             # print "R unit / quantity"
-            raise NotImplementedError('programmer is surprised __rdiv__ was called instead of __div__')
+            raise NotImplementedError('programmer is surprised __rtruediv__ was called instead of __truediv__')
         elif is_quantity(other):
-            raise NotImplementedError('programmer is surprised __rdiv__ was called instead of __div__')
+            raise NotImplementedError('programmer is surprised __rtruediv__ was called instead of __truediv__')
         else:
             # print "R scalar / quantity"
             return other * pow(self, -1.0)
