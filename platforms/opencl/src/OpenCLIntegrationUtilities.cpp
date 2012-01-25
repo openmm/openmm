@@ -28,6 +28,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLKernelSources.h"
 #include "openmm/HarmonicAngleForce.h"
+#include "openmm/VirtualSite.h"
 #include "quern.h"
 #include "OpenCLExpressionUtilities.h"
 #include <algorithm>
@@ -91,10 +92,13 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
-        ccmaConvergedBuffer(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
+        ccmaConvergedBuffer(NULL), vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
+        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
     // Create workspace arrays.
 
     posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
+    vector<mm_float4> deltas(posDelta->getSize(), mm_float4(0.0, 0.0, 0.0, 0.0));
+    posDelta->upload(deltas);
     stepSize = new OpenCLArray<mm_float2>(context, 1, "stepSize", true);
     stepSize->set(0, mm_float2(0.0f, 0.0f));
     stepSize->upload();
@@ -515,6 +519,87 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaVelForceKernel = cl::Kernel(ccmaProgram, "computeConstraintForce");
         ccmaVelUpdateKernel = cl::Kernel(ccmaProgram, "updateAtomPositions");
     }
+    
+    // Build the list of virtual sites.
+    
+    vector<mm_int4> vsite2AvgAtomVec;
+    vector<mm_float2> vsite2AvgWeightVec;
+    vector<mm_int4> vsite3AvgAtomVec;
+    vector<mm_float4> vsite3AvgWeightVec;
+    vector<mm_int4> vsiteOutOfPlaneAtomVec;
+    vector<mm_float4> vsiteOutOfPlaneWeightVec;
+    for (int i = 0; i < numAtoms; i++) {
+        if (system.isVirtualSite(i)) {
+            if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                // A two particle average.
+                
+                const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
+                vsite2AvgAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), 0));
+                vsite2AvgWeightVec.push_back(mm_float2((float) site.getWeight(0), (float) site.getWeight(1)));
+            }
+            else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                // A three particle average.
+                
+                const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
+                vsite3AvgAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
+                vsite3AvgWeightVec.push_back(mm_float4((float) site.getWeight(0), (float) site.getWeight(1), (float) site.getWeight(2), 0.0f));
+            }
+            else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
+                // An out of plane site.
+                
+                const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
+                vsiteOutOfPlaneAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
+                vsiteOutOfPlaneWeightVec.push_back(mm_float4((float) site.getWeight12(), (float) site.getWeight13(), (float) site.getWeightCross(), 0.0f));
+            }
+        }
+    }
+    int num2Avg = vsite2AvgAtomVec.size();
+    int num3Avg = vsite3AvgAtomVec.size();
+    int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
+    vsite2AvgAtoms = new OpenCLArray<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
+    vsite2AvgWeights = new OpenCLArray<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
+    vsite3AvgAtoms = new OpenCLArray<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
+    vsite3AvgWeights = new OpenCLArray<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
+    vsiteOutOfPlaneAtoms = new OpenCLArray<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
+    vsiteOutOfPlaneWeights = new OpenCLArray<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+    if (num2Avg > 0) {
+        vsite2AvgAtoms->upload(vsite2AvgAtomVec);
+        vsite2AvgWeights->upload(vsite2AvgWeightVec);
+    }
+    if (num3Avg > 0) {
+        vsite3AvgAtoms->upload(vsite3AvgAtomVec);
+        vsite3AvgWeights->upload(vsite3AvgWeightVec);
+    }
+    if (numOutOfPlane > 0) {
+        vsiteOutOfPlaneAtoms->upload(vsiteOutOfPlaneAtomVec);
+        vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+    }
+    
+    // Create the kernels for virtual sites.
+
+    map<string, string> defines;
+    defines["NUM_2_AVERAGE"] = OpenCLExpressionUtilities::intToString(num2Avg);
+    defines["NUM_3_AVERAGE"] = OpenCLExpressionUtilities::intToString(num3Avg);
+    defines["NUM_OUT_OF_PLANE"] = OpenCLExpressionUtilities::intToString(numOutOfPlane);
+    cl::Program ccmaProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
+    vsitePositionKernel = cl::Kernel(ccmaProgram, "computeVirtualSites");
+    vsitePositionKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(1, vsite2AvgAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(2, vsite2AvgWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(3, vsite3AvgAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(4, vsite3AvgWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(5, vsiteOutOfPlaneAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    vsiteForceKernel = cl::Kernel(ccmaProgram, "distributeForces");
+    vsiteForceKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(3, vsite2AvgWeights->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(4, vsite3AvgAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(5, vsite3AvgWeights->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    numVsites = num2Avg+num3Avg+numOutOfPlane;
 }
 
 OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
@@ -556,6 +641,18 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete ccmaConverged;
     if (ccmaConvergedBuffer != NULL)
         delete ccmaConvergedBuffer;
+    if (vsite2AvgAtoms != NULL)
+        delete vsite2AvgAtoms;
+    if (vsite2AvgWeights != NULL)
+        delete vsite2AvgWeights;
+    if (vsite3AvgAtoms != NULL)
+        delete vsite3AvgAtoms;
+    if (vsite3AvgWeights != NULL)
+        delete vsite3AvgWeights;
+    if (vsiteOutOfPlaneAtoms != NULL)
+        delete vsiteOutOfPlaneAtoms;
+    if (vsiteOutOfPlaneWeights != NULL)
+        delete vsiteOutOfPlaneWeights;
 }
 
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {
@@ -658,6 +755,16 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
             }
         }
     }
+}
+
+void OpenCLIntegrationUtilities::computeVirtualSites() {
+    if (numVsites > 0)
+        context.executeKernel(vsitePositionKernel, numVsites);
+}
+
+void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
+    if (numVsites > 0)
+        context.executeKernel(vsiteForceKernel, numVsites);
 }
 
 void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {

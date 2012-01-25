@@ -84,6 +84,14 @@ public:
      * @return the index in the array at which to start reading
      */
     int prepareRandomNumbers(int numValues);
+    /**
+     * Compute the positions of virtual sites.
+     */
+    void computeVirtualSites();
+    /**
+     * Distribute forces from virtual sites to the atoms they are based on.
+     */
+    void distributeForcesFromVirtualSites();
 private:
     void applyConstraints(bool constrainVelocities, double tol);
     OpenCLContext& context;
@@ -93,6 +101,7 @@ private:
     cl::Kernel ccmaPosForceKernel, ccmaVelForceKernel;
     cl::Kernel ccmaMultiplyKernel;
     cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
+    cl::Kernel vsitePositionKernel, vsiteForceKernel;
     cl::Kernel randomKernel;
     OpenCLArray<mm_float4>* posDelta;
     OpenCLArray<mm_int4>* settleAtoms;
@@ -114,8 +123,14 @@ private:
     OpenCLArray<cl_int>* ccmaConverged;
     cl::Buffer* ccmaConvergedBuffer;
     cl_int* ccmaConvergedMemory;
+    OpenCLArray<mm_int4>* vsite2AvgAtoms;
+    OpenCLArray<mm_float2>* vsite2AvgWeights;
+    OpenCLArray<mm_int4>* vsite3AvgAtoms;
+    OpenCLArray<mm_float4>* vsite3AvgWeights;
+    OpenCLArray<mm_int4>* vsiteOutOfPlaneAtoms;
+    OpenCLArray<mm_float4>* vsiteOutOfPlaneWeights;
     int randomPos;
-    int lastSeed;
+    int lastSeed, numVsites;
     bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels;
     struct ShakeCluster;
     struct ConstraintOrderer;

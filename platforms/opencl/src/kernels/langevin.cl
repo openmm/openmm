@@ -18,10 +18,12 @@ __kernel void integrateLangevinPart1(__global float4* restrict velm, __global co
     randomIndex += index;
     while (index < NUM_ATOMS) {
         float4 velocity = velm[index];
-        float sqrtInvMass = sqrt(velocity.w);
-        velocity.xyz = vscale*velocity.xyz + fscale*velocity.w*force[index].xyz + noisescale*sqrtInvMass*random[randomIndex].xyz;
-        velm[index] = velocity;
-        posDelta[index] = stepSize*velocity;
+        if (velocity.w != 0.0) {
+            float sqrtInvMass = sqrt(velocity.w);
+            velocity.xyz = vscale*velocity.xyz + fscale*velocity.w*force[index].xyz + noisescale*sqrtInvMass*random[randomIndex].xyz;
+            velm[index] = velocity;
+            posDelta[index] = stepSize*velocity;
+        }
         randomIndex += get_global_size(0);
         index += get_global_size(0);
     }
@@ -39,17 +41,19 @@ __kernel void integrateLangevinPart2(__global float4* restrict posq, __global co
 #endif
     int index = get_global_id(0);
     while (index < NUM_ATOMS) {
-        float4 pos = posq[index];
-        float4 delta = posDelta[index];
         float4 vel = velm[index];
-        pos.xyz += delta.xyz;
+        if (vel.w != 0.0) {
+            float4 pos = posq[index];
+            float4 delta = posDelta[index];
+            pos.xyz += delta.xyz;
 #ifdef SUPPORTS_DOUBLE_PRECISION
-        vel.xyz = convert_float4(invStepSize*convert_double4(delta)).xyz;
+            vel.xyz = convert_float4(invStepSize*convert_double4(delta)).xyz;
 #else
-        vel.xyz = invStepSize*delta.xyz;
+            vel.xyz = invStepSize*delta.xyz;
 #endif
-        posq[index] = pos;
-        velm[index] = vel;
+            posq[index] = pos;
+            velm[index] = vel;
+        }
         index += get_global_size(0);
     }
 }

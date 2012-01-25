@@ -38,10 +38,12 @@
 #include "hilbert.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <typeinfo>
 
 using namespace OpenMM;
 using namespace std;
@@ -230,8 +232,10 @@ OpenCLContext::~OpenCLContext() {
 }
 
 void OpenCLContext::initialize(const System& system) {
-    for (int i = 0; i < numAtoms; i++)
-        (*velm)[i].w = (float) (1.0/system.getParticleMass(i));
+    for (int i = 0; i < numAtoms; i++) {
+        double mass = system.getParticleMass(i);
+        (*velm)[i].w = (float) (mass == 0.0 ? 0.0 : 1.0/mass);
+    }
     velm->upload();
     bonded->initialize(system);
     numForceBuffers = platformData.contexts.size();
@@ -462,7 +466,77 @@ struct OpenCLContext::Molecule {
     vector<vector<int> > groups;
 };
 
+/**
+ * This class ensures that atom reordering doesn't break virtual sites.
+ */
+class OpenCLContext::VirtualSiteInfo : public OpenCLForceInfo {
+public:
+    VirtualSiteInfo(const System& system) : OpenCLForceInfo(0) {
+        for (int i = 0; i < system.getNumParticles(); i++) {
+            if (system.isVirtualSite(i)) {
+                siteTypes.push_back(&typeid(system.getVirtualSite(i)));
+                vector<int> particles;
+                particles.push_back(i);
+                for (int j = 0; j < system.getVirtualSite(i).getNumParticles(); j++)
+                    particles.push_back(system.getVirtualSite(i).getParticle(j));
+                siteParticles.push_back(particles);
+                vector<double> weights;
+                if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                    // A two particle average.
+
+                    const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
+                    weights.push_back(site.getWeight(0));
+                    weights.push_back(site.getWeight(1));
+                }
+                else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                    // A three particle average.
+
+                    const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
+                    weights.push_back(site.getWeight(0));
+                    weights.push_back(site.getWeight(1));
+                    weights.push_back(site.getWeight(2));
+                }
+                else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
+                    // An out of plane site.
+
+                    const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
+                    weights.push_back(site.getWeight12());
+                    weights.push_back(site.getWeight13());
+                    weights.push_back(site.getWeightCross());
+                }
+                siteWeights.push_back(weights);
+            }
+        }
+    }
+    int getNumParticleGroups() {
+        return siteTypes.size();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        particles = siteParticles[index];
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        if (siteTypes[group1] != siteTypes[group2])
+            return false;
+        int numParticles = siteWeights[group1].size();
+        if (siteWeights[group2].size() != numParticles)
+            return false;
+        for (int i = 0; i < numParticles; i++)
+            if (siteWeights[group1][i] != siteWeights[group2][i])
+                return false;
+        return true;
+    }
+private:
+    vector<const type_info*> siteTypes;
+    vector<vector<int> > siteParticles;
+    vector<vector<double> > siteWeights;
+};
+
+
 void OpenCLContext::findMoleculeGroups(const System& system) {
+    // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
+    
+    addForce(new VirtualSiteInfo(system));
+    
     // First make a list of every other atom to which each atom is connect by a constraint or force group.
 
     vector<vector<int> > atomBonds(system.getNumParticles());

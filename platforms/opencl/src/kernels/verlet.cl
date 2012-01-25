@@ -12,12 +12,14 @@ __kernel void integrateVerletPart1(int numAtoms, __global const float2* restrict
     float dtVel = 0.5f*(stepSize.x+stepSize.y);
     int index = get_global_id(0);
     while (index < numAtoms) {
-        float4 pos = posq[index];
         float4 velocity = velm[index];
-        velocity.xyz += force[index].xyz*dtVel*velocity.w;
-        pos.xyz = velocity.xyz*dtPos;
-        posDelta[index] = pos;
-        velm[index] = velocity;
+        if (velocity.w != 0.0) {
+            float4 pos = posq[index];
+            velocity.xyz += force[index].xyz*dtVel*velocity.w;
+            pos.xyz = velocity.xyz*dtPos;
+            posDelta[index] = pos;
+            velm[index] = velocity;
+        }
         index += get_global_size(0);
     }
 }
@@ -38,17 +40,19 @@ __kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, _
     barrier(CLK_LOCAL_MEM_FENCE);
     int index = get_global_id(0);
     while (index < numAtoms) {
-        float4 pos = posq[index];
-        float4 delta = posDelta[index];
         float4 velocity = velm[index];
-        pos.xyz += delta.xyz;
+        if (velocity.w != 0.0) {
+            float4 pos = posq[index];
+            float4 delta = posDelta[index];
+            pos.xyz += delta.xyz;
 #ifdef SUPPORTS_DOUBLE_PRECISION
-        velocity.xyz = convert_float4(convert_double4(delta)*oneOverDt).xyz;
+            velocity.xyz = convert_float4(convert_double4(delta)*oneOverDt).xyz;
 #else
-        velocity.xyz = delta.xyz*oneOverDt;
+            velocity.xyz = delta.xyz*oneOverDt;
 #endif
-        posq[index] = pos;
-        velm[index] = velocity;
+            posq[index] = pos;
+            velm[index] = velocity;
+        }
         index += get_global_size(0);
     }
 }

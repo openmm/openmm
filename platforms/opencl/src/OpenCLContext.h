@@ -476,6 +476,7 @@ public:
 private:
     struct Molecule;
     struct MoleculeGroup;
+    class VirtualSiteInfo;
     void findMoleculeGroups(const System& system);
     static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
     double time;

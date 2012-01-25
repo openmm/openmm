@@ -108,6 +108,7 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
     cl.getBondedUtilities().computeInteractions();
     cl.getNonbondedUtilities().computeInteractions();
     cl.reduceForces();
+    cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     double sum = 0.0f;
     if (includeEnergy) {
         OpenCLArray<cl_float>& energy = cl.getEnergyBuffer();
@@ -221,6 +222,7 @@ void OpenCLApplyConstraintsKernel::initialize(const System& system) {
 
 void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     cl.getIntegrationUtilities().applyConstraints(tol);
+    cl.getIntegrationUtilities().computeVirtualSites();
 }
 
 class OpenCLBondForceInfo : public OpenCLForceInfo {
@@ -3216,6 +3218,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     // Call the second integration kernel.
 
     cl.executeKernel(kernel2, numAtoms);
+    integration.computeVirtualSites();
 
     // Update the time and step count.
 
@@ -3292,6 +3295,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     // Call the second integration kernel.
 
     cl.executeKernel(kernel2, numAtoms);
+    integration.computeVirtualSites();
 
     // Update the time and step count.
 
@@ -3351,6 +3355,7 @@ void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
     // Call the second integration kernel.
 
     cl.executeKernel(kernel2, numAtoms);
+    integration.computeVirtualSites();
 
     // Update the time and step count.
 
@@ -3411,6 +3416,7 @@ void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
     // Call the second integration kernel.
 
     cl.executeKernel(kernel2, numAtoms);
+    integration.computeVirtualSites();
 
     // Update the time and step count.
 
@@ -3488,6 +3494,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     // Call the second integration kernel.
 
     cl.executeKernel(kernel2, numAtoms);
+    integration.computeVirtualSites();
 
     // Update the time and step count.
 
@@ -3958,6 +3965,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         else if (stepType[i] == CustomIntegrator::ConstrainPositions) {
             cl.getIntegrationUtilities().applyConstraints(integrator.getConstraintTolerance());
             cl.executeKernel(kernels[i][0], numAtoms);
+            cl.getIntegrationUtilities().computeVirtualSites();
         }
         else if (stepType[i] == CustomIntegrator::ConstrainVelocities) {
             cl.getIntegrationUtilities().applyVelocityConstraints(integrator.getConstraintTolerance());

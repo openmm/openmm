@@ -30,9 +30,11 @@ __kernel void computePerDof(__global float4* restrict posq, __global float4* res
         float4 f = force[index];
         float mass = 1.0f/velocity.w;
 #endif
-        float4 gaussian = gaussianValues[randomIndex];
-        float4 uniform = uniformValues[index];
-        COMPUTE_STEP
+        if (velocity.w != 0.0) {
+            float4 gaussian = gaussianValues[randomIndex];
+            float4 uniform = uniformValues[index];
+            COMPUTE_STEP
+        }
         randomIndex += get_global_size(0);
         index += get_global_size(0);
     }
