@@ -27,6 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/internal/windowsExport.h"
 #include <string>
 
 namespace OpenMM {
@@ -37,7 +38,7 @@ namespace OpenMM {
  * kernels subfolder.
  */
 
-class OpenCLKernelSources {
+class OPENMM_EXPORT OpenCLKernelSources {
 public:
 @CL_FILE_DECLARATIONS@
 };

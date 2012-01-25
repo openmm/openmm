@@ -159,9 +159,9 @@ static HMODULE loadOneLibrary(const string& file) {
     HMODULE handle = LoadLibrary(file.c_str());
     SetErrorMode(oldErrorMode); // Restore previous error mode.
     if (handle == NULL) {
-        string message;
-        stringstream(message) << "Error loading library " << file << ": " << GetLastError();
-        throw OpenMMException(message);
+        stringstream message;
+        message << "Error loading library " << file << ": " << GetLastError();
+        throw OpenMMException(message.str());
     }
     return handle;
 }

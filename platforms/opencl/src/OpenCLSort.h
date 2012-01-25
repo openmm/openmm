@@ -75,7 +75,7 @@ namespace OpenMM {
  */
     
 template <class TRAIT>
-class OPENMM_EXPORT OpenCLSort {
+class OpenCLSort {
 public:
     /**
      * Create an OpenCLSort object for sorting data of a particular type.

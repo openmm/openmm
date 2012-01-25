@@ -344,7 +344,7 @@ void ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
 int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                          vector<RealVec>& atomCoordinatesP,
                                          vector<RealOpenMM>& inverseMasses ){
-    applyConstraints(numberOfAtoms, atomCoordinates, atomCoordinatesP, inverseMasses, false);
+    return applyConstraints(numberOfAtoms, atomCoordinates, atomCoordinatesP, inverseMasses, false);
 }
 
 /**---------------------------------------------------------------------------------------
@@ -363,7 +363,7 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, vector<RealVec>& atomCoord
 
 int ReferenceCCMAAlgorithm::applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) {
-    applyConstraints(numberOfAtoms, atomCoordinates, velocities, inverseMasses, true);
+    return applyConstraints(numberOfAtoms, atomCoordinates, velocities, inverseMasses, true);
 }
 
 int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>& atomCoordinates,
