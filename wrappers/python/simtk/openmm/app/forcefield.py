@@ -57,7 +57,10 @@ class ForceField(object):
             
             if tree.getroot().find('AtomTypes') is not None:
                 for type in tree.getroot().find('AtomTypes').findall('Type'):
-                    self._atomTypes[type.attrib['name']] = (type.attrib['class'], float(type.attrib['mass']), elem.get_by_symbol(type.attrib['element']))
+                    element = None
+                    if 'element' in type.attrib:
+                        element = elem.get_by_symbol(type.attrib['element'])
+                    self._atomTypes[type.attrib['name']] = (type.attrib['class'], float(type.attrib['mass']), element)
             
             # Load the residue templates.
             
@@ -68,6 +71,8 @@ class ForceField(object):
                     self._templates[resName] = template
                     for atom in residue.findall('Atom'):
                         template.atoms.append(ForceField._TemplateAtomData(atom.attrib['name'], atom.attrib['type'], self._atomTypes[atom.attrib['type']][2]))
+                    for site in residue.findall('VirtualSite'):
+                        template.virtualSites.append(ForceField._VirtualSiteData(site))
                     for bond in residue.findall('Bond'):
                         b = (int(bond.attrib['from']), int(bond.attrib['to']))
                         template.bonds.append(b)
@@ -79,7 +84,10 @@ class ForceField(object):
                         template.atoms[b].externalBonds += 1
             for template in self._templates.values():
                 template.signature = _createResidueSignature([atom.element for atom in template.atoms])
-                sigString = _signatureToString(template.signature)
+                if template.signature is None:
+                    sigString = None
+                else:
+                    sigString = _signatureToString(template.signature)
                 if sigString in self._templateSignatures:
                     self._templateSignatures[sigString].append(template)
                 else:
@@ -137,13 +145,14 @@ class ForceField(object):
             torsion.phase.append(float(attrib['phase%d'%index]))
             torsion.k.append(float(attrib['k%d'%index]))
             index += 1
-        return torsion
+        return torsion            
         
     class _SystemData:
         """Inner class used to encapsulate data about the system being created."""
         def __init__(self):
             self.atomType = {}
             self.atoms = []
+            self.virtualSites = {}
             self.bonds = []
             self.angles = []
             self.propers = []
@@ -156,6 +165,7 @@ class ForceField(object):
         def __init__(self, name):
             self.name = name
             self.atoms = []
+            self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
 
@@ -175,6 +185,25 @@ class ForceField(object):
             self.atom2 = atom2
             self.isConstrained = False
             self.length = 0.0
+    
+    class _VirtualSiteData:
+        """Inner class used to encapsulate data about a virtual site."""
+        def __init__(self, node):
+            attrib = node.attrib
+            self.index = int(attrib['index'])
+            self.type = attrib['type']
+            if self.type == 'average2':
+                self.atoms = [int(attrib['atom1']), int(attrib['atom2'])]
+                self.weights = [float(attrib['weight1']), float(attrib['weight2'])]
+            elif self.type == 'average3':
+                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                self.weights = [float(attrib['weight1']), float(attrib['weight2']), float(attrib['weight3'])]
+            elif self.type == 'outOfPlane':
+                self.atoms = [int(attrib['atom1']), int(attrib['atom2']), int(attrib['atom3'])]
+                self.weights = [float(attrib['weight12']), float(attrib['weight13']), float(attrib['weightCross'])]
+            else:
+                raise ValueError('Unknown virtual site type: %s' % self.type)
+            self.atoms = [x-self.index for x in self.atoms]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, removeCMMotion=True, **args):
@@ -225,11 +254,20 @@ class ForceField(object):
         
         for chain in topology.chains():
             for res in chain.residues():
-                signature = _signatureToString(_createResidueSignature([atom.element for atom in res.atoms()]))
                 template = None
                 matches = None
-                if signature in self._templateSignatures:
-                    for t in self._templateSignatures[signature]:
+                sig = _createResidueSignature([atom.element for atom in res.atoms()])
+                if sig is not None:
+                    signature = _signatureToString(sig)
+                    if signature in self._templateSignatures:
+                        for t in self._templateSignatures[signature]:
+                            matches = _matchResidue(res, t, bondedToAtom, atomIndices)
+                            if matches is not None:
+                                template = t
+                                break
+                if matches is None:
+                    # Check templates involving virtual sites
+                    for t in self._templateSignatures[None]:
                         matches = _matchResidue(res, t, bondedToAtom, atomIndices)
                         if matches is not None:
                             template = t
@@ -238,6 +276,9 @@ class ForceField(object):
                     raise ValueError('No template found for residue %d (%s)' % (res.index+1, res.name))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
+                    for site in template.virtualSites:
+                        if match == site.index:
+                            data.virtualSites[atom] = site
 
         # Create the System and add atoms
         
@@ -337,7 +378,19 @@ class ForceField(object):
                 atom3 = data.atoms[angle[2]]
                 if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
                     data.isAngleConstrained[i] = True
-
+        
+        # Add virtual sites
+        
+        for atom in data.virtualSites:
+            site = data.virtualSites[atom]
+            index = atomIndices[atom]
+            if site.type == 'average2':
+                sys.setVirtualSite(index, mm.TwoParticleAverageSite(index+site.atoms[0], index+site.atoms[1], site.weights[0], site.weights[1]))
+            elif site.type == 'average3':
+                sys.setVirtualSite(index, mm.ThreeParticleAverageSite(index+site.atoms[0], index+site.atoms[1], index+site.atoms[2], site.weights[0], site.weights[1], site.weights[2]))
+            elif site.type == 'outOfPlane':
+                sys.setVirtualSite(index, mm.OutOfPlaneSite(index+site.atoms[0], index+site.atoms[1], index+site.atoms[2], site.weights[0], site.weights[1], site.weights[2]))
+        
         # Add forces to the System
         
         for force in self._forces:
@@ -351,6 +404,8 @@ def _createResidueSignature(elements):
     """Create a signature for a residue based on the elements of the atoms it contains."""
     counts = {}
     for element in elements:
+        if element is None:
+            return None # This residue contains "atoms" (probably virtual sites) that should match any element
         if element in counts:
             counts[element] += 1
         else:
@@ -382,6 +437,8 @@ def _matchResidue(res, template, bondedToAtom, atomIndices):
     or None if it does not match the template
     """
     atoms = list(res.atoms())
+    if len(atoms) != len(template.atoms):
+        return None
     residueAtomBonds = []
     templateAtomBonds = []
     matches = len(atoms)*[0]
@@ -410,7 +467,7 @@ def _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch
     elem = atoms[position].element
     for i in range(len(atoms)):
         atom = template.atoms[i]
-        if atom.element == elem and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
+        if (atom.element == elem or atom.element is None) and not hasMatch[i] and len(atom.bondedTo) == len(bondedTo[position]) and atom.externalBonds == externalBonds[position]:
             # See if the bonds for this identification are consistent
             
             allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))
@@ -868,10 +925,16 @@ class NonbondedGenerator:
                 values = self.typeMap[t]
                 force.addParticle(values[0], values[1], values[2])
             else:
-                raise ValueError('No nonbonded parameters defined for atom type '+t) 
+                raise ValueError('No nonbonded parameters defined for atom type '+t)
+        # Create exceptions based on bonds and virtual sites.
         bondIndices = []
         for bond in data.bonds:
             bondIndices.append((bond.atom1, bond.atom2))
+        for i in range(sys.getNumParticles()):
+            if sys.isVirtualSite(i):
+                site = sys.getVirtualSite(i)
+                for j in range(site.getNumParticles()):
+                    bondIndices.append((i, site.getParticle(j)))
         force.createExceptionsFromBonds(bondIndices, self.coulomb14scale, self.lj14scale)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)

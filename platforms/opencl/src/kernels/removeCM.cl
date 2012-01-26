@@ -7,7 +7,8 @@ __kernel void calcCenterOfMassMomentum(int numAtoms, __global const float4* rest
     float4 cm = 0.0f;
     while (index < numAtoms) {
         float4 velocity = velm[index];
-        cm.xyz += velocity.xyz/velocity.w;
+        if (velocity.w != 0.0)
+            cm.xyz += velocity.xyz/velocity.w;
         index += get_global_size(0);
     }
 

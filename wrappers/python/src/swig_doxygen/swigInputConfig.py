@@ -173,6 +173,7 @@ NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
 # The list is the argument position(s).
 STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("System", "addForce") : [0],
+                   ("System", "setVirtualSite") : [1],
 }
 
 # This is a list of units to attach to return values and method args.
