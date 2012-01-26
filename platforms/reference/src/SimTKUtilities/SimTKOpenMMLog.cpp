@@ -24,6 +24,7 @@
 
 #include "SimTKOpenMMLog.h"
 #include <stdlib.h>
+#include "openmm/OpenMMException.h"
 
 // static settings
 
@@ -291,13 +292,13 @@ void SimTKOpenMMLog::printError( const std::stringstream& message ){
 
 // ---------------------------------------------------------------------------------------
 
+   std::stringstream messageWithHeader;
+   messageWithHeader << "Error: " << message.str();
    if( _simTKOpenMMLog ){
-      std::stringstream messageWithHeader;
-      messageWithHeader << "Error: " << message.str();
       _simTKOpenMMLog->logMessage( messageWithHeader );
    } else {
-      (void) fprintf( stderr, "Error: %s", message.str().c_str() );
+      (void) fprintf( stderr, "%s", messageWithHeader.str().c_str() );
       (void) fflush( stderr );
    }
-   exit(-1);
+   throw OpenMM::OpenMMException(messageWithHeader.str());
 }

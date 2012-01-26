@@ -38,19 +38,18 @@
 #include <cufft.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
+#include "openmm/OpenMMException.h"
 
 #define RTERROR(status, s) \
     if (status != cudaSuccess) { \
-        printf("%s %s\n", s, cudaGetErrorString(status)); \
-        exit(-1); \
+        throw OpenMM::OpenMMException(std::string(s) + " " + cudaGetErrorString(status)); \
     }
 
 #define LAUNCHERROR(s) \
     { \
         cudaError_t status = cudaGetLastError(); \
         if (status != cudaSuccess) { \
-            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
-            exit(-1); \
+            throw OpenMM::OpenMMException(std::string("Error: ") + cudaGetErrorString(status) + " launching kernel " + s); \
         } \
     }
 

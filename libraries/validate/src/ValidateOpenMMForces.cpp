@@ -24,6 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include <iostream>
+#include <sstream>
+#include "openmm/OpenMMException.h"
 #include "ValidateOpenMMForces.h"
 
 using namespace OpenMM;
@@ -547,8 +550,10 @@ ForceValidationResult* ValidateOpenMMForces::compareForce(Context& context, std:
     for( int ii = 0; ii < system.getNumForces(); ii++ ){
         std::string forceName         = getForceName( system.getForce( ii ) );
         if( forceName.compare( "NA" ) == 0 ){
-            (void) fprintf( stderr, "Force at index=%d not found -- aborting!\n", ii );
-            exit(-1);
+            std::stringstream message;
+            message << "Force at index=" << ii << " not found -- aborting!";
+            std::cerr << message << std::endl;
+            throw OpenMM::OpenMMException(message.str());
         }
         systemForceNameMap[forceName] = ii;
         systemForceNameIndex[ii]      = forceName;

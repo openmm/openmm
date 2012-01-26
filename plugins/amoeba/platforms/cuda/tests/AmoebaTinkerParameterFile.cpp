@@ -411,7 +411,6 @@ static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens,
        char buffer[1024];
        (void) sprintf( buffer, "%s no %s entries?\n", methodName.c_str(), typeName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     int numberToRead = atoi( tokens[1].c_str() );
@@ -435,7 +434,6 @@ static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens,
           char buffer[1024];
           (void) sprintf( buffer, "%s %s tokens incomplete at line=%d\n", methodName.c_str(), typeName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -491,7 +489,6 @@ static int readVectorOfIntVectors( FILE* filePtr, const StringVector& tokens, st
        char buffer[1024];
        (void) sprintf( buffer, "%s no %s entries?\n", methodName.c_str(), typeName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     int numberToRead = atoi( tokens[1].c_str() );
@@ -514,7 +511,6 @@ static int readVectorOfIntVectors( FILE* filePtr, const StringVector& tokens, st
           char buffer[1024];
           (void) sprintf( buffer, "%s %s tokens incomplete at line=%d\n", methodName.c_str(), typeName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -574,7 +570,6 @@ static int readIntVector( FILE* filePtr, const StringVector& tokens, int numberT
         char buffer[1024];
         (void) sprintf( buffer, "%s no %s entries?\n", methodName.c_str(), typeName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
  
     int numberToRead = atoi( tokens[numberTokenIndex].c_str() );
@@ -630,7 +625,6 @@ static int readParticles( FILE* filePtr, const StringVector& tokens, System& sys
        char buffer[1024];
        (void) sprintf( buffer, "%s no particles number entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     int numberOfParticles = atoi( tokens[1].c_str() );
@@ -667,7 +661,6 @@ static int readMasses( FILE* filePtr, const StringVector& tokens, System& system
        char buffer[1024];
        (void) sprintf( buffer, "%s no particle masses?\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     int numberOfParticles = atoi( tokens[1].c_str() );
@@ -686,7 +679,6 @@ static int readMasses( FILE* filePtr, const StringVector& tokens, System& system
           char buffer[1024];
           (void) sprintf( buffer, "%s particle tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -741,7 +733,6 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
        char buffer[1024];
        (void) sprintf( buffer, "%s no bonds number entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     AmoebaHarmonicBondForce* bondForce = new AmoebaHarmonicBondForce();
@@ -771,8 +762,10 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
           double k             = atof( lineTokens[tokenIndex++].c_str() );
           bondForce->addBond( particle1, particle2, length, k );
        } else {
-          (void) fprintf( log, "%s AmoebaHarmonicBondForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-          exit(-1);
+          char buffer[1024];
+          (void) sprintf( buffer, "%s AmoebaHarmonicBondForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) fprintf( log, "%s", buffer );
+          throwException(__FILE__, __LINE__, buffer );
        }
     }
 
@@ -911,7 +904,6 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
        char buffer[1024];
        (void) sprintf( buffer, "%s no angles number entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     AmoebaHarmonicAngleForce* angleForce = new AmoebaHarmonicAngleForce();
@@ -943,8 +935,10 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
           double k             = atof( lineTokens[tokenIndex++].c_str() );
           angleForce->addAngle( particle1, particle2, particle3, angle, k );
        } else {
-          (void) fprintf( log, "%s AmoebaHarmonicAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-          exit(-1);
+          char buffer[1024];
+          (void) sprintf( buffer, "%s AmoebaHarmonicAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) fprintf( log, "%s", buffer );
+          throwException(__FILE__, __LINE__, buffer );
        }
     }
 
@@ -1052,7 +1046,6 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
        char buffer[1024];
        (void) sprintf( buffer, "%s no angles number entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     AmoebaHarmonicInPlaneAngleForce* angleForce = new AmoebaHarmonicInPlaneAngleForce();
@@ -1084,8 +1077,10 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
             double k             = atof( lineTokens[tokenIndex++].c_str() );
             angleForce->addAngle( particle1, particle2, particle3, particle4, angle, k );
         } else {
-            (void) fprintf( log, "%s AmoebaHarmonicInPlaneAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-            exit(-1);
+            char buffer[1024];
+            (void) sprintf( buffer, "%s AmoebaHarmonicInPlaneAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fprintf( log, "%s", buffer );
+            throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -1194,7 +1189,6 @@ static int readAmoebaTorsionParameters( FILE* filePtr, MapStringInt& forceMap, c
        char buffer[1024];
        (void) sprintf( buffer, "%s no torsions number entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     AmoebaTorsionForce* torsionForce   = new AmoebaTorsionForce();
@@ -1244,8 +1238,10 @@ static int readAmoebaTorsionParameters( FILE* filePtr, MapStringInt& forceMap, c
 
           torsionForce->addTorsion( particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3 );
        } else {
-          (void) fprintf( log, "%s AmoebaTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-          exit(-1);
+          char buffer[1024];
+          (void) sprintf( buffer, "%s AmoebaTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) fprintf( log, "%s", buffer );
+          throwException(__FILE__, __LINE__, buffer );
        }
     }
 
@@ -1325,7 +1321,6 @@ static int readAmoebaPiTorsionParameters( FILE* filePtr, MapStringInt& forceMap,
         char buffer[1024];
         (void) sprintf( buffer, "%s no pi torsions number entry???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
 
     AmoebaPiTorsionForce* piTorsionForce = new AmoebaPiTorsionForce();
@@ -1361,8 +1356,10 @@ static int readAmoebaPiTorsionParameters( FILE* filePtr, MapStringInt& forceMap,
  
            piTorsionForce->addPiTorsion( particle1, particle2, particle3, particle4, particle5, particle6, k );
         } else {
-           (void) fprintf( log, "%s AmoebaPiTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-           exit(-1);
+          char buffer[1024];
+          (void) sprintf( buffer, "%s AmoebaPiTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) fprintf( log, "%s", buffer );
+          throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -1437,7 +1434,6 @@ static int readAmoebaStretchBendParameters( FILE* filePtr, MapStringInt& forceMa
         char buffer[1024];
         (void) sprintf( buffer, "%s no stretchBends number entry???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
 
     // create force
@@ -1474,8 +1470,10 @@ static int readAmoebaStretchBendParameters( FILE* filePtr, MapStringInt& forceMa
             double k             = atof( lineTokens[tokenIndex++].c_str() );
             stretchBendForce->addStretchBend( particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
         } else {
-            (void) fprintf( log, "%s AmoebaStretchBendForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-            exit(-1);
+            char buffer[1024];
+            (void) sprintf( buffer, "%s AmoebaStretchBendForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fprintf( log, "%s", buffer );
+            throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -1551,7 +1549,6 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
         char buffer[1024];
         (void) sprintf( buffer, "%s no outOfPlaneBends number entry???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
 
     // create force
@@ -1587,8 +1584,10 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
            double k             = atof( lineTokens[tokenIndex++].c_str() );
            outOfPlaneBendForce->addOutOfPlaneBend( particle1, particle2, particle3, particle4, k );
         } else {
-           (void) fprintf( log, "%s AmoebaOutOfPlaneBendForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-           exit(-1);
+           char buffer[1024];
+           (void) sprintf( buffer, "%s AmoebaOutOfPlaneBendForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+           (void) fprintf( log, "%s", buffer );
+           throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -1730,8 +1729,10 @@ static int readAmoebaTorsionTorsionGrid( FILE* filePtr, int numX, int numY, Tors
            }
            grid[xIndex][yIndex]       = values;
        } else {
-           (void) fprintf( log, "%s grid tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-           exit(-1);
+           char buffer[1024];
+           (void) sprintf( buffer, "%s grid tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+           (void) fprintf( log, "%s", buffer );
+           throwException(__FILE__, __LINE__, buffer );
        }
     }
 
@@ -1822,7 +1823,6 @@ static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forc
         char buffer[1024];
         (void) sprintf( buffer, "%s no torsionTorsions number entry???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
 
     // create force
@@ -1860,8 +1860,10 @@ static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forc
             int gridIndex        = atoi( lineTokens[tokenIndex++].c_str() );
             torsionTorsionForce->addTorsionTorsion( particle1, particle2, particle3, particle4, particle5, chiralAtomIndex, gridIndex );
         } else {
-            (void) fprintf( log, "%s AmoebaTorsionTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-            exit(-1);
+            char buffer[1024];
+            (void) sprintf( buffer, "%s AmoebaTorsionTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fprintf( log, "%s", buffer );
+            throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -1954,7 +1956,6 @@ static int readAmoebaUreyBradleyParameters( FILE* filePtr, MapStringInt& forceMa
        char buffer[1024];
        (void) sprintf( buffer, "%s no UB parameter number entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     AmoebaUreyBradleyForce* ubForce  = new AmoebaUreyBradleyForce();
@@ -1987,8 +1988,10 @@ static int readAmoebaUreyBradleyParameters( FILE* filePtr, MapStringInt& forceMa
 (void) fprintf( log, "%s AmoebaUreyBradleyForce %9d %8d [%8d %8d] %12.4f %12.4f\n", methodName.c_str(), *lineCount, index, particle1, particle2, length, k);
 (void) fflush( log );
        } else {
-          (void) fprintf( log, "%s AmoebaUreyBradleyForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-          exit(-1);
+          char buffer[1024];
+          (void) sprintf( buffer, "%s AmoebaUreyBradleyForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) fprintf( log, "%s", buffer );
+          throwException(__FILE__, __LINE__, buffer );
        }
     }
 
@@ -2153,7 +2156,6 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
         char buffer[1024];
         (void) sprintf( buffer, "%s no multipoles number entry???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
 
     // create force
@@ -2266,9 +2268,11 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringI
             quadrupole[8]        = atof( lineTokens[tokenIndex++].c_str() );
             multipoleForce->addParticle( charge, dipole, quadrupole, axisType, zAxis, xAxis, yAxis, tholeDamp, pdamp, polarity );
         } else {
-            (void) fprintf( log, "%s AmoebaMultipoleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            char buffer[1024];
+            (void) sprintf( buffer, "%s AmoebaMultipoleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fprintf( log, "%s", buffer );
             (void) fflush( log );
-            exit(-1);
+            throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -2493,7 +2497,6 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
        char buffer[1024];
        (void) sprintf( buffer, "%s no GK terms entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     AmoebaGeneralizedKirkwoodForce* gbsaObcForce   = new AmoebaGeneralizedKirkwoodForce();
@@ -2526,7 +2529,6 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
           char buffer[1024];
           (void) sprintf( buffer, "%s GK force tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -2548,13 +2550,11 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
                 char buffer[1024];
                 (void) sprintf( buffer, "%s read past GK block at line=%d\n", methodName.c_str(), *lineCount );
                 throwException(__FILE__, __LINE__, buffer );
-                exit(-1);
           }
        } else {
           char buffer[1024];
           (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -2674,7 +2674,6 @@ static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& fo
         char buffer[1024];
         (void) sprintf( buffer, "%s no vdw entries???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
 
     // create force
@@ -2711,8 +2710,10 @@ static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& fo
             double reduction     = atof( lineTokens[tokenIndex++].c_str() );
             vdwForce->addParticle( indexIV, indexClass, sigma, epsilon, reduction );
         } else {
-            (void) fprintf( log, "%s AmoebaVdwForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-            exit(-1);
+            char buffer[1024];
+            (void) sprintf( buffer, "%s AmoebaVdwForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fprintf( log, "%s", buffer );
+            throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -2735,7 +2736,6 @@ static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& fo
             (void) sprintf( buffer, "Vdw scaling factors different from assummed values [0.0 0.0 1.0 1.0] [%12.5e %12.5e %12.5e %12.5e]\n",
                             scale2, scale3, scale4, scale5 );
             throwException(__FILE__, __LINE__, buffer );
-            exit(-1);
         }
     }
 
@@ -2772,8 +2772,10 @@ static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& fo
                 }
                 vdwForce->setParticleExclusions( ii, exclusions );
             } else {
-                (void) fprintf( log, "%s AmoebaVdwForce exclusion tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-                exit(-1);
+                char buffer[1024];
+                (void) sprintf( buffer, "%s AmoebaVdwForce exclusion tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+                (void) fprintf( log, "%s", buffer );
+                throwException(__FILE__, __LINE__, buffer );
             }
         }
     }
@@ -2793,7 +2795,6 @@ static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& fo
             (void) sprintf( buffer, "Vdw hal values different from assummed values [0.07 0.12 ] [%12.5e %12.5e]\n",
                             hal1, hal2 );
             throwException(__FILE__, __LINE__, buffer );
-            exit(-1);
         }
     }
 
@@ -2895,7 +2896,6 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
         char buffer[1024];
         (void) sprintf( buffer, "%s no wca entries???\n", methodName.c_str() );
         throwException(__FILE__, __LINE__, buffer );
-        exit(-1);
     }
  
    // create force
@@ -2936,8 +2936,10 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             }
 
         } else {
-            (void) fprintf( log, "%s AmoebaWcaDispersionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-            exit(-1);
+            char buffer[1024];
+            (void) sprintf( buffer, "%s AmoebaWcaDispersionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fprintf( log, "%s", buffer );
+            throwException(__FILE__, __LINE__, buffer );
         }
     }
 
@@ -2972,13 +2974,11 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
                 char buffer[1024];
                 (void) sprintf( buffer, "%s read past WcaDispersion block at line=%d\n", methodName.c_str(), *lineCount );
                 throwException(__FILE__, __LINE__, buffer );
-                exit(-1);
           }
        } else {
           char buffer[1024];
           (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -3091,7 +3091,10 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             } 
         }
         if( errors ){
-            exit(-1);
+            char buffer[1024];
+            (void) sprintf( buffer, "%s encountered %d errors in maxDispEnergy\n", methodName.c_str(), errors );
+            (void) fprintf( log, "%s", buffer );
+            throwException(__FILE__, __LINE__, buffer );
         } else {
             (void) fprintf( log, "No errors detected in maxDispEnergy!\n" );
         }
@@ -3130,7 +3133,6 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
        char buffer[1024];
        (void) sprintf( buffer, "%s no constraints terms entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     setIntFromMap( inputArgumentMap, "applyConstraints",  applyConstraints);
@@ -3158,7 +3160,6 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
           char buffer[1024];
           (void) sprintf( buffer, "%s constraint tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -3221,7 +3222,6 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
        char buffer[1024];
        (void) sprintf( buffer, "%s integrator name missing?\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     std::string integratorName = tokens[1];
@@ -3244,9 +3244,11 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
     } else if( integratorName == "BrownianIntegrator" ){
        readLines = 5;
     } else {
-       (void) fprintf( log, "%s integrator=%s not recognized.\n", methodName.c_str(), integratorName.c_str() );
+       char buffer[1024];
+       (void) sprintf( buffer, "%s integrator=%s not recognized.\n", methodName.c_str(), integratorName.c_str() );
+       (void) fprintf( log, "%s", buffer );
        (void) fflush( log );
-       exit(-1);
+       throwException(__FILE__, __LINE__, buffer );
     }
     
     // read in parameters
@@ -3275,15 +3277,16 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
           } else if( lineTokens[0] == "RandomNumberSeed" ){
              randomNumberSeed    =  atoi( lineTokens[1].c_str() );
           } else {
-             (void) fprintf( log, "%s integrator field=%s not recognized.\n", methodName.c_str(), lineTokens[0].c_str() );
+             char buffer[1024];
+             (void) sprintf( buffer, "%s integrator field=%s not recognized.\n", methodName.c_str(), lineTokens[0].c_str() );
+             (void) fprintf( log, "%s", buffer );
              (void) fflush( log );
-             exit(-1);
+             throwException(__FILE__, __LINE__, buffer );
           }
        } else {
           char buffer[1024];
           (void) sprintf( buffer, "%s integrator parameters incomplete at line=%d\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -3359,7 +3362,6 @@ static int readVec3( FILE* filePtr, const StringVector& tokens, std::vector<Vec3
        char buffer[1024];
        (void) sprintf( buffer, "%s no entries?\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
-       exit(-1);
     }
 
     int numberOfCoordinates= atoi( tokens[1].c_str() );
@@ -3380,7 +3382,6 @@ static int readVec3( FILE* filePtr, const StringVector& tokens, std::vector<Vec3
           char buffer[1024];
           (void) sprintf( buffer, "%s coordinates tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
-          exit(-1);
        }
     }
 
@@ -3945,7 +3946,6 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                 char buffer[1024];
                 (void) sprintf( buffer, "Field=<%s> not recognized at line=%d.\n", field.c_str(), lineCount );
                 throwException(__FILE__, __LINE__, buffer );
-                exit(-1);
             }
        }
     }
@@ -4682,9 +4682,10 @@ void checkIntermediateStatesUsingAmoebaTinkerParameterFile( const std::string& a
 
     StringVectorVector fileContents;
     if( readFile( statesFileName, fileContents, log ) ){
-        (void) fprintf( stderr, "%s: File %s not read.\n", methodName.c_str(), statesFileName.c_str() );
-        (void) fflush( stderr );
-        exit(-1);
+        char buffer[1024];
+        (void) sprintf( buffer, "%s: File %s not read.\n", methodName.c_str(), statesFileName.c_str() );
+        (void) fprintf( stderr, "%s", buffer );
+        throwException(__FILE__, __LINE__, buffer );
     }
     unsigned int lineIndex  = 0;
     unsigned int stateIndex = 0;
@@ -5961,7 +5962,6 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             char buffer[1024];
             (void) sprintf( buffer, "%s nans detected at time %12.3f -- aborting.\n", methodName.c_str(), currentTime );
             throwException(__FILE__, __LINE__, buffer );
-            exit(-1);
         }
  
         // check constraints
