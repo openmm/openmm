@@ -220,7 +220,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
     recordChangedParameters(context, globals);
 }
 
-RealOpenMM ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<RealVec>& results, const vector<RealVec>& atomCoordinates,
+void ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<RealVec>& results, const vector<RealVec>& atomCoordinates,
               const vector<RealVec>& velocities, const vector<RealVec>& forces, const vector<RealOpenMM>& masses,
               const map<string, RealOpenMM>& globals, const vector<vector<RealVec> >& perDof, const Lepton::ExpressionProgram& expression) {
     // Loop over all degrees of freedom.

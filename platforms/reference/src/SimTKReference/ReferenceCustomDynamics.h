@@ -48,7 +48,7 @@ private:
     std::vector<bool> invalidatesForces, needsForces, needsEnergy;
     RealOpenMM energy;
     
-    RealOpenMM computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
+    void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
                   const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,
                   const std::map<std::string, RealOpenMM>& globals, const std::vector<std::vector<OpenMM::RealVec> >& perDof, const Lepton::ExpressionProgram& expression);
     

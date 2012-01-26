@@ -99,12 +99,12 @@ __kernel void distributeForces(__global const float4* restrict posq, __global fl
         float4 f1 = force[atoms.y];
         float4 f2 = force[atoms.z];
         float4 f3 = force[atoms.w];
-        float4 fp2 = (float4) (weights.x*f.x - weights.z*v13.z*f.y + weights.z*v13.y*f[2],
-                   weights.z*v13.z*f.x + weights.x*f.y - weights.z*v13.x*f[2],
+        float4 fp2 = (float4) (weights.x*f.x - weights.z*v13.z*f.y + weights.z*v13.y*f.z,
+                   weights.z*v13.z*f.x + weights.x*f.y - weights.z*v13.x*f.z,
                   -weights.z*v13.y*f.x + weights.z*v13.x*f.y + weights.x*f.z, 0.0f);
-        float4 fp3 = (float4) (weights.y*f.x + weights.z*v12[2]*f.y - weights.z*v12.y*f.z,
-                  -weights.z*v12[2]*f.x + weights.y*f.y + weights.z*v12.x*f.z,
-                   weights.z*v12.y*f.x - weights.z*v12.x*f.y + weights.y*f[2], 0.0f);
+        float4 fp3 = (float4) (weights.y*f.x + weights.z*v12.z*f.y - weights.z*v12.y*f.z,
+                  -weights.z*v12.z*f.x + weights.y*f.y + weights.z*v12.x*f.z,
+                   weights.z*v12.y*f.x - weights.z*v12.x*f.y + weights.y*f.z, 0.0f);
         f1.xyz += f.xyz-fp2.xyz-fp3.xyz;
         f2.xyz += fp2.xyz;
         f3.xyz += fp3.xyz;

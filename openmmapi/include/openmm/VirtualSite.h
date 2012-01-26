@@ -72,7 +72,7 @@ private:
  * of two other particle's locations.  Assuming the weights add up to 1, this means
  * the virtual site is on the line passing through the two particles.
  */
-class TwoParticleAverageSite : public VirtualSite {
+class OPENMM_EXPORT TwoParticleAverageSite : public VirtualSite {
 public:
     /**
      * Create a new TwoParticleAverageSite virtual site.  Normally weight1 and weight2
@@ -100,7 +100,7 @@ private:
  * of three other particle's locations.  Assuming the weights add up to 1, this means
  * the virtual site is in the plane of the three particles.
  */
-class ThreeParticleAverageSite : public VirtualSite {
+class OPENMM_EXPORT ThreeParticleAverageSite : public VirtualSite {
 public:
     /**
      * Create a new ThreeParticleAverageSite virtual site.  Normally the weights
@@ -137,7 +137,7 @@ private:
  * The three weight factors are user-specified.  This allows the virtual site location
  * to be out of the plane of the three particles.
  */
-class OutOfPlaneSite : public VirtualSite {
+class OPENMM_EXPORT OutOfPlaneSite : public VirtualSite {
 public:
     /**
      * Create a new OutOfPlaneSite virtual site.
