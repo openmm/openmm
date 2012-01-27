@@ -41,7 +41,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
         damp         = damp < -50.0f ? 0.0f : damp;
     }
 
-    float scale5                = (damp == 0.0f) ? 1.0f : (1.0f - (1.0f-damp)*exp(damp));
+    float scale5                = (damp == 0.0f) ? 1.0f : (1.0f - (1.0f-damp)*expf(damp));
     float rr5                   = rr1*rr1;
           rr5                   = 3.0f*rr1*rr5*rr5;
 #ifdef APPLY_SCALE
@@ -79,7 +79,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
           ftm23                += (qiuk3 + qiukp3)*psc5;
 #endif
 
-    float expdamp               = exp(damp);
+    float expdamp               = expf(damp);
     float scale3                = (damp == 0.0f) ? 1.0f : (1.0f - expdamp);
     float rr3                   = rr1*rr1*rr1;
 
@@ -190,7 +190,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
 
     if( damp != 0.0f ){
 
-        float expdamp = exp(damp);
+        float expdamp = expf(damp);
         float temp3   = -1.5f*damp*expdamp*rr1*rr1;
         float temp5   = -damp;
         float temp7   = -0.2f - 0.6f*damp;
@@ -395,7 +395,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
 
     if( damp != 0.0f ){
 
-        float expdamp = exp(damp);
+        float expdamp = expf(damp);
         float temp3   = -1.5f*damp*expdamp*rr1*rr1;
         float temp5   = -damp;
         float temp7   = -0.2f - 0.6f*damp;

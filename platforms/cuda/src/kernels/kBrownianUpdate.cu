@@ -72,7 +72,7 @@ void kBrownianUpdatePart1_kernel()
         float4 force            = cSim.pForce4[pos];
         float invMass           = cSim.pVelm4[pos].w;
         float forceScale        = cSim.tauDeltaT*invMass;
-        float noiseScale        = cSim.noiseAmplitude*sqrt(invMass);
+        float noiseScale        = cSim.noiseAmplitude*sqrtf(invMass);
 
         cSim.pOldPosq[pos]      = apos;
         apos.x                  = force.x*forceScale + noiseScale*random4a.x;

@@ -105,7 +105,7 @@ __device__ void calculateGrycukBornRadiiPairIxn_kernel( GrycukParticle& atomI, G
     zr           = atomJ.z - atomI.z;
 
     r2           = xr*xr + yr*yr + zr*zr;
-    r            = sqrt(r2);
+    r            = sqrtf(r2);
 
     sk           = atomJ.scaledRadius;
     sk2          = sk*sk;
@@ -170,7 +170,7 @@ void kReduceGrycukGbsaBornSum_kernel()
         float radius              = cSim.pObcData[pos].x;
         radius                    = 1.0f/(radius*radius*radius);
         sum                       = radius - sum;
-        sum                       = sum <= 0.0f ? 1000.0f : pow( sum, -1.0f/3.0f );
+        sum                       = sum <= 0.0f ? 1000.0f : powf( sum, -1.0f/3.0f );
         cSim.pBornRadii[pos]      = sum;
 
         pos                      += gridDim.x * blockDim.x;
@@ -305,9 +305,9 @@ __device__ void calculateGrycukChainRulePairIxn_kernel( GrycukChainRuleParticle&
 
     float lik, uik;
     float lik4, uik4;
-    float factor           = -pow(pi,third)*pow(6.0f,(2.0f*third))/9.0f;
+    float factor           = -powf(pi,third)*powf(6.0f,(2.0f*third))/9.0f;
     float term             = pi43/(atomI.bornRadius*atomI.bornRadius*atomI.bornRadius);
-          term             = factor/pow( term, (4.0f*third) );
+          term             = factor/powf( term, (4.0f*third) );
 
     float xr               = atomJ.x - atomI.x;
     float yr               = atomJ.y - atomI.y;
@@ -316,7 +316,7 @@ __device__ void calculateGrycukChainRulePairIxn_kernel( GrycukChainRuleParticle&
     float sk               = atomJ.scaledRadius;
     float sk2              = sk*sk;
     float r2               = xr*xr + yr*yr + zr*zr;
-    float r                = sqrt(r2);
+    float r                = sqrtf(r2);
     float de               = 0.0f;
 
     if( (atomI.radius + r) < sk ){

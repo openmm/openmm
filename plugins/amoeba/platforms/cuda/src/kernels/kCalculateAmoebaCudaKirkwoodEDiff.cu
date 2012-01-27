@@ -186,9 +186,9 @@ __device__ void calculateKirkwoodEDiffPairIxnOrig_kernel( KirkwoodEDiffParticle&
             scale7       = 1.0f - (1.0f - damp + 0.6f*damp2)*dampE;
             //scale9       = 1.0f - (1.0f - damp + (18.0f*damp2 - (9.0f*damp*damp2))/35.0f)*dampE;
 
-            ddsc3_1     = -3.0f*damp*exp(damp) * xr/r2;
-            ddsc3_2     = -3.0f*damp*exp(damp) * yr/r2;
-            ddsc3_3     = -3.0f*damp*exp(damp) * zr/r2;
+            ddsc3_1     = -3.0f*damp*expf(damp) * xr/r2;
+            ddsc3_2     = -3.0f*damp*expf(damp) * yr/r2;
+            ddsc3_3     = -3.0f*damp*expf(damp) * zr/r2;
 
             ddsc5_1     = -damp * ddsc3_1;
             ddsc5_2     = -damp * ddsc3_2;

@@ -48,7 +48,7 @@ using namespace std;
     dp          = DOT3(v1, v2); \
     float norm1 = DOT3(v1, v1); \
     float norm2 = DOT3(v2, v2); \
-    dp /= sqrt(norm1 * norm2); \
+    dp /= sqrtf(norm1 * norm2); \
     dp = min(dp, 1.0f); \
     dp = max(dp, -1.0f); \
 }
@@ -60,12 +60,12 @@ using namespace std;
     if (dp > 0.99f || dp < -0.99f) { \
         float3 cross = CROSS_PRODUCT(v1, v2); \
         float scale = DOT3(v1, v1)*DOT3(v2, v2); \
-        angle = asin(sqrt(DOT3(cross, cross)/scale)); \
+        angle = asinf(sqrtf(DOT3(cross, cross)/scale)); \
         if (dp < 0.0f) \
             angle = LOCAL_HACK_PI-angle; \
     } \
     else { \
-        angle = acos(dp); \
+        angle = acosf(dp); \
     } \
 }
 
@@ -166,7 +166,7 @@ void kCalculateCMAPTorsionForces_kernel(int numAtoms, int numTorsions, float4* f
 
         float normCross1 = DOT3(cp0a, cp0a);
         float normSqrBC = DOT3(v1a, v1a);
-        float normBC = sqrt(normSqrBC);
+        float normBC = sqrtf(normSqrBC);
         float normCross2 = DOT3(cp1a, cp1a);
         float dp = 1.0f/normSqrBC;
         float4 ff = make_float4((-dEdA*normBC)/normCross1, DOT3(v0a, v1a)*dp, DOT3(v2a, v1a)*dp, (dEdA*normBC)/normCross2);
@@ -204,7 +204,7 @@ void kCalculateCMAPTorsionForces_kernel(int numAtoms, int numTorsions, float4* f
 
         normCross1 = DOT3(cp0b, cp0b);
         normSqrBC = DOT3(v1b, v1b);
-        normBC = sqrt(normSqrBC);
+        normBC = sqrtf(normSqrBC);
         normCross2 = DOT3(cp1b, cp1b);
         dp = 1.0f/normSqrBC;
         ff = make_float4((-dEdB*normBC)/normCross1, DOT3(v0b, v1b)*dp, DOT3(v2b, v1b)*dp, (dEdB*normBC)/normCross2);

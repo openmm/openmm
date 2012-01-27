@@ -57,9 +57,9 @@ __global__ void kScaleAtomCoordinates_kernel(float scale, int numMolecules, floa
 
         // Move it into the first periodic box.
 
-        int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
-        int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
-        int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
+        int xcell = (int) floorf(center.x*invPeriodicBoxSize.x);
+        int ycell = (int) floorf(center.y*invPeriodicBoxSize.y);
+        int zcell = (int) floorf(center.z*invPeriodicBoxSize.z);
         float3 delta = make_float3(xcell*periodicBoxSize.x, ycell*periodicBoxSize.y, zcell*periodicBoxSize.z);
         center.x -= delta.x;
         center.y -= delta.y;

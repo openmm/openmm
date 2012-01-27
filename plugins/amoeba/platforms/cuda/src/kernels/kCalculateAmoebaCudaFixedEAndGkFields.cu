@@ -156,7 +156,7 @@ __device__ void calculateFixedGkFieldPairIxn_kernel( float4 atomCoordinatesI,   
     qyzk         = labFrameQuadrupoleJ[5];
     qzzk         = labFrameQuadrupoleJ[8];
 
-    expterm      = exp(-r2/(gkc*rb2));
+    expterm      = expf(-r2/(gkc*rb2));
     expc         = expterm / gkc;
     dexpc        = -2.0f / (gkc*rb2);
     gf2          = 1.0f / (r2+rb2*expterm);

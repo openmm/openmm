@@ -320,7 +320,7 @@ void kCalculateAmoebaLocalForces_kernel()
             float dy            = atomB.y - atomA.y;
             float dz            = atomB.z - atomA.z;
             float r2            = dx * dx + dy * dy + dz * dz;
-            float r             = sqrt(r2);
+            float r             = sqrtf(r2);
             float deltaIdeal    = r - bond.x;
 #if defined OLD
             energy             += 0.5f * bond.y * deltaIdeal * deltaIdeal;
@@ -382,16 +382,16 @@ void kCalculateAmoebaLocalForces_kernel()
             float3 cp;
             CROSS_PRODUCT(v0, v1, cp);
             float rp                = DOT3(cp, cp); //cx * cx + cy * cy + cz * cz;
-            rp                      = max(sqrt(rp), 1.0e-06f);
+            rp                      = max(sqrtf(rp), 1.0e-06f);
             float r21               = DOT3(v0, v0); // dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
             float r23               = DOT3(v1, v1); // dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
             float dot               = DOT3(v0, v1); // dx1 * dx2 + dy1 * dy2 + dz1 * dz2;
-            float cosine            = dot / sqrt(r21 * r23);
+            float cosine            = dot / sqrtf(r21 * r23);
 
 // e     = angunit * force * dt2 * (1.0d0+cang*dt+qang*dt2+pang*dt3+sang*dt4)
 // deddt = angunit * force * dt * radian * (2.0d0 + 3.0d0*cang*dt + 4.0d0*qang*dt2 + 5.0d0*pang*dt3 + 6.0d0*sang*dt4)
 
-            float angle             = acos(cosine);
+            float angle             = acosf(cosine);
             float deltaIdeal        = angle*(180.0f/LOCAL_HACK_PI) - bond_angle1.x;
             float deltaIdeal2       = deltaIdeal *deltaIdeal;
             float deltaIdeal3       = deltaIdeal *deltaIdeal2;
@@ -507,7 +507,7 @@ void kCalculateAmoebaLocalForces_kernel()
             float cosine            = product > 0.0f ? (dot/product) : 0.0f;
                   cosine            = cosine >  1.0f ?  1.0f : cosine;
                   cosine            = cosine < -1.0f ? -1.0f : cosine;
-            float angle             = acos(cosine);
+            float angle             = acosf(cosine);
 
             // if product == 0, set force/energy to 0
 
@@ -670,19 +670,19 @@ void kCalculateAmoebaLocalForces_kernel()
 
             float    v1             = torsionParam1.x;
             float    angle          = torsionParam1.y;
-            float    c1             = cos( angle );
-            float    s1             = sin( angle );
+            float    c1             = cosf( angle );
+            float    s1             = sinf( angle );
 
             float    v2             = torsionParam1.z;
                      angle          = torsionParam1.w;
-            float    c2             = cos( angle );
-            float    s2             = sin( angle );
+            float    c2             = cosf( angle );
+            float    s2             = sinf( angle );
 
 
             float    v3             = torsionParam2.x;
                      angle          = torsionParam2.y;
-            float    c3             = cos( angle );
-            float    s3             = sin( angle );
+            float    c3             = cosf( angle );
+            float    s3             = sinf( angle );
 
             // compute the multiple angle trigonometry and the phase terms
 
@@ -857,7 +857,7 @@ void kCalculateAmoebaLocalForces_kernel()
             float ru2               = xu*xu + yu*yu + zu*zu;
 
             float rtru              = sqrtf(rt2 * ru2);
-            float rdc               = sqrt(xdc*xdc + ydc*ydc + zdc*zdc);
+            float rdc               = sqrtf(xdc*xdc + ydc*ydc + zdc*zdc);
 
             float cosine            = rtru > 0.0f ? (xt*xu + yt*yu + zt*zu) / rtru : 0.0f;
             float sine              = (rtru*rdc) > 0.0f ? (xdc*xtu + ydc*ytu + zdc*ztu) / (rdc*rtru) : 0.0f;
@@ -1020,13 +1020,13 @@ void kCalculateAmoebaLocalForces_kernel()
             float yp                = zcb*xab - xcb*zab;
             float zp                = xcb*yab - ycb*xab;
 
-            float rp                = sqrt(xp*xp + yp*yp + zp*zp);
+            float rp                = sqrtf(xp*xp + yp*yp + zp*zp);
 
             float    dot            = xab*xcb + yab*ycb + zab*zcb;
             float    cosine         = rab*rcb > 0.0f ? (dot / (rab*rcb)) : 1.0f;
                      cosine         = cosine >  1.0f ?  1.0f : cosine;
                      cosine         = cosine < -1.0f ? -1.0f : cosine;
-            float    angle          = acos(cosine);
+            float    angle          = acosf(cosine);
 
             // find chain rule terms for the bond angle deviation
 
@@ -1158,9 +1158,9 @@ void kCalculateAmoebaLocalForces_kernel()
             float adXcd_nrm2        = adXcd_0*adXcd_0 + adXcd_1*adXcd_1 + adXcd_2*adXcd_2;
 
             float adXcd_dot_db      = xdb*adXcd_0 + ydb*adXcd_1 + zdb*adXcd_2;
-                  adXcd_dot_db     /= sqrt(rdb2*adXcd_nrm2);
+                  adXcd_dot_db     /= sqrtf(rdb2*adXcd_nrm2);
 
-            float angle             = abs( asin(adXcd_dot_db) );
+            float angle             = abs( asinf(adXcd_dot_db) );
                 
             // find the out-of-plane energy and master chain rule terms
 
@@ -1327,7 +1327,7 @@ void kCalculateAmoebaLocalForces_kernel()
                      cosine1        = cosine1 >  1.0f ?  1.0f : cosine1;
                      cosine1        = cosine1 < -1.0f ? -1.0f : cosine1;
 
-            float    angle1         = LOCAL_HACK_RADIAN * acos(cosine1);
+            float    angle1         = LOCAL_HACK_RADIAN * acosf(cosine1);
             float    sign           = xba*xu + yba*yu + zba*zu;
                      angle1         = sign < 0.0f ? -angle1 : angle1;
             float    value1         = angle1;
@@ -1336,7 +1336,7 @@ void kCalculateAmoebaLocalForces_kernel()
             float    cosine2        = (xu*xv + yu*yv + zu*zv) / rurv;
                      cosine2        = cosine2 >  1.0f ?  1.0f : cosine2;
                      cosine2        = cosine2 < -1.0f ? -1.0f : cosine2;
-            float    angle2         = LOCAL_HACK_RADIAN * acos(cosine2);
+            float    angle2         = LOCAL_HACK_RADIAN * acosf(cosine2);
 
                      sign           = xcb*xv + ycb*yv + zcb*zv;
                      angle2         = sign < 0.0f ? -angle2 : angle2;
@@ -1577,7 +1577,7 @@ void kCalculateAmoebaLocalForces_kernel()
             float dz            = atomB.z - atomA.z;
 
             float r2            = dx * dx + dy * dy + dz * dz;
-            float r             = sqrt(r2);
+            float r             = sqrtf(r2);
             float deltaIdeal    = r - bond.x;
             float deltaIdeal2   = deltaIdeal*deltaIdeal;
             energy             += bond.y * deltaIdeal2*( 1.0f + cAmoebaSim.amoebaUreyBradleyCubicParameter*deltaIdeal +

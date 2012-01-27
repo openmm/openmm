@@ -121,9 +121,9 @@ void kUpdateBsplines_kernel()
         }
 
         float4 posq = cSim.pPosq[i];
-        posq.x -= floor(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
-        posq.y -= floor(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
-        posq.z -= floor(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        posq.x -= floorf(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
+        posq.y -= floorf(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
+        posq.z -= floorf(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
         float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX)*cSim.pmeGridSize.x,
                                (posq.y*cSim.invPeriodicBoxSizeY)*cSim.pmeGridSize.y,
                                (posq.z*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z);
@@ -210,7 +210,7 @@ void kFindAtomRangeForGrid_kernel()
         // some work in the charge spreading kernel.
 
         float posz = cSim.pPosq[atomData.x].z;
-        posz -= floor(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        posz -= floorf(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
         int z = ((int) ((posz*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z)) % cSim.pmeGridSize.z;
         cSim.pPmeAtomGridIndex[i].y = z;
     }
@@ -278,7 +278,7 @@ void kGridSpreadCharge_kernel()
                 }
             }
         }
-        cSim.pPmeGrid[gridIndex] = make_cuComplex(result*sqrt(cSim.epsfac), 0.0f);
+        cSim.pPmeGrid[gridIndex] = make_cuComplex(result*sqrtf(cSim.epsfac), 0.0f);
     }
 }
 
@@ -337,9 +337,9 @@ void kGridInterpolateForce_kernel()
     {
         float3 force = make_float3(0.0f, 0.0f, 0.0f);
         float4 posq = cSim.pPosq[atom];
-        posq.x -= floor(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
-        posq.y -= floor(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
-        posq.z -= floor(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        posq.x -= floorf(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
+        posq.y -= floorf(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
+        posq.z -= floorf(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
         float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX)*cSim.pmeGridSize.x,
                                (posq.y*cSim.invPeriodicBoxSizeY)*cSim.pmeGridSize.y,
                                (posq.z*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z);
@@ -373,7 +373,7 @@ void kGridInterpolateForce_kernel()
             }
         }
         float4 totalForce = cSim.pForce4[atom];
-        float q = posq.w*sqrt(cSim.epsfac);
+        float q = posq.w*sqrtf(cSim.epsfac);
         totalForce.x -= q*force.x*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
         totalForce.y -= q*force.y*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
         totalForce.z -= q*force.z*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;

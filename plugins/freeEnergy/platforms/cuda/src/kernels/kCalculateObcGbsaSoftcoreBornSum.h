@@ -99,9 +99,9 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                 dy                      = psA[j].y - apos.y;
                 dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
 
                 r2                      = dx * dx + dy * dy + dz * dz;
@@ -112,7 +112,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                 if (i < cSim.atoms && x+j < cSim.atoms )
 #endif
                 {
-                    r                       = sqrt(r2);
+                    r                       = sqrtf(r2);
                     float rInverse          = 1.0f/r;
                     float rScaledRadiusJ    = r + psA[j].sr;
                     if( (j != tgx) && (ar.x < rScaledRadiusJ) ){
@@ -120,7 +120,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                         float u_ij     = 1.0f / rScaledRadiusJ;
                         float l_ij2    = l_ij * l_ij;
                         float u_ij2    = u_ij * u_ij;
-                        float ratio    = log(u_ij / l_ij);
+                        float ratio    = logf(u_ij / l_ij);
                         float term     = l_ij - u_ij +
                                          0.25f * r * (u_ij2 - l_ij2) +
                                          (0.50f * rInverse * ratio) +
@@ -190,9 +190,9 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                     dy  = psA[tj].y - apos.y;
                     dz  = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
 #ifdef USE_CUTOFF
@@ -201,7 +201,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                     if (i < cSim.atoms && y+tj < cSim.atoms )
 #endif
                     {
-                        r                       = sqrt(r2);
+                        r                       = sqrtf(r2);
                         float rInverse          = 1.0f / r;
                         float rScaledRadiusJ    = r + psA[tj].sr;
                         if (ar.x < rScaledRadiusJ)
@@ -210,7 +210,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                             float u_ij     = 1.0f / rScaledRadiusJ;
                             float l_ij2    = l_ij * l_ij;
                             float u_ij2    = u_ij * u_ij;
-                            float ratio    = log(u_ij / l_ij);
+                            float ratio    = logf(u_ij / l_ij);
                             float term     = l_ij - u_ij +
                                              0.25f * r * (u_ij2 - l_ij2) +
                                              (0.50f * rInverse * ratio) +
@@ -232,7 +232,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                             float u_ij     = 1.0f / rScaledRadiusI;
                             float l_ij2    = l_ij * l_ij;
                             float u_ij2    = u_ij * u_ij;
-                            float ratio    = log(u_ij / l_ij);
+                            float ratio    = logf(u_ij / l_ij);
                             float term     = l_ij - u_ij +
                                              0.25f * r * (u_ij2 - l_ij2) +
                                              (0.50f * rInverse * ratio) +
@@ -265,9 +265,9 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
 #ifdef USE_CUTOFF
@@ -276,7 +276,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                         if (i < cSim.atoms && y+j < cSim.atoms )
 #endif
                         {
-                            r                       = sqrt(r2);
+                            r                       = sqrtf(r2);
                             float rInverse          = 1.0f / r;
                             float rScaledRadiusJ    = r + psA[j].sr;
                             if (ar.x < rScaledRadiusJ)
@@ -285,7 +285,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                                 float u_ij     = 1.0f / rScaledRadiusJ;
                                 float l_ij2    = l_ij * l_ij;
                                 float u_ij2    = u_ij * u_ij;
-                                float ratio    = log(u_ij / l_ij);
+                                float ratio    = logf(u_ij / l_ij);
                                 float term     = l_ij -
                                                  u_ij +
                                                  0.25f * r * (u_ij2 - l_ij2) +
@@ -306,7 +306,7 @@ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUn
                                 float u_ij     = 1.0f / rScaledRadiusI;
                                 float l_ij2    = l_ij * l_ij;
                                 float u_ij2    = u_ij * u_ij;
-                                float ratio    = log(u_ij / l_ij);
+                                float ratio    = logf(u_ij / l_ij);
                                 float term     = l_ij -
                                                  u_ij +
                                                  0.25f * r * (u_ij2 - l_ij2) +

@@ -63,10 +63,10 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 
                         float arg1 = kx*apos1.x + ky*apos1.y + kz*apos1.z;
                         float arg2 = kx*apos2.x + ky*apos2.y + kz*apos2.z;
-                        float sinI = sin(arg1);
-                        float sinJ = sin(arg2);
-                        float cosI = cos(arg1);
-                        float cosJ = cos(arg2);
+                        float sinI = sinf(arg1);
+                        float sinJ = sinf(arg2);
+                        float cosI = cosf(arg1);
+                        float cosJ = cosf(arg2);
 
                         float f = scale * ek * (-sinI*cosJ + cosI*sinJ) / k2;
                         af.x -= kx*f;

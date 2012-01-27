@@ -88,7 +88,7 @@ void SetCustomTorsionGlobalParams(const vector<float>& paramValues)
     dp          = DOT3(v1, v2); \
     float norm1 = DOT3(v1, v1); \
     float norm2 = DOT3(v2, v2); \
-    dp /= sqrt(norm1 * norm2); \
+    dp /= sqrtf(norm1 * norm2); \
     dp = min(dp, 1.0f); \
     dp = max(dp, -1.0f); \
 }
@@ -100,12 +100,12 @@ void SetCustomTorsionGlobalParams(const vector<float>& paramValues)
     if (dp > 0.99f || dp < -0.99f) { \
         float3 cross = CROSS_PRODUCT(v1, v2); \
         float scale = DOT3(v1, v1)*DOT3(v2, v2); \
-        angle = asin(sqrt(DOT3(cross, cross)/scale)); \
+        angle = asinf(sqrtf(DOT3(cross, cross)/scale)); \
         if (dp < 0.0f) \
             angle = LOCAL_HACK_PI-angle; \
     } \
     else { \
-        angle = acos(dp); \
+        angle = acosf(dp); \
     } \
 }
 
@@ -155,7 +155,7 @@ void kCalculateCustomTorsionForces_kernel()
         VARIABLE(4) = params.w;
         float dEdAngle = kEvaluateExpression_kernel(&forceExp, stack, variables);
         totalEnergy += kEvaluateExpression_kernel(&energyExp, stack, variables);
-        float normBC = sqrt(DOT3(v1, v1));
+        float normBC = sqrtf(DOT3(v1, v1));
         float dp = 1.0f / DOT3(v1, v1);
         float4 ff = make_float4((-dEdAngle*normBC)/DOT3(cp0, cp0), DOT3(v0, v1)*dp, DOT3(v2, v1)*dp, (dEdAngle*normBC)/DOT3(cp1, cp1));
         float3 internalF0 = make_float3(ff.x*cp0.x, ff.x*cp0.y, ff.x*cp0.z);

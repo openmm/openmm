@@ -137,9 +137,9 @@ void kComputeAmoebaBsplines_kernel()
 
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
         float4 posq = cSim.pPosq[i];
-        posq.x -= floor(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
-        posq.y -= floor(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
-        posq.z -= floor(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        posq.x -= floorf(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
+        posq.y -= floorf(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
+        posq.z -= floorf(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
 
         // First axis.
 
@@ -210,7 +210,7 @@ void kFindAmoebaAtomRangeForGrid_kernel()
         // some work in the charge spreading kernel.
 
         float posz = cSim.pPosq[atomData.x].z;
-        posz -= floor(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        posz -= floorf(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
         float w = posz*cSim.invPeriodicBoxSizeZ;
         float fr = cSim.pmeGridSize.z*(w-(int)(w+0.5f)+0.5f);
         int z = ((int) fr)-AMOEBA_PME_ORDER+1;
@@ -449,7 +449,7 @@ void kAmoebaReciprocalConvolution_kernel()
         cuComplex grid = cSim.pPmeGrid[index];
         float m2 = mhx*mhx+mhy*mhy+mhz*mhz;
         float denom = m2*bx*by*bz;
-        float eterm = scaleFactor*exp(-expFactor*m2)/denom;
+        float eterm = scaleFactor*expf(-expFactor*m2)/denom;
         cSim.pPmeGrid[index] = make_cuComplex(grid.x*eterm, grid.y*eterm);
     }
 }

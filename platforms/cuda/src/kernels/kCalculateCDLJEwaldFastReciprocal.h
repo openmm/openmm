@@ -83,11 +83,11 @@ __global__ void kCalculateEwaldFastCosSinSums_kernel()
         {
             float4 apos = cSim.pPosq[atom];
             float phase = apos.x*kx;
-            float2 structureFactor = make_float2(cos(phase), sin(phase));
+            float2 structureFactor = make_float2(cosf(phase), sinf(phase));
             phase = apos.y*ky;
-            structureFactor = MultofFloat2(structureFactor, make_float2(cos(phase), sin(phase)));
+            structureFactor = MultofFloat2(structureFactor, make_float2(cosf(phase), sinf(phase)));
             phase = apos.z*kz;
-            structureFactor = MultofFloat2(structureFactor, make_float2(cos(phase), sin(phase)));
+            structureFactor = MultofFloat2(structureFactor, make_float2(cosf(phase), sinf(phase)));
             sum.x += apos.w*structureFactor.x;
             sum.y += apos.w*structureFactor.y;
         }
@@ -129,9 +129,9 @@ __global__ void kCalculateEwaldFastForces_kernel()
             for (int ry = lowry; ry < cSim.kmaxY; ry++) {
                 float ky = ry * cSim.recipBoxSizeY;
                 float phase = apos.x*kx;
-                float2 tab_xy = make_float2(cos(phase), sin(phase));
+                float2 tab_xy = make_float2(cosf(phase), sinf(phase));
                 phase = apos.y*ky;
-                tab_xy = MultofFloat2(tab_xy, make_float2(cos(phase), sin(phase)));
+                tab_xy = MultofFloat2(tab_xy, make_float2(cosf(phase), sinf(phase)));
                 for (int rz = lowrz; rz < cSim.kmaxZ; rz++) {
                     float kz = rz * cSim.recipBoxSizeZ;
 
@@ -141,7 +141,7 @@ __global__ void kCalculateEwaldFastForces_kernel()
                     float k2 = kx*kx + ky*ky + kz*kz;
                     float ak = exp(k2*cSim.factorEwald) / k2;
                     phase = apos.z*kz;
-                    float2 structureFactor = MultofFloat2(tab_xy, make_float2(cos(phase), sin(phase)));
+                    float2 structureFactor = MultofFloat2(tab_xy, make_float2(cosf(phase), sinf(phase)));
                     float2 cosSinSum = cSim.pEwaldCosSinSum[index];
                     float dEdR = ak * apos.w * (cosSinSum.x*structureFactor.y - cosSinSum.y*structureFactor.x);
                     force.x += 2 * recipCoeff * dEdR * kx;

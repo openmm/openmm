@@ -117,9 +117,9 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
                 ijForce[2]    = psA[j].z - localParticle.z;
                 if( cAmoebaSim.vdwUsePBC )
                 {
-                    ijForce[0]   -= floor(ijForce[0]*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    ijForce[1]   -= floor(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    ijForce[2]   -= floor(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    ijForce[0]   -= floorf(ijForce[0]*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    ijForce[1]   -= floorf(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    ijForce[2]   -= floorf(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
                 }
 
                 float energy;
@@ -211,9 +211,9 @@ flags = 0xFFFFFFFF;
                         ijForce[2]    = psA[jIdx].z - localParticle.z;
                         if( cAmoebaSim.vdwUsePBC )
                         {
-                            ijForce[0]   -= floor(ijForce[0]*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                            ijForce[1]   -= floor(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                            ijForce[2]   -= floor(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                            ijForce[0]   -= floorf(ijForce[0]*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            ijForce[1]   -= floorf(ijForce[1]*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            ijForce[2]   -= floorf(ijForce[2]*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
                         }
                         calculateVdw14_7PairIxn_kernel( combindedSigma, combindedEpsilon, ijForce, &energy);
             

@@ -195,7 +195,7 @@ __device__ void computeBornRadiiUsingQuinticSpline( float atomicRadius3, float b
       sum                = atomicRadius3 - bornSum; 
       *switchDeriviative = one;
    }
-   *bornRadius = pow( sum, minusOneThird );
+   *bornRadius = powf( sum, minusOneThird );
 }
 
 __global__ void kReduceGBVIBornSum_kernel()
@@ -221,7 +221,7 @@ __global__ void kReduceGBVIBornSum_kernel()
         Rinv                 = Rinv*Rinv*Rinv;
         if( cSim.gbviBornRadiusScalingMethod == 0 ){
             sum                             = Rinv - sum; 
-            cSim.pBornRadii[pos]            = pow( sum, (-1.0f/3.0f) ); 
+            cSim.pBornRadii[pos]            = powf( sum, (-1.0f/3.0f) ); 
             cSim.pGBVISwitchDerivative[pos] = 1.0f; 
         } else {
             float bornRadius;

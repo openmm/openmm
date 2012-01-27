@@ -104,12 +104,12 @@ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit 
                 float dz                = psA[j].z - apos.z;
 
 #ifdef USE_PERIODIC
-                dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 float r2                = dx * dx + dy * dy + dz * dz;
-                float r                 = sqrt(r2);
+                float r                 = sqrtf(r2);
 
                 // Atom I Born forces and sum
                 float dE                = psA[j].bornRadiusScaleFactor*getGBVI_dE2( r, ar.x, psA[j].sr, fb );
@@ -190,12 +190,12 @@ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit 
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
-                    float r                 = sqrt(r2);
+                    float r                 = sqrtf(r2);
 
                     float dE                = psA[tj].bornRadiusScaleFactor*getGBVI_dE2( r, ar.x, psA[tj].sr, fb );
 
@@ -256,12 +256,12 @@ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit 
                         float dy                = psA[j].y - apos.y;
                         float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         float r2                = dx * dx + dy * dy + dz * dz;
-                        float r                 = sqrt(r2);
+                        float r                 = sqrtf(r2);
 
                         // Interleaved Atom I and J Born Forces and sum components
                         float dE                = psA[j].bornRadiusScaleFactor*getGBVI_dE2( r, ar.x, psA[j].sr, fb );

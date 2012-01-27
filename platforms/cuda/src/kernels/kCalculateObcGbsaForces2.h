@@ -87,12 +87,12 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
                 float dy                = psA[j].y - apos.y;
                 float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 float r2                = dx * dx + dy * dy + dz * dz;
-                float r                 = sqrt(r2);
+                float r                 = sqrtf(r2);
 
 
                 // Atom I Born forces and sum
@@ -104,7 +104,7 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
                 float l_ij2         = l_ij * l_ij;
                 float u_ij2         = u_ij * u_ij;
                 float r2Inverse     = rInverse * rInverse;
-                float t1            = log (u_ij / l_ij);
+                float t1            = logf(u_ij / l_ij);
                 float t2            = (l_ij2 - u_ij2);
                 float t3            = t2 * rInverse;
                 t1                 *= rInverse;
@@ -182,12 +182,12 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
-                    float r                 = sqrt(r2);
+                    float r                 = sqrtf(r2);
 
                     // Interleaved Atom I and J Born Forces and sum components
                     float r2Inverse         = 1.0f / r2;
@@ -202,8 +202,8 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
                     float l_ij2I            = l_ijI * l_ijI;
                     float u_ij2J            = u_ijJ * u_ijJ;
                     float u_ij2I            = u_ijI * u_ijI;
-                    float t1J               = log (u_ijJ / l_ijJ);
-                    float t1I               = log (u_ijI / l_ijI);
+                    float t1J               = logf(u_ijJ / l_ijJ);
+                    float t1I               = logf(u_ijI / l_ijI);
                     float t2J               = (l_ij2J - u_ij2J);
                     float t2I               = (l_ij2I - u_ij2I);
                     float t3J               = t2J * rInverse;
@@ -280,12 +280,12 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
                         float dy                = psA[j].y - apos.y;
                         float dz                = psA[j].z - apos.z;
     #ifdef USE_PERIODIC
-                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
     #endif
                         float r2                = dx * dx + dy * dy + dz * dz;
-                        float r                 = sqrt(r2);
+                        float r                 = sqrtf(r2);
 
                         // Interleaved Atom I and J Born Forces and sum components
                         float r2Inverse         = 1.0f / r2;
@@ -300,8 +300,8 @@ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
                         float l_ij2I            = l_ijI * l_ijI;
                         float u_ij2J            = u_ijJ * u_ijJ;
                         float u_ij2I            = u_ijI * u_ijI;
-                        float t1J               = log (u_ijJ / l_ijJ);
-                        float t1I               = log (u_ijI / l_ijI);
+                        float t1J               = logf(u_ijJ / l_ijJ);
+                        float t1I               = logf(u_ijI / l_ijI);
                         float t2J               = (l_ij2J - u_ij2J);
                         float t2I               = (l_ij2I - u_ij2I);
                         float t3J               = t2J * rInverse;

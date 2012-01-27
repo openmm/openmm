@@ -172,7 +172,7 @@ __device__ void calculateKirkwoodPairIxnOrig_kernel( KirkwoodParticle& atomI,   
     dexpcr       = 2.0f / (cAmoebaSim.gkc*rb2*rb2);
     dgfdr        = 0.5f * expterm * (1.0f+r2/(rb2*cAmoebaSim.gkc));
     gf2          = 1.0f / (r2+rb2*expterm);
-    gf           = sqrt(gf2);
+    gf           = sqrtf(gf2);
     gf3          = gf2 * gf;
     gf5          = gf3 * gf2;
     gf7          = gf5 * gf2;

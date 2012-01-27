@@ -96,7 +96,7 @@ void RNG::zigset()
   wn[0] = q / m1; wn[127] = tn / m1;
   fn[0]=1.; fn[127] = exp(-.5 * tn * tn);		
   for (uint i = 126; i > 0; i--) {
-    const double dn = sqrt(-2 * log(vn / tn + exp(-.5 * tn * tn)));
+    const double dn = sqrtf(-2 * log(vn / tn + exp(-.5 * tn * tn)));
     kn[i + 1] = ULONG32((dn / tn) * m1);
     fn[i] = exp(-.5 * dn * dn);        
     wn[i] = dn / m1;
@@ -130,7 +130,7 @@ double RNG::gamma(double shape, double scale)
     return gamma(shape + 1., scale) * pow(rand_open01(), 1.0 / shape);
 
   const double d = shape - 1. / 3.;
-  const double c = 1. / sqrt(9. * d);
+  const double c = 1. / sqrtf(9. * d);
   double x, v;
   for (;;) {
     do {
@@ -186,7 +186,7 @@ int RNG::poisson(double mu)
     if (big_mu) {
       new_big_mu = 1;
       muprev = mu;
-      s = sqrt(mu);
+      s = sqrtf(mu);
       d = 6. * mu * mu;
       big_l = floor(mu - 1.1484);
     }
@@ -240,7 +240,7 @@ int RNG::poisson(double mu)
 
   if (new_big_mu || mu != muprev2) {
     muprev2 = mu;
-    omega = 1.0 / (sqrt(2.0 * PI) * s);
+    omega = 1.0 / (sqrtf(2.0 * PI) * s);
     b1 = one_24 / mu;
     b2 = 0.3 * b1 * b1;
     c3 = one_7 * b1 * b2;
@@ -280,7 +280,7 @@ Step_F:
             - del;
         else
           px = fk * log(1. + v) - difmuk - del;
-        py = 1.0 / (sqrt(2.0 * PI) * sqrt(fk));
+        py = 1.0 / (sqrtf(2.0 * PI) * sqrtf(fk));
       }
       x = (0.5 - difmuk) / s;
       x *= x;/* x^2 */
@@ -332,7 +332,7 @@ int RNG::binomial(double pp, int n)
       m = (int) ffm;
       fm = m;
       npq = np * q;
-      p1 = (int)(2.195 * sqrt(npq) - 4.6 * q) + 0.5;
+      p1 = (int)(2.195 * sqrtf(npq) - 4.6 * q) + 0.5;
       xm = fm + 0.5;
       xl = xm - p1;
       xr = xm + p1;

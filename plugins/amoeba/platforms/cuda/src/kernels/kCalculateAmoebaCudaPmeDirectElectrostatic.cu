@@ -192,10 +192,10 @@ __device__ void calculateBn_kernel( float r, float4* bn, float* bn0, float *bn5 
     if( cSim.alphaEwald > 0.0f ){
         alsq2n                  = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
     }   
-    float exp2a                 = exp(-(ralpha*ralpha));
+    float exp2a                 = expf(-(ralpha*ralpha));
 
     float rr1                   = 1.0f/r;
-    *bn0                        = erfc(ralpha)*rr1;
+    *bn0                        = erfcf(ralpha)*rr1;
     float rr2                   = rr1*rr1;
     alsq2n                     *= alsq2;
 
@@ -241,14 +241,14 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrig_kernel( const PmeDire
 
     // periodic box
 
-    xr         -= floor(xr*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-    yr         -= floor(yr*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-    zr         -= floor(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+    xr         -= floorf(xr*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+    yr         -= floorf(yr*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+    zr         -= floorf(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 
     float r2    = xr*xr + yr*yr + zr*zr;
     if( r2 <= cSim.nonbondedCutoffSqr ){
 
-        float r      = sqrt(r2);
+        float r      = sqrtf(r2);
         float ck     = atomJ.q;
 
         // set the permanent multipole and induced dipole values;
@@ -282,14 +282,14 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrig_kernel( const PmeDire
         // calculate the real space error function terms
 
         float ralpha = cSim.alphaEwald*r;
-        float bn0    = erfc(ralpha)/r;
+        float bn0    = erfcf(ralpha)/r;
 
         float alsq2  = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n = 0.0f;
         if( cSim.alphaEwald > 0.0f ){
             alsq2n = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
         }
-        float exp2a  = exp(-(ralpha*ralpha));
+        float exp2a  = expf(-(ralpha*ralpha));
 
         alsq2n      *= alsq2;
         float bn1    = (bn0+alsq2n*exp2a)/r2;
@@ -336,7 +336,7 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrig_kernel( const PmeDire
             float ratio  = r/damp;
                 damp     = -pgamma*ratio*ratio*ratio;
             if( damp > -50.0f ){
-                float expdamp  = exp(damp);
+                float expdamp  = expf(damp);
                 scale3         = 1.0f - expdamp;
                    scale5      = 1.0f - (1.0f-damp)*expdamp;
                    scale7      = 1.0f - (1.0f-damp+0.6f*damp*damp)*expdamp;
@@ -957,16 +957,16 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
 
     // periodic box
 
-    delta.x         -= floor(delta.x*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-    delta.y         -= floor(delta.y*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-    delta.z         -= floor(delta.z*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+    delta.x         -= floorf(delta.x*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+    delta.y         -= floorf(delta.y*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+    delta.z         -= floorf(delta.z*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 
     delta.w          = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
     if( delta.w > cSim.nonbondedCutoffSqr ){
         return;
     }   
 
-    float r                     = sqrt(delta.w);
+    float r                     = sqrtf(delta.w);
     float ralpha                = cSim.alphaEwald*r;
 
     float alsq2                 = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
@@ -974,11 +974,11 @@ __device__ void calculatePmeDirectElectrostaticPairIxn_kernel( PmeDirectElectros
     if( cSim.alphaEwald > 0.0f ){
         alsq2n                  = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
     }   
-    float exp2a                 = exp(-(ralpha*ralpha));
+    float exp2a                 = expf(-(ralpha*ralpha));
 
     float rr1                   = 1.0f/r;
     delta.w                     = rr1;
-    float bn0                   = erfc(ralpha)*rr1;
+    float bn0                   = erfcf(ralpha)*rr1;
     *energy                    += forceFactor*atomI.q*atomJ.q*bn0;
     float rr2                   = rr1*rr1;
     alsq2n                     *= alsq2;
@@ -1058,16 +1058,16 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrigg_kernel( PmeDirectEle
 
     // periodic box
 
-    delta.x         -= floor(delta.x*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-    delta.y         -= floor(delta.y*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-    delta.z         -= floor(delta.z*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+    delta.x         -= floorf(delta.x*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+    delta.y         -= floorf(delta.y*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+    delta.z         -= floorf(delta.z*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 
     delta.w          = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
     if( delta.w > cSim.nonbondedCutoffSqr ){
         return;
     }   
 
-    float r                     = sqrt(delta.w);
+    float r                     = sqrtf(delta.w);
     float ralpha                = cSim.alphaEwald*r;
 
     float alsq2                 = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
@@ -1075,11 +1075,11 @@ __device__ void calculatePmeDirectElectrostaticPairIxnOrigg_kernel( PmeDirectEle
     if( cSim.alphaEwald > 0.0f ){
         alsq2n                  = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
     }   
-    float exp2a                 = exp(-(ralpha*ralpha));
+    float exp2a                 = expf(-(ralpha*ralpha));
 
     float rr1                   = 1.0f/r;
     delta.w                     = rr1;
-    float bn0                   = erfc(ralpha)*rr1;
+    float bn0                   = erfcf(ralpha)*rr1;
     *energy                    += forceFactor*atomI.q*atomJ.q*bn0;
     float rr2                   = rr1*rr1;
     alsq2n                     *= alsq2;

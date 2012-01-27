@@ -108,12 +108,12 @@ void kCalculateCustomAngleForces_kernel()
         float3 v1 = make_float3(a2.x-a3.x, a2.y-a3.y, a2.z-a3.z);
         float3 cp = CROSS_PRODUCT(v0, v1);
         float rp = DOT3(cp, cp);
-        rp = max(sqrt(rp), 1.0e-06f);
+        rp = max(sqrtf(rp), 1.0e-06f);
         float r21 = DOT3(v0, v0);
         float r23 = DOT3(v1, v1);
         float dot = DOT3(v0, v1);
-        float cosine = max(-1.0f, min(1.0f, dot/sqrt(r21*r23)));
-        VARIABLE(0) = acos(cosine);
+        float cosine = max(-1.0f, min(1.0f, dot/sqrtf(r21*r23)));
+        VARIABLE(0) = acosf(cosine);
         VARIABLE(1) = params.x;
         VARIABLE(2) = params.y;
         VARIABLE(3) = params.z;

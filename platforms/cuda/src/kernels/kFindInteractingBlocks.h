@@ -41,9 +41,9 @@ __global__ void METHOD_NAME(kFindBlockBounds, _kernel)()
     {
         float4 apos = cSim.pPosq[base];
 #ifdef USE_PERIODIC
-        apos.x -= floor(apos.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
-        apos.y -= floor(apos.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
-        apos.z -= floor(apos.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        apos.x -= floorf(apos.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
+        apos.y -= floorf(apos.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
+        apos.z -= floorf(apos.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
         float4 firstPoint = apos;
 #endif
         float minx = apos.x;
@@ -56,9 +56,9 @@ __global__ void METHOD_NAME(kFindBlockBounds, _kernel)()
         {
             apos = cSim.pPosq[base+i];
 #ifdef USE_PERIODIC
-            apos.x -= floor((apos.x-firstPoint.x)*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-            apos.y -= floor((apos.y-firstPoint.y)*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-            apos.z -= floor((apos.z-firstPoint.z)*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+            apos.x -= floorf((apos.x-firstPoint.x)*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+            apos.y -= floorf((apos.y-firstPoint.y)*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+            apos.z -= floorf((apos.z-firstPoint.z)*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
             minx = min(minx, apos.x);
             maxx = max(maxx, apos.x);
@@ -95,9 +95,9 @@ __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
         float dy = centera.y-centerb.y;
         float dz = centera.z-centerb.z;
 #ifdef USE_PERIODIC
-        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+        dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+        dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+        dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
         float4 boxSizea = cSim.pGridBoundingBox[x];
         float4 boxSizeb = cSim.pGridBoundingBox[y];
@@ -156,9 +156,9 @@ __global__ void METHOD_NAME(kFindInteractionsWithinBlocks, _kernel)(unsigned int
             float dy = apos.y-center.y;
             float dz = apos.z-center.z;
 #ifdef USE_PERIODIC
-            dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-            dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-            dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+            dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+            dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+            dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
             dx = max(0.0f, abs(dx)-boxSize.x);
             dy = max(0.0f, abs(dy)-boxSize.y);

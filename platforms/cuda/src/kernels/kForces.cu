@@ -346,7 +346,7 @@ void kReduceObcGbsaBornForces_kernel()
             totalForce += *pFt;
         }
         float r            = (obcData.x + cSim.dielectricOffset + cSim.probeRadius);
-        float ratio6       = pow((obcData.x + cSim.dielectricOffset) / bornRadius, 6.0f);
+        float ratio6       = powf((obcData.x + cSim.dielectricOffset) / bornRadius, 6.0f);
         float saTerm       = cSim.surfaceAreaFactor * r * r * ratio6;
 
         totalForce        += saTerm / bornRadius;

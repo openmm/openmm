@@ -69,9 +69,9 @@ __device__ void SUB_METHOD_NAME( calculateKirkwoodEDiffPairIxn, _kernel)( Kirkwo
             scale7       = 1.0f - (1.0f - damp + 0.6f*damp2)*dampE;
 
 #ifdef F1
-            ddsc3_1     = -3.0f*damp*exp(damp)*xr*rr2*rr3;
-            ddsc3_2     = -3.0f*damp*exp(damp)*yr*rr2*rr3;
-            ddsc3_3     = -3.0f*damp*exp(damp)*zr*rr2*rr3;
+            ddsc3_1     = -3.0f*damp*expf(damp)*xr*rr2*rr3;
+            ddsc3_2     = -3.0f*damp*expf(damp)*yr*rr2*rr3;
+            ddsc3_3     = -3.0f*damp*expf(damp)*zr*rr2*rr3;
 
             ddsc5_1     = -3.0f*damp*ddsc3_1*rr2;
             ddsc5_2     = -3.0f*damp*ddsc3_2*rr2;

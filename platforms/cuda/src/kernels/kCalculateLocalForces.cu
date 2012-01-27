@@ -48,7 +48,7 @@ static __constant__ cudaGmxSimulation cSim;
     dp          = DOT3(v1, v2); \
     float norm1 = DOT3(v1, v1); \
     float norm2 = DOT3(v2, v2); \
-    dp /= sqrt(norm1 * norm2); \
+    dp /= sqrtf(norm1 * norm2); \
     dp = min(dp, 1.0f); \
     dp = max(dp, -1.0f); \
 }
@@ -60,14 +60,14 @@ static __constant__ cudaGmxSimulation cSim;
 
 #define GETPREFACTORSGIVENANGLECOSINE(cosine, param, dEdR) \
 { \
-   float angle          = acos(cosine); \
+   float angle          = acosf(cosine); \
    float deltaIdeal     = angle - (param.x * (LOCAL_HACK_PI / 180.0f)); \
    dEdR                 = param.y * deltaIdeal; \
 }
 
 #define GETENERGYGIVENANGLECOSINE(cosine, param, dEdR) \
 { \
-   float angle          = acos(cosine); \
+   float angle          = acosf(cosine); \
    float deltaIdeal     = angle - (param.x * (LOCAL_HACK_PI / 180.0f)); \
    dEdR                 = param.y * deltaIdeal * deltaIdeal; \
 }
@@ -80,12 +80,12 @@ static __constant__ cudaGmxSimulation cSim;
         float4 cross; \
         CROSS_PRODUCT(v1, v2, cross); \
         float scale = DOT3(v1, v1)*DOT3(v2, v2); \
-        angle = asin(sqrt(DOT3(cross, cross)/scale)); \
+        angle = asinf(sqrtf(DOT3(cross, cross)/scale)); \
         if (dp < 0.0f) \
             angle = LOCAL_HACK_PI-angle; \
     } \
     else { \
-        angle = acos(dp); \
+        angle = acosf(dp); \
     } \
 }
 
@@ -105,7 +105,7 @@ static __constant__ cudaGmxSimulation cSim;
     GETANGLEBETWEENTWOVECTORS(cp0, cp1, angle); \
     float dp = DOT3(signVector, cp1); \
     angle = (dp >= 0) ? angle : -angle; \
-    cosine = cos(angle); \
+    cosine = cosf(angle); \
 }
 
 void SetCalculateLocalForcesSim(gpuContext gpu)
@@ -150,7 +150,7 @@ void kCalculateLocalForces_kernel()
             float dy            = atomB.y - atomA.y;
             float dz            = atomB.z - atomA.z;
             float r2            = dx * dx + dy * dy + dz * dz;
-            float r             = sqrt(r2);
+            float r             = sqrtf(r2);
             float deltaIdeal    = r - bond.x;
 /* E */     energy             += 0.5f * bond.y * deltaIdeal * deltaIdeal;
             float dEdR          = bond.y * deltaIdeal;
@@ -194,11 +194,11 @@ void kCalculateLocalForces_kernel()
             float3 cp;
             CROSS_PRODUCT(A->v0, A->v1, cp);
             float rp                = DOT3(cp, cp); //cx * cx + cy * cy + cz * cz;
-            rp                      = max(sqrt(rp), 1.0e-06f);
+            rp                      = max(sqrtf(rp), 1.0e-06f);
             float r21               = DOT3(A->v0, A->v0); // dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
             float r23               = DOT3(A->v1, A->v1); // dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
             float dot               = DOT3(A->v0, A->v1); // dx1 * dx2 + dy1 * dy2 + dz1 * dz2;
-            float cosine            = max(-1.0f, min(1.0f, dot / sqrt(r21 * r23)));
+            float cosine            = max(-1.0f, min(1.0f, dot / sqrtf(r21 * r23)));
 
             float angle_energy;
 /* E */     GETENERGYGIVENANGLECOSINE(cosine, bond_angle, angle_energy);
@@ -270,7 +270,7 @@ void kCalculateLocalForces_kernel()
 	    // ATTENTION: This section leads to a divergent deltaAngle values wrt
 	    // forces and energies. We separate the case dihedral.z = n = 0, which
 	    // is treated by the calculation of energies via a harmonic potential
-/* E */     if (dihedral.z) energy += dihedral.x * (1.0f + cos(deltaAngle));
+/* E */     if (dihedral.z) energy += dihedral.x * (1.0f + cosf(deltaAngle));
 /* E */     else
 	    {
 		float deltaAngle    = dihedralAngle - dihedral.y;
@@ -279,10 +279,10 @@ void kCalculateLocalForces_kernel()
                 energy             += dihedral.x * deltaAngle * deltaAngle;
 	    }
 
-            float sinDeltaAngle     = sin(deltaAngle);
+            float sinDeltaAngle     = sinf(deltaAngle);
             float dEdAngle          = -dihedral.x * dihedral.z * sinDeltaAngle;
             float normCross1        = DOT3(cp0, cp0);
-            float normBC            = sqrt(DOT3(A->v1, A->v1));
+            float normBC            = sqrtf(DOT3(A->v1, A->v1));
             float4 ff;
             ff.x                    = (-dEdAngle * normBC) / normCross1;
             float normCross2        = DOT3(cp1, cp1);
@@ -400,11 +400,11 @@ void kCalculateLocalForces_kernel()
             rb_energy              += dihedral2.y * cosFactor * cosPhi;
 /* E */     energy                 += rb_energy;
  //           printf("%4d - 5: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
-            dEdAngle               *= sin(dihedralAngle);
+            dEdAngle               *= sinf(dihedralAngle);
 //            printf("%4d - f: %9.4f\n", pos1, dEdAngle);
 
             float normCross1        = DOT3(cp0, cp0);
-            float normBC            = sqrt(DOT3(A->v1, A->v1));
+            float normBC            = sqrtf(DOT3(A->v1, A->v1));
             float4 ff;
             ff.x                    = (-dEdAngle * normBC) / normCross1;
             float normCross2        = DOT3(cp1, cp1);
@@ -475,7 +475,7 @@ void kCalculateLocalForces_kernel()
             d.y                     = a1.y - a2.y;
             d.z                     = a1.z - a2.z;
             float r2                = DOT3(d, d);
-            float inverseR          = 1.0f / sqrt(r2);
+            float inverseR          = 1.0f / sqrtf(r2);
             float sig2              = inverseR * LJ14.y;
             sig2                   *= sig2;
             float sig6              = sig2 * sig2 * sig2;

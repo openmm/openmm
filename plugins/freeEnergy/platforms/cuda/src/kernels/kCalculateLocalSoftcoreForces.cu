@@ -142,7 +142,7 @@ __global__ void kCalculateLocalSoftcoreForces_kernel()
             d.z                     = a1.z - a2.z;
 
             float r2                = DOT3(d, d);
-            float inverseR          = 1.0f / sqrt(r2);
+            float inverseR          = 1.0f / sqrtf(r2);
 #ifdef USE_SOFTCORE_LJ
             float CDLJ_energy       = 0.0f;
             float dEdR              = getSoftCoreLJ( r2, LJ14.y, LJ14.x, LJ14.w, LJ14.w, &CDLJ_energy );
@@ -187,7 +187,7 @@ __global__ void kCalculateLocalSoftcoreForces_kernel()
             d.y                     = a1.y - a2.y;
             d.z                     = a1.z - a2.z;
             float r2                = DOT3(d, d);
-            float inverseR          = 1.0f / sqrt(r2);
+            float inverseR          = 1.0f / sqrtf(r2);
 #ifdef USE_SOFTCORE_LJ
             float dEdR              = getSoftCoreLJ( r2, LJ14.y, LJ14.x, LJ14.w, LJ14.w, &LJ14_energy);
 #else
@@ -235,11 +235,11 @@ __global__ void kCalculateLocalSoftcoreForces_kernel()
             d.x                     = a1.x - a2.x;
             d.y                     = a1.y - a2.y;
             d.z                     = a1.z - a2.z;
-            d.x                    -= floor(d.x/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-            d.y                    -= floor(d.y/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-            d.z                    -= floor(d.z/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+            d.x                    -= floorf(d.x/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+            d.y                    -= floorf(d.y/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+            d.z                    -= floorf(d.z/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
             float r2                = DOT3(d, d);
-            float inverseR          = 1.0f / sqrt(r2);
+            float inverseR          = 1.0f / sqrtf(r2);
 #ifdef USE_SOFTCORE_LJ
             float dEdR              = getSoftCoreLJ( r2, LJ14.y, LJ14.x, LJ14.w, LJ14.w, &LJ14_energy);
 #else

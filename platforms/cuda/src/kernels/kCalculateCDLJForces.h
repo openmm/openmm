@@ -56,7 +56,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 #endif
 
 #ifdef USE_EWALD
-    const float TWO_OVER_SQRT_PI = 2.0f/sqrt(LOCAL_HACK_PI);
+    const float TWO_OVER_SQRT_PI = 2.0f/sqrtf(LOCAL_HACK_PI);
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
@@ -108,12 +108,12 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                     dy              = psA[j].y - apos.y;
                     dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
+                    invR            = 1.0f / sqrtf(r2);
                     sig             = a.x + psA[j].sig;
                     sig2            = invR * sig;
                     sig2           *= sig2;
@@ -124,7 +124,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 		    CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                    float r         = sqrt(r2);
+                    float r         = sqrtf(r2);
                     float alphaR    = cSim.alphaEwald * r;
                     float erfcAlphaR = fastErfc(alphaR);
                     dEdR           += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI );
@@ -170,12 +170,12 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                     dy              = psA[j].y - apos.y;
                     dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
+                    invR            = 1.0f / sqrtf(r2);
                     sig             = a.x + psA[j].sig;
                     sig2            = invR * sig;
                     sig2           *= sig2;
@@ -186,7 +186,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 		    CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                    float r         = sqrt(r2);
+                    float r         = sqrtf(r2);
                     float alphaR    = cSim.alphaEwald * r;
                     float erfcAlphaR = fastErfc(alphaR);
                     dEdR           += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
@@ -287,12 +287,12 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                         dy              = psA[tj].y - apos.y;
                         dz              = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2              = dx * dx + dy * dy + dz * dz;
-                        invR            = 1.0f / sqrt(r2);
+                        invR            = 1.0f / sqrtf(r2);
                         sig             = a.x + psA[tj].sig;
                         sig2            = invR * sig;
                         sig2           *= sig2;
@@ -303,7 +303,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 			CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                        float r         = sqrt(r2);
+                        float r         = sqrtf(r2);
                         float alphaR    = cSim.alphaEwald * r;
                         float erfcAlphaR = fastErfc(alphaR);
                         dEdR           += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
@@ -355,12 +355,12 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                             dy              = psA[j].y - apos.y;
                             dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                            dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                            dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                            dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                            dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                             r2              = dx * dx + dy * dy + dz * dz;
-                            invR            = 1.0f / sqrt(r2);
+                            invR            = 1.0f / sqrtf(r2);
                             sig             = a.x + psA[j].sig;
                             sig2            = invR * sig;
                             sig2           *= sig2;
@@ -371,7 +371,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 			    CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                            float r         = sqrt(r2);
+                            float r         = sqrtf(r2);
                             float alphaR    = cSim.alphaEwald * r;
                             float erfcAlphaR = fastErfc(alphaR);
                             dEdR           += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
@@ -458,12 +458,12 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                     dy              = psA[tj].y - apos.y;
                     dz              = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
+                    invR            = 1.0f / sqrtf(r2);
                     sig             = a.x + psA[tj].sig;
                     sig2            = invR * sig;
                     sig2           *= sig2;
@@ -474,7 +474,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 		    CDLJ_energy     = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                    float r         = sqrt(r2);
+                    float r         = sqrtf(r2);
                     float alphaR    = cSim.alphaEwald * r;
                     float erfcAlphaR = fastErfc(alphaR);
                     dEdR           += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);

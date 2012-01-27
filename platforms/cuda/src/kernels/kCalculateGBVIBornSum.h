@@ -98,9 +98,9 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                 dy                                  = psA[j].y - apos.y;
                 dz                                  = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx                                 -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy                                 -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz                                 -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx                                 -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy                                 -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz                                 -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 r2                                  = dx * dx + dy * dy + dz * dz;
 #if defined USE_CUTOFF
@@ -109,7 +109,7 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                 if (i < cSim.atoms && x+j < cSim.atoms && j != tgx )
 #endif
                 {
-                    r                       = sqrt(r2);
+                    r                       = sqrtf(r2);
                     apos.w                 += getGBVI_Volume( r, ar.x, psA[j].sr );
                 }
             }
@@ -161,9 +161,9 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                     dy                      = psA[tj].y - apos.y;
                     dz                      = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
 #ifdef USE_CUTOFF
@@ -173,7 +173,7 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
 #endif
 
                     {
-                        r                       = sqrt(r2);
+                        r                       = sqrtf(r2);
                         apos.w                 += getGBVI_Volume( r, ar.x,      psA[tj].sr );
                         psA[tj].sum            += getGBVI_Volume( r, psA[tj].r, ar.y );
                     }
@@ -194,9 +194,9 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx                     -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy                     -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz                     -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floorf(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floorf(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floorf(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
 #ifdef USE_CUTOFF
@@ -205,7 +205,7 @@ void METHOD_NAME(kCalculateGBVI, BornSum_kernel)(unsigned int* workUnit)
                         if (i < cSim.atoms && y+j < cSim.atoms)
 #endif
                         {
-                            r                       = sqrt(r2);
+                            r                       = sqrtf(r2);
                             apos.w                 += getGBVI_Volume( r, ar.x,      psA[j].sr );
                             tempBuffer[threadIdx.x] = getGBVI_Volume( r, psA[j].r, ar.y );
                         }

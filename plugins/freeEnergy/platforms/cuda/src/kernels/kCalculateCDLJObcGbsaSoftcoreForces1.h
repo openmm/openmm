@@ -113,12 +113,12 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                     float dy                = psA[j].y - apos.y;
                     float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
-                    float invR              = 1.0f / sqrt(r2);
+                    float invR              = 1.0f / sqrtf(r2);
                     float sig               = a.x + psA[j].sig;
                     float eps               = a.y * psA[j].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -147,9 +147,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                     // ObcGbsaForce1 part
                     float alpha2_ij         = br * psA[j].br;
                     float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
+                    float expTerm           = expf(-D_ij);
                     float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
+                    float denominator       = sqrtf(denominator2);
                     float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
@@ -190,12 +190,12 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                     float dy                = psA[j].y - apos.y;
                     float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
-                    float invR              = 1.0f / sqrt(r2);
+                    float invR              = 1.0f / sqrtf(r2);
                     float sig               = a.x + psA[j].sig;
                     float eps               = a.y * psA[j].eps;
 
@@ -235,9 +235,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
 
                     float alpha2_ij         = br * psA[j].br;
                     float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
+                    float expTerm           = expf(-D_ij);
                     float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
+                    float denominator       = sqrtf(denominator2);
                     float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
@@ -333,12 +333,12 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                         float dy                = psA[tj].y - apos.y;
                         float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         float r2                = dx * dx + dy * dy + dz * dz;
-                        float invR              = 1.0f / sqrt(r2);
+                        float invR              = 1.0f / sqrtf(r2);
 
                         float sig               = a.x + psA[tj].sig;
                         float eps               = a.y * psA[tj].eps;
@@ -367,9 +367,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
 
                         float alpha2_ij         = br * psA[tj].br;
                         float D_ij              = r2 / (4.0f * alpha2_ij);
-                        float expTerm           = exp(-D_ij);
+                        float expTerm           = expf(-D_ij);
                         float denominator2      = r2 + alpha2_ij * expTerm;
-                        float denominator       = sqrt(denominator2);
+                        float denominator       = sqrtf(denominator2);
                         float Gpol              = (q2 * psA[tj].q) / (denominator * denominator2);
                         float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                         dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
@@ -418,12 +418,12 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                             float dy                = psA[j].y - apos.y;
                             float dz                = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                            dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                            dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                            dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                            dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                             float r2                = dx * dx + dy * dy + dz * dz;
-                            float invR              = 1.0f / sqrt(r2);
+                            float invR              = 1.0f / sqrtf(r2);
                             float sig               = a.x + psA[j].sig;
                             float eps               = a.y * psA[j].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -451,9 +451,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                             // ObcGbsaForce1 part
                             float alpha2_ij         = br * psA[j].br;
                             float D_ij              = r2 / (4.0f * alpha2_ij);
-                            float expTerm           = exp(-D_ij);
+                            float expTerm           = expf(-D_ij);
                             float denominator2      = r2 + alpha2_ij * expTerm;
-                            float denominator       = sqrt(denominator2);
+                            float denominator       = sqrtf(denominator2);
                             float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
                             float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                             dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
@@ -544,12 +544,12 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
                     float dy                = psA[tj].y - apos.y;
                     float dz                = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx                     -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy                     -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz                     -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx                     -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy                     -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz                     -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r2                = dx * dx + dy * dy + dz * dz;
-                    float invR              = 1.0f / sqrt(r2);
+                    float invR              = 1.0f / sqrtf(r2);
                     float sig               = a.x + psA[tj].sig;
                     float eps               = a.y * psA[tj].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -582,9 +582,9 @@ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsigned int* wo
 
                     float alpha2_ij         = br * psA[tj].br;
                     float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
+                    float expTerm           = expf(-D_ij);
                     float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
+                    float denominator       = sqrtf(denominator2);
                     float Gpol              = (q2 * psA[tj].q) / (denominator * denominator2);
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);

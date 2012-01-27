@@ -42,7 +42,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnT2
         float ratio   = 1.0f/(rr1*damp);
             damp      = -pgamma*ratio*ratio*ratio;
         if( damp > -50.0f ){
-            float expdamp    = exp(damp);
+            float expdamp    = expf(damp);
             scale3           = 1.0f - expdamp;
             scale5           = 1.0f - (1.0f-damp)*expdamp;
             scale7           = 1.0f - (1.0f-damp+0.6f*damp*damp)*expdamp;

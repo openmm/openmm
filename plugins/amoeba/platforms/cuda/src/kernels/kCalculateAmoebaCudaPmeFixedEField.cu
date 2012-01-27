@@ -201,9 +201,9 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
     // periodic boundary conditions
 
-    xr               -= floor(xr*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-    yr               -= floor(yr*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-    zr               -= floor(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+    xr               -= floorf(xr*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+    yr               -= floorf(yr*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+    zr               -= floorf(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 
     float r2          = xr*xr + yr*yr + zr*zr;
     if( r2 <= cSim.nonbondedCutoffSqr ){
@@ -214,10 +214,10 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
         float ralpha      = cSim.alphaEwald*r;
 
-        float bn0         = erfc(ralpha)/r;
+        float bn0         = erfcf(ralpha)/r;
         float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
-        float exp2a       = exp(-(ralpha*ralpha));
+        float exp2a       = expf(-(ralpha*ralpha));
         alsq2n           *= alsq2;
         float bn1         = (bn0+alsq2n*exp2a)/r2;
 
@@ -243,7 +243,7 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
                   damp   = -pgamma*ratio;
 
             if( damp > -50.0f) {
-                float expdamp = exp(damp);
+                float expdamp = expf(damp);
                 scale3        = 1.0f - expdamp;
                 scale5        = 1.0f - expdamp*(1.0f-damp);
                 scale7        = 1.0f - expdamp*(1.0f-damp+(0.6f*damp*damp));

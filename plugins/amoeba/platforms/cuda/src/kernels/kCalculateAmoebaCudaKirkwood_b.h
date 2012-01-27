@@ -51,7 +51,7 @@ static __device__ void SUB_METHOD_NAME( calculateKirkwoodPairIxn, _kernel)( Kirk
     float dgfdr        = 0.5f*expterm*(1.0f + r2/(rb2*cAmoebaSim.gkc));
     float gf2          = 1.0f / (r2 + rb2*expterm);
 
-    float gf           = sqrt(gf2);
+    float gf           = sqrtf(gf2);
     float gf3          = gf2*gf;
     float gf5          = gf3*gf2;
     float gf7          = gf5*gf2;

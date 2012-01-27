@@ -104,12 +104,12 @@ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
                     dy              = psA[j].y - apos.y;
                     dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx             -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy             -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz             -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx             -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy             -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz             -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
+                    invR            = 1.0f / sqrtf(r2);
                     sig             = a.x + psA[j].sig;
                     eps             = a.y * psA[j].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -158,12 +158,12 @@ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
                     dy              = psA[j].y - apos.y;
                     dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx             -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy             -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz             -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx             -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy             -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz             -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
+                    invR            = 1.0f / sqrtf(r2);
                     sig             = a.x + psA[j].sig;
                     eps             = a.y * psA[j].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -266,12 +266,12 @@ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
                         dy              = psA[tj].y - apos.y;
                         dz              = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2              = dx * dx + dy * dy + dz * dz;
-                        invR            = 1.0f / sqrt(r2);
+                        invR            = 1.0f / sqrtf(r2);
                         sig             = a.x + psA[tj].sig;
                         eps             = a.y * psA[tj].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -325,12 +325,12 @@ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
                             dy              = psA[j].y - apos.y;
                             dz              = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                            dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                            dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                            dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                            dx -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                             r2              = dx * dx + dy * dy + dz * dz;
-                            invR            = 1.0f / sqrt(r2);
+                            invR            = 1.0f / sqrtf(r2);
                             sig             = a.x + psA[j].sig;
                             eps             = a.y * psA[j].eps;
 #ifdef USE_SOFTCORE_LJ
@@ -419,12 +419,12 @@ void METHOD_NAME(kCalculateCDLJSoftcore, Forces_kernel)(unsigned int* workUnit )
                     dy              = psA[tj].y - apos.y;
                     dz              = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floorf(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floorf(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floorf(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
+                    invR            = 1.0f / sqrtf(r2);
                     sig             = a.x + psA[tj].sig;
                     eps             = a.y * psA[tj].eps;
 #ifdef USE_SOFTCORE_LJ

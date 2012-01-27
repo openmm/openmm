@@ -102,7 +102,7 @@ void kCalculateCustomBondForces_kernel()
         float dx        = a1.x - a2.x;
         float dy        = a1.y - a2.y;
         float dz        = a1.z - a2.z;
-        float r         = sqrt(dx*dx + dy*dy + dz*dz);
+        float r         = sqrtf(dx*dx + dy*dy + dz*dz);
         float invR      = 1.0f/r;
         VARIABLE(0)     = r;
         VARIABLE(1)     = params.x;
