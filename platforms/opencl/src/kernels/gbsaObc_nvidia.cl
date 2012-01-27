@@ -22,7 +22,6 @@ __kernel void computeBornSum(
         __global float* restrict global_bornSum,
 #endif
         __global const float4* restrict posq, __global const float2* restrict global_params,
-        __local AtomData1* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags,
 #else
@@ -40,6 +39,7 @@ __kernel void computeBornSum(
     unsigned int end = (warp+1)*numTiles/totalWarps;
 #endif
     unsigned int lasty = 0xFFFFFFFF;
+    __local AtomData1 localData[FORCE_WORK_GROUP_SIZE];
     __local float tempBuffer[FORCE_WORK_GROUP_SIZE];
     __local int2 reservedBlocks[WARPS_PER_GROUP];
     __local unsigned int* exclusionRange = (__local unsigned int*) reservedBlocks;
@@ -344,7 +344,6 @@ __kernel void computeGBSAForce1(
         __global float4* restrict forceBuffers, __global float* restrict global_bornForce,
 #endif
         __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
-        __local AtomData2* restrict localData,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags,
 #else
@@ -363,6 +362,7 @@ __kernel void computeGBSAForce1(
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
+    __local AtomData2 localData[FORCE_WORK_GROUP_SIZE];
     __local float4 tempBuffer[FORCE_WORK_GROUP_SIZE];
     __local int2 reservedBlocks[WARPS_PER_GROUP];
     __local unsigned int* exclusionRange = (__local unsigned int*) reservedBlocks;

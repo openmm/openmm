@@ -1,10 +1,21 @@
 #define TILE_SIZE 32
 
+// Cannot use float3 as OpenCL defines it to be 4 DWORD aligned. This would
+// cause every element of array to have DWORD of padding to make it 4 DWORD
+// aligned which wastes space and causes LDS bank conflicts as stride is no
+// longer odd DWORDS.
+typedef struct {
+    float x, y, z;
+} UnalignedFloat3;
+
 typedef struct {
     float x, y, z;
     float q;
     float fx, fy, fz;
     ATOM_PARAMETER_DATA
+#ifndef PARAMETER_SIZE_IS_EVEN
+    float padding;
+#endif
 } AtomData;
 
 /**
@@ -13,7 +24,7 @@ typedef struct {
 
 __kernel __attribute__((reqd_work_group_size(FORCE_WORK_GROUP_SIZE, 1, 1)))
 void computeNonbonded(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
-        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
@@ -31,9 +42,12 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
-    __local float tempBuffer[3*(FORCE_WORK_GROUP_SIZE/2)];
+    __local AtomData localData[TILE_SIZE];
+    __local UnalignedFloat3 localForce[FORCE_WORK_GROUP_SIZE];
+#ifdef USE_EXCLUSIONS
     __local unsigned int exclusionRange[2];
     __local int exclusionIndex[1];
+#endif
 
     while (pos < end) {
         // Extract the coordinates of this tile
@@ -56,7 +70,7 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
         }
         unsigned int baseLocalAtom = (get_local_id(0) < TILE_SIZE ? 0 : TILE_SIZE/2);
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
-        unsigned int forceBufferOffset = (tgx < TILE_SIZE/2 ? 0 : TILE_SIZE);
+        unsigned int localForceOffset = get_local_id(0) & ~(TILE_SIZE-1);
         unsigned int atom1 = x*TILE_SIZE + tgx;
         float4 force = 0.0f;
         float4 posq1 = posq[atom1];
@@ -79,12 +93,14 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
         if (x == y) {
             // This tile is on the diagonal.
 
-            const unsigned int localAtomIndex = get_local_id(0);
-            localData[localAtomIndex].x = posq1.x;
-            localData[localAtomIndex].y = posq1.y;
-            localData[localAtomIndex].z = posq1.z;
-            localData[localAtomIndex].q = posq1.w;
-            LOAD_LOCAL_PARAMETERS_FROM_1
+            if (get_local_id(0) < TILE_SIZE) {
+                const unsigned int localAtomIndex = tgx;
+                localData[localAtomIndex].x = posq1.x;
+                localData[localAtomIndex].y = posq1.y;
+                localData[localAtomIndex].z = posq1.z;
+                localData[localAtomIndex].q = posq1.w;
+                LOAD_LOCAL_PARAMETERS_FROM_1
+            }
             barrier(CLK_LOCAL_MEM_FENCE);
 #ifdef USE_EXCLUSIONS
             unsigned int excl = exclusions[exclusionIndex[0]+tgx] >> baseLocalAtom;
@@ -93,7 +109,7 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
 #endif
-                int atom2 = baseLocalAtom+j;
+                unsigned int atom2 = baseLocalAtom+j;
                 float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
@@ -125,14 +141,16 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 
             // Sum the forces and write results.
 
-            int bufferIndex = 3*tgx;
             if (get_local_id(0) >= TILE_SIZE) {
-                tempBuffer[bufferIndex] = force.x;
-                tempBuffer[bufferIndex+1] = force.y;
-                tempBuffer[bufferIndex+2] = force.z;
+                localData[tgx].fx = force.x;
+                localData[tgx].fy = force.y;
+                localData[tgx].fz = force.z;
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
+                force.x += localData[tgx].fx;
+                force.y += localData[tgx].fy;
+                force.z += localData[tgx].fz;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
 #else
@@ -140,15 +158,16 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #endif
                 // Cheaper to load/store float4 than float3.
                 float4 sum = forceBuffers[offset];
-                sum += force + (float4) (tempBuffer[bufferIndex], tempBuffer[bufferIndex+1], tempBuffer[bufferIndex+2], 0.0f);
+                sum.xyz += force.xyz;
                 forceBuffers[offset] = sum;
             }
+            // barrier not required here as localData[*].temp is not accessed before encountering another barrier.
         }
         else {
             // This is an off-diagonal tile.
 
-            const unsigned int localAtomIndex = get_local_id(0);
-            if (lasty != y && localAtomIndex < TILE_SIZE) {
+            if (lasty != y && get_local_id(0) < TILE_SIZE) {
+                const unsigned int localAtomIndex = tgx;
                 unsigned int j = y*TILE_SIZE + tgx;
                 float4 tempPosq = posq[j];
                 localData[localAtomIndex].x = tempPosq.x;
@@ -157,26 +176,23 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
                 localData[localAtomIndex].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            localData[localAtomIndex].fx = 0.0f;
-            localData[localAtomIndex].fy = 0.0f;
-            localData[localAtomIndex].fz = 0.0f;
+            localForce[get_local_id(0)].x = 0.0f;
+            localForce[get_local_id(0)].y = 0.0f;
+            localForce[get_local_id(0)].z = 0.0f;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
 
+            unsigned int tj = (tgx+baseLocalAtom) & (TILE_SIZE-1);
 #ifdef USE_EXCLUSIONS
             unsigned int excl = (hasExclusions ? exclusions[exclusionIndex[0]+tgx] : 0xFFFFFFFF);
-            excl = (excl >> baseLocalAtom) & 0xFFFF;
-            excl += excl << 16;
-            excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
+            excl = (excl >> tj) | (excl << (TILE_SIZE - tj));
 #endif
-            unsigned int tj = tgx%(TILE_SIZE/2);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
 #ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
 #endif
-                int atom2 = baseLocalAtom+tj;
-                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
+                float4 posq2 = (float4) (localData[tj].x, localData[tj].y, localData[tj].z, localData[tj].q);
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
@@ -186,8 +202,9 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 float invR = RSQRT(r2);
                 float r = RECIP(invR);
+                int atom2 = tj;
                 LOAD_ATOM2_PARAMETERS
-                atom2 = y*TILE_SIZE+baseLocalAtom+tj;
+                atom2 = y*TILE_SIZE+tj;
 #ifdef USE_SYMMETRIC
                 float dEdR = 0.0f;
 #else
@@ -200,29 +217,28 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
 #ifdef USE_SYMMETRIC
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
-                localData[baseLocalAtom+tj+forceBufferOffset].fx += delta.x;
-                localData[baseLocalAtom+tj+forceBufferOffset].fy += delta.y;
-                localData[baseLocalAtom+tj+forceBufferOffset].fz += delta.z;
+                localForce[tj+localForceOffset].x += delta.x;
+                localForce[tj+localForceOffset].y += delta.y;
+                localForce[tj+localForceOffset].z += delta.z;
 #else
                 force.xyz -= dEdR1.xyz;
-                localData[baseLocalAtom+tj+forceBufferOffset].fx += dEdR2.x;
-                localData[baseLocalAtom+tj+forceBufferOffset].fy += dEdR2.y;
-                localData[baseLocalAtom+tj+forceBufferOffset].fz += dEdR2.z;
+                localForce[tj+localForceOffset].x += dEdR2.x;
+                localForce[tj+localForceOffset].y += dEdR2.y;
+                localForce[tj+localForceOffset].z += dEdR2.z;
 #endif
                 barrier(CLK_LOCAL_MEM_FENCE);
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
-                tj = (tj+1)%(TILE_SIZE/2);
+                tj = (tj+1) & (TILE_SIZE-1);
             }
 
             // Sum the forces and write results.
 
-            int bufferIndex = 3*tgx;
             if (get_local_id(0) >= TILE_SIZE) {
-                tempBuffer[bufferIndex] = force.x;
-                tempBuffer[bufferIndex+1] = force.y;
-                tempBuffer[bufferIndex+2] = force.z;
+                localData[tgx].fx = force.x;
+                localData[tgx].fy = force.y;
+                localData[tgx].fz = force.z;
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
@@ -236,11 +252,16 @@ void computeNonbonded(__global float4* restrict forceBuffers, __global float* re
                 // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
                 float4 sum1 = forceBuffers[offset1];
                 float4 sum2 = forceBuffers[offset2];
-                sum1 += force + (float4) (tempBuffer[bufferIndex], tempBuffer[bufferIndex+1], tempBuffer[bufferIndex+2], 0.0f);
-                sum2 += (float4) (localData[get_local_id(0)].fx+localData[get_local_id(0)+TILE_SIZE].fx, localData[get_local_id(0)].fy+localData[get_local_id(0)+TILE_SIZE].fy, localData[get_local_id(0)].fz+localData[get_local_id(0)+TILE_SIZE].fz, 0.0f);
+                sum1.x += localData[tgx].fx + force.x;
+                sum1.y += localData[tgx].fy + force.y;
+                sum1.z += localData[tgx].fz + force.z;
+                sum2.x += localForce[tgx].x + localForce[tgx+TILE_SIZE].x;
+                sum2.y += localForce[tgx].y + localForce[tgx+TILE_SIZE].y;
+                sum2.z += localForce[tgx].z + localForce[tgx+TILE_SIZE].z;
                 forceBuffers[offset1] = sum1;
                 forceBuffers[offset2] = sum2;
             }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }
         lasty = y;
         pos++;

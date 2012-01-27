@@ -1563,7 +1563,6 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         computeBornSumKernel.setArg<cl::Buffer>(index++, (useLong ? longBornSum->getDeviceBuffer() : bornSum->getDeviceBuffer()));
         computeBornSumKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         computeBornSumKernel.setArg<cl::Buffer>(index++, params->getDeviceBuffer());
-        computeBornSumKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*7*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -1585,7 +1584,6 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
-        force1Kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*9*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -1624,19 +1622,19 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         reduceBornForceKernel.setArg<cl::Buffer>(index++, obcChain->getDeviceBuffer());
     }
     if (nb.getUseCutoff()) {
-        computeBornSumKernel.setArg<mm_float4>(6, cl.getPeriodicBoxSize());
-        computeBornSumKernel.setArg<mm_float4>(7, cl.getInvPeriodicBoxSize());
-        force1Kernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
-        force1Kernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(5, cl.getPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(6, cl.getInvPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(7, cl.getPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(8, cl.getInvPeriodicBoxSize());
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
-            computeBornSumKernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_uint>(8, maxTiles);
-            force1Kernel.setArg<cl::Buffer>(6, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(10, maxTiles);
+            computeBornSumKernel.setArg<cl::Buffer>(4, nb.getInteractingTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl_uint>(7, maxTiles);
+            force1Kernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl_uint>(9, maxTiles);
             if (cl.getSIMDWidth() == 32 || deviceIsCpu) {
-                computeBornSumKernel.setArg<cl::Buffer>(9, nb.getInteractionFlags().getDeviceBuffer());
-                force1Kernel.setArg<cl::Buffer>(11, nb.getInteractionFlags().getDeviceBuffer());
+                computeBornSumKernel.setArg<cl::Buffer>(8, nb.getInteractionFlags().getDeviceBuffer());
+                force1Kernel.setArg<cl::Buffer>(10, nb.getInteractionFlags().getDeviceBuffer());
             }
         }
     }

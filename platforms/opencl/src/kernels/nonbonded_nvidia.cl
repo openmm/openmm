@@ -10,6 +10,9 @@ typedef struct {
     float q;
     float fx, fy, fz;
     ATOM_PARAMETER_DATA
+#ifndef PARAMETER_SIZE_IS_EVEN
+    float padding;
+#endif
 } AtomData;
 
 /**
@@ -22,7 +25,7 @@ __kernel void computeNonbonded(
         __global float4* restrict forceBuffers,
 #endif
         __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
-        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __local AtomData* restrict localData,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
@@ -41,6 +44,7 @@ __kernel void computeNonbonded(
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
 #endif
     float energy = 0.0f;
+    __local AtomData localData[FORCE_WORK_GROUP_SIZE];
     __local float tempBuffer[3*FORCE_WORK_GROUP_SIZE];
     __local unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __local int exclusionIndex[WARPS_PER_GROUP];

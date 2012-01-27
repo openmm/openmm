@@ -326,8 +326,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 void OpenCLNonbondedUtilities::computeInteractions() {
     if (cutoff != -1.0) {
         if (useCutoff) {
-            forceKernel.setArg<mm_float4>(11, context.getPeriodicBoxSize());
-            forceKernel.setArg<mm_float4>(12, context.getInvPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(10, context.getPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(11, context.getInvPeriodicBoxSize());
         }
         context.executeKernel(forceKernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
@@ -349,14 +349,14 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
         newSize = numTiles;
     delete interactingTiles;
     interactingTiles = new OpenCLArray<mm_ushort2>(context, newSize, "interactingTiles");
-    forceKernel.setArg<cl::Buffer>(9, interactingTiles->getDeviceBuffer());
-    forceKernel.setArg<cl_uint>(13, newSize);
+    forceKernel.setArg<cl::Buffer>(8, interactingTiles->getDeviceBuffer());
+    forceKernel.setArg<cl_uint>(12, newSize);
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(9, newSize);
     if (context.getSIMDWidth() == 32 || deviceIsCpu) {
         delete interactionFlags;
         interactionFlags = new OpenCLArray<cl_uint>(context, deviceIsCpu ? 2*newSize : newSize, "interactionFlags");
-        forceKernel.setArg<cl::Buffer>(14, interactionFlags->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(13, interactionFlags->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, interactingTiles->getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
@@ -369,22 +369,22 @@ void OpenCLNonbondedUtilities::setTileRange(int startTileIndex, int numTiles) {
     this->numTiles = numTiles;
     if (cutoff == -1.0)
         return; // There are no nonbonded interactions in the System.
-    forceKernel.setArg<cl_uint>(7, startTileIndex);
-    forceKernel.setArg<cl_uint>(8, startTileIndex+numTiles);
+    forceKernel.setArg<cl_uint>(6, startTileIndex);
+    forceKernel.setArg<cl_uint>(7, startTileIndex+numTiles);
     if (useCutoff) {
         findInteractingBlocksKernel.setArg<cl_uint>(10, startTileIndex);
         findInteractingBlocksKernel.setArg<cl_uint>(11, startTileIndex+numTiles);
     }
     else
-        forceKernel.setArg<cl_uint>(9, numTiles);
+        forceKernel.setArg<cl_uint>(8, numTiles);
 }
 
 cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
-    int localDataSize = 7*sizeof(cl_float);
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
+    int localDataSize = 0;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1)
             localData<<params[i].getType()<<" "<<params[i].getName()<<";\n";
@@ -393,10 +393,6 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
                 localData<<params[i].getComponentType()<<" "<<params[i].getName()<<"_"<<suffixes[j]<<";\n";
         }
         localDataSize += params[i].getSize();
-    }
-    if ((localDataSize/4)%2 == 0) {
-        localData << "float padding;\n";
-        localDataSize += 4;
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
@@ -487,6 +483,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+    if ((localDataSize/4)%2 == 0)
+        defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     string file;
     if (deviceIsCpu)
         file = OpenCLKernelSources::nonbonded_cpu;
@@ -509,7 +507,6 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionIndices->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionRowIndices->getDeviceBuffer());
-    kernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize*localDataSize : forceThreadBlockSize*localDataSize), NULL);
     kernel.setArg<cl_uint>(index++, startTileIndex);
     kernel.setArg<cl_uint>(index++, startTileIndex+numTiles);
     if (useCutoff) {
