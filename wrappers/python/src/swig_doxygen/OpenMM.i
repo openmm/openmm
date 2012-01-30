@@ -18,6 +18,7 @@ See https://simtk.org/home/pyopenmm for details"
 %include "std_string.i"
 %include "std_iostream.i"
 
+%include "std_map.i"
 %include "std_pair.i"
 %include "std_vector.i"
 namespace std {
@@ -28,6 +29,7 @@ namespace std {
   %template(vectorii) vector < vector<int> >;
   %template(vectorpairii) vector< pair<int,int> >;
   %template(vectorstring) vector<string>;
+  %template(mapstringstring) map<string,string>;
 };
 
 %include "windows.i"
