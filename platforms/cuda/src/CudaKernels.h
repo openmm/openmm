@@ -184,6 +184,27 @@ private:
 };
 
 /**
+ * This kernel recomputes the positions of virtual sites.
+ */
+class CudaVirtualSitesKernel : public VirtualSitesKernel {
+public:
+    CudaVirtualSitesKernel(std::string name, const Platform& platform) : VirtualSitesKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Compute the virtual site locations.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void computePositions(ContextImpl& context);
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {

@@ -278,6 +278,14 @@ void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     ReferenceVirtualSites::computePositions(context.getSystem(), positions);
 }
 
+void ReferenceVirtualSitesKernel::initialize(const System& system) {
+}
+
+void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
+    vector<RealVec>& positions = extractPositions(context);
+    ReferenceVirtualSites::computePositions(context.getSystem(), positions);
+}
+
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);

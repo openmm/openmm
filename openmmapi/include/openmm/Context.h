@@ -171,11 +171,19 @@ public:
      */
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     /**
-     * Update the positions of particles so that all distance constraints are satisfied.
+     * Update the positions of particles so that all distance constraints are satisfied.  This also recomputes
+     * the locations of all virtual sites.
      *
      * @param tol    the distance tolerance within which constraints must be satisfied.
      */
     void applyConstraints(double tol);
+    /**
+     * Recompute the locations of all virtual sites.  There is rarely a reason to call
+     * this, since virtual sites are also updated by applyConstraints().  This is only
+     * for the rare situations when you want to enforce virtual sites but <i>not</i>
+     * constraints.
+     */
+    void computeVirtualSites();
     /**
      * When a Context is created, it may cache information about the System being simulated
      * and the Force objects contained in it.  This means that, if the System or Forces are then

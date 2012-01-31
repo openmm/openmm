@@ -166,6 +166,10 @@ void Context::applyConstraints(double tol) {
     impl->applyConstraints(tol);
 }
 
+void Context::computeVirtualSites() {
+    impl->computeVirtualSites();
+}
+
 void Context::reinitialize() {
     System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();

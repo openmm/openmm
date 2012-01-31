@@ -105,6 +105,8 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).initialize(system);
     applyConstraintsKernel = platform->createKernel(ApplyConstraintsKernel::Name(), *this);
     dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).initialize(system);
+    virtualSitesKernel = platform->createKernel(VirtualSitesKernel::Name(), *this);
+    dynamic_cast<VirtualSitesKernel&>(virtualSitesKernel.getImpl()).initialize(system);
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
@@ -183,6 +185,10 @@ void ContextImpl::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3
 
 void ContextImpl::applyConstraints(double tol) {
     dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).apply(*this, tol);
+}
+
+void ContextImpl::computeVirtualSites() {
+    dynamic_cast<VirtualSitesKernel&>(virtualSitesKernel.getImpl()).computePositions(*this);
 }
 
 double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy) {

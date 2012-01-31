@@ -209,6 +209,30 @@ public:
 };
 
 /**
+ * This kernel recomputes the positions of virtual sites.
+ */
+class VirtualSitesKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "VirtualSites";
+    }
+    VirtualSitesKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    virtual void initialize(const System& system) = 0;
+    /**
+     * Compute the virtual site locations.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void computePositions(ContextImpl& context) = 0;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcHarmonicBondForceKernel : public KernelImpl {

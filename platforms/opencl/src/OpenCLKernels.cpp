@@ -225,6 +225,13 @@ void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     cl.getIntegrationUtilities().computeVirtualSites();
 }
 
+void OpenCLVirtualSitesKernel::initialize(const System& system) {
+}
+
+void OpenCLVirtualSitesKernel::computePositions(ContextImpl& context) {
+    cl.getIntegrationUtilities().computeVirtualSites();
+}
+
 class OpenCLBondForceInfo : public OpenCLForceInfo {
 public:
     OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {

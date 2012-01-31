@@ -185,6 +185,12 @@ void CudaApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     kApplyConstraints(data.gpu);
 }
 
+void CudaVirtualSitesKernel::initialize(const System& system) {
+}
+
+void CudaVirtualSitesKernel::computePositions(ContextImpl& context) {
+}
+
 class CudaCalcHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const HarmonicBondForce& force) : force(force) {

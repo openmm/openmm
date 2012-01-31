@@ -44,6 +44,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceUpdateStateDataKernel(name, platform, data);
     if (name == ApplyConstraintsKernel::Name())
         return new ReferenceApplyConstraintsKernel(name, platform, data);
+    if (name == VirtualSitesKernel::Name())
+        return new ReferenceVirtualSitesKernel(name, platform);
     if (name == CalcNonbondedForceKernel::Name())
         return new ReferenceCalcNonbondedForceKernel(name, platform);
     if (name == CalcCustomNonbondedForceKernel::Name())

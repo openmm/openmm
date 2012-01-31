@@ -162,11 +162,19 @@ public:
      */
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     /**
-     * Update the positions of particles so that all distance constraints are satisfied.
+     * Update the positions of particles so that all distance constraints are satisfied.  This also recomputes
+     * the locations of all virtual sites.
      *
      * @param tol    the distance tolerance within which constraints must be satisfied.
      */
     void applyConstraints(double tol);
+    /**
+     * Recompute the locations of all virtual sites.  There is rarely a reason to call
+     * this, since virtual sites are also updated by applyConstraints().  This is only
+     * for the rare situations when you want to enforce virtual sites but <i>not</i>
+     * constraints.
+     */
+    void computeVirtualSites();
     /**
      * Recalculate all of the forces in the system and/or the potential energy of the system (in kJ/mol).
      * After calling this, use getForces() to retrieve the forces that were calculated.
@@ -217,7 +225,7 @@ private:
     mutable std::vector<std::vector<int> > molecules;
     bool hasInitializedForces;
     Platform* platform;
-    Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel, applyConstraintsKernel;
+    Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;
     void* platformData;
 };
 

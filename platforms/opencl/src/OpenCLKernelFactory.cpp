@@ -70,6 +70,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLUpdateStateDataKernel(name, platform, cl);
     if (name == ApplyConstraintsKernel::Name())
         return new OpenCLApplyConstraintsKernel(name, platform, cl);
+    if (name == VirtualSitesKernel::Name())
+        return new OpenCLVirtualSitesKernel(name, platform, cl);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new OpenCLCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())

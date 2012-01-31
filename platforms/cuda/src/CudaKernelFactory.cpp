@@ -39,6 +39,8 @@ OPENMMCUDA_EXPORT KernelImpl* CudaKernelFactory::createKernelImpl(std::string na
         return new CudaUpdateStateDataKernel(name, platform, data);
     if (name == ApplyConstraintsKernel::Name())
         return new CudaApplyConstraintsKernel(name, platform, data);
+    if (name == VirtualSitesKernel::Name())
+        return new CudaVirtualSitesKernel(name, platform);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CudaCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())

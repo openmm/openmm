@@ -30,6 +30,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "openmm/Context.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/System.h"
 #include <sstream>
 
@@ -48,6 +49,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(ApplyConstraintsKernel::Name(), factory);
+    registerKernelFactory(VirtualSitesKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
@@ -93,6 +95,10 @@ void CudaPlatform::setPropertyValue(Context& context, const string& property, co
 }
 
 void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
+    System& system = context.getSystem();
+    for (int i = 0; i < system.getNumParticles(); i++)
+        if (system.isVirtualSite(i))
+            throw OpenMMException("CudaPlatform does not support virtual sites");
     unsigned int device = 0;
     const string& devicePropValue = (properties.find(CudaDevice()) == properties.end() ?
             getPropertyDefaultValue(CudaDevice()) : properties.find(CudaDevice())->second);

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2011 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,12 +59,20 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     for (int i = 0; i < numParticles; i++)
         positions[i] = Vec3(x[3*i], x[3*i+1], x[3*i+2]);
     context.setPositions(positions);
+    context.computeVirtualSites();
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
     for (int i = 0; i < numParticles; i++) {
-        g[3*i] = -forces[i][0];
-        g[3*i+1] = -forces[i][1];
-        g[3*i+2] = -forces[i][2];
+        if (system.isVirtualSite(i)) {
+            g[3*i] = 0.0;
+            g[3*i+1] = 0.0;
+            g[3*i+2] = 0.0;
+        }
+        else {
+            g[3*i] = -forces[i][0];
+            g[3*i+1] = -forces[i][1];
+            g[3*i+2] = -forces[i][2];
+        }
     }
     double energy = state.getPotentialEnergy();
 
