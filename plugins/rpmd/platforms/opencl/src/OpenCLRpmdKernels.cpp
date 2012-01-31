@@ -108,7 +108,6 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
         pileKernel.setArg(1, 2*workgroupSize*sizeof(mm_float4), NULL);
         pileKernel.setArg(2, 2*workgroupSize*sizeof(mm_float4), NULL);
         pileKernel.setArg(3, numCopies*sizeof(mm_float2), NULL);
-        pileKernel.setArg<cl::Buffer>(4, integration.getRandom().getDeviceBuffer());
         stepKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
         stepKernel.setArg<cl::Buffer>(1, velocities->getDeviceBuffer());
         stepKernel.setArg<cl::Buffer>(2, forces->getDeviceBuffer());
@@ -137,6 +136,7 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     // Apply the PILE-L thermostat.
     
     const double dt = integrator.getStepSize();
+    pileKernel.setArg<cl::Buffer>(4, integration.getRandom().getDeviceBuffer());
     pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
     pileKernel.setArg<cl_float>(6, dt);
     pileKernel.setArg<cl_float>(7, integrator.getTemperature()*BOLTZ);
