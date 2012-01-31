@@ -33,7 +33,7 @@
  * This tests the Ewald summation method OpenCL implementation of NonbondedForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "ReferencePlatform.h"

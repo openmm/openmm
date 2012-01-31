@@ -34,13 +34,14 @@
  * This tests all the different force terms in the reference implementation of CustomGBForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "sfmt/SFMT.h"
 #include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/CustomGBForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include <iostream>

@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "../src/SimTKReference/ReferenceNeighborList.h"
 #include "sfmt/SFMT.h"
 #include <cassert>

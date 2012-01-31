@@ -33,7 +33,7 @@
  * This tests the CUDA implementation of CustomAngleForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/CustomAngleForce.h"

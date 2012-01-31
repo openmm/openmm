@@ -33,7 +33,7 @@
  * This tests the OpenCL implementation of sorting.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "../src/OpenCLArray.h"
 #include "../src/OpenCLContext.h"
 #include "../src/OpenCLFFT3D.h"

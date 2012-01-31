@@ -33,7 +33,7 @@
  * This tests the reference implementation of random number generation.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "../src/SimTKUtilities/SimTKOpenMMUtilities.h"
 #include <iostream>
 

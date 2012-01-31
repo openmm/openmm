@@ -33,7 +33,7 @@
  * This tests the OpenCL implementation of RPMDIntegrator.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
@@ -73,7 +73,6 @@ void testFreeParticles() {
     vector<double> ke(numCopies, 0.0);
     vector<double> rg(numParticles, 0.0);
     const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
-    const double wn = numCopies*BOLTZ*temperature/hbar;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         vector<State> state(numCopies);
@@ -167,7 +166,6 @@ void testParaHydrogen() {
     const double invBoxSize = 1.0/boxSize;
     double meanKE = 0.0;
     const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
-    const double wn = numCopies*BOLTZ*temperature/hbar;
     for (int step = 0; step < numSteps; step++) {
         integ.step(20);
         vector<State> states(numCopies);

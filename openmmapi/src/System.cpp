@@ -32,6 +32,8 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
+#include "openmm/internal/AssertionUtilities.h"
 
 using namespace OpenMM;
 
@@ -47,6 +49,17 @@ System::~System() {
     for (int i = 0; i < (int) virtualSites.size(); ++i)
         delete virtualSites[i];
 }
+
+double System::getParticleMass(int index) const {
+    ASSERT_VALID_INDEX(index, masses);
+    return masses[index];
+}
+
+void System::setParticleMass(int index, double mass) {
+    ASSERT_VALID_INDEX(index, masses);
+    masses[index] = mass;
+}
+
 
 void System::setVirtualSite(int index, VirtualSite* virtualSite) {
     if (index >= virtualSites.size())
@@ -66,15 +79,27 @@ int System::addConstraint(int particle1, int particle2, double distance) {
 }
 
 void System::getConstraintParameters(int index, int& particle1, int& particle2, double& distance) const {
+    ASSERT_VALID_INDEX(index, constraints);
     particle1 = constraints[index].particle1;
     particle2 = constraints[index].particle2;
     distance = constraints[index].distance;
 }
 
 void System::setConstraintParameters(int index, int particle1, int particle2, double distance) {
+    ASSERT_VALID_INDEX(index, constraints);
     constraints[index].particle1 = particle1;
     constraints[index].particle2 = particle2;
     constraints[index].distance = distance;
+}
+
+const Force& System::getForce(int index) const {
+    ASSERT_VALID_INDEX(index, forces);
+    return *forces[index];
+}
+
+Force& System::getForce(int index) {
+    ASSERT_VALID_INDEX(index, forces);
+    return *forces[index];
 }
 
 void System::getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {

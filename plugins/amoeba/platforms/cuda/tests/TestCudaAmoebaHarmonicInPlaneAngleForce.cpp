@@ -33,7 +33,7 @@
  * This tests the Cuda implementation of CudaAmoebaHarmonicInPlaneAngleForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"

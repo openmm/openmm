@@ -34,7 +34,7 @@
  * This tests the OpenCL implementation of CustomGBForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "sfmt/SFMT.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"

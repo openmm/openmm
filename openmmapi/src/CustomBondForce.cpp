@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomBondForceImpl.h"
 #include <cmath>
 #include <map>
@@ -60,10 +61,12 @@ int CustomBondForce::addPerBondParameter(const string& name) {
 }
 
 const string& CustomBondForce::getPerBondParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, parameters);
     return parameters[index].name;
 }
 
 void CustomBondForce::setPerBondParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, parameters);
     parameters[index].name = name;
 }
 
@@ -73,18 +76,22 @@ int CustomBondForce::addGlobalParameter(const string& name, double defaultValue)
 }
 
 const string& CustomBondForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomBondForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomBondForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomBondForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -94,12 +101,14 @@ int CustomBondForce::addBond(int particle1, int particle2, const vector<double>&
 }
 
 void CustomBondForce::getBondParameters(int index, int& particle1, int& particle2, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, bonds);
     particle1 = bonds[index].particle1;
     particle2 = bonds[index].particle2;
     parameters = bonds[index].parameters;
 }
 
 void CustomBondForce::setBondParameters(int index, int particle1, int particle2, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, bonds);
     bonds[index].parameters = parameters;
     bonds[index].particle1 = particle1;
     bonds[index].particle2 = particle2;

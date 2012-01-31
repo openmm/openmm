@@ -33,7 +33,7 @@
  * This tests the Cuda implementation of MonteCarloBarostat.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"

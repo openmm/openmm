@@ -32,7 +32,7 @@
  * 
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "CudaPlatform.h"
 #include "../../../platforms/opencl/include/OpenCLPlatform.h"
 #include "ReferencePlatform.h"

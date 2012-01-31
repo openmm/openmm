@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/HarmonicBondForceImpl.h"
 
 using namespace OpenMM;
@@ -45,6 +46,7 @@ int HarmonicBondForce::addBond(int particle1, int particle2, double length, doub
 }
 
 void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k) const {
+    ASSERT_VALID_INDEX(index, bonds);
     particle1 = bonds[index].particle1;
     particle2 = bonds[index].particle2;
     length = bonds[index].length;
@@ -52,6 +54,7 @@ void HarmonicBondForce::getBondParameters(int index, int& particle1, int& partic
 }
 
 void HarmonicBondForce::setBondParameters(int index, int particle1, int particle2, double length, double k) {
+    ASSERT_VALID_INDEX(index, bonds);
     bonds[index].particle1 = particle1;
     bonds[index].particle2 = particle2;
     bonds[index].length = length;

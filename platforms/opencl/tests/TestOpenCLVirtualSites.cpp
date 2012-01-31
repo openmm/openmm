@@ -33,7 +33,7 @@
  * This tests the OpenCL implementation of virtual sites.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "openmm/CustomBondForce.h"

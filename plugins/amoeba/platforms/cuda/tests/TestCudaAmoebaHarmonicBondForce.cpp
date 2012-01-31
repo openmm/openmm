@@ -33,7 +33,7 @@
  * This tests the Cuda implementation of HarmonicBondForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "CudaPlatform.h"
 #include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"

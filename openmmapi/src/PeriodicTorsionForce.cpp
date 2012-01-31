@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/PeriodicTorsionForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/PeriodicTorsionForceImpl.h"
 
 using namespace OpenMM;
@@ -45,6 +46,7 @@ int PeriodicTorsionForce::addTorsion(int particle1, int particle2, int particle3
 }
 
 void PeriodicTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& periodicity, double& phase, double& k) const {
+    ASSERT_VALID_INDEX(index, periodicTorsions);
     particle1 = periodicTorsions[index].particle1;
     particle2 = periodicTorsions[index].particle2;
     particle3 = periodicTorsions[index].particle3;
@@ -55,6 +57,7 @@ void PeriodicTorsionForce::getTorsionParameters(int index, int& particle1, int& 
 }
 
 void PeriodicTorsionForce::setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k) {
+    ASSERT_VALID_INDEX(index, periodicTorsions);
     periodicTorsions[index].particle1 = particle1;
     periodicTorsions[index].particle2 = particle2;
     periodicTorsions[index].particle3 = particle3;

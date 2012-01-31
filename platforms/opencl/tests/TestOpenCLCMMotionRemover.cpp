@@ -33,7 +33,7 @@
  * This tests the OpenCL implementation of AndersenThermostat.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"

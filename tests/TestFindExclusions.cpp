@@ -29,8 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/OpenMMException.h"
 #include <iostream>
 #include <set>
 #include <vector>

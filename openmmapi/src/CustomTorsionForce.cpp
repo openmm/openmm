@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomTorsionForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomTorsionForceImpl.h"
 #include <cmath>
 #include <map>
@@ -60,10 +61,12 @@ int CustomTorsionForce::addPerTorsionParameter(const string& name) {
 }
 
 const string& CustomTorsionForce::getPerTorsionParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, parameters);
     return parameters[index].name;
 }
 
 void CustomTorsionForce::setPerTorsionParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, parameters);
     parameters[index].name = name;
 }
 
@@ -73,18 +76,22 @@ int CustomTorsionForce::addGlobalParameter(const string& name, double defaultVal
 }
 
 const string& CustomTorsionForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomTorsionForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomTorsionForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomTorsionForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -94,6 +101,7 @@ int CustomTorsionForce::addTorsion(int particle1, int particle2, int particle3, 
 }
 
 void CustomTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, torsions);
     particle1 = torsions[index].particle1;
     particle2 = torsions[index].particle2;
     particle3 = torsions[index].particle3;
@@ -102,6 +110,7 @@ void CustomTorsionForce::getTorsionParameters(int index, int& particle1, int& pa
 }
 
 void CustomTorsionForce::setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, torsions);
     torsions[index].parameters = parameters;
     torsions[index].particle1 = particle1;
     torsions[index].particle2 = particle2;

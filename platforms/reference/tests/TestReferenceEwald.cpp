@@ -33,7 +33,7 @@
  * This tests the Eewald summation method reference implementation of NonbondedForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/NonbondedForce.h"

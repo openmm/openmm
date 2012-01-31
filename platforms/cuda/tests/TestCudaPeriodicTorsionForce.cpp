@@ -33,7 +33,7 @@
  * This tests the Cuda implementation of PeriodicTorsionForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/PeriodicTorsionForce.h"

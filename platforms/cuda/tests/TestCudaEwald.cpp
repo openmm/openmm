@@ -33,7 +33,7 @@
  * This tests the Ewald summation method cuda implementation of NonbondedForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "ReferencePlatform.h"

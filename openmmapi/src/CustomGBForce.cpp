@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomGBForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomGBForceImpl.h"
 #include <cmath>
 #include <map>
@@ -71,10 +72,12 @@ int CustomGBForce::addPerParticleParameter(const string& name) {
 }
 
 const string& CustomGBForce::getPerParticleParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, parameters);
     return parameters[index].name;
 }
 
 void CustomGBForce::setPerParticleParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, parameters);
     parameters[index].name = name;
 }
 
@@ -84,18 +87,22 @@ int CustomGBForce::addGlobalParameter(const string& name, double defaultValue) {
 }
 
 const string& CustomGBForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomGBForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomGBForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomGBForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -105,10 +112,12 @@ int CustomGBForce::addParticle(const vector<double>& parameters) {
 }
 
 void CustomGBForce::getParticleParameters(int index, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, particles);
     parameters = particles[index].parameters;
 }
 
 void CustomGBForce::setParticleParameters(int index, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, particles);
     particles[index].parameters = parameters;
 }
 
@@ -118,12 +127,14 @@ int CustomGBForce::addComputedValue(const std::string& name, const std::string& 
 }
 
 void CustomGBForce::getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const {
+    ASSERT_VALID_INDEX(index, computedValues);
     name = computedValues[index].name;
     expression = computedValues[index].expression;
     type = computedValues[index].type;
 }
 
 void CustomGBForce::setComputedValueParameters(int index, const std::string& name, const std::string& expression, ComputationType type) {
+    ASSERT_VALID_INDEX(index, computedValues);
     computedValues[index].name = name;
     computedValues[index].expression = expression;
     computedValues[index].type = type;
@@ -135,11 +146,13 @@ int CustomGBForce::addEnergyTerm(const std::string& expression, ComputationType 
 }
 
 void CustomGBForce::getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const {
+    ASSERT_VALID_INDEX(index, energyTerms);
     expression = energyTerms[index].expression;
     type = energyTerms[index].type;
 }
 
 void CustomGBForce::setEnergyTermParameters(int index, const std::string& expression, ComputationType type) {
+    ASSERT_VALID_INDEX(index, energyTerms);
     energyTerms[index].expression = expression;
     energyTerms[index].type = type;
 }
@@ -149,11 +162,13 @@ int CustomGBForce::addExclusion(int particle1, int particle2) {
     return exclusions.size()-1;
 }
 void CustomGBForce::getExclusionParticles(int index, int& particle1, int& particle2) const {
+    ASSERT_VALID_INDEX(index, exclusions);
     particle1 = exclusions[index].particle1;
     particle2 = exclusions[index].particle2;
 }
 
 void CustomGBForce::setExclusionParticles(int index, int particle1, int particle2) {
+    ASSERT_VALID_INDEX(index, exclusions);
     exclusions[index].particle1 = particle1;
     exclusions[index].particle2 = particle2;
 }
@@ -168,6 +183,7 @@ int CustomGBForce::addFunction(const std::string& name, const std::vector<double
 }
 
 void CustomGBForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
+    ASSERT_VALID_INDEX(index, functions);
     name = functions[index].name;
     values = functions[index].values;
     min = functions[index].min;
@@ -179,6 +195,7 @@ void CustomGBForce::setFunctionParameters(int index, const std::string& name, co
         throw OpenMMException("CustomGBForce: max <= min for a tabulated function.");
     if (values.size() < 2)
         throw OpenMMException("CustomGBForce: a tabulated function must have at least two points");
+    ASSERT_VALID_INDEX(index, functions);
     functions[index].name = name;
     functions[index].values = values;
     functions[index].min = min;

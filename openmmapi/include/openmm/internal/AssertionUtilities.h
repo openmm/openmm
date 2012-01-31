@@ -1,3 +1,6 @@
+#ifndef OPENMM_ASSERTIONUTILITIES_H_
+#define OPENMM_ASSERTIONUTILITIES_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,67 +33,29 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the OpenCL implementation of random number generation.
+ * This file provides a variety of macros useful in test cases.
  */
 
-#include "openmm/internal/AssertionUtilities.h"
-#include "../src/OpenCLArray.h"
-#include "../src/OpenCLContext.h"
-#include "../src/OpenCLIntegrationUtilities.h"
-#include "openmm/System.h"
-#include <iostream>
+#include <cmath>
+#include <string>
+#include <sstream>
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-void testGaussian() {
-    int numAtoms = 5000;
-    System system;
-    for (int i = 0; i < numAtoms; i++)
-        system.addParticle(1.0);
-    OpenCLPlatform::PlatformData platformData(numAtoms, "", "");
-    OpenCLContext& context = *platformData.contexts[0];
-    context.initialize(system);
-    context.getIntegrationUtilities().initRandomNumberGenerator(0);
-    OpenCLArray<mm_float4>& random = context.getIntegrationUtilities().getRandom();
-    context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());
-    const int numValues = random.getSize()*4;
-    vector<mm_float4> values(numValues);
-    random.download(values);
-    float* data = reinterpret_cast<float*>(&values[0]);
-    double mean = 0.0;
-    double var = 0.0;
-    double skew = 0.0;
-    double kurtosis = 0.0;
-    for (int i = 0; i < numValues; i++) {
-        double value = data[i];
-        mean += value;
-        var += value*value;
-        skew += value*value*value;
-        kurtosis += value*value*value*value;
-    }
-    mean /= numValues;
-    var /= numValues;
-    skew /= numValues;
-    kurtosis /= numValues;
-    double c2 = var-mean*mean;
-    double c3 = skew-3*var*mean+2*mean*mean*mean;
-    double c4 = kurtosis-4*skew*mean-3*var*var+12*var*mean*mean-6*mean*mean*mean*mean;
-    ASSERT_EQUAL_TOL(0.0, mean, 3.0/sqrt((double)numValues));
-    ASSERT_EQUAL_TOL(1.0, c2, 3.0/pow(numValues, 1.0/3.0));
-    ASSERT_EQUAL_TOL(0.0, c3, 3.0/pow(numValues, 1.0/4.0));
-    ASSERT_EQUAL_TOL(0.0, c4, 3.0/pow(numValues, 1.0/4.0));
-}
+void throwException(const char* file, int line, const std::string& details);
 
-int main() {
-    try {
-        testGaussian();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
-}
+} // namespace OpenMM
 
+#define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};
+
+#define ASSERT_EQUAL(expected, found) {if (!((expected) == (found))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_EQUAL_VEC(expected, found, tol) {ASSERT_EQUAL_TOL((expected)[0], (found)[0], (tol)); ASSERT_EQUAL_TOL((expected)[1], (found)[1], (tol)); ASSERT_EQUAL_TOL((expected)[2], (found)[2], (tol));};
+
+#define ASSERT_USUALLY_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found)<<" (This test is stochastic and may occasionally fail)"; throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_VALID_INDEX(index, vector) {if (index < 0 || index >= vector.size()) throwException(__FILE__, __LINE__, "Index out of range");};
+
+#endif /*OPENMM_ASSERTIONUTILITIES_H_*/

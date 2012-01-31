@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/HarmonicAngleForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/HarmonicAngleForceImpl.h"
 
 using namespace OpenMM;
@@ -45,6 +46,7 @@ int HarmonicAngleForce::addAngle(int particle1, int particle2, int particle3, do
 }
 
 void HarmonicAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& angle, double& k) const {
+    ASSERT_VALID_INDEX(index, angles);
     particle1 = angles[index].particle1;
     particle2 = angles[index].particle2;
     particle3 = angles[index].particle3;
@@ -53,6 +55,7 @@ void HarmonicAngleForce::getAngleParameters(int index, int& particle1, int& part
 }
 
 void HarmonicAngleForce::setAngleParameters(int index, int particle1, int particle2, int particle3, double angle, double k) {
+    ASSERT_VALID_INDEX(index, angles);
     angles[index].particle1 = particle1;
     angles[index].particle2 = particle2;
     angles[index].particle3 = particle3;

@@ -33,7 +33,7 @@
  * This tests the reference implementation of GBVIForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/GBVISoftcoreForce.h"

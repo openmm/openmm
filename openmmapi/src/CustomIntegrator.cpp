@@ -32,6 +32,7 @@
 #include "openmm/CustomIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <ctime>
@@ -88,8 +89,7 @@ int CustomIntegrator::addGlobalVariable(const string& name, double initialValue)
 }
 
 const string& CustomIntegrator::getGlobalVariableName(int index) const {
-    if (index < 0 || index >= globalNames.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, globalNames);
     return globalNames[index];
 }
 
@@ -102,14 +102,12 @@ int CustomIntegrator::addPerDofVariable(const string& name, double initialValue)
 }
 
 const string& CustomIntegrator::getPerDofVariableName(int index) const {
-    if (index < 0 || index >= perDofNames.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, perDofNames);
     return perDofNames[index];
 }
 
 double CustomIntegrator::getGlobalVariable(int index) const {
-    if (index < 0 || index >= globalNames.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, globalValues);
     if (owner != NULL && !globalsAreCurrent) {
         dynamic_cast<const IntegrateCustomStepKernel&>(kernel.getImpl()).getGlobalVariables(*context, globalValues);
         globalsAreCurrent = true;
@@ -118,8 +116,7 @@ double CustomIntegrator::getGlobalVariable(int index) const {
 }
 
 void CustomIntegrator::setGlobalVariable(int index, double value) {
-    if (index < 0 || index >= globalNames.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, globalValues);
     if (owner != NULL && !globalsAreCurrent) {
         dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).getGlobalVariables(*context, globalValues);
         globalsAreCurrent = true;
@@ -138,8 +135,7 @@ void CustomIntegrator::setGlobalVariableByName(const string& name, double value)
 }
 
 void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const {
-    if (index < 0 || index >= perDofNames.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, perDofValues);
     if (owner == NULL)
         values = perDofValues[index];
     else
@@ -147,8 +143,7 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
 }
 
 void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {
-    if (index < 0 || index >= perDofNames.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, perDofValues);
     if (values.size() != context->getSystem().getNumParticles())
         throw OpenMMException("setPerDofVariable() called with wrong number of values");
     if (owner == NULL)
@@ -209,8 +204,7 @@ int CustomIntegrator::addUpdateContextState() {
 }
 
 void CustomIntegrator::getComputationStep(int index, ComputationType& type, string& variable, string& expression) const {
-    if (index < 0 || index >= computations.size())
-        throw OpenMMException("Index out of range");
+    ASSERT_VALID_INDEX(index, computations);
     type = computations[index].type;
     variable = computations[index].variable;
     expression = computations[index].expression;

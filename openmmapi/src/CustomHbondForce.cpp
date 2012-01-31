@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomHbondForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include <cmath>
 #include <map>
@@ -79,10 +80,12 @@ int CustomHbondForce::addPerDonorParameter(const string& name) {
 }
 
 const string& CustomHbondForce::getPerDonorParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, donorParameters);
     return donorParameters[index].name;
 }
 
 void CustomHbondForce::setPerDonorParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, donorParameters);
     donorParameters[index].name = name;
 }
 
@@ -92,10 +95,12 @@ int CustomHbondForce::addPerAcceptorParameter(const string& name) {
 }
 
 const string& CustomHbondForce::getPerAcceptorParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, acceptorParameters);
     return acceptorParameters[index].name;
 }
 
 void CustomHbondForce::setPerAcceptorParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, acceptorParameters);
     acceptorParameters[index].name = name;
 }
 
@@ -105,18 +110,22 @@ int CustomHbondForce::addGlobalParameter(const string& name, double defaultValue
 }
 
 const string& CustomHbondForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomHbondForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomHbondForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomHbondForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -126,6 +135,7 @@ int CustomHbondForce::addDonor(int d1, int d2, int d3, const vector<double>& par
 }
 
 void CustomHbondForce::getDonorParameters(int index, int& d1, int& d2, int&  d3, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, donors);
     d1 = donors[index].p1;
     d2 = donors[index].p2;
     d3 = donors[index].p3;
@@ -133,6 +143,7 @@ void CustomHbondForce::getDonorParameters(int index, int& d1, int& d2, int&  d3,
 }
 
 void CustomHbondForce::setDonorParameters(int index, int d1, int d2, int d3, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, donors);
     donors[index].p1 = d1;
     donors[index].p2 = d2;
     donors[index].p3 = d3;
@@ -145,6 +156,7 @@ int CustomHbondForce::addAcceptor(int a1, int a2, int a3, const vector<double>& 
 }
 
 void CustomHbondForce::getAcceptorParameters(int index, int& a1, int& a2, int& a3, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, acceptors);
     a1 = acceptors[index].p1;
     a2 = acceptors[index].p2;
     a3 = acceptors[index].p3;
@@ -152,6 +164,7 @@ void CustomHbondForce::getAcceptorParameters(int index, int& a1, int& a2, int& a
 }
 
 void CustomHbondForce::setAcceptorParameters(int index, int a1, int a2, int a3, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, acceptors);
     acceptors[index].p1 = a1;
     acceptors[index].p2 = a2;
     acceptors[index].p3 = a3;
@@ -163,11 +176,13 @@ int CustomHbondForce::addExclusion(int donor, int acceptor) {
     return exclusions.size()-1;
 }
 void CustomHbondForce::getExclusionParticles(int index, int& donor, int& acceptor) const {
+    ASSERT_VALID_INDEX(index, exclusions);
     donor = exclusions[index].donor;
     acceptor = exclusions[index].acceptor;
 }
 
 void CustomHbondForce::setExclusionParticles(int index, int donor, int acceptor) {
+    ASSERT_VALID_INDEX(index, exclusions);
     exclusions[index].donor = donor;
     exclusions[index].acceptor = acceptor;
 }
@@ -182,6 +197,7 @@ int CustomHbondForce::addFunction(const std::string& name, const std::vector<dou
 }
 
 void CustomHbondForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
+    ASSERT_VALID_INDEX(index, functions);
     name = functions[index].name;
     values = functions[index].values;
     min = functions[index].min;
@@ -193,6 +209,7 @@ void CustomHbondForce::setFunctionParameters(int index, const std::string& name,
         throw OpenMMException("CustomHbondForce: max <= min for a tabulated function.");
     if (values.size() < 2)
         throw OpenMMException("CustomHbondForce: a tabulated function must have at least two points");
+    ASSERT_VALID_INDEX(index, functions);
     functions[index].name = name;
     functions[index].values = values;
     functions[index].min = min;

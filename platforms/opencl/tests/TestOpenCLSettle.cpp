@@ -34,7 +34,7 @@
  * This tests the OpenCL implementation of the SETTLE algorithm.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "openmm/NonbondedForce.h"

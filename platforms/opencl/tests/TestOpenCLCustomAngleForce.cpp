@@ -33,7 +33,7 @@
  * This tests the OpenCL implementation of CustomAngleForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "openmm/CustomAngleForce.h"

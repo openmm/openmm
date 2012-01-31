@@ -36,7 +36,7 @@
  * Utility methods shared across unit tests
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"

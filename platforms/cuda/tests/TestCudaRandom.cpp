@@ -33,7 +33,7 @@
  * This tests the Cuda implementation of random number generation.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "../src/kernels/gputypes.h"
 #include "../src/kernels/cudaKernels.h"
 #include <iostream>

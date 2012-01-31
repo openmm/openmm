@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomExternalForceImpl.h"
 #include <cmath>
 #include <map>
@@ -60,10 +61,12 @@ int CustomExternalForce::addPerParticleParameter(const string& name) {
 }
 
 const string& CustomExternalForce::getPerParticleParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, parameters);
     return parameters[index].name;
 }
 
 void CustomExternalForce::setPerParticleParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, parameters);
     parameters[index].name = name;
 }
 
@@ -73,18 +76,22 @@ int CustomExternalForce::addGlobalParameter(const string& name, double defaultVa
 }
 
 const string& CustomExternalForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomExternalForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomExternalForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomExternalForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -94,11 +101,13 @@ int CustomExternalForce::addParticle(int particle, const vector<double>& paramet
 }
 
 void CustomExternalForce::getParticleParameters(int index, int& particle, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, particles);
     particle = particles[index].particle;
     parameters = particles[index].parameters;
 }
 
 void CustomExternalForce::setParticleParameters(int index, int particle, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, particles);
     particles[index].parameters = parameters;
     particles[index].particle = particle;
 }

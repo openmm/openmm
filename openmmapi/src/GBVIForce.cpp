@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/GBVIForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/GBVIForceImpl.h"
 #include <sstream>
 
@@ -47,12 +48,14 @@ int GBVIForce::addParticle(double charge, double radius, double gamma) {
 }
 
 void GBVIForce::getParticleParameters(int index, double& charge, double& radius, double& gamma) const {
+    ASSERT_VALID_INDEX(index, particles);
     charge = particles[index].charge;
     radius = particles[index].radius;
     gamma  = particles[index].gamma;
 }
 
 void GBVIForce::setParticleParameters(int index, double charge, double radius, double gamma) {
+    ASSERT_VALID_INDEX(index, particles);
     particles[index].charge = charge;
     particles[index].radius = radius;
     particles[index].gamma  = gamma;
@@ -104,6 +107,7 @@ int GBVIForce::addBond(int particle1, int particle2, double bondLength) {
 }
 
 void GBVIForce::setBondParameters( int index, int particle1, int particle2, double bondLength) {
+    ASSERT_VALID_INDEX(index, bonds);
     bonds[index].particle1  = particle1;
     bonds[index].particle2  = particle2;
     bonds[index].bondLength = bondLength;
@@ -114,6 +118,7 @@ int GBVIForce::getNumBonds( void ) const {
 }
 
 void GBVIForce::getBondParameters(int index, int& bondIndex1, int& bondIndex2, double& bondLength) const {
+    ASSERT_VALID_INDEX(index, bonds);
     bondIndex1 = bonds[index].particle1;
     bondIndex2 = bonds[index].particle2;
     bondLength = bonds[index].bondLength;

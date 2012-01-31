@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include <cmath>
 #include <map>
@@ -88,12 +89,14 @@ int NonbondedForce::addParticle(double charge, double sigma, double epsilon) {
 }
 
 void NonbondedForce::getParticleParameters(int index, double& charge, double& sigma, double& epsilon) const {
+    ASSERT_VALID_INDEX(index, particles);
     charge = particles[index].charge;
     sigma = particles[index].sigma;
     epsilon = particles[index].epsilon;
 }
 
 void NonbondedForce::setParticleParameters(int index, double charge, double sigma, double epsilon) {
+    ASSERT_VALID_INDEX(index, particles);
     particles[index].charge = charge;
     particles[index].sigma = sigma;
     particles[index].epsilon = epsilon;
@@ -125,6 +128,7 @@ int NonbondedForce::addException(int particle1, int particle2, double chargeProd
     return newIndex;
 }
 void NonbondedForce::getExceptionParameters(int index, int& particle1, int& particle2, double& chargeProd, double& sigma, double& epsilon) const {
+    ASSERT_VALID_INDEX(index, exceptions);
     particle1 = exceptions[index].particle1;
     particle2 = exceptions[index].particle2;
     chargeProd = exceptions[index].chargeProd;
@@ -133,6 +137,7 @@ void NonbondedForce::getExceptionParameters(int index, int& particle1, int& part
 }
 
 void NonbondedForce::setExceptionParameters(int index, int particle1, int particle2, double chargeProd, double sigma, double epsilon) {
+    ASSERT_VALID_INDEX(index, exceptions);
     exceptions[index].particle1 = particle1;
     exceptions[index].particle2 = particle2;
     exceptions[index].chargeProd = chargeProd;

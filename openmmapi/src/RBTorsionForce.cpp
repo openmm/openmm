@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/RBTorsionForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/RBTorsionForceImpl.h"
 
 using namespace OpenMM;
@@ -45,6 +46,7 @@ int RBTorsionForce::addTorsion(int particle1, int particle2, int particle3, int 
 }
 
 void RBTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const {
+    ASSERT_VALID_INDEX(index, rbTorsions);
     particle1 = rbTorsions[index].particle1;
     particle2 = rbTorsions[index].particle2;
     particle3 = rbTorsions[index].particle3;
@@ -58,6 +60,7 @@ void RBTorsionForce::getTorsionParameters(int index, int& particle1, int& partic
 }
 
 void RBTorsionForce::setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5) {
+    ASSERT_VALID_INDEX(index, rbTorsions);
     rbTorsions[index].particle1 = particle1;
     rbTorsions[index].particle2 = particle2;
     rbTorsions[index].particle3 = particle3;

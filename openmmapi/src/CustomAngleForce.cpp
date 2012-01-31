@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomAngleForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomAngleForceImpl.h"
 #include <cmath>
 #include <map>
@@ -60,10 +61,12 @@ int CustomAngleForce::addPerAngleParameter(const string& name) {
 }
 
 const string& CustomAngleForce::getPerAngleParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, parameters);
     return parameters[index].name;
 }
 
 void CustomAngleForce::setPerAngleParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, parameters);
     parameters[index].name = name;
 }
 
@@ -73,18 +76,22 @@ int CustomAngleForce::addGlobalParameter(const string& name, double defaultValue
 }
 
 const string& CustomAngleForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomAngleForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomAngleForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomAngleForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -94,6 +101,7 @@ int CustomAngleForce::addAngle(int particle1, int particle2, int particle3, cons
 }
 
 void CustomAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, angles);
     particle1 = angles[index].particle1;
     particle2 = angles[index].particle2;
     particle3 = angles[index].particle3;
@@ -101,6 +109,7 @@ void CustomAngleForce::getAngleParameters(int index, int& particle1, int& partic
 }
 
 void CustomAngleForce::setAngleParameters(int index, int particle1, int particle2, int particle3, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, angles);
     angles[index].parameters = parameters;
     angles[index].particle1 = particle1;
     angles[index].particle2 = particle2;

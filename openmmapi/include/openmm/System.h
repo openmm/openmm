@@ -97,9 +97,7 @@ public:
      * 
      * @param index the index of the particle for which to get the mass
      */
-    double getParticleMass(int index) const {
-        return masses[index];
-    }
+    double getParticleMass(int index) const;
     /**
      * Set the mass (in atomic mass units) of a particle.  If the mass is 0, Integrators will ignore
      * the particle and not modify its position or velocity.  This is most often
@@ -109,9 +107,7 @@ public:
      * @param index  the index of the particle for which to set the mass
      * @param mass   the mass of the particle
      */
-    void setParticleMass(int index, double mass) {
-        masses[index] = mass;
-    }
+    void setParticleMass(int index, double mass);
     /**
      * Set a particle to be a virtual site.  The VirtualSite object should have
      * been created on the heap with the "new" operator.  The System takes over
@@ -195,17 +191,13 @@ public:
      * 
      * @param index  the index of the Force to get
      */
-    const Force& getForce(int index) const {
-        return *forces[index];
-    }
+    const Force& getForce(int index) const;
     /**
      * Get a writable reference to one of the Forces in this System.
      *
      * @param index  the index of the Force to get
      */
-    Force& getForce(int index) {
-        return *forces[index];
-    }
+    Force& getForce(int index);
     /**
      * Get the default values of the vectors defining the axes of the periodic box (measured in nm).  Any newly
      * created Context will have its box vectors set to these.  They will affect

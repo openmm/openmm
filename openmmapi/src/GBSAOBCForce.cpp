@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/GBSAOBCForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/GBSAOBCForceImpl.h"
 
 using namespace OpenMM;
@@ -45,12 +46,14 @@ int GBSAOBCForce::addParticle(double charge, double radius, double scalingFactor
 }
 
 void GBSAOBCForce::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {
+    ASSERT_VALID_INDEX(index, particles);
     charge = particles[index].charge;
     radius = particles[index].radius;
     scalingFactor = particles[index].scalingFactor;
 }
 
 void GBSAOBCForce::setParticleParameters(int index, double charge, double radius, double scalingFactor) {
+    ASSERT_VALID_INDEX(index, particles);
     particles[index].charge = charge;
     particles[index].radius = radius;
     particles[index].scalingFactor = scalingFactor;

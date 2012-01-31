@@ -33,7 +33,7 @@
  * This tests the Reference implementation of ReferenceAmoebaStretchBendForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 //#include "AmoebaTinkerParameterFile.h"
 const double DegreesToRadians = 3.14159265/180.0;
 #include "openmm/Context.h"

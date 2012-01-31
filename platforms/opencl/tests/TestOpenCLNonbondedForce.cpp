@@ -33,7 +33,7 @@
  * This tests all the different force terms in the reference implementation of NonbondedForce.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "ReferencePlatform.h"

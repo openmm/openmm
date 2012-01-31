@@ -32,7 +32,7 @@
 #ifdef WIN32
   #define _USE_MATH_DEFINES // Needed to get M_PI
 #endif
-#include "AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/SplineFitter.h"
 #include <cmath>
 #include <iostream>

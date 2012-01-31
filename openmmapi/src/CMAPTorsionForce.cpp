@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CMAPTorsionForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 
 using namespace OpenMM;
@@ -47,11 +48,13 @@ int CMAPTorsionForce::addMap(int size, const std::vector<double>& energy) {
 }
 
 void CMAPTorsionForce::getMapParameters(int index, int& size, std::vector<double>& energy) const {
+    ASSERT_VALID_INDEX(index, maps);
     size = maps[index].size;
     energy = maps[index].energy;
 }
 
 void CMAPTorsionForce::setMapParameters(int index, int size, const std::vector<double>& energy) {
+    ASSERT_VALID_INDEX(index, maps);
     if (energy.size() != size*size)
         throw OpenMMException("CMAPTorsionForce: incorrect number of energy values");
     maps[index].size = size;
@@ -64,6 +67,7 @@ int CMAPTorsionForce::addTorsion(int map, int a1, int a2, int a3, int a4, int b1
 }
 
 void CMAPTorsionForce::getTorsionParameters(int index, int& map, int& a1, int& a2, int& a3, int& a4, int& b1, int& b2, int& b3, int& b4) const {
+    ASSERT_VALID_INDEX(index, torsions);
     map = torsions[index].map;
     a1 = torsions[index].a1;
     a2 = torsions[index].a2;
@@ -76,6 +80,7 @@ void CMAPTorsionForce::getTorsionParameters(int index, int& map, int& a1, int& a
 }
 
 void CMAPTorsionForce::setTorsionParameters(int index, int map, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4) {
+    ASSERT_VALID_INDEX(index, torsions);
     torsions[index].map = map;
     torsions[index].a1 = a1;
     torsions[index].a2 = a2;

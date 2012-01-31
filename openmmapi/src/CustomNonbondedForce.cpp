@@ -32,6 +32,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/CustomNonbondedForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include <cmath>
 #include <map>
@@ -79,10 +80,12 @@ int CustomNonbondedForce::addPerParticleParameter(const string& name) {
 }
 
 const string& CustomNonbondedForce::getPerParticleParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, parameters);
     return parameters[index].name;
 }
 
 void CustomNonbondedForce::setPerParticleParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, parameters);
     parameters[index].name = name;
 }
 
@@ -92,18 +95,22 @@ int CustomNonbondedForce::addGlobalParameter(const string& name, double defaultV
 }
 
 const string& CustomNonbondedForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].name;
 }
 
 void CustomNonbondedForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].name = name;
 }
 
 double CustomNonbondedForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
     return globalParameters[index].defaultValue;
 }
 
 void CustomNonbondedForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
     globalParameters[index].defaultValue = defaultValue;
 }
 
@@ -113,10 +120,12 @@ int CustomNonbondedForce::addParticle(const vector<double>& parameters) {
 }
 
 void CustomNonbondedForce::getParticleParameters(int index, std::vector<double>& parameters) const {
+    ASSERT_VALID_INDEX(index, particles);
     parameters = particles[index].parameters;
 }
 
 void CustomNonbondedForce::setParticleParameters(int index, const vector<double>& parameters) {
+    ASSERT_VALID_INDEX(index, particles);
     particles[index].parameters = parameters;
 }
 
@@ -125,11 +134,13 @@ int CustomNonbondedForce::addExclusion(int particle1, int particle2) {
     return exclusions.size()-1;
 }
 void CustomNonbondedForce::getExclusionParticles(int index, int& particle1, int& particle2) const {
+    ASSERT_VALID_INDEX(index, exclusions);
     particle1 = exclusions[index].particle1;
     particle2 = exclusions[index].particle2;
 }
 
 void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int particle2) {
+    ASSERT_VALID_INDEX(index, exclusions);
     exclusions[index].particle1 = particle1;
     exclusions[index].particle2 = particle2;
 }
@@ -144,6 +155,7 @@ int CustomNonbondedForce::addFunction(const std::string& name, const std::vector
 }
 
 void CustomNonbondedForce::getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const {
+    ASSERT_VALID_INDEX(index, functions);
     name = functions[index].name;
     values = functions[index].values;
     min = functions[index].min;
@@ -155,6 +167,7 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
         throw OpenMMException("CustomNonbondedForce: max <= min for a tabulated function.");
     if (values.size() < 2)
         throw OpenMMException("CustomNonbondedForce: a tabulated function must have at least two points");
+    ASSERT_VALID_INDEX(index, functions);
     functions[index].name = name;
     functions[index].values = values;
     functions[index].min = min;

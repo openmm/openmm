@@ -33,7 +33,7 @@
  * This tests the Reference implementation of RPMDIntegrator.
  */
 
-#include "../../../tests/AssertionUtilities.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/Platform.h"
