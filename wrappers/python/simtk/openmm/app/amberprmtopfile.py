@@ -5,6 +5,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology
+from simtk.openmm.app import PDBFile
 from simtk.openmm.app.internal import amber_file_parser
 import forcefield as ff
 import element as elem
@@ -30,15 +31,24 @@ class AmberPrmtopFile(object):
 
         # Add atoms to the topology
 
+        PDBFile._loadNameReplacementTables()
         lastResidue = None
         c = top.addChain()
         for index in range(prmtop.getNumAtoms()):
             resNumber = prmtop.getResidueNumber(index)
             if resNumber != lastResidue:
                 lastResidue = resNumber
-                resName = prmtop.getResidueLabel(iAtom=index)
+                resName = prmtop.getResidueLabel(iAtom=index).strip()
+                if resName in PDBFile._residueNameReplacements:
+                    resName = PDBFile._residueNameReplacements[resName]
                 r = top.addResidue(resName, c)
-            atomName = prmtop.getAtomName(index)
+                if resName in PDBFile._atomNameReplacements:
+                    atomReplacements = PDBFile._atomNameReplacements[resName]
+                else:
+                    atomReplacements = {}
+            atomName = prmtop.getAtomName(index).strip()
+            if atomName in atomReplacements:
+                atomName = atomReplacements[atomName]
 
             # Try to guess the element.
             
