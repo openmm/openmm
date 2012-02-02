@@ -5,6 +5,11 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app.internal import amber_file_parser
+from simtk.unit import nanometers, picoseconds
+try:
+    import numpy
+except:
+    pass
 
 class AmberInpcrdFile(object):
     """AmberInpcrdFile parses an AMBER inpcrd file and loads the data stored in it."""
@@ -35,3 +40,48 @@ class AmberInpcrdFile(object):
             self.boxVectors = results[1]
         else:
             self.positions = results
+        self._numpyPositions = None
+        if loadVelocities:
+            self._numpyVelocities = None
+        if loadBoxVectors:
+            self._numpyBoxVectors = None
+
+    def getPositions(self, asNumpy=False):
+        """Get the atomic positions.
+        
+        Parameters:
+         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+         """
+        if asNumpy:
+            if self._numpyPositions is None:
+                self._numpyPositions = numpy.array(self.positions.value_in_unit(nanometers))*nanometers
+            return self._numpyPositions
+        return self.positions
+    
+    def getVelocities(self, asNumpy=False):
+        """Get the atomic velocities.
+        
+        Parameters:
+         - asNumpy (boolean=False) if true, the vectors are returned as numpy arrays instead of Vec3s
+         """
+        if asNumpy:
+            if self._numpyVelocities is None:
+                self._numpyVelocities = numpy.array(self.velocities.value_in_unit(nanometers/picoseconds))*nanometers/picoseconds
+            return self._numpyVelocities
+        return self.velocities
+    
+    def getBoxVectors(self, asNumpy=False):
+        """Get the periodic box vectors.
+        
+        Parameters:
+         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+         """
+        if asNumpy:
+            if self._numpyBoxVectors is None:
+                self._numpyBoxVectors = []
+                self._numpyBoxVectors.append(numpy.array(self.boxVectors[0].value_in_unit(nanometers))*nanometers)
+                self._numpyBoxVectors.append(numpy.array(self.boxVectors[1].value_in_unit(nanometers))*nanometers)
+                self._numpyBoxVectors.append(numpy.array(self.boxVectors[2].value_in_unit(nanometers))*nanometers)
+            return self._numpyBoxVectors
+        return self.boxVectors
+        

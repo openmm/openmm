@@ -780,7 +780,7 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
             line = infile.readline().strip()
             elements = line.split()
             while (len(elements) > 0):
-                velocities.append(mm.Vec3(float(elements.pop(0)), float(elements.pop(0)), float(elements.pop(0))))
+                velocities.append(20.455*mm.Vec3(float(elements.pop(0)), float(elements.pop(0)), float(elements.pop(0))))
             natoms_read += 1
         if asNumpy:
             newvel = numpy.zeros([natoms,3], numpy.float32)
@@ -789,7 +789,7 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
                     newvel[i,j] = velocities[i][j]
             velocities = newvel
         # Assign units.
-        velocities = units.Quantity(velocities, units.angstroms)
+        velocities = units.Quantity(velocities, units.angstroms/units.picoseconds)
             
     # Read box size if present
     box_vectors = None

@@ -13,7 +13,11 @@ from simtk.openmm.app.internal.pdbstructure import PdbStructure
 from simtk.openmm.app import Topology
 from simtk.unit import nanometers, angstroms, is_quantity
 import element as elem
-    
+try:
+    import numpy
+except:
+    pass
+
 class PDBFile(object):
     """PDBFile parses a Protein Data Bank (PDB) file and constructs a Topology and a set of atom positions from it.
     
@@ -27,7 +31,7 @@ class PDBFile(object):
     def __init__(self, file):
         """Load a PDB file.
         
-        The atom positions and Topology are stored into this object's "positions" and "topology" fields.
+        The atom positions and Topology can be retrieved by calling getPositions() and getTopology().
         
         Parameters:
          - file (string) the name of the file to load
@@ -90,6 +94,23 @@ class PDBFile(object):
         self.topology.setUnitCellDimensions(pdb.get_unit_cell_dimensions())
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
+        self._numpyPositions = None
+
+    def getTopology(self):
+        """Get the Topology of the model."""
+        return self.topology
+        
+    def getPositions(self, asNumpy=False):
+        """Get the atomic positions.
+        
+        Parameters:
+         - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+         """
+        if asNumpy:
+            if self._numpyPositions is None:
+                self._numpyPositions = numpy.array(self.positions.value_in_unit(nanometers))*nanometers
+            return self._numpyPositions
+        return self.positions
 
     @staticmethod
     def _loadNameReplacementTables():
