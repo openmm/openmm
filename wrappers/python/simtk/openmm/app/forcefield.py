@@ -43,7 +43,7 @@ class ForceField(object):
         """
         self._atomTypes = {}
         self._templates = {}
-        self._templateSignatures = {}
+        self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
         self._forces = []
         for file in files:
