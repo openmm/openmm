@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -244,6 +244,13 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
     for (int i = 0; i < (int) forceImpls.size(); i++) {
         vector<pair<int, int> > forceBonds = forceImpls[i]->getBondedParticles();
         bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
+    }
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        if (system.isVirtualSite(i)) {
+            const VirtualSite& site = system.getVirtualSite(i);
+            for (int j = 0; j < site.getNumParticles(); j++)
+                bonds.push_back(std::make_pair(i, site.getParticle(j)));
+        }
     }
 
     // Make a list of every other particle to which each particle is connected
