@@ -105,7 +105,7 @@ class Modeller(object):
                     
                     if sites == 4:
                         newTopology.addAtom('M', None, newResidue)
-                        newPositions.append(0.74397587*po + 0.128012065*ph1 + 0.128012065*ph2)
+                        newPositions.append(0.786646558*po + 0.106676721*ph1 + 0.106676721*ph2)
                     elif sites == 5:
                         newTopology.addAtom('M1', None, newResidue)
                         newTopology.addAtom('M2', None, newResidue)
