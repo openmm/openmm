@@ -184,7 +184,7 @@ amus = amu = dalton
 atom_mass_units = atomic_mass_unit = dalton
 
 # Volume
-liter_base_unit = ScaledUnit(1.0, decimeter**3, "liter", "l")
+liter_base_unit = ScaledUnit(1.0, decimeter**3, "liter", "L")
 liter = liters = litre = litres = Unit({liter_base_unit: 1.0})
 define_prefixed_units(liter_base_unit, module = sys.modules[__name__])
 

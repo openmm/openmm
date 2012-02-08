@@ -37,6 +37,7 @@ foreach(SUBDIR ${SUBDIRS})
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.i"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.xml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*.pdb"
     )
     foreach(file ${STAGING_INPUT_FILES1})
         set(STAGING_INPUT_FILES ${STAGING_INPUT_FILES} "${file}")
