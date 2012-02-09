@@ -36,13 +36,14 @@
  * This file provides a variety of macros useful in test cases.
  */
 
+#include "windowsExport.h"
 #include <cmath>
 #include <string>
 #include <sstream>
 
 namespace OpenMM {
 
-void throwException(const char* file, int line, const std::string& details);
+void OPENMM_EXPORT throwException(const char* file, int line, const std::string& details);
 
 } // namespace OpenMM
 
