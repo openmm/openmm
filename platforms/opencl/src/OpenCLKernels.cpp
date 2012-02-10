@@ -221,8 +221,20 @@ void OpenCLApplyConstraintsKernel::initialize(const System& system) {
 }
 
 void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
-    cl.getIntegrationUtilities().applyConstraints(tol);
-    cl.getIntegrationUtilities().computeVirtualSites();
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        map<string, string> defines;
+        defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+        cl::Program program = cl.createProgram(OpenCLKernelSources::constraints, defines);
+        applyDeltasKernel = cl::Kernel(program, "applyPositionDeltas");
+        applyDeltasKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+        applyDeltasKernel.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getPosDelta().getDeviceBuffer());
+    }
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
+    cl.clearBuffer(integration.getPosDelta());
+    integration.applyConstraints(tol);
+    cl.executeKernel(applyDeltasKernel, cl.getNumAtoms());
+    integration.computeVirtualSites();
 }
 
 void OpenCLVirtualSitesKernel::initialize(const System& system) {

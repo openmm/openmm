@@ -159,7 +159,8 @@ private:
  */
 class OpenCLApplyConstraintsKernel : public ApplyConstraintsKernel {
 public:
-    OpenCLApplyConstraintsKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyConstraintsKernel(name, platform), cl(cl) {
+    OpenCLApplyConstraintsKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyConstraintsKernel(name, platform),
+            cl(cl), hasInitializedKernel(false) {
     }
     /**
      * Initialize the kernel.
@@ -176,6 +177,8 @@ public:
     void apply(ContextImpl& context, double tol);
 private:
     OpenCLContext& cl;
+    bool hasInitializedKernel;
+    cl::Kernel applyDeltasKernel;
 };
 
 /**
