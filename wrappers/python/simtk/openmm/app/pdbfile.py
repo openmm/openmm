@@ -58,7 +58,7 @@ class PDBFile(object):
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
                     atomReplacements = {}
-                for atom in residue.iter_atoms():
+                for atom in residue.atoms:
                     atomName = atom.get_name()
                     if atomName in atomReplacements:
                         atomName = atomReplacements[atomName]
