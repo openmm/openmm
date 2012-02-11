@@ -63,7 +63,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
     for (int i = 0; i < numParticles; i++) {
-        if (system.isVirtualSite(i)) {
+        if (system.getParticleMass(i) == 0) {
             g[3*i] = 0.0;
             g[3*i+1] = 0.0;
             g[3*i+2] = 0.0;
