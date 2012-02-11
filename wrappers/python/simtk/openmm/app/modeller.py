@@ -7,8 +7,8 @@ __version__ = "1.0"
 from simtk.openmm.app import Topology, PDBFile
 from simtk.openmm.app.forcefield import HAngles
 from simtk.openmm.vec3 import Vec3
-from simtk.openmm import System, Context, NonbondedForce, VerletIntegrator
-from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, sqrt, is_quantity
+from simtk.openmm import System, Context, NonbondedForce, VerletIntegrator, LocalEnergyMinimizer
+from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
 import element as elem
 import os
 import random
@@ -264,7 +264,7 @@ class Modeller(object):
         def periodicDistance(pos1, pos2):
             delta = pos1-pos2
             delta = [delta[i]-floor(delta[i]*invBox[i]+0.5)*box[i] for i in range(3)]
-            return sqrt(delta[0]*delta[0]+delta[1]*delta[1]+delta[2]*delta[2])
+            return norm(delta)
         
         # Find the list of water molecules to add.
         
@@ -451,13 +451,22 @@ class Modeller(object):
         # Make a list of atoms bonded to each atom.
         
         bonded = {}
+        for atom in self.topology.atoms():
+            bonded[atom] = []
         for atom1, atom2 in self.topology.bonds():
-            if atom1 not in bonded:
-                bonded[atom1] = []
-            if atom2 not in bonded:
-                bonded[atom2] = []
             bonded[atom1].append(atom2)
             bonded[atom2].append(atom1)
+        
+        # Define a function that decides whether a set of atoms form a hydrogen bond, using fairly tolerant criteria.
+        
+        def isHbond(d, h, a):
+            if norm(d-a) > 0.35*nanometer:
+                return False
+            deltaDH = h-d
+            deltaHA = a-h
+            deltaDH /= norm(deltaDH)
+            deltaHA /= norm(deltaHA)
+            return acos(dot(deltaDH, deltaHA)) < 50*degree
         
         # Loop over residues.
         
@@ -486,7 +495,54 @@ class Modeller(object):
                             if len(sulfur) == 1 and any((atom.residue != residue for atom in bonded[sulfur[0]])):
                                 variant = 'CYX'
                         if residue.name == 'HIS' and pH > 6.5:
-                            variant = 'HID' # Fix this!!!!!!!!!!!!!!!!!!!
+                            # See if either nitrogen already has a hydrogen attached.
+                            
+                            nd1 = [atom for atom in residue.atoms() if atom.name == 'ND1']
+                            ne2 = [atom for atom in residue.atoms() if atom.name == 'NE2']
+                            if len(nd1) != 1 or len(ne2) != 1:
+                                raise ValueError('HIS residue (%d) has the wrong set of atoms' % residue.index)
+                            nd1 = nd1[0]
+                            ne2 = ne2[0]
+                            nd1HasHydrogen = any((atom.element == elem.hydrogen for atom in bonded[nd1]))
+                            ne2HasHydrogen = any((atom.element == elem.hydrogen for atom in bonded[ne2]))
+                            if nd1HasHydrogen and ne2HasHydrogen:
+                                variant = 'HIP'
+                            elif nd1HasHydrogen:
+                                variant = 'HID'
+                            elif ne2HasHydrogen:
+                                variant = 'HIE'
+                            else:
+                                # Estimate the hydrogen positions.
+                                
+                                nd1Pos = self.positions[nd1.index]
+                                ne2Pos = self.positions[ne2.index]
+                                hd1Delta = Vec3(0, 0, 0)*nanometer
+                                for other in bonded[nd1]:
+                                    hd1Delta += nd1Pos-self.positions[other.index]
+                                hd1Delta *= 0.1*nanometer/norm(hd1Delta)
+                                hd1Pos = nd1Pos+hd1Delta
+                                he2Delta = Vec3(0, 0, 0)*nanometer
+                                for other in bonded[ne2]:
+                                    he2Delta += ne2Pos-self.positions[other.index]
+                                he2Delta *= 0.1*nanometer/norm(he2Delta)
+                                he2Pos = ne2Pos+he2Delta
+
+                                # See whether either hydrogen would form a hydrogen bond.
+    
+                                nd1IsBonded = False
+                                ne2IsBonded = False
+                                for acceptor in acceptors:
+                                    if acceptor.residue != residue:
+                                        acceptorPos = self.positions[acceptor.index]
+                                        if isHbond(nd1Pos, hd1Pos, acceptorPos):
+                                            nd1IsBonded = True
+                                            break
+                                        if isHbond(ne2Pos, he2Pos, acceptorPos):
+                                            ne2IsBonded = True
+                                if ne2IsBonded and not nd1IsBonded:
+                                    variant = 'HIE'
+                                else:
+                                    variant = 'HID'
                         elif residue.name == 'HIS':
                             variant = 'HIP'
                     if variant is not None and variant not in spec.variants:
@@ -537,13 +593,16 @@ class Modeller(object):
                                 for h in expected:
                                     newH = newTopology.addAtom(h.name, elem.hydrogen, newResidue)
                                     newIndices.append(newH.index)
-                                    if len(expected) == 1:
-                                        delta = Vec3(0, 0, 0)*nanometer
+                                    delta = Vec3(0, 0, 0)*nanometer
+                                    if len(bonded[parent]) > 0:
                                         for other in bonded[parent]:
                                             delta += self.positions[parent.index]-self.positions[other.index]
                                     else:
                                         delta = Vec3(random.random(), random.random(), random.random())*nanometer
-                                    delta *= 0.1*nanometer/sqrt(delta[0]*delta[0]+delta[1]*delta[1]+delta[2]*delta[2])
+                                    delta *= 0.1*nanometer/norm(delta)
+                                    if len(expected) > 1:
+                                        delta += 0.05*Vec3(random.random(), random.random(), random.random())*nanometer
+                                        delta *= 0.1*nanometer/norm(delta)
                                     newPositions.append(self.positions[parent.index]+delta)
                                     newTopology.addBond(newAtom, newH)
                 else:
@@ -559,17 +618,14 @@ class Modeller(object):
         
         # The hydrogens were added at random positions.  Now use the ForceField to fix them up.
         
-        system = forcefield.createSystem(newTopology, constraints=HAngles)
-        system2 = System()
-        for i in range(system.getNumParticles()):
-            system2.addParticle(system.getParticleMass(i))
+        system = forcefield.createSystem(newTopology, rigidWater=False)
         atoms = list(newTopology.atoms())
-        for i in range(system.getNumConstraints()):
-            p1, p2, distance = system.getConstraintParameters(i)
-            if atoms[p1].element == elem.hydrogen or atoms[p2].element == elem.hydrogen:
-                system2.addConstraint(p1, p2, distance)
-        context = Context(system2, VerletIntegrator(0.0))
+        for i in range(system.getNumParticles()):
+            if atoms[i].element != elem.hydrogen:
+                # This is a heavy atom, so make it immobile.
+                system.setParticleMass(i, 0)
+        context = Context(system, VerletIntegrator(0.0))
         context.setPositions(newPositions)
-        context.applyConstraints(0.0001)
+        LocalEnergyMinimizer.minimize(context)
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()

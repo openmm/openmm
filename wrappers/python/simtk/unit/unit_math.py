@@ -116,6 +116,27 @@ def sqrt(val):
     except AttributeError:
         return math.sqrt(val)
 
+###################
+### VECTOR MATH ###
+###################
+
+def dot(x, y):
+    """
+    >>> dot((2, 3)*meter, (4, 5)*meter)
+    Quantity(value=23, unit=meter**2)
+    """
+    sum = x[0]*y[0]
+    for i in range(1, len(x)):
+        sum += x[i]*y[i]
+    return sum
+
+def norm(x):
+    """
+    >>>norm((3, 4)*meter)
+    Quantity(value=5, unit=meter*)
+    """
+    return sqrt(dot(x, x))
+
 # run module directly for testing
 if __name__=='__main__':
     # Test the examples in the docstrings
