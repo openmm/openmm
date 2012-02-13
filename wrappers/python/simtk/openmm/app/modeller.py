@@ -316,7 +316,7 @@ class Modeller(object):
         
         # Add ions to neutralize the system.
         
-        totalCharge = int(sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles()))))
+        totalCharge = int(floor(0.5+sum((nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge) for i in range(system.getNumParticles())))))
         if abs(totalCharge) > len(addedWaters):
             raise Exception('Cannot neutralize the system because the charge is greater than the number of available positions for ions')
         def addIon(element):
