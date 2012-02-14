@@ -99,6 +99,9 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
     for (int i = 0; i < system.getNumParticles(); i++)
         if (system.isVirtualSite(i))
             throw OpenMMException("CudaPlatform does not support virtual sites");
+    for (int i = 0; i < system.getNumForces(); i++)
+        if (system.getForce(i).getForceGroup() != 0)
+            throw OpenMMException("CudaPlatform does not support force groups");
     unsigned int device = 0;
     const string& devicePropValue = (properties.find(CudaDevice()) == properties.end() ?
             getPropertyDefaultValue(CudaDevice()) : properties.find(CudaDevice())->second);

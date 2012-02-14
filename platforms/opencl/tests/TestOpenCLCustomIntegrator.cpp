@@ -525,6 +525,107 @@ void testPerDofVariables() {
     }
 }
 
+/**
+ * Test evaluating force groups separately.
+ */
+void testForceGroups() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(2.0);
+    system.addParticle(2.0);
+    CustomIntegrator integrator(0.01);
+    integrator.addPerDofVariable("outf", 0);
+    integrator.addPerDofVariable("outf1", 0);
+    integrator.addPerDofVariable("outf2", 0);
+    integrator.addComputePerDof("outf", "f");
+    integrator.addComputePerDof("outf1", "f1");
+    integrator.addComputePerDof("outf2", "f2");
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, 1.5, 1.1);
+    bonds->setForceGroup(1);
+    system.addForce(bonds);
+    NonbondedForce* nb = new NonbondedForce();
+    nb->addParticle(0.2, 1, 0);
+    nb->addParticle(0.2, 1, 0);
+    nb->setForceGroup(2);
+    system.addForce(nb);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    
+    // See if the various forces are computed correctly.
+    
+    integrator.step(1);
+    vector<Vec3> f, f1, f2;
+    integrator.getPerDofVariable(0, f);
+    integrator.getPerDofVariable(1, f1);
+    integrator.getPerDofVariable(2, f2);
+    ASSERT_EQUAL_VEC(Vec3(1.1*0.5, 0, 0), f1[0], 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(-1.1*0.5, 0, 0), f1[1], 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(-138.935456*0.2*0.2/4.0, 0, 0), f2[0], 1e-5);
+    ASSERT_EQUAL_VEC(Vec3(138.935456*0.2*0.2/4.0, 0, 0), f2[1], 1e-5);
+    ASSERT_EQUAL_VEC(f1[0]+f2[0], f[0], 1e-5);
+    ASSERT_EQUAL_VEC(f1[1]+f2[1], f[1], 1e-5);
+}
+
+/**
+ * Test a multiple time step r-RESPA integrator.
+ */
+void testRespa() {
+    const int numParticles = 8;
+    OpenCLPlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    CustomIntegrator integrator(0.002);
+    integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+    for (int i = 0; i < 2; i++) {
+        integrator.addComputePerDof("v", "v+0.5*(dt/2)*f0/m");
+        integrator.addComputePerDof("x", "x+(dt/2)*v");
+        integrator.addComputePerDof("v", "v+0.5*(dt/2)*f0/m");
+    }
+    integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    for (int i = 0; i < numParticles-2; i++)
+        bonds->addBond(i, i+1, 1.0, 0.5);
+    system.addForce(bonds);
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setCutoffDistance(2.0);
+    nb->setNonbondedMethod(NonbondedForce::Ewald);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(i%2 == 0 ? 5.0 : 10.0);
+        nb->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    }
+    nb->setForceGroup(1);
+    nb->setReciprocalSpaceForceGroup(0);
+    system.addForce(nb);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    
+    // Simulate it and monitor energy conservations.
+    
+    double initialEnergy = 0.0;
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Energy);
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        if (i == 1)
+            initialEnergy = energy;
+        else if (i > 1)
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
+        integrator.step(2);
+    }
+}
+
 int main() {
     try {
         testSingleBond();
@@ -536,6 +637,8 @@ int main() {
         testParameter();
         testRandomDistributions();
         testPerDofVariables();
+        testForceGroups();
+        testRespa();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

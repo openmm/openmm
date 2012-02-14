@@ -88,8 +88,9 @@ public:
      * @param atoms    this should have one entry for each bond, and that entry should contain the list
      *                 of atoms involved in the bond.  Every entry must have the same number of atoms.
      * @param source   the code to evaluate the interaction
+     * @param group    the force group in which the interaction should be calculated
      */
-    void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source);
+    void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source, int group);
     /**
      * Add an argument that should be passed to the interaction kernel.
      * 
@@ -111,15 +112,18 @@ public:
     }
     /**
      * Compute the bonded interactions.
+     * 
+     * @param groups        a set of bit flags for which force groups to include
      */
-    void computeInteractions();
+    void computeInteractions(int groups);
 private:
-    std::string createForceSource(int forceIndex, int numBonds, int numAtoms, const std::string& computeForce);
+    std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce);
     OpenCLContext& context;
     std::vector<cl::Kernel> kernels;
     std::vector<std::vector<std::vector<int> > > forceAtoms;
     std::vector<int> indexWidth;
     std::vector<std::string> forceSource;
+    std::vector<int> forceGroup;
     std::vector<std::vector<int> > forceSets;
     std::vector<cl::Memory*> arguments;
     std::vector<std::string> argTypes;

@@ -978,7 +978,7 @@ public:
 private:
     class ReorderListener;
     std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator);
-    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName);
     void recordChangedParameters(ContextImpl& context);
     OpenCLContext& cl;
     double prevStepSize;
@@ -1000,6 +1000,7 @@ private:
     std::vector<bool> needsEnergy;
     std::vector<bool> invalidatesForces;
     std::vector<bool> merged;
+    std::vector<int> forceGroup;
     std::vector<int> requiredGaussian;
     std::vector<int> requiredUniform;
     std::vector<std::string> parameterNames;

@@ -816,6 +816,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             method = PERIODIC;
         }
         if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
+            if (force.getReciprocalSpaceForceGroup() != 0)
+                throw OpenMMException("CudaPlatform does not support force groups");
             if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
                 double alpha;
                 int kmaxx, kmaxy, kmaxz;

@@ -94,19 +94,23 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
+    bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cl.setAtomsWereReordered(false);
-    if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0) {
+    if (nb.getUseCutoff() && includeNonbonded && cl.getComputeForceCount()%100 == 0) {
         cl.reorderAtoms();
-        cl.getNonbondedUtilities().updateNeighborListSize();
+        nb.updateNeighborListSize();
+        cl.setComputeForceCount(cl.getComputeForceCount()+1);
     }
-    cl.setComputeForceCount(cl.getComputeForceCount()+1);
     cl.clearAutoclearBuffers();
-    cl.getNonbondedUtilities().prepareInteractions();
+    if (includeNonbonded)
+        nb.prepareInteractions();
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    cl.getBondedUtilities().computeInteractions();
-    cl.getNonbondedUtilities().computeInteractions();
+    cl.getBondedUtilities().computeInteractions(groups);
+    if ((groups&(1<<cl.getNonbondedUtilities().getForceGroup())) != 0)
+        cl.getNonbondedUtilities().computeInteractions();
     cl.reduceForces();
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
     double sum = 0.0f;
@@ -293,7 +297,7 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     params->upload(paramVector);
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicBondForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicBondForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLBondForceInfo(0, force));
 }
 
@@ -399,7 +403,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customBondForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customBondForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -468,7 +472,7 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     params->upload(paramVector);
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicAngleForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicAngleForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLAngleForceInfo(0, force));
 }
 
@@ -575,7 +579,7 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customAngleForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customAngleForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -646,7 +650,7 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     params->upload(paramVector);
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float4");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::periodicTorsionForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::periodicTorsionForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLPeriodicTorsionForceInfo(0, force));
 }
 
@@ -706,7 +710,7 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     params->upload(paramVector);
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float8");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::rbTorsionForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::rbTorsionForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLRBTorsionForceInfo(0, force));
 }
 
@@ -793,7 +797,7 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
     replacements["COEFF"] = cl.getBondedUtilities().addArgument(coefficients->getDeviceBuffer(), "float4");
     replacements["MAP_POS"] = cl.getBondedUtilities().addArgument(mapPositions->getDeviceBuffer(), "int2");
     replacements["MAPS"] = cl.getBondedUtilities().addArgument(torsionMaps->getDeviceBuffer(), "int");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::cmapTorsionForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLCMAPTorsionForceInfo(0, force));
 }
 
@@ -902,7 +906,7 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["M_PI"] = doubleToString(M_PI);
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customTorsionForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customTorsionForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1170,7 +1174,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     // Add the interaction to the default nonbonded kernel.
     
     string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
-    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
+    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
     if (hasLJ)
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
 
@@ -1192,7 +1196,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         exceptionParams->upload(exceptionParamsVector);
         map<string, string> replacements;
         replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams->getDeviceBuffer(), "float4");
-        cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements));
+        cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
     cl.addForce(new OpenCLNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
 }
@@ -1252,7 +1256,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
        }
     }
-    if (cosSinSums != NULL && cl.getContextIndex() == 0) {
+    if (cosSinSums != NULL && cl.getContextIndex() == 0 && includeReciprocal) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         mm_float4 recipBoxSize = mm_float4((float) (2*M_PI/boxSize.x), (float) (2*M_PI/boxSize.y), (float) (2*M_PI/boxSize.z), 0);
         float recipCoefficient = (float) (ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z));
@@ -1263,7 +1267,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         ewaldForcesKernel.setArg<cl_float>(4, recipCoefficient);
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
-    if (pmeGrid != NULL && cl.getContextIndex() == 0) {
+    if (pmeGrid != NULL && cl.getContextIndex() == 0 && includeReciprocal) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         mm_float4 invBoxSize = cl.getInvPeriodicBoxSize();
         pmeUpdateBsplinesKernel.setArg<mm_float4>(4, boxSize);
@@ -1443,7 +1447,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     string source = cl.replaceStrings(OpenCLKernelSources::customNonbonded, replacements);
-    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
+    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params"+intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
@@ -1538,7 +1542,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = OpenCLKernelSources::gbsaObc2;
-    nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source);
+    nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source, force.getForceGroup());
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(cl_float2), params->getDeviceBuffer()));;
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "float", 1, sizeof(cl_float), bornForce->getDeviceBuffer()));;
     cl.addForce(new OpenCLGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
@@ -2351,7 +2355,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             globals->upload(globalParamValues);
             arguments.push_back(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
         }
-        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, force.getCutoffDistance(), exclusionList, source);
+        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
         for (int i = 0; i < (int) parameters.size(); i++)
             cl.getNonbondedUtilities().addParameter(parameters[i]);
         for (int i = 0; i < (int) arguments.size(); i++)
@@ -2660,7 +2664,7 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customExternalForce, replacements));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customExternalForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -3536,6 +3540,8 @@ public:
     void execute() {
         // Reorder the per-DOF variables to reflect the new atom order.
 
+        if (perDofValues.getNumParameters() == 0)
+            return;
         int numAtoms = cl.getNumAtoms();
         if (deviceValuesAreCurrent)
             perDofValues.getParameterValues(localPerDofValues);
@@ -3623,7 +3629,7 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
     return OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
 }
 
-string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator) {
+string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const string& forceName) {
     const string suffixes[] = {".x", ".y", ".z"};
     string suffix = suffixes[component];
     map<string, Lepton::ParsedExpression> expressions;
@@ -3643,7 +3649,7 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     map<string, string> variables;
     variables["x"] = "position"+suffix;
     variables["v"] = "velocity"+suffix;
-    variables["f"] = "f"+suffix;
+    variables[forceName] = "f"+suffix;
     variables["gaussian"] = "gaussian"+suffix;
     variables["uniform"] = "uniform"+suffix;
     variables["m"] = "mass";
@@ -3681,6 +3687,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         requiredUniform.resize(integrator.getNumComputations(), 0);
         needsForces.resize(numSteps, false);
         needsEnergy.resize(numSteps, false);
+        forceGroup.resize(numSteps, -2);
         invalidatesForces.resize(numSteps, false);
         merged.resize(numSteps, false);
         modifiesParameters = false;
@@ -3722,15 +3729,39 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         stepType.resize(numSteps);
         vector<string> variable(numSteps);
         vector<Lepton::ParsedExpression> expression(numSteps);
+        vector<string> forceGroupName;
+        for (int i = 0; i < 32; i++) {
+            stringstream str;
+            str << "f" << i;
+            forceGroupName.push_back(str.str());
+        }
+        vector<string> forceName(numSteps, "f");
         for (int step = 0; step < numSteps; step++) {
             string expr;
             integrator.getComputationStep(step, stepType[step], variable[step], expr);
             if (expr.size() > 0) {
                 expression[step] = Lepton::Parser::parse(expr).optimize();
-                needsForces[step] = usesVariable(expression[step], "f");
-                needsEnergy[step] = usesVariable(expression[step], "energy");
+                if (usesVariable(expression[step], "f")) {
+                    needsForces[step] = true;
+                    forceGroup[step] = -1;
+                }
+                if (usesVariable(expression[step], "energy")) {
+                    needsEnergy[step] = true;
+                    forceGroup[step] = -1;
+                }
+                for (int i = 0; i < 32; i++) {
+                    if (usesVariable(expression[step], forceGroupName[i])) {
+                        if (forceGroup[step] != -2)
+                            throw OpenMMException("A single computation step cannot depend on multiple force groups");
+                        needsForces[step] = true;
+                        forceGroup[step] = 1<<i;
+                        forceName[step] = forceGroupName[i];
+                    }
+                }
             }
             invalidatesForces[step] = (stepType[step] == CustomIntegrator::ConstrainPositions || affectsForce.find(variable[step]) != affectsForce.end());
+            if (forceGroup[step] == -2 && step > 0)
+                forceGroup[step] = forceGroup[step-1];
         }
         
         // Determine how each step will represent the position (as just a value, or a value plus a delta).
@@ -3756,7 +3787,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         // Identify steps that can be merged into a single kernel.
         
         for (int step = 1; step < numSteps; step++) {
-            if ((needsForces[step] || needsEnergy[step]) && invalidatesForces[step-1])
+            if ((needsForces[step] || needsEnergy[step]) && (invalidatesForces[step-1] || forceGroup[step] != forceGroup[step-1]))
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
                 merged[step] = true;
@@ -3784,7 +3815,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     compute << "{\n";
                     for (int i = 0; i < 3; i++)
-                        compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j], i, integrator);
+                        compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j], i, integrator, forceName[j]);
                     if (variable[j] == "x") {
                         if (storePosAsDelta[j]) {
                             if (cl.getSupportsDoublePrecision())
@@ -3934,7 +3965,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     // Loop over computation steps in the integrator and execute them.
 
     for (int i = 0; i < numSteps; i++) {
-        if ((needsForces[i] || needsEnergy[i]) && !forcesAreValid) {
+        if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || context.getLastForceGroups() != forceGroup[i])) {
             // Recompute forces and/or energy.  Figure out what is actually needed
             // between now and the next time they get invalidated again.
             
@@ -3952,7 +3983,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     break;
             }
             recordChangedParameters(context);
-            context.calcForcesAndEnergy(computeForce, false);
+            context.calcForcesAndEnergy(computeForce, false, forceGroup[i]);
             if (computeEnergy)
                 cl.executeKernel(sumEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
             forcesAreValid = true;

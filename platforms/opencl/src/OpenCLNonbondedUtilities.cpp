@@ -37,7 +37,7 @@ using namespace std;
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false),
         numForceBuffers(0), exclusionIndices(NULL), exclusionRowIndices(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
-        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL) {
+        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), nonbondedForceGroup(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
@@ -91,7 +91,7 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete blockBoundingBox;
 }
 
-void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel) {
+void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
     if (cutoff != -1.0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -99,6 +99,8 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
             throw OpenMMException("All Forces must agree on whether to use periodic boundary conditions");
         if (cutoffDistance != cutoff)
             throw OpenMMException("All Forces must use the same cutoff distance");
+        if (forceGroup != nonbondedForceGroup)
+            throw OpenMMException("All nonbonded forces must be in the same force group");
     }
     if (usesExclusions)
         requestExclusions(exclusionList);
@@ -106,6 +108,7 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
     usePeriodic = usesPeriodic;
     cutoff = cutoffDistance;
     kernelSource += kernel+"\n";
+    nonbondedForceGroup = forceGroup;
 }
 
 void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {

@@ -43,10 +43,11 @@ OpenCLBondedUtilities::~OpenCLBondedUtilities() {
         delete bufferIndices[i];
 }
 
-void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, const string& source) {
+void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, const string& source, int group) {
     if (atoms.size() > 0) {
         forceAtoms.push_back(atoms);
         forceSource.push_back(source);
+        forceGroup.push_back(group);
         int width = 1;
         while (width < atoms[0].size())
             width *= 2;
@@ -154,7 +155,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         const vector<int>& set = *iter;
         int setSize = set.size();
         stringstream s;
-        s<<"__kernel void computeBondedForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq";
+        s<<"__kernel void computeBondedForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, int groups";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             string indexType = "uint"+(indexWidth[force] == 1 ? "" : OpenCLExpressionUtilities::intToString(indexWidth[force]));
@@ -167,7 +168,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         s<<"float energy = 0.0f;\n";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
-            s<<createForceSource(i, forceAtoms[force].size(), forceAtoms[force][0].size(), forceSource[force]);
+            s<<createForceSource(i, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);
         }
         s<<"energyBuffer[get_global_id(0)] += energy;\n";
         s<<"}\n";
@@ -180,7 +181,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     forceSource.clear();
 }
 
-string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, int numAtoms, const string& computeForce) {
+string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const string& computeForce) {
     maxBonds = max(maxBonds, numBonds);
     int width = 1;
     while (width < numAtoms)
@@ -198,6 +199,7 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
         suffix = suffix16;
     string indexType = "uint"+(width == 1 ? "" : OpenCLExpressionUtilities::intToString(width));
     stringstream s;
+    s<<"if ((groups&"<<(1<<group)<<") != 0)\n";
     s<<"for (unsigned int index = get_global_id(0); index < "<<numBonds<<"; index += get_global_size(0)) {\n";
     s<<"    "<<indexType<<" atoms = atomIndices"<<forceIndex<<"[index];\n";
     s<<"    "<<indexType<<" buffers = bufferIndices"<<forceIndex<<"[index];\n";
@@ -218,7 +220,7 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
     return s.str();
 }
 
-void OpenCLBondedUtilities::computeInteractions() {
+void OpenCLBondedUtilities::computeInteractions(int groups) {
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         for (int i = 0; i < (int) forceSets.size(); i++) {
@@ -227,6 +229,7 @@ void OpenCLBondedUtilities::computeInteractions() {
             kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
             kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
             kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
+            index++;
             for (int j = 0; j < (int) forceSets[i].size(); j++) {
                 kernel.setArg<cl::Buffer>(index++, atomIndices[forceSets[i][j]]->getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, bufferIndices[forceSets[i][j]]->getDeviceBuffer());
@@ -235,6 +238,8 @@ void OpenCLBondedUtilities::computeInteractions() {
                 kernel.setArg<cl::Memory>(index++, *arguments[j]);
         }
     }
-    for (int i = 0; i < (int) kernels.size(); i++)
+    for (int i = 0; i < (int) kernels.size(); i++) {
+        kernels[i].setArg<cl_int>(3, groups);
         context.executeKernel(kernels[i], maxBonds);
+    }
 }
