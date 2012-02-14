@@ -87,8 +87,9 @@ void NonbondedSoftcoreForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcNonbondedSoftcoreForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-double NonbondedSoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return dynamic_cast<CalcNonbondedSoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+double NonbondedSoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return dynamic_cast<CalcNonbondedSoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> NonbondedSoftcoreForceImpl::getKernelNames() {

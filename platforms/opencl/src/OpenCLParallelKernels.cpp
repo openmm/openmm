@@ -54,35 +54,36 @@ using namespace std;
 class OpenCLParallelCalcForcesAndEnergyKernel::BeginComputationTask : public OpenCLContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, mm_float4* pinnedMemory) : context(context), cl(cl), kernel(kernel),
-            includeForce(includeForce), includeEnergy(includeEnergy), pinnedMemory(pinnedMemory) {
+            bool includeForce, bool includeEnergy, int groups, mm_float4* pinnedMemory) : context(context), cl(cl), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory) {
     }
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
 
         if (cl.getContextIndex() > 0)
             cl.getQueue().enqueueWriteBuffer(cl.getPosq().getDeviceBuffer(), CL_FALSE, 0, cl.getPaddedNumAtoms()*sizeof(mm_float4), pinnedMemory);
-        kernel.beginComputation(context, includeForce, includeEnergy);
+        kernel.beginComputation(context, includeForce, includeEnergy, groups);
     }
 private:
     ContextImpl& context;
     OpenCLContext& cl;
     OpenCLCalcForcesAndEnergyKernel& kernel;
     bool includeForce, includeEnergy;
+    int groups;
     mm_float4* pinnedMemory;
 };
 
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, double& energy, long long& completionTime, mm_float4* pinnedMemory) :
-            context(context), cl(cl), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), energy(energy),
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, mm_float4* pinnedMemory) :
+            context(context), cl(cl), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory) {
     }
     void execute() {
         // Execute the kernel, then download forces.
         
-        energy += kernel.finishComputation(context, includeForce, includeEnergy);
+        energy += kernel.finishComputation(context, includeForce, includeEnergy, groups);
         if (includeForce) {
             if (cl.getContextIndex() > 0) {
                 int numAtoms = cl.getPaddedNumAtoms();
@@ -99,6 +100,7 @@ private:
     OpenCLContext& cl;
     OpenCLCalcForcesAndEnergyKernel& kernel;
     bool includeForce, includeEnergy;
+    int groups;
     double& energy;
     long long& completionTime;
     mm_float4* pinnedMemory;
@@ -125,7 +127,7 @@ void OpenCLParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
         getKernel(i).initialize(system);
 }
 
-void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy) {
+void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     OpenCLContext& cl0 = *data.contexts[0];
     if (contextForces == NULL) {
         contextForces = new OpenCLArray<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
@@ -144,15 +146,15 @@ void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& cont
         data.contextEnergy[i] = 0.0;
         OpenCLContext& cl = *data.contexts[i];
         OpenCLContext::WorkThread& thread = cl.getWorkThread();
-        thread.addTask(new BeginComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, pinnedPositionMemory));
+        thread.addTask(new BeginComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionMemory));
     }
 }
 
-double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy) {
+double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         OpenCLContext& cl = *data.contexts[i];
         OpenCLContext::WorkThread& thread = cl.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, data.contextEnergy[i], completionTimes[i], pinnedForceMemory));
+        thread.addTask(new FinishComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceMemory));
     }
     data.syncContexts();
     double energy = 0.0;
@@ -487,16 +489,16 @@ double OpenCLParallelCalcCustomTorsionForceKernel::execute(ContextImpl& context,
 class OpenCLParallelCalcNonbondedForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcNonbondedForceKernel& kernel, bool includeForce,
-            bool includeEnergy, double& energy) : context(context), kernel(kernel),
-            includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
+            bool includeEnergy, bool includeDirect, bool includeReciprocal, double& energy) : context(context), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), includeDirect(includeDirect), includeReciprocal(includeReciprocal), energy(energy) {
     }
     void execute() {
-        energy += kernel.execute(context, includeForce, includeEnergy);
+        energy += kernel.execute(context, includeForce, includeEnergy, includeDirect, includeReciprocal);
     }
 private:
     ContextImpl& context;
     OpenCLCalcNonbondedForceKernel& kernel;
-    bool includeForce, includeEnergy;
+    bool includeForce, includeEnergy, includeDirect, includeReciprocal;
     double& energy;
 };
 
@@ -511,11 +513,11 @@ void OpenCLParallelCalcNonbondedForceKernel::initialize(const System& system, co
         getKernel(i).initialize(system, force);
 }
 
-double OpenCLParallelCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double OpenCLParallelCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         OpenCLContext& cl = *data.contexts[i];
         OpenCLContext::WorkThread& thread = cl.getWorkThread();
-        thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
+        thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, includeDirect, includeReciprocal, data.contextEnergy[i]));
     }
     return 0.0;
 }

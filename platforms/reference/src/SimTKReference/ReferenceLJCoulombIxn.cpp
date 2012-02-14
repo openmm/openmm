@@ -164,13 +164,15 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
    @param forces           force array (forces added)
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
+   @param includeDirect      true if direct space interactions should be included
+   @param includeReciprocal  true if reciprocal space interactions should be included
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
+                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const {
     typedef std::complex<RealOpenMM> d_complex;
 
     static const RealOpenMM epsilon     =  1.0;
@@ -212,7 +214,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec
 // **************************************************************************************
     // PME
 
-  if (pme) {
+  if (pme && includeReciprocal) {
 	pme_t          pmedata; /* abstract handle for PME data */
 	RealOpenMM virial[3][3];
 
@@ -232,7 +234,7 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec
 
     // Ewald method
 
-  else if (ewald) {
+  else if (ewald && includeReciprocal) {
 
     // setup reciprocal box
 
@@ -336,17 +338,12 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec
     }
   }
 
-  else {
-      std::stringstream message;
-      message << " Wrong method for Ewald summation, Aborting" << std::endl;
-      SimTKOpenMMLog::printError( message );
-  }
-
-
 // **************************************************************************************
 // SHORT-RANGE ENERGY AND FORCES
 // **************************************************************************************
 
+    if (!includeDirect)
+        return;
     RealOpenMM totalVdwEnergy            = 0.0f;
     RealOpenMM totalRealSpaceEwaldEnergy = 0.0f;
 
@@ -454,16 +451,23 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, vector<RealVec
    @param forces           force array (forces added)
    @param energyByAtom     atom energy
    @param totalEnergy      total energy
+   @param includeDirect      true if direct space interactions should be included
+   @param includeReciprocal  true if reciprocal space interactions should be included
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, vector<RealVec>& atomCoordinates,
+void ReferenceLJCoulombIxn::calculatePairIxn(int numberOfAtoms, vector<RealVec>& atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, vector<RealVec>& forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
+                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const {
 
-   if (ewald || pme)
-        return calculateEwaldIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, fixedParameters, forces, energyByAtom, totalEnergy);
+   if (ewald || pme) {
+       calculateEwaldIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, fixedParameters, forces, energyByAtom,
+               totalEnergy, includeDirect, includeReciprocal);
+       return;
+   }
+   if (!includeDirect)
+       return;
    if (cutoff) {
        for (int i = 0; i < (int) neighborList->size(); i++) {
            OpenMM::AtomPair pair = (*neighborList)[i];

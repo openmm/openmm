@@ -105,8 +105,9 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-double CustomNonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+double CustomNonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomNonbondedForceImpl::getKernelNames() {

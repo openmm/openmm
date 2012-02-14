@@ -181,9 +181,11 @@ public:
      *
      * @param includeForces  true if forces should be calculated
      * @param includeEnergy  true if the energy should be calculated
+     * @param groups         a set of bit flags for which force groups to include.  Group i will be included
+     *                       if (groups&(1<<i)) != 0.  The default value includes all groups.
      * @return the potential energy of the system, or 0 if includeEnergy is false
      */
-    double calcForcesAndEnergy(bool includeForces, bool includeEnergy);
+    double calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups=0xFFFFFFFF);
     /**
      * Calculate the kinetic energy of the system (in kJ/mol).
      */

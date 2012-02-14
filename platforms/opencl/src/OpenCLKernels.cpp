@@ -93,7 +93,7 @@ static pair<ExpressionTreeNode, string> makeVariable(const string& name, const s
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cl.setAtomsWereReordered(false);
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0) {
         cl.reorderAtoms();
@@ -104,7 +104,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     cl.getNonbondedUtilities().prepareInteractions();
 }
 
-double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cl.getBondedUtilities().computeInteractions();
     cl.getNonbondedUtilities().computeInteractions();
     cl.reduceForces();
@@ -1197,7 +1197,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     cl.addForce(new OpenCLNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
 }
 
-double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
     bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;

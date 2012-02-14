@@ -191,13 +191,13 @@ void ContextImpl::computeVirtualSites() {
     dynamic_cast<VirtualSitesKernel&>(virtualSitesKernel.getImpl()).computePositions(*this);
 }
 
-double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy) {
+double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups) {
     CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
     double energy = 0.0;
-    kernel.beginComputation(*this, includeForces, includeEnergy);
+    kernel.beginComputation(*this, includeForces, includeEnergy, groups);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
-        energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy);
-    energy += kernel.finishComputation(*this, includeForces, includeEnergy);
+        energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy, groups);
+    energy += kernel.finishComputation(*this, includeForces, includeEnergy, groups);
     return energy;
 }
 

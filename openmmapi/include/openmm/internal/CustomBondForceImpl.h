@@ -56,7 +56,7 @@ public:
     void updateContextState(ContextImpl& context) {
         // This force field doesn't update the state directly.
     }
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;

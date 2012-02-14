@@ -145,7 +145,7 @@ static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorith
 void ReferenceCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     vector<RealVec>& forceData = extractForces(context);
     if (includeForces) {
         int numParticles = context.getSystem().getNumParticles();
@@ -159,7 +159,7 @@ void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, 
         savedForces = forceData;
 }
 
-double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if (!includeForces)
         extractForces(context) = savedForces; // Restore the forces so computing the energy doesn't overwrite the forces with incorrect values.
     else
@@ -676,7 +676,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         dispersionCoefficient = 0.0;
 }
 
-double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     RealOpenMM energy = 0;
@@ -694,10 +694,12 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
         clj.setUsePME(ewaldAlpha, gridSize);
-    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, includeEnergy ? &energy : NULL);
-    ReferenceBondForce refBondForce;
-    ReferenceLJCoulomb14 nonbonded14;
-    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
+    if (includeDirect) {
+        ReferenceBondForce refBondForce;
+        ReferenceLJCoulomb14 nonbonded14;
+        refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
+    }
     if (periodic || ewald || pme) {
         RealVec& boxSize = extractBoxSize(context);
         energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);

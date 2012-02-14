@@ -263,6 +263,22 @@ public:
     void setUseDispersionCorrection(bool useCorrection) {
         useDispersionCorrection = useCorrection;
     }
+    /**
+     * Get the force group that reciprocal space interactions for Ewald or PME are included in.  This allows multiple
+     * time step integrators to evaluate direct and reciprocal space interactions at different intervals: getForceGroup()
+     * specifies the group for direct space, and getReciprocalSpaceForceGroup() specifies the group for reciprocal space.
+     * The default value is 0.
+     */
+    int getReciprocalSpaceForceGroup() const;
+    /**
+     * Set the force group that reciprocal space interactions for Ewald or PME are included in.  This allows multiple
+     * time step integrators to evaluate direct and reciprocal space interactions at different intervals: setForceGroup()
+     * specifies the group for direct space, and setReciprocalSpaceForceGroup() specifies the group for reciprocal space.
+     * The default value is 0.
+     * 
+     * @param group    the group index.  Legal values are between 0 and 31 (inclusive).
+     */
+    void setReciprocalSpaceForceGroup(int group);
 protected:
     ForceImpl* createImpl();
 private:
@@ -271,6 +287,7 @@ private:
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, rfDielectric, ewaldErrorTol;
     bool useDispersionCorrection;
+    int recipForceGroup;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;

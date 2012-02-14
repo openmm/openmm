@@ -30,7 +30,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceLJCoulombIxn : public ReferencePairIxn {
+class ReferenceLJCoulombIxn {
 
    private:
        
@@ -153,13 +153,15 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
+         @param includeDirect      true if direct space interactions should be included
+         @param includeReciprocal  true if reciprocal space interactions should be included
       
          --------------------------------------------------------------------------------------- */
           
-      void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculatePairIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 
 private:
       /**---------------------------------------------------------------------------------------
@@ -177,13 +179,15 @@ private:
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
+         @param includeDirect      true if direct space interactions should be included
+         @param includeReciprocal  true if reciprocal space interactions should be included
             
          --------------------------------------------------------------------------------------- */
           
-      void calculateEwaldIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+      void calculateEwaldIxn(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy, bool includeDirect, bool includeReciprocal) const;
 };
 
 // ---------------------------------------------------------------------------------------

@@ -43,14 +43,16 @@ private:
     std::vector<RealOpenMM> inverseMasses;
     std::vector<OpenMM::RealVec> sumBuffer;
     std::vector<OpenMM::CustomIntegrator::ComputationType> stepType;
-    std::vector<std::string> stepVariable;
+    std::vector<std::string> stepVariable, forceName;
     std::vector<Lepton::ExpressionProgram> stepExpression;
     std::vector<bool> invalidatesForces, needsForces, needsEnergy;
+    std::vector<int> forceGroup;
     RealOpenMM energy;
     
     void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
                   const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,
-                  const std::map<std::string, RealOpenMM>& globals, const std::vector<std::vector<OpenMM::RealVec> >& perDof, const Lepton::ExpressionProgram& expression);
+                  const std::map<std::string, RealOpenMM>& globals, const std::vector<std::vector<OpenMM::RealVec> >& perDof,
+                  const Lepton::ExpressionProgram& expression, const std::string& forceName);
     
     void recordChangedParameters(OpenMM::ContextImpl& context, std::map<std::string, RealOpenMM>& globals);
       

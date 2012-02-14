@@ -82,10 +82,12 @@ public:
      * @param context        the context in which the system is being simulated
      * @param includeForces  true if forces should be calculated
      * @param includeEnergy  true if the energy should be calculated
+     * @param groups         a set of bit flags for which force groups to include.  Group i should be included
+     *                       if (groups&(1<<i)) != 0.
      * @return this force's contribution to the potential energy of the system, or 0 if this
      * force does not contribute to potential energy (or if includeEnergy is false)
      */
-    virtual double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    virtual double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) = 0;
     /**
      * Get a map containing the default values for all adjustable parameters defined by this ForceImpl.  These
      * parameters and their default values will automatically be added to the Context.

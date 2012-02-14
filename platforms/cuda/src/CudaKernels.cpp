@@ -46,7 +46,7 @@ using namespace std;
 void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
@@ -59,7 +59,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
         kClearEnergy(gpu);
 }
 
-double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     _gpuContext* gpu = data.gpu;
     if (gpu->bIncludeGBSA || gpu->bIncludeGBVI) {
         gpu->bRecalculateBornRadii = true;
@@ -874,7 +874,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     data.gpu->forces.push_back(new ForceInfo(force));
 }
 
-double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
     return 0.0;
 }
 

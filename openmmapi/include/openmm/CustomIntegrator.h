@@ -97,6 +97,9 @@ namespace OpenMM {
  * freedom (the x, y, or z component of a particle's velocity).</li>
  * <li>f: (per-DOF, read-only) This is the current force acting on the degree of
  * freedom (the x, y, or z component of the force on a particle).</li>
+ * <li>f0, f1, f2, ...: (per-DOF, read-only) This is similar to f, but includes
+ * only the contribution from forces in one force group.  A single computation
+ * step may only depend on a single force variable (f, f0, f1, etc.).</li>
  * <li>m: (per-DOF, read-only) This is the mass of the particle the degree of
  * freedom is associated with.</li>
  * <li>uniform: (either global or per-DOF, read-only) This is a uniformly
@@ -161,6 +164,22 @@ namespace OpenMM {
  * put addUpdateContextState() at the beginning of the algorithm instead, that would
  * risk invalidating the forces just before the first velocity update, thus
  * requiring two force evaluations per time step instead of one.
+ * 
+ * CustomIntegrator can be used to implement multiple time step integrators.  The
+ * following example shows an r-RESPA integrator.  It assumes the quickly changing
+ * forces are in force group 0 and the slowly changing ones are in force group 1.
+ * It evaluates the "fast" forces four times as often as the "slow" forces.
+ * 
+ * <tt><pre>
+ * CustomIntegrator integrator(0.004);
+ * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+ * for (int i = 0; i < 4; i++) {
+ *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
+ *     integrator.addComputePerDof("x", "x+(dt/4)*v");
+ *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
+ * }
+ * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+ * </pre></tt>
  * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step.  All trigonometric functions

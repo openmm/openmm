@@ -55,8 +55,9 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-double AmoebaVdwForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+double AmoebaVdwForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaVdwForceImpl::getKernelNames() {

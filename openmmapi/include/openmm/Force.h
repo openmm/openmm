@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -51,13 +51,31 @@ class ForceImpl;
  * <li>Define parameters which are stored in the Context and can be modified by the user</li>
  * <li>Change the values of parameters defined by other Force objects at the start of each time step</li>
  * </ul>
+ * 
+ * Forces may be organized into "force groups".  This is used for multiple time step integration,
+ * and allows subsets of the Forces in a System to be evaluated at different times.  By default,
+ * all Forces are in group 0.  Call setForceGroup() to change this.  Some Force subclasses may
+ * provide additional methods to further split their computations into multiple groups.  Be aware
+ * that particular Platforms may place restrictions on the use of force groups, such as requiring
+ * all nonbonded forces to be in the same group.
  */
 
 class OPENMM_EXPORT Force {
 public:
-    Force() {}
+    Force() : forceGroup(0) {
+    }
     virtual ~Force() {
     }
+    /**
+     * Get the force group this Force belongs to.
+     */
+    int getForceGroup() const;
+    /**
+     * Set the force group this Force belongs to.
+     * 
+     * @param group    the group index.  Legal values are between 0 and 31 (inclusive).
+     */
+    void setForceGroup(int group);
 protected:
     friend class ContextImpl;
     /**
@@ -66,6 +84,8 @@ protected:
      * The ForceImpl will be deleted automatically when the Context is deleted.
      */
     virtual ForceImpl* createImpl() = 0;
+private:
+    int forceGroup;
 };
 
 } // namespace OpenMM

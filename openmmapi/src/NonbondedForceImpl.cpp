@@ -98,8 +98,10 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    bool includeDirect = ((groups&(1<<owner.getForceGroup())) != 0);
+    bool includeReciprocal = ((groups&(1<<owner.getReciprocalSpaceForceGroup())) != 0);
+    return dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
 }
 
 std::vector<std::string> NonbondedForceImpl::getKernelNames() {

@@ -56,8 +56,9 @@ void AmoebaWcaDispersionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-double AmoebaWcaDispersionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    return dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+double AmoebaWcaDispersionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy ) {
 

@@ -89,8 +89,9 @@ public:
      * @param context       the context in which to execute this kernel
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
+     * @param groups        a set of bit flags for which force groups to include
      */
-    virtual void beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy) = 0;
+    virtual void beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) = 0;
     /**
      * This is called at the end of each force/energy computation, after calcForcesAndEnergy() has been called on
      * every ForceImpl.
@@ -98,11 +99,12 @@ public:
      * @param context       the context in which to execute this kernel
      * @param includeForce  true if forces should be computed
      * @param includeEnergy true if potential energy should be computed
+     * @param groups        a set of bit flags for which force groups to include
      * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
      * calcForcesAndEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
      * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
      */
-    virtual double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy) = 0;
+    virtual double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) = 0;
 };
 
 /**
@@ -486,9 +488,11 @@ public:
      * @param context        the context in which to execute this kernel
      * @param includeForces  true if forces should be calculated
      * @param includeEnergy  true if the energy should be calculated
+     * @param includeDirect  true if direct space interactions should be included
+     * @param includeReciprocal  true if reciprocal space interactions should be included
      * @return the potential energy due to the force
      */
-    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) = 0;
 };
 
 /**
