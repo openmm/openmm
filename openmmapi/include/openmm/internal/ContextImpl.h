@@ -187,6 +187,10 @@ public:
      */
     double calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups=0xFFFFFFFF);
     /**
+     * Get the set of force group flags that were passed to the most recent call to calcForcesAndEnergy().
+     */
+    int getLastForceGroups() const;
+    /**
      * Calculate the kinetic energy of the system (in kJ/mol).
      */
     double calcKineticEnergy();
@@ -226,6 +230,7 @@ private:
     std::map<std::string, double> parameters;
     mutable std::vector<std::vector<int> > molecules;
     bool hasInitializedForces;
+    int lastForceGroups;
     Platform* platform;
     Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;
     void* platformData;

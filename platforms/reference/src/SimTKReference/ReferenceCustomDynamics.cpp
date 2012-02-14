@@ -91,7 +91,6 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                                      vector<RealVec>& velocities, vector<RealVec>& forces, vector<RealOpenMM>& masses,
                                      map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid){
     int numSteps = stepType.size();
-    int currentForceGroup = -1;
     globals.insert(context.getParameters().begin(), context.getParameters().end());
     if (invalidatesForces.size() == 0) {
         // The first time this is called, work out when to recompute forces and energy.  First build a
@@ -167,7 +166,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
     // Loop over steps and execute them.
     
     for (int i = 0; i < numSteps; i++) {
-        if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || currentForceGroup != forceGroup[i])) {
+        if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || context.getLastForceGroups() != forceGroup[i])) {
             // Recompute forces and or energy.  Figure out what is actually needed
             // between now and the next time they get invalidated again.
             
@@ -189,7 +188,6 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
             if (computeEnergy)
                 energy = e;
             forcesAreValid = true;
-            currentForceGroup = forceGroup[i];
         }
         globals["energy"] = energy;
         
@@ -248,8 +246,6 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
     ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();
     recordChangedParameters(context, globals);
-    if (currentForceGroup != -1)
-        forcesAreValid = false;
 }
 
 void ReferenceCustomDynamics::computePerDof(int numberOfAtoms, vector<RealVec>& results, const vector<RealVec>& atomCoordinates,

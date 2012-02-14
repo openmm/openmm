@@ -49,7 +49,7 @@ using std::vector;
 using std::string;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
-         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), platform(platform), platformData(NULL) {
+         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), lastForceGroups(-1), platform(platform), platformData(NULL) {
     if (system.getNumParticles() == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");
     
@@ -192,6 +192,7 @@ void ContextImpl::computeVirtualSites() {
 }
 
 double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+    lastForceGroups = groups;
     CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
     double energy = 0.0;
     kernel.beginComputation(*this, includeForces, includeEnergy, groups);
@@ -199,6 +200,10 @@ double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, 
         energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy, groups);
     energy += kernel.finishComputation(*this, includeForces, includeEnergy, groups);
     return energy;
+}
+
+int ContextImpl::getLastForceGroups() const {
+    return lastForceGroups;
 }
 
 double ContextImpl::calcKineticEnergy() {
