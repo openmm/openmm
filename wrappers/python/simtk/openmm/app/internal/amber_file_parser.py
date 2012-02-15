@@ -114,7 +114,7 @@ class PrmtopLoader(object):
                 for index in range(0, len(line), iLength):
                     item = line.rstrip()[index:index+iLength]
                     if item:
-                        self._raw_data[flag].append(item)
+                        self._raw_data[flag].append(item.strip())
         fIn.close()
 
     def _getFormat(self, flag=None):
@@ -470,7 +470,7 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=True, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
     """
     Create an OpenMM System from an Amber prmtop file.
     
@@ -487,6 +487,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
       mm - if specified, this module will be used in place of pyopenmm (default: None)
       verbose (boolean) - if True, print out information on progress (default: False)
       flexibleConstraints (boolean) - if True, flexible bonds will be added in addition ot constrained bonds
+      rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the shake argument
 
     NOTES
 
@@ -546,19 +547,25 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         system.addParticle(mass)
 
     # Add constraints.
+    isWater = [prmtop.getResidueLabel(i) == 'WAT' for i in range(prmtop.getNumAtoms())]
     if shake in ('h-bonds', 'all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
             system.addConstraint(iAtom, jAtom, rMin)
     if shake in ('all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsNoH():
             system.addConstraint(iAtom, jAtom, rMin)
+    if rigidWater and shake == None:
+        for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
+            if isWater[iAtom] and isWater[jAtom]:
+                system.addConstraint(iAtom, jAtom, rMin)
             
     # Add harmonic bonds.
     if verbose: print "Adding bonds..."    
     force = mm.HarmonicBondForce()
     if flexibleConstraints or (shake not in ('h-bonds', 'all-bonds', 'h-angles')):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
-            force.addBond(iAtom, jAtom, rMin, 2*k)                            
+            if flexibleConstraints or not (rigidWater and isWater[iAtom] and isWater[jAtom]):
+                force.addBond(iAtom, jAtom, rMin, 2*k)
     if flexibleConstraints or (shake not in ('all-bonds', 'h-angles')):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsNoH():
             force.addBond(iAtom, jAtom, rMin, 2*k)
@@ -590,7 +597,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             for bond in atomConstraints[jAtom]:
                 if bond[0] == iAtom:
                     l1 = bond[1]
-                elif bond[0] == jAtom:
+                elif bond[0] == kAtom:
                     l2 = bond[1]
             
             # Compute the distance between atoms and add a constraint

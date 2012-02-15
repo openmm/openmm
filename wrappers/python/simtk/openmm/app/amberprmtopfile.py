@@ -116,7 +116,7 @@ class AmberPrmtopFile(object):
         else:
             raise ValueError('Illegal value for implicit solvent model')
         sys = amber_file_parser.readAmberSystem(prmtop_loader=self.prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
-                                                 nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString)
+                                                 nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString, rigidWater=rigidWater)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
         return sys
