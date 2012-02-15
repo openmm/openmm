@@ -136,8 +136,8 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     // Apply the PILE-L thermostat.
     
     const double dt = integrator.getStepSize();
-    pileKernel.setArg<cl::Buffer>(4, integration.getRandom().getDeviceBuffer());
     pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
+    pileKernel.setArg<cl::Buffer>(4, integration.getRandom().getDeviceBuffer()); // Do this *after* prepareRandomNumbers(), which might rebuild the array.
     pileKernel.setArg<cl_float>(6, dt);
     pileKernel.setArg<cl_float>(7, integrator.getTemperature()*BOLTZ);
     pileKernel.setArg<cl_float>(8, integrator.getFriction());
