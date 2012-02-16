@@ -470,7 +470,7 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=True, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
     """
     Create an OpenMM System from an Amber prmtop file.
     
@@ -686,6 +686,66 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     system.addForce(force)
 
+    # Add virtual sites for water.
+    
+    epNames = ['EP', 'LP']
+    ep = [i for i in range(prmtop.getNumAtoms()) if isWater[i] and prmtop.getAtomName(i)[:2] in epNames]
+    if len(ep) > 0:
+        epRes = set((prmtop.getResidueNumber(i) for i in ep))
+        numRes = max(epRes)+1
+        # For each residue that contains an "extra point", find the oxygen, hydrogens, and points.
+        waterO = []
+        waterH = []
+        waterEP = []
+        for i in range(numRes):
+            waterO.append([])
+            waterH.append([])
+            waterEP.append([])
+        for i in range(prmtop.getNumAtoms()):
+            res = prmtop.getResidueNumber(i)
+            if res in epRes:
+                name = prmtop.getAtomName(i)
+                if name[0] == 'O':
+                    waterO[res].append(i)
+                if name[0] == 'H':
+                    waterH[res].append(i)
+                if name[:2] in epNames:
+                    waterEP[res].append(i)
+        # Record bond lengths for faster access.
+        distOH = [None]*numRes
+        distHH = [None]*numRes
+        distOE = [None]*numRes
+        for (atom1, atom2, k, dist) in prmtop.getBondsWithH()+prmtop.getBondsNoH():
+            res = prmtop.getResidueNumber(atom1)
+            if res in epRes:
+                name1 = prmtop.getAtomName(atom1)
+                name2 = prmtop.getAtomName(atom2)
+                if name1[0] == 'H' or name2[0] == 'H':
+                    if name1[0] == 'H' and name2[0] == 'H':
+                        distHH[res] = dist
+                    if name1[0] == 'O' or name2[0] == 'O':
+                        distOH[res] = dist
+                elif (name1[0] == 'O' or name2[0] == 'O') and ((name1[:2] in epNames or name2[:2] in epNames)):
+                    distOE[res] = dist
+        # Loop over residues and add the virtual sites.
+        outOfPlaneAngle = 54.735*units.degree
+        cosOOP = units.cos(outOfPlaneAngle)
+        sinOOP = units.sin(outOfPlaneAngle)
+        for res in range(numRes):
+            if len(waterO[res]) == 1 and len(waterH[res]) == 2:
+                if len(waterEP[res]) == 1:
+                    # Four point water
+                    weightH = distOE[res]/units.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
+                    system.setVirtualSite(waterEP[res][0], mm.ThreeParticleAverageSite(waterO[res][0], waterH[res][0], waterH[res][1], 1-weightH, weightH/2, weightH/2))
+                elif len(waterEP[res]) == 2:
+                    # Five point water
+                    weightH = cosOOP*distOE[res]/units.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
+                    angleHOH = 2*math.asin(0.5*distHH[res]/distOH[res])
+                    lenCross = (distOH[res].value_in_unit(units.nanometer)**2)*math.sin(angleHOH)*units.nanometer
+                    weightCross = sinOOP*distOE[res]/lenCross
+                    system.setVirtualSite(waterEP[res][0], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, weightCross))
+                    system.setVirtualSite(waterEP[res][1], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, -weightCross))
+    
     # Add GBSA-OBC model.
     if gbmodel == 'OBC':
         if verbose: print "Adding GB parameters..."            
