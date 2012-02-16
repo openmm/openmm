@@ -3895,6 +3895,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                         }
                     if (!found)
                         throw OpenMMException("Unknown global variable: "+variable[step]);
+                    kernel.setArg<cl_int>(index++, 3*numAtoms);
                 }
             }
             else if (stepType[step] == CustomIntegrator::ComputeGlobal && !merged[step]) {
@@ -3935,7 +3936,8 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         int index = 0;
         sumEnergyKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         sumEnergyKernel.setArg<cl::Buffer>(index++, energy->getDeviceBuffer());
-        sumEnergyKernel.setArg<cl_float>(index++, 0);
+        sumEnergyKernel.setArg<cl_int>(index++, 0);
+        sumEnergyKernel.setArg<cl_int>(index++, cl.getEnergyBuffer().getSize());
     }
     
     // Make sure all values (variables, parameters, etc.) stored on the device are up to date.
@@ -3983,7 +3985,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     break;
             }
             recordChangedParameters(context);
-            context.calcForcesAndEnergy(computeForce, false, forceGroup[i]);
+            context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
             if (computeEnergy)
                 cl.executeKernel(sumEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
             forcesAreValid = true;

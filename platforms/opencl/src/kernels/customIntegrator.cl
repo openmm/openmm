@@ -1,8 +1,8 @@
-__kernel void computeSum(__global const float* restrict sumBuffer, __global float* result, unsigned int outputIndex) {
+__kernel void computeSum(__global const float* restrict sumBuffer, __global float* result, unsigned int outputIndex, int bufferSize) {
     __local float tempBuffer[WORK_GROUP_SIZE];
     const unsigned int thread = get_local_id(0);
     float sum = 0.0f;
-    for (unsigned int index = thread; index < 3*NUM_ATOMS; index += get_local_size(0))
+    for (unsigned int index = thread; index < bufferSize; index += get_local_size(0))
         sum += sumBuffer[index];
     tempBuffer[thread] = sum;
     for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
