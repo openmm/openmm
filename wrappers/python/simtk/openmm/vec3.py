@@ -44,6 +44,7 @@ class Vec3(tuple):
     def __div__(self, other):
         """Divide a Vec3 by a constant."""
         return Vec3(self[0]/other, self[1]/other, self[2]/other)
+    __truediv__ = __div__
     
     def __deepcopy__(self, memo):
         return Vec3(self[0], self[1], self[2])

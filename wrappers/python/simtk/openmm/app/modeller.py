@@ -1,6 +1,8 @@
 """
 modeller.py: Provides tools for editing molecular models
 """
+from __future__ import division
+
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
@@ -213,7 +215,10 @@ class Modeller(object):
             raise ValueError('The ForceField does not specify a NonbondedForce')
         cutoff = [nonbonded.getParticleParameters(i)[1].value_in_unit(nanometer)*vdwRadiusPerSigma+waterRadius for i in range(system.getNumParticles())]
         waterCutoff = 2*waterRadius
-        maxCutoff = max(waterCutoff, max(cutoff))
+        if len(cutoff) == 0:
+            maxCutoff = waterCutoff
+        else:
+            maxCutoff = max(waterCutoff, max(cutoff))
         
         # Copy the solute over.
 
@@ -235,9 +240,12 @@ class Modeller(object):
         
         # Sort the solute atoms into cells for fast lookup.
         
-        positions = self.positions.value_in_unit(nanometer)
+        if len(self.positions) == 0:
+            positions = []
+        else:
+            positions = self.positions.value_in_unit(nanometer)
         cells = {}
-        numCells = tuple((int(floor(box[i]/maxCutoff)) for i in range(3)))
+        numCells = tuple((max(1, int(floor(box[i]/maxCutoff))) for i in range(3)))
         cellSize = tuple((box[i]/numCells[i] for i in range(3)))
         for i in range(len(positions)):
             cell = tuple((int(floor(positions[i][j]/cellSize[j]))%numCells[j] for j in range(3)))
@@ -269,8 +277,11 @@ class Modeller(object):
         # Find the list of water molecules to add.
         
         newChain = newTopology.addChain()
-        center = [(max((pos[i] for pos in positions))+min((pos[i] for pos in positions)))/2 for i in range(3)]
-        center = Vec3(center[0], center[1], center[2])
+        if len(positions) == 0:
+            center = Vec3(0, 0, 0)
+        else:
+            center = [(max((pos[i] for pos in positions))+min((pos[i] for pos in positions)))/2 for i in range(3)]
+            center = Vec3(center[0], center[1], center[2])
         numBoxes = [int(ceil(box[i]/pdbBoxSize[i])) for i in range(3)]
         addedWaters = []
         for boxx in range(numBoxes[0]):
@@ -310,7 +321,7 @@ class Modeller(object):
             if pos[0] < upperCutoff[0] and pos[1] < upperCutoff[1] and pos[2] < upperCutoff[2]:
                 filteredWaters.append(entry)
             else:
-                if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff for i in neighbors(pos))):
+                if not any((periodicDistance(lowerSkinPositions[i], pos) < waterCutoff and norm(lowerSkinPositions[i]-pos) > waterCutoff for i in neighbors(pos))):
                     filteredWaters.append(entry)
         addedWaters = filteredWaters
         
