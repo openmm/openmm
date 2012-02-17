@@ -74,9 +74,9 @@ class Modeller(object):
         """Convert all water molecules to a different water model.
         
         Parameters:
-         - model (string='tip3p') the water model to convert to.  Supported values are 'tip3p', 'tip4pew', and 'tip5p'.
+         - model (string='tip3p') the water model to convert to.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
         """
-        if model == 'tip3p':
+        if model in ('tip3p', 'spce'):
             sites = 3
         elif model == 'tip4pew':
             sites = 4
@@ -153,7 +153,7 @@ class Modeller(object):
         
         Parameters:
          - forcefield (ForceField) the ForceField to use for determining van der Waals radii and atomic charges
-         - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'tip4pew', and 'tip5p'.
+         - model (string='tip3p') the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
          - boxSize (Vec3=None) the size of the box to fill with water
          - padding (distance=None) the padding distance to use
          - positiveIon (string='Na+') the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
@@ -192,6 +192,8 @@ class Modeller(object):
         vdwRadiusPerSigma = 0.5612310241546864907
         if model == 'tip3p':
             waterRadius = 0.31507524065751241*vdwRadiusPerSigma
+        elif model == 'spce':
+            waterRadius = 0.31657195050398818*vdwRadiusPerSigma
         elif model == 'tip4pew':
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
