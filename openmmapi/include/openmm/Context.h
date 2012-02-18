@@ -123,8 +123,10 @@ public:
      * @param enforcePeriodicBox if false, the position of each particle will be whatever position
      * is stored in the Context, regardless of periodic boundary conditions.  If true, particle
      * positions will be translated so the center of every molecule lies in the same periodic box.
+     * @param groups a set of bit flags for which force groups to include when computing forces
+     * and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
      */
-    State getState(int types, bool enforcePeriodicBox=false) const;
+    State getState(int types, bool enforcePeriodicBox=false, int groups=0xFFFFFFFF) const;
     /**
      * Set the current time of the simulation (in picoseconds).
      */

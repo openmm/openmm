@@ -553,6 +553,19 @@ void testForceGroups() {
     ASSERT_EQUAL_VEC(Vec3(138.935456*0.2*0.2/4.0, 0, 0), f2[1], 1e-5);
     ASSERT_EQUAL_VEC(f1[0]+f2[0], f[0], 1e-5);
     ASSERT_EQUAL_VEC(f1[1]+f2[1], f[1], 1e-5);
+    
+    // Make sure they also match the values returned by the Context.
+    
+    vector<Vec3> c, c1, c2;
+    c = context.getState(State::Forces, false).getForces();
+    c1 = context.getState(State::Forces, false, 2).getForces();
+    c2 = context.getState(State::Forces, false, 4).getForces();
+    ASSERT_EQUAL_VEC(f[0], c[0], 1e-5);
+    ASSERT_EQUAL_VEC(f[1], c[1], 1e-5);
+    ASSERT_EQUAL_VEC(f1[0], c1[0], 1e-5);
+    ASSERT_EQUAL_VEC(f1[1], c1[1], 1e-5);
+    ASSERT_EQUAL_VEC(f2[0], c2[0], 1e-5);
+    ASSERT_EQUAL_VEC(f2[1], c2[1], 1e-5);
 }
 
 /**

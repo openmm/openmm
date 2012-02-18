@@ -78,7 +78,7 @@ Platform& Context::getPlatform() {
     return impl->getPlatform();
 }
 
-State Context::getState(int types, bool enforcePeriodicBox) const {
+State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     State state(impl->getTime(), impl->getSystem().getNumParticles(), types);
     Vec3 periodicBoxSize[3];
     impl->getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
@@ -86,7 +86,7 @@ State Context::getState(int types, bool enforcePeriodicBox) const {
     bool includeForces = types&State::Forces;
     bool includeEnergy = types&State::Energy;
     if (includeForces || includeEnergy) {
-        double energy = impl->calcForcesAndEnergy(includeForces, includeEnergy);
+        double energy = impl->calcForcesAndEnergy(includeForces, includeEnergy, groups);
         if (includeEnergy)
             state.setEnergy(impl->calcKineticEnergy(), energy);
         if (includeForces)
