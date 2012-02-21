@@ -51,6 +51,7 @@ using namespace OpenMM;
 ReferenceCustomDynamics::ReferenceCustomDynamics(int numberOfAtoms, const CustomIntegrator& integrator) : 
            ReferenceDynamics(numberOfAtoms, integrator.getStepSize(), 0.0), integrator(integrator) {
     sumBuffer.resize(numberOfAtoms);
+    oldPos.resize(numberOfAtoms);
     stepType.resize(integrator.getNumComputations());
     stepVariable.resize(integrator.getNumComputations());
     stepExpression.resize(integrator.getNumComputations());
@@ -92,6 +93,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                                      map<string, RealOpenMM>& globals, vector<vector<RealVec> >& perDof, bool& forcesAreValid){
     int numSteps = stepType.size();
     globals.insert(context.getParameters().begin(), context.getParameters().end());
+    oldPos = atomCoordinates;
     if (invalidatesForces.size() == 0) {
         // The first time this is called, work out when to recompute forces and energy.  First build a
         // list of every step that invalidates the forces.
@@ -227,11 +229,12 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 break;
             }
             case CustomIntegrator::ConstrainPositions: {
-                getReferenceConstraintAlgorithm()->apply(numberOfAtoms, atomCoordinates, atomCoordinates, inverseMasses);
+                getReferenceConstraintAlgorithm()->apply(numberOfAtoms, oldPos, atomCoordinates, inverseMasses);
+                oldPos = atomCoordinates;
                 break;
             }
             case CustomIntegrator::ConstrainVelocities: {
-                getReferenceConstraintAlgorithm()->applyToVelocities(numberOfAtoms, atomCoordinates, velocities, inverseMasses);
+                getReferenceConstraintAlgorithm()->applyToVelocities(numberOfAtoms, oldPos, velocities, inverseMasses);
                 break;
             }
             case CustomIntegrator::UpdateContextState: {
