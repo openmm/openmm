@@ -660,7 +660,7 @@ class Atom(object):
         try:
             temperature_factor = float(pdb_line[60:66]) * unit.angstroms * unit.angstroms
         except:
-            temperature_factor = 0.0
+            temperature_factor = 0.0 * unit.angstroms * unit.angstroms
         self.locations = {}
         loc = Atom.Location(alternate_location_indicator, Vec3(x,y,z) * unit.angstroms, occupancy, temperature_factor, self.residue_name_with_spaces)
         self.locations[alternate_location_indicator] = loc
