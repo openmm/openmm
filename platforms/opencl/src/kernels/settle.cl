@@ -173,57 +173,41 @@ __kernel void constrainVelocities(int numClusters, float tol, __global const flo
         float4 v0 = velm[atoms.x];
         float4 v1 = velm[atoms.y];
         float4 v2 = velm[atoms.z];
-        float m0 = RECIP(v0.w);
-        float m1 = RECIP(v1.w);
-        float m2 = RECIP(v2.w);
-
-        // Compute the center of mass position and velocity, and atom positions and
-        // velocities relative to it.
-
-        float4 com = (apos0*m0 + apos1*m1 + apos2*m2)/(m0+m1+m2);
-        float4 deltax0 = apos0-com;
-        float4 deltax1 = apos1-com;
-        float4 deltax2 = apos2-com;
-        float4 p = v0*m0 + v1*m1 + v2*m2;
-        float4 v = p/(m0+m1+m2);
-        float4 deltav0 = v0-v;
-        float4 deltav1 = v1-v;
-        float4 deltav2 = v2-v;
-
-        // Compute linear and angular momentum, and the inertia tensor.
-
-        float4 L = cross(deltax0, deltav0)*m0 + cross(deltax1, deltav1)*m1 + cross(deltax2, deltav2)*m2;
-        float Ixx = m0*(deltax0.y*deltax0.y+deltax0.z*deltax0.z) + m1*(deltax1.y*deltax1.y+deltax1.z*deltax1.z) + m2*(deltax2.y*deltax2.y+deltax2.z*deltax2.z);
-        float Iyy = m0*(deltax0.x*deltax0.x+deltax0.z*deltax0.z) + m1*(deltax1.x*deltax1.x+deltax1.z*deltax1.z) + m2*(deltax2.x*deltax2.x+deltax2.z*deltax2.z);
-        float Izz = m0*(deltax0.x*deltax0.x+deltax0.y*deltax0.y) + m1*(deltax1.x*deltax1.x+deltax1.y*deltax1.y) + m2*(deltax2.x*deltax2.x+deltax2.y*deltax2.y);
-        float Ixy = -m0*deltax0.x*deltax0.y - m1*deltax1.x*deltax1.y - m2*deltax2.x*deltax2.y;
-        float Ixz = -m0*deltax0.x*deltax0.z - m1*deltax1.x*deltax1.z - m2*deltax2.x*deltax2.z;
-        float Iyz = -m0*deltax0.y*deltax0.z - m1*deltax1.y*deltax1.z - m2*deltax2.y*deltax2.z;
-        float Iyx = Ixy;
-        float Izx = Ixz;
-        float Izy = Iyz;
         
-        // Invert the inertia tensor and use it to compute the angular velocity.
+        // Compute intermediate quantities: the atom masses, the bond directions, the relative velocities,
+        // and the angle cosines and sines.
         
-        float Axx = Iyy*Izz - Iyz*Izy;
-        float Axy = Iyz*Izx - Iyx*Izz;
-        float Axz = Iyx*Izy - Iyy*Izx;
-        float Ayx = Izy*Ixz - Izz*Ixy;
-        float Ayy = Izz*Ixx - Izx*Ixz;
-        float Ayz = Izx*Ixy - Izy*Ixx;
-        float Azx = Ixy*Iyz - Ixz*Iyy;
-        float Azy = Ixz*Iyx - Ixx*Iyz;
-        float Azz = Ixx*Iyy - Ixy*Iyx;
-        float invDet = 1.0f/(Ixx*Axx + Ixy*Axy + Ixz*Axz);
-        float4 w = (float4) (invDet*(L.x*Axx + L.y*Axy + L.z*Axz),
-                             invDet*(L.x*Ayx + L.y*Ayy + L.z*Ayz),
-                             invDet*(L.x*Azx + L.y*Azy + L.z*Azz), 0.0f);
+        float mA = RECIP(v0.w);
+        float mB = RECIP(v1.w);
+        float mC = RECIP(v2.w);
+        float4 eAB = apos1-apos0;
+        float4 eBC = apos2-apos1;
+        float4 eCA = apos0-apos2;
+        eAB.xyz /= SQRT(eAB.x*eAB.x + eAB.y*eAB.y + eAB.z*eAB.z);
+        eBC.xyz /= SQRT(eBC.x*eBC.x + eBC.y*eBC.y + eBC.z*eBC.z);
+        eCA.xyz /= SQRT(eCA.x*eCA.x + eCA.y*eCA.y + eCA.z*eCA.z);
+        float vAB = (v1.x-v0.x)*eAB.x + (v1.y-v0.y)*eAB.y + (v1.z-v0.z)*eAB.z;
+        float vBC = (v2.x-v1.x)*eBC.x + (v2.y-v1.y)*eBC.y + (v2.z-v1.z)*eBC.z;
+        float vCA = (v0.x-v2.x)*eCA.x + (v0.y-v2.y)*eCA.y + (v0.z-v2.z)*eCA.z;
+        float cA = -(eAB.x*eCA.x + eAB.y*eCA.y + eAB.z*eCA.z);
+        float cB = -(eAB.x*eBC.x + eAB.y*eBC.y + eAB.z*eBC.z);
+        float cC = -(eBC.x*eCA.x + eBC.y*eCA.y + eBC.z*eCA.z);
+        float s2A = 1-cA*cA;
+        float s2B = 1-cB*cB;
+        float s2C = 1-cC*cC;
         
-        // Compute the particle velocities from the molecule's linear and angular velocities.
+        // Solve the equations.  These are different from those in the SETTLE paper (JCC 13(8), pp. 952-962, 1992), because
+        // in going from equations B1 to B2, they make the assumption that mB=mC (but don't bother to mention they're
+        // making that assumption).  We allow all three atoms to have different masses.
         
-        v0.xyz = v.xyz+cross(w, deltax0).xyz;
-        v1.xyz = v.xyz+cross(w, deltax1).xyz;
-        v2.xyz = v.xyz+cross(w, deltax2).xyz;
+        float mABC = mA*mB*mC;
+        float denom = ((s2A*mB+s2B*mA)*mC+(s2A*mB*mB+2*(cA*cB*cC+1)*mA*mB+s2B*mA*mA))*mC+s2C*mA*mB*(mA+mB);
+        float tab = (mABC*(cB*cC*mA-cA*mB-cA*mC)*vCA + mABC*(cA*cC*mB-cB*mC-cB*mA)*vBC + (mABC*(mA+mB+mC)+s2C*mA*mA*mB*mB)*vAB)/denom;
+        float tbc = (mABC*(cA*cB*mC-cC*mB-cC*mA)*vCA + ((s2A*mB*mB)*mC*mC+mABC*(mA+mB+mC))*vBC + mABC*(cA*cC*mB-cB*mA-cB*mC)*vAB)/denom;
+        float tca = (((s2B*mA*mA)*mC*mC+mABC*(mA+mB+mC))*vCA + mABC*(cA*cB*mC-cC*mB-cC*mA)*vBC + mABC*(cB*cC*mA-cA*mB-cA*mC)*vAB)/denom;
+        v0.xyz += (tab*eAB.xyz - tca*eCA.xyz)*v0.w;
+        v1.xyz += (tbc*eBC.xyz - tab*eAB.xyz)*v1.w;
+        v2.xyz += (tca*eCA.xyz - tbc*eBC.xyz)*v2.w;
         velm[atoms.x] = v0;
         velm[atoms.y] = v1;
         velm[atoms.z] = v2;
