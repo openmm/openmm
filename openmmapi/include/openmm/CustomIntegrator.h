@@ -144,26 +144,18 @@ namespace OpenMM {
  * time step so that, for example, an AndersenThermostat can randomize velocities
  * or a MonteCarloBarostat can scale particle positions.  You need to add a
  * step to tell the integrator when to do this.  The following example corrects
- * both these problems:
+ * both these problems, using the RATTLE algorithm to apply constraints:
  * 
  * <tt><pre>
  * CustomIntegrator integrator(0.001);
+ * integrator.addPerDofVariable("x1", 0);
+ * integrator.addUpdateContextState();
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
  * integrator.addComputePerDof("x", "x+dt*v");
  * integrator.addConstrainPositions();
- * integrator.addUpdateContextState();
- * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
  * integrator.addConstrainVelocities();
  * </pre></tt>
- * 
- * This integrator includes two steps that require forces (the two velocity
- * updates) and three steps that can potentially change particle positions and
- * thus invalidate the forces (the position update, applying position constraints,
- * and allowing Forces to update the context state).  We put all three of these
- * steps together to minimize the number of force computations needed.  If we had
- * put addUpdateContextState() at the beginning of the algorithm instead, that would
- * risk invalidating the forces just before the first velocity update, thus
- * requiring two force evaluations per time step instead of one.
  * 
  * CustomIntegrator can be used to implement multiple time step integrators.  The
  * following example shows an r-RESPA integrator.  It assumes the quickly changing
@@ -173,7 +165,7 @@ namespace OpenMM {
  * <tt><pre>
  * CustomIntegrator integrator(0.004);
  * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
- * for (int i = 0; i < 4; i++) {
+ * for (int i = 0; i &lt; 4; i++) {
  *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
  *     integrator.addComputePerDof("x", "x+(dt/4)*v");
  *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");

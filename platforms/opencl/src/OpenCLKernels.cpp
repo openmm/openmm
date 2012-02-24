@@ -3787,12 +3787,11 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         // Identify steps that can be merged into a single kernel.
         
         for (int step = 1; step < numSteps; step++) {
-            if ((needsForces[step] || needsEnergy[step]) && (invalidatesForces[step-1] || forceGroup[step] != forceGroup[step-1]))
+            if (needsForces[step] || needsEnergy[step])
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
                 merged[step] = true;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof &&
-                    storePosAsDelta[step-1] == storePosAsDelta[step] && loadPosAsDelta[step-1] == loadPosAsDelta[step] &&
                     !usesVariable(expression[step], "uniform"))
                 merged[step] = true;
         }
@@ -3828,11 +3827,13 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     }
                     else if (variable[j] == "v")
                         compute << "velm[index] = " << convert << "velocity);\n";
-                    for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
-                        const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
-                        compute << "perDofValues"<<intToString(i+1)<<"[3*index] = perDofx"<<intToString(i+1)<<";\n";
-                        compute << "perDofValues"<<intToString(i+1)<<"[3*index+1] = perDofy"<<intToString(i+1)<<";\n";
-                        compute << "perDofValues"<<intToString(i+1)<<"[3*index+2] = perDofz"<<intToString(i+1)<<";\n";
+                    else {
+                        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
+                            const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
+                            compute << "perDofValues"<<intToString(i+1)<<"[3*index] = perDofx"<<intToString(i+1)<<";\n";
+                            compute << "perDofValues"<<intToString(i+1)<<"[3*index+1] = perDofy"<<intToString(i+1)<<";\n";
+                            compute << "perDofValues"<<intToString(i+1)<<"[3*index+2] = perDofz"<<intToString(i+1)<<";\n";
+                        }
                     }
                     compute << "}\n";
                     numGaussian += numAtoms*usesVariable(expression[j], "gaussian");

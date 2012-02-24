@@ -146,7 +146,7 @@ void testConstraints() {
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
 }
@@ -159,10 +159,12 @@ void testVelocityConstraints() {
     OpenCLPlatform platform;
     System system;
     CustomIntegrator integrator(0.002);
+    integrator.addPerDofVariable("x1", 0);
     integrator.addComputePerDof("v", "v+0.5*dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
+    integrator.addComputePerDof("x1", "x");
     integrator.addConstrainPositions();
-    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+    integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
     integrator.addConstrainVelocities();
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
@@ -225,7 +227,7 @@ void testVelocityConstraints() {
         if (i == 0)
             initialEnergy = energy;
         else if (i > 0)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
     }
 }
 
