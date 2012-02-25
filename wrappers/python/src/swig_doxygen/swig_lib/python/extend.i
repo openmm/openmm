@@ -173,3 +173,11 @@
         self.this = system.this
   }
 }
+
+%extend OpenMM::CustomIntegrator {
+    PyObject* getPerDofVariable(int index) const {
+        std::vector<Vec3> values;
+        self->getPerDofVariable(index, values);
+        return copyVVec3ToList(values);
+    }
+}
