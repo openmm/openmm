@@ -165,7 +165,9 @@ class Modeller(object):
         # Pick a unit cell size.
         
         if boxSize is not None:
-            box = boxSize
+            if is_quantity(boxSize):
+                boxSize = boxSize.value_in_unit(nanometer)
+            box = Vec3(boxSize[0], boxSize[1], boxSize[2])*nanometer
         elif padding is not None:
             maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
             box = (maxSize+2*padding)*Vec3(1, 1, 1)
