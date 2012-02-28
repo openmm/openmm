@@ -311,14 +311,14 @@ void testConservationLaws() {
         if (i == 0)
             initialMomentum = momentum;
         else
-            ASSERT_EQUAL_VEC(initialMomentum, momentum, 0.01);
+            ASSERT_EQUAL_VEC(initialMomentum, momentum, 0.02);
         Vec3 angularMomentum;
         for (int j = 0; j < numParticles; j++)
             angularMomentum += pos[j].cross(vel[j])*system.getParticleMass(j);
         if (i == 0)
             initialAngularMomentum = angularMomentum;
         else
-            ASSERT_EQUAL_VEC(initialAngularMomentum, angularMomentum, 0.01);
+            ASSERT_EQUAL_VEC(initialAngularMomentum, angularMomentum, 0.02);
         integrator.step(1);
     }
 }
