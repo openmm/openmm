@@ -19,13 +19,6 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
         float m1 = RECIP(velm[atoms.y].w);
         float m2 = RECIP(velm[atoms.z].w);
 
-        // Translate the molecule to the origin to improve numerical precision.
-
-        float4 center = apos0;
-        apos0.xyz -= center.xyz;
-        apos1.xyz -= center.xyz;
-        apos2.xyz -= center.xyz;
-
         // Apply the SETTLE algorithm.
 
         float xb0 = apos1.x-apos0.x;
@@ -35,20 +28,20 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
         float yc0 = apos2.y-apos0.y;
         float zc0 = apos2.z-apos0.z;
 
-        float totalMass = m0+m1+m2;
-        float xcom = ((apos0.x+xp0.x)*m0 + (apos1.x+xp1.x)*m1 + (apos2.x+xp2.x)*m2) / totalMass;
-        float ycom = ((apos0.y+xp0.y)*m0 + (apos1.y+xp1.y)*m1 + (apos2.y+xp2.y)*m2) / totalMass;
-        float zcom = ((apos0.z+xp0.z)*m0 + (apos1.z+xp1.z)*m1 + (apos2.z+xp2.z)*m2) / totalMass;
+        float invTotalMass = 1.0f/(m0+m1+m2);
+        float xcom = (xp0.x*m0 + (xb0+xp1.x)*m1 + (xc0+xp2.x)*m2) * invTotalMass;
+        float ycom = (xp0.y*m0 + (yb0+xp1.y)*m1 + (yc0+xp2.y)*m2) * invTotalMass;
+        float zcom = (xp0.z*m0 + (zb0+xp1.z)*m1 + (zc0+xp2.z)*m2) * invTotalMass;
 
-        float xa1 = apos0.x + xp0.x - xcom;
-        float ya1 = apos0.y + xp0.y - ycom;
-        float za1 = apos0.z + xp0.z - zcom;
-        float xb1 = apos1.x + xp1.x - xcom;
-        float yb1 = apos1.y + xp1.y - ycom;
-        float zb1 = apos1.z + xp1.z - zcom;
-        float xc1 = apos2.x + xp2.x - xcom;
-        float yc1 = apos2.y + xp2.y - ycom;
-        float zc1 = apos2.z + xp2.z - zcom;
+        float xa1 = xp0.x - xcom;
+        float ya1 = xp0.y - ycom;
+        float za1 = xp0.z - zcom;
+        float xb1 = xb0 + xp1.x - xcom;
+        float yb1 = yb0 + xp1.y - ycom;
+        float zb1 = zb0 + xp1.z - zcom;
+        float xc1 = xc0 + xp2.x - xcom;
+        float yc1 = yc0 + xp2.y - ycom;
+        float zc1 = zc0 + xp2.z - zcom;
 
         float xaksZd = yb0*zc0 - zb0*yc0;
         float yaksZd = zb0*xc0 - xb0*zc0;
@@ -89,7 +82,7 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
 
         float rc = 0.5*params.y;
         float rb = sqrt(params.x*params.x-rc*rc);
-        float ra = rb*(m1+m2)/totalMass;
+        float ra = rb*(m1+m2)*invTotalMass;
         rb -= ra;
         float sinphi = za1d / ra;
         float cosphi = sqrt(1.0f - sinphi*sinphi);
@@ -112,11 +105,11 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
         float gamma = xb0d*yb1d - xb1d*yb0d + xc0d*yc1d - xc1d*yc0d;
 
         float al2be2 = alpha*alpha + beta*beta;
-        float sintheta = (alpha*gamma - beta*sqrt (al2be2 - gamma*gamma)) / al2be2;
+        float sintheta = (alpha*gamma - beta*sqrt(al2be2 - gamma*gamma)) / al2be2;
 
         //                                        --- Step4  A3' ---
 
-        float costheta = sqrt (1.0f - sintheta*sintheta);
+        float costheta = sqrt(1.0f - sintheta*sintheta);
         float xa3d = - ya2d*sintheta;
         float ya3d =   ya2d*costheta;
         float za3d = za1d;
@@ -139,15 +132,15 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
         float yc3 = trns21*xc3d + trns22*yc3d + trns23*zc3d;
         float zc3 = trns31*xc3d + trns32*yc3d + trns33*zc3d;
 
-        xp0.x = xcom + xa3 - apos0.x;
-        xp0.y = ycom + ya3 - apos0.y;
-        xp0.z = zcom + za3 - apos0.z;
-        xp1.x = xcom + xb3 - apos1.x;
-        xp1.y = ycom + yb3 - apos1.y;
-        xp1.z = zcom + zb3 - apos1.z;
-        xp2.x = xcom + xc3 - apos2.x;
-        xp2.y = ycom + yc3 - apos2.y;
-        xp2.z = zcom + zc3 - apos2.z;
+        xp0.x = xcom + xa3;
+        xp0.y = ycom + ya3;
+        xp0.z = zcom + za3;
+        xp1.x = xcom + xb3 - xb0;
+        xp1.y = ycom + yb3 - yb0;
+        xp1.z = zcom + zb3 - zb0;
+        xp2.x = xcom + xc3 - xc0;
+        xp2.y = ycom + yc3 - yc0;
+        xp2.z = zcom + zc3 - zc0;
 
         // Record the new positions.
 
@@ -201,10 +194,11 @@ __kernel void constrainVelocities(int numClusters, float tol, __global const flo
         // making that assumption).  We allow all three atoms to have different masses.
         
         float mABC = mA*mB*mC;
-        float denom = ((s2A*mB+s2B*mA)*mC+(s2A*mB*mB+2*(cA*cB*cC+1)*mA*mB+s2B*mA*mA))*mC+s2C*mA*mB*(mA+mB);
-        float tab = (mABC*(cB*cC*mA-cA*mB-cA*mC)*vCA + mABC*(cA*cC*mB-cB*mC-cB*mA)*vBC + (mABC*(mA+mB+mC)+s2C*mA*mA*mB*mB)*vAB)/denom;
-        float tbc = (mABC*(cA*cB*mC-cC*mB-cC*mA)*vCA + ((s2A*mB*mB)*mC*mC+mABC*(mA+mB+mC))*vBC + mABC*(cA*cC*mB-cB*mA-cB*mC)*vAB)/denom;
-        float tca = (((s2B*mA*mA)*mC*mC+mABC*(mA+mB+mC))*vCA + mABC*(cA*cB*mC-cC*mB-cC*mA)*vBC + mABC*(cB*cC*mA-cA*mB-cA*mC)*vAB)/denom;
+        float mABCinv = 1.0f/mABC;
+        float denom = (((s2A*mB+s2B*mA)*mC+(s2A*mB*mB+2*(cA*cB*cC+1)*mA*mB+s2B*mA*mA))*mC+s2C*mA*mB*(mA+mB))*mABCinv;
+        float tab = ((cB*cC*mA-cA*mB-cA*mC)*vCA + (cA*cC*mB-cB*mC-cB*mA)*vBC + (mABC+s2C*mA*mA*mB*mB*mABCinv)*vAB)/denom;
+        float tbc = ((cA*cB*mC-cC*mB-cC*mA)*vCA + ((s2A*mB*mB)*mC*mC*mABCinv+mABC)*vBC + (cA*cC*mB-cB*mA-cB*mC)*vAB)/denom;
+        float tca = (((s2B*mA*mA)*mC*mC*mABCinv+mABC)*vCA + (cA*cB*mC-cC*mB-cC*mA)*vBC + (cB*cC*mA-cA*mB-cA*mC)*vAB)/denom;
         v0.xyz += (tab*eAB.xyz - tca*eCA.xyz)*v0.w;
         v1.xyz += (tbc*eBC.xyz - tab*eAB.xyz)*v1.w;
         v2.xyz += (tca*eCA.xyz - tbc*eBC.xyz)*v2.w;
