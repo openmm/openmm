@@ -299,16 +299,16 @@ OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_resize_(<xsl:value-of se
 OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_RESIZE(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
     <xsl:value-of select="$name"/>_resize(array, size);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, const <xsl:value-of select="$element_type"/>&amp; value) {
     <xsl:value-of select="$name"/>_append(array, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, const <xsl:value-of select="$element_type"/>&amp; value) {
     <xsl:value-of select="$name"/>_append(array, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, const <xsl:value-of select="$element_type"/>&amp; value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, const <xsl:value-of select="$element_type"/>&amp; value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
 OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
