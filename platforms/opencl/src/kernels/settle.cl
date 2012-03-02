@@ -193,12 +193,11 @@ __kernel void constrainVelocities(int numClusters, float tol, __global const flo
         // in going from equations B1 to B2, they make the assumption that mB=mC (but don't bother to mention they're
         // making that assumption).  We allow all three atoms to have different masses.
         
-        float mABC = mA*mB*mC;
-        float mABCinv = 1.0f/mABC;
+        float mABCinv = 1.0f/(mA*mB*mC);
         float denom = (((s2A*mB+s2B*mA)*mC+(s2A*mB*mB+2*(cA*cB*cC+1)*mA*mB+s2B*mA*mA))*mC+s2C*mA*mB*(mA+mB))*mABCinv;
-        float tab = ((cB*cC*mA-cA*mB-cA*mC)*vCA + (cA*cC*mB-cB*mC-cB*mA)*vBC + (mABC+s2C*mA*mA*mB*mB*mABCinv)*vAB)/denom;
-        float tbc = ((cA*cB*mC-cC*mB-cC*mA)*vCA + ((s2A*mB*mB)*mC*mC*mABCinv+mABC)*vBC + (cA*cC*mB-cB*mA-cB*mC)*vAB)/denom;
-        float tca = (((s2B*mA*mA)*mC*mC*mABCinv+mABC)*vCA + (cA*cB*mC-cC*mB-cC*mA)*vBC + (cB*cC*mA-cA*mB-cA*mC)*vAB)/denom;
+        float tab = ((cB*cC*mA-cA*mB-cA*mC)*vCA + (cA*cC*mB-cB*mC-cB*mA)*vBC + (s2C*mA*mA*mB*mB*mABCinv+(mA+mB+mC))*vAB)/denom;
+        float tbc = ((cA*cB*mC-cC*mB-cC*mA)*vCA + (s2A*mB*mB*mC*mC*mABCinv+(mA+mB+mC))*vBC + (cA*cC*mB-cB*mA-cB*mC)*vAB)/denom;
+        float tca = ((s2B*mA*mA*mC*mC*mABCinv+(mA+mB+mC))*vCA + (cA*cB*mC-cC*mB-cC*mA)*vBC + (cB*cC*mA-cA*mB-cA*mC)*vAB)/denom;
         v0.xyz += (tab*eAB.xyz - tca*eCA.xyz)*v0.w;
         v1.xyz += (tbc*eBC.xyz - tab*eAB.xyz)*v1.w;
         v2.xyz += (tca*eCA.xyz - tbc*eBC.xyz)*v2.w;
