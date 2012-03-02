@@ -85,11 +85,36 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
             int bestSpeed = -1;
             for (int i = 0; i < (int) devices.size(); i++) {
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
-                int processingElementsPerComputeUnit = (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU ? 8 : 1);
-                if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
+                int processingElementsPerComputeUnit = 8;
+                if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
+                    processingElementsPerComputeUnit = 1;
+                }
+                else if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
                     cl_uint computeCapabilityMajor;
                     clGetDeviceInfo(devices[i](), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
                     processingElementsPerComputeUnit = (computeCapabilityMajor < 2 ? 8 : 32);
+                }
+                else if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_amd_device_attribute_query") != string::npos) {
+                    // This attribute does not ensure that all queries are supported by the runtime (it may be an older runtime,
+                    // or the CPU device) so still have to check for errors.
+                    try {
+                        processingElementsPerComputeUnit =
+                            // AMD GPUs either have a single VLIW SIMD or multiple scalar SIMDs.
+                            // The SIMD width is the number of threads the SIMD executes per cycle.
+                            // This will be less than the wavefront width since it takes several
+                            // cycles to execute the full wavefront.
+                            // The SIMD instruction width is the VLIW instruction width (or 1 for scalar),
+                            // this is the number of ALUs that can be executing per instruction per thread. 
+                            devices[i].getInfo<CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD>() *
+                            devices[i].getInfo<CL_DEVICE_SIMD_WIDTH_AMD>() *
+                            devices[i].getInfo<CL_DEVICE_SIMD_INSTRUCTION_WIDTH_AMD>();
+                        // Just in case any of the queries return 0.
+                        if (processingElementsPerComputeUnit <= 0)
+                            processingElementsPerComputeUnit = 1;
+                    }
+                    catch (cl::Error err) {
+                        // Runtime does not support the queries so use default.
+                    }
                 }
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
                 if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
@@ -109,6 +134,7 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
+        int numThreadBlocksPerComputeUnit = 6;
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationDefines["WARPS_ARE_ATOMIC"] = "";
             simdWidth = 32;
@@ -124,11 +150,45 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
             }
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
-            // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around.
-            compilationDefines["AMD_ATOMIC_WORK_AROUND"] = "";
-            // AMD has both 32 and 64 width SIMDs. To determine need to create a kernel to query.
-            // For now default to 1 which will use the default kernels.
-            simdWidth = 1;
+            if (device.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
+                /// \todo Is 6 a good value for the OpenCL CPU device?
+                // numThreadBlocksPerComputeUnit = ?;
+                simdWidth = 1;
+            }
+            else {
+                bool amdPostSdk2_4 = false;
+                // Default to 1 which will use the default kernels.
+                simdWidth = 1;
+                if (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_amd_device_attribute_query") != string::npos) {
+                    // This attribute does not ensure that all queries are supported by the runtime so still have to
+                    // check for errors.
+                    try {
+                        // AMD has both 32 and 64 width SIMDs. Can determine by using:
+                        // simdWidth = device.getInfo<CL_DEVICE_WAVEFRONT_WIDTH_AMD>();
+                        // Must catch cl:Error as will fail if runtime does not support queries.
+                        // However, the 32 width NVIDIA kernels do not have all the necessary
+                        // barriers and so will not work for AMD.
+                        // So for now leave default of 1 which will use the default kernels.
+
+                        cl_uint simdPerComputeUnit = device.getInfo<CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD>();
+                        // If the GPU has multiple SIMDs per compute unit then it is uses the scalar instruction
+                        // set instead of the VLIW instruction set. It therefore needs more thread blocks per
+                        // compute unit to hide memory latency.
+                        if (simdPerComputeUnit > 1)
+                            numThreadBlocksPerComputeUnit = 4 * simdPerComputeUnit;
+
+                        // If the queries are supported then must be newer than SDK 2.4.
+                        amdPostSdk2_4 = true;
+                    }
+                    catch (cl::Error err) {
+                        // Runtime does not support the query so is unlikely to be the newer scalar GPU.
+                        // Stay with the default simdWidth and numThreadBlocksPerComputeUnit.
+                    }
+                }
+                // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around. This is fixed after SDK 2.4.
+                if (!amdPostSdk2_4)
+                    compilationDefines["AMD_ATOMIC_WORK_AROUND"] = "";
+            }
         }
         else
             simdWidth = 1;
@@ -142,7 +202,7 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
-        numThreadBlocks = 6*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         bonded = new OpenCLBondedUtilities(*this);
         nonbonded = new OpenCLNonbondedUtilities(*this);
         posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
