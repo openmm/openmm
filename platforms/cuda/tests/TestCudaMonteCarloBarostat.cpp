@@ -54,18 +54,35 @@ void testChangingBoxSize() {
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 6));
     system.addParticle(1.0);
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(2.0);
+    nb->addParticle(1, 0.5, 0.5);
+    system.addForce(nb);
     LangevinIntegrator integrator(300.0, 1.0, 0.01);
     Context context(system, integrator, platform);
     Vec3 x, y, z;
-    context.getState(0).getPeriodicBoxVectors(x, y, z);
+    context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
     ASSERT_EQUAL_VEC(Vec3(4, 0, 0), x, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 5, 0), y, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 6), z, 0);
     context.setPeriodicBoxVectors(Vec3(7, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 9));
-    context.getState(0).getPeriodicBoxVectors(x, y, z);
+    context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
     ASSERT_EQUAL_VEC(Vec3(7, 0, 0), x, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 8, 0), y, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 9), z, 0);
+    
+    // Shrinking the box too small should produce an exception.
+    
+    context.setPeriodicBoxVectors(Vec3(7, 0, 0), Vec3(0, 3.9, 0), Vec3(0, 0, 9));
+    bool ok = true;
+    try {
+        context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
+        ok = false;
+    }
+    catch (exception& ex) {
+    }
+    ASSERT(ok);
 }
 
 void testIdealGas() {

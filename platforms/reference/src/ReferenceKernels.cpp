@@ -688,8 +688,13 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic || ewald || pme, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
-    if (periodic || ewald || pme)
-        clj.setPeriodic(extractBoxSize(context));
+    if (periodic || ewald || pme) {
+        RealVec& box = extractBoxSize(context);
+        double minAllowedSize = 2*nonbondedCutoff;
+        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        clj.setPeriodic(box);
+    }
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
@@ -821,8 +826,13 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxSize(context), periodic, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
-    if (periodic)
-        ixn.setPeriodic(extractBoxSize(context));
+    if (periodic) {
+        RealVec& box = extractBoxSize(context);
+        double minAllowedSize = 2*nonbondedCutoff;
+        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+        ixn.setPeriodic(box);
+    }
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);

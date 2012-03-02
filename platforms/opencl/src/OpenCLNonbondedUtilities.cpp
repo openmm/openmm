@@ -24,6 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/OpenMMException.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLArray.h"
 #include "OpenCLKernelSources.h"
@@ -310,6 +311,12 @@ int OpenCLNonbondedUtilities::findExclusionIndex(int x, int y, const vector<cl_u
 void OpenCLNonbondedUtilities::prepareInteractions() {
     if (!useCutoff)
         return;
+    if (usePeriodic) {
+        mm_float4 box = context.getPeriodicBoxSize();
+        double minAllowedSize = 2*cutoff;
+        if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+    }
 
     // Compute the neighbor list.
 

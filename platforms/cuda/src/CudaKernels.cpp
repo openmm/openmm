@@ -50,6 +50,12 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
+    if ((data.hasNonbonded && data.nonbondedMethod != NO_CUTOFF && data.nonbondedMethod != CUTOFF) ||
+        (data.hasCustomNonbonded && data.customNonbondedMethod != NO_CUTOFF && data.customNonbondedMethod != CUTOFF)) {
+        double minAllowedSize = 2*gpu->sim.nonbondedCutoff;
+        if (gpu->sim.periodicBoxSizeX < minAllowedSize || gpu->sim.periodicBoxSizeY < minAllowedSize || gpu->sim.periodicBoxSizeZ < minAllowedSize)
+            throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+    }
     data.computeForceCount++;
     if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
         kClearBornSumAndForces(gpu);
