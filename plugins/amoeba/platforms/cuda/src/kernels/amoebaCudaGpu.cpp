@@ -3029,13 +3029,13 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu, int updateFlag )
             amoebaGpu->gpuContext->sim.preFactor = -amoebaGpu->amoebaSim.electric*((1.0f/amoebaGpu->amoebaSim.dielec)-(1.0f/amoebaGpu->amoebaSim.dwater));
         }
         gpuSetAmoebaBondOffsets( amoebaGpu );
-        SetCalculateAmoebaLocalForcesSim( amoebaGpu );
         SetCalculateAmoebaCudaWcaDispersionSim( amoebaGpu );
         SetCalculateAmoebaKirkwoodSim( amoebaGpu );
         SetCalculateAmoebaKirkwoodEDiffSim( amoebaGpu );
         SetCalculateAmoebaGrycukSim(  amoebaGpu  );
     }
 
+    SetCalculateAmoebaLocalForcesSim( amoebaGpu );
     SetCalculateAmoebaCudaUtilitiesSim( amoebaGpu );
     SetCalculateAmoebaMultipoleForcesSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEFieldSim( amoebaGpu );
