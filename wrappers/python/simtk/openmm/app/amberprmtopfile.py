@@ -72,6 +72,11 @@ class AmberPrmtopFile(object):
             top.addBond(bond[0], bond[1])
         for bond in prmtop.getBondsNoH():
             top.addBond(bond[0], bond[1])
+        
+        # Set the periodic box size.
+        
+        if prmtop.getIfBox():
+            top.setUnitCellDimensions(tuple(x.value_in_unit(unit.nanometer) for x in prmtop.getBoxBetaAndDimensions()[1:4])*unit.nanometer)
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=True, implicitSolvent=None, removeCMMotion=True):
