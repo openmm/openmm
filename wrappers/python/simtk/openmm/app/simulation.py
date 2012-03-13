@@ -88,7 +88,7 @@ class Simulation(object):
                             getForces = True
                         if next[4]:
                             getEnergy = True
-                state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces, getEnergy=getEnergy, getParameters=True)
+                state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces, getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=(self.topology.getUnitCellDimensions() is not None))
                 for reporter, next in zip(self.reporters, nextReport):
                     if next[0] == nextSteps:
                         reporter.report(self, state)
