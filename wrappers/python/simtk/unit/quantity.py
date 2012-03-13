@@ -550,13 +550,13 @@ class Quantity(object):
     def _scale_sequence(self, value, factor, post_multiply):
         try:
             if post_multiply:
-                if isinstance(value, tuple):
+                if isinstance(self._value, tuple):
                     value = tuple([x*factor for x in value])
                 else:
                     for i in range(len(value)):
                         value[i] = value[i]*factor
             else:
-                if isinstance(value, tuple):
+                if isinstance(self._value, tuple):
                     value = tuple([factor*x for x in value])
                 else:
                     for i in range(len(value)):
