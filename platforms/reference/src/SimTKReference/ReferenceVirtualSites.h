@@ -37,8 +37,6 @@
 #include <vector>
 
 class ReferenceVirtualSites {
-private:
-    const OpenMM::System& system;
 public:
     /**
      * Compute the positions of all virtual sites.
