@@ -54,6 +54,7 @@ void AmoebaTorsionTorsionForceImpl::initialize(ContextImpl& context) {
 double AmoebaTorsionTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
         return dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
 struct IntPair {

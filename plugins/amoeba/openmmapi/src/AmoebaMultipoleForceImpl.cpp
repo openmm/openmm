@@ -84,6 +84,7 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 double AmoebaMultipoleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
         return dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
 std::vector<std::string> AmoebaMultipoleForceImpl::getKernelNames() {

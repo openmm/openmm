@@ -53,6 +53,7 @@ void AmoebaHarmonicAngleForceImpl::initialize(ContextImpl& context) {
 double AmoebaHarmonicAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
         return dynamic_cast<CalcAmoebaHarmonicAngleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
 std::vector<std::string> AmoebaHarmonicAngleForceImpl::getKernelNames() {

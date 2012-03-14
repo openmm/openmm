@@ -54,6 +54,7 @@ void AmoebaUreyBradleyForceImpl::initialize(ContextImpl& context) {
 double AmoebaUreyBradleyForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
         return dynamic_cast<CalcAmoebaUreyBradleyForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
 std::vector<std::string> AmoebaUreyBradleyForceImpl::getKernelNames() {
