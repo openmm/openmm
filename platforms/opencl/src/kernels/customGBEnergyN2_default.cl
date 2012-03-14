@@ -1,14 +1,26 @@
 #define TILE_SIZE 32
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#define STORE_DERIVATIVE_1(INDEX) atom_add(&derivBuffers[offset1+(INDEX-1)*PADDED_NUM_ATOMS], (long) (deriv##INDEX##_1*0xFFFFFFFF));
+#define STORE_DERIVATIVE_2(INDEX) atom_add(&derivBuffers[offset2+(INDEX-1)*PADDED_NUM_ATOMS], (long) (local_deriv##INDEX[get_local_id(0)]*0xFFFFFFFF));
+#else
 #define STORE_DERIVATIVE_1(INDEX) derivBuffers##INDEX[offset1] += deriv##INDEX##_1+tempDerivBuffer##INDEX[get_local_id(0)+TILE_SIZE];
 #define STORE_DERIVATIVE_2(INDEX) derivBuffers##INDEX[offset2] += local_deriv##INDEX[get_local_id(0)]+local_deriv##INDEX[get_local_id(0)+TILE_SIZE];
+#endif
 
 /**
  * Compute a force based on pair interactions.
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeN2Energy(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __local float4* restrict local_force,
-	__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions, __global const unsigned int* restrict exclusionIndices,
+void computeN2Energy(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict forceBuffers,
+#else
+        __global float4* restrict forceBuffers,
+#endif
+        __global float* restrict energyBuffer, __local float4* restrict local_force,
+	    __global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions, __global const unsigned int* restrict exclusionIndices,
         __global const unsigned int* restrict exclusionRowIndices, __local float4* restrict tempForceBuffer,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles
@@ -127,12 +139,19 @@ void computeN2Energy(__global float4* restrict forceBuffers, __global float* res
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset1 = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset1 = x*TILE_SIZE + tgx;
+                atom_add(&forceBuffers[offset1], (long) ((force.x + tempForceBuffer[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1+PADDED_NUM_ATOMS], (long) ((force.y + tempForceBuffer[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1+2*PADDED_NUM_ATOMS], (long) ((force.z + tempForceBuffer[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
 #else
-                unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset1 = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                forceBuffers[offset1].xyz += force.xyz+tempForceBuffer[get_local_id(0)+TILE_SIZE].xyz;
+                forceBuffers[offset1].xyz += force.xyz + tempForceBuffer[get_local_id(0)+TILE_SIZE].xyz;
+#endif
                 STORE_DERIVATIVES_1
             }
         }
@@ -208,15 +227,26 @@ void computeN2Energy(__global float4* restrict forceBuffers, __global float* res
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset1 = x*TILE_SIZE + tgx;
+                const unsigned int offset2 = y*TILE_SIZE + tgx;
+                atom_add(&forceBuffers[offset1], (long) ((force.x+tempForceBuffer[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1+PADDED_NUM_ATOMS], (long) ((force.y+tempForceBuffer[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1+2*PADDED_NUM_ATOMS], (long) ((force.z+tempForceBuffer[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2], (long) ((local_force[get_local_id(0)].x+local_force[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2+PADDED_NUM_ATOMS], (long) ((local_force[get_local_id(0)].y+local_force[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2+2*PADDED_NUM_ATOMS], (long) ((local_force[get_local_id(0)].z+local_force[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
 #else
-                unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 forceBuffers[offset1].xyz += force.xyz+tempForceBuffer[get_local_id(0)+TILE_SIZE].xyz;
                 forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz+local_force[get_local_id(0)+TILE_SIZE].xyz;
+#endif
                 STORE_DERIVATIVES_1
                 STORE_DERIVATIVES_2
             }

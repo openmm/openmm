@@ -52,7 +52,8 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
         if (context.getSupports64BitGlobalAtomics()) {
             numForceThreadBlocks = 2*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
             forceThreadBlockSize = 256;
-            numForceBuffers = 2;
+            // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
+            numForceBuffers = 1;
         }
         else {
             numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
@@ -63,12 +64,18 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = OpenCLContext::ThreadBlockSize;
-        numForceBuffers = numForceThreadBlocks;
-        if (numForceBuffers >= context.getNumAtomBlocks()) {
-            // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
+        if (context.getSupports64BitGlobalAtomics()) {
+            // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
+            numForceBuffers = 1;
+        }
+        else {
+            numForceBuffers = numForceThreadBlocks;
+            if (numForceBuffers >= context.getNumAtomBlocks()) {
+                // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
 
-            forceBufferPerAtomBlock = true;
-            numForceBuffers = context.getNumAtomBlocks();
+                forceBufferPerAtomBlock = true;
+                numForceBuffers = context.getNumAtomBlocks();
+            }
         }
     }
 }

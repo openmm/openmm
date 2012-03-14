@@ -1,3 +1,7 @@
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#endif
 #define TILE_SIZE 32
 
 typedef struct {
@@ -10,7 +14,13 @@ typedef struct {
  */
 
 __kernel __attribute__((reqd_work_group_size(FORCE_WORK_GROUP_SIZE, 1, 1)))
-void computeBornSum(__global float* restrict global_bornSum, __global const float4* restrict posq, __global const float2* restrict global_params,
+void computeBornSum(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict global_bornSum,
+#else
+        __global float* restrict global_bornSum,
+#endif
+        __global const float4* restrict posq, __global const float2* restrict global_params,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
@@ -99,12 +109,17 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                 localTemp[tgx] = bornSum;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset = x*TILE_SIZE + tgx;
+                atom_add(&global_bornSum[offset], (long) ((bornSum + localTemp[tgx])*0xFFFFFFFF));
 #else
-                unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                global_bornSum[offset] += bornSum+localTemp[tgx];
+                global_bornSum[offset] += bornSum + localTemp[tgx];
+#endif
             }
             // barrier not required here as localTemp is not accessed before encountering another barrier.
         }
@@ -177,12 +192,18 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                 localTemp[tgx] = bornSum;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset1 = x*TILE_SIZE + tgx;
+                const unsigned int offset2 = y*TILE_SIZE + tgx;
+                atom_add(&global_bornSum[offset1], (long) ((bornSum + localTemp[tgx])*0xFFFFFFFF));
+                atom_add(&global_bornSum[offset2], (long) ((localBornSum[get_local_id(0)] + localBornSum[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
 #else
-                unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 // Do both loads before both stores to minimize store-load waits.
                 float sum1 = global_bornSum[offset1];
@@ -191,6 +212,7 @@ void computeBornSum(__global float* restrict global_bornSum, __global const floa
                 sum2 += localBornSum[get_local_id(0)] + localBornSum[get_local_id(0)+TILE_SIZE];
                 global_bornSum[offset1] = sum1;
                 global_bornSum[offset2] = sum2;
+#endif
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }
@@ -216,7 +238,12 @@ typedef struct {
  */
 
 __kernel __attribute__((reqd_work_group_size(FORCE_WORK_GROUP_SIZE, 1, 1)))
-void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* restrict global_bornForce,
+void computeGBSAForce1(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict forceBuffers, __global long* restrict global_bornForce,
+#else
+        __global float4* restrict forceBuffers, __global float* restrict global_bornForce,
+#endif
         __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
@@ -316,10 +343,17 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset = x*TILE_SIZE + tgx;
+                atom_add(&forceBuffers[offset], (long) ((force.x + localData[tgx].temp_x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0xFFFFFFFF));
+                atom_add(&global_bornForce[offset], (long) ((force.w + localData[tgx].temp_w)*0xFFFFFFFF));
 #else
-                unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
                 float4 sum = forceBuffers[offset];
@@ -330,6 +364,7 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
                 global_sum += force.w + localData[tgx].temp_w;
                 forceBuffers[offset] = sum;
                 global_bornForce[offset] = global_sum;
+#endif
             }
             // barrier not required here as localData[*]/temp_* is not accessed before encountering another barrier.
         }
@@ -403,12 +438,25 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                barrier(CLK_LOCAL_MEM_FENCE);
+                const unsigned int offset1 = x*TILE_SIZE + tgx;
+                const unsigned int offset2 = y*TILE_SIZE + tgx;
+                atom_add(&forceBuffers[offset1], (long) ((force.x + localData[tgx].temp_x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0xFFFFFFFF));
+                atom_add(&global_bornForce[offset1], (long) ((force.w + localData[tgx].temp_w)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2], (long) ((localData[get_local_id(0)].fx + localForce[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2+PADDED_NUM_ATOMS], (long) ((localData[get_local_id(0)].fy + localForce[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2+2*PADDED_NUM_ATOMS], (long) ((localData[get_local_id(0)].fz + localForce[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
+                atom_add(&global_bornForce[offset2], (long) ((localData[get_local_id(0)].fw + localForce[get_local_id(0)+TILE_SIZE].w)*0xFFFFFFFF));
 #else
-                unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
                 float4 sum1 = forceBuffers[offset1];
@@ -427,6 +475,7 @@ void computeGBSAForce1(__global float4* restrict forceBuffers, __global float* r
                 forceBuffers[offset2] = sum2;
                 global_bornForce[offset1] = global_sum1;
                 global_bornForce[offset2] = global_sum2;
+#endif
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }

@@ -150,6 +150,9 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
             }
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
+            // Disable 64 bit atomics.  A future version of the driver will support them, but until we can test that,
+            // it's safest not to use them.
+            supports64BitGlobalAtomics = false;
             if (device.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
                 /// \todo Is 6 a good value for the OpenCL CPU device?
                 // numThreadBlocksPerComputeUnit = ?;

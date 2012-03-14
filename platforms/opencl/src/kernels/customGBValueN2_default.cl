@@ -1,3 +1,7 @@
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#endif
 #define TILE_SIZE 32
 
 /**
@@ -6,7 +10,13 @@
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeN2Value(__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions,
-        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global float* restrict global_value, __local float* restrict local_value,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict global_value,
+#else
+        __global float* restrict global_value,
+#endif
+        __local float* restrict local_value,
         __local float* restrict tempBuffer,
 #ifdef USE_CUTOFF
         __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles
@@ -122,12 +132,17 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
                 tempBuffer[get_local_id(0)] = value;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset = x*TILE_SIZE + tgx;
+                atom_add(&global_value[offset], (long) ((value + tempBuffer[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
 #else
-                unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                global_value[offset] += value+tempBuffer[get_local_id(0)+TILE_SIZE];
+                global_value[offset] += value + tempBuffer[get_local_id(0)+TILE_SIZE];
+#endif
             }
         }
         else {
@@ -198,15 +213,22 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
                 tempBuffer[get_local_id(0)] = value;
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
-#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+                const unsigned int offset1 = x*TILE_SIZE + tgx;
+                const unsigned int offset2 = y*TILE_SIZE + tgx;
+                atom_add(&global_value[offset1], (long) ((value + tempBuffer[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
+                atom_add(&global_value[offset2], (long) ((local_value[get_local_id(0)] + local_value[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
 #else
-                unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
+                const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
+#else
+                const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                global_value[offset1] += value+tempBuffer[get_local_id(0)+TILE_SIZE];
-                global_value[offset2] += local_value[get_local_id(0)]+local_value[get_local_id(0)+TILE_SIZE];
+                global_value[offset1] += value + tempBuffer[get_local_id(0)+TILE_SIZE];
+                global_value[offset2] += local_value[get_local_id(0)] + local_value[get_local_id(0)+TILE_SIZE];
+#endif
             }
         }
         lasty = y;

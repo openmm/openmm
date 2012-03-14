@@ -2397,6 +2397,8 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, useLong ? longValueBuffers->getDeviceBuffer() : valueBuffers->getDeviceBuffer());
         pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*sizeof(cl_float), NULL);
+        /// \todo Eliminate this argument and make local to the kernel. For *_default.cl kernel can actually make it TileSize rather than getForceThreadBlockSize as only half the workgroup stores to it as was done with nonbonded_default.cl.
+        /// \todo Also make the previous __local argument local as was done with nonbonded_default.cl.
         pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
@@ -2445,6 +2447,8 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusions().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionIndices().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
+        /// \todo Eliminate this argument and make local to the kernel. For *_default.cl kernel can actually make it TileSize rather than getForceThreadBlockSize as only half the workgroup stores to it as was done with nonbonded_default.cl.
+        /// \todo Also make the previous __local argument local as was done with nonbonded_default.cl.
         pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*sizeof(cl_float4), NULL);
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
