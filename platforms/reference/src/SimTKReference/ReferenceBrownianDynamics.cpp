@@ -144,7 +144,7 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Real
 
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
          if (masses[ii] == zero)
-             inverseMasses[ii] == zero;
+             inverseMasses[ii] = zero;
          else
              inverseMasses[ii] = one/masses[ii];
       }
