@@ -55,7 +55,7 @@ namespace OpenMM {
  * As an example, the following code creates a CustomExternalForce that attracts each particle to a target position (x0, y0, z0)
  * via a harmonic potential:
  *
- * <tt>CustomExternalForce* force = new CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2");</tt>
+ * <tt>CustomExternalForce* force = new CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)");</tt>
  *
  * This force depends on four parameters: the spring constant k and equilibrium coordinates x0, y0, and z0.  The following code defines these parameters:
  *
