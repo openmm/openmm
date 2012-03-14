@@ -538,6 +538,8 @@ struct OpenCLContext::MoleculeGroup {
 class OpenCLContext::WorkTask {
 public:
     virtual void execute() = 0;
+    virtual ~WorkTask() {
+    }
 };
 
 class OpenCLContext::WorkThread {
@@ -578,6 +580,8 @@ private:
 class OpenCLContext::ReorderListener {
 public:
     virtual void execute() = 0;
+    virtual ~ReorderListener() {
+    }
 };
 
 } // namespace OpenMM
