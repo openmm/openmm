@@ -1301,8 +1301,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         pmeInterpolateForceKernel.setArg<mm_float4>(4, invBoxSize);
         cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms(), interpolateForceThreads);
     }
-    double energy = ewaldSelfEnergy;
-    if (dispersionCoefficient != 0.0) {
+    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    if (dispersionCoefficient != 0.0 && includeDirect) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         energy += dispersionCoefficient/(boxSize.x*boxSize.y*boxSize.z);
     }
