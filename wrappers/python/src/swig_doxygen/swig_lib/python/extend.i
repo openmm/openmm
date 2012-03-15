@@ -96,7 +96,7 @@
                  getEnergy=False,
                  getParameters=False,
                  enforcePeriodicBox=False,
-                 groups=0xFFFFFFFF):
+                 groups=-1):
         """
         getState(self,
                  getPositions = False,
@@ -105,7 +105,7 @@
                  getEnergy = False,
                  getParameters = False,
                  enforcePeriodicBox = False,
-                 groups = 0xFFFFFFFF)
+                 groups = -1)
               -> State
         Get a State object recording the current state information stored in this context.
            getPositions -- whether to store particle positions in the State
