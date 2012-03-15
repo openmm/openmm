@@ -1,10 +1,11 @@
 %extend OpenMM::Context {
-  PyObject *getStateAsLists(int getPositions=0,
-                            int getVelocities=0,
-                            int getForces=0,
-                            int getEnergy=0,
-                            int getParameters=0,
-                            int enforcePeriodic=0) {
+  PyObject *_getStateAsLists(int getPositions,
+                            int getVelocities,
+                            int getForces,
+                            int getEnergy,
+                            int getParameters,
+                            int enforcePeriodic,
+                            int groups) {
     int types;
     double simTime;
     PyObject *pPeriodicBoxVectorsList;
@@ -21,7 +22,7 @@
     if (getForces) types |= State::Forces;
     if (getEnergy) types |= State::Energy;
     if (getParameters) types |= State::Parameters;
-    State state = self->getState(types, enforcePeriodic);
+    State state = self->getState(types, enforcePeriodic, groups);
 
     simTime=state.getTime();
 
@@ -94,16 +95,26 @@
                  getForces=False,
                  getEnergy=False,
                  getParameters=False,
-                 enforcePeriodicBox=False):
+                 enforcePeriodicBox=False,
+                 groups=0xFFFFFFFF):
         """
         getState(self,
                  getPositions = False,
                  getVelocities = False,
                  getForces = False,
                  getEnergy = False,
-                 getParameters = False
-                 enforcePeriodicBox = False)
+                 getParameters = False,
+                 enforcePeriodicBox = False,
+                 groups = 0xFFFFFFFF)
               -> State
+        Get a State object recording the current state information stored in this context.
+           getPositions -- whether to store particle positions in the State
+           getVelocities -- whether to store particle velocities in the State
+           getForces -- whether to store the forces acting on particles in the State
+           getEnergy -- whether to store potential and kinetic energy in the State
+           getParameter -- whether to store context parameters in the State
+           enforcePeriodicBox -- if false, the position of each particle will be whatever position is stored in the Context, regardless of periodic boundary conditions.  If true, particle positions will be translated so the center of every molecule lies in the same periodic box.
+           groups -- a set of bit flags for which force groups to include when computing forces and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
         """
         
         if getPositions: getP=1
@@ -121,7 +132,7 @@
 
         (simTime, periodicBoxVectorsList, energy, coordList, velList,
          forceList, paramMap) = \
-            self.getStateAsLists(getP, getV, getF, getE, getPa, enforcePeriodic)
+            self._getStateAsLists(getP, getV, getF, getE, getPa, enforcePeriodic, groups)
         
         state = State(simTime=simTime,
                       energy=energy,
