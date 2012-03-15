@@ -14,54 +14,10 @@
 #   libOpenMMCuda_static[_d].a
 #----------------------------------------------------
 
-# Only run tests if this machine has a cuda-capable GPU
-# So run a little test program at configuration time to sniff for GPUs
-# find_package(CUDA) # find_package has already run and causes trouble w/ cmake 2.4
-# message("Checking for working GPU...")
-# On Peter E.'s computer, DYLD_LIBRARY_PATH does not include the CUDA path, so in order to 
-# get this gpu-sniffer to work, we need to set DYLD_LIBRARY_PATH here.
-get_filename_component(CUDART_DIR "${FOUND_CUDART}" PATH)
-file(TO_NATIVE_PATH "${CUDART_DIR}" CUDART_NATIVE_DIR)
-if(APPLE)
-        set(ENV{DYLD_LIBRARY_PATH} "$ENV{DYLD_LIBRARY_PATH}:${CUDART_NATIVE_DIR}")
-elseif(UNIX)
-        set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH}:${CUDART_NATIVE_DIR}")
-elseif(MSVC)
-        set(ENV{PATH} "$ENV{PATH};${CUDART_NATIVE_DIR}")
-endif(APPLE)
-try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
-    ${CMAKE_BINARY_DIR} 
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/has_cuda_gpu.c
-    CMAKE_FLAGS 
-        # -DINCLUDE_DIRECTORIES:STRING=${CUDA_TOOLKIT_INCLUDE}
-        # -DLINK_LIBRARIES:STRING=${CUDA_CUDART_LIBRARY}
-        -DINCLUDE_DIRECTORIES:STRING=${CUDA_INCLUDE}
-        -DLINK_LIBRARIES:STRING=${FOUND_CUDART}
-    COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_VAR
-    RUN_OUTPUT_VARIABLE RUN_OUTPUT_VAR
-)
-# message("${RUN_OUTPUT_VAR}") # Display number of GPUs found
-# COMPILE_RESULT_VAR is TRUE when compile succeeds
-# RUN_RESULT_VAR is zero when a GPU is found
-set(CUDA_HAVE_GPU_MAYBE TRUE)
-if(NOT COMPILE_RESULT_VAR)
-    set(CUDA_HAVE_GPU_MAYBE FALSE)
-endif(NOT COMPILE_RESULT_VAR)
-if(RUN_RESULT_VAR)
-    set(CUDA_HAVE_GPU_MAYBE FALSE)
-endif(RUN_RESULT_VAR)
-if(CUDA_HAVE_GPU_MAYBE)
-    set(CUDA_HAVE_GPU TRUE CACHE BOOL "Whether CUDA-capable GPU is present")
-    # message("GPU check succeeded")
-else(CUDA_HAVE_GPU_MAYBE)
-    set(CUDA_HAVE_GPU FALSE CACHE BOOL "Whether CUDA-capable GPU is present")
-    message("GPU check failed")
-    message("${COMPILE_OUTPUT_VAR}")
-    message("${RUN_OUTPUT_VAR}")
-endif(CUDA_HAVE_GPU_MAYBE)
-if(CUDA_HAVE_GPU)
+set(OPENMM_BUILD_CUDA_TESTS TRUE CACHE BOOL "Whether to build CUDA test cases")
+if(OPENMM_BUILD_CUDA_TESTS)
     SUBDIRS (tests)
-endif(CUDA_HAVE_GPU)
+endif(OPENMM_BUILD_CUDA_TESTS)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.

@@ -19,52 +19,10 @@ IF (APPLE)
     SET (CMAKE_OSX_SYSROOT "/Developer/SDKs/MacOSX10.6.sdk")
 ENDIF (APPLE)
 
-# Only run tests if this machine has a OpenCL-capable GPU
-# So run a little test program at configuration time to sniff for GPUs
-# But first, we need to set DYLD_LIBRARY_PATH here.
-get_filename_component(OPENCL_LIB_DIR "${OPENCL_LIBRARY}" PATH)
-file(TO_NATIVE_PATH "${OPENCL_LIB_DIR}" OPENCL_LIB_NATIVE_DIR)
-if(APPLE)
-        set(ENV{DYLD_LIBRARY_PATH} "$ENV{DYLD_LIBRARY_PATH}:${OPENCL_LIB_NATIVE_DIR}")
-elseif(UNIX)
-        set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH}:${OPENCL_LIB_NATIVE_DIR}")
-elseif(MSVC)
-        set(ENV{PATH} "$ENV{PATH};${OPENCL_LIB_NATIVE_DIR}")
-endif(APPLE)
-try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
-    ${CMAKE_BINARY_DIR} 
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/has_opencl_gpu.c
-    CMAKE_FLAGS 
-        -DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIR}
-        -DLINK_LIBRARIES:STRING=${OPENCL_LIBRARY}
-    COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_VAR
-    RUN_OUTPUT_VARIABLE RUN_OUTPUT_VAR
-)
-# message("${RUN_OUTPUT_VAR}") # Display number of GPUs found
-# COMPILE_RESULT_VAR is TRUE when compile succeeds
-# RUN_RESULT_VAR is zero when a GPU is found
-set(OPENCL_HAVE_GPU_MAYBE TRUE)
-if(NOT COMPILE_RESULT_VAR)
-    set(OPENCL_HAVE_GPU_MAYBE FALSE)
-endif(NOT COMPILE_RESULT_VAR)
-if(RUN_RESULT_VAR)
-    set(OPENCL_HAVE_GPU_MAYBE FALSE)
-endif(RUN_RESULT_VAR)
-if(OPENCL_HAVE_GPU_MAYBE)
-    set(OPENCL_HAVE_GPU TRUE CACHE BOOL "Whether OpenCL-capable GPU is present")
-    # Remain silent in case where GPU is found.
-    # message("GPU check succeeded")
-    # message("${COMPILE_OUTPUT_VAR}")
-    # message("${RUN_OUTPUT_VAR}")
-else(OPENCL_HAVE_GPU_MAYBE)
-    set(OPENCL_HAVE_GPU FALSE CACHE BOOL "Whether OpenCL-capable GPU is present")
-    message("OpenCL GPU check failed")
-    message("${COMPILE_OUTPUT_VAR}")
-    message("${RUN_OUTPUT_VAR}")
-endif(OPENCL_HAVE_GPU_MAYBE)
-if(OPENCL_HAVE_GPU)
+set(OPENMM_BUILD_OPENCL_TESTS TRUE CACHE BOOL "Whether to build OpenCL test cases")
+if(OPENMM_BUILD_OPENCL_TESTS)
     SUBDIRS (tests)
-endif(OPENCL_HAVE_GPU)
+endif(OPENMM_BUILD_OPENCL_TESTS)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
