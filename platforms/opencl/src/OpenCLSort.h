@@ -94,7 +94,7 @@ public:
         replacements["MIN_KEY"] = TRAIT::clMinKey();
         replacements["MAX_KEY"] = TRAIT::clMaxKey();
         replacements["MAX_VALUE"] = TRAIT::clMaxValue();
-        replacements["VALUE_IS_INT2"] = (TRAIT::clDataType() == "int2" ? "1" : "0");
+        replacements["VALUE_IS_INT2"] = (TRAIT::clDataType() == std::string("int2") ? "1" : "0");
         cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::sort, replacements));
         computeRangeKernel = cl::Kernel(program, "computeRange");
         assignElementsKernel = cl::Kernel(program, "assignElementsToBuckets");
