@@ -61,7 +61,7 @@ __kernel void assignElementsToBuckets(__global const DATA_TYPE* restrict data, u
     float maxValue = (float) (range[1]);
     float bucketWidth = (maxValue-minValue)/numBuckets;
     for (uint index = get_global_id(0); index < length; index += get_global_size(0)) {
-#ifdef MAC_AMD_WORKAROUND
+#if defined(MAC_AMD_WORKAROUND) && VALUE_IS_INT2
         __global int* d = (__global int*) data;
         int2 element = (int2) (d[2*index], d[2*index+1]);
         float key = (float) getValue(element);
