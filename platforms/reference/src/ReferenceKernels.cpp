@@ -704,10 +704,10 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         ReferenceBondForce refBondForce;
         ReferenceLJCoulomb14 nonbonded14;
         refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
-    }
-    if (periodic || ewald || pme) {
-        RealVec& boxSize = extractBoxSize(context);
-        energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
+        if (periodic || ewald || pme) {
+            RealVec& boxSize = extractBoxSize(context);
+            energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
+        }
     }
     return energy;
 }

@@ -196,12 +196,13 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
 // SELF ENERGY
 // **************************************************************************************
 
-    for( int atomID = 0; atomID < numberOfAtoms; atomID++ ){
-        RealOpenMM selfEwaldEnergy       = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI);
-        totalSelfEwaldEnergy            -= selfEwaldEnergy;
-
-        if( energyByAtom ){
-           energyByAtom[atomID]         -= selfEwaldEnergy;
+    if (includeReciprocal) {
+        for( int atomID = 0; atomID < numberOfAtoms; atomID++ ){
+            RealOpenMM selfEwaldEnergy       = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI);
+            totalSelfEwaldEnergy            -= selfEwaldEnergy;
+            if( energyByAtom ){
+                energyByAtom[atomID]        -= selfEwaldEnergy;
+            }
         }
     }
 
