@@ -169,6 +169,16 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
             break; // Further tightening the springs doesn't seem to be helping, so just give up.
         prevMaxError = maxError;
         k *= 10;
+        if (maxError > 100*constraintTol) {
+            // We've gotten far enough from a valid state that we might have trouble getting
+            // back, so reset to the original positions.
+            
+            for (int i = 0; i < numParticles; i++) {
+                x[3*i] = initialPos[i][0];
+                x[3*i+1] = initialPos[i][1];
+                x[3*i+2] = initialPos[i][2];
+            }
+        }
     }
     lbfgs_free(x);
 }
