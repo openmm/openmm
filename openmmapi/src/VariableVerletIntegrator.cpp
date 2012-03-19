@@ -64,7 +64,7 @@ void VariableVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity());
+        setStepSize(dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity()));
     }
 }
 
@@ -72,6 +72,6 @@ void VariableVerletIntegrator::stepTo(double time) {
     while (time > context->getTime()) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, time);
+        setStepSize(dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, time));
     }
 }

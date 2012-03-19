@@ -1343,7 +1343,7 @@ void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, con
     prevErrorTol = -1.0;
 }
 
-void CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     _gpuContext* gpu = data.gpu;
     double errorTol = integrator.getErrorTolerance();
     if (errorTol != prevErrorTol) {
@@ -1368,6 +1368,7 @@ void CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const 
     if ((*gpu->psStepSize)[0].y == maxStepSize)
         data.time = maxTime; // Avoid round-off error
     data.stepCount++;
+    return (*gpu->psStepSize)[0].y;
 }
 
 CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKernel() {
@@ -1383,7 +1384,7 @@ void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, c
     prevErrorTol = -1.0;
 }
 
-void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
     _gpuContext* gpu = data.gpu;
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -1415,6 +1416,7 @@ void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, cons
     if ((*gpu->psStepSize)[0].y == maxStepSize)
         data.time = maxTime; // Avoid round-off error
     data.stepCount++;
+    return (*gpu->psStepSize)[0].y;
 }
 
 CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {

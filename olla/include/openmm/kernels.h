@@ -780,8 +780,9 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
      */
-    virtual void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) = 0;
+    virtual double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) = 0;
 };
 
 /**
@@ -807,8 +808,9 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
      */
-    virtual void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
+    virtual double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
 };
 
 /**

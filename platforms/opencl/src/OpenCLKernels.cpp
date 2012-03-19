@@ -3400,7 +3400,7 @@ void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, c
     blockSize = std::min(std::min(256, system.getNumParticles()), (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 }
 
-void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     if (!hasInitializedKernels) {
@@ -3452,6 +3452,7 @@ void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
         time = maxTime; // Avoid round-off error
     cl.setTime(time);
     cl.setStepCount(cl.getStepCount()+1);
+    return dt;
 }
 
 OpenCLIntegrateVariableLangevinStepKernel::~OpenCLIntegrateVariableLangevinStepKernel() {
@@ -3475,7 +3476,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     blockSize = std::min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 }
 
-void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     if (!hasInitializedKernels) {
@@ -3530,6 +3531,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
         time = maxTime; // Avoid round-off error
     cl.setTime(time);
     cl.setStepCount(cl.getStepCount()+1);
+    return dt;
 }
 
 class OpenCLIntegrateCustomStepKernel::ReorderListener : public OpenCLContext::ReorderListener {

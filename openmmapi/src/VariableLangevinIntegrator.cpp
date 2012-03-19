@@ -69,7 +69,7 @@ void VariableLangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity());
+        setStepSize(dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity()));
     }
 }
 
@@ -77,6 +77,6 @@ void VariableLangevinIntegrator::stepTo(double time) {
     while (time > context->getTime()) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, time);
+        setStepSize(dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, time));
     }
 }

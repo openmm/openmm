@@ -50,6 +50,23 @@ using namespace std;
 
 const double TOL = 1e-5;
 
+/**
+ * Compute the energy of a state, taking into account the half step offset between
+ * positions and velocities.
+ */
+
+static double computeEnergy(const State& state, const System& system, double dt) {
+    const vector<Vec3>& v = state.getVelocities();
+    const vector<Vec3>& f = state.getForces();
+    double energy = 0.0;
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        double m = system.getParticleMass(i);
+        Vec3 vel = v[i]+f[i]*(0.5*dt/m);
+        energy += 0.5*m*vel.dot(vel);
+    }
+    return energy+state.getPotentialEnergy();
+}
+
 void testSingleBond() {
     OpenCLPlatform platform;
     System system;
@@ -121,7 +138,7 @@ void testConstraints() {
 
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy);
+        State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
         for (int j = 0; j < numConstraints; ++j) {
             int particle1, particle2;
             double distance;
@@ -131,11 +148,11 @@ void testConstraints() {
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 1e-4);
         }
-        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        double energy = computeEnergy(state, system, integrator.getStepSize());
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
 }
@@ -145,7 +162,7 @@ void testConstrainedClusters() {
     const double temp = 500.0;
     OpenCLPlatform platform;
     System system;
-    VerletIntegrator integrator(0.002);
+    VerletIntegrator integrator(0.001);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -185,7 +202,7 @@ void testConstrainedClusters() {
 
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy);
+        State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
         for (int j = 0; j < system.getNumConstraints(); ++j) {
             int particle1, particle2;
             double distance;
@@ -195,11 +212,11 @@ void testConstrainedClusters() {
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 2e-5);
         }
-        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        double energy = computeEnergy(state, system, integrator.getStepSize());
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
 }

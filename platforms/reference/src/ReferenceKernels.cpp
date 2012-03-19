@@ -1447,7 +1447,7 @@ void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& syst
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
 
-void ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double errorTol = integrator.getErrorTolerance();
@@ -1478,6 +1478,7 @@ void ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context,
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
     data.stepCount++;
+    return dynamics->getDeltaT();
 }
 
 ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletStepKernel() {
@@ -1509,7 +1510,7 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
     }
 }
 
-void ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     double errorTol = integrator.getErrorTolerance();
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& velData = extractVelocities(context);
@@ -1535,6 +1536,7 @@ void ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, c
     if (dynamics->getDeltaT() == maxStepSize)
         data.time = maxTime; // Avoid round-off error
     data.stepCount++;
+    return dynamics->getDeltaT();
 }
 
 ReferenceIntegrateCustomStepKernel::~ReferenceIntegrateCustomStepKernel() {
