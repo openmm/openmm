@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
@@ -45,10 +46,15 @@ void testSerialization() {
     System system;
     for (int i = 0; i < 5; i++)
         system.addParticle(0.1*i+1);
+    for (int i = 0; i < 4; i++)
+        system.addParticle(0.0);
     system.addConstraint(0, 1, 3.0);
     system.addConstraint(1, 2, 2.5);
     system.addConstraint(4, 1, 1.001);
     system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 1.5));
+    system.setVirtualSite(5, new TwoParticleAverageSite(0, 1, 0.3, 0.7));
+    system.setVirtualSite(6, new ThreeParticleAverageSite(2, 4, 3, 0.5, 0.2, 0.3));
+    system.setVirtualSite(7, new OutOfPlaneSite(0, 3, 1, 0.1, 0.2, 0.5));
     system.addForce(new HarmonicBondForce());
 
     // Serialize and then deserialize it.
@@ -80,6 +86,27 @@ void testSerialization() {
     ASSERT_EQUAL_VEC(a, a2, 0);
     ASSERT_EQUAL_VEC(b, b2, 0);
     ASSERT_EQUAL_VEC(c, c2, 0);
+    for (int i = 0; i < system.getNumParticles(); i++)
+        ASSERT_EQUAL(system.isVirtualSite(i), system2.isVirtualSite(i));
+    const TwoParticleAverageSite& site5 = dynamic_cast<const TwoParticleAverageSite&>(system2.getVirtualSite(5));
+    ASSERT_EQUAL(0, site5.getParticle(0));
+    ASSERT_EQUAL(1, site5.getParticle(1));
+    ASSERT_EQUAL(0.3, site5.getWeight(0));
+    ASSERT_EQUAL(0.7, site5.getWeight(1));
+    const ThreeParticleAverageSite& site6 = dynamic_cast<const ThreeParticleAverageSite&>(system2.getVirtualSite(6));
+    ASSERT_EQUAL(2, site6.getParticle(0));
+    ASSERT_EQUAL(4, site6.getParticle(1));
+    ASSERT_EQUAL(3, site6.getParticle(2));
+    ASSERT_EQUAL(0.5, site6.getWeight(0));
+    ASSERT_EQUAL(0.2, site6.getWeight(1));
+    ASSERT_EQUAL(0.3, site6.getWeight(2));
+    const OutOfPlaneSite& site7 = dynamic_cast<const OutOfPlaneSite&>(system2.getVirtualSite(7));
+    ASSERT_EQUAL(0, site7.getParticle(0));
+    ASSERT_EQUAL(3, site7.getParticle(1));
+    ASSERT_EQUAL(1, site7.getParticle(2));
+    ASSERT_EQUAL(0.1, site7.getWeight12());
+    ASSERT_EQUAL(0.2, site7.getWeight13());
+    ASSERT_EQUAL(0.5, site7.getWeightCross());
     ASSERT_EQUAL(system.getNumForces(), system2.getNumForces());
     for (int i = 0; i < system.getNumForces(); i++)
         ASSERT(typeid(system.getForce(i)) == typeid(system2.getForce(i)))

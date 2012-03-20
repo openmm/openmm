@@ -33,6 +33,7 @@
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
 #include <sstream>
 
 using namespace OpenMM;
@@ -51,8 +52,23 @@ void SystemProxy::serialize(const void* object, SerializationNode& node) const {
     box.createChildNode("B").setDoubleProperty("x", b[0]).setDoubleProperty("y", b[1]).setDoubleProperty("z", b[2]);
     box.createChildNode("C").setDoubleProperty("x", c[0]).setDoubleProperty("y", c[1]).setDoubleProperty("z", c[2]);
     SerializationNode& particles = node.createChildNode("Particles");
-    for (int i = 0; i < system.getNumParticles(); i++)
-        particles.createChildNode("Particle").setDoubleProperty("mass", system.getParticleMass(i));
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        SerializationNode& particle = particles.createChildNode("Particle").setDoubleProperty("mass", system.getParticleMass(i));
+        if (system.isVirtualSite(i)) {
+            if (typeid(system.getVirtualSite(i)) == typeid(TwoParticleAverageSite)) {
+                const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
+                particle.createChildNode("TwoParticleAverageSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setDoubleProperty("w1", site.getWeight(0)).setDoubleProperty("w2", site.getWeight(1));
+            }
+            else if (typeid(system.getVirtualSite(i)) == typeid(ThreeParticleAverageSite)) {
+                const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
+                particle.createChildNode("ThreeParticleAverageSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setIntProperty("p3", site.getParticle(2)).setDoubleProperty("w1", site.getWeight(0)).setDoubleProperty("w2", site.getWeight(1)).setDoubleProperty("w3", site.getWeight(2));
+            }
+            else if (typeid(system.getVirtualSite(i)) == typeid(OutOfPlaneSite)) {
+                const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
+                particle.createChildNode("OutOfPlaneSite").setIntProperty("p1", site.getParticle(0)).setIntProperty("p2", site.getParticle(1)).setIntProperty("p3", site.getParticle(2)).setDoubleProperty("w12", site.getWeight12()).setDoubleProperty("w13", site.getWeight13()).setDoubleProperty("wc", site.getWeightCross());
+            }
+        }
+    }
     SerializationNode& constraints = node.createChildNode("Constraints");
     for (int i = 0; i < system.getNumConstraints(); i++) {
         int particle1, particle2;
@@ -79,8 +95,18 @@ void* SystemProxy::deserialize(const SerializationNode& node) const {
         Vec3 c(boxc.getDoubleProperty("x"), boxc.getDoubleProperty("y"), boxc.getDoubleProperty("z"));
         system->setDefaultPeriodicBoxVectors(a, b, c);
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (int i = 0; i < (int) particles.getChildren().size(); i++)
+        for (int i = 0; i < (int) particles.getChildren().size(); i++) {
             system->addParticle(particles.getChildren()[i].getDoubleProperty("mass"));
+            if (particles.getChildren()[i].getChildren().size() > 0) {
+                const SerializationNode& vsite = particles.getChildren()[i].getChildren()[0];
+                if (vsite.getName() == "TwoParticleAverageSite")
+                    system->setVirtualSite(i, new TwoParticleAverageSite(vsite.getIntProperty("p1"), vsite.getIntProperty("p2"), vsite.getDoubleProperty("w1"), vsite.getDoubleProperty("w2")));
+                else if (vsite.getName() == "ThreeParticleAverageSite")
+                    system->setVirtualSite(i, new ThreeParticleAverageSite(vsite.getIntProperty("p1"), vsite.getIntProperty("p2"), vsite.getIntProperty("p3"), vsite.getDoubleProperty("w1"), vsite.getDoubleProperty("w2"), vsite.getDoubleProperty("w3")));
+                else if (vsite.getName() == "OutOfPlaneSite")
+                    system->setVirtualSite(i, new OutOfPlaneSite(vsite.getIntProperty("p1"), vsite.getIntProperty("p2"), vsite.getIntProperty("p3"), vsite.getDoubleProperty("w12"), vsite.getDoubleProperty("w13"), vsite.getDoubleProperty("wc")));
+            }
+        }
         const SerializationNode& constraints = node.getChildNode("Constraints");
         for (int i = 0; i < (int) constraints.getChildren().size(); i++) {
             const SerializationNode& constraint = constraints.getChildren()[i];
