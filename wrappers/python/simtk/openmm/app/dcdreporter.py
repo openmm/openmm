@@ -6,6 +6,7 @@ __version__ = "1.0"
 
 import simtk.openmm as mm
 from simtk.openmm.app import DCDFile
+from simtk.unit import nanometer
     
 class DCDReporter(object):
     """DCDReporter outputs a series of frames from a Simulation to a DCD file.
@@ -45,7 +46,8 @@ class DCDReporter(object):
         """
         if self._dcd is None:
             self._dcd = DCDFile(self._out, simulation.topology, simulation.integrator.getStepSize(), 0, self._reportInterval)
-        self._dcd.writeModel(state.getPositions())
+        a,b,c = state.getPeriodicBoxVectors()
+        self._dcd.writeModel(state.getPositions(), mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
     
     def __del__(self):
         self._out.close()

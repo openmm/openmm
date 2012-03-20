@@ -49,11 +49,14 @@ class DCDFile(object):
         header += struct.pack('<4i', 164, 4, len(list(topology.atoms())), 4)
         file.write(header)
     
-    def writeModel(self, positions):
+    def writeModel(self, positions, unitCellDimensions=None):
         """Write out a model to the DCD file.
                 
         Parameters:
          - positions (list) The list of atomic positions to write
+         - unitCellDimensions (Vec3=None) The dimensions of the crystallographic unit cell.  If None, the dimensions specified in
+           the Topology will be used.  Regardless of the value specified, no dimensions will be written if the Topology does not
+           represent a periodic system.
         """
         if len(list(self._topology.atoms())) != len(positions):
             raise ValueError('The number of positions must match the number of atoms') 
@@ -74,6 +77,8 @@ class DCDFile(object):
         file.seek(0, os.SEEK_END)
         boxSize = self._topology.getUnitCellDimensions()
         if boxSize is not None:
+            if unitCellDimensions is not None:
+                boxSize = unitCellDimensions
             size = boxSize.value_in_unit(angstroms)
             file.write(struct.pack('<i6di', 48, size[0], 0, size[1], 0, 0, size[2], 48))
         length = struct.pack('<i', 4*len(positions))
