@@ -320,7 +320,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
         return;
     if (usePeriodic) {
         mm_float4 box = context.getPeriodicBoxSize();
-        double minAllowedSize = 2*cutoff;
+        double minAllowedSize = 1.999999*cutoff;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }

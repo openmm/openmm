@@ -690,7 +690,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     }
     if (periodic || ewald || pme) {
         RealVec& box = extractBoxSize(context);
-        double minAllowedSize = 2*nonbondedCutoff;
+        double minAllowedSize = 1.999999*nonbondedCutoff;
         if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         clj.setPeriodic(box);
