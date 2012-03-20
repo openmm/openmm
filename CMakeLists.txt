@@ -277,23 +277,18 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
 ENDFOREACH(subdir)
 
 # If API wrappers are being generated, and add them to the build.
-# Java and gccxml are required for API wrappers
-FIND_PACKAGE(Java)
-MARK_AS_ADVANCED(CLEAR JAVA_RUNTIME)
-# One particular location to try first for nightly builds
-FIND_PROGRAM(GCCXML_PATH gccxml PATH
-    "C:/Program Files/gccxml_sherm/bin")
-# In case first attempt fails
 FIND_PROGRAM(GCCXML_PATH gccxml PATH
     /usr/local/bin
     "C:/Program Files/gccxml 0.9/bin"
 )
-IF(GCCXML_PATH AND JAVA_RUNTIME AND NOT cmv EQUAL "2.4")
+IF(GCCXML_PATH)
     SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
-ELSE(GCCXML_PATH AND JAVA_RUNTIME AND NOT cmv EQUAL "2.4")
+ELSE(GCCXML_PATH)
     SET(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
-ENDIF(GCCXML_PATH AND JAVA_RUNTIME AND NOT cmv EQUAL "2.4")
+ENDIF(GCCXML_PATH)
 IF(OPENMM_BUILD_C_AND_FORTRAN_WRAPPERS)
+    FIND_PACKAGE(Java)
+    MARK_AS_ADVANCED(CLEAR JAVA_RUNTIME)
     ADD_SUBDIRECTORY(wrappers)
     SET(SOURCE_FILES ${SOURCE_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
     SET_SOURCE_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
