@@ -146,6 +146,8 @@ SKIP_METHODS = [('State',),
                 ('Platform', 'contextDestroyed'),
                 ('Platform', 'createKernel'),
                 ('Platform', 'registerKernelFactory'),
+                ('IntegrateRPMDStepKernel',),
+                ('RPMDIntegrator',  'getState'),
 ]
 
 # The build script assumes method args that are non-const references are

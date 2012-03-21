@@ -113,6 +113,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                'OpenMMSerialization', 
                'OpenMMFreeEnergy',
                'OpenMMAmoeba',
+               'OpenMMRpmd',
               ]
     if 'OPENMM_USE_DEBUG_LIBS' in os.environ:
         if platform.system() == "Windows":

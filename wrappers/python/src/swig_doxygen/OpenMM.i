@@ -43,6 +43,7 @@ namespace std {
 #include "OpenMM.h"
 #include "OpenMMFreeEnergy.h"
 #include "OpenMMAmoeba.h"
+#include "openmm/RPMDIntegrator.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/serialization/SerializationProxy.h"
 #include "openmm/serialization/XmlSerializer.h"
