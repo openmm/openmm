@@ -234,8 +234,8 @@
  </Residue>
  <Residue name="NH2" type="Protein">
   <Atom name="N" alt1="NT"/>
-  <Atom name="H1" alt1="1H" alt2="HT1"/>
-  <Atom name="H2" alt1="2H" alt2="HT2"/>
+  <Atom name="HN1" alt1="1H" alt2="HT1" alt3="H1"/>
+  <Atom name="HN2" alt1="2H" alt2="HT2" alt3="H2"/>
  </Residue>
  <Residue name="UNK" type="Protein"/>
  <Residue name="A" alt1="ADE" type="Nucleic">
