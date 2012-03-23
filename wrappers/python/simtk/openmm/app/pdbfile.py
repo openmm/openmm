@@ -47,6 +47,7 @@ class PDBFile(object):
 
         # Build the topology
 
+        atomByNumber = {}
         for chain in pdb.iter_chains():
             c = top.addChain()
             for residue in chain.iter_residues():
@@ -87,7 +88,8 @@ class PDBFile(object):
                             element = elem.get_by_symbol(atomName[0])
                         except KeyError:
                             pass
-                    top.addAtom(atomName, element, r)
+                    newAtom = top.addAtom(atomName, element, r)
+                    atomByNumber[atom.serial_number] = newAtom
                     pos = atom.get_position().value_in_unit(nanometers)
                     coords.append(Vec3(pos[0], pos[1], pos[2]))
         self.positions = coords*nanometers
@@ -95,6 +97,21 @@ class PDBFile(object):
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
         self._numpyPositions = None
+        
+        # Add bonds based on CONECT records.
+        
+        connectBonds = []
+        for connect in pdb.get_model(0).connects:
+            i = connect[0]
+            for j in connect[1:]:
+                connectBonds.append((atomByNumber[i], atomByNumber[j]))
+        if len(connectBonds) > 0:
+            # Only add bonds that don't already exist.
+            existingBonds = set(top.bonds())
+            for bond in connectBonds:
+                if bond not in existingBonds and (bond[1], bond[0]) not in existingBonds:
+                    top.addBond(bond[0], bond[1])
+                    existingBonds.add(bond)
 
     def getTopology(self):
         """Get the Topology of the model."""

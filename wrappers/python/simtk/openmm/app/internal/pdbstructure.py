@@ -137,6 +137,14 @@ class PdbStructure(object):
                 self._current_model._current_chain._add_ter_record()
             elif (pdb_line.find("CRYST1") == 0):
                 self._unit_cell_dimensions = (float(pdb_line[6:15]), float(pdb_line[15:24]), float(pdb_line[24:33]))*unit.angstroms
+            elif (pdb_line.find("CONECT") == 0):
+                atoms = [int(pdb_line[7:12])]
+                for pos in (12,17,22,27):
+                    try:
+                        atoms.append(int(pdb_line[pos:pos+5]))
+                    except:
+                        pass
+                self._current_model.connects.append(atoms)
         self._finalize()
 
     def write(self, output_stream=sys.stdout):
@@ -242,6 +250,7 @@ class Model(object):
         self.chains = []
         self._current_chain = None
         self.chains_by_id = {}
+        self.connects = []
 
     def _add_atom(self, atom):
         """
