@@ -20,6 +20,7 @@ from amberinpcrdfile import AmberInpcrdFile
 from dcdfile import DCDFile
 from dcdreporter import DCDReporter
 from modeller import Modeller
+from statedatareporter import StateDataReporter
 
 # Enumerated values
 
