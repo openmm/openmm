@@ -46,6 +46,7 @@ class ForceField(object):
         self._templateSignatures = {None:[]}
         self._atomClasses = {'':set()}
         self._forces = []
+        self._scripts = []
         for file in files:
             try:
                 tree = etree.parse(file)
@@ -110,6 +111,11 @@ class ForceField(object):
             for child in root:
                 if child.tag in parsers:
                     parsers[child.tag](child, self)
+            
+            # Load scripts
+            
+            for node in tree.getroot().findall('Script'):
+                self._scripts.append(node.text)
 
     def _findAtomTypes(self, node, num):
         """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
@@ -397,6 +403,11 @@ class ForceField(object):
             force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
+        
+        # Execute scripts found in the XML files.
+        
+        for script in self._scripts:
+            exec script
         return sys
 
 
