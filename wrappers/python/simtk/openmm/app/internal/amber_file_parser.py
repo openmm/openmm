@@ -32,6 +32,7 @@ except:
 
 import simtk.unit as units
 import simtk.openmm
+import customgbforces as customgb
 
 #=============================================================================================
 # AMBER parmtop loader (from 'zander', by Randall J. Radmer)
@@ -439,21 +440,33 @@ class PrmtopLoader(object):
             self._excludedAtoms.append(atomList)
         return self._excludedAtoms
 
-    def getGBSA_OBC(self):
+    def getGBParms(self, symbls=None):
         """Return list giving GB params, Radius and screening factor"""
         try:
-            return self._gbsa_obcList
+            return self._gb_List
         except AttributeError:
             pass
-        self._gbsa_obcList=[]
+        self._gb_List=[]
         radii=self._raw_data["RADII"]
         screen=self._raw_data["SCREEN"]
+        # Update screening parameters for GBn if specified
+        if symbls:
+            for (i, symbl) in enumerate(symbls):
+                if symbl[0] == ('c' or 'C'):
+                    screen[i] = 0.48435382330
+                elif symbl[0] == ('h' or 'H'):
+                    screen[i] = 1.09085413633
+                elif symbl[0] == ('n' or 'N'):
+                    screen[i] = 0.700147318409
+                elif symbl[0] == ('o' or 'O'):
+                    screen[i] = 1.06557401132
+                elif symbl[0] == ('s' or 'S'):
+                    screen[i] = 0.602256336067
+                else:
+                    screen[i] = 0.5
         for iAtom in range(len(radii)):
-            self._gbsa_obcList.append( (units.Quantity(float(radii[iAtom]),
-                                                 units.angstrom),
-                                        units.Quantity(float(screen[iAtom]),
-                                                 units.dimensionless)) )
-        return self._gbsa_obcList
+            self._gb_List.append((float(radii[iAtom])*units.angstrom, float(screen[iAtom])))
+        return self._gb_List
 
     def getBoxBetaAndDimensions(self):
         """Return periodic boundary box beta angle and dimensions"""
@@ -470,7 +483,7 @@ class PrmtopLoader(object):
 # AMBER System builder (based on, but not identical to, systemManager from 'zander')
 #=============================================================================================
 
-def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
+def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
     """
     Create an OpenMM System from an Amber prmtop file.
     
@@ -481,6 +494,8 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     OPTIONAL ARGUMENTS
       shake (String) - if 'h-bonds', will SHAKE all bonds to hydrogen and water; if 'all-bonds', will SHAKE all bonds and water (default: None)
       gbmodel (String) - if 'OBC', OBC GBSA will be used; if 'GBVI', GB/VI will be used (default: None)
+      soluteDielectric (float) - The solute dielectric constant to use in the implicit solvent model (default: 1.0)
+      solventDielectric (float) - The solvent dielectric constant to use in the implicit solvent model (default: 78.5)
       nonbondedCutoff (float) - if specified, will set nonbondedCutoff (default: None)
       scnb (float) - 1-4 Lennard-Jones scaling factor (default: 1.2)
       scee (float) - 1-4 electrostatics scaling factor (default: 2.0)
@@ -745,16 +760,32 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
                     weightCross = sinOOP*distOE[res]/lenCross
                     system.setVirtualSite(waterEP[res][0], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, weightCross))
                     system.setVirtualSite(waterEP[res][1], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, -weightCross))
-    
-    # Add GBSA-OBC model.
-    if gbmodel == 'OBC':
-        if verbose: print "Adding GB parameters..."            
-        gb = mm.GBSAOBCForce()
+
+    # Add GBSA model.
+    if gbmodel is not None:
+        if verbose: print "Adding GB parameters..."
         charges = prmtop.getCharges()
-        gbsa_obc = prmtop.getGBSA_OBC()
-        #for charge, radius, scalingFactor in prmtop.getGBSA_OBC():
+        symbls = None
+        if gbmodel == 'GBn':
+            symbls = prmtop.getAtomTypes()
+        gb_parms = prmtop.getGBParms(symbls)
+        if gbmodel == 'HCT':
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, True)
+        elif gbmodel == 'OBC1':
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, True)
+        elif gbmodel == 'OBC2':
+            gb = mm.GBSAOBCForce()
+            gb.setSoluteDielectric(soluteDielectric)
+            gb.setSolventDielectric(solventDielectric)
+        elif gbmodel == 'GBn':
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, True)
+        else:
+            raise Exception("Illegal value specified for implicit solvent model")
         for iAtom in range(prmtop.getNumAtoms()):
-            gb.addParticle(charges[iAtom], gbsa_obc[iAtom][0], gbsa_obc[iAtom][1])
+            if gbmodel == 'OBC2':
+                gb.addParticle(charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1])
+            else:
+                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1]])        
         system.addForce(gb)
         if nonbondedMethod == 'NoCutoff':
             gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)

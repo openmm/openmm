@@ -14,7 +14,10 @@ import simtk.openmm as mm
 
 # Enumerated values for implicit solvent model
 
-OBC = object()
+HCT = object()
+OBC1 = object()
+OBC2 = object()
+GBn = object()
 
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""
@@ -79,7 +82,7 @@ class AmberPrmtopFile(object):
             top.setUnitCellDimensions(tuple(x.value_in_unit(unit.nanometer) for x in prmtop.getBoxBetaAndDimensions()[1:4])*unit.nanometer)
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, implicitSolvent=None, removeCMMotion=True):
+                     constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, removeCMMotion=True):
         """Construct an OpenMM System representing the topology described by this prmtop file.
         
         Parameters:
@@ -89,7 +92,9 @@ class AmberPrmtopFile(object):
          - constraints (object=None) Specifies which bonds angles should be implemented with constraints.
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent model to use
+         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, or GBn.
+         - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
+         - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
         Returns: the newly created System
         """
@@ -116,12 +121,19 @@ class AmberPrmtopFile(object):
             raise ValueError('Illegal value for constraints')
         if implicitSolvent is None:
             implicitString = None
-        elif implicitSolvent == OBC:
-            implicitString = 'OBC'
+        elif implicitSolvent == HCT:
+            implicitString = 'HCT'
+        elif implicitSolvent == OBC1:
+            implicitString = 'OBC1'
+        elif implicitSolvent == OBC2:
+            implicitString = 'OBC2'
+        elif implicitSolvent == GBn:
+            implicitString = 'GBn'
         else:
             raise ValueError('Illegal value for implicit solvent model')
         sys = amber_file_parser.readAmberSystem(prmtop_loader=self.prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
-                                                 nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString, rigidWater=rigidWater)
+                                                 nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
+                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
         return sys

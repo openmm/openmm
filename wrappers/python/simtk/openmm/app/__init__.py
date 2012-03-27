@@ -34,4 +34,7 @@ HBonds = forcefield.HBonds
 AllBonds = forcefield.AllBonds
 HAngles = forcefield.HAngles
 
-OBC = amberprmtopfile.OBC
+HCT = amberprmtopfile.HCT
+OBC1 = amberprmtopfile.OBC1
+OBC2 = amberprmtopfile.OBC2
+GBn = amberprmtopfile.GBn
