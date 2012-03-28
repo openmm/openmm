@@ -1016,6 +1016,10 @@ class GBSAOBCGenerator:
                 raise ValueError('No GBSAOBC parameters defined for atom type '+t) 
         force.setNonbondedMethod(methodMap[nonbondedMethod])
         force.setCutoffDistance(nonbondedCutoff)
+        if 'soluteDielectric' in args:
+            force.setSoluteDielectric(float(args['soluteDielectric']))
+        if 'solventDielectric' in args:
+            force.setSolventDielectric(float(args['solventDielectric']))
         sys.addForce(force)
 
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
