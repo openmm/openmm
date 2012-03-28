@@ -122,7 +122,9 @@ class PrmtopLoader(object):
                 format = line.rstrip()
                 index0=format.index('(')
                 index1=format.index(')')
-                self._raw_format[self._flags[-1]] = format[index0+1:index1]
+                format = format[index0+1:index1]
+                m = FORMAT_RE_PATTERN.search(format)
+                self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), m.group(3), m.group(4))
             elif self._flags \
                  and 'TITLE'==self._flags[-1] \
                  and not self._raw_data['TITLE']:
@@ -132,8 +134,9 @@ class PrmtopLoader(object):
                 (format, numItems, itemType,
                  itemLength, itemPrecision) = self._getFormat(flag)
                 iLength=int(itemLength)
+                line = line.rstrip()
                 for index in range(0, len(line), iLength):
-                    item = line.rstrip()[index:index+iLength]
+                    item = line[index:index+iLength]
                     if item:
                         self._raw_data[flag].append(item.strip())
         fIn.close()
@@ -141,10 +144,7 @@ class PrmtopLoader(object):
     def _getFormat(self, flag=None):
         if not flag:
             flag=self._flags[-1]
-        format=self._raw_format[flag]
-        m=FORMAT_RE_PATTERN.search(format)
-        return (format, m.group(1),
-                m.group(2), m.group(3), m.group(4))
+        return self._raw_format[flag]
 
     def _getPointerValue(self, pointerLabel):
         """Return pointer value given pointer label
@@ -282,17 +282,14 @@ class PrmtopLoader(object):
             return self.residuePointerDict[iAtom]
         except:
             pass
+        self.residuePointerDict = {}
         resPointers=self._raw_data['RESIDUE_POINTER']
-        iRes=len(resPointers)
-        for ii in range(1, len(resPointers)):
-            firstAtom=int(resPointers[ii])-1
-            if firstAtom>iAtom:
-                iRes=ii
-                break
-        try:
-            self.residuePointerDict[iAtom]=iRes-1
-        except AttributeError:
-            self.residuePointerDict={iAtom:iRes-1}
+        firstAtom = [int(p)-1 for p in resPointers]
+        res = 0
+        for i in range(self.getNumAtoms()):
+            while i < firstAtom[res]:
+                res += 1
+            self.residuePointerDict[i] = res
         return self.residuePointerDict[iAtom]
 
     def getNonbondTerms(self):
@@ -699,30 +696,32 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             force.setEwaldErrorTolerance(EwaldErrorTolerance)
 
     # Add per-particle nonbonded parameters.
+    sigmaScale = 2**(-1./6.) * 2.0
     for (charge, (rVdw, epsilon)) in zip(prmtop.getCharges(), prmtop.getNonbondTerms()):
-        sigma = rVdw * 2**(-1./6.) * 2.0
+        sigma = rVdw * sigmaScale
         force.addParticle(charge, sigma, epsilon)
 
     # Add 1-4 Interactions
     excludedAtomPairs = set()
+    sigmaScale = 2**(-1./6.)
     for (iAtom, lAtom, chargeProd, rMin, epsilon) in prmtop.get14Interactions():
         chargeProd /= scee
         epsilon /= scnb
-        sigma = rMin * 2**(-1./6.)
+        sigma = rMin * sigmaScale
         force.addException(iAtom, lAtom, chargeProd, sigma, epsilon)
         excludedAtomPairs.add(min((iAtom, lAtom), (lAtom, iAtom)))
 
     # Add Excluded Atoms
     excludedAtoms=prmtop.getExcludedAtoms()
+    excludeParams = (0.0*units.elementary_charge**2, 1.0*units.angstroms, 0.0*units.kilocalories_per_mole)
     for iAtom in range(prmtop.getNumAtoms()):
         for jAtom in excludedAtoms[iAtom]:
             if min((iAtom, jAtom), (jAtom, iAtom)) in excludedAtomPairs: continue            
-            force.addException(iAtom, jAtom, 0.0 * units.elementary_charge**2, 1.0 * units.angstroms, 0.0 * units.kilocalories_per_mole)
+            force.addException(iAtom, jAtom, excludeParams[0], excludeParams[1], excludeParams[2])
 
     system.addForce(force)
 
     # Add virtual sites for water.
-    
     epNames = ['EP', 'LP']
     ep = [i for i in range(prmtop.getNumAtoms()) if isWater[i] and prmtop.getAtomName(i)[:2] in epNames]
     if len(ep) > 0:
