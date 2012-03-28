@@ -267,16 +267,17 @@ public:
      * Get the force group that reciprocal space interactions for Ewald or PME are included in.  This allows multiple
      * time step integrators to evaluate direct and reciprocal space interactions at different intervals: getForceGroup()
      * specifies the group for direct space, and getReciprocalSpaceForceGroup() specifies the group for reciprocal space.
-     * The default value is 0.
+     * If this is -1 (the default value), the same force group is used for reciprocal space as for direct space.
      */
     int getReciprocalSpaceForceGroup() const;
     /**
      * Set the force group that reciprocal space interactions for Ewald or PME are included in.  This allows multiple
      * time step integrators to evaluate direct and reciprocal space interactions at different intervals: setForceGroup()
      * specifies the group for direct space, and setReciprocalSpaceForceGroup() specifies the group for reciprocal space.
-     * The default value is 0.
+     * If this is -1 (the default value), the same force group is used for reciprocal space as for direct space.
      * 
-     * @param group    the group index.  Legal values are between 0 and 31 (inclusive).
+     * @param group    the group index.  Legal values are between 0 and 31 (inclusive), or -1 to use the same force group
+     *                 that is specified for direct space.
      */
     void setReciprocalSpaceForceGroup(int group);
 protected:

@@ -47,7 +47,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), rfDielectric(78.3), ewaldErrorTol(5e-4), useDispersionCorrection(true), recipForceGroup(0) {
+NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), rfDielectric(78.3), ewaldErrorTol(5e-4), useDispersionCorrection(true), recipForceGroup(-1) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
@@ -202,7 +202,7 @@ int NonbondedForce::getReciprocalSpaceForceGroup() const {
 }
 
 void NonbondedForce::setReciprocalSpaceForceGroup(int group) {
-    if (group < 0 || group > 31)
-        throw OpenMMException("Force group must be between 0 and 31");
+    if (group < -1 || group > 31)
+        throw OpenMMException("Force group must be between -1 and 31");
     recipForceGroup = group;
 }

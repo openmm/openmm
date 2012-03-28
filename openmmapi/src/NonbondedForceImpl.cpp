@@ -100,7 +100,9 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
 
 double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     bool includeDirect = ((groups&(1<<owner.getForceGroup())) != 0);
-    bool includeReciprocal = ((groups&(1<<owner.getReciprocalSpaceForceGroup())) != 0);
+    bool includeReciprocal = includeDirect;
+    if (owner.getReciprocalSpaceForceGroup() >= 0)
+        includeReciprocal = ((groups&(1<<owner.getReciprocalSpaceForceGroup())) != 0);
     return dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
 }
 
