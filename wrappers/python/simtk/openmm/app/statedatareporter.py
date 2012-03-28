@@ -43,7 +43,7 @@ class StateDataReporter(object):
     written in comma-separated-value (CSV) format, but you can specify a different separator to use.
     """
     
-    def __init__(self, file, reportInterval, step=True, time=True, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False, separator=','):
+    def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False, separator=','):
         """Create a StateDataReporter.
     
         Parameters:
