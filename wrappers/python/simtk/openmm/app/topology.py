@@ -205,9 +205,12 @@ class Topology(object):
                     self.addBond(sg1, sg2)
 
 class Chain(object):
+    """A Chain object represents a chain within a Topology."""
     def __init__(self, index, topology):
         """Construct a new Chain.  You should call addChain() on the Topology instead of calling this directly."""
+        ## The index of the Chain within its Topology
         self.index = index
+        ## The Topology this Chain belongs to
         self.topology = topology
         self._residues = []
     
@@ -222,10 +225,14 @@ class Chain(object):
                 yield atom
 
 class Residue(object):
+    """A Residue object represents a residue within a Topology."""
     def __init__(self, name, index, chain):
         """Construct a new Residue.  You should call addResidue() on the Topology instead of calling this directly."""
+        ## The name of the Residue
         self.name = name
+        ## The index of the Residue within its Topology
         self.index = index
+        ## The Chain this Residue belongs to
         self.chain = chain
         self._atoms = []
     
@@ -234,10 +241,16 @@ class Residue(object):
         return iter(self._atoms)
 
 class Atom(object):
+    """An Atom object represents a residue within a Topology."""
+    
     def __init__(self, name, element, index, residue):
         """Construct a new Atom.  You should call addAtom() on the Topology instead of calling this directly."""
+        ## The name of the Atom
         self.name = name
+        ## That Atom's element
         self.element = element
+        ## The index of the Atom within its Topology
         self.index = index
+        ## The Residue this Atom belongs to
         self.residue = residue
 

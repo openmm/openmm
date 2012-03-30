@@ -63,9 +63,11 @@ class Modeller(object):
          - topology (Topology) the initial Topology of the model
          - positions (list) the initial atomic positions
         """
+        ## The Topology describing the structure of the system
         self.topology = topology
         if not is_quantity(positions):
             positions = positions*nanometers
+        ## The list of atom positions
         self.positions = positions
         
     def getTopology(self):

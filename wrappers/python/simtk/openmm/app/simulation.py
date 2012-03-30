@@ -53,19 +53,25 @@ class Simulation(object):
         """Create a Simulation.
         
         Parameters:
-         - topology (Topology) A Topology describing the the system to simulation
+         - topology (Topology) A Topology describing the the system to simulate
          - system (System) The OpenMM System object to simulate
          - integrator (Integrator) The OpenMM Integrator to use for simulating the System
          - platform (Platform=None) If not None, the OpenMM Platform to use
          - platformProperties (map=None) If not None, a set of platform-specific properties to pass
            to the Context's constructor
         """
+        ## The Topology describing the system being simulated
         self.topology = topology
+        ## The System being simulated
         self.system = system
+        ## The Integrator used to advance the simulation
         self.integrator = integrator
+        ## The index of the current time step
         self.currentStep = 0
+        ## A list of reporters to invoke during the simulation
         self.reporters = []
         if platform is None:
+            ## The Context containing the current state of the simulation
             self.context = mm.Context(system, integrator)
         elif platformProperties is None:
             self.context = mm.Context(system, integrator, platform)

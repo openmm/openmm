@@ -65,7 +65,7 @@ class ForceField(object):
         """Load one or more XML files and create a ForceField object based on them.
         
         Parameters:
-         - A list of XML files defining the force field.  Each entry may be an absolute file path, a path relative to the
+         - files A list of XML files defining the force field.  Each entry may be an absolute file path, a path relative to the
            current working directory, or a path relative to this module's data subdirectory (for built in force fields).
         """
         self._atomTypes = {}
@@ -251,7 +251,7 @@ class ForceField(object):
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
-         - - Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
+         - args Arbitrary additional keyword arguments may also be specified.  This allows extra parameters to be specified that are specific to
            particular force fields.
         Returns: the newly created System
         """

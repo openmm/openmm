@@ -65,6 +65,7 @@ class PDBFile(object):
         """
         top = Topology()
         coords = [];
+        ## The Topology read from the PDB file
         self.topology = top
         
         # Load the PDB file
@@ -119,6 +120,7 @@ class PDBFile(object):
                     atomByNumber[atom.serial_number] = newAtom
                     pos = atom.get_position().value_in_unit(nanometers)
                     coords.append(Vec3(pos[0], pos[1], pos[2]))
+        ## The atom positions read from the PDB file
         self.positions = coords*nanometers
         self.topology.setUnitCellDimensions(pdb.get_unit_cell_dimensions())
         self.topology.createStandardBonds()

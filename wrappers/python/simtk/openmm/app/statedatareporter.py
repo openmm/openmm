@@ -49,12 +49,12 @@ class StateDataReporter(object):
         Parameters:
          - file (string or file) The file to write to, specified as a file name or file object
          - reportInterval (int) The interval (in time steps) at which to write frames
-         - step (boolean=True) Whether to write the current step index to the file
-         - time (boolean=True) Whether to write the current time to the file
+         - step (boolean=False) Whether to write the current step index to the file
+         - time (boolean=False) Whether to write the current time to the file
          - potentialEnergy (boolean=False) Whether to write the potential energy to the file
          - kineticEnergy (boolean=False) Whether to write the kinetic energy to the file
          - totalEnergy (boolean=False) Whether to write the total energy to the file
-         - temperature(boolean=False) Whether to write the instantaneous temperature to the file
+         - temperature (boolean=False) Whether to write the instantaneous temperature to the file
          - volume (boolean=False) Whether to write the periodic box volume to the file
          - density (boolean=False) Whether to write the system density to the file
          - separator (string=',') The separator to use between columns in the file

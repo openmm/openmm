@@ -52,12 +52,13 @@ class AmberPrmtopFile(object):
     def __init__(self, file):
         """Load a prmtop file."""
         top = Topology()
+        ## The Topology read from the prmtop file
         self.topology = top
         
         # Load the prmtop file
         
         prmtop = amber_file_parser.PrmtopLoader(file)
-        self.prmtop = prmtop
+        self._prmtop = prmtop
 
         # Add atoms to the topology
 
@@ -132,7 +133,7 @@ class AmberPrmtopFile(object):
                      ff.PME:'PME'}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal value for nonbonded method')
-        if not self.prmtop.getIfBox() and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
+        if not self._prmtop.getIfBox() and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         if nonbondedMethod == ff.NoCutoff:
             nonbondedCutoff = None
@@ -158,7 +159,7 @@ class AmberPrmtopFile(object):
             implicitString = 'GBn'
         else:
             raise ValueError('Illegal value for implicit solvent model')
-        sys = amber_file_parser.readAmberSystem(prmtop_loader=self.prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
+        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
                                                  nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
                                                  soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater)
         if removeCMMotion:

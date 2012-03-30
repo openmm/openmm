@@ -38,7 +38,7 @@ from simtk.unit import nanometer
 class DCDReporter(object):
     """DCDReporter outputs a series of frames from a Simulation to a DCD file.
     
-    To use it, create a DCDReporter, than add it to the Simulation's list of reporters.
+    To use it, create a DCDReporter, then add it to the Simulation's list of reporters.
     """
     
     def __init__(self, file, reportInterval):

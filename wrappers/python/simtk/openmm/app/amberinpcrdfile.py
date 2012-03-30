@@ -56,9 +56,12 @@ class AmberInpcrdFile(object):
         """
         results = amber_file_parser.readAmberCoordinates(file, read_velocities=loadVelocities, read_box=loadBoxVectors)
         if loadVelocities:
+            ## The atom positions read from the inpcrd file
             self.positions = results[0]
             if loadBoxVectors:
+                ## The periodic box vectors read from the inpcrd file
                 self.boxVectors = results[1]
+                ## The atom velocities read from the inpcrd file
                 self.velocities = results[2]
             else:
                 self.velocities = results[1]

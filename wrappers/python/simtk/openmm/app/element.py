@@ -37,22 +37,38 @@ __version__ = "1.0"
 from simtk.unit import daltons
 
 class Element:
-    elements_by_symbol = {}
+    """An Element represents a chemical element.
+    
+    The simtk.openmm.app.element module contains objects for all the standard chemical elements,
+    such as element.hydrogen or element.carbon.  You can also call the static method Element.getBySymbol() to
+    look up the Element with a particular chemical symbol."""
+
+    _elements_by_symbol = {}
     
     def __init__(self, number, name, symbol, mass):
+        ## The atomic number of the element
         self.atomic_number = number
+        ## The name of the element
         self.name = name
+        ## The chemical symbol of the element
         self.symbol = symbol
+        ## The atomic mass of the element
         self.mass = mass
         # Index this element in a global table
         s = symbol.strip().upper()
-        assert s not in Element.elements_by_symbol
-        Element.elements_by_symbol[s] = self
+        assert s not in Element._elements_by_symbol
+        Element._elements_by_symbol[s] = self
 
+    @staticmethod
+    def getBySymbol(symbol):
+        """Get the Element with a particular chemical symbol."""
+        s = symbol.strip().upper()
+        return Element._elements_by_symbol[s]
 
+# This is for backward compatibility.
 def get_by_symbol(symbol):
     s = symbol.strip().upper()
-    return Element.elements_by_symbol[s]
+    return Element._elements_by_symbol[s]
 
 
 hydrogen =       Element(  1, "hydrogen", "H", 1.007947*daltons)

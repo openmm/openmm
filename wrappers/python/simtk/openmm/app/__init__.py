@@ -21,6 +21,7 @@ from dcdfile import DCDFile
 from dcdreporter import DCDReporter
 from modeller import Modeller
 from statedatareporter import StateDataReporter
+from element import Element
 
 # Enumerated values
 

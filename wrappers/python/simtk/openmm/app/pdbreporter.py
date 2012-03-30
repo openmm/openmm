@@ -37,7 +37,7 @@ from simtk.openmm.app import PDBFile
 class PDBReporter(object):
     """PDBReporter outputs a series of frames from a Simulation to a PDB file.
     
-    To use it, create a PDBReporter, than add it to the Simulation's list of reporters.
+    To use it, create a PDBReporter, then add it to the Simulation's list of reporters.
     """
     
     def __init__(self, file, reportInterval):
