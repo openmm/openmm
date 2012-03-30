@@ -123,7 +123,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
 
     float sci4                  = atomJ.inducedDipole[0]*xr  + atomJ.inducedDipole[1]*yr  + atomJ.inducedDipole[2]*zr;
     //forceTorqueEnergy->w       += 0.5f*((psc3-bn1)*(ci*sci4) + (psc5-bn2)*(sc3*sci4) + (psc7-bn3)*(sci4*sc5));
-    *energy                    += forceFactor*0.5f*((psc3-bn1)*(ci*sci4) + (psc5-bn2)*(sc3*sci4) + (psc7-bn3)*(sci4*sc5));
+    *energy                    += forceFactor*0.5f*sci4*((psc3-bn1)*ci + (psc5-bn2)*sc3 + (psc7-bn3)*sc5);
 
     float scip4                 = atomJ.inducedDipoleP[0]*xr + atomJ.inducedDipoleP[1]*yr + atomJ.inducedDipoleP[2]*zr;
     if( cAmoebaSim.polarizationType == 0 ){
@@ -286,8 +286,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
     ftm23                      += prefactor1*atomI.inducedDipoleP[2];
 
     float sci3                  = atomI.inducedDipole[0]*xr  + atomI.inducedDipole[1]*yr  + atomI.inducedDipole[2]*zr;
-    //forceTorqueEnergy->w       += 0.5f*( (ck*sci3)*(bn1-psc3) -(sci3*sc4)*(bn2-psc5) + sci3*sc6*(bn3-psc7) );
-    *energy                    += forceFactor*0.5f*( (ck*sci3)*(bn1-psc3) -(sci3*sc4)*(bn2-psc5) + sci3*sc6*(bn3-psc7) );
+    *energy                    += forceFactor*0.5f*sci3*( ck*(bn1-psc3) - sc4*(bn2-psc5) + sc6*(bn3-psc7) );
     float scip3                 = atomI.inducedDipoleP[0]*xr + atomI.inducedDipoleP[1]*yr + atomI.inducedDipoleP[2]*zr;
 
     if( cAmoebaSim.polarizationType == 0 ){
@@ -343,7 +342,7 @@ static __device__ void SUB_METHOD_NAME( calculatePmeDirectElectrostaticPairIxnF2
 
     float sci8                  = qkr1*atomI.inducedDipole[0] + qkr2*atomI.inducedDipole[1] + qkr3*atomI.inducedDipole[2];
     //forceTorqueEnergy->w       += sci8*(bn2-psc5);
-    *energy                    += forceFactor*sci8*(bn2-psc5);
+    *energy                    -= forceFactor*sci8*(bn2-psc5);
     float scip1                 = atomI.inducedDipoleP[0]*dk1 + atomI.inducedDipoleP[1]*dk2 + atomI.inducedDipoleP[2]*dk3 + di1*atomJ.inducedDipoleP[0] + di2*atomJ.inducedDipoleP[1] + di3*atomJ.inducedDipoleP[2];
 #ifndef APPLY_SCALE
         sci1                   += scip1;
