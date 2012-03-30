@@ -17,6 +17,8 @@ import xml.etree.ElementTree as etree
 
 INDENT = "   ";
 
+docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt'}
+
 def trimToSingleSpace(text):
     if text is None or len(text) == 0:
         return ""
@@ -29,13 +31,30 @@ def trimToSingleSpace(text):
         t = "%s " % t
     return t
 
+def getNodeText(node):
+    if node.text is not None:
+        s = node.text
+    else:
+        s = ""
+    for n in node:
+        if n.tag == "para":
+            s = "%s%s\n\n" % (s, getNodeText(n))
+        elif n.tag == "ref":
+            s = "%s%s" % (s, getNodeText(n))
+        else:
+            if n.tag in docTags:
+                tag = docTags[n.tag]
+                s = "%s<%s>%s</%s>" % (s, tag, getNodeText(n), tag)
+        if n.tail is not None:
+            s = "%s%s" % (s, n.tail)
+    return s
+
 def getText(subNodePath, node):
-    s=""
+    s = ""
     for n in node.findall(subNodePath):
-        s = "%s%s" % (s, trimToSingleSpace(n.text))
-        for r in n.findall("ref"):
-            s = "%s%s%s" % (s, trimToSingleSpace(r.text), trimToSingleSpace(r.tail))
-        s = "%s%s" % (s, trimToSingleSpace(n.tail))
+        s = "%s%s" % (s, trimToSingleSpace(getNodeText(n)))
+        if n.tag == "para":
+            s = "%s\n\n" % s
     return s.strip()
 
 OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
@@ -92,7 +111,7 @@ def getClassMethodList(classNode, skipMethods):
 
 class SwigInputBuilder:
     def __init__(self,
-                 inputFilename,
+                 inputDirname,
                  configFilename,
                  outputFilename=None,
                  docstringFilename=None,
@@ -110,7 +129,12 @@ class SwigInputBuilder:
                 items[2]=int(items[2])
             self.skipMethods.append(tuple(items))
 
-        self.doc = etree.parse(inputFilename)
+        # Read all the XML files and merge them into a single document.
+        self.doc = etree.ElementTree(etree.Element('root'))
+        for file in os.listdir(inputDirname):
+            root = etree.parse(os.path.join(inputDirname, file)).getroot()
+            for node in root:
+                self.doc.getroot().append(node)
 
         if outputFilename:
             self.fOut = open(outputFilename, 'w')
@@ -220,6 +244,11 @@ class SwigInputBuilder:
         self.fOut.write("\n/* Class Declarations */\n\n")
         for classNode in self._orderedClassNodes:
             className = stripOpenmmPrefix(getText("compoundname", classNode))
+            if self.fOutDocstring:
+                dNode = classNode.find('detaileddescription')
+                if dNode is not None:
+                    docstring = getNodeText(dNode).strip().replace('"', '\\"')
+                    self.fOutDocstring.write('%%feature("docstring") %s "%s";\n' % (className, docstring))
             self.fOut.write("class %s" % className)
             if className in self.configModule.MISSING_BASE_CLASSES:
                 self.fOut.write(" : public %s" %
@@ -498,10 +527,13 @@ class SwigInputBuilder:
                             dString=description
                     except IndexError:
                         pass
-                    for pNode in findNodes(dNode, 'para/parameterlist/parameteritem'):
+                    params = findNodes(dNode, 'para/parameterlist/parameteritem')
+                    if len(params) > 0:
+                        dString="%s\n   Parameters:" % dString
+                    for pNode in params:
                         argName = getText('parameternamelist/parametername', pNode)
                         argDoc = getText('parameterdescription/para', pNode)
-                        dString="%s\n   %s -- %s" % (dString, argName, argDoc)
+                        dString="%s\n    - %s %s" % (dString, argName, argDoc)
                         dString.strip()
                     if dString:
                         dString=re.sub(r'([^\\])"', r'\g<1>\"', dString)
@@ -527,7 +559,7 @@ class SwigInputBuilder:
 
 def parseCommandLine():
     opts, args_proper = getopt.getopt(sys.argv[1:], 'hi:c:o:d:a:z:s:')
-    inputFilename = None
+    inputDirname = None
     configFilename = None
     outputFilename = ""
     docstringFilename = ""
@@ -536,24 +568,24 @@ def parseCommandLine():
     skipAdditionalMethods = []
     for option, parameter in opts:
         if option=='-h': usageError()
-        if option=='-i': inputFilename = parameter
+        if option=='-i': inputDirname = parameter
         if option=='-c': configFilename=parameter
         if option=='-o': outputFilename = parameter
         if option=='-d': docstringFilename = parameter
         if option=='-a': pythonprependFilename=parameter
         if option=='-z': pythonappendFilename=parameter
         if option=='-s': skipAdditionalMethods.append(parameter)
-    if not inputFilename: usageError()
+    if not inputDirname: usageError()
     if not configFilename: usageError()
-    return (args_proper, inputFilename, configFilename, outputFilename,
+    return (args_proper, inputDirname, configFilename, outputFilename,
             docstringFilename,
             pythonprependFilename, pythonappendFilename, skipAdditionalMethods)
 
 def main():
-    (args_proper, inputFilename, configFilename, outputFilename,
+    (args_proper, inputDirname, configFilename, outputFilename,
      docstringFilename, pythonprependFilename, pythonappendFilename,
      skipAdditionalMethods) = parseCommandLine()
-    sBuilder = SwigInputBuilder(inputFilename, configFilename, outputFilename,
+    sBuilder = SwigInputBuilder(inputDirname, configFilename, outputFilename,
                                 docstringFilename, pythonprependFilename,
                                 pythonappendFilename, skipAdditionalMethods)
     #print "Calling writeSwigFile\n"
@@ -568,7 +600,7 @@ def usageError():
          % os.path.basename(sys.argv[0]))
     sys.stdout.write('       %s -c inputConfigFilename\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))
-    sys.stdout.write('       %s[-o swigInputFilename]\n' \
+    sys.stdout.write('       %s[-o swigInputDirname]\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))
     sys.stdout.write('       %s[-d docstringFilename]\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))

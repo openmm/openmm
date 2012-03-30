@@ -426,16 +426,20 @@ class Modeller(object):
         Aspartic acid:
             ASH: Neutral form with a hydrogen on one of the delta oxygens
             ASP: Negatively charged form without a hydrogen on either delta oxygen
+            
         Cysteine:
             CYS: Neutral form with a hydrogen on the sulfur
             CYX: No hydrogen on the sulfur (either negatively charged, or part of a disulfide bond)
+            
         Glutamic acid:
             GLH: Neutral form with a hydrogen on one of the epsilon oxygens
             GLU: Negatively charged form without a hydrogen on either epsilon oxygen
+            
         Histidine:
             HID: Neutral form with a hydrogen on the ND1 atom
             HIE: Neutral form with a hydrogen on the NE2 atom
             HIP: Positively charged form with hydrogens on both ND1 and NE2
+            
         Lysine:
             LYN: Neutral form with two hydrogens on the zeta nitrogen
             LYS: Positively charged form with three hydrogens on the zeta nitrogen

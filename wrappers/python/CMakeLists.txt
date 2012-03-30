@@ -83,9 +83,6 @@ endif(SWIG_VERSION_ERROR)
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
 
-find_package(Java REQUIRED)
-mark_as_advanced(CLEAR JAVA_RUNTIME)
-
 # SWIG_OPENMM_DIR is package area where swig files will be created/used
 set(SWIG_OPENMM_DIR "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen")
 file(MAKE_DIRECTORY ${SWIG_OPENMM_DIR}/swig_lib/python)
@@ -100,31 +97,12 @@ configure_file(
 
 # Step 2 - Run doxygen in non-package area
 add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml" "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/combine.xslt"
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml"
     COMMAND "${DOXYGEN_EXECUTABLE}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/Doxyfile"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen"
     COMMENT "Parsing OpenMM header files with doxygen..."
 )
-
-# Step 3 - Run xslt to create combined xml file
-add_custom_command(
-    OUTPUT "${SWIG_OPENMM_DIR}/OpenMM_headers.xml"
-    COMMAND ${JAVA_RUNTIME}
-        -jar "${CMAKE_SOURCE_DIR}/wrappers/saxonb9-1-0-7j/saxon9.jar"
-        -t
-        -s:"${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml"
-        -xsl:"${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/combine.xslt"
-        -o:OpenMM_headers.xml
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml" "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/combine.xslt"
-    WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
-    COMMENT "Creating combined OpenMM API xml file..."
-)
-add_custom_target(CreateCombinedXmlFile DEPENDS
-    "${SWIG_OPENMM_DIR}/OpenMM_headers.xml"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/combine.xslt"
-    ${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/Doxyfile)
 
 # OpenMM REFERENCE platform first
 
@@ -153,7 +131,7 @@ set(SWIG_INPUT_FILES2
 add_custom_command(
     OUTPUT ${SWIG_INPUT_FILES_REF}
     COMMAND ${PYTHON_EXECUTABLE} "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
-        -i OpenMM_headers.xml
+        -i "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml"
         -c swigInputConfig.py
         -d OpenMM_docstring.i
         -o OpenMM_headers.i
@@ -163,7 +141,7 @@ add_custom_command(
     DEPENDS
         "${SWIG_OPENMM_DIR}/swigInputConfig.py"
         "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
-        "${SWIG_OPENMM_DIR}/OpenMM_headers.xml"
+        "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml"
     COMMENT "Creating OpenMM Python swig input files..."
 )
 
