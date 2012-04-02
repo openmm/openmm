@@ -435,8 +435,10 @@ void kAmoebaReciprocalConvolution_kernel()
         int remainder = index-kx*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
         int ky = remainder/cSim.pmeGridSize.z;
         int kz = remainder-ky*cSim.pmeGridSize.z;
-        if (kx == 0 && ky == 0 && kz == 0)
+        if (kx == 0 && ky == 0 && kz == 0){
+            cSim.pPmeGrid[index] = make_cuComplex(0.0f, 0.0f);
             continue;
+        }
         int mx = (kx < (cSim.pmeGridSize.x+1)/2) ? kx : (kx-cSim.pmeGridSize.x);
         int my = (ky < (cSim.pmeGridSize.y+1)/2) ? ky : (ky-cSim.pmeGridSize.y);
         int mz = (kz < (cSim.pmeGridSize.z+1)/2) ? kz : (kz-cSim.pmeGridSize.z);
