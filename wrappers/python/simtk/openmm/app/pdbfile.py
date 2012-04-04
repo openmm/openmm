@@ -130,7 +130,7 @@ class PDBFile(object):
         # Add bonds based on CONECT records.
         
         connectBonds = []
-        for connect in pdb.get_model(0).connects:
+        for connect in pdb.models[0].connects:
             i = connect[0]
             for j in connect[1:]:
                 connectBonds.append((atomByNumber[i], atomByNumber[j]))
