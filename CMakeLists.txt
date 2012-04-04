@@ -516,7 +516,7 @@ IF(DOXYGEN_EXECUTABLE)
     FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/")
     INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-c++/"
             DESTINATION "docs/api-c++/")
-    INSTALL(FILES "docs/API Reference.html"
+    INSTALL(FILES "docs/C++ API Reference.html"
             DESTINATION "docs/")
     ADD_CUSTOM_TARGET(DoxygenApiDocs
         DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/api-c++/index.html"
@@ -556,13 +556,13 @@ IF(DOXYGEN_EXECUTABLE)
         FILE(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/api-python/")
         INSTALL(DIRECTORY "${PROJECT_BINARY_DIR}/api-python/"
                 DESTINATION "docs/api-python/")
-        INSTALL(FILES "docs/API Reference.html"
+        INSTALL(FILES "docs/Python API Reference.html"
                 DESTINATION "docs/")
         ADD_DEPENDENCIES(DoxygenApiDocs PythonApiDocs)
     ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS)
 ENDIF(DOXYGEN_EXECUTABLE)
 
-install(FILES docs/UsersGuide/OpenMMUsersGuide.pdf
+install(FILES docs/OpenMMUsersGuide.pdf docs/OpenMMApplicationGuide.pdf docs/OpenMMDeveloperGuide.pdf
     DESTINATION docs/)
 
 FILE(GLOB LICENSE_FILES "docs/licenses/*.txt")
