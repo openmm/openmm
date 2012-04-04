@@ -93,6 +93,9 @@ FOREACH(EX_ROOT ${F_EXAMPLES})
     INSTALL(FILES ${EX_ROOT}.f90 DESTINATION examples)
 ENDFOREACH(EX_ROOT ${F_EXAMPLES})
 
+INSTALL(FILES simulateAmber.py simulatePdb.py testInstallation.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb
+        DESTINATION examples)
+
 INSTALL(FILES HelloArgonInCVS8/HelloArgonInC.vcproj 
               HelloArgonInCVS8/HelloArgonInC.sln 
         DESTINATION examples/VisualStudio)
@@ -103,5 +106,4 @@ INSTALL(FILES Makefile NMakefile DESTINATION examples)
 INSTALL(FILES HelloArgonVS8/HelloArgon.vcproj 
 		      HelloArgonVS8/HelloArgon.sln 
 	    DESTINATION examples/VisualStudio)
-INSTALL(FILES HelloOpenMM.ppt 
-        DESTINATION examples)
+INSTALL(FILES MakefileNotes.txt DESTINATION examples)
