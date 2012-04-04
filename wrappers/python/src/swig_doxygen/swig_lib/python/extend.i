@@ -202,3 +202,15 @@
         return copyVVec3ToList(values);
     }
 }
+
+%extend OpenMM::Force {
+  %pythoncode {
+    def __copy__(self):
+        copy = self.__class__.__new__(self.__class__)
+        copy.__init__(self)
+        return copy
+
+    def __deepcopy__(self, memo):
+        return self.__copy__()
+  }
+}
