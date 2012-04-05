@@ -84,6 +84,8 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
 
             int bestSpeed = -1;
             for (int i = 0; i < (int) devices.size(); i++) {
+                if (platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>() == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
+                    continue; // Don't use AMD GPUs on OS X due to serious bugs.
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
@@ -195,7 +197,7 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         }
         else
             simdWidth = 1;
-        if (platforms[0].getInfo<CL_PLATFORM_VENDOR>() == "Apple" && vendor == "AMD")
+        if (platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>() == "Apple" && vendor == "AMD")
             compilationDefines["MAC_AMD_WORKAROUND"] = "";
         if (supports64BitGlobalAtomics)
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
