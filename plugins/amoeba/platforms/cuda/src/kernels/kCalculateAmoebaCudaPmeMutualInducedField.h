@@ -83,7 +83,7 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
         fieldPolarSum[1]                 = 0.0f;
         fieldPolarSum[2]                 = 0.0f;
 
-        if (x == y ){
+        if ( x == y ){
 
             // load shared data
 
@@ -104,11 +104,13 @@ void METHOD_NAME(kCalculateAmoebaPmeMutualInducedField, _kernel)(
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset            = 3*(x + tgx + warp*cSim.paddedNumberOfAtoms);
+            load3dArrayBufferPerWarp( offset, fieldSum,       outputField );
+            load3dArrayBufferPerWarp( offset, fieldPolarSum,  outputFieldPolar );
 #else
             unsigned int offset            = 3*(x + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
-#endif
             load3dArray( offset, fieldSum,      outputField );
             load3dArray( offset, fieldPolarSum, outputFieldPolar);
+#endif
 
         } else {
 

@@ -376,7 +376,7 @@ static void kSorUpdateMutualInducedField_kernel(
 
     int pos                        = blockIdx.x*blockDim.x + threadIdx.x;
     const float term               = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
-    const float polarSOR           = 0.70f;
+    const float polarSOR           = 0.55f;
 
     while( pos < 3*cSim.atoms )
     {   
@@ -521,7 +521,8 @@ static void cudaComputeAmoebaPmeMutualInducedFieldBySOR( amoebaGpuContext amoeba
 
     while( !done ){
 
-        // matrix multiply
+        //  apply SOR
+
         cudaComputeAmoebaPmeMutualInducedFieldMatrixMultiply( amoebaGpu, amoebaGpu->psWorkVector[0],  amoebaGpu->psWorkVector[1] );
         kCalculateAmoebaPMEInducedDipoleField( amoebaGpu );
 

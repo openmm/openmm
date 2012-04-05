@@ -341,7 +341,7 @@ void kSorUpdateMutualInducedAndGkField_kernel(
                    float* matrixProduct, float* matrixProductP )
 {
 
-    float polarSOR = 0.70f;
+    float polarSOR = 0.55f;
     int pos        = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
@@ -378,7 +378,7 @@ void kSorUpdateMutualInducedAndGkFieldS_kernel(
                    float* matrixProduct, float* matrixProductP )
 {
 
-    float polarSOR = 0.70f;
+    float polarSOR = 0.55f;
     int pos        = blockIdx.x*blockDim.x + threadIdx.x;
     while( pos < 3*cSim.atoms )
     {
