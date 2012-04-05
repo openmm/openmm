@@ -96,14 +96,15 @@ ENDFOREACH(EX_ROOT ${F_EXAMPLES})
 INSTALL(FILES simulateAmber.py simulatePdb.py testInstallation.py argon-chemical-potential.py input.inpcrd input.prmtop input.pdb
         DESTINATION examples)
 
-INSTALL(FILES HelloArgonInCVS8/HelloArgonInC.vcproj 
-              HelloArgonInCVS8/HelloArgonInC.sln 
+INSTALL(FILES VisualStudio/HelloArgon.vcproj 
+              VisualStudio/HelloArgon.sln 
+              VisualStudio/HelloArgonInC.sln 
+              VisualStudio/HelloArgonInC.vcproj 
+              VisualStudio/HelloArgonInFortran.sln 
+              VisualStudio/HelloArgonInFortran.vfproj 
         DESTINATION examples/VisualStudio)
 
 INSTALL(FILES README.txt DESTINATION examples)
 INSTALL(FILES Makefile NMakefile DESTINATION examples)
 
-INSTALL(FILES HelloArgonVS8/HelloArgon.vcproj 
-		      HelloArgonVS8/HelloArgon.sln 
-	    DESTINATION examples/VisualStudio)
-INSTALL(FILES MakefileNotes.txt DESTINATION examples)
+INSTALL(FILES MakefileNotes.txt Empty.cpp DESTINATION examples)
