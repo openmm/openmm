@@ -253,7 +253,7 @@ class PDBFile(object):
                 else:
                     resName = res.name
                 for atom in res.atoms():
-                    if len(atom.name) < 4:
+                    if len(atom.name) < 4 and atom.name[:1].isalpha() and (atom.element is None or len(atom.element.symbol) < 2):
                         atomName = ' '+atom.name
                     elif len(atom.name) > 4:
                         atomName = atom.name[:4]
