@@ -3913,7 +3913,6 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     compute << "{\n" << createGlobalComputation(variable[i], expression[i], integrator) << "}\n";
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
-                stringstream args;
                 cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorGlobal, replacements), defines);
                 cl::Kernel kernel = cl::Kernel(program, "computeGlobal");
                 kernels[step].push_back(kernel);
@@ -4006,7 +4005,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         else if (stepType[i] == CustomIntegrator::ComputeGlobal && !merged[i]) {
             kernels[i][0].setArg<cl_float>(3, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
             kernels[i][0].setArg<cl_float>(4, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-            cl.executeKernel(kernels[i][0], 1);
+            cl.executeKernel(kernels[i][0], 1, 1);
         }
         else if (stepType[i] == CustomIntegrator::ComputeSum) {
             kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[i]));
