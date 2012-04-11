@@ -386,14 +386,17 @@ static void kSorUpdateMutualInducedField_kernel(
     
         // add self terms to fields
     
-        matrixProduct[pos]            +=  term*previousDipole;
-        matrixProductP[pos]           +=  term*previousDipoleP;
+        float mProd                    = matrixProduct[pos];
+        float mProdP                   = matrixProductP[pos];
+
+        mProd                         += term*previousDipole;
+        mProdP                        += term*previousDipoleP;
     
-        inducedDipole[pos]             = fixedEField[pos]     + polarizability[pos]*matrixProduct[pos];
-        inducedDipoleP[pos]            = fixedEFieldP[pos]    + polarizability[pos]*matrixProductP[pos];
+        float inducedDipoleI           = fixedEField[pos]     + polarizability[pos]*mProd;
+        float inducedDipoleIP          = fixedEFieldP[pos]    + polarizability[pos]*mProdP;
     
-        inducedDipole[pos]             = previousDipole   + polarSOR*( inducedDipole[pos]   - previousDipole  );   
-        inducedDipoleP[pos]            = previousDipoleP  + polarSOR*( inducedDipoleP[pos]  - previousDipoleP );
+        inducedDipole[pos]             = previousDipole   + polarSOR*( inducedDipoleI   - previousDipole  );   
+        inducedDipoleP[pos]            = previousDipoleP  + polarSOR*( inducedDipoleIP  - previousDipoleP );
     
         matrixProduct[pos]             = ( inducedDipole[pos]  - previousDipole  )*( inducedDipole[pos]  - previousDipole  );
         matrixProductP[pos]            = ( inducedDipoleP[pos] - previousDipoleP )*( inducedDipoleP[pos] - previousDipoleP );
