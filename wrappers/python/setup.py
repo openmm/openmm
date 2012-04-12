@@ -13,7 +13,7 @@ import struct
 from distutils.core import setup
 
 MAJOR_VERSION_NUM='4'
-MINOR_VERSION_NUM='0'
+MINOR_VERSION_NUM='1'
 BUILD_INFO='0'
 
 def reportError(message):
@@ -180,7 +180,10 @@ def main():
         macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
         if tuple(macVersion) < (10, 5):
             reportError("OpenMM requires Mac OS X Leopard (10.5) or better.")
-    uninstall()
+    try:
+        uninstall()
+    except:
+        pass
     setupKeywords=buildKeywordDictionary()
     setup(**setupKeywords)
 
