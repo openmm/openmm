@@ -67,7 +67,7 @@ PROGRAM HelloArgon
     frameNum = 1
     do
         ! Output current state information.
-        call OpenMM_Context_getState(context, OpenMM_State_Positions, state, 0)
+        call OpenMM_Context_getState(context, OpenMM_State_Positions, OpenMM_False, state)
         timeInPs = OpenMM_State_getTime(state)
         call writePdbFrame(frameNum, state) !output coordinates
         call OpenMM_State_destroy(state)

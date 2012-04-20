@@ -27,6 +27,8 @@
 
 <!-- Do not generate functions for the following classes -->
 <xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
+<!-- Do not generate the following functions -->
+<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
 <!-- Suppress any function which references any of the following classes -->
 <xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl')"/>
 
@@ -248,6 +250,22 @@ MODULE OpenMM
  <xsl:with-param name="element_type" select="'real*8'"/>
  <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
 </xsl:call-template>
+
+        ! These methods need to be handled specially, since their C++ APIs cannot be directly translated to Fortran.
+        ! Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself.
+        subroutine OpenMM_Context_getState(target, types, enforcePeriodicBox, result)
+            use OpenMM_Types; implicit none
+            type (OpenMM_Context) target
+            integer*4 types
+            integer*4 enforcePeriodicBox
+            type (OpenMM_State) result
+        end
+
+        subroutine OpenMM_Platform_loadPluginsFromDirectory(directory, result)
+            use OpenMM_Types; implicit none
+            character(*) directory
+            type (OpenMM_StringArray) result
+        end
 
  <!-- Class members -->
  <xsl:for-each select="Class[@context=$openmm_namespace_id and empty(index-of($skip_classes, @name))]">
@@ -507,6 +525,8 @@ END MODULE OpenMM
 <!-- Determine whether a method should be hidden -->
 <xsl:template name="should_hide">
  <xsl:variable name="class_id" select="@context"/>
+ <xsl:variable name="method_name" select="concat('OpenMM_', /GCC_XML/Class[@id=$class_id]/@name, '_', @name)"/>
+ <xsl:if test="not(empty(index-of($skip_methods, $method_name)))">1</xsl:if>
  <xsl:call-template name="hide_type">
   <xsl:with-param name="type_id" select="@returns"/>
  </xsl:call-template>
