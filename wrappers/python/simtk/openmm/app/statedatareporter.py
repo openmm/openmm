@@ -132,7 +132,7 @@ class StateDataReporter(object):
             if self._volume:
                 headers.append('Box Volume (nm^3)')
             if self._density:
-                headers.append('Density (amu/nm^3)')
+                headers.append('Density (g/mL)')
             print >>self._out, '#"%s"' % ('"'+self._separator+'"').join(headers)
             self._hasInitialized = True
 
@@ -156,7 +156,7 @@ class StateDataReporter(object):
         if self._volume:
             values.append(volume.value_in_unit(unit.nanometer**3))
         if self._density:
-            values.append((self._totalMass/volume).value_in_unit(unit.dalton/unit.nanometer**3))
+            values.append((self._totalMass/volume).value_in_unit(unit.gram/unit.item/unit.milliliter))
         print >>self._out, self._separator.join(str(v) for v in values)
         
     def __del__(self):
