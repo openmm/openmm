@@ -33,12 +33,13 @@ __version__ = "1.0"
 
 import os
 import sys
+import math
 import xml.etree.ElementTree as etree
 from copy import copy
 from simtk.openmm import Vec3
 from simtk.openmm.app.internal.pdbstructure import PdbStructure
 from simtk.openmm.app import Topology
-from simtk.unit import nanometers, angstroms, is_quantity
+from simtk.unit import nanometers, angstroms, is_quantity, norm
 import element as elem
 try:
     import numpy
@@ -240,6 +241,10 @@ class PDBFile(object):
             raise ValueError('The number of positions must match the number of atoms') 
         if is_quantity(positions):
             positions = positions.value_in_unit(angstroms)
+        if any(math.isnan(norm(pos)) for pos in positions):
+            raise ValueError('Particle position is NaN')
+        if any(math.isinf(norm(pos)) for pos in positions):
+            raise ValueError('Particle position is infinite')
         atomIndex = 1
         posIndex = 0
         if modelIndex is not None:

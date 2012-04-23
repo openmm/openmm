@@ -34,6 +34,7 @@ __version__ = "1.0"
 import simtk.openmm as mm
 import simtk.unit as unit
 from simtk.openmm.app import PDBFile
+import math
     
 class StateDataReporter(object):
     """StateDataReporter outputs information about a simulation, such as energy and temperature, to a file.
@@ -136,6 +137,15 @@ class StateDataReporter(object):
             print >>self._out, '#"%s"' % ('"'+self._separator+'"').join(headers)
             self._hasInitialized = True
 
+        # Check for errors.
+        
+        if self._needEnergy:
+            energy = (state.getKineticEnergy()+state.getPotentialEnergy()).value_in_unit(unit.kilojoules_per_mole)
+            if math.isnan(energy):
+                raise ValueError('Energy is NaN')
+            if math.isinf(energy):
+                raise ValueError('Energy is infinite')
+                
         # Write the values.
         
         values = []

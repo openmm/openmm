@@ -35,8 +35,9 @@ import array
 import os
 import time
 import struct
-from simtk.unit import picoseconds, nanometers, angstroms, is_quantity
-    
+import math
+from simtk.unit import picoseconds, nanometers, angstroms, is_quantity, norm
+
 class DCDFile(object):
     """DCDFile provides methods for creating DCD files.
     
@@ -89,6 +90,10 @@ class DCDFile(object):
             raise ValueError('The number of positions must match the number of atoms') 
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
+        if any(math.isnan(norm(pos)) for pos in positions):
+            raise ValueError('Particle position is NaN')
+        if any(math.isinf(norm(pos)) for pos in positions):
+            raise ValueError('Particle position is infinite')
         file = self._file
         
         # Update the header.
