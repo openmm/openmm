@@ -164,7 +164,16 @@ struct cudaAmoebaGmxSimulation {
     float* pWorkArray_1_2;
 
     int vdwUsePBC;
+    float vdwCutoff;
     float vdwCutoff2;
+    float vdwTaperCutoff;
+    float vdwTaperCutoff2;
+    float vdwTaperDelta;
+
+#define VDW_TAPER_TABLE_SIZE 100
+    float vdwTaperTable[VDW_TAPER_TABLE_SIZE+1];
+    float vdw_dTaperTable[VDW_TAPER_TABLE_SIZE+1];
+
     unsigned int amoebaVdwNonReductions;
     int* pAmoebaVdwNonReductionID;
     unsigned int* pVdwWorkUnit;

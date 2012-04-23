@@ -447,7 +447,12 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     vdwSigmaCombiningRule              %d\n",      amoebaGpu->vdwSigmaCombiningRule);
     (void) fprintf( log, "     vdwEpsilonCombiningRule            %d\n",      amoebaGpu->vdwEpsilonCombiningRule);
     (void) fprintf( log, "     vdwUsePBC                          %d\n",      amoebaGpu->amoebaSim.vdwUsePBC);
+    (void) fprintf( log, "     vdwCutoff                          %15.7e\n",  amoebaGpu->amoebaSim.vdwCutoff);
     (void) fprintf( log, "     vdwCutoff2                         %15.7e\n",  amoebaGpu->amoebaSim.vdwCutoff2);
+    (void) fprintf( log, "     vdwTaperCutoff                     %15.7e\n",  amoebaGpu->amoebaSim.vdwTaperCutoff );
+    if( amoebaGpu->amoebaSim.vdwCutoff > 0.0f ){
+        (void) fprintf( log, "     vdwTaper                           %8.3f\n",  amoebaGpu->amoebaSim.vdwTaperCutoff/amoebaGpu->amoebaSim.vdwCutoff);
+    }
     totalMemory += gpuPrintCudaStreamFloat2( amoebaGpu->psVdwSigmaEpsilon, log );
     totalMemory += gpuPrintCudaStreamInt( amoebaGpu->psAmoebaVdwNonReductionID, log );
     totalMemory += gpuPrintCudaStreamInt4( amoebaGpu->psAmoebaVdwReductionID, log );
@@ -2243,6 +2248,84 @@ static int decodeCell( int cellCode, unsigned int* x, unsigned int* y, unsigned 
 	return 0;
 }
 
+static void getVdwTaper( double r, double vdwTaperCoefficients[6], double* taper, double* dtaper ){
+
+       double r2 = r*r;
+       *taper    = r*( r2*(vdwTaperCoefficients[5]*r2 +
+                           vdwTaperCoefficients[3])   +
+                           vdwTaperCoefficients[1])   +
+                     ( r2*(vdwTaperCoefficients[4]*r2   +
+                           vdwTaperCoefficients[2])   +
+                           vdwTaperCoefficients[0]);
+
+       *dtaper   = ( r2*(5.0*vdwTaperCoefficients[5]*r2   + 3.0*vdwTaperCoefficients[3]) + vdwTaperCoefficients[1]) +
+                      r*(4.0*vdwTaperCoefficients[4]*r2   + 2.0*vdwTaperCoefficients[2]);
+
+}
+
+static void lookupVdwTaperLinear( float r, double vdwTaperCut, double delta,
+                                  std::vector<float>& taperTable,  std::vector<float>& dtaperTable, float* taper, float* dtaper ){
+
+    //int index        = static_cast<int>(floor( (r - vdwTaperCut)/delta));
+    int index        = static_cast<int>(round( (r - vdwTaperCut)/delta));
+    if( index > taperTable.size()-1 ){
+        *taper = *dtaper = 0.0f;
+    } else {
+
+        float slope      = (taperTable[index+1] - taperTable[index])/delta;
+        float intercept  = taperTable[index+1] - slope*(delta*static_cast<float>(index+1));
+        *taper           = slope*(r-vdwTaperCut) + intercept; 
+
+        slope            = (dtaperTable[index+1] - dtaperTable[index])/delta;
+        intercept        = dtaperTable[index+1] - slope*(delta*static_cast<float>(index+1));
+        *dtaper          = slope*(r-vdwTaperCut) + intercept; 
+
+//fprintf( stderr, "TaperTest: %3d r=%15.7e m=%15.7e b=%15.7e taper=%15.7e %15.7e\n", index, r, slope, intercept, *taper, *dtaper );
+    }
+       
+}
+
+static void lookupVdwTaper( float r, double vdwTaperCut, double delta,
+                            std::vector<float>& taperTable,  std::vector<float>& dtaperTable, float* taper, float* dtaper ){
+
+    int index        = static_cast<int>(round( (r - vdwTaperCut)/delta));
+    if( index > taperTable.size()-2 ){
+        *taper = *dtaper = 0.0f;
+    } else if( index == 0){
+        *taper  = 1.0f;
+        *dtaper = 0.0f;
+    } else {
+
+        float x          = r-vdwTaperCut;
+        float x0         = delta*static_cast<float>(index-1);
+        float y0         = taperTable[index-1];
+
+        float x1         = x0 + delta;
+        float y1         = taperTable[index];
+
+        float x2         = x1 + delta;
+        float y2         = taperTable[index+1];
+
+        *taper           = y0*( (x-x1)*(x-x2)/((x0-x1)*(x0-x2))) + 
+                           y1*( (x-x0)*(x-x2)/((x1-x0)*(x1-x2))) + 
+                           y2*( (x-x0)*(x-x1)/((x2-x0)*(x2-x1)));
+
+
+              y0         = dtaperTable[index-1];
+              y1         = dtaperTable[index];
+              y2         = dtaperTable[index+1];
+
+        *dtaper          = y0*( (x-x1)*(x-x2)/((x0-x1)*(x0-x2))) + 
+                           y1*( (x-x0)*(x-x2)/((x1-x0)*(x1-x2))) + 
+                           y2*( (x-x0)*(x-x1)/((x2-x0)*(x2-x1)));
+
+
+//fprintf( stderr, "TaperTest: %3d r=%15.7e x=%15.7e x0=%15.7e x1=%15.7e x2=%15.7e  V=%15.7e %15.7e\n", 
+//         index, r, x, x0, x1, x2, *taper, *dtaper );
+    } 
+       
+}
+
 extern "C"
 void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<int>& indexIVs, 
@@ -2265,9 +2348,86 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     unsigned int particles                 = sigmas.size();
     
     amoebaGpu->amoebaSim.vdwUsePBC         = usePBC;
+    amoebaGpu->amoebaSim.vdwCutoff         = cutoff;
     amoebaGpu->amoebaSim.vdwCutoff2        = cutoff*cutoff;
+    double vdwTaper                         = 0.90f;
+    if( vdwTaper < 1.0 ){
+        double vdwTaperCoefficients[6];
+        double vdwCut       = cutoff;
+        double vdwTaperCut  = vdwTaper*cutoff;
+        amoebaGpu->amoebaSim.vdwTaperCutoff  = vdwTaperCut;
+        amoebaGpu->amoebaSim.vdwTaperCutoff2 = vdwTaperCut*vdwTaperCut;
 
-    // set sigma combining rule flag
+        double vdwCut2      = vdwCut*vdwCut;
+        double vdwCut3      = vdwCut2*vdwCut;
+        double vdwCut4      = vdwCut2*vdwCut2;
+        double vdwCut5      = vdwCut2*vdwCut3;
+        double vdwCut6      = vdwCut3*vdwCut3;
+        double vdwCut7      = vdwCut3*vdwCut4;
+
+        double vdwTaperCut2 = vdwTaperCut*vdwTaperCut;
+        double vdwTaperCut3 = vdwTaperCut2*vdwTaperCut;
+        double vdwTaperCut4 = vdwTaperCut2*vdwTaperCut2;
+        double vdwTaperCut5 = vdwTaperCut2*vdwTaperCut3;
+        double vdwTaperCut6 = vdwTaperCut3*vdwTaperCut3;
+        double vdwTaperCut7 = vdwTaperCut3*vdwTaperCut4;
+
+        // get 5th degree multiplicative switching function coefficients;
+ 
+       double denom  = 1.0/(vdwCut-vdwTaperCut);
+       double denom2 = denom*denom;
+       denom         = denom*denom2*denom2;
+
+       vdwTaperCoefficients[0] = vdwCut*vdwCut2 * (vdwCut2-5.0*vdwCut*vdwTaperCut+10.0*vdwTaperCut2)*denom;
+       vdwTaperCoefficients[1] = -30.0*vdwCut2*vdwTaperCut2*denom;
+       vdwTaperCoefficients[2] =  30.0*(vdwCut2*vdwTaperCut+vdwCut*vdwTaperCut2)*denom;
+       vdwTaperCoefficients[3] = -10.0*(vdwCut2+4.0*vdwCut*vdwTaperCut+vdwTaperCut2)*denom;
+       vdwTaperCoefficients[4] =  15.0*(vdwCut+vdwTaperCut)*denom;
+       vdwTaperCoefficients[5] =  -6.0*denom;
+
+       // table
+
+       int vdwTableSize      = VDW_TAPER_TABLE_SIZE;
+       double tableDelta     = vdwCut - vdwTaperCut;
+       double tableIncrement = tableDelta/static_cast<double>(vdwTableSize-1);
+       amoebaGpu->amoebaSim.vdwTaperDelta = static_cast<float>(tableIncrement);
+       std::vector<float> taper;
+       std::vector<float> dtaper;
+       for( unsigned int ii = 0; ii < vdwTableSize; ii ++ ){
+           double r = vdwTaperCut + static_cast<double>(ii)*tableIncrement;
+           double taperValue, dtaperValue;
+           getVdwTaper( r, vdwTaperCoefficients, &taperValue, &dtaperValue );
+           taper.push_back(  static_cast<float>(taperValue) );
+           dtaper.push_back( static_cast<float>(dtaperValue) );
+           amoebaGpu->amoebaSim.vdwTaperTable[ii]   = taperValue;
+           amoebaGpu->amoebaSim.vdw_dTaperTable[ii] = dtaperValue;
+           //fprintf( stderr, "Taper: %3d %15.7e  %15.7e %15.7e\n", ii, r, taperValue, dtaperValue );
+       }
+       amoebaGpu->amoebaSim.vdwTaperTable[VDW_TAPER_TABLE_SIZE]   = 0.0f;
+       amoebaGpu->amoebaSim.vdw_dTaperTable[VDW_TAPER_TABLE_SIZE] = 0.0f;
+
+       if( 0 ){
+           for( unsigned int ii = 0; ii < vdwTableSize; ii ++ ){
+               float r = vdwTaperCut + (static_cast<double>(ii)+0.5)*tableIncrement;
+               float taperValue, dtaperValue;
+               float taperValueL, dtaperValueL;
+               double taperValueD, dtaperValueD;
+               lookupVdwTaperLinear( r, vdwTaperCut, tableIncrement, taper, dtaper, &taperValueL, &dtaperValueL );
+               lookupVdwTaper( r, vdwTaperCut, tableIncrement, taper, dtaper, &taperValue, &dtaperValue );
+               getVdwTaper( static_cast<double>(r), vdwTaperCoefficients, &taperValueD, &dtaperValueD );
+               double diffTaperL = fabs( (taperValueL-taperValueD )/taperValueD);
+               double diffdTaperL= fabs( (dtaperValueL-dtaperValueD )/dtaperValueD);
+               double diffTaper  = fabs( (taperValue-taperValueD )/taperValueD);
+               double diffdTaper = fabs( (dtaperValue-dtaperValueD )/dtaperValueD);
+    fprintf( stderr, "TT: %3d %15.7e %15.7e %15.7e %15.7e %15.7e %15.7e    %15.7e %15.7e %15.7e %15.7e %15.7e\n", 
+                   ii, r, diffTaper, diffTaperL, taperValueL, taperValue, taperValueD, diffdTaper, diffdTaperL, dtaperValueL, dtaperValue, dtaperValueD );
+    
+           }
+       }
+
+    }
+
+    //  sigma combining rule flag
 
     if( vdwSigmaCombiningRule.compare( "ARITHMETIC" ) == 0 ){
         amoebaGpu->vdwSigmaCombiningRule = 1;
@@ -2832,6 +2992,7 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
                                           const float totalMaxWcaDispersionEnergy,
                                           const float epso, const float epsh, const float rmino, const float rminh,
                                           const float awater, const float shctd, const float dispoff )
+
 {
    // ---------------------------------------------------------------------------------------
 

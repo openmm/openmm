@@ -116,6 +116,67 @@ __device__ void getVdw14_7CombindedSigmaEpsilon_kernel( int sigmaCombiningRule, 
 
 }
 
+// lookup table w/ linear interpolation
+
+__device__ void lookupLinearVdwTaper( float r, float* taper, float* dtaper )
+{
+    if( r > (cAmoebaSim.vdwCutoff - cAmoebaSim.vdwTaperDelta) ){
+        *taper = *dtaper = 0.0f;
+    } else {
+
+        int index        = (int) (floor( (r - cAmoebaSim.vdwTaperCutoff)/cAmoebaSim.vdwTaperDelta));
+//        int index        = (int) round( (r - cAmoebaSim.vdwTaperCutoff)/cAmoebaSim.vdwTaperDelta);
+        float slope      = (cAmoebaSim.vdwTaperTable[index+1] - cAmoebaSim.vdwTaperTable[index])/cAmoebaSim.vdwTaperDelta;
+        float intercept  =  cAmoebaSim.vdwTaperTable[index+1] - slope*(cAmoebaSim.vdwTaperDelta*static_cast<float>(index+1));
+        *taper           = slope*(r-cAmoebaSim.vdwTaperCutoff) + intercept; 
+
+        slope            = (cAmoebaSim.vdw_dTaperTable[index+1] - cAmoebaSim.vdw_dTaperTable[index])/cAmoebaSim.vdwTaperDelta;
+        intercept        =  cAmoebaSim.vdw_dTaperTable[index+1]  - slope*(cAmoebaSim.vdwTaperDelta*static_cast<float>(index+1));
+        *dtaper          = slope*(r-cAmoebaSim.vdwTaperCutoff) + intercept; 
+    }
+}
+
+// lookup table w/ quadratic interpolation
+
+__device__ void lookupVdwTaper( float r, float* taper, float* dtaper )
+{
+    if( r > (cAmoebaSim.vdwCutoff - 2.0f*cAmoebaSim.vdwTaperDelta) ){
+        *taper = *dtaper = 0.0f;
+    } else {
+
+        float x          = r - cAmoebaSim.vdwTaperCutoff;
+//        int index        = (int) (floor(x)/cAmoebaSim.vdwTaperDelta);
+        int index        = (int) round(x/cAmoebaSim.vdwTaperDelta);
+        if( index ){
+
+            float x0         = cAmoebaSim.vdwTaperDelta*static_cast<float>(index-1);
+            float y0         = cAmoebaSim.vdwTaperTable[index-1];
+    
+            float x1         = x0 + cAmoebaSim.vdwTaperDelta;
+            float y1         = cAmoebaSim.vdwTaperTable[index];
+    
+            float x2         = x1 + cAmoebaSim.vdwTaperDelta;
+            float y2         = cAmoebaSim.vdwTaperTable[index+1];
+    
+            *taper           = y0*( (x-x1)*(x-x2)/((x0-x1)*(x0-x2))) + 
+                               y1*( (x-x0)*(x-x2)/((x1-x0)*(x1-x2))) + 
+                               y2*( (x-x0)*(x-x1)/((x2-x0)*(x2-x1)));
+    
+                  y0         = cAmoebaSim.vdw_dTaperTable[index-1];
+                  y1         = cAmoebaSim.vdw_dTaperTable[index];
+                  y2         = cAmoebaSim.vdw_dTaperTable[index+1];
+    
+            *dtaper          = y0*( (x-x1)*(x-x2)/((x0-x1)*(x0-x2))) + 
+                               y1*( (x-x0)*(x-x2)/((x1-x0)*(x1-x2))) + 
+                               y2*( (x-x0)*(x-x1)/((x2-x0)*(x2-x1)));
+    
+        } else {
+            *taper  = 1.0f;
+            *dtaper = 0.0f;
+        }
+    }
+}
+
 __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float combindedEpsilon,
                                                 float force[3], float* energy)
 {
@@ -156,9 +217,19 @@ __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float c
     *energy                                      = combindedEpsilon*combindedSigma7*tau7*( (combindedSigma7*gammaHal*rhoInverse) - 2.0f);
     float deltaE                                 = (-7.0f*(dTau*(*energy) + gTau))*rI;
  
+    if( r > cAmoebaSim.vdwTaperCutoff ){ 
+
+        float taper, dtaper;
+        lookupVdwTaper( r, &taper, &dtaper );
+        //lookupLinearVdwTaper( r, &taper, &dtaper );
+        deltaE   = (*energy)*dtaper + deltaE*taper;
+        *energy *= taper;
+    }
+
     force[0]                                    *= deltaE;
     force[1]                                    *= deltaE;
     force[2]                                    *= deltaE;
+
 
 }
 
@@ -511,6 +582,7 @@ void kCalculateAmoebaVdw14_7Forces( amoebaGpuContext amoebaGpu, int applyCutoff 
             maxThreads = 128;
         threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(Vdw14_7Particle), gpu->sharedMemoryPerBlock ), maxThreads);
     }    
+
 
     kCalculateAmoebaVdw14_7CopyCoordinates( amoebaGpu, gpu->psPosq4, amoebaGpu->psAmoebaVdwCoordinates );
     kCalculateAmoebaVdw14_7CoordinateReduction( amoebaGpu, amoebaGpu->psAmoebaVdwCoordinates, amoebaGpu->psAmoebaVdwCoordinates );

@@ -162,15 +162,15 @@ void METHOD_NAME(kCalculateAmoebaVdw14_7, _kernel)(
 
             }
 
+            // zero shared fields
+
+            zeroVdw14_7SharedForce( &(sA[threadIdx.x]) );
+
 #ifdef USE_CUTOFF
             unsigned int flags = cSim.pInteractionFlag[pos];
             if (flags == 0) {
             } else {
 #endif
-               // zero shared fields
-    
-                zeroVdw14_7SharedForce( &(sA[threadIdx.x]) );
-    
                 if( bExclusionFlag )
                 {
     
