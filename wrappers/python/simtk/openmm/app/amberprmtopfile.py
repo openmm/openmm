@@ -135,8 +135,6 @@ class AmberPrmtopFile(object):
             raise ValueError('Illegal value for nonbonded method')
         if not self._prmtop.getIfBox() and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
-        if nonbondedMethod == ff.NoCutoff:
-            nonbondedCutoff = None
         constraintMap = {None:None,
                          ff.HBonds:'h-bonds',
                          ff.AllBonds:'all-bonds',

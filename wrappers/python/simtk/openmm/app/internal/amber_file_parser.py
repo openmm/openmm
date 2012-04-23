@@ -676,7 +676,8 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             min_box_width = min([boxX / units.nanometers, boxY / units.nanometers, boxZ / units.nanometers])
             CLEARANCE_FACTOR = 0.97 # reduce the cutoff to be a bit smaller than 1/2 smallest box length            
             nonbondedCutoff = units.Quantity((min_box_width * CLEARANCE_FACTOR) / 2.0, units.nanometers)
-        force.setCutoffDistance(nonbondedCutoff)
+        if nonbondedMethod != 'NoCutoff':
+            force.setCutoffDistance(nonbondedCutoff)
         
         # Set nonbonded method.
         if nonbondedMethod == 'NoCutoff':
@@ -789,15 +790,15 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             symbls = prmtop.getAtomTypes()
         gb_parms = prmtop.getGBParms(symbls)
         if gbmodel == 'HCT':
-            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, True)
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, 'ACE')
         elif gbmodel == 'OBC1':
-            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, True)
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, 'ACE')
         elif gbmodel == 'OBC2':
             gb = mm.GBSAOBCForce()
             gb.setSoluteDielectric(soluteDielectric)
             gb.setSolventDielectric(solventDielectric)
         elif gbmodel == 'GBn':
-            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, True)
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, 'ACE')
         else:
             raise Exception("Illegal value specified for implicit solvent model")
         for iAtom in range(prmtop.getNumAtoms()):
