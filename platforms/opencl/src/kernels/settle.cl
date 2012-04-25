@@ -156,7 +156,7 @@ __kernel void applySettle(int numClusters, float tol, __global const float4* res
  */
 
 __kernel void constrainVelocities(int numClusters, float tol, __global const float4* restrict oldPos, __global float4* restrict posDelta, __global float4* restrict velm, __global const int4* restrict clusterAtoms, __global const float2* restrict clusterParams) {
-    for (int index = get_global_id(0); index < numClusters; index++) {
+    for (int index = get_global_id(0); index < numClusters; index += get_global_size(0)) {
         // Load the data for this cluster.
 
         int4 atoms = clusterAtoms[index];
@@ -193,7 +193,7 @@ __kernel void constrainVelocities(int numClusters, float tol, __global const flo
         // in going from equations B1 to B2, they make the assumption that mB=mC (but don't bother to mention they're
         // making that assumption).  We allow all three atoms to have different masses.
         
-        float mABCinv = 1.0f/(mA*mB*mC);
+        float mABCinv = RECIP(mA*mB*mC);
         float denom = (((s2A*mB+s2B*mA)*mC+(s2A*mB*mB+2*(cA*cB*cC+1)*mA*mB+s2B*mA*mA))*mC+s2C*mA*mB*(mA+mB))*mABCinv;
         float tab = ((cB*cC*mA-cA*mB-cA*mC)*vCA + (cA*cC*mB-cB*mC-cB*mA)*vBC + (s2C*mA*mA*mB*mB*mABCinv+(mA+mB+mC))*vAB)/denom;
         float tbc = ((cA*cB*mC-cC*mB-cC*mA)*vCA + (s2A*mB*mB*mC*mC*mABCinv+(mA+mB+mC))*vBC + (cA*cC*mB-cB*mA-cB*mC)*vAB)/denom;
