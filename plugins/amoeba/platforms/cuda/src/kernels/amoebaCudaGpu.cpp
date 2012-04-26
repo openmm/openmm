@@ -2266,8 +2266,8 @@ static void getVdwTaper( double r, double vdwTaperCoefficients[6], double* taper
 static void lookupVdwTaperLinear( float r, double vdwTaperCut, double delta,
                                   std::vector<float>& taperTable,  std::vector<float>& dtaperTable, float* taper, float* dtaper ){
 
-    //int index        = static_cast<int>(floor( (r - vdwTaperCut)/delta));
-    int index        = static_cast<int>(round( (r - vdwTaperCut)/delta));
+    int index        = static_cast<int>(floor( (r - vdwTaperCut)/delta));
+    //int index        = static_cast<int>(round( (r - vdwTaperCut)/delta));
     if( index > taperTable.size()-1 ){
         *taper = *dtaper = 0.0f;
     } else {
@@ -2288,7 +2288,8 @@ static void lookupVdwTaperLinear( float r, double vdwTaperCut, double delta,
 static void lookupVdwTaper( float r, double vdwTaperCut, double delta,
                             std::vector<float>& taperTable,  std::vector<float>& dtaperTable, float* taper, float* dtaper ){
 
-    int index        = static_cast<int>(round( (r - vdwTaperCut)/delta));
+    //int index        = static_cast<int>(round( (r - vdwTaperCut)/delta));
+    int index        = static_cast<int>(floor( (r - vdwTaperCut)/delta));
     if( index > taperTable.size()-2 ){
         *taper = *dtaper = 0.0f;
     } else if( index == 0){
