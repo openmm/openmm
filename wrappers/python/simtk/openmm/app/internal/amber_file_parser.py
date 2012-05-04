@@ -285,9 +285,10 @@ class PrmtopLoader(object):
         self.residuePointerDict = {}
         resPointers=self._raw_data['RESIDUE_POINTER']
         firstAtom = [int(p)-1 for p in resPointers]
+        firstAtom.append(self.getNumAtoms())
         res = 0
         for i in range(self.getNumAtoms()):
-            while i < firstAtom[res]:
+            while firstAtom[res+1] <= i:
                 res += 1
             self.residuePointerDict[i] = res
         return self.residuePointerDict[iAtom]
