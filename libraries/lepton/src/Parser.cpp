@@ -314,6 +314,7 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
         opMap["erf"] = Operation::ERF;
         opMap["erfc"] = Operation::ERFC;
         opMap["step"] = Operation::STEP;
+        opMap["delta"] = Operation::DELTA;
         opMap["square"] = Operation::SQUARE;
         opMap["cube"] = Operation::CUBE;
         opMap["recip"] = Operation::RECIPROCAL;
@@ -371,6 +372,8 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
             return new Operation::Erfc();
         case Operation::STEP:
             return new Operation::Step();
+        case Operation::DELTA:
+            return new Operation::Delta();
         case Operation::SQUARE:
             return new Operation::Square();
         case Operation::CUBE:

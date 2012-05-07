@@ -249,6 +249,10 @@ ExpressionTreeNode Operation::Step::differentiate(const std::vector<ExpressionTr
     return ExpressionTreeNode(new Operation::Constant(0.0));
 }
 
+ExpressionTreeNode Operation::Delta::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Constant(0.0));
+}
+
 ExpressionTreeNode Operation::Square::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Multiply(),
                               ExpressionTreeNode(new Operation::MultiplyConstant(2.0),

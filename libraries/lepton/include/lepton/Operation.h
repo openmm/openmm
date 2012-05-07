@@ -62,7 +62,7 @@ public:
      * can be used when processing or analyzing parsed expressions.
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, ERF, ERFC, STEP, SQUARE, CUBE, RECIPROCAL,
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, ERF, ERFC, STEP, DELTA, SQUARE, CUBE, RECIPROCAL,
              ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS};
     /**
      * Get the name of this Operation.
@@ -142,6 +142,7 @@ public:
     class Erf;
     class Erfc;
     class Step;
+    class Delta;
     class Square;
     class Cube;
     class Reciprocal;
@@ -803,6 +804,28 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return (args[0] >= 0.0 ? 1.0 : 0.0);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Delta : public Operation {
+public:
+    Delta() {
+    }
+    std::string getName() const {
+        return "delta";
+    }
+    Id getId() const {
+        return DELTA;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Delta();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return (args[0] == 0.0 ? 1.0 : 0.0);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };

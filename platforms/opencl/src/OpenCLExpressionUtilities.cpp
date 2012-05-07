@@ -217,6 +217,9 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
         case Operation::STEP:
             out << getTempName(node.getChildren()[0], temps) << " >= 0.0f ? 1.0f : 0.0f";
             break;
+        case Operation::DELTA:
+            out << getTempName(node.getChildren()[0], temps) << " == 0.0f ? 1.0f : 0.0f";
+            break;
         case Operation::SQUARE:
         {
             string arg = getTempName(node.getChildren()[0], temps);

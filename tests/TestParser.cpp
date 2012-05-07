@@ -205,6 +205,7 @@ int main() {
         verifyEvaluation("max(x, y)", 2.0, 3.0, 3.0);
         verifyEvaluation("max(x, -1)", 2.0, 3.0, 2.0);
         verifyEvaluation("abs(x-y)", 2.0, 3.0, 1.0);
+        verifyEvaluation("delta(x)+3*delta(y-1.5)", 2.0, 1.5, 3.0);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");
