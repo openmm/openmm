@@ -143,6 +143,26 @@ def sqrt(val):
     except AttributeError:
         return math.sqrt(val)
 
+###########
+### SUM ###
+###########
+
+def sum(val):
+    """
+    >>> sum((1.0, 2.0))
+    3.0
+    >>> sum((2.0*meter, 3.0*meter))
+    Quantity(value=5.0, unit=meter)
+    >>> sum((2.0*meter, 30.0*centimeter))
+    Quantity(value=2.3, unit=meter)
+    """
+    if len(val) == 0:
+        return 0
+    result = val[0]
+    for i in range(1, len(val)):
+        result += val[i]
+    return result
+
 ###################
 ### VECTOR MATH ###
 ###################
@@ -159,8 +179,8 @@ def dot(x, y):
 
 def norm(x):
     """
-    >>>norm((3, 4)*meter)
-    Quantity(value=5, unit=meter*)
+    >>> norm((3, 4)*meter)
+    Quantity(value=5.0, unit=meter)
     """
     return sqrt(dot(x, x))
 
