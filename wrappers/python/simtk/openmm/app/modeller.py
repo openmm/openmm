@@ -78,8 +78,18 @@ class Modeller(object):
         """Get the atomic positions."""
         return self.positions
 
-    def deleteWater(self):
-        """Delete all water molecules from the model."""
+    def add(self, addTopology, addPositions):
+        """Add chains, residues, atoms, and bonds to the model.
+        
+        Specify what to add by providing a new Topology object and the corresponding atomic positions.
+        All chains, residues, atoms, and bonds contained in the Topology are added to the model.
+        
+        Parameters:
+         - addTopoology (Topology) a Topology whose contents should be added to the model
+         - addPositions (list) the positions of the atoms to add
+        """
+        # Copy over the existing model.
+        
         newTopology = Topology()
         newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
         newAtoms = {}
@@ -87,17 +97,71 @@ class Modeller(object):
         for chain in self.topology.chains():
             newChain = newTopology.addChain()
             for residue in chain.residues():
-                if residue.name != "HOH":
-                    newResidue = newTopology.addResidue(residue.name, newChain)
-                    for atom in residue.atoms():
-                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
-                        newAtoms[atom] = newAtom
-                        newPositions.append(deepcopy(self.positions[atom.index]))
+                newResidue = newTopology.addResidue(residue.name, newChain)
+                for atom in residue.atoms():
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtoms[atom] = newAtom
+                    newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
-            if bond[0] in newAtoms and bond[1] in newAtoms:
-                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+        
+        # Add the new model
+
+        newAtoms = {}
+        for chain in addTopology.chains():
+            newChain = newTopology.addChain()
+            for residue in chain.residues():
+                newResidue = newTopology.addResidue(residue.name, newChain)
+                for atom in residue.atoms():
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                    newAtoms[atom] = newAtom
+                    newPositions.append(deepcopy(addPositions[atom.index]))
+        for bond in addTopology.bonds():
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
         self.topology = newTopology
         self.positions = newPositions
+
+    def delete(self, toDelete):
+        """Delete chains, residues, atoms, and bonds from the model.
+        
+        You can specify objects to delete at any granularity: atoms, residues, or chains.  Passing
+        in an Atom object causes that Atom to be deleted.  Passing in a Residue object causes that
+        Residue and all Atoms it contains to be deleted.  Passing in a Chain object causes that
+        Chain and all Residues and Atoms it contains to be deleted.
+        
+        In all cases, when an Atom is deleted, any bonds it participates in are also deleted.
+        You also can specify a bond (as a tuple of Atom objects) to delete just that bond without
+        deleting the Atoms it connects.
+        
+        Parameters:
+         - toDelete (list) a list of Atoms, Residues, Chains, and bonds (specified as tuples of Atoms) to delete
+        """
+        newTopology = Topology()
+        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newAtoms = {}
+        newPositions = []*nanometer
+        deleteSet = set(toDelete)
+        for chain in self.topology.chains():
+            if chain not in deleteSet:
+                newChain = newTopology.addChain()
+                for residue in chain.residues():
+                    if residue not in deleteSet:
+                        newResidue = newTopology.addResidue(residue.name, newChain)
+                        for atom in residue.atoms():
+                            if atom not in deleteSet:
+                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                                newAtoms[atom] = newAtom
+                                newPositions.append(deepcopy(self.positions[atom.index]))
+        for bond in self.topology.bonds():
+            if bond[0] in newAtoms and bond[1] in newAtoms:
+                if bond not in deleteSet and (bond[1], bond[0]) not in deleteSet:
+                    newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+        self.topology = newTopology
+        self.positions = newPositions
+    
+    def deleteWater(self):
+        """Delete all water molecules from the model."""
+        self.delete(res for res in self.topology.residues() if res.name == "HOH")
     
     def convertWater(self, model='tip3p'):
         """Convert all water molecules to a different water model.
@@ -268,8 +332,7 @@ class Modeller(object):
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
-            if bond[0] in newAtoms and bond[1] in newAtoms:
-                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
         
         # Sort the solute atoms into cells for fast lookup.
         
