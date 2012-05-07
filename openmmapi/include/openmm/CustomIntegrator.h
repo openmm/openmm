@@ -91,6 +91,10 @@ namespace OpenMM {
  * <li>dt: (global) This is the step size being used by the integrator.</li>
  * <li>energy: (global, read-only) This is the current potential energy of the
  * system.</li>
+ * <li>energy0, energy1, energy2, ...: (global, read-only) This is similar to
+ * energy, but includes only the contribution from forces in one force group.
+ * A single computation step may only depend on a single energy variable
+ * (energy, energy0, energy1, etc.).</li>
  * <li>x: (per-DOF) This is the current value of the degree of freedom (the x,
  * y, or z coordinate of a particle).</li>
  * <li>v: (per-DOF) This is the current velocity associated with the degree of

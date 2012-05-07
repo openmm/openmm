@@ -524,9 +524,15 @@ void testForceGroups() {
     integrator.addPerDofVariable("outf", 0);
     integrator.addPerDofVariable("outf1", 0);
     integrator.addPerDofVariable("outf2", 0);
+    integrator.addGlobalVariable("oute", 0);
+    integrator.addGlobalVariable("oute1", 0);
+    integrator.addGlobalVariable("oute2", 0);
     integrator.addComputePerDof("outf", "f");
     integrator.addComputePerDof("outf1", "f1");
     integrator.addComputePerDof("outf2", "f2");
+    integrator.addComputeGlobal("oute", "energy");
+    integrator.addComputeGlobal("oute1", "energy1");
+    integrator.addComputeGlobal("oute2", "energy2");
     HarmonicBondForce* bonds = new HarmonicBondForce();
     bonds->addBond(0, 1, 1.5, 1.1);
     bonds->setForceGroup(1);
@@ -546,6 +552,8 @@ void testForceGroups() {
     
     integrator.step(1);
     vector<Vec3> f, f1, f2;
+    double e1 = 0.5*1.1*0.5*0.5;
+    double e2 = 138.935456*0.2*0.2/2.0;
     integrator.getPerDofVariable(0, f);
     integrator.getPerDofVariable(1, f1);
     integrator.getPerDofVariable(2, f2);
@@ -555,9 +563,15 @@ void testForceGroups() {
     ASSERT_EQUAL_VEC(Vec3(138.935456*0.2*0.2/4.0, 0, 0), f2[1], 1e-5);
     ASSERT_EQUAL_VEC(f1[0]+f2[0], f[0], 1e-5);
     ASSERT_EQUAL_VEC(f1[1]+f2[1], f[1], 1e-5);
+    ASSERT_EQUAL_TOL(e1, integrator.getGlobalVariable(1), 1e-5);
+    ASSERT_EQUAL_TOL(e2, integrator.getGlobalVariable(2), 1e-5);
+    ASSERT_EQUAL_TOL(e1+e2, integrator.getGlobalVariable(0), 1e-5);
     
     // Make sure they also match the values returned by the Context.
     
+    State s = context.getState(State::Forces | State::Energy, false);
+    State s1 = context.getState(State::Forces | State::Energy, false, 2);
+    State s2 = context.getState(State::Forces | State::Energy, false, 4);
     vector<Vec3> c, c1, c2;
     c = context.getState(State::Forces, false).getForces();
     c1 = context.getState(State::Forces, false, 2).getForces();
@@ -568,6 +582,9 @@ void testForceGroups() {
     ASSERT_EQUAL_VEC(f1[1], c1[1], 1e-5);
     ASSERT_EQUAL_VEC(f2[0], c2[0], 1e-5);
     ASSERT_EQUAL_VEC(f2[1], c2[1], 1e-5);
+    ASSERT_EQUAL_TOL(s.getPotentialEnergy(), integrator.getGlobalVariable(0), 1e-5);
+    ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), integrator.getGlobalVariable(1), 1e-5);
+    ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), integrator.getGlobalVariable(2), 1e-5);
 }
 
 /**

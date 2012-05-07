@@ -3606,7 +3606,7 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
 
-string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator) {
+string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const string& energyName) {
     map<string, Lepton::ParsedExpression> expressions;
     if (variable == "dt")
         expressions["dt[0].y = "] = expr;
@@ -3626,7 +3626,7 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
     variables["dt"] = "dt[0].y";
     variables["uniform"] = "uniform";
     variables["gaussian"] = "gaussian";
-    variables["energy"] = "energy[0]";
+    variables[energyName] = "energy[0]";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+intToString(i)+"]";
     for (int i = 0; i < (int) parameterNames.size(); i++)
@@ -3635,7 +3635,7 @@ string OpenCLIntegrateCustomStepKernel::createGlobalComputation(const string& va
     return OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
 }
 
-string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const string& forceName) {
+string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const string& forceName, const string& energyName) {
     const string suffixes[] = {".x", ".y", ".z"};
     string suffix = suffixes[component];
     map<string, Lepton::ParsedExpression> expressions;
@@ -3660,7 +3660,7 @@ string OpenCLIntegrateCustomStepKernel::createPerDofComputation(const string& va
     variables["uniform"] = "uniform"+suffix;
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
-    variables["energy"] = "energy[0]";
+    variables[energyName] = "energy[0]";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+intToString(i)+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
@@ -3736,12 +3736,17 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         vector<string> variable(numSteps);
         vector<Lepton::ParsedExpression> expression(numSteps);
         vector<string> forceGroupName;
+        vector<string> energyGroupName;
         for (int i = 0; i < 32; i++) {
-            stringstream str;
-            str << "f" << i;
-            forceGroupName.push_back(str.str());
+            stringstream fname;
+            fname << "f" << i;
+            forceGroupName.push_back(fname.str());
+            stringstream ename;
+            ename << "energy" << i;
+            energyGroupName.push_back(ename.str());
         }
         vector<string> forceName(numSteps, "f");
+        vector<string> energyName(numSteps, "energy");
         for (int step = 0; step < numSteps; step++) {
             string expr;
             integrator.getComputationStep(step, stepType[step], variable[step], expr);
@@ -3762,6 +3767,13 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                         needsForces[step] = true;
                         forceGroup[step] = 1<<i;
                         forceName[step] = forceGroupName[i];
+                    }
+                    if (usesVariable(expression[step], energyGroupName[i])) {
+                        if (forceGroup[step] != -2)
+                            throw OpenMMException("A single computation step cannot depend on multiple force groups");
+                        needsEnergy[step] = true;
+                        forceGroup[step] = 1<<i;
+                        energyName[step] = energyGroupName[i];
                     }
                 }
             }
@@ -3820,7 +3832,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     compute << "{\n";
                     for (int i = 0; i < 3; i++)
-                        compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j], i, integrator, forceName[j]);
+                        compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j], i, integrator, forceName[j], energyName[j]);
                     if (variable[j] == "x") {
                         if (storePosAsDelta[j]) {
                             if (cl.getSupportsDoublePrecision())
@@ -3910,7 +3922,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
 
                 stringstream compute;
                 for (int i = step; i < numSteps && (i == step || merged[i]); i++)
-                    compute << "{\n" << createGlobalComputation(variable[i], expression[i], integrator) << "}\n";
+                    compute << "{\n" << createGlobalComputation(variable[i], expression[i], integrator, energyName[i]) << "}\n";
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
                 cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customIntegratorGlobal, replacements), defines);

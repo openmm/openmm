@@ -43,7 +43,7 @@ private:
     std::vector<RealOpenMM> inverseMasses;
     std::vector<OpenMM::RealVec> sumBuffer, oldPos;
     std::vector<OpenMM::CustomIntegrator::ComputationType> stepType;
-    std::vector<std::string> stepVariable, forceName;
+    std::vector<std::string> stepVariable, forceName, energyName;
     std::vector<Lepton::ExpressionProgram> stepExpression;
     std::vector<bool> invalidatesForces, needsForces, needsEnergy;
     std::vector<int> forceGroup;

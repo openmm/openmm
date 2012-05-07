@@ -103,6 +103,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         needsEnergy.resize(numSteps, false);
         forceGroup.resize(numSteps, -2);
         forceName.resize(numSteps, "f");
+        energyName.resize(numSteps, "energy");
         set<string> affectsForce;
         affectsForce.insert("x");
         for (vector<ForceImpl*>::const_iterator iter = context.getForceImpls().begin(); iter != context.getForceImpls().end(); ++iter) {
@@ -116,10 +117,14 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         // Make a list of which steps require valid forces or energy to be known.
         
         vector<string> forceGroupName;
+        vector<string> energyGroupName;
         for (int i = 0; i < 32; i++) {
-            stringstream str;
-            str << "f" << i;
-            forceGroupName.push_back(str.str());
+            stringstream fname;
+            fname << "f" << i;
+            forceGroupName.push_back(fname.str());
+            stringstream ename;
+            ename << "energy" << i;
+            energyGroupName.push_back(ename.str());
         }
         for (int i = 0; i < numSteps; i++) {
             if (stepType[i] == CustomIntegrator::ComputeGlobal || stepType[i] == CustomIntegrator::ComputePerDof || stepType[i] == CustomIntegrator::ComputeSum) {
@@ -131,6 +136,17 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                                 throw OpenMMException("A single computation step cannot depend on multiple force groups");
                             needsEnergy[i] = true;
                             forceGroup[i] = -1;
+                        }
+                        else if (op.getName().substr(0, 6) == "energy") {
+                            for (int k = 0; k < (int) energyGroupName.size(); k++)
+                                if (op.getName() == energyGroupName[k]) {
+                                    if (forceGroup[i] != -2)
+                                        throw OpenMMException("A single computation step cannot depend on multiple force groups");
+                                    needsForces[i] = true;
+                                    forceGroup[i] = 1<<k;
+                                    energyName[i] = energyGroupName[k];
+                                    break;
+                                }
                         }
                         else if (op.getName() == "f") {
                             if (forceGroup[i] != -2)
@@ -191,7 +207,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
                 energy = e;
             forcesAreValid = true;
         }
-        globals["energy"] = energy;
+        globals[energyName[i]] = energy;
         
         // Execute the step.
         
