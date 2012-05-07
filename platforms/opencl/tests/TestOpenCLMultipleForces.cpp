@@ -89,7 +89,7 @@ void testForces() {
     context1.setPositions(positions);
     context2.setPositions(positions);
     State state1 = context1.getState(State::Forces | State::Energy);
-    State state2 = context1.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces1 = state1.getForces();
     const vector<Vec3>& forces2 = state2.getForces();
     for (int i = 0; i < numParticles; i++)
