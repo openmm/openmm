@@ -122,7 +122,8 @@ void CustomIntegrator::setGlobalVariable(int index, double value) {
         globalsAreCurrent = true;
     }
     globalValues[index] = value;
-    dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setGlobalVariables(*context, globalValues);
+    if (owner != NULL)
+        dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setGlobalVariables(*context, globalValues);
 }
 
 void CustomIntegrator::setGlobalVariableByName(const string& name, double value) {
