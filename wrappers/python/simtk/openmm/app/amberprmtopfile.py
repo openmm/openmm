@@ -99,10 +99,11 @@ class AmberPrmtopFile(object):
         
         # Add bonds to the topology
         
+        atoms = list(top.atoms())
         for bond in prmtop.getBondsWithH():
-            top.addBond(bond[0], bond[1])
+            top.addBond(atoms[bond[0]], atoms[bond[1]])
         for bond in prmtop.getBondsNoH():
-            top.addBond(bond[0], bond[1])
+            top.addBond(atoms[bond[0]], atoms[bond[1]])
         
         # Set the periodic box size.
         
