@@ -75,9 +75,8 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         cl::Platform::get(&platforms);
         if (platformIndex < 0 || platformIndex >= platforms.size())
             throw OpenMMException("Illegal value for OpenCL platform index");
-        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};
-        context = cl::Context(CL_DEVICE_TYPE_ALL, cprops, errorCallback);
-        vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+        vector<cl::Device> devices;
+        platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
         const int minThreadBlockSize = 32;
         if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
             // Try to figure out which device is the fastest.
@@ -203,6 +202,10 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
         if (supportsDoublePrecision)
             compilationDefines["SUPPORTS_DOUBLE_PRECISION"] = "";
+        vector<cl::Device> contextDevices;
+        contextDevices.push_back(device);
+        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};
+        context = cl::Context(contextDevices, cprops, errorCallback);
         queue = cl::CommandQueue(context, device);
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
