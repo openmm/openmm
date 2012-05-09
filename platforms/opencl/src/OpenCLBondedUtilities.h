@@ -101,6 +101,13 @@ public:
      */
     std::string addArgument(cl::Memory& data, const std::string& type);
     /**
+     * Add some OpenCL code that should be included in the program, before the start of the kernel.
+     * This can be used, for example, to define functions that will be called by the kernel.
+     * 
+     * @param source   the code to include
+     */
+    void addPrefixCode(const std::string& source);
+    /**
      * Initialize this object in preparation for a simulation.
      */
     void initialize(const System& system);
@@ -129,6 +136,7 @@ private:
     std::vector<std::string> argTypes;
     std::vector<OpenCLArray<cl_uint>*> atomIndices;
     std::vector<OpenCLArray<cl_uint>*> bufferIndices;
+    std::vector<std::string> prefixCode;
     int numForceBuffers, maxBonds;
     bool hasInitializedKernels;
 };

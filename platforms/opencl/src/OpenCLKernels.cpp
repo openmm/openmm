@@ -31,6 +31,7 @@
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "OpenCLBondedUtilities.h"
@@ -3193,6 +3194,298 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     acceptorKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
     acceptorKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
     cl.executeKernel(acceptorKernel, std::max(numDonors, numAcceptors));
+    return 0.0;
+}
+
+class OpenCLCustomCompoundBondForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomCompoundBondForceInfo(const CustomCompoundBondForce& force) : OpenCLForceInfo(1), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumBonds();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        vector<double> parameters;
+        force.getBondParameters(index, particles, parameters);
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        vector<int> particles;
+        vector<double> parameters1, parameters2;
+        force.getBondParameters(group1, particles, parameters1);
+        force.getBondParameters(group2, particles, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomCompoundBondForce& force;
+};
+
+OpenCLCalcCustomCompoundBondForceKernel::~OpenCLCalcCustomCompoundBondForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (globals != NULL)
+        delete globals;
+    if (tabulatedFunctionParams != NULL)
+        delete tabulatedFunctionParams;
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        delete tabulatedFunctions[i];
+}
+
+void OpenCLCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    numBonds = endIndex-startIndex;
+    if (numBonds == 0)
+        return;
+    int particlesPerBond = force.getNumParticlesPerBond();
+    vector<vector<int> > atoms(numBonds, vector<int>(particlesPerBond));
+    params = new OpenCLParameterSet(cl, force.getNumPerBondParameters(), numBonds, "customCompoundBondParams");
+    vector<vector<cl_float> > paramVector(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        vector<double> parameters;
+        force.getBondParameters(startIndex+i, atoms[i], parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    cl.addForce(new OpenCLCustomCompoundBondForceInfo(force));
+
+    // Record the tabulated functions.
+
+    OpenCLExpressionUtilities::FunctionPlaceholder fp;
+    map<string, Lepton::CustomFunction*> functions;
+    vector<pair<string, string> > functionDefinitions;
+    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    stringstream tableArgs;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        force.getFunctionParameters(i, name, values, min, max);
+        functions[name] = &fp;
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
+        vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, min, max);
+        OpenCLArray<mm_float4>* array = new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction");
+        tabulatedFunctions.push_back(array);
+        array->upload(f);
+        string arrayName = cl.getBondedUtilities().addArgument(array->getDeviceBuffer(), "float4");
+        functionDefinitions.push_back(make_pair(name, arrayName));
+    }
+    string functionParamsName;
+    if (force.getNumFunctions() > 0) {
+        tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
+        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
+        functionParamsName = cl.getBondedUtilities().addArgument(tabulatedFunctionParams->getDeviceBuffer(), "float4");
+    }
+    
+    // Record information about parameters.
+
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    map<string, string> variables;
+    for (int i = 0; i < particlesPerBond; i++) {
+        string index = intToString(i+1);
+        variables["x"+index] = "pos"+index+".x";
+        variables["y"+index] = "pos"+index+".y";
+        variables["z"+index] = "pos"+index+".z";
+    }
+    for (int i = 0; i < force.getNumPerBondParameters(); i++) {
+        const string& name = force.getPerBondParameterName(i);
+        variables[name] = "bondParams"+params->getParameterSuffix(i);
+    }
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customCompoundBondGlobals", false, CL_MEM_READ_ONLY);
+        globals->upload(globalParamValues);
+        string argName = cl.getBondedUtilities().addArgument(globals->getDeviceBuffer(), "float");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = argName+"["+intToString(i)+"]";
+            variables[name] = value;
+        }
+    }
+
+    // Now to generate the kernel.  First, it needs to calculate all distances, angles,
+    // and dihedrals the expression depends on.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomCompoundBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    map<string, Lepton::ParsedExpression> forceExpressions;
+    set<string> computedDeltas;
+    vector<string> atomNames, posNames;
+    for (int i = 0; i < particlesPerBond; i++) {
+        string index = intToString(i+1);
+        atomNames.push_back("P"+index);
+        posNames.push_back("pos"+index);
+    }
+    stringstream compute;
+    int index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        if (computedDeltas.count(deltaName) == 0) {
+            compute<<"float4 delta"<<deltaName<<" = ccb_delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<");\n";
+            computedDeltas.insert(deltaName);
+        }
+        compute<<"float r_"<<deltaName<<" = sqrt(delta"<<deltaName<<".w);\n";
+        variables[iter->first] = "r_"+deltaName;
+        forceExpressions["float dEdDistance"+intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute<<"float4 delta"<<deltaName1<<" = ccb_delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<");\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute<<"float4 delta"<<deltaName2<<" = ccb_delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<");\n";
+            computedDeltas.insert(deltaName2);
+        }
+        compute<<"float "<<angleName<<" = ccb_computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        variables[iter->first] = angleName;
+        forceExpressions["float dEdAngle"+intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute<<"float4 delta"<<deltaName1<<" = ccb_delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<");\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute<<"float4 delta"<<deltaName2<<" = ccb_delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<");\n";
+            computedDeltas.insert(deltaName2);
+        }
+        if (computedDeltas.count(deltaName3) == 0) {
+            compute<<"float4 delta"<<deltaName3<<" = ccb_delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<");\n";
+            computedDeltas.insert(deltaName3);
+        }
+        compute<<"float4 "<<crossName1<<" = ccb_computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        compute<<"float4 "<<crossName2<<" = ccb_computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
+        compute<<"float "<<dihedralName<<" = ccb_computeAngle("<<crossName1<<", "<<crossName2<<");\n";
+        compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
+        variables[iter->first] = dihedralName;
+        forceExpressions["float dEdDihedral"+intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+
+    // Now evaluate the expressions.
+
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        string argName = cl.getBondedUtilities().addArgument(buffer.getMemory(), buffer.getType());
+        compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<argName<<"[index];\n";
+    }
+    forceExpressions["energy += "] = energyExpression;
+    compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, "temp", functionParamsName);
+
+    // Finally, apply forces to atoms.
+
+    vector<string> forceNames;
+    for (int i = 0; i < particlesPerBond; i++) {
+        string istr = intToString(i+1);
+        string forceName = "force"+istr;
+        forceNames.push_back(forceName);
+        compute<<"float4 "<<forceName<<" = (float4) (0.0f, 0.0f, 0.0f, 0.0f);\n";
+        compute<<"{\n";
+        Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x"+istr).optimize();
+        Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y"+istr).optimize();
+        Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z"+istr).optimize();
+        map<string, Lepton::ParsedExpression> expressions;
+        if (!isZeroExpression(forceExpressionX))
+            expressions[forceName+".x -= "] = forceExpressionX;
+        if (!isZeroExpression(forceExpressionY))
+            expressions[forceName+".y -= "] = forceExpressionY;
+        if (!isZeroExpression(forceExpressionZ))
+            expressions[forceName+".z -= "] = forceExpressionZ;
+        if (expressions.size() > 0)
+            compute<<OpenCLExpressionUtilities::createExpressions(expressions, variables, functionDefinitions, "coordtemp", functionParamsName);
+        compute<<"}\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string value = "(dEdDistance"+intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
+        compute<<forceNames[atoms[0]]<<".xyz += "<<"-"<<value<<";\n";
+        compute<<forceNames[atoms[1]]<<".xyz += "<<value<<";\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        compute<<"{\n";
+        compute<<"float4 crossProd = cross(delta"<<deltaName2<<", delta"<<deltaName1<<");\n";
+        compute<<"float lengthCross = max(length(crossProd), 1e-6f);\n";
+        compute<<"float4 deltaCross0 = -cross(delta"<<deltaName1<<", crossProd)*dEdAngle"<<intToString(index)<<"/(delta"<<deltaName1<<".w*lengthCross);\n";
+        compute<<"float4 deltaCross2 = cross(delta"<<deltaName2<<", crossProd)*dEdAngle"<<intToString(index)<<"/(delta"<<deltaName2<<".w*lengthCross);\n";
+        compute<<"float4 deltaCross1 = -(deltaCross0+deltaCross2);\n";
+        compute<<forceNames[atoms[0]]<<".xyz += deltaCross0.xyz;\n";
+        compute<<forceNames[atoms[1]]<<".xyz += deltaCross1.xyz;\n";
+        compute<<forceNames[atoms[2]]<<".xyz += deltaCross2.xyz;\n";
+        compute<<"}\n";
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        compute<<"{\n";
+        compute<<"float r = sqrt(delta"<<deltaName2<<".w);\n";
+        compute<<"float4 ff;\n";
+        compute<<"ff.x = (-dEdDihedral"<<intToString(index)<<"*r)/"<<crossName1<<".w;\n";
+        compute<<"ff.y = (delta"<<deltaName1<<".x*delta"<<deltaName2<<".x + delta"<<deltaName1<<".y*delta"<<deltaName2<<".y + delta"<<deltaName1<<".z*delta"<<deltaName2<<".z)/delta"<<deltaName2<<".w;\n";
+        compute<<"ff.z = (delta"<<deltaName3<<".x*delta"<<deltaName2<<".x + delta"<<deltaName3<<".y*delta"<<deltaName2<<".y + delta"<<deltaName3<<".z*delta"<<deltaName2<<".z)/delta"<<deltaName2<<".w;\n";
+        compute<<"ff.w = (dEdDihedral"<<intToString(index)<<"*r)/"<<crossName2<<".w;\n";
+        compute<<"float4 internalF0 = ff.x*"<<crossName1<<";\n";
+        compute<<"float4 internalF3 = ff.w*"<<crossName2<<";\n";
+        compute<<"float4 s = ff.y*internalF0 - ff.z*internalF3;\n";
+        compute<<forceNames[atoms[0]]<<".xyz += internalF0.xyz;\n";
+        compute<<forceNames[atoms[1]]<<".xyz += s.xyz-internalF0.xyz;\n";
+        compute<<forceNames[atoms[2]]<<".xyz += -s.xyz-internalF3.xyz;\n";
+        compute<<forceNames[atoms[3]]<<".xyz += internalF3.xyz;\n";
+        compute<<"}\n";
+    }
+    cl.getBondedUtilities().addInteraction(atoms, compute.str(), force.getForceGroup());
+    map<string, string> replacements;
+    replacements["M_PI"] = doubleToString(M_PI);
+    cl.getBondedUtilities().addPrefixCode(cl.replaceStrings(OpenCLKernelSources::customCompoundBond, replacements));;
+}
+
+double OpenCLCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
     return 0.0;
 }
 

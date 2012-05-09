@@ -629,3 +629,39 @@ double OpenCLParallelCalcCustomHbondForceKernel::execute(ContextImpl& context, b
     }
     return 0.0;
 }
+
+class OpenCLParallelCalcCustomCompoundBondForceKernel::Task : public OpenCLContext::WorkTask {
+public:
+    Task(ContextImpl& context, OpenCLCalcCustomCompoundBondForceKernel& kernel, bool includeForce,
+            bool includeEnergy, double& energy) : context(context), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
+    }
+    void execute() {
+        energy += kernel.execute(context, includeForce, includeEnergy);
+    }
+private:
+    ContextImpl& context;
+    OpenCLCalcCustomCompoundBondForceKernel& kernel;
+    bool includeForce, includeEnergy;
+    double& energy;
+};
+
+OpenCLParallelCalcCustomCompoundBondForceKernel::OpenCLParallelCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) :
+        CalcCustomCompoundBondForceKernel(name, platform), data(data) {
+    for (int i = 0; i < (int) data.contexts.size(); i++)
+        kernels.push_back(Kernel(new OpenCLCalcCustomCompoundBondForceKernel(name, platform, *data.contexts[i], system)));
+}
+
+void OpenCLParallelCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).initialize(system, force);
+}
+
+double OpenCLParallelCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    for (int i = 0; i < (int) data.contexts.size(); i++) {
+        OpenCLContext& cl = *data.contexts[i];
+        OpenCLContext::WorkThread& thread = cl.getWorkThread();
+        thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
+    }
+    return 0.0;
+}

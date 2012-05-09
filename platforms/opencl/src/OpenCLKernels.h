@@ -763,6 +763,43 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
+public:
+    OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomCompoundBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCompoundBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomCompoundBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numBonds;
+    OpenCLContext& cl;
+    OpenCLParameterSet* params;
+    OpenCLArray<cl_float>* globals;
+    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    System& system;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

@@ -62,6 +62,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
             return new OpenCLParallelCalcCustomExternalForceKernel(name, platform, data, context.getSystem());
         if (name == CalcCustomHbondForceKernel::Name())
             return new OpenCLParallelCalcCustomHbondForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomCompoundBondForceKernel::Name())
+            return new OpenCLParallelCalcCustomCompoundBondForceKernel(name, platform, data, context.getSystem());
     }
     OpenCLContext& cl = *data.contexts[0];
     if (name == CalcForcesAndEnergyKernel::Name())
@@ -100,6 +102,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
         return new OpenCLCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
+    if (name == CalcCustomCompoundBondForceKernel::Name())
+        return new OpenCLCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
         return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())

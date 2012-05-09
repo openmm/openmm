@@ -61,6 +61,10 @@ std::string OpenCLBondedUtilities::addArgument(cl::Memory& data, const string& t
     return "customArg"+OpenCLExpressionUtilities::intToString(arguments.size());
 }
 
+void OpenCLBondedUtilities::addPrefixCode(const string& source) {
+    prefixCode.push_back(source);
+}
+
 void OpenCLBondedUtilities::initialize(const System& system) {
     int numForces = forceAtoms.size();
     if (numForces == 0)
@@ -155,6 +159,8 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         const vector<int>& set = *iter;
         int setSize = set.size();
         stringstream s;
+        for (int i = 0; i < (int) prefixCode.size(); i++)
+            s<<prefixCode[i];
         s<<"__kernel void computeBondedForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, int groups";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];

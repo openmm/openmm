@@ -30,12 +30,12 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CustomCompoundBondForce.
+ * This tests the OpenCL implementation of CustomCompoundBondForce.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
 #include "openmm/CustomCompoundBondForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
@@ -52,7 +52,7 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testBond() {
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
 
     // Create a system using a CustomCompoundBondForce.
 
@@ -124,7 +124,7 @@ void testBond() {
 }
 
 void testPositionDependence() {
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System customSystem;
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
@@ -149,10 +149,45 @@ void testPositionDependence() {
     ASSERT_EQUAL_VEC(Vec3(-0.3, -2, 0), state.getForces()[1], 1e-5);
 }
 
+void testParallelComputation() {
+    OpenCLPlatform platform;
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    CustomCompoundBondForce* force = new CustomCompoundBondForce(2, ("(distance(p1,p2)-1.1)^2"));
+    vector<int> particles(2);
+    vector<double> params;
+    for (int i = 1; i < numParticles; i++) {
+        particles[0] = i-1;
+        particles[1] = i;
+        force->addBond(particles, params);
+    }
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(i, 0, 0);
+    VerletIntegrator integrator1(0.01);
+    Context context1(system, integrator1, platform);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    string deviceIndex = platform.getPropertyValue(context1, OpenCLPlatform::OpenCLDeviceIndex());
+    map<string, string> props;
+    props[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex+","+deviceIndex;
+    Context context2(system, integrator2, platform, props);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
+
 int main() {
     try {
         testBond();
         testPositionDependence();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
@@ -161,5 +196,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-
-
