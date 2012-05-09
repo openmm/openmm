@@ -137,7 +137,7 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         contexts[i]->setTime(time);
 }
 
-void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
+void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
     OpenCLArray<mm_float4>& posq = cl.getPosq();
     posq.download();
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
@@ -151,7 +151,7 @@ void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector
     }
 }
 
-void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
+void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
     OpenCLArray<mm_float4>& posq = cl.getPosq();
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
@@ -169,7 +169,7 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
 }
 
-void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
+void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
     OpenCLArray<mm_float4>& velm = cl.getVelm();
     velm.download();
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
@@ -181,7 +181,7 @@ void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vecto
     }
 }
 
-void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
+void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector<Vec3>& velocities) {
     OpenCLArray<mm_float4>& velm = cl.getVelm();
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
@@ -197,7 +197,7 @@ void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std:
     velm.upload();
 }
 
-void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
+void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
     OpenCLArray<mm_float4>& force = cl.getForce();
     force.download();
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
@@ -251,12 +251,12 @@ void OpenCLVirtualSitesKernel::computePositions(ContextImpl& context) {
 
 class OpenCLBondForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLBondForceInfo(const HarmonicBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
         double length, k;
         force.getBondParameters(index, particle1, particle2, length, k);
@@ -299,7 +299,7 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicBondForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLBondForceInfo(0, force));
+    cl.addForce(new OpenCLBondForceInfo(force));
 }
 
 double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -308,12 +308,12 @@ double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool inc
 
 class OpenCLCustomBondForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomBondForceInfo(int requiredBuffers, const CustomBondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLCustomBondForceInfo(const CustomBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
         vector<double> parameters;
         force.getBondParameters(index, particle1, particle2, parameters);
@@ -360,7 +360,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomBondForceInfo(0, force));
+    cl.addForce(new OpenCLCustomBondForceInfo(force));
 
     // Record information for the expressions.
 
@@ -424,12 +424,12 @@ double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool inclu
 
 class OpenCLAngleForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLAngleForceInfo(int requiredBuffers, const HarmonicAngleForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLAngleForceInfo(const HarmonicAngleForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3;
         double angle, k;
         force.getAngleParameters(index, particle1, particle2, particle3, angle, k);
@@ -474,7 +474,7 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicAngleForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLAngleForceInfo(0, force));
+    cl.addForce(new OpenCLAngleForceInfo(force));
 }
 
 double OpenCLCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -483,12 +483,12 @@ double OpenCLCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool in
 
 class OpenCLCustomAngleForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomAngleForceInfo(int requiredBuffers, const CustomAngleForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLCustomAngleForceInfo(const CustomAngleForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3;
         vector<double> parameters;
         force.getAngleParameters(index, particle1, particle2, particle3, parameters);
@@ -536,7 +536,7 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomAngleForceInfo(0, force));
+    cl.addForce(new OpenCLCustomAngleForceInfo(force));
 
     // Record information for the expressions.
 
@@ -600,12 +600,12 @@ double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool incl
 
 class OpenCLPeriodicTorsionForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLPeriodicTorsionForceInfo(int requiredBuffers, const PeriodicTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLPeriodicTorsionForceInfo(const PeriodicTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
         force.getTorsionParameters(index, particle1, particle2, particle3, particle4, periodicity, phase, k);
@@ -652,7 +652,7 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float4");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::periodicTorsionForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLPeriodicTorsionForceInfo(0, force));
+    cl.addForce(new OpenCLPeriodicTorsionForceInfo(force));
 }
 
 double OpenCLCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -661,12 +661,12 @@ double OpenCLCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool 
 
 class OpenCLRBTorsionForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLRBTorsionForceInfo(int requiredBuffers, const RBTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLRBTorsionForceInfo(const RBTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
         force.getTorsionParameters(index, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
@@ -712,7 +712,7 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     map<string, string> replacements;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float8");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::rbTorsionForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLRBTorsionForceInfo(0, force));
+    cl.addForce(new OpenCLRBTorsionForceInfo(force));
 }
 
 double OpenCLCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -721,12 +721,12 @@ double OpenCLCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includ
 
 class OpenCLCMAPTorsionForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCMAPTorsionForceInfo(int requiredBuffers, const CMAPTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLCMAPTorsionForceInfo(const CMAPTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int map, a1, a2, a3, a4, b1, b2, b3, b4;
         force.getTorsionParameters(index, map, a1, a2, a3, a4, b1, b2, b3, b4);
         particles.resize(8);
@@ -799,7 +799,7 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
     replacements["MAP_POS"] = cl.getBondedUtilities().addArgument(mapPositions->getDeviceBuffer(), "int2");
     replacements["MAPS"] = cl.getBondedUtilities().addArgument(torsionMaps->getDeviceBuffer(), "int");
     cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLCMAPTorsionForceInfo(0, force));
+    cl.addForce(new OpenCLCMAPTorsionForceInfo(force));
 }
 
 double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -808,12 +808,12 @@ double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool incl
 
 class OpenCLCustomTorsionForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomTorsionForceInfo(int requiredBuffers, const CustomTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    OpenCLCustomTorsionForceInfo(const CustomTorsionForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3, particle4;
         vector<double> parameters;
         force.getTorsionParameters(index, particle1, particle2, particle3, particle4, parameters);
@@ -862,7 +862,7 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    cl.addForce(new OpenCLCustomTorsionForceInfo(0, force));
+    cl.addForce(new OpenCLCustomTorsionForceInfo(force));
 
     // Record information for the expressions.
 
@@ -938,7 +938,7 @@ public:
     int getNumParticleGroups() {
         return force.getNumExceptions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(index, particle1, particle2, chargeProd, sigma, epsilon);
@@ -1057,7 +1057,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI) : 0.0);
+        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
 
         // Create the reciprocal space kernels.
 
@@ -1083,14 +1083,14 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI) : 0.0);
+        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
         pmeDefines["PME_ORDER"] = intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = intToString(numParticles);
         pmeDefines["RECIP_EXP_FACTOR"] = doubleToString(M_PI*M_PI/(alpha*alpha));
         pmeDefines["GRID_SIZE_X"] = intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = intToString(gridSizeY);
         pmeDefines["GRID_SIZE_Z"] = intToString(gridSizeZ);
-        pmeDefines["EPSILON_FACTOR"] = doubleToString(std::sqrt(ONE_4PI_EPS0));
+        pmeDefines["EPSILON_FACTOR"] = doubleToString(sqrt(ONE_4PI_EPS0));
 
         // Create required data structures.
 
@@ -1327,7 +1327,7 @@ public:
     int getNumParticleGroups() {
         return force.getNumExclusions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
         force.getExclusionParticles(index, particle1, particle2);
         particles.resize(2);
@@ -1686,7 +1686,7 @@ public:
     int getNumParticleGroups() {
         return force.getNumExclusions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
         force.getExclusionParticles(index, particle1, particle2);
         particles.resize(2);
@@ -2564,7 +2564,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
 
 class OpenCLCustomExternalForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomExternalForceInfo(const CustomExternalForce& force, int numParticles) : OpenCLForceInfo(1), force(force), indices(numParticles, -1) {
+    OpenCLCustomExternalForceInfo(const CustomExternalForce& force, int numParticles) : OpenCLForceInfo(0), force(force), indices(numParticles, -1) {
         vector<double> params;
         for (int i = 0; i < force.getNumParticles(); i++) {
             int particle;
@@ -2697,7 +2697,7 @@ public:
     int getNumParticleGroups() {
         return force.getNumDonors()+force.getNumAcceptors()+force.getNumExclusions();
     }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
+    void getParticlesInGroup(int index, vector<int>& particles) {
         int p1, p2, p3;
         vector<double> parameters;
         if (index < force.getNumDonors()) {
@@ -3190,16 +3190,16 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     }
     donorKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
     donorKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
-    cl.executeKernel(donorKernel, std::max(numDonors, numAcceptors));
+    cl.executeKernel(donorKernel, max(numDonors, numAcceptors));
     acceptorKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
     acceptorKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
-    cl.executeKernel(acceptorKernel, std::max(numDonors, numAcceptors));
+    cl.executeKernel(acceptorKernel, max(numDonors, numAcceptors));
     return 0.0;
 }
 
 class OpenCLCustomCompoundBondForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLCustomCompoundBondForceInfo(const CustomCompoundBondForce& force) : OpenCLForceInfo(1), force(force) {
+    OpenCLCustomCompoundBondForceInfo(const CustomCompoundBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -3586,9 +3586,9 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         double kT = BOLTZ*temperature;
-        double vscale = std::exp(-stepSize/tau);
+        double vscale = exp(-stepSize/tau);
         double fscale = (1-vscale)*tau;
-        double noisescale = std::sqrt(2*kT/tau)*std::sqrt(0.5*(1-vscale*vscale)*tau);
+        double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
         vector<cl_float> p(params->getSize());
         p[0] = (cl_float) vscale;
         p[1] = (cl_float) fscale;
@@ -3690,7 +3690,7 @@ void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, c
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     selectSizeKernel = cl::Kernel(program, "selectVerletStepSize");
-    blockSize = std::min(std::min(256, system.getNumParticles()), (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    blockSize = min(min(256, system.getNumParticles()), (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 }
 
 double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
@@ -3764,9 +3764,9 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     selectSizeKernel = cl::Kernel(program, "selectLangevinStepSize");
     params = new OpenCLArray<cl_float>(cl, 3, "langevinParams");
-    blockSize = std::min(256, system.getNumParticles());
-    blockSize = std::max(blockSize, params->getSize());
-    blockSize = std::min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+    blockSize = min(256, system.getNumParticles());
+    blockSize = max(blockSize, params->getSize());
+    blockSize = min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 }
 
 double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -3866,7 +3866,7 @@ private:
     OpenCLParameterSet& perDofValues;
     vector<vector<cl_float> >& localPerDofValues;
     bool& deviceValuesAreCurrent;
-    std::vector<int> lastAtomOrder;
+    vector<int> lastAtomOrder;
 };
 
 OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
