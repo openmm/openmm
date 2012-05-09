@@ -78,6 +78,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomExternalForceKernel(name, platform);
     if (name == CalcCustomHbondForceKernel::Name())
         return new ReferenceCalcCustomHbondForceKernel(name, platform);
+    if (name == CalcCustomCompoundBondForceKernel::Name())
+        return new ReferenceCalcCustomCompoundBondForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())

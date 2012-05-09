@@ -41,6 +41,7 @@
 class CpuObc;
 class CpuGBVI;
 class ReferenceAndersenThermostat;
+class ReferenceCustomCompoundBondIxn;
 class ReferenceCustomHbondIxn;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
@@ -709,6 +710,37 @@ private:
     RealOpenMM nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
+    std::vector<std::string> globalParameterNames;
+};
+
+/**
+ * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
+public:
+    ReferenceCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform) : CalcCustomCompoundBondForceKernel(name, platform), ixn(NULL) {
+    }
+    ~ReferenceCalcCustomCompoundBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCompoundBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomCompoundBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numBonds, numParticles;
+    RealOpenMM **bondParamArray;
+    ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames;
 };
 

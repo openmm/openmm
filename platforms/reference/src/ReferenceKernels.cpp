@@ -40,6 +40,7 @@
 #include "SimTKReference/ReferenceCMAPTorsionIxn.h"
 #include "SimTKReference/ReferenceCustomAngleIxn.h"
 #include "SimTKReference/ReferenceCustomBondIxn.h"
+#include "SimTKReference/ReferenceCustomCompoundBondIxn.h"
 #include "SimTKReference/ReferenceCustomDynamics.h"
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
 #include "SimTKReference/ReferenceCustomGBIxn.h"
@@ -62,6 +63,7 @@
 #include "openmm/System.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -1233,6 +1235,69 @@ double ReferenceCalcCustomHbondForceKernel::execute(ContextImpl& context, bool i
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ixn->calculatePairIxn(posData, donorParamArray, acceptorParamArray, exclusionArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
+    return energy;
+}
+
+ReferenceCalcCustomCompoundBondForceKernel::~ReferenceCalcCustomCompoundBondForceKernel() {
+    disposeRealArray(bondParamArray, numBonds);
+    if (ixn != NULL)
+        delete ixn;
+}
+
+void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
+
+    // Build the arrays.
+
+    numBonds = force.getNumBonds();
+    numParticles = system.getNumParticles();
+    vector<vector<int> > bondParticles(numBonds);
+    int numBondParameters = force.getNumPerBondParameters();
+    bondParamArray = allocateRealArray(numBonds, numBondParameters);
+    for (int i = 0; i < numBonds; ++i) {
+        vector<double> parameters;
+        force.getBondParameters(i, bondParticles[i], parameters);
+        for (int j = 0; j < numBondParameters; j++)
+            bondParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        force.getFunctionParameters(i, name, values, min, max);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values);
+    }
+
+    // Parse the expression and create the object used to calculate the interaction.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomCompoundBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    vector<string> bondParameterNames;
+    for (int i = 0; i < numBondParameters; i++)
+        bondParameterNames.push_back(force.getPerBondParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    ixn = new ReferenceCustomCompoundBondIxn(force.getNumParticlesPerBond(), bondParticles, energyExpression, bondParameterNames, distances, angles, dihedrals);
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+}
+
+double ReferenceCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& forceData = extractForces(context);
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
 }
 

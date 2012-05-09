@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -119,7 +119,7 @@ public:
     /**
      * Create a CustomHbondForce.
      *
-     * @param energy    an algebraic expression giving the interaction energy between a donor as a function
+     * @param energy    an algebraic expression giving the interaction energy between a donor and an acceptor as a function
      *                  of inter-particle distances, angles, and dihedrals, as well as any global, per-donor, and
      *                  per-acceptor parameters
      */
@@ -295,7 +295,7 @@ public:
      *                    includes one particle, this will be -1.
      * @param d3          the index of the third particle for this donor group.  If the group includes
      *                    less than three particles, this will be -1.
-     * @param parameters  the list of per-donor parameter values for the new donor
+     * @param parameters  the list of per-donor parameter values for the donor
      */
     void getDonorParameters(int index, int& d1, int& d2, int& d3, std::vector<double>& parameters) const;
     /**
@@ -307,7 +307,7 @@ public:
      *                    includes one particle, this must be -1.
      * @param d3          the index of the third particle for this donor group.  If the group includes
      *                    less than three particles, this must be -1.
-     * @param parameters  the list of per-donor parameter values for the new donor
+     * @param parameters  the list of per-donor parameter values for the donor
      */
     void setDonorParameters(int index, int d1, int d2, int d3, const std::vector<double>& parameters);
     /**
@@ -331,7 +331,7 @@ public:
      *                    includes one particle, this will be -1.
      * @param a3          the index of the third particle for this acceptor group.  If the group includes
      *                    less than three particles, this will be -1.
-     * @param parameters  the list of per-acceptor parameter values for the new acceptor
+     * @param parameters  the list of per-acceptor parameter values for the acceptor
      */
     void getAcceptorParameters(int index, int& a1, int& a2, int& a3, std::vector<double>& parameters) const;
     /**
@@ -343,7 +343,7 @@ public:
      *                    includes one particle, this must be -1.
      * @param a3          the index of the third particle for this acceptor group.  If the group includes
      *                    less than three particles, this must be -1.
-     * @param parameters  the list of per-acceptor parameter values for the new acceptor
+     * @param parameters  the list of per-acceptor parameter values for the acceptor
      */
     void setAcceptorParameters(int index, int a1, int a2, int a3, const std::vector<double>& parameters);
     /**
