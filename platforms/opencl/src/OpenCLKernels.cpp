@@ -234,6 +234,7 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     mm_float4 box = cl.getPeriodicBoxSize();
     stream.write((char*) &box, sizeof(mm_float4));
     cl.getIntegrationUtilities().createCheckpoint(stream);
+    SimTKOpenMMUtilities::createCheckpoint(stream);
 }
 
 void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
@@ -252,6 +253,7 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     stream.read((char*) &box, sizeof(mm_float4));
     cl.setPeriodicBoxSize(box.x, box.y, box.z);
     cl.getIntegrationUtilities().loadCheckpoint(stream);
+    SimTKOpenMMUtilities::loadCheckpoint(stream);
 }
 
 void OpenCLApplyConstraintsKernel::initialize(const System& system) {
