@@ -16,11 +16,12 @@
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
 <xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
+<xsl:variable name="vector_int_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;int')]/@id"/>
 
 <!-- Do not generate functions for the following classes -->
 <xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
 <!-- Do not generate the following functions -->
-<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
+<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory', 'OpenMM_Context_createCheckpoint', 'OpenMM_Context_loadCheckpoint')"/>
 <!-- Suppress any function which references any of the following classes -->
 <xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl')"/>
 
@@ -48,6 +49,7 @@ typedef struct OpenMM_BondArray_struct OpenMM_BondArray;
 typedef struct OpenMM_ParameterArray_struct OpenMM_ParameterArray;
 typedef struct OpenMM_PropertyArray_struct OpenMM_PropertyArray;
 typedef struct OpenMM_DoubleArray_struct OpenMM_DoubleArray;
+typedef struct OpenMM_IntArray_struct OpenMM_IntArray;
 typedef struct {double x, y, z;} OpenMM_Vec3;
 
 typedef enum {OpenMM_False = 0, OpenMM_True = 1} OpenMM_Boolean;
@@ -96,6 +98,10 @@ extern OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyA
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'double'"/>
  <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
+</xsl:call-template>
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'int'"/>
+ <xsl:with-param name="name" select="'OpenMM_IntArray'"/>
 </xsl:call-template>
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
@@ -242,6 +248,9 @@ extern OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="t
   </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'OpenMM_DoubleArray'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$vector_int_type_id">
+   <xsl:value-of select="'OpenMM_IntArray'"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="wrap_type">

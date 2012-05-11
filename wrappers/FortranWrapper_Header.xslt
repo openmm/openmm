@@ -20,6 +20,7 @@
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
 <xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
+<xsl:variable name="vector_int_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;int')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
 </xsl:text>
@@ -28,7 +29,7 @@
 <!-- Do not generate functions for the following classes -->
 <xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
 <!-- Do not generate the following functions -->
-<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
+<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory', 'OpenMM_Context_createCheckpoint', 'OpenMM_Context_loadCheckpoint')"/>
 <!-- Suppress any function which references any of the following classes -->
 <xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl')"/>
 
@@ -500,6 +501,9 @@ END MODULE OpenMM
   </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="concat('type (OpenMM_DoubleArray) ', $value)"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$vector_int_type_id">
+   <xsl:value-of select="concat('type (OpenMM_IntArray) ', $value)"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="declare_argument">

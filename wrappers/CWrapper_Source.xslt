@@ -18,6 +18,7 @@
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
 <xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
+<xsl:variable name="vector_int_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;int')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
 </xsl:text>
@@ -27,7 +28,7 @@
 <!-- Do not generate functions for the following classes -->
 <xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
 <!-- Do not generate the following functions -->
-<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
+<xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory', 'OpenMM_Context_createCheckpoint', 'OpenMM_Context_loadCheckpoint')"/>
 <!-- Suppress any function which references any of the following classes -->
 <xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl')"/>
 
@@ -147,6 +148,10 @@ OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* a
  <xsl:with-param name="element_type" select="'double'"/>
  <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
 </xsl:call-template>
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'int'"/>
+ <xsl:with-param name="name" select="'OpenMM_IntArray'"/>
+</xsl:call-template>
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
@@ -190,7 +195,7 @@ OPENMM_EXPORT void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$
 OPENMM_EXPORT void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value) {
     (*reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index] = value;
 }
-OPENMM_EXPORT double <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
+OPENMM_EXPORT <xsl:value-of select="concat($element_type, ' ')"/> <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
     return (*reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index];
 }
 </xsl:template>
@@ -347,6 +352,9 @@ OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id"
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'OpenMM_DoubleArray'"/>
   </xsl:when>
+  <xsl:when test="$type_id=$vector_int_type_id">
+   <xsl:value-of select="'OpenMM_IntArray'"/>
+  </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="wrap_type">
     <xsl:with-param name="type_id" select="$node/@type"/>
@@ -396,6 +404,9 @@ OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id"
   </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'vector&lt;double&gt;'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$vector_int_type_id">
+   <xsl:value-of select="'vector&lt;int&gt;'"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="unwrap_type">
