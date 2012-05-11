@@ -73,6 +73,41 @@
         return state
   }
 
+  %feature("docstring") createCheckpoint1 "Create a checkpoint recording the current state of the Context.
+This should be treated as an opaque block of binary data.  See loadCheckpoint() for more details.
+
+Returns: a string containing the checkpoint data
+"
+  std::string createCheckpoint1() {
+    std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    self->createCheckpoint(stream);
+    return stream.str();
+  }
+
+  %feature ("docstring") loadCheckpoint "Load a checkpoint that was written by createCheckpoint().
+
+A checkpoint contains not only publicly visible data such as the particle positions and
+velocities, but also internal data such as the states of random number generators.  Ideally,
+loading a checkpoint should restore the Context to an identical state to when it was written,
+such that continuing the simulation will produce an identical trajectory.  This is not strictly
+guaranteed to be true, however, and should not be relied on.  For most purposes, however, the
+internal state should be close enough to be reasonably considered equivalent.
+
+A checkpoint contains data that is highly specific to the Context from which it was created.
+It depends on the details of the System, the Platform being used, and the hardware and software
+of the computer it was created on.  If you try to load it on a computer with different hardware,
+or for a System that is different in any way, loading is likely to fail.  Checkpoints created
+with different versions of OpenMM are also often incompatible.  If a checkpoint cannot be loaded,
+that is signaled by throwing an exception.
+
+Parameters:
+ - checkpoint (string) the checkpoint data to load
+"
+  void loadCheckpoint(std::string checkpoint) {
+    std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    stream << checkpoint;
+    self->loadCheckpoint(stream);
+  }
 }
 
 %extend OpenMM::RPMDIntegrator {
