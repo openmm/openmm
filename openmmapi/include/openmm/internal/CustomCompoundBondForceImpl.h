@@ -45,7 +45,7 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of CustomNonbondedForce.
+ * This is the internal implementation of CustomCompoundBondForce.
  */
 
 class OPENMM_EXPORT CustomCompoundBondForceImpl : public ForceImpl {
