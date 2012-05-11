@@ -65,7 +65,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
-OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
+OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
         velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL), thread(NULL) {
@@ -207,8 +207,8 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};
         context = cl::Context(contextDevices, cprops, errorCallback);
         queue = cl::CommandQueue(context, device);
-        numAtoms = numParticles;
-        paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
+        numAtoms = system.getNumParticles();
+        paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
         numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         bonded = new OpenCLBondedUtilities(*this);
@@ -268,6 +268,10 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
     // Create the work thread used for parallelization when running on multiple devices.
     
     thread = new WorkThread();
+    
+    // Create the integration utilities object.
+    
+    integration = new OpenCLIntegrationUtilities(*this, system);
 }
 
 OpenCLContext::~OpenCLContext() {
@@ -328,7 +332,6 @@ void OpenCLContext::initialize(const System& system) {
         (*atomIndex)[i] = i;
     atomIndex->upload();
     findMoleculeGroups(system);
-    integration = new OpenCLIntegrationUtilities(*this, system);
     nonbonded->initialize(system);
 }
 

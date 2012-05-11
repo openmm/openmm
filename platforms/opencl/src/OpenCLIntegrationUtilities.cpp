@@ -592,7 +592,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneWeights->getDeviceBuffer());
     vsiteForceKernel = cl::Kernel(ccmaProgram, "distributeForces");
     vsiteForceKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+    // Skip argument 1: the force array hasn't been created yet.
     vsiteForceKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(3, vsite2AvgWeights->getDeviceBuffer());
     vsiteForceKernel.setArg<cl::Buffer>(4, vsite3AvgAtoms->getDeviceBuffer());
@@ -763,8 +763,10 @@ void OpenCLIntegrationUtilities::computeVirtualSites() {
 }
 
 void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
-    if (numVsites > 0)
+    if (numVsites > 0) {
+        vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
         context.executeKernel(vsiteForceKernel, numVsites);
+    }
 }
 
 void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {

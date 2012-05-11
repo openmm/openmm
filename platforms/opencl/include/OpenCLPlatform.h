@@ -72,7 +72,7 @@ public:
 
 class OPENMM_EXPORT OpenCLPlatform::PlatformData {
 public:
-    PlatformData(int numParticles, const std::string& platformPropValue, const std::string& deviceIndexProperty);
+    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();

@@ -231,6 +231,8 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     stream.write((char*) &cl.getPosq()[0], sizeof(mm_float4)*cl.getPosq().getSize());
     cl.getVelm().download();
     stream.write((char*) &cl.getVelm()[0], sizeof(mm_float4)*cl.getVelm().getSize());
+    stream.write((char*) &cl.getAtomIndex()[0], sizeof(cl_int)*cl.getAtomIndex().getSize());
+    stream.write((char*) &cl.getPosCellOffsets()[0], sizeof(mm_int4)*cl.getPosCellOffsets().size());
     mm_float4 box = cl.getPeriodicBoxSize();
     stream.write((char*) &box, sizeof(mm_float4));
     cl.getIntegrationUtilities().createCheckpoint(stream);
@@ -244,16 +246,24 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     double time;
     stream.read((char*) &time, sizeof(double));
-    cl.setTime(time);
+    vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->setTime(time);
     stream.read((char*) &cl.getPosq()[0], sizeof(mm_float4)*cl.getPosq().getSize());
     cl.getPosq().upload();
     stream.read((char*) &cl.getVelm()[0], sizeof(mm_float4)*cl.getVelm().getSize());
     cl.getVelm().upload();
+    stream.read((char*) &cl.getAtomIndex()[0], sizeof(cl_int)*cl.getAtomIndex().getSize());
+    cl.getAtomIndex().upload();
+    stream.read((char*) &cl.getPosCellOffsets()[0], sizeof(mm_int4)*cl.getPosCellOffsets().size());
     mm_float4 box;
     stream.read((char*) &box, sizeof(mm_float4));
-    cl.setPeriodicBoxSize(box.x, box.y, box.z);
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->setPeriodicBoxSize(box.x, box.y, box.z);
     cl.getIntegrationUtilities().loadCheckpoint(stream);
     SimTKOpenMMUtilities::loadCheckpoint(stream);
+    for (int i = 0; i < cl.getReorderListeners().size(); i++)
+        cl.getReorderListeners()[i]->execute();
 }
 
 void OpenCLApplyConstraintsKernel::initialize(const System& system) {
@@ -4435,6 +4445,7 @@ void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
     cl::Program program = cl.createProgram(OpenCLKernelSources::andersenThermostat, defines);
     kernel = cl::Kernel(program, "applyAndersenThermostat");
+    cl.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
 
     // Create the arrays with the group definitions.
 
@@ -4451,7 +4462,6 @@ void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const
 void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
-        cl.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
         kernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(4, cl.getIntegrationUtilities().getRandom().getDeviceBuffer());

@@ -68,8 +68,8 @@ void compareStates(State& s1, State& s2) {
 }
 
 void testCheckpoint() {
-    const int numParticles = 10;
-    const double boxSize = 3.0;
+    const int numParticles = 100;
+    const double boxSize = 5.0;
     const double temperature = 200.0;
     OpenCLPlatform platform;
     System system;
@@ -83,7 +83,16 @@ void testCheckpoint() {
     for (int i = 0; i < numParticles; i++) {
         system.addParticle(1.0);
         nonbonded->addParticle(i%2 == 0 ? 0.1 : -0.1, 0.2, 0.1);
-        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        bool clash;
+        do {
+            clash = false;
+            positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+            for (int j = 0; j < i; j++) {
+                Vec3 delta = positions[i]-positions[j];
+                if (sqrt(delta.dot(delta)) < 0.1)
+                    clash = true;
+            }
+        } while (clash);
     }
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
@@ -119,6 +128,34 @@ void testCheckpoint() {
     integrator.step(10);
     State s4 = context.getState(State::Positions | State::Velocities | State::Parameters);
     compareStates(s2, s4);
+    
+    // Create a new Context that uses multiple devices.
+
+    string deviceIndex = platform.getPropertyValue(context, OpenCLPlatform::OpenCLDeviceIndex());
+    map<string, string> props;
+    props[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex+","+deviceIndex;
+    VerletIntegrator integrator2(0.001);
+    Context context2(system, integrator2, platform, props);
+    context2.setPositions(positions);
+    context2.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    context2.setParameter(AndersenThermostat::Temperature(), temperature);
+    
+    // Now repeat all of the above tests with it.
+
+    integrator2.step(100);
+    State s5 = context2.getState(State::Positions | State::Velocities | State::Parameters);
+    stringstream stream2(ios_base::out | ios_base::in | ios_base::binary);
+    context2.createCheckpoint(stream2);
+    integrator2.step(10);
+    State s6 = context2.getState(State::Positions | State::Velocities | State::Parameters);
+    context2.setPeriodicBoxVectors(Vec3(2*boxSize, 0, 0), Vec3(0, 2*boxSize, 0), Vec3(0, 0, 2*boxSize));
+    context2.setParameter(AndersenThermostat::Temperature(), temperature+10);
+    context2.loadCheckpoint(stream2);
+    State s7 = context2.getState(State::Positions | State::Velocities | State::Parameters);
+    compareStates(s5, s7);
+    integrator2.step(10);
+    State s8 = context2.getState(State::Positions | State::Velocities | State::Parameters);
+    compareStates(s6, s8);
 }
 
 int main() {

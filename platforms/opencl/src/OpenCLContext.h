@@ -146,7 +146,7 @@ public:
     class ReorderListener;
     static const int ThreadBlockSize;
     static const int TileSize;
-    OpenCLContext(int numParticles, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
+    OpenCLContext(const System& system, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -473,6 +473,12 @@ public:
      * assumes ownership of the object, and deletes it when the context itself is deleted.
      */
     void addReorderListener(ReorderListener* listener);
+    /**
+     * Get the list of ReorderListeners.
+     */
+    std::vector<ReorderListener*>& getReorderListeners() {
+        return reorderListeners;
+    }
 private:
     struct Molecule;
     struct MoleculeGroup;
