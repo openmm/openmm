@@ -30,6 +30,7 @@
 #include "openmm/System.h"
 #include "OpenCLContext.h"
 #include "openmm/internal/windowsExport.h"
+#include <iosfwd>
 
 namespace OpenMM {
 
@@ -92,6 +93,18 @@ public:
      * Distribute forces from virtual sites to the atoms they are based on.
      */
     void distributeForcesFromVirtualSites();
+    /**
+     * Create a checkpoint recording the current state of the random number generator.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    void createCheckpoint(std::ostream& stream);
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    void loadCheckpoint(std::istream& stream);
 private:
     void applyConstraints(bool constrainVelocities, double tol);
     OpenCLContext& context;

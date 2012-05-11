@@ -199,6 +199,25 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
       static void setRandomNumberSeed( uint32_t seed );
       
+      /**---------------------------------------------------------------------------------------
+      
+         Write out the internal state of the random number generator.
+      
+         @param stream  a stream to write the checkpoint to
+      
+         --------------------------------------------------------------------------------------- */
+
+      static void createCheckpoint(std::ostream& stream);
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Load a checkpoint created by createCheckpoint().
+      
+         @param stream  a stream to load the checkpoint from
+      
+         --------------------------------------------------------------------------------------- */
+
+      static void loadCheckpoint(std::istream& stream);
 };
    
 // ---------------------------------------------------------------------------------------

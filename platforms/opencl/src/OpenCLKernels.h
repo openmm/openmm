@@ -152,6 +152,18 @@ public:
      * @param c      the vector defining the third edge of the periodic box
      */
     void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const;
+    /**
+     * Create a checkpoint recording the current state of the Context.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    void createCheckpoint(ContextImpl& context, std::ostream& stream);
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     OpenCLContext& cl;
 };

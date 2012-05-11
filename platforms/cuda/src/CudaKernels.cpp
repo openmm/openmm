@@ -184,6 +184,14 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
     gpuSetConstants(gpu);
 }
 
+void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
+    throw OpenMMException("CudaPlatform does not support checkpointing");
+}
+
+void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    throw OpenMMException("CudaPlatform does not support checkpointing");
+}
+
 void CudaApplyConstraintsKernel::initialize(const System& system) {
 }
 

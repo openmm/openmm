@@ -15,6 +15,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <iostream>
 
 #if defined(__BIG_ENDIAN__) && !defined(__amd64) && !defined(BIG_ENDIAN64)
 #define BIG_ENDIAN64 1
@@ -116,6 +117,16 @@ public:
 		parity[3] = PARITY4;
 	}
 };
+
+void SFMT::createCheckpoint(std::ostream& stream) {
+    stream.write((char*) &data->sfmt, sizeof(data->sfmt));
+    stream.write((char*) &data->idx, sizeof(data->idx));
+}
+
+void SFMT::loadCheckpoint(std::istream& stream) {
+    stream.read((char*) &data->sfmt, sizeof(data->sfmt));
+    stream.read((char*) &data->idx, sizeof(data->idx));
+}
 
 /*----------------
   STATIC FUNCTIONS

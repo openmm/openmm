@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include "Integrator.h"
 #include "State.h"
 #include "System.h"
+#include <iosfwd>
 #include <map>
 #include <string>
 #include <vector>
@@ -196,6 +197,33 @@ public:
      * This is an expensive operation, so you should try to avoid calling it too frequently.
      */
     void reinitialize();
+    /**
+     * Create a checkpoint recording the current state of the Context.  This should be treated
+     * as an opaque block of binary data.  See loadCheckpoint() for more details.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    void createCheckpoint(std::ostream& stream);
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * A checkpoint contains not only publicly visible data such as the particle positions and
+     * velocities, but also internal data such as the states of random number generators.  Ideally,
+     * loading a checkpoint should restore the Context to an identical state to when it was written,
+     * such that continuing the simulation will produce an identical trajectory.  This is not strictly
+     * guaranteed to be true, however, and should not be relied on.  For most purposes, however, the
+     * internal state should be close enough to be reasonably considered equivalent.
+     * 
+     * A checkpoint contains data that is highly specific to the Context from which it was created.
+     * It depends on the details of the System, the Platform being used, and the hardware and software
+     * of the computer it was created on.  If you try to load it on a computer with different hardware,
+     * or for a System that is different in any way, loading is likely to fail.  Checkpoints created
+     * with different versions of OpenMM are also often incompatible.  If a checkpoint cannot be loaded,
+     * that is signaled by throwing an exception.
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    void loadCheckpoint(std::istream& stream);
 private:
     friend class Platform;
     ContextImpl* impl;

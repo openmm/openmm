@@ -75,6 +75,7 @@
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include <cmath>
+#include <iostream>
 #include <limits>
 
 using namespace OpenMM;
@@ -236,6 +237,34 @@ void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context,
     box[0] = (RealOpenMM) a[0];
     box[1] = (RealOpenMM) b[1];
     box[2] = (RealOpenMM) c[2];
+}
+
+void ReferenceUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
+    int version = 1;
+    stream.write((char*) &version, sizeof(int));
+    stream.write((char*) &data.time, sizeof(data.time));
+    vector<RealVec>& posData = extractPositions(context);
+    stream.write((char*) &posData[0], sizeof(RealVec)*posData.size());
+    vector<RealVec>& velData = extractVelocities(context);
+    stream.write((char*) &velData[0], sizeof(RealVec)*velData.size());
+    RealVec& box = extractBoxSize(context);
+    stream.write((char*) &box, sizeof(RealVec));
+    SimTKOpenMMUtilities::createCheckpoint(stream);
+}
+
+void ReferenceUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    int version;
+    stream.read((char*) &version, sizeof(int));
+    if (version != 1)
+        throw OpenMMException("Checkpoint was created with a different version of OpenMM");
+    stream.read((char*) &data.time, sizeof(data.time));
+    vector<RealVec>& posData = extractPositions(context);
+    stream.read((char*) &posData[0], sizeof(RealVec)*posData.size());
+    vector<RealVec>& velData = extractVelocities(context);
+    stream.read((char*) &velData[0], sizeof(RealVec)*velData.size());
+    RealVec& box = extractBoxSize(context);
+    stream.read((char*) &box, sizeof(RealVec));
+    SimTKOpenMMUtilities::loadCheckpoint(stream);
 }
 
 void ReferenceApplyConstraintsKernel::initialize(const System& system) {

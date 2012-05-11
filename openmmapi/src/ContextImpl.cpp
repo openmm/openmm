@@ -38,15 +38,14 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/State.h"
 #include "openmm/VirtualSite.h"
+#include "openmm/Context.h"
+#include <iostream>
 #include <map>
 #include <utility>
 #include <vector>
 
 using namespace OpenMM;
-using std::map;
-using std::pair;
-using std::vector;
-using std::string;
+using namespace std;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
          owner(owner), system(system), integrator(integrator), hasInitializedForces(false), lastForceGroups(-1), platform(platform), platformData(NULL) {
@@ -287,4 +286,51 @@ void ContextImpl::tagParticlesInMolecule(int particle, int molecule, vector<int>
     for (int i = 0; i < (int) particleBonds[particle].size(); i++)
         if (particleMolecule[particleBonds[particle][i]] == -1)
             tagParticlesInMolecule(particleBonds[particle][i], molecule, particleMolecule, particleBonds);
+}
+
+static void writeString(ostream& stream, string str) {
+    int length = str.size();
+    stream.write((char*) &length, sizeof(int));
+    stream.write((char*) &str[0], length);
+}
+
+static string readString(istream& stream) {
+    int length;
+    stream.read((char*) &length, sizeof(int));
+    string str(length, ' ');
+    stream.read((char*) &str[0], length);
+    return str;
+}
+
+void ContextImpl::createCheckpoint(ostream& stream) {
+    writeString(stream, getPlatform().getName());
+    int numParticles = getSystem().getNumParticles();
+    stream.write((char*) &numParticles, sizeof(int));
+    int numParameters = parameters.size();
+    stream.write((char*) &numParameters, sizeof(int));
+    for (map<string, double>::const_iterator iter = parameters.begin(); iter != parameters.end(); ++iter) {
+        writeString(stream, iter->first);
+        stream.write((char*) &iter->second, sizeof(double));
+    }
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).createCheckpoint(*this, stream);
+    stream.flush();
+}
+
+void ContextImpl::loadCheckpoint(istream& stream) {
+    string platformName = readString(stream);
+    if (platformName != getPlatform().getName())
+        throw OpenMMException("loadCheckpoint: Checkpoint was created with a different Platform: "+platformName);
+    int numParticles;
+    stream.read((char*) &numParticles, sizeof(int));
+    if (numParticles != getSystem().getNumParticles())
+        throw OpenMMException("loadCheckpoint: Checkpoint contains the wrong number of particles");
+    int numParameters;
+    stream.read((char*) &numParameters, sizeof(int));
+    for (int i = 0; i < numParameters; i++) {
+        string name = readString(stream);
+        double value;
+        stream.read((char*) &value, sizeof(double));
+        parameters[name] = value;
+    }
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).loadCheckpoint(*this, stream);
 }

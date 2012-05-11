@@ -222,6 +222,38 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
         contexts[i]->setPeriodicBoxSize(a[0], b[1], c[2]);
 }
 
+void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
+    int version = 1;
+    stream.write((char*) &version, sizeof(int));
+    double time = cl.getTime();
+    stream.write((char*) &time, sizeof(double));
+    cl.getPosq().download();
+    stream.write((char*) &cl.getPosq()[0], sizeof(mm_float4)*cl.getPosq().getSize());
+    cl.getVelm().download();
+    stream.write((char*) &cl.getVelm()[0], sizeof(mm_float4)*cl.getVelm().getSize());
+    mm_float4 box = cl.getPeriodicBoxSize();
+    stream.write((char*) &box, sizeof(mm_float4));
+    cl.getIntegrationUtilities().createCheckpoint(stream);
+}
+
+void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    int version;
+    stream.read((char*) &version, sizeof(int));
+    if (version != 1)
+        throw OpenMMException("Checkpoint was created with a different version of OpenMM");
+    double time;
+    stream.read((char*) &time, sizeof(double));
+    cl.setTime(time);
+    stream.read((char*) &cl.getPosq()[0], sizeof(mm_float4)*cl.getPosq().getSize());
+    cl.getPosq().upload();
+    stream.read((char*) &cl.getVelm()[0], sizeof(mm_float4)*cl.getVelm().getSize());
+    cl.getVelm().upload();
+    mm_float4 box;
+    stream.read((char*) &box, sizeof(mm_float4));
+    cl.setPeriodicBoxSize(box.x, box.y, box.z);
+    cl.getIntegrationUtilities().loadCheckpoint(stream);
+}
+
 void OpenCLApplyConstraintsKernel::initialize(const System& system) {
 }
 

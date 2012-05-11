@@ -816,3 +816,23 @@ int OpenCLIntegrationUtilities::prepareRandomNumbers(int numValues) {
     randomPos = numValues;
     return 0;
 }
+
+void OpenCLIntegrationUtilities::createCheckpoint(ostream& stream) {
+    stream.write((char*) &randomPos, sizeof(int));
+    vector<mm_float4> randomVec;
+    random->download(randomVec);
+    stream.write((char*) &randomVec[0], sizeof(mm_float4)*random->getSize());
+    vector<mm_int4> randomSeedVec;
+    randomSeed->download(randomSeedVec);
+    stream.write((char*) &randomSeedVec[0], sizeof(mm_int4)*randomSeed->getSize());
+}
+
+void OpenCLIntegrationUtilities::loadCheckpoint(istream& stream) {
+    stream.read((char*) &randomPos, sizeof(int));
+    vector<mm_float4> randomVec(random->getSize());
+    stream.read((char*) &randomVec[0], sizeof(mm_float4)*random->getSize());
+    random->upload(randomVec);
+    vector<mm_int4> randomSeedVec(randomSeed->getSize());
+    stream.read((char*) &randomSeedVec[0], sizeof(mm_int4)*randomSeed->getSize());
+    randomSeed->upload(randomSeedVec);
+}

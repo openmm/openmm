@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include "openmm/Kernel.h"
 #include "openmm/Platform.h"
 #include "openmm/Vec3.h"
+#include <iosfwd>
 #include <map>
 #include <vector>
 
@@ -220,6 +221,18 @@ public:
      * same molecule if they are connected by constraints or bonds.
      */
     const std::vector<std::vector<int> >& getMolecules() const;
+    /**
+     * Create a checkpoint recording the current state of the Context.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    void createCheckpoint(std::ostream& stream);
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    void loadCheckpoint(std::istream& stream);
 private:
     friend class Context;
     static void tagParticlesInMolecule(int particle, int molecule, std::vector<int>& particleMolecule, std::vector<std::vector<int> >& particleBonds);

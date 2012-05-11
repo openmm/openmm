@@ -33,6 +33,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string.h>
+#include <iostream>
 
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
@@ -362,4 +363,24 @@ void SimTKOpenMMUtilities::setRandomNumberSeed( uint32_t seed ) {
 
    _randomNumberSeed = seed;
    _randomInitialized = false;
+}
+
+void SimTKOpenMMUtilities::createCheckpoint(std::ostream& stream) {
+    stream.write((char*) &_randomNumberSeed, sizeof(uint32_t));
+    stream.write((char*) &_randomInitialized, sizeof(bool));
+    if (_randomInitialized) {
+        stream.write((char*) &nextGaussianIsValid, sizeof(bool));
+        stream.write((char*) &nextGaussian, sizeof(RealOpenMM));
+        sfmt.createCheckpoint(stream);
+    }
+}
+
+void SimTKOpenMMUtilities::loadCheckpoint(std::istream& stream) {
+    stream.read((char*) &_randomNumberSeed, sizeof(uint32_t));
+    stream.read((char*) &_randomInitialized, sizeof(bool));
+    if (_randomInitialized) {
+        stream.read((char*) &nextGaussianIsValid, sizeof(bool));
+        stream.read((char*) &nextGaussian, sizeof(RealOpenMM));
+        sfmt.loadCheckpoint(stream);
+    }
 }

@@ -59,6 +59,7 @@
 #include "openmm/VariableLangevinIntegrator.h"
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/VerletIntegrator.h"
+#include <iosfwd>
 #include <set>
 #include <string>
 #include <vector>
@@ -184,6 +185,18 @@ public:
      * @param c      the vector defining the third edge of the periodic box
      */
     virtual void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const = 0;
+    /**
+     * Create a checkpoint recording the current state of the Context.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    virtual void createCheckpoint(ContextImpl& context, std::ostream& stream) = 0;
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    virtual void loadCheckpoint(ContextImpl& context, std::istream& stream) = 0;
 };
 
 /**

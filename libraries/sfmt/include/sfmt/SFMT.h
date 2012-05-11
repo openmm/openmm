@@ -32,6 +32,7 @@
 #define SFMT_H
 
 #include <stdio.h>
+#include <iosfwd>
 #include "openmm/internal/windowsExport.h"
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
@@ -101,6 +102,8 @@ public:
     ~SFMT() {
         deleteSFMTData(data);
     }
+    void createCheckpoint(std::ostream& stream);
+    void loadCheckpoint(std::istream& stream);
     SFMTData* data;
 };
 
