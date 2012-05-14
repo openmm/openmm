@@ -52,12 +52,12 @@ void GBSAOBCForceImpl::initialize(ContextImpl& context) {
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("GBSAOBCForce: The cutoff distance cannot be greater than half the periodic box size.");
     }
-    dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcGBSAOBCForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double GBSAOBCForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcGBSAOBCForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

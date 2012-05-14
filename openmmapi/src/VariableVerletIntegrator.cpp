@@ -51,7 +51,7 @@ void VariableVerletIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateVariableVerletStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateVariableVerletStepKernel>().initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> VariableVerletIntegrator::getKernelNames() {
@@ -64,7 +64,7 @@ void VariableVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        setStepSize(dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity()));
+        setStepSize(kernel.getAs<IntegrateVariableVerletStepKernel>().execute(*context, *this, std::numeric_limits<double>::infinity()));
     }
 }
 
@@ -72,6 +72,6 @@ void VariableVerletIntegrator::stepTo(double time) {
     while (time > context->getTime()) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        setStepSize(dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, time));
+        setStepSize(kernel.getAs<IntegrateVariableVerletStepKernel>().execute(*context, *this, time));
     }
 }

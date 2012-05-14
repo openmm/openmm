@@ -102,12 +102,12 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("CustomNonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
     }
-    dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcCustomNonbondedForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double CustomNonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcCustomNonbondedForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

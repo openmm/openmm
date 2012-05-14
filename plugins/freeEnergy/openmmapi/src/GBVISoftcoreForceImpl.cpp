@@ -111,7 +111,7 @@ void GBVISoftcoreForceImpl::initialize(ContextImpl& context) {
     scaledRadii.resize(numberOfParticles);
     findScaledRadii( numberOfParticles, bondIndices, bondLengths, scaledRadii);
 
-    dynamic_cast<CalcGBVISoftcoreForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, scaledRadii);
+    kernel.getAs<CalcGBVISoftcoreForceKernel>().initialize(context.getSystem(), owner, scaledRadii);
 }
 
 int GBVISoftcoreForceImpl::getBondsFromForces(ContextImpl& context) {
@@ -263,7 +263,7 @@ void GBVISoftcoreForceImpl::findScaledRadii( int numberOfParticles, const std::v
 
 double GBVISoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcGBVISoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcGBVISoftcoreForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

@@ -45,11 +45,11 @@ CMMotionRemoverImpl::CMMotionRemoverImpl(CMMotionRemover& owner) : owner(owner) 
 void CMMotionRemoverImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(RemoveCMMotionKernel::Name(), context);
     const System& system = context.getSystem();
-    dynamic_cast<RemoveCMMotionKernel&>(kernel.getImpl()).initialize(system, owner);
+    kernel.getAs<RemoveCMMotionKernel>().initialize(system, owner);
 }
 
 void CMMotionRemoverImpl::updateContextState(ContextImpl& context) {
-    dynamic_cast<RemoveCMMotionKernel&>(kernel.getImpl()).execute(context);
+    kernel.getAs<RemoveCMMotionKernel>().execute(context);
 }
 
 std::vector<std::string> CMMotionRemoverImpl::getKernelNames() {

@@ -85,12 +85,12 @@ void CustomAngleForceImpl::initialize(ContextImpl& context) {
             throw OpenMMException(msg.str());
         }
     }
-    dynamic_cast<CalcCustomAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcCustomAngleForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double CustomAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcCustomAngleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcCustomAngleForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

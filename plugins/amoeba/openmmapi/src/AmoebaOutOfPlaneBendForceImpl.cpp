@@ -47,12 +47,12 @@ AmoebaOutOfPlaneBendForceImpl::~AmoebaOutOfPlaneBendForceImpl() {
 
 void AmoebaOutOfPlaneBendForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcAmoebaOutOfPlaneBendForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaOutOfPlaneBendForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaOutOfPlaneBendForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaOutOfPlaneBendForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaOutOfPlaneBendForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaOutOfPlaneBendForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

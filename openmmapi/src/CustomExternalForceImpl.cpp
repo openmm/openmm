@@ -73,12 +73,12 @@ void CustomExternalForceImpl::initialize(ContextImpl& context) {
             throw OpenMMException(msg.str());
         }
     }
-    dynamic_cast<CalcCustomExternalForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcCustomExternalForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double CustomExternalForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcCustomExternalForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcCustomExternalForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

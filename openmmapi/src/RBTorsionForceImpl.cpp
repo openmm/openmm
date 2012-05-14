@@ -46,12 +46,12 @@ RBTorsionForceImpl::~RBTorsionForceImpl() {
 
 void RBTorsionForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcRBTorsionForceKernel::Name(), context);
-    dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcRBTorsionForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double RBTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcRBTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

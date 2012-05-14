@@ -84,12 +84,12 @@ void NonbondedSoftcoreForceImpl::initialize(ContextImpl& context) {
         exceptions[particle1].insert(particle2);
         exceptions[particle2].insert(particle1);
     }
-    dynamic_cast<CalcNonbondedSoftcoreForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcNonbondedSoftcoreForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double NonbondedSoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcNonbondedSoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcNonbondedSoftcoreForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

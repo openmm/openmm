@@ -46,12 +46,12 @@ PeriodicTorsionForceImpl::~PeriodicTorsionForceImpl() {
 
 void PeriodicTorsionForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcPeriodicTorsionForceKernel::Name(), context);
-    dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcPeriodicTorsionForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double PeriodicTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcPeriodicTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

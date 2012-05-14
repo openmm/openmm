@@ -47,12 +47,12 @@ AmoebaStretchBendForceImpl::~AmoebaStretchBendForceImpl() {
 
 void AmoebaStretchBendForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcAmoebaStretchBendForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaStretchBendForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaStretchBendForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaStretchBendForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaStretchBendForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaStretchBendForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

@@ -97,22 +97,22 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     
     platform->contextCreated(*this, properties);
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
-    dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl()).initialize(system);
+    initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>().initialize(system);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
-    dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
+    kineticEnergyKernel.getAs<CalcKineticEnergyKernel>().initialize(system);
     updateStateDataKernel = platform->createKernel(UpdateStateDataKernel::Name(), *this);
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).initialize(system);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().initialize(system);
     applyConstraintsKernel = platform->createKernel(ApplyConstraintsKernel::Name(), *this);
-    dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).initialize(system);
+    applyConstraintsKernel.getAs<ApplyConstraintsKernel>().initialize(system);
     virtualSitesKernel = platform->createKernel(VirtualSitesKernel::Name(), *this);
-    dynamic_cast<VirtualSitesKernel&>(virtualSitesKernel.getImpl()).initialize(system);
+    virtualSitesKernel.getAs<VirtualSitesKernel>().initialize(system);
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setVelocities(*this, vector<Vec3>(system.getNumParticles()));
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, vector<Vec3>(system.getNumParticles()));
 }
 
 ContextImpl::~ContextImpl() {
@@ -122,33 +122,33 @@ ContextImpl::~ContextImpl() {
 }
 
 double ContextImpl::getTime() const {
-    return dynamic_cast<const UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getTime(*this);
+    return updateStateDataKernel.getAs<const UpdateStateDataKernel>().getTime(*this);
 }
 
 void ContextImpl::setTime(double t) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setTime(*this, t);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setTime(*this, t);
 }
 
 void ContextImpl::getPositions(std::vector<Vec3>& positions) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getPositions(*this, positions);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getPositions(*this, positions);
 }
 
 void ContextImpl::setPositions(const std::vector<Vec3>& positions) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPositions(*this, positions);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setPositions(*this, positions);
     integrator.stateChanged(State::Positions);
 }
 
 void ContextImpl::getVelocities(std::vector<Vec3>& velocities) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getVelocities(*this, velocities);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getVelocities(*this, velocities);
 }
 
 void ContextImpl::setVelocities(const std::vector<Vec3>& velocities) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setVelocities(*this, velocities);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, velocities);
     integrator.stateChanged(State::Velocities);
 }
 
 void ContextImpl::getForces(std::vector<Vec3>& forces) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getForces(*this, forces);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getForces(*this, forces);
 }
 
 const std::map<std::string, double>& ContextImpl::getParameters() const {
@@ -169,7 +169,7 @@ void ContextImpl::setParameter(std::string name, double value) {
 }
 
 void ContextImpl::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) {
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getPeriodicBoxVectors(*this, a, b, c);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getPeriodicBoxVectors(*this, a, b, c);
 }
 
 void ContextImpl::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
@@ -179,20 +179,20 @@ void ContextImpl::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3
         throw OpenMMException("Second periodic box vector must be parallel to y.");
     if (c[0] != 0.0 || c[1] != 0.0)
         throw OpenMMException("Third periodic box vector must be parallel to z.");
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, a, b, c);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setPeriodicBoxVectors(*this, a, b, c);
 }
 
 void ContextImpl::applyConstraints(double tol) {
-    dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).apply(*this, tol);
+    applyConstraintsKernel.getAs<ApplyConstraintsKernel>().apply(*this, tol);
 }
 
 void ContextImpl::computeVirtualSites() {
-    dynamic_cast<VirtualSitesKernel&>(virtualSitesKernel.getImpl()).computePositions(*this);
+    virtualSitesKernel.getAs<VirtualSitesKernel>().computePositions(*this);
 }
 
 double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups) {
     lastForceGroups = groups;
-    CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
+    CalcForcesAndEnergyKernel& kernel = initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>();
     double energy = 0.0;
     kernel.beginComputation(*this, includeForces, includeEnergy, groups);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
@@ -206,7 +206,7 @@ int ContextImpl::getLastForceGroups() const {
 }
 
 double ContextImpl::calcKineticEnergy() {
-    return dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).execute(*this);
+    return kineticEnergyKernel.getAs<CalcKineticEnergyKernel>().execute(*this);
 }
 
 void ContextImpl::updateContextState() {
@@ -312,7 +312,7 @@ void ContextImpl::createCheckpoint(ostream& stream) {
         writeString(stream, iter->first);
         stream.write((char*) &iter->second, sizeof(double));
     }
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).createCheckpoint(*this, stream);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().createCheckpoint(*this, stream);
     stream.flush();
 }
 
@@ -332,5 +332,5 @@ void ContextImpl::loadCheckpoint(istream& stream) {
         stream.read((char*) &value, sizeof(double));
         parameters[name] = value;
     }
-    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).loadCheckpoint(*this, stream);
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().loadCheckpoint(*this, stream);
 }

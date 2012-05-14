@@ -54,12 +54,12 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateCustomStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
-    dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setGlobalVariables(contextRef, globalValues);
+    kernel.getAs<IntegrateCustomStepKernel>().initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateCustomStepKernel>().setGlobalVariables(contextRef, globalValues);
     for (int i = 0; i < (int) perDofValues.size(); i++) {
         if (perDofValues[i].size() == 1)
             perDofValues[i].resize(context->getSystem().getNumParticles(), perDofValues[i][0]);
-        dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setPerDofVariable(contextRef, i, perDofValues[i]);
+        kernel.getAs<IntegrateCustomStepKernel>().setPerDofVariable(contextRef, i, perDofValues[i]);
     }
 }
 
@@ -76,7 +76,7 @@ vector<string> CustomIntegrator::getKernelNames() {
 void CustomIntegrator::step(int steps) {
     globalsAreCurrent = false;
     for (int i = 0; i < steps; ++i) {
-        dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).execute(*context, *this, forcesAreValid);
+        kernel.getAs<IntegrateCustomStepKernel>().execute(*context, *this, forcesAreValid);
     }
 }
 
@@ -109,7 +109,7 @@ const string& CustomIntegrator::getPerDofVariableName(int index) const {
 double CustomIntegrator::getGlobalVariable(int index) const {
     ASSERT_VALID_INDEX(index, globalValues);
     if (owner != NULL && !globalsAreCurrent) {
-        dynamic_cast<const IntegrateCustomStepKernel&>(kernel.getImpl()).getGlobalVariables(*context, globalValues);
+        kernel.getAs<const IntegrateCustomStepKernel>().getGlobalVariables(*context, globalValues);
         globalsAreCurrent = true;
     }
     return globalValues[index];
@@ -118,12 +118,12 @@ double CustomIntegrator::getGlobalVariable(int index) const {
 void CustomIntegrator::setGlobalVariable(int index, double value) {
     ASSERT_VALID_INDEX(index, globalValues);
     if (owner != NULL && !globalsAreCurrent) {
-        dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).getGlobalVariables(*context, globalValues);
+        kernel.getAs<IntegrateCustomStepKernel>().getGlobalVariables(*context, globalValues);
         globalsAreCurrent = true;
     }
     globalValues[index] = value;
     if (owner != NULL)
-        dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setGlobalVariables(*context, globalValues);
+        kernel.getAs<IntegrateCustomStepKernel>().setGlobalVariables(*context, globalValues);
 }
 
 void CustomIntegrator::setGlobalVariableByName(const string& name, double value) {
@@ -140,7 +140,7 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
     if (owner == NULL)
         values = perDofValues[index];
     else
-        dynamic_cast<const IntegrateCustomStepKernel&>(kernel.getImpl()).getPerDofVariable(*context, index, values);
+        kernel.getAs<const IntegrateCustomStepKernel>().getPerDofVariable(*context, index, values);
 }
 
 void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {
@@ -150,7 +150,7 @@ void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) 
     if (owner == NULL)
         perDofValues[index] = values;
     else
-        dynamic_cast<IntegrateCustomStepKernel&>(kernel.getImpl()).setPerDofVariable(*context, index, values);
+        kernel.getAs<IntegrateCustomStepKernel>().setPerDofVariable(*context, index, values);
 }
 
 void CustomIntegrator::setPerDofVariableByName(const string& name, const vector<Vec3>& value) {

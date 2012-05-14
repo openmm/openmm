@@ -58,7 +58,7 @@ void RPMDIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateRPMDStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateRPMDStepKernel>().initialize(contextRef.getSystem(), *this);
 }
 
 void RPMDIntegrator::stateChanged(State::DataType changed) {
@@ -72,17 +72,17 @@ vector<string> RPMDIntegrator::getKernelNames() {
 }
 
 void RPMDIntegrator::setPositions(int copy, const vector<Vec3>& positions) {
-    dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).setPositions(copy, positions);
+    kernel.getAs<IntegrateRPMDStepKernel>().setPositions(copy, positions);
     hasSetPosition = true;
 }
 
 void RPMDIntegrator::setVelocities(int copy, const vector<Vec3>& velocities) {
-    dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).setVelocities(copy, velocities);
+    kernel.getAs<IntegrateRPMDStepKernel>().setVelocities(copy, velocities);
     hasSetVelocity = true;
 }
 
 State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int groups) {
-    dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).copyToContext(copy, *context);
+    kernel.getAs<IntegrateRPMDStepKernel>().copyToContext(copy, *context);
     return context->getOwner().getState(types, enforcePeriodicBox, groups);
 }
 
@@ -102,7 +102,7 @@ void RPMDIntegrator::step(int steps) {
             setVelocities(i, s.getVelocities());
     }
     for (int i = 0; i < steps; ++i) {
-        dynamic_cast<IntegrateRPMDStepKernel&>(kernel.getImpl()).execute(*context, *this, forcesAreValid);
+        kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);
         forcesAreValid = true;
     }
 }

@@ -78,12 +78,12 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
         }
     }
     kernel = context.getPlatform().createKernel(CalcAmoebaMultipoleForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaMultipoleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaMultipoleForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

@@ -56,7 +56,7 @@ void VariableLangevinIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateVariableLangevinStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateVariableLangevinStepKernel>().initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> VariableLangevinIntegrator::getKernelNames() {
@@ -69,7 +69,7 @@ void VariableLangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        setStepSize(dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity()));
+        setStepSize(kernel.getAs<IntegrateVariableLangevinStepKernel>().execute(*context, *this, std::numeric_limits<double>::infinity()));
     }
 }
 
@@ -77,6 +77,6 @@ void VariableLangevinIntegrator::stepTo(double time) {
     while (time > context->getTime()) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        setStepSize(dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, time));
+        setStepSize(kernel.getAs<IntegrateVariableLangevinStepKernel>().execute(*context, *this, time));
     }
 }

@@ -53,12 +53,12 @@ void AmoebaWcaDispersionForceImpl::initialize(ContextImpl& context) {
         throw OpenMMException("AmoebaWcaDispersionForce must have exactly as many particles as the System it belongs to.");
 
     kernel = context.getPlatform().createKernel(CalcAmoebaWcaDispersionForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaWcaDispersionForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaWcaDispersionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaWcaDispersionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy ) {

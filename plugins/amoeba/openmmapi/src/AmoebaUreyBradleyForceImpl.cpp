@@ -48,12 +48,12 @@ AmoebaUreyBradleyForceImpl::~AmoebaUreyBradleyForceImpl() {
 
 void AmoebaUreyBradleyForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcAmoebaUreyBradleyForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaUreyBradleyForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaUreyBradleyForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaUreyBradleyForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaUreyBradleyForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaUreyBradleyForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

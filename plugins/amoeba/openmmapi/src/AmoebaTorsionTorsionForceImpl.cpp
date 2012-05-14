@@ -48,12 +48,12 @@ AmoebaTorsionTorsionForceImpl::~AmoebaTorsionTorsionForceImpl() {
 
 void AmoebaTorsionTorsionForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcAmoebaTorsionTorsionForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaTorsionTorsionForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaTorsionTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaTorsionTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

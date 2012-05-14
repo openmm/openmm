@@ -95,7 +95,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
     }
-    dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcNonbondedForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
@@ -103,7 +103,7 @@ double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
     bool includeReciprocal = includeDirect;
     if (owner.getReciprocalSpaceForceGroup() >= 0)
         includeReciprocal = ((groups&(1<<owner.getReciprocalSpaceForceGroup())) != 0);
-    return dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
+    return kernel.getAs<CalcNonbondedForceKernel>().execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
 }
 
 std::vector<std::string> NonbondedForceImpl::getKernelNames() {

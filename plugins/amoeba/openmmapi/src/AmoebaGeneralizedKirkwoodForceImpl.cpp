@@ -49,12 +49,12 @@ void AmoebaGeneralizedKirkwoodForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), context);
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("AmoebaGeneralizedKirkwoodForce must have exactly as many particles as the System it belongs to.");
-    dynamic_cast<CalcAmoebaGeneralizedKirkwoodForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaGeneralizedKirkwoodForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaGeneralizedKirkwoodForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaGeneralizedKirkwoodForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaGeneralizedKirkwoodForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

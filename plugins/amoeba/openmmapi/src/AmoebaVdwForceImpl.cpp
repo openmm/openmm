@@ -52,12 +52,12 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
         throw OpenMMException("AmoebaVdwForce must have exactly as many particles as the System it belongs to.");
 
     kernel = context.getPlatform().createKernel(CalcAmoebaVdwForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaVdwForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaVdwForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaVdwForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

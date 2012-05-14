@@ -51,7 +51,7 @@ void VerletIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateVerletStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateVerletStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateVerletStepKernel>().initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> VerletIntegrator::getKernelNames() {
@@ -64,6 +64,6 @@ void VerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateVerletStepKernel&>(kernel.getImpl()).execute(*context, *this);
+        kernel.getAs<IntegrateVerletStepKernel>().execute(*context, *this);
     }
 }

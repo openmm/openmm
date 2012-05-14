@@ -45,12 +45,12 @@ void GBSAOBCSoftcoreForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBSAOBCSoftcoreForceKernel::Name(), context);
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("GBSAOBCSoftcoreForce must have exactly as many particles as the System it belongs to.");
-    dynamic_cast<CalcGBSAOBCSoftcoreForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcGBSAOBCSoftcoreForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double GBSAOBCSoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcGBSAOBCSoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcGBSAOBCSoftcoreForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

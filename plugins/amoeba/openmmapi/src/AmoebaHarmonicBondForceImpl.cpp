@@ -48,12 +48,12 @@ AmoebaHarmonicBondForceImpl::~AmoebaHarmonicBondForceImpl() {
 
 void AmoebaHarmonicBondForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcAmoebaHarmonicBondForceKernel::Name(), context);
-    dynamic_cast<CalcAmoebaHarmonicBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcAmoebaHarmonicBondForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double AmoebaHarmonicBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcAmoebaHarmonicBondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcAmoebaHarmonicBondForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

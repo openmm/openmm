@@ -44,11 +44,11 @@ AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner) : owne
 
 void AndersenThermostatImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name(), context);
-    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<ApplyAndersenThermostatKernel>().initialize(context.getSystem(), owner);
 }
 
 void AndersenThermostatImpl::updateContextState(ContextImpl& context) {
-    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).execute(context);
+    kernel.getAs<ApplyAndersenThermostatKernel>().execute(context);
 }
 
 std::map<std::string, double> AndersenThermostatImpl::getDefaultParameters() {

@@ -46,12 +46,12 @@ HarmonicBondForceImpl::~HarmonicBondForceImpl() {
 
 void HarmonicBondForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcHarmonicBondForceKernel::Name(), context);
-    dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcHarmonicBondForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double HarmonicBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcHarmonicBondForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

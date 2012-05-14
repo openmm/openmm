@@ -102,12 +102,12 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("CustomGBForce: The cutoff distance cannot be greater than half the periodic box size.");
     }
-    dynamic_cast<CalcCustomGBForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcCustomGBForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double CustomGBForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcCustomGBForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcCustomGBForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

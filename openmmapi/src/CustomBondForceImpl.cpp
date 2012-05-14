@@ -79,12 +79,12 @@ void CustomBondForceImpl::initialize(ContextImpl& context) {
             throw OpenMMException(msg.str());
         }
     }
-    dynamic_cast<CalcCustomBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<CalcCustomBondForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double CustomBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<owner.getForceGroup())) != 0)
-        return dynamic_cast<CalcCustomBondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcCustomBondForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 

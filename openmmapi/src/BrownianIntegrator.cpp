@@ -55,7 +55,7 @@ void BrownianIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateBrownianStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateBrownianStepKernel>().initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> BrownianIntegrator::getKernelNames() {
@@ -68,6 +68,6 @@ void BrownianIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).execute(*context, *this);
+        kernel.getAs<IntegrateBrownianStepKernel>().execute(*context, *this);
     }
 }

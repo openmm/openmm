@@ -50,7 +50,7 @@ MonteCarloBarostatImpl::MonteCarloBarostatImpl(MonteCarloBarostat& owner) : owne
 
 void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    dynamic_cast<ApplyMonteCarloBarostatKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -77,7 +77,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     double deltaVolume = volumeScale*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
-    dynamic_cast<ApplyMonteCarloBarostatKernel&>(kernel.getImpl()).scaleCoordinates(context, lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
 
     // Compute the energy of the modified system.
@@ -89,7 +89,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
 
-        dynamic_cast<ApplyMonteCarloBarostatKernel&>(kernel.getImpl()).restoreCoordinates(context);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         volume = newVolume;
     }

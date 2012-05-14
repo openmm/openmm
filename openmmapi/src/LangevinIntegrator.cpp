@@ -55,7 +55,7 @@ void LangevinIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateLangevinStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel.getAs<IntegrateLangevinStepKernel>().initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> LangevinIntegrator::getKernelNames() {
@@ -68,6 +68,6 @@ void LangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
-        dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this);
+        kernel.getAs<IntegrateLangevinStepKernel>().execute(*context, *this);
     }
 }
