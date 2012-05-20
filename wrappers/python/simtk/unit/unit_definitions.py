@@ -278,6 +278,10 @@ farad = farads = Unit({farad_base_unit: 1.0})
 henry_base_unit = ScaledUnit(1.0, volt * second / ampere, "henry", "H")
 henry = henries = henrys = Unit({henry_base_unit: 1.0})
 
+# Polarizability
+debye_base_unit = ScaledUnit(0.20822678, elementary_charge * angstrom, "debye", "D")
+debyes = debye = Unit({debye_base_unit: 1.0})
+
 # Pressure
 pascal_base_unit = ScaledUnit(1.0, newton / (meter**2), "pascal", "Pa")
 pascals = pascal = Unit({pascal_base_unit: 1.0})
