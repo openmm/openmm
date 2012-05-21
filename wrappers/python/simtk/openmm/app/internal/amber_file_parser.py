@@ -865,7 +865,7 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
     if verbose: print "title: '%s'" % title
 
     # Read number of atoms
-    natoms = int(infile.readline().strip())
+    natoms = int(infile.readline().split()[0])
     if verbose: print "%d atoms" % natoms
 
     # Allocate storage for coordinates
