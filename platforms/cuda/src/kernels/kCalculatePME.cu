@@ -205,14 +205,6 @@ void kFindAtomRangeForGrid_kernel()
                 cSim.pPmeAtomRange[j] = i;
             last = gridIndex;
         }
-
-        // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
-        // some work in the charge spreading kernel.
-
-        float posz = cSim.pPosq[atomData.x].z;
-        posz -= floorf(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
-        int z = ((int) ((posz*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z)) % cSim.pmeGridSize.z;
-        cSim.pPmeAtomGridIndex[i].y = z;
     }
 
     // Fill in values beyond the last atom.
@@ -222,6 +214,33 @@ void kFindAtomRangeForGrid_kernel()
         int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
         for (int j = last+1; j <= gridSize; ++j)
             cSim.pPmeAtomRange[j] = cSim.atoms;
+    }
+}
+
+/**
+ * The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+ * some work in the charge spreading kernel.
+ */
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kRecordZIndex_kernel()
+{
+    int thread = blockIdx.x*blockDim.x+threadIdx.x;
+    int start = (cSim.atoms*thread)/(blockDim.x*gridDim.x);
+    int end = (cSim.atoms*(thread+1))/(blockDim.x*gridDim.x);
+    for (int i = start; i < end; ++i)
+    {
+        int2 atomData = cSim.pPmeAtomGridIndex[i];
+        float posz = cSim.pPosq[atomData.x].z;
+        posz -= floorf(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        int z = ((int) ((posz*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z)) % cSim.pmeGridSize.z;
+        cSim.pPmeAtomGridIndex[i].y = z;
     }
 }
 
@@ -392,6 +411,8 @@ void kCalculatePME(gpuContext gpu)
     bbSort(gpu->psPmeAtomGridIndex->_pDevData, gpu->natoms);
     kFindAtomRangeForGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kFindAtomRangeForGrid");
+    kRecordZIndex_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kRecordZIndex");
     kGridSpreadCharge_kernel<<<16*gpu->sim.blocks, 64>>>();
     LAUNCHERROR("kGridSpreadCharge");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);

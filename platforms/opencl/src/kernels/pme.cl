@@ -51,14 +51,6 @@ __kernel void findAtomRangeForGrid(__global int2* restrict pmeAtomGridIndex, __g
                 pmeAtomRange[j] = i;
             last = gridIndex;
         }
-
-        // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
-        // some work in the charge spreading kernel.
-
-        float posz = posq[pmeAtomGridIndex[i].x].z;
-        posz -= floor(posz*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        int z = ((int) ((posz*invPeriodicBoxSize.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
-        pmeAtomGridIndex[i].y = z;
     }
 
     // Fill in values beyond the last atom.
@@ -67,6 +59,21 @@ __kernel void findAtomRangeForGrid(__global int2* restrict pmeAtomGridIndex, __g
         int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
         for (int j = last+1; j <= gridSize; ++j)
             pmeAtomRange[j] = NUM_ATOMS;
+    }
+}
+
+/**
+ * The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+ * some work in the charge spreading kernel.
+ */
+__kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global const float4* restrict posq, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+    int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
+    int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
+    for (int i = start; i < end; ++i) {
+        float posz = posq[pmeAtomGridIndex[i].x].z;
+        posz -= floor(posz*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        int z = ((int) ((posz*invPeriodicBoxSize.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
+        pmeAtomGridIndex[i].y = z;
     }
 }
 

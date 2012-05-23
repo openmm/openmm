@@ -553,6 +553,7 @@ private:
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeGridIndexKernel;
     cl::Kernel pmeAtomRangeKernel;
+    cl::Kernel pmeZIndexKernel;
     cl::Kernel pmeUpdateBsplinesKernel;
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
