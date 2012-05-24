@@ -687,6 +687,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     System& system;
     cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
 };

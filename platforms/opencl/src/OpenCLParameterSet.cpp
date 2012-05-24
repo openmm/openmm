@@ -32,30 +32,33 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLParameterSet::OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const string& name) :
+OpenCLParameterSet::OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const string& name, bool bufferPerParameter) :
             context(context), numParameters(numParameters), numObjects(numObjects), name(name) {
     int params = numParameters;
     int bufferCount = 0;
     try {
-        while (params > 2) {
-            cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(mm_float4));
-            std::stringstream name;
-            name << "param" << (++bufferCount);
-            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 4, sizeof(mm_float4), *buf));
-            params -= 4;
+        if (!bufferPerParameter) {
+            while (params > 2) {
+                cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(mm_float4));
+                std::stringstream name;
+                name << "param" << (++bufferCount);
+                buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 4, sizeof(mm_float4), *buf));
+                params -= 4;
+            }
+            if (params > 1) {
+                cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(mm_float2));
+                std::stringstream name;
+                name << "param" << (++bufferCount);
+                buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 2, sizeof(mm_float2), *buf));
+                params -= 2;
+            }
         }
-        if (params > 1) {
-            cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(mm_float2));
-            std::stringstream name;
-            name << "param" << (++bufferCount);
-            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 2, sizeof(mm_float2), *buf));
-            params -= 2;
-        }
-        if (params > 0) {
+        while (params > 0) {
             cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(cl_float));
             std::stringstream name;
             name << "param" << (++bufferCount);
             buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 1, sizeof(cl_float), *buf));
+            params--;
         }
     }
     catch (cl::Error err) {
@@ -106,6 +109,7 @@ void OpenCLParameterSet::getParameterValues(vector<vector<cl_float> >& values) c
                 context.getQueue().enqueueReadBuffer(reinterpret_cast<cl::Buffer&>(buffers[i].getMemory()), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
                 for (int j = 0; j < numObjects; j++)
                     values[j][base] = data[j];
+                base++;
             }
             else
                 throw OpenMMException("Internal error: Unknown buffer type in OpenCLParameterSet");
@@ -151,6 +155,7 @@ void OpenCLParameterSet::setParameterValues(const vector<vector<cl_float> >& val
                 for (int j = 0; j < numObjects; j++)
                     data[j] = values[j][base];
                 context.getQueue().enqueueWriteBuffer(reinterpret_cast<cl::Buffer&>(buffers[i].getMemory()), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
+                base++;
             }
             else
                 throw OpenMMException("Internal error: Unknown buffer type in OpenCLParameterSet");

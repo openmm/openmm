@@ -49,8 +49,10 @@ public:
      * @param numParameters    the number of parameters for each object
      * @param numObjects       the number of objects to store parameter values for
      * @param name             the name of the parameter set
+     * @param bufferPerParameter  if true, a separate cl::Buffer is created for each parameter.  If false,
+     *                            multiple parameters may be combined into a single buffer.
      */
-    OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const std::string& name);
+    OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const std::string& name, bool bufferPerParameter=false);
     ~OpenCLParameterSet();
     /**
      * Get the number of parameters.

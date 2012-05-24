@@ -1799,8 +1799,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     // Record parameters and exclusions.
 
     int numParticles = force.getNumParticles();
-    params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customGBParameters");
-    computedValues = new OpenCLParameterSet(cl, force.getNumComputedValues(), numParticles, "customGBComputedValues");
+    params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customGBParameters", true);
+    computedValues = new OpenCLParameterSet(cl, force.getNumComputedValues(), numParticles, "customGBComputedValues", true);
     if (force.getNumGlobalParameters() > 0)
         globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customGBGlobals", false, CL_MEM_READ_ONLY);
     vector<vector<cl_float> > paramVector(numParticles);
@@ -1877,17 +1877,25 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             valueDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]).optimize());
     }
     vector<vector<Lepton::ParsedExpression> > energyDerivExpressions(force.getNumEnergyTerms());
+    vector<bool> needChainForValue(force.getNumComputedValues(), false);
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
         CustomGBForce::ComputationType type;
         force.getEnergyTermParameters(i, expression, type);
         Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
         for (int j = 0; j < force.getNumComputedValues(); j++) {
-            if (type == CustomGBForce::SingleParticle)
+            if (type == CustomGBForce::SingleParticle) {
                 energyDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]).optimize());
+                if (!isZeroExpression(energyDerivExpressions[i].back()))
+                    needChainForValue[j] = true;
+            }
             else {
                 energyDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]+"1").optimize());
+                if (!isZeroExpression(energyDerivExpressions[i].back()))
+                    needChainForValue[j] = true;
                 energyDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]+"2").optimize());
+                if (!isZeroExpression(energyDerivExpressions[i].back()))
+                    needChainForValue[j] = true;
             }
         }
     }
@@ -1895,11 +1903,11 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     bool useLong = (cl.getSupports64BitGlobalAtomics() && !deviceIsCpu);
     if (useLong) {
         longEnergyDerivs = new OpenCLArray<cl_long>(cl, force.getNumComputedValues()*cl.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
-        energyDerivs = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms(), "customGBEnergyDerivatives");
+        energyDerivs = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
     }
     else
-        energyDerivs = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), "customGBEnergyDerivatives");
-
+        energyDerivs = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), "customGBEnergyDerivatives", true);
+ 
     // Create the kernels.
 
     bool useCutoff = (force.getNonbondedMethod() != CustomGBForce::NoCutoff);
@@ -1932,18 +1940,23 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         n2ValueExpressions["tempValue2 = "] = ex.renameVariables(rename);
         n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
         map<string, string> replacements;
-        replacements["COMPUTE_VALUE"] = n2ValueSource.str();
+        string n2ValueStr = n2ValueSource.str();
+        replacements["COMPUTE_VALUE"] = n2ValueStr;
         stringstream extraArgs, loadLocal1, loadLocal2, load1, load2;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", __global const float* globals";
+        pairValueUsesParam.resize(params->getBuffers().size(), false);
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << paramName << ", __local " << buffer.getType() << "* restrict local_" << paramName;
-            loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
-            loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
-            load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
-            load2 << buffer.getType() << " " << paramName << "2 = local_" << paramName << "[atom2];\n";
+            if (n2ValueStr.find(paramName+"1") != n2ValueStr.npos || n2ValueStr.find(paramName+"2") != n2ValueStr.npos) {
+                extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << paramName << ", __local " << buffer.getType() << "* restrict local_" << paramName;
+                loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
+                loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
+                load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
+                load2 << buffer.getType() << " " << paramName << "2 = local_" << paramName << "[atom2];\n";
+                pairValueUsesParam[i] = true;
+            }
         }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
@@ -2054,15 +2067,19 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             n2EnergyExpressions["dEdR += "] = Lepton::Parser::parse(expression, functions).differentiate("r").optimize();
             if (useLong) {
                 for (int j = 0; j < force.getNumComputedValues(); j++) {
-                    string index = intToString(j+1);
-                    n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+index+"_1 += "] = energyDerivExpressions[i][2*j];
-                    n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+index+"_2 += "] = energyDerivExpressions[i][2*j+1];
+                    if (needChainForValue[j]) {
+                        string index = intToString(j+1);
+                        n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+index+"_1 += "] = energyDerivExpressions[i][2*j];
+                        n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+index+"_2 += "] = energyDerivExpressions[i][2*j+1];
+                    }
                 }
             }
             else {
                 for (int j = 0; j < force.getNumComputedValues(); j++) {
-                    n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_1")+" += "] = energyDerivExpressions[i][2*j];
-                    n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_2")+" += "] = energyDerivExpressions[i][2*j+1];
+                    if (needChainForValue[j]) {
+                        n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_1")+" += "] = energyDerivExpressions[i][2*j];
+                        n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_2")+" += "] = energyDerivExpressions[i][2*j+1];
+                    }
                 }
             }
             if (exclude)
@@ -2072,27 +2089,36 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 n2EnergySource << "}\n";
         }
         map<string, string> replacements;
-        replacements["COMPUTE_INTERACTION"] = n2EnergySource.str();
+        string n2EnergyStr = n2EnergySource.str();
+        replacements["COMPUTE_INTERACTION"] = n2EnergyStr;
         stringstream extraArgs, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2, declareTemps, setTemps;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", __global const float* globals";
+        pairEnergyUsesParam.resize(params->getBuffers().size(), false);
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = "params"+intToString(i+1);
-            extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << paramName << ", __local " << buffer.getType() << "* restrict local_" << paramName;
-            loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
-            loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
-            load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
-            load2 << buffer.getType() << " " << paramName << "2 = local_" << paramName << "[atom2];\n";
+            if (n2EnergyStr.find(paramName+"1") != n2EnergyStr.npos || n2EnergyStr.find(paramName+"2") != n2EnergyStr.npos) {
+                extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << paramName << ", __local " << buffer.getType() << "* restrict local_" << paramName;
+                loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
+                loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
+                load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
+                load2 << buffer.getType() << " " << paramName << "2 = local_" << paramName << "[atom2];\n";
+                pairEnergyUsesParam[i] = true;
+            }
         }
+        pairEnergyUsesValue.resize(computedValues->getBuffers().size(), false);
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string valueName = "values"+intToString(i+1);
-            extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << valueName << ", __local " << buffer.getType() << "* restrict local_" << valueName;
-            loadLocal1 << "local_" << valueName << "[localAtomIndex] = " << valueName << "1;\n";
-            loadLocal2 << "local_" << valueName << "[localAtomIndex] = global_" << valueName << "[j];\n";
-            load1 << buffer.getType() << " " << valueName << "1 = global_" << valueName << "[atom1];\n";
-            load2 << buffer.getType() << " " << valueName << "2 = local_" << valueName << "[atom2];\n";
+            if (n2EnergyStr.find(valueName+"1") != n2EnergyStr.npos || n2EnergyStr.find(valueName+"2") != n2EnergyStr.npos) {
+                extraArgs << ", __global const " << buffer.getType() << "* restrict global_" << valueName << ", __local " << buffer.getType() << "* restrict local_" << valueName;
+                loadLocal1 << "local_" << valueName << "[localAtomIndex] = " << valueName << "1;\n";
+                loadLocal2 << "local_" << valueName << "[localAtomIndex] = global_" << valueName << "[j];\n";
+                load1 << buffer.getType() << " " << valueName << "1 = global_" << valueName << "[atom1];\n";
+                load2 << buffer.getType() << " " << valueName << "2 = local_" << valueName << "[atom2];\n";
+                pairEnergyUsesValue[i] = true;
+            }
         }
         if (useLong) {
             extraArgs << ", __global long* restrict derivBuffers";
@@ -2193,6 +2219,9 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
                 reduce << "REDUCE_VALUE(derivBuffers" << intToString(i+1) << ", " << energyDerivs->getBuffers()[i].getType() << ")\n";
         }
+        
+        // Compute the various expressions.
+        
         map<string, string> variables;
         variables["x"] = "pos.x";
         variables["y"] = "pos.y";
@@ -2203,7 +2232,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
         for (int i = 0; i < force.getNumComputedValues(); i++)
             variables[computedValueNames[i]] = "values"+computedValues->getParameterSuffix(i, "[index]");
-        map<string, Lepton::ParsedExpression> energyExpressions;
+        map<string, Lepton::ParsedExpression> expressions;
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
             string expression;
             CustomGBForce::ComputationType type;
@@ -2211,25 +2240,38 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             if (type != CustomGBForce::SingleParticle)
                 continue;
             Lepton::ParsedExpression parsed = Lepton::Parser::parse(expression, functions).optimize();
-            energyExpressions["/*"+intToString(i+1)+"*/ energy += "] = parsed;
+            expressions["/*"+intToString(i+1)+"*/ energy += "] = parsed;
             for (int j = 0; j < force.getNumComputedValues(); j++)
-                energyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j)+" += "] = energyDerivExpressions[i][j];
+                expressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j)+" += "] = energyDerivExpressions[i][j];
             Lepton::ParsedExpression gradx = parsed.differentiate("x").optimize();
             Lepton::ParsedExpression grady = parsed.differentiate("y").optimize();
             Lepton::ParsedExpression gradz = parsed.differentiate("z").optimize();
             if (!isZeroExpression(gradx))
-                energyExpressions["/*"+intToString(i+1)+"*/ force.x -= "] = gradx;
+                expressions["/*"+intToString(i+1)+"*/ force.x -= "] = gradx;
             if (!isZeroExpression(grady))
-                energyExpressions["/*"+intToString(i+1)+"*/ force.y -= "] = grady;
+                expressions["/*"+intToString(i+1)+"*/ force.y -= "] = grady;
             if (!isZeroExpression(gradz))
-                energyExpressions["/*"+intToString(i+1)+"*/ force.z -= "] = gradz;
+                expressions["/*"+intToString(i+1)+"*/ force.z -= "] = gradz;
         }
-        compute << OpenCLExpressionUtilities::createExpressions(energyExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
+        for (int i = 1; i < force.getNumComputedValues(); i++)
+            for (int j = 0; j < i; j++)
+                expressions["float dV"+intToString(i)+"dV"+intToString(j)+" = "] = valueDerivExpressions[i][j];
+        compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functionDefinitions, "temp", prefix+"functionParams");
+        
+        // Record values.
+        
+        compute << "forceBuffers[index] = forceBuffers[index]+force;\n";
+        for (int i = 1; i < force.getNumComputedValues(); i++) {
+            compute << "float totalDeriv"<<i<<" = dV"<<i<<"dV0";
+            for (int j = 1; j < i; j++)
+                compute << " + totalDeriv"<<j<<"*dV"<<i<<"dV"<<j;
+            compute << ";\n";
+            compute << "deriv"<<(i+1)<<" *= totalDeriv"<<i<<";\n";
+        }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             string index = intToString(i+1);
             compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
         }
-        compute << "forceBuffers[index] = forceBuffers[index]+force;\n";
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["REDUCE_DERIVATIVES"] = reduce.str();
@@ -2324,8 +2366,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             const string& name = force.getPerParticleParameterName(i);
             variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
             variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
-            rename[name+"1"] =  name+"2";
-            rename[name+"2"] =  name+"1";
+            rename[name+"1"] = name+"2";
+            rename[name+"2"] = name+"1";
         }
         map<string, Lepton::ParsedExpression> derivExpressions;
         stringstream chainSource;
@@ -2333,75 +2375,44 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         derivExpressions["float dV0dR1 = "] = dVdR;
         derivExpressions["float dV0dR2 = "] = dVdR.renameVariables(rename);
         chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp0_", prefix+"functionParams");
-        if (useExclusionsForValue)
-            chainSource << "if (!isExcluded) {\n";
-        chainSource << "tempForce -= dV0dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
-        chainSource << "tempForce -= dV0dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
-        if (useExclusionsForValue)
-            chainSource << "}\n";
-        variables = globalVariables;
-        map<string, string> rename1;
-        map<string, string> rename2;
-        variables.push_back(makeVariable("x1", "posq1.x"));
-        variables.push_back(makeVariable("y1", "posq1.y"));
-        variables.push_back(makeVariable("z1", "posq1.z"));
-        variables.push_back(makeVariable("x2", "posq2.x"));
-        variables.push_back(makeVariable("y2", "posq2.y"));
-        variables.push_back(makeVariable("z2", "posq2.z"));
-        rename1["x"] = "x1";
-        rename1["y"] = "y1";
-        rename1["z"] = "z1";
-        rename2["x"] = "x2";
-        rename2["y"] = "y2";
-        rename2["z"] = "z2";
-        for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-            const string& name = force.getPerParticleParameterName(i);
-            variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
-            variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
-            rename1[name] = name+"1";
-            rename2[name] = name+"2";
+        if (needChainForValue[0]) {
+            if (useExclusionsForValue)
+                chainSource << "if (!isExcluded) {\n";
+            chainSource << "tempForce -= dV0dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
+            chainSource << "tempForce -= dV0dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
+            if (useExclusionsForValue)
+                chainSource << "}\n";
         }
-        for (int i = 0; i < force.getNumComputedValues(); i++) {
-            const string& name = computedValueNames[i];
-            variables.push_back(makeVariable(name+"1", prefix+"values"+computedValues->getParameterSuffix(i, "1")));
-            variables.push_back(makeVariable(name+"2", prefix+"values"+computedValues->getParameterSuffix(i, "2")));
-            rename1[name] = name+"1";
-            rename2[name] = name+"2";
-            if (i == 0)
-                continue;
-            string is = intToString(i);
-            chainSource << "float dV"+is+"dR1 = 0;\n";
-            chainSource << "float dV"+is+"dR2 = 0;\n";
-            for (int j = 0; j < i; j++) {
-                string js = intToString(j);
-                Lepton::ParsedExpression dVdV = Lepton::Parser::parse(computedValueExpressions[i], functions).differentiate(computedValueNames[j]).optimize();
-                derivExpressions.clear();
-                derivExpressions["dV"+is+"dR1 += dV"+js+"dR1*"] = dVdV.renameVariables(rename1);
-                derivExpressions["dV"+is+"dR2 += dV"+js+"dR2*"] = dVdV.renameVariables(rename2);
-                chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp"+is+"_"+js+"_", prefix+"functionParams");
+        for (int i = 1; i < force.getNumComputedValues(); i++) {
+            if (needChainForValue[i]) {
+                chainSource << "tempForce -= dV0dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "1") << ";\n";
+                chainSource << "tempForce -= dV0dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "2") << ";\n";
             }
-            chainSource << "tempForce -= dV"<< is << "dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "1") << ";\n";
-            chainSource << "tempForce -= dV"<< is << "dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "2") << ";\n";
         }
         map<string, string> replacements;
-        replacements["COMPUTE_FORCE"] = chainSource.str();
+        string chainStr = chainSource.str();
+        replacements["COMPUTE_FORCE"] = chainStr;
         string source = cl.replaceStrings(OpenCLKernelSources::customGBChainRule, replacements);
         vector<OpenCLNonbondedUtilities::ParameterInfo> parameters;
         vector<OpenCLNonbondedUtilities::ParameterInfo> arguments;
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = prefix+"params"+intToString(i+1);
-            parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
+            if (chainStr.find(paramName+"1") != chainStr.npos || chainStr.find(paramName+"2") != chainStr.npos)
+                parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string paramName = prefix+"values"+intToString(i+1);
-            parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
+            if (chainStr.find(paramName+"1") != chainStr.npos || chainStr.find(paramName+"2") != chainStr.npos)
+                parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
-            string paramName = prefix+"dEdV"+intToString(i+1);
-            parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
+            if (needChainForValue[i]) { 
+                const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+                string paramName = prefix+"dEdV"+intToString(i+1);
+                parameters.push_back(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
+            }
         }
         if (globals != NULL) {
             globals->upload(globalParamValues);
@@ -2465,9 +2476,11 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (globals != NULL)
             pairValueKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            pairValueKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
+            if (pairValueUsesParam[i]) {
+                const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+                pairValueKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+                pairValueKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
+            }
         }
         if (tabulatedFunctionParams != NULL) {
             for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -2515,14 +2528,18 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (globals != NULL)
             pairEnergyKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
+            if (pairEnergyUsesParam[i]) {
+                const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+                pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+                pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
+            }
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
-            const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
-            pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
-            pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
+            if (pairEnergyUsesValue[i]) {
+                const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
+                pairEnergyKernel.setArg<cl::Memory>(index++, buffer.getMemory());
+                pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*buffer.getSize(), NULL);
+            }
         }
         if (useLong) {
             pairEnergyKernel.setArg<cl::Memory>(index++, longEnergyDerivs->getDeviceBuffer());
