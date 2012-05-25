@@ -1,3 +1,4 @@
+const float PI = 3.14159265358979323846f;
 float4 v0 = (float4) (pos1.xyz-pos2.xyz, 0.0f);
 float4 v1 = (float4) (pos3.xyz-pos2.xyz, 0.0f);
 float4 v2 = (float4) (pos3.xyz-pos4.xyz, 0.0f);
@@ -12,7 +13,7 @@ if (cosangle > 0.99f || cosangle < -0.99f) {
     float scale = dot(cp0, cp0)*dot(cp1, cp1);
     theta = asin(sqrt(dot(cross_prod, cross_prod)/scale));
     if (cosangle < 0.0f)
-        theta = M_PI-theta;
+        theta = PI-theta;
 }
 else
    theta = acos(cosangle);

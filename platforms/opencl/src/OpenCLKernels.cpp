@@ -293,9 +293,9 @@ void OpenCLVirtualSitesKernel::computePositions(ContextImpl& context) {
     cl.getIntegrationUtilities().computeVirtualSites();
 }
 
-class OpenCLBondForceInfo : public OpenCLForceInfo {
+class OpenCLHarmonicBondForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLBondForceInfo(const HarmonicBondForce& force) : OpenCLForceInfo(0), force(force) {
+    OpenCLHarmonicBondForceInfo(const HarmonicBondForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -341,9 +341,10 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = OpenCLKernelSources::harmonicBondForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicBondForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLBondForceInfo(force));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::bondForce, replacements), force.getForceGroup());
+    cl.addForce(new OpenCLHarmonicBondForceInfo(force));
 }
 
 double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -448,7 +449,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customBondForce, replacements), force.getForceGroup());
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::bondForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -466,9 +467,9 @@ double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool inclu
     return 0.0;
 }
 
-class OpenCLAngleForceInfo : public OpenCLForceInfo {
+class OpenCLHarmonicAngleForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLAngleForceInfo(const HarmonicAngleForce& force) : OpenCLForceInfo(0), force(force) {
+    OpenCLHarmonicAngleForceInfo(const HarmonicAngleForce& force) : OpenCLForceInfo(0), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -516,9 +517,10 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = OpenCLKernelSources::harmonicAngleForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::harmonicAngleForce, replacements), force.getForceGroup());
-    cl.addForce(new OpenCLAngleForceInfo(force));
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::angleForce, replacements), force.getForceGroup());
+    cl.addForce(new OpenCLHarmonicAngleForceInfo(force));
 }
 
 double OpenCLCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -624,7 +626,7 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customAngleForce, replacements), force.getForceGroup());
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::angleForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -694,8 +696,9 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = OpenCLKernelSources::periodicTorsionForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float4");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::periodicTorsionForce, replacements), force.getForceGroup());
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::torsionForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLPeriodicTorsionForceInfo(force));
 }
 
@@ -754,8 +757,9 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     }
     params->upload(paramVector);
     map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = OpenCLKernelSources::rbTorsionForce;
     replacements["PARAMS"] = cl.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float8");
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::rbTorsionForce, replacements), force.getForceGroup());
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::torsionForce, replacements), force.getForceGroup());
     cl.addForce(new OpenCLRBTorsionForceInfo(force));
 }
 
@@ -950,8 +954,7 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    replacements["M_PI"] = doubleToString(M_PI);
-    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::customTorsionForce, replacements), force.getForceGroup());
+    cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::torsionForce, replacements), force.getForceGroup());
 }
 
 double OpenCLCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
