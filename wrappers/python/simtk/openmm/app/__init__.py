@@ -18,7 +18,7 @@ from pdbreporter import PDBReporter
 from amberprmtopfile import AmberPrmtopFile
 from amberinpcrdfile import AmberInpcrdFile
 from dcdfile import DCDFile
-from grofile import GroFile
+from gromacsgrofile import GromacsGroFile
 from dcdreporter import DCDReporter
 from modeller import Modeller
 from statedatareporter import StateDataReporter

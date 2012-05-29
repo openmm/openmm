@@ -1,5 +1,5 @@
 """
-grofile.py: Used for loading GRO files.
+grofile.py: Used for loading Gromacs GRO files.
 
 This is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of
@@ -7,7 +7,7 @@ Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2012 Stanford University and the Authors.
-Authors: Lee-Ping Wang
+Authors: Lee-Ping Wang, Peter Eastman
 Contributors:
 
 Permission is hereby granted, free of charge, to any person obtaining a 
@@ -33,20 +33,16 @@ __version__ = "1.0"
 
 import os
 import sys
-#import xml.etree.ElementTree as etree
-#from copy import copy
 from simtk.openmm import Vec3
-#from simtk.openmm.app.internal.pdbstructure import PdbStructure
-#from simtk.openmm.app import Topology
 from re import sub, match
-from simtk.unit import nanometers, angstroms#, is_quantity
-#import element as elem
+from simtk.unit import nanometers, angstroms
+import element as elem
 try:
     import numpy
 except:
     pass
 
-def isint(word):
+def _isint(word):
     """ONLY matches integers! If you have a decimal point? None shall pass!
 
     @param[in] word String (for instance, '123', '153.0', '2.', '-354')
@@ -55,7 +51,7 @@ def isint(word):
     """
     return match('^[-+]?[0-9]+$',word)
 
-def isfloat(word):
+def _isfloat(word):
     """Matches ANY number; it can be a decimal, scientific notation, what have you
     CAUTION - this will also match an integer.
 
@@ -65,7 +61,7 @@ def isfloat(word):
     """
     return match('^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$',word)
 
-def is_gro_coord(line):
+def _is_gro_coord(line):
     """ Determines whether a line contains GROMACS data or not
 
     @param[in] line The line to be tested
@@ -73,31 +69,35 @@ def is_gro_coord(line):
     """
     sline = line.split()
     if len(sline) == 6 or len(sline) == 9:
-        return all([isint(sline[2]),isfloat(sline[3]),isfloat(sline[4]),isfloat(sline[5])])
+        return all([_isint(sline[2]), _isfloat(sline[3]), _isfloat(sline[4]), _isfloat(sline[5])])
     elif len(sline) == 5 or len(sline) == 8:
-        return all([isint(line[15:20]),isfloat(sline[2]),isfloat(sline[3]),isfloat(sline[4])])
+        return all([_isint(line[15:20]), _isfloat(sline[2]), _isfloat(sline[3]), _isfloat(sline[4])])
     else:
         return 0
 
-def is_gro_box(line):
+def _is_gro_box(line):
     """ Determines whether a line contains a GROMACS box vector or not
 
     @param[in] line The line to be tested
     
     """
     sline = line.split()
-    if len(sline) == 9 and all([isfloat(i) for i in sline]):
+    if len(sline) == 9 and all([_isfloat(i) for i in sline]):
         return 1
-    elif len(sline) == 3 and all([isfloat(i) for i in sline]):
+    elif len(sline) == 3 and all([_isfloat(i) for i in sline]):
         return 1
     else:
         return 0
 
-class GroFile(object):
-    """GroFile parses a GROMACS (.gro) file and constructs a set of atom positions from it."""
+class GromacsGroFile(object):
+    """GromacsGroFile parses a Gromacs .gro file and constructs a set of atom positions from it.
+    
+    A .gro file also contains some topological information, such as elements and residue names,
+    but not enough to construct a full Topology object.  This information is recorded and stored
+    in the object's public fields."""
     
     def __init__(self, file):
-        """Load a GRO file.
+        """Load a .gro file.
         
         The atom positions can be retrieved by calling getPositions().
         
@@ -106,7 +106,7 @@ class GroFile(object):
         """
 
         xyzs     = []
-        elem     = [] # The element, most useful for quantum chemistry calculations
+        elements = [] # The element, most useful for quantum chemistry calculations
         atomname = [] # The atom name, for instance 'HW1'
         comms    = []
         resid    = []
@@ -114,7 +114,6 @@ class GroFile(object):
         boxes    = []
         xyz      = []
         ln       = 0
-        lna      = 0
         frame    = 0
         for line in open(file):
             sline = line.split()
@@ -122,7 +121,7 @@ class GroFile(object):
                 comms.append(line.strip())
             elif ln == 1:
                 na = int(line.strip())
-            elif is_gro_coord(line):
+            elif _is_gro_coord(line):
                 if frame == 0: # Create the list of residues, atom names etc. only if it's the first frame.
                     # Name of the residue, for instance '153SOL1 -> SOL1' ; strips leading numbers
                     thisresname = sub('^[0-9]*','',sline[0])
@@ -132,38 +131,59 @@ class GroFile(object):
                     thiselem = sline[1]
                     if len(thiselem) > 1:
                         thiselem = thiselem[0] + sub('[A-Z0-9]','',thiselem[1:])
-                    elem.append(thiselem)
+                        try:
+                            elements.append(elem.get_by_symbol(thiselem))
+                        except KeyError:
+                            elements.append(None)
                 pos = [float(i) for i in sline[-3:]]
                 xyz.append(Vec3(pos[0], pos[1], pos[2]))
-            elif is_gro_box(line) and ln == na + 2:
+            elif _is_gro_box(line) and ln == na + 2:
                 boxes.append([float(i) for i in sline]*nanometers)
                 xyzs.append(xyz*nanometers)
                 xyz = []
                 ln = -1
                 frame += 1
             else:
-                print "Har, grofile.py encountered a line it didn't expect (line %i)!" % lna
-                print line
+                raise Exception("Unexpected line in .gro file: "+line)
             ln += 1
-            lna += 1
             
-        self.positions = xyzs
-        self.elem = elem
-        self.atomname = atomname
-        self.resid = resid
-        self.resname = resname
-        self.boxes = boxes*nanometers
+        ## The atom positions read from the file.  If the file contains multiple frames, these are the positions in the first frame.
+        self.positions = xyzs[0]
+        ## A list containing the element of each atom stored in the file
+        self.elements = elements
+        ## A list containing the name of each atom stored in the file
+        self.atomNames = atomname
+        ## A list containing the ID of the residue that each atom belongs to
+        self.residueIds = resid
+        ## A list containing the name of the residue that each atom belongs to
+        self.residueNames = resname
+        self._positions = xyzs
+        self._unitCellDimensions = boxes
         self._numpyPositions = None
-        
-    def getPositions(self, asNumpy=False, index=0):
+    
+    def getNumFrames(self):
+        """Get the number of frames stored in the file."""
+        return len(self._positions)
+    
+    def getPositions(self, asNumpy=False, frame=0):
         """Get the atomic positions.
         
         Parameters:
          - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+         - frame (int=0) the index of the frame for which to get positions
          """
         if asNumpy:
             if self._numpyPositions is None:
-                self._numpyPositions = numpy.array(self.positions[index].value_in_unit(nanometers))*nanometers
-            return self._numpyPositions
-        return self.positions[index]
+                self._numpyPositions = [None]*len(self._positions)
+            if self._numpyPositions[frame] is None:
+                self._numpyPositions[frame] = numpy.array(self._positions[frame].value_in_unit(nanometers))*nanometers
+            return self._numpyPositions[frame]
+        return self._positions[frame]
     
+    def getUnitCellDimensions(self, frame=0):
+        """Get the dimensions of the crystallographic unit cell.
+        
+        Parameters:
+         - frame (int=0) the index of the frame for which to get the unit cell dimensions
+        """
+        return self._unitCellDimensions[frame]
