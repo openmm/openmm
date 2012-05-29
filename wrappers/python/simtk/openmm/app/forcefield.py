@@ -154,12 +154,14 @@ class ForceField(object):
             else:
                 suffix = str(i+1)
             classAttrib = 'class'+suffix
+            typeAttrib = 'type'+suffix
             if classAttrib in attrib:
+                if typeAttrib in attrib:
+                    raise ValueError('Tag specifies both a type and a class for the same atom: '+etree.tostring(node))
                 if attrib[classAttrib] not in self._atomClasses:
                     return None # Unknown atom class
                 types.append(self._atomClasses[attrib[classAttrib]])
             else:
-                typeAttrib = 'type'+suffix
                 if typeAttrib not in attrib or attrib[typeAttrib] not in self._atomTypes:
                     return None # Unknown atom type
                 types.append([attrib[typeAttrib]])
