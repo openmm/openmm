@@ -219,3 +219,7 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
     double cutoff = force.getCutoffDistance();
     return 8*numParticles*numParticles*M_PI*(sum1/(9*pow(cutoff, 9))-sum2/(3*pow(cutoff, 3)));
 }
+
+void NonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcNonbondedForceKernel>().copyParametersToContext(context, owner);
+}

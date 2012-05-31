@@ -98,7 +98,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cl.setAtomsWereReordered(false);
-    if (nb.getUseCutoff() && includeNonbonded && cl.getComputeForceCount()%100 == 0) {
+    if (nb.getUseCutoff() && includeNonbonded && (cl.getComputeForceCount()%100 == 0 || cl.getMoleculesAreInvalid())) {
         cl.reorderAtoms();
         nb.updateNeighborListSize();
         cl.setComputeForceCount(cl.getComputeForceCount()+1);
@@ -1058,8 +1058,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     vector<mm_float2> sigmaEpsilonVector(numParticles);
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
-    bool hasCoulomb = false;
-    bool hasLJ = false;
+    hasCoulomb = false;
+    hasLJ = false;
     for (int i = 0; i < numParticles; i++) {
         double charge, sigma, epsilon;
         force.getParticleParameters(i, charge, sigma, epsilon);
@@ -1095,7 +1095,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
-    double alpha = 0;
+    alpha = 0;
     if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
         // Compute the Ewald parameters.
 
@@ -1365,6 +1365,77 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         energy += dispersionCoefficient/(boxSize.x*boxSize.y*boxSize.z);
     }
     return energy;
+}
+
+void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    if (force.getNumParticles() != cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    if (!hasCoulomb || !hasLJ) {
+        for (int i = 0; i < force.getNumParticles(); i++) {
+            double charge, sigma, epsilon;
+            force.getParticleParameters(i, charge, sigma, epsilon);
+            if (!hasCoulomb && charge != 0.0)
+                throw OpenMMException("updateParametersInContext: The nonbonded force kernel does not include Coulomb interactions, because all charges were originally 0");
+            if (!hasLJ && epsilon != 0.0)
+                throw OpenMMException("updateParametersInContext: The nonbonded force kernel does not include Lennard-Jones interactions, because all epsilons were originally 0");
+        }
+    }
+    vector<int> exceptions;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            exceptions.push_back(i);
+    }
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*exceptions.size()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
+    int numExceptions = endIndex-startIndex;
+    if ((exceptionParams == NULL && numExceptions > 0) || (exceptionParams != NULL && numExceptions != exceptionParams->getSize()))
+        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
+    
+    // Record the per-particle parameters.
+    
+    OpenCLArray<mm_float4>& posq = cl.getPosq();
+    posq.download();
+    vector<mm_float2> sigmaEpsilonVector(force.getNumParticles());
+    double sumSquaredCharges = 0.0;
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int index = order[i];
+        double charge, sigma, epsilon;
+        force.getParticleParameters(index, charge, sigma, epsilon);
+        posq[i].w = (float) charge;
+        sigmaEpsilonVector[index] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
+        sumSquaredCharges += charge*charge;
+    }
+    posq.upload();
+    sigmaEpsilon->upload(sigmaEpsilonVector);
+    
+    // Record the exceptions.
+    
+    if (numExceptions > 0) {
+        vector<vector<int> > atoms(numExceptions, vector<int>(2));
+        vector<mm_float4> exceptionParamsVector(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
+            double chargeProd, sigma, epsilon;
+            force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
+            exceptionParamsVector[i] = mm_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
+        }
+        exceptionParams->upload(exceptionParamsVector);
+    }
+    
+    // Compute other values.
+    
+    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
+    if (method == NonbondedForce::Ewald || method == NonbondedForce::PME)
+        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
+    if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+        dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+    cl.invalidateMolecules();
 }
 
 class OpenCLCustomNonbondedForceInfo : public OpenCLForceInfo {

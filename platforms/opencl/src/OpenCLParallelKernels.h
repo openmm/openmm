@@ -363,6 +363,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the NonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
     class Task;
     OpenCLPlatform::PlatformData& data;

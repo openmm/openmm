@@ -64,7 +64,7 @@ void verifySorting(vector<float> array) {
     system.addParticle(0.0);
     OpenCLPlatform::PlatformData platformData(system, "", "");
     OpenCLContext& context = *platformData.contexts[0];
-    context.initialize(system);
+    context.initialize();
     OpenCLArray<float> data(context, array.size(), "sortData");
     data.upload(array);
     OpenCLSort<SortTrait> sort(context, array.size());

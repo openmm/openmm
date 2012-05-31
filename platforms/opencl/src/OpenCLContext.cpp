@@ -66,7 +66,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 }
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
+        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
         velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL), thread(NULL) {
     try {
@@ -303,7 +303,7 @@ OpenCLContext::~OpenCLContext() {
         delete thread;
 }
 
-void OpenCLContext::initialize(const System& system) {
+void OpenCLContext::initialize() {
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
         (*velm)[i].w = (float) (mass == 0.0 ? 0.0 : 1.0/mass);
@@ -331,7 +331,8 @@ void OpenCLContext::initialize(const System& system) {
     for (int i = 0; i < paddedNumAtoms; ++i)
         (*atomIndex)[i] = i;
     atomIndex->upload();
-    findMoleculeGroups(system);
+    findMoleculeGroups();
+    moleculesInvalid = false;
     nonbonded->initialize(system);
 }
 
@@ -531,12 +532,6 @@ void OpenCLContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atom
             tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
 }
 
-struct OpenCLContext::Molecule {
-    vector<int> atoms;
-    vector<int> constraints;
-    vector<vector<int> > groups;
-};
-
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -603,67 +598,72 @@ private:
 };
 
 
-void OpenCLContext::findMoleculeGroups(const System& system) {
-    // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
+void OpenCLContext::findMoleculeGroups() {
+    // The first time this is called, we need to identify all the molecules in the system.
     
-    addForce(new VirtualSiteInfo(system));
-    
-    // First make a list of every other atom to which each atom is connect by a constraint or force group.
+    if (moleculeGroups.size() == 0) {
+        // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
 
-    vector<vector<int> > atomBonds(system.getNumParticles());
-    for (int i = 0; i < system.getNumConstraints(); i++) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        atomBonds[particle1].push_back(particle2);
-        atomBonds[particle2].push_back(particle1);
-    }
-    for (int i = 0; i < (int) forces.size(); i++) {
-        for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
-            vector<int> particles;
-            forces[i]->getParticlesInGroup(j, particles);
-            for (int k = 0; k < (int) particles.size(); k++)
-                for (int m = 0; m < (int) particles.size(); m++)
-                    if (k != m)
-                        atomBonds[particles[k]].push_back(particles[m]);
+        addForce(new VirtualSiteInfo(system));
+
+        // First make a list of every other atom to which each atom is connect by a constraint or force group.
+
+        vector<vector<int> > atomBonds(system.getNumParticles());
+        for (int i = 0; i < system.getNumConstraints(); i++) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(i, particle1, particle2, distance);
+            atomBonds[particle1].push_back(particle2);
+            atomBonds[particle2].push_back(particle1);
         }
-    }
-
-    // Now tag atoms by which molecule they belong to.
-
-    vector<int> atomMolecule(numAtoms, -1);
-    int numMolecules = 0;
-    for (int i = 0; i < numAtoms; i++)
-        if (atomMolecule[i] == -1)
-            tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
-    vector<vector<int> > atomIndices(numMolecules);
-    for (int i = 0; i < numAtoms; i++)
-        atomIndices[atomMolecule[i]].push_back(i);
-
-    // Construct a description of each molecule.
-
-    vector<Molecule> molecules(numMolecules);
-    for (int i = 0; i < numMolecules; i++) {
-        molecules[i].atoms = atomIndices[i];
-        molecules[i].groups.resize(forces.size());
-    }
-    for (int i = 0; i < system.getNumConstraints(); i++) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        molecules[atomMolecule[particle1]].constraints.push_back(i);
-    }
-    for (int i = 0; i < (int) forces.size(); i++)
-        for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
-            vector<int> particles;
-            forces[i]->getParticlesInGroup(j, particles);
-            molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
+        for (int i = 0; i < (int) forces.size(); i++) {
+            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+                vector<int> particles;
+                forces[i]->getParticlesInGroup(j, particles);
+                for (int k = 0; k < (int) particles.size(); k++)
+                    for (int m = 0; m < (int) particles.size(); m++)
+                        if (k != m)
+                            atomBonds[particles[k]].push_back(particles[m]);
+            }
         }
+
+        // Now tag atoms by which molecule they belong to.
+
+        vector<int> atomMolecule(numAtoms, -1);
+        int numMolecules = 0;
+        for (int i = 0; i < numAtoms; i++)
+            if (atomMolecule[i] == -1)
+                tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
+        vector<vector<int> > atomIndices(numMolecules);
+        for (int i = 0; i < numAtoms; i++)
+            atomIndices[atomMolecule[i]].push_back(i);
+
+        // Construct a description of each molecule.
+
+        molecules.resize(numMolecules);
+        for (int i = 0; i < numMolecules; i++) {
+            molecules[i].atoms = atomIndices[i];
+            molecules[i].groups.resize(forces.size());
+        }
+        for (int i = 0; i < system.getNumConstraints(); i++) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(i, particle1, particle2, distance);
+            molecules[atomMolecule[particle1]].constraints.push_back(i);
+        }
+        for (int i = 0; i < (int) forces.size(); i++)
+            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+                vector<int> particles;
+                forces[i]->getParticlesInGroup(j, particles);
+                molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
+            }
+    }
 
     // Sort them into groups of identical molecules.
 
     vector<Molecule> uniqueMolecules;
     vector<vector<int> > moleculeInstances;
+    vector<vector<int> > moleculeOffsets;
     for (int molIndex = 0; molIndex < (int) molecules.size(); molIndex++) {
         Molecule& mol = molecules[molIndex];
 
@@ -706,20 +706,24 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
                         identical = false;
             }
             if (identical) {
-                moleculeInstances[j].push_back(mol.atoms[0]);
+                moleculeInstances[j].push_back(molIndex);
+                moleculeOffsets[j].push_back(mol.atoms[0]);
                 isNew = false;
             }
         }
         if (isNew) {
             uniqueMolecules.push_back(mol);
             moleculeInstances.push_back(vector<int>());
-            moleculeInstances[moleculeInstances.size()-1].push_back(mol.atoms[0]);
+            moleculeInstances[moleculeInstances.size()-1].push_back(molIndex);
+            moleculeOffsets.push_back(vector<int>());
+            moleculeOffsets[moleculeOffsets.size()-1].push_back(mol.atoms[0]);
         }
     }
     moleculeGroups.resize(moleculeInstances.size());
     for (int i = 0; i < (int) moleculeInstances.size(); i++)
     {
         moleculeGroups[i].instances = moleculeInstances[i];
+        moleculeGroups[i].offsets = moleculeOffsets[i];
         vector<int>& atoms = uniqueMolecules[i].atoms;
         moleculeGroups[i].atoms.resize(atoms.size());
         for (int j = 0; j < (int) atoms.size(); j++)
@@ -727,9 +731,78 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
     }
 }
 
+void OpenCLContext::invalidateMolecules() {
+    moleculesInvalid = true;
+}
+
+void OpenCLContext::validateMolecules() {
+    moleculesInvalid = false;
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
+        return;
+    bool valid = true;
+    for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
+        MoleculeGroup& mol = moleculeGroups[group];
+        vector<int>& instances = mol.instances;
+        vector<int>& offsets = mol.offsets;
+        vector<int>& atoms = mol.atoms;
+        int numMolecules = instances.size();
+        Molecule& m1 = molecules[instances[0]];
+        int offset1 = offsets[0];
+        for (int j = 1; valid && j < numMolecules; j++) {
+            // See if the atoms are identical.
+
+            Molecule& m2 = molecules[instances[j]];
+            int offset2 = offsets[j];
+            for (int i = 0; i < (int) atoms.size() && valid; i++) {
+                for (int k = 0; k < (int) forces.size(); k++)
+                    if (!forces[k]->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                        valid = false;
+            }
+
+            // See if the force groups are identical.
+
+            for (int i = 0; i < (int) forces.size() && valid; i++) {
+                for (int k = 0; k < (int) m1.groups[i].size() && valid; k++)
+                    if (!forces[i]->areGroupsIdentical(m1.groups[i][k], m2.groups[i][k]))
+                        valid = false;
+            }
+        }
+    }
+    if (valid)
+        return;
+    
+    // The list of which molecules are identical is no longer valid.  We need to restore the
+    // atoms to their original order, rebuild the list of identical molecules, and sort them
+    // again.
+    
+    vector<mm_float4> newPosq(numAtoms);
+    vector<mm_float4> newVelm(numAtoms);
+    vector<mm_int4> newCellOffsets(numAtoms);
+    posq->download();
+    velm->download();
+    for (int i = 0; i < numAtoms; i++) {
+        int index = atomIndex->get(i);
+        newPosq[index] = posq->get(i);
+        newVelm[index] = velm->get(i);
+        newCellOffsets[index] = posCellOffsets[i];
+    }
+    for (int i = 0; i < numAtoms; i++) {
+        posq->set(i, newPosq[i]);
+        velm->set(i, newVelm[i]);
+        atomIndex->set(i, i);
+        posCellOffsets[i] = newCellOffsets[i];
+    }
+    posq->upload();
+    velm->upload();
+    atomIndex->upload();
+    findMoleculeGroups();
+}
+
 void OpenCLContext::reorderAtoms() {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
         return;
+    if (moleculesInvalid)
+        validateMolecules();
     atomsWereReordered = true;
 
     // Find the range of positions and the number of bins along each axis.
@@ -767,7 +840,7 @@ void OpenCLContext::reorderAtoms() {
         // Find the center of each molecule.
 
         MoleculeGroup& mol = moleculeGroups[group];
-        int numMolecules = mol.instances.size();
+        int numMolecules = mol.offsets.size();
         vector<int>& atoms = mol.atoms;
         vector<mm_float4> molPos(numMolecules);
         float invNumAtoms = 1.0f/atoms.size();
@@ -776,7 +849,7 @@ void OpenCLContext::reorderAtoms() {
             molPos[i].y = 0.0f;
             molPos[i].z = 0.0f;
             for (int j = 0; j < (int)atoms.size(); j++) {
-                int atom = atoms[j]+mol.instances[i];
+                int atom = atoms[j]+mol.offsets[i];
                 const mm_float4& pos = posq->get(atom);
                 molPos[i].x += pos.x;
                 molPos[i].y += pos.y;
@@ -801,7 +874,7 @@ void OpenCLContext::reorderAtoms() {
                     molPos[i].y -= dy;
                     molPos[i].z -= dz;
                     for (int j = 0; j < (int) atoms.size(); j++) {
-                        int atom = atoms[j]+mol.instances[i];
+                        int atom = atoms[j]+mol.offsets[i];
                         mm_float4 p = posq->get(atom);
                         p.x -= dx;
                         p.y -= dy;
@@ -854,8 +927,8 @@ void OpenCLContext::reorderAtoms() {
 
         for (int i = 0; i < numMolecules; i++) {
             for (int j = 0; j < (int)atoms.size(); j++) {
-                int oldIndex = mol.instances[molBins[i].second]+atoms[j];
-                int newIndex = mol.instances[i]+atoms[j];
+                int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
+                int newIndex = mol.offsets[i]+atoms[j];
                 originalIndex[newIndex] = atomIndex->get(oldIndex);
                 newPosq[newIndex] = posq->get(oldIndex);
                 newVelm[newIndex] = velm->get(oldIndex);

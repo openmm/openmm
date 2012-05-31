@@ -53,7 +53,7 @@ void testTransform() {
     system.addParticle(0.0);
     OpenCLPlatform::PlatformData platformData(system, "", "");
     OpenCLContext& context = *platformData.contexts[0];
-    context.initialize(system);
+    context.initialize();
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     int xsize = 32, ysize = 25, zsize = 30;

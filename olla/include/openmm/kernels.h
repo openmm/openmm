@@ -507,6 +507,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the NonbondedForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force) = 0;
 };
 
 /**

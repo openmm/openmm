@@ -522,6 +522,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the NonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
     struct SortTrait {
         typedef mm_int2 DataType;
@@ -560,8 +567,9 @@ private:
     cl::Kernel pmeConvolutionKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
-    double ewaldSelfEnergy, dispersionCoefficient;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha;
     int interpolateForceThreads;
+    bool hasCoulomb, hasLJ;
     static const int PmeOrder = 5;
 };
 

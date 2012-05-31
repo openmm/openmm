@@ -29,10 +29,15 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/Context.h"
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/ForceImpl.h"
+#include <vector>
 
 using namespace OpenMM;
+using namespace std;
 
 int Force::getForceGroup() const {
     return forceGroup;
@@ -42,4 +47,16 @@ void Force::setForceGroup(int group) {
     if (group < 0 || group > 31)
         throw OpenMMException("Force group must be between 0 and 31");
     forceGroup = group;
+}
+
+ForceImpl& Force::getImplInContext(Context& context) {
+    const vector<ForceImpl*>& impls = context.getImpl().getForceImpls();
+    for (int i = 0; i < (int) impls.size(); i++)
+        if (&impls[i]->getOwner() == this)
+            return *impls[i];
+    throw OpenMMException("getImplInContext: This Force is not present in the Context");
+}
+
+ContextImpl& Force::getContextImpl(Context& context) {
+    return context.getImpl();
 }

@@ -165,8 +165,7 @@ void testExclusionsAnd14() {
         nonbonded->setParticleParameters(i, 2, 1.5, 0);
         nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
-        context.reinitialize();
-        context.setPositions(positions);
+        nonbonded->updateParametersInContext(context);
         state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
         force = ONE_4PI_EPS0*4/(r*r);
@@ -298,8 +297,7 @@ void testCutoff14() {
         nonbonded->setParticleParameters(i, q, 1.5, 0);
         nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? q*q/1.2 : 0, 1.5, 0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
-        context.reinitialize();
-        context.setPositions(positions);
+        nonbonded->updateParametersInContext(context);
         state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
         force = ONE_4PI_EPS0*q*q/(r*r);
@@ -401,14 +399,12 @@ void testDispersionCorrection() {
         numType2++;
     }
     int numType1 = numParticles-numType2;
+    nonbonded->updateParametersInContext(context);
+    energy2 = context.getState(State::Energy).getPotentialEnergy();
     nonbonded->setUseDispersionCorrection(true);
     context.reinitialize();
     context.setPositions(positions);
     energy1 = context.getState(State::Energy).getPotentialEnergy();
-    nonbonded->setUseDispersionCorrection(false);
-    context.reinitialize();
-    context.setPositions(positions);
-    energy2 = context.getState(State::Energy).getPotentialEnergy();
     term1 = ((numType1*(numType1+1))/2)*(0.5*pow(1.1, 12)/pow(cutoff, 9))/9;
     term2 = ((numType1*(numType1+1))/2)*(0.5*pow(1.1, 6)/pow(cutoff, 3))/3;
     term1 += ((numType2*(numType2+1))/2)*(1*pow(1.0, 12)/pow(cutoff, 9))/9;

@@ -894,6 +894,10 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     return 0.0;
 }
 
+void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
+}
+
 class CudaCalcCustomNonbondedForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const CustomNonbondedForce& force) : force(force) {

@@ -36,6 +36,8 @@
 
 namespace OpenMM {
 
+class Context;
+class ContextImpl;
 class ForceImpl;
 
 /**
@@ -84,6 +86,14 @@ protected:
      * The ForceImpl will be deleted automatically when the Context is deleted.
      */
     virtual ForceImpl* createImpl() = 0;
+    /**
+     * Get the ForceImpl corresponding to this Force in a Context.
+     */
+    ForceImpl& getImplInContext(Context& context);
+    /**
+     * Get the ContextImpl corresponding to a Context.
+     */
+    ContextImpl& getContextImpl(Context& context);
 private:
     int forceGroup;
 };

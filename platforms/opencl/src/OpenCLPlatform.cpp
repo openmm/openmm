@@ -147,7 +147,7 @@ OpenCLPlatform::PlatformData::~PlatformData() {
 
 void OpenCLPlatform::PlatformData::initializeContexts(const System& system) {
     for (int i = 0; i < (int) contexts.size(); i++)
-        contexts[i]->initialize(system);
+        contexts[i]->initialize();
 }
 
 void OpenCLPlatform::PlatformData::syncContexts() {

@@ -206,3 +206,7 @@ void NonbondedForce::setReciprocalSpaceForceGroup(int group) {
         throw OpenMMException("Force group must be between -1 and 31");
     recipForceGroup = group;
 }
+
+void NonbondedForce::updateParametersInContext(Context& context) {
+    dynamic_cast<NonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

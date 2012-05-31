@@ -63,6 +63,7 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+    void updateParametersInContext(ContextImpl& context);
     /**
      * This is a utility routine that calculates the values to use for alpha and kmax when using
      * Ewald summation.

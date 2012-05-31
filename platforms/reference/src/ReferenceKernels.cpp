@@ -743,6 +743,47 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
+void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+    if (force.getNumParticles() != numParticles)
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+    }
+    if (nb14s.size() != num14)
+        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, depth;
+        force.getParticleParameters(i, charge, radius, depth);
+        particleParamArray[i][0] = static_cast<RealOpenMM>(0.5*radius);
+        particleParamArray[i][1] = static_cast<RealOpenMM>(2.0*sqrt(depth));
+        particleParamArray[i][2] = static_cast<RealOpenMM>(charge);
+    }
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        double charge, radius, depth;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+        bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
+        bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
+    }
+    
+    // Recompute the coefficient for the dispersion correction.
+
+    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
+    if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+        dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+}
+
 class ReferenceTabulatedFunction : public Lepton::CustomFunction {
 public:
     ReferenceTabulatedFunction(double min, double max, const vector<double>& values) :

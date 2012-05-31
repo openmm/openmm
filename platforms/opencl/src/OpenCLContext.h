@@ -152,7 +152,7 @@ public:
      * This is called to initialize internal data structures after all Forces in the system
      * have been initialized.
      */
-    void initialize(const System& system);
+    void initialize();
     /**
      * Add an OpenCLForce to this context.
      */
@@ -479,12 +479,31 @@ public:
     std::vector<ReorderListener*>& getReorderListeners() {
         return reorderListeners;
     }
+    /**
+     * Mark that the current molecule definitions (and hence the atom order) may be invalid.
+     * This should be called whenever force field parameters change.  It will cause the definitions
+     * and order to be revalidated the next to reorderAtoms() is called.
+     */
+    void invalidateMolecules();
+    /**
+     * Get whether the current molecule definitions are valid.
+     */
+    bool getMoleculesAreInvalid() {
+        return moleculesInvalid;
+    }
 private:
     struct Molecule;
     struct MoleculeGroup;
     class VirtualSiteInfo;
-    void findMoleculeGroups(const System& system);
+    void findMoleculeGroups();
     static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
+    /**
+     * Ensure that all molecules marked as "identical" really are identical.  This should be
+     * called whenever force field parameters change.  If necessary, it will rebuild the list
+     * of molecules and resort the atoms.
+     */
+    void validateMolecules();
+    const System& system;
     double time;
     OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;
@@ -497,7 +516,7 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, atomsWereReordered;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, atomsWereReordered, moleculesInvalid;
     mm_float4 periodicBoxSize;
     mm_float4 invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
@@ -515,6 +534,7 @@ private:
     cl::Kernel reduceFloat4Kernel;
     cl::Kernel reduceForcesKernel;
     std::vector<OpenCLForceInfo*> forces;
+    std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
     std::vector<mm_int4> posCellOffsets;
     OpenCLArray<mm_float4>* posq;
@@ -533,9 +553,16 @@ private:
     WorkThread* thread;
 };
 
+struct OpenCLContext::Molecule {
+    std::vector<int> atoms;
+    std::vector<int> constraints;
+    std::vector<std::vector<int> > groups;
+};
+
 struct OpenCLContext::MoleculeGroup {
     std::vector<int> atoms;
     std::vector<int> instances;
+    std::vector<int> offsets;
 };
 
 /**

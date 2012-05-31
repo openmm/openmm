@@ -32,6 +32,7 @@
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/ForceImpl.h"
 #include <cmath>
 
 using namespace OpenMM;
@@ -184,4 +185,8 @@ void Context::createCheckpoint(ostream& stream) {
 
 void Context::loadCheckpoint(istream& stream) {
     impl->loadCheckpoint(stream);
+}
+
+ContextImpl& Context::getImpl() {
+    return *impl;
 }

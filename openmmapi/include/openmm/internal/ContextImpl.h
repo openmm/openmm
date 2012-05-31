@@ -205,6 +205,10 @@ public:
      */
     const std::vector<ForceImpl*>& getForceImpls() const;
     /**
+     * Get the list of ForceImpls belonging to this ContextImpl.
+     */
+    std::vector<ForceImpl*>& getForceImpls();
+    /**
      * Get the platform-specific data stored in this context.
      */
     void* getPlatformData();

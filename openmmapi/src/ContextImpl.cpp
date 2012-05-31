@@ -218,6 +218,10 @@ const vector<ForceImpl*>& ContextImpl::getForceImpls() const {
     return forceImpls;
 }
 
+vector<ForceImpl*>& ContextImpl::getForceImpls() {
+    return forceImpls;
+}
+
 void* ContextImpl::getPlatformData() {
     return platformData;
 }

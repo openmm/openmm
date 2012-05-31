@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "Context.h"
 #include "Force.h"
 #include <map>
 #include <set>
@@ -280,6 +281,19 @@ public:
      *                 that is specified for direct space.
      */
     void setReciprocalSpaceForceGroup(int group);
+    /**
+     * Update the particle and exception parameters in a Context to match those stored in this Force object.  This method
+     * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setParticleParameters() and setExceptionParameters() to modify this object's parameters, then call
+     * updateParametersInState() to copy them over to the Context.
+     * 
+     * This method has several limitations.  The only information it updates is the parameters of particles and exceptions.
+     * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
+     * changed by reinitializing the Context.  Furthermore, only the chargeProd, sigma, and epsilon values of an exception
+     * can be changed; the pair of particles involved in the exception cannot change.  Finally, this method cannot be used
+     * to add new particles or exceptions, only to change the parameters of existing ones.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

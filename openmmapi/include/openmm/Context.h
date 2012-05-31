@@ -225,7 +225,9 @@ public:
      */
     void loadCheckpoint(std::istream& stream);
 private:
+    friend class Force;
     friend class Platform;
+    ContextImpl& getImpl();
     ContextImpl* impl;
     std::map<std::string, std::string> properties;
 };
