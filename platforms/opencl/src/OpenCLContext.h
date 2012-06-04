@@ -466,8 +466,10 @@ public:
     /**
      * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
      * together in the arrays.
+     * 
+     * @param enforcePeriodic    if true, the atom positions may be altered to enforce periodic boundary conditions
      */
-    void reorderAtoms();
+    void reorderAtoms(bool enforcePeriodic);
     /**
      * Add a listener that should be called whenever atoms get reordered.  The OpenCLContext
      * assumes ownership of the object, and deletes it when the context itself is deleted.

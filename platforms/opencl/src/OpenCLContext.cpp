@@ -796,9 +796,11 @@ void OpenCLContext::validateMolecules() {
     velm->upload();
     atomIndex->upload();
     findMoleculeGroups();
+    for (int i = 0; i < (int) reorderListeners.size(); i++)
+        reorderListeners[i]->execute();
 }
 
-void OpenCLContext::reorderAtoms() {
+void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
         return;
     if (moleculesInvalid)
@@ -873,16 +875,18 @@ void OpenCLContext::reorderAtoms() {
                     molPos[i].x -= dx;
                     molPos[i].y -= dy;
                     molPos[i].z -= dz;
-                    for (int j = 0; j < (int) atoms.size(); j++) {
-                        int atom = atoms[j]+mol.offsets[i];
-                        mm_float4 p = posq->get(atom);
-                        p.x -= dx;
-                        p.y -= dy;
-                        p.z -= dz;
-                        posq->set(atom, p);
-                        posCellOffsets[atom].x -= xcell;
-                        posCellOffsets[atom].y -= ycell;
-                        posCellOffsets[atom].z -= zcell;
+                    if (enforcePeriodic) {
+                        for (int j = 0; j < (int) atoms.size(); j++) {
+                            int atom = atoms[j]+mol.offsets[i];
+                            mm_float4 p = posq->get(atom);
+                            p.x -= dx;
+                            p.y -= dy;
+                            p.z -= dz;
+                            posq->set(atom, p);
+                            posCellOffsets[atom].x -= xcell;
+                            posCellOffsets[atom].y -= ycell;
+                            posCellOffsets[atom].z -= zcell;
+                        }
                     }
                 }
             }

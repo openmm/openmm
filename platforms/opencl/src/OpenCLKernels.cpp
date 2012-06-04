@@ -98,8 +98,8 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cl.setAtomsWereReordered(false);
-    if (nb.getUseCutoff() && includeNonbonded && (cl.getComputeForceCount()%100 == 0 || cl.getMoleculesAreInvalid())) {
-        cl.reorderAtoms();
+    if (cl.getMoleculesAreInvalid() || (nb.getUseCutoff() && includeNonbonded && cl.getComputeForceCount()%100 == 0)) {
+        cl.reorderAtoms(!cl.getMoleculesAreInvalid());
         nb.updateNeighborListSize();
         cl.setComputeForceCount(cl.getComputeForceCount()+1);
     }
@@ -4645,9 +4645,10 @@ double OpenCLCalcKineticEnergyKernel::execute(ContextImpl& context) {
     OpenCLArray<mm_float4>& velm = cl.getVelm();
     velm.download();
     double energy = 0.0;
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     for (size_t i = 0; i < masses.size(); ++i) {
         mm_float4 v = velm[i];
-        energy += masses[i]*(v.x*v.x+v.y*v.y+v.z*v.z);
+        energy += masses[order[i]]*(v.x*v.x+v.y*v.y+v.z*v.z);
     }
     return 0.5*energy;
 }
