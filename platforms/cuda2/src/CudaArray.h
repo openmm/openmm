@@ -83,7 +83,7 @@ public:
     /**
      * Get a pointer to the device memory.
      */
-    CUdeviceptr getDevicePointer() {
+    CUdeviceptr& getDevicePointer() {
         return pointer;
     }
     /**

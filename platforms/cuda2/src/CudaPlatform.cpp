@@ -154,6 +154,7 @@ CudaPlatform::PlatformData::PlatformData(const System& system, const string& dev
         device << contexts[i]->getDeviceIndex();
     }
     propertyValues[CudaPlatform::CudaDeviceIndex()] = device.str();
+    propertyValues[CudaPlatform::CudaUseBlockingSync()] = blocking ? "true" : "false";
     propertyValues[CudaPlatform::CudaPrecision()] = precisionProperty;
     propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
@@ -166,11 +167,11 @@ CudaPlatform::PlatformData::~PlatformData() {
 }
 
 void CudaPlatform::PlatformData::initializeContexts(const System& system) {
-//    for (int i = 0; i < (int) contexts.size(); i++)
-//        contexts[i]->initialize();
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->initialize();
 }
 
 void CudaPlatform::PlatformData::syncContexts() {
-//    for (int i = 0; i < (int) contexts.size(); i++)
-//        contexts[i]->getWorkThread().flush();
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->getWorkThread().flush();
 }

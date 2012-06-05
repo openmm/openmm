@@ -1,3 +1,5 @@
+extern "C" {
+
 /**
  * This is called by the various functions below to clear a buffer.
  */
@@ -99,4 +101,6 @@ __global__ void reduceForces(const long* __restrict__ longBuffer, float4* __rest
             sum += buffer[i];
         buffer[index] = sum;
     }
+}
+
 }

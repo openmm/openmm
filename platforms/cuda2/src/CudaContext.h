@@ -72,11 +72,11 @@ public:
     CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
             const std::string& compiler, const std::string& tempDir, CudaPlatform::PlatformData& platformData);
     ~CudaContext();
-//    /**
-//     * This is called to initialize internal data structures after all Forces in the system
-//     * have been initialized.
-//     */
-//    void initialize();
+    /**
+     * This is called to initialize internal data structures after all Forces in the system
+     * have been initialized.
+     */
+    void initialize();
     /**
      * Add a CudaForce to this context.
      */
@@ -123,12 +123,12 @@ public:
     CudaArray& getVelm() {
         return *velm;
     }
-//    /**
-//     * Get the array which contains the force on each atom.
-//     */
-//    CudaArray<mm_float4>& getForce() {
-//        return *force;
-//    }
+    /**
+     * Get the array which contains the force on each atom (respresented as a long3 in 64 bit fixed point).
+     */
+    CudaArray& getForce() {
+        return *force;
+    }
 //    /**
 //     * Get the array which contains the buffers in which forces are computed.
 //     */
@@ -184,36 +184,41 @@ public:
      *                           omitted, a default set of options will be used
      */
     CUmodule createModule(const std::string source, const std::map<std::string, std::string>& defines, const char* optimizationFlags = NULL);
-//    /**
-//     * Execute a kernel.
-//     *
-//     * @param kernel       the kernel to execute
-//     * @param workUnits    the maximum number of work units that should be used
-//     * @param blockSize    the size of each thread block to use
-//     */
-//    void executeKernel(cl::Kernel& kernel, int workUnits, int blockSize = -1);
-//    /**
-//     * Set all elements of an array to 0.
-//     */
-//    void clearBuffer(CudaArray<float>& array);
-//    /**
-//     * Set all elements of an array to 0.
-//     */
-//    void clearBuffer(CudaArray<mm_float4>& array);
-//    /**
-//     * Set all elements of an array to 0.
-//     *
-//     * @param memory     the Memory to clear
-//     * @param size       the number of float elements in the buffer
-//     */
-//    void clearBuffer(cl::Memory& memory, int size);
-//    /**
-//     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
-//     *
-//     * @param memory     the Memory to clear
-//     * @param size       the number of float elements in the buffer
-//     */
-//    void addAutoclearBuffer(cl::Memory& memory, int size);
+    /**
+     * Get a kernel from a CUDA module.
+     *
+     * @param module    the module to get the kernel from
+     * @param name      the name of the kernel to get
+     */
+    CUfunction getKernel(CUmodule& module, const std::string& name);
+    /**
+     * Execute a kernel.
+     *
+     * @param kernel       the kernel to execute
+     * @param arguments    an array of pointers to the kernel arguments
+     * @param threads      the maximum number of threads that should be used
+     * @param blockSize    the size of each thread block to use
+     * @param sharedSize   the amount of dynamic shared memory to allocated for the kernel, in bytes
+     */
+    void executeKernel(CUfunction kernel, void** arguments, int workUnits, int blockSize = -1, unsigned int sharedSize = 0);
+    /**
+     * Set all elements of an array to 0.
+     */
+    void clearBuffer(CudaArray& array);
+    /**
+     * Set all elements of an array to 0.
+     *
+     * @param memory     the memory to clear
+     * @param size       the number of 4-byte elements in the buffer
+     */
+    void clearBuffer(CUdeviceptr memory, int size);
+    /**
+     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
+     *
+     * @param memory     the memory to clear
+     * @param size       the number of float/double elements in the buffer
+     */
+    void addAutoclearBuffer(CUdeviceptr memory, int size);
 //    /**
 //     * Clear all buffers that have been registered with addAutoclearBuffer().
 //     */
@@ -230,108 +235,110 @@ public:
 //     * Sum the buffesr containing forces.
 //     */
 //    void reduceForces();
-//    /**
-//     * Get the current simulation time.
-//     */
-//    double getTime() {
-//        return time;
-//    }
-//    /**
-//     * Set the current simulation time.
-//     */
-//    void setTime(double t) {
-//        time = t;
-//    }
-//    /**
-//     * Get the number of integration steps that have been taken.
-//     */
-//    int getStepCount() {
-//        return stepCount;
-//    }
-//    /**
-//     * Set the number of integration steps that have been taken.
-//     */
-//    void setStepCount(int steps) {
-//        stepCount = steps;
-//    }
-//    /**
-//     * Get the number of times forces or energy has been computed.
-//     */
-//    int getComputeForceCount() {
-//        return computeForceCount;
-//    }
-//    /**
-//     * Set the number of times forces or energy has been computed.
-//     */
-//    void setComputeForceCount(int count) {
-//        computeForceCount = count;
-//    }
-//    /**
-//     * Get the number of atoms.
-//     */
-//    int getNumAtoms() const {
-//        return numAtoms;
-//    }
-//    /**
-//     * Get the number of atoms, rounded up to a multiple of TileSize.  This is the actual size of
-//     * most arrays with one element per atom.
-//     */
-//    int getPaddedNumAtoms() const {
-//        return paddedNumAtoms;
-//    }
-//    /**
-//     * Get the number of blocks of TileSize atoms.
-//     */
-//    int getNumAtomBlocks() const {
-//        return numAtomBlocks;
-//    }
-//    /**
-//     * Get the standard number of thread blocks to use when executing kernels.
-//     */
-//    int getNumThreadBlocks() const {
-//        return numThreadBlocks;
-//    }
-//    /**
-//     * Get the number of force buffers.
-//     */
-//    int getNumForceBuffers() const {
-//        return numForceBuffers;
-//    }
-//    /**
-//     * Get the SIMD width of the device being used.
-//     */
-//    int getSIMDWidth() const {
-//        return simdWidth;
-//    }
-//    /**
-//     * Get whether the device being used supports 64 bit atomic operations on global memory.
-//     */
-//    bool getSupports64BitGlobalAtomics() {
-//        return supports64BitGlobalAtomics;
-//    }
-//    /**
-//     * Get whether the device being used supports double precision math.
-//     */
-//    bool getSupportsDoublePrecision() {
-//        return supportsDoublePrecision;
-//    }
+    /**
+     * Get the current simulation time.
+     */
+    double getTime() {
+        return time;
+    }
+    /**
+     * Set the current simulation time.
+     */
+    void setTime(double t) {
+        time = t;
+    }
+    /**
+     * Get the number of integration steps that have been taken.
+     */
+    int getStepCount() {
+        return stepCount;
+    }
+    /**
+     * Set the number of integration steps that have been taken.
+     */
+    void setStepCount(int steps) {
+        stepCount = steps;
+    }
+    /**
+     * Get the number of times forces or energy has been computed.
+     */
+    int getComputeForceCount() {
+        return computeForceCount;
+    }
+    /**
+     * Set the number of times forces or energy has been computed.
+     */
+    void setComputeForceCount(int count) {
+        computeForceCount = count;
+    }
+    /**
+     * Get the number of atoms.
+     */
+    int getNumAtoms() const {
+        return numAtoms;
+    }
+    /**
+     * Get the number of atoms, rounded up to a multiple of TileSize.  This is the actual size of
+     * most arrays with one element per atom.
+     */
+    int getPaddedNumAtoms() const {
+        return paddedNumAtoms;
+    }
+    /**
+     * Get the number of blocks of TileSize atoms.
+     */
+    int getNumAtomBlocks() const {
+        return numAtomBlocks;
+    }
+    /**
+     * Get the standard number of thread blocks to use when executing kernels.
+     */
+    int getNumThreadBlocks() const {
+        return numThreadBlocks;
+    }
+    /**
+     * Get whether double precision is being used.
+     */
+    bool getUseDoublePrecision() {
+        return useDoublePrecision;
+    }
+    /**
+     * Get whether accumulation is being done in double precision.
+     */
+    bool getAccumulateInDouble() {
+        return accumulateInDouble;
+    }
+    /**
+     * Convert a number to a string in a format suitable for including in a kernel.
+     * This takes into account whether the context uses single or double precision.
+     */
+    std::string doubleToString(double value);
+    /**
+     * Convert a number to a string in a format suitable for including in a kernel.
+     */
+    std::string intToString(int value);
+    /**
+     * Convert a CUDA result code to the corresponding string description.
+     */
+    std::string getErrorString(CUresult result);
+    
 //    /**
 //     * Get the size of the periodic box.
 //     */
-//    mm_float4 getPeriodicBoxSize() const {
+//    float4 getPeriodicBoxSize() const {
 //        return periodicBoxSize;
 //    }
 //    /**
 //     * Set the size of the periodic box.
 //     */
 //    void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
-//        periodicBoxSize = mm_float4((float) xsize, (float) ysize, (float) zsize, 0);
-//        invPeriodicBoxSize = mm_float4((float) (1.0/xsize), (float) (1.0/ysize), (float) (1.0/zsize), 0);
+//        periodicBoxSize = make_float4((float) xsize, (float) ysize, (float) zsize, 0);
+//        invPeriodicBoxSize = make_float4((float) (1.0/xsize), (float) (1.0/ysize), (float) (1.0/zsize), 0);
 //    }
 //    /**
 //     * Get the inverse of the size of the periodic box.
 //     */
-//    mm_float4 getInvPeriodicBoxSize() const {
+//    float4 getInvPeriodicBoxSize() const {
 //        return invPeriodicBoxSize;
 //    }
 //    /**
@@ -352,66 +359,66 @@ public:
 //    CudaNonbondedUtilities& getNonbondedUtilities() {
 //        return *nonbonded;
 //    }
-//    /**
-//     * Get the thread used by this context for executing parallel computations.
-//     */
-//    WorkThread& getWorkThread() {
-//        return *thread;
-//    }
-//    /**
-//     * Get whether atoms were reordered during the most recent force/energy computation.
-//     */
-//    bool getAtomsWereReordered() const {
-//        return atomsWereReordered;
-//    }
-//    /**
-//     * Set whether atoms were reordered during the most recent force/energy computation.
-//     */
-//    void setAtomsWereReordered(bool wereReordered) {
-//        atomsWereReordered = wereReordered;
-//    }
-//    /**
-//     * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
-//     * together in the arrays.
-//     * 
-//     * @param enforcePeriodic    if true, the atom positions may be altered to enforce periodic boundary conditions
-//     */
-//    void reorderAtoms(bool enforcePeriodic);
-//    /**
-//     * Add a listener that should be called whenever atoms get reordered.  The CudaContext
-//     * assumes ownership of the object, and deletes it when the context itself is deleted.
-//     */
-//    void addReorderListener(ReorderListener* listener);
-//    /**
-//     * Get the list of ReorderListeners.
-//     */
-//    std::vector<ReorderListener*>& getReorderListeners() {
-//        return reorderListeners;
-//    }
-//    /**
-//     * Mark that the current molecule definitions (and hence the atom order) may be invalid.
-//     * This should be called whenever force field parameters change.  It will cause the definitions
-//     * and order to be revalidated the next to reorderAtoms() is called.
-//     */
-//    void invalidateMolecules();
-//    /**
-//     * Get whether the current molecule definitions are valid.
-//     */
-//    bool getMoleculesAreInvalid() {
-//        return moleculesInvalid;
-//    }
+    /**
+     * Get the thread used by this context for executing parallel computations.
+     */
+    WorkThread& getWorkThread() {
+        return *thread;
+    }
+    /**
+     * Get whether atoms were reordered during the most recent force/energy computation.
+     */
+    bool getAtomsWereReordered() const {
+        return atomsWereReordered;
+    }
+    /**
+     * Set whether atoms were reordered during the most recent force/energy computation.
+     */
+    void setAtomsWereReordered(bool wereReordered) {
+        atomsWereReordered = wereReordered;
+    }
+    /**
+     * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
+     * together in the arrays.
+     * 
+     * @param enforcePeriodic    if true, the atom positions may be altered to enforce periodic boundary conditions
+     */
+    void reorderAtoms(bool enforcePeriodic);
+    /**
+     * Add a listener that should be called whenever atoms get reordered.  The CudaContext
+     * assumes ownership of the object, and deletes it when the context itself is deleted.
+     */
+    void addReorderListener(ReorderListener* listener);
+    /**
+     * Get the list of ReorderListeners.
+     */
+    std::vector<ReorderListener*>& getReorderListeners() {
+        return reorderListeners;
+    }
+    /**
+     * Mark that the current molecule definitions (and hence the atom order) may be invalid.
+     * This should be called whenever force field parameters change.  It will cause the definitions
+     * and order to be revalidated the next to reorderAtoms() is called.
+     */
+    void invalidateMolecules();
+    /**
+     * Get whether the current molecule definitions are valid.
+     */
+    bool getMoleculesAreInvalid() {
+        return moleculesInvalid;
+    }
 private:
     struct Molecule;
     struct MoleculeGroup;
     class VirtualSiteInfo;
-//    void findMoleculeGroups();
-//    static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
-//    /**
-//     * Ensure that all molecules marked as "identical" really are identical.  This should be
-//     * called whenever force field parameters change.  If necessary, it will rebuild the list
-//     * of molecules and resort the atoms.
-//     */
-//    void validateMolecules();
+    void findMoleculeGroups();
+    static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
+    /**
+     * Ensure that all molecules marked as "identical" really are identical.  This should be
+     * called whenever force field parameters change.  If necessary, it will rebuild the list
+     * of molecules and resort the atoms.
+     */
+    void validateMolecules();
     static bool hasInitializedCuda;
     const System& system;
     double time;
@@ -424,8 +431,6 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-//    int numForceBuffers;
-//    int simdWidth;
     bool useBlockingSync, useDoublePrecision, accumulateInDouble, contextIsValid, atomsWereReordered, moleculesInvalid;
     std::string compiler, tempDir, gpuArchitecture;
     float4 periodicBoxSize;
@@ -446,15 +451,15 @@ private:
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
     std::vector<int4> posCellOffsets;
+    void* pinnedBuffer;
     CudaArray* posq;
     CudaArray* velm;
-//    CudaArray<mm_float4>* force;
-//    CudaArray<mm_float4>* forceBuffers;
-//    CudaArray<cl_long>* longForceBuffer;
-//    CudaArray<cl_float>* energyBuffer;
-//    CudaArray<cl_int>* atomIndex;
-//    std::vector<cl::Memory*> autoclearBuffers;
-//    std::vector<int> autoclearBufferSizes;
+    CudaArray* force;
+    CudaArray* energyBuffer;
+    CudaArray* atomIndexDevice;
+    std::vector<int> atomIndex;
+    std::vector<CUdeviceptr> autoclearBuffers;
+    std::vector<int> autoclearBufferSizes;
     std::vector<ReorderListener*> reorderListeners;
 //    CudaIntegrationUtilities* integration;
 //    CudaBondedUtilities* bonded;

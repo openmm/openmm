@@ -31,7 +31,6 @@
 #include "CudaContext.h"
 #include "CudaArray.h"
 //#include "CudaBondedUtilities.h"
-#include "CudaExpressionUtilities.h"
 #include "CudaForceInfo.h"
 //#include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
@@ -53,7 +52,7 @@
 #define CHECK_RESULT2(result, prefix) \
     if (result != CUDA_SUCCESS) { \
         std::stringstream m; \
-        m<<prefix<<": "<<result<<" ("<<__FILE__<<": "<<__LINE__<<")"; \
+        m<<prefix<<": "<<getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
         throw OpenMMException(m.str());\
     }
 
@@ -66,7 +65,7 @@ bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
-        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), posq(NULL),
+        time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
         velm(NULL), /*forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL),*/ thread(NULL) {
     if (!hasInitializedCuda) {
@@ -88,7 +87,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     else
         throw OpenMMException("Illegal value for CudaPrecision: "+precision);
 #ifdef WIN32
-    this->tempDir = tempDir+"\";
+    this->tempDir = tempDir+"\\";
 #else
     this->tempDir = tempDir+"/";
 #endif
@@ -114,6 +113,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
                 deviceIndex = i;
                 bestSpeed = speed;
                 bestCompute = major;
+                gpuArchitecture = intToString(major)+intToString(minor);
             }
         }
     }
@@ -121,37 +121,47 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         throw OpenMMException("No compatible CUDA device is available");
     CHECK_RESULT(cuDeviceGet(&device, deviceIndex));
     this->deviceIndex = deviceIndex;
-    int major, minor;
-    CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
-    gpuArchitecture = CudaExpressionUtilities::intToString(major)+CudaExpressionUtilities::intToString(minor);
-    compilationDefines["WORK_GROUP_SIZE"] = CudaExpressionUtilities::intToString(ThreadBlockSize);
+    compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
     defaultOptimizationOptions = "--use_fast_math";
-    int numThreadBlocksPerComputeUnit = 6;
-    CHECK_RESULT(cuCtxCreate(&context, 0, device));
+    unsigned int flags = CU_CTX_MAP_HOST;
+    if (useBlockingSync)
+        flags += CU_CTX_SCHED_BLOCKING_SYNC;
+    else
+        flags += CU_CTX_SCHED_SPIN;
+    CHECK_RESULT(cuCtxCreate(&context, flags, device));
     contextIsValid = true;
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
+    int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
 //    bonded = new CudaBondedUtilities(*this);
 //    nonbonded = new CudaNonbondedUtilities(*this);
-    posq = CudaArray::create<float4>(paddedNumAtoms, "posq");
-    velm = CudaArray::create<float4>(paddedNumAtoms, "velm");
+    if (useDoublePrecision) {
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, paddedNumAtoms*sizeof(double4), 0));
+        posq = CudaArray::create<double4>(paddedNumAtoms, "posq");
+        velm = CudaArray::create<double4>(paddedNumAtoms, "velm");
+    }
+    else {
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, paddedNumAtoms*sizeof(float4), 0));
+        posq = CudaArray::create<float4>(paddedNumAtoms, "posq");
+        velm = CudaArray::create<float4>(paddedNumAtoms, "velm");
+    }
     posCellOffsets.resize(paddedNumAtoms, make_int4(0, 0, 0, 0));
 
     // Create utility kernels that are used in multiple places.
 
     CUmodule utilities = createModule(CudaKernelSources::vectorOps+CudaKernelSources::utilities);
-    cuModuleGetFunction(&clearBufferKernel, utilities, "clearBuffer");
-    cuModuleGetFunction(&clearTwoBuffersKernel, utilities, "clearTwoBuffers");
-    cuModuleGetFunction(&clearThreeBuffersKernel, utilities, "clearThreeBuffers");
-    cuModuleGetFunction(&clearFourBuffersKernel, utilities, "clearFourBuffers");
-    cuModuleGetFunction(&clearFiveBuffersKernel, utilities, "clearFiveBuffers");
-    cuModuleGetFunction(&clearSixBuffersKernel, utilities, "clearSixBuffers");
-    cuModuleGetFunction(&reduceFloat4Kernel, utilities, "reduceFloat4Buffer");
-    cuModuleGetFunction(&reduceForcesKernel, utilities, "reduceForces");
+    clearBufferKernel = getKernel(utilities, "clearBuffer");
+    clearTwoBuffersKernel = getKernel(utilities, "clearTwoBuffers");
+    clearThreeBuffersKernel = getKernel(utilities, "clearThreeBuffers");
+    clearFourBuffersKernel = getKernel(utilities, "clearFourBuffers");
+    clearFiveBuffersKernel = getKernel(utilities, "clearFiveBuffers");
+    clearSixBuffersKernel = getKernel(utilities, "clearSixBuffers");
+    reduceFloat4Kernel = getKernel(utilities, "reduceFloat4Buffer");
+    reduceForcesKernel = getKernel(utilities, "reduceForces");
 
     // Set defines based on the requested precision.
 
@@ -175,6 +185,8 @@ CudaContext::~CudaContext() {
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         delete reorderListeners[i];
+    if (pinnedBuffer != NULL)
+        cuMemFreeHost(pinnedBuffer);
     if (posq != NULL)
         delete posq;
     if (velm != NULL)
@@ -202,38 +214,29 @@ CudaContext::~CudaContext() {
         CHECK_RESULT(cuCtxDestroy(context));
 }
 
-//void CudaContext::initialize() {
-//    for (int i = 0; i < numAtoms; i++) {
-//        double mass = system.getParticleMass(i);
-//        (*velm)[i].w = (float) (mass == 0.0 ? 0.0 : 1.0/mass);
-//    }
-//    velm->upload();
+void CudaContext::initialize() {
+    for (int i = 0; i < numAtoms; i++) {
+        double mass = system.getParticleMass(i);
+        if (useDoublePrecision)
+            ((double4*) pinnedBuffer)[i] = make_double4(0.0, 0.0, 0.0, mass == 0.0 ? 0.0 : 1.0/mass);
+        else
+            ((float4*) pinnedBuffer)[i] = make_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (float) (1.0/mass));
+    }
+    velm->upload(pinnedBuffer);
 //    bonded->initialize(system);
-//    numForceBuffers = platformData.contexts.size();
-//    numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
-//    for (int i = 0; i < (int) forces.size(); i++)
-//        numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
-//    forceBuffers = new CudaArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
-//    if (supports64BitGlobalAtomics) {
-//        longForceBuffer = new CudaArray<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer", false);
-//        reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer->getDeviceBuffer());
-//        reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers->getDeviceBuffer());
-//        reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
-//        reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
-//        addAutoclearBuffer(longForceBuffer->getDeviceBuffer(), longForceBuffer->getSize()*2);
-//    }
-//    addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
-//    force = new CudaArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
-//    energyBuffer = new CudaArray<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer", true);
-//    addAutoclearBuffer(energyBuffer->getDeviceBuffer(), energyBuffer->getSize());
-//    atomIndex = new CudaArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
-//    for (int i = 0; i < paddedNumAtoms; ++i)
-//        (*atomIndex)[i] = i;
-//    atomIndex->upload();
-//    findMoleculeGroups();
-//    moleculesInvalid = false;
+    force = CudaArray::create<long3>(paddedNumAtoms, "force");
+    addAutoclearBuffer(force->getDevicePointer(), force->getSize()*6);
+    energyBuffer = CudaArray::create<float>(numThreadBlocks*ThreadBlockSize, "energyBuffer");
+    addAutoclearBuffer(energyBuffer->getDevicePointer(), energyBuffer->getSize());
+    atomIndexDevice = CudaArray::create<int>(paddedNumAtoms, "atomIndex");
+    atomIndex.resize(paddedNumAtoms);
+    for (int i = 0; i < paddedNumAtoms; ++i)
+        atomIndex[i] = i;
+    atomIndexDevice->upload(atomIndex);
+    findMoleculeGroups();
+    moleculesInvalid = false;
 //    nonbonded->initialize(system);
-//}
+}
 
 void CudaContext::addForce(CudaForceInfo* force) {
     forces.push_back(force);
@@ -315,7 +318,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         CUresult result = cuModuleLoad(&module, outputFile.c_str());
         if (result != CUDA_SUCCESS) {
             std::stringstream m;
-            m<<"Error loading CUDA module: "<<result;
+            m<<"Error loading CUDA module: "<<getErrorString(result)<<" ("<<result<<")";
             throw OpenMMException(m.str());
         }
         remove(inputFile.c_str());
@@ -329,52 +332,109 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         remove(logFile.c_str());
         throw;
     }
-//    
-//    // Get length before using c_str() to avoid length() call invalidating the c_str() value.
-//    string src_string = src.str();
-//    ::size_t src_length = src_string.length();
-//    cl::Program::Sources sources(1, make_pair(src_string.c_str(), src_length));
-//    cl::Program program(context, sources);
-//    try {
-//        program.build(vector<cl::Device>(1, device), options.c_str());
-//    } catch (cl::Error err) {
-//        throw OpenMMException("Error compiling kernel: "+program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
-//    }
 }
-//
-//void CudaContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSize) {
-//    if (blockSize == -1)
-//        blockSize = ThreadBlockSize;
-//    int size = std::min((workUnits+blockSize-1)/blockSize, numThreadBlocks)*blockSize;
-//    try {
-//        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
-//    }
-//    catch (cl::Error err) {
-//        stringstream str;
-//        str<<"Error invoking kernel "<<kernel.getInfo<CL_KERNEL_FUNCTION_NAME>()<<": "<<err.what()<<" ("<<err.err()<<")";
-//        throw OpenMMException(str.str());
-//    }
-//}
-//
-//void CudaContext::clearBuffer(CudaArray<float>& array) {
-//    clearBuffer(array.getDeviceBuffer(), array.getSize());
-//}
-//
-//void CudaContext::clearBuffer(CudaArray<mm_float4>& array) {
-//    clearBuffer(array.getDeviceBuffer(), array.getSize()*4);
-//}
-//
-//void CudaContext::clearBuffer(cl::Memory& memory, int size) {
-//    clearBufferKernel.setArg<cl::Memory>(0, memory);
-//    clearBufferKernel.setArg<cl_int>(1, size);
-//    executeKernel(clearBufferKernel, size, 128);
-//}
-//
-//void CudaContext::addAutoclearBuffer(cl::Memory& memory, int size) {
-//    autoclearBuffers.push_back(&memory);
-//    autoclearBufferSizes.push_back(size);
-//}
-//
+
+CUfunction CudaContext::getKernel(CUmodule& module, const string& name) {
+    CUfunction function;
+    CUresult result = cuModuleGetFunction(&function, module, name.c_str());
+    if (result != CUDA_SUCCESS) {
+        std::stringstream m;
+        m<<"Error creating kernel "<<name<<": "<<getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(m.str());
+    }
+    return function;
+}
+
+string CudaContext::doubleToString(double value) {
+    stringstream s;
+    s.precision(useDoublePrecision ? 16 : 8);
+    s << scientific << value;
+    if (!useDoublePrecision)
+        s << "f";
+    return s.str();
+}
+
+string CudaContext::intToString(int value) {
+    stringstream s;
+    s << value;
+    return s.str();
+}
+
+std::string CudaContext::getErrorString(CUresult result) {
+    switch (result) {
+        case CUDA_SUCCESS: return "CUDA_SUCCESS";
+        case CUDA_ERROR_INVALID_VALUE: return "CUDA_ERROR_INVALID_VALUE";
+        case CUDA_ERROR_OUT_OF_MEMORY: return "CUDA_ERROR_OUT_OF_MEMORY";
+        case CUDA_ERROR_NOT_INITIALIZED: return "CUDA_ERROR_NOT_INITIALIZED";
+        case CUDA_ERROR_DEINITIALIZED: return "CUDA_ERROR_DEINITIALIZED";
+        case CUDA_ERROR_PROFILER_DISABLED: return "CUDA_ERROR_PROFILER_DISABLED";
+        case CUDA_ERROR_PROFILER_NOT_INITIALIZED: return "CUDA_ERROR_PROFILER_NOT_INITIALIZED";
+        case CUDA_ERROR_PROFILER_ALREADY_STARTED: return "CUDA_ERROR_PROFILER_ALREADY_STARTED";
+        case CUDA_ERROR_PROFILER_ALREADY_STOPPED: return "CUDA_ERROR_PROFILER_ALREADY_STOPPED";
+        case CUDA_ERROR_NO_DEVICE: return "CUDA_ERROR_NO_DEVICE";
+        case CUDA_ERROR_INVALID_DEVICE: return "CUDA_ERROR_INVALID_DEVICE";
+        case CUDA_ERROR_INVALID_IMAGE: return "CUDA_ERROR_INVALID_IMAGE";
+        case CUDA_ERROR_INVALID_CONTEXT: return "CUDA_ERROR_INVALID_CONTEXT";
+        case CUDA_ERROR_CONTEXT_ALREADY_CURRENT: return "CUDA_ERROR_CONTEXT_ALREADY_CURRENT";
+        case CUDA_ERROR_MAP_FAILED: return "CUDA_ERROR_MAP_FAILED";
+        case CUDA_ERROR_UNMAP_FAILED: return "CUDA_ERROR_UNMAP_FAILED";
+        case CUDA_ERROR_ARRAY_IS_MAPPED: return "CUDA_ERROR_ARRAY_IS_MAPPED";
+        case CUDA_ERROR_ALREADY_MAPPED: return "CUDA_ERROR_ALREADY_MAPPED";
+        case CUDA_ERROR_NO_BINARY_FOR_GPU: return "CUDA_ERROR_NO_BINARY_FOR_GPU";
+        case CUDA_ERROR_ALREADY_ACQUIRED: return "CUDA_ERROR_ALREADY_ACQUIRED";
+        case CUDA_ERROR_NOT_MAPPED: return "CUDA_ERROR_NOT_MAPPED";
+        case CUDA_ERROR_NOT_MAPPED_AS_ARRAY: return "CUDA_ERROR_NOT_MAPPED_AS_ARRAY";
+        case CUDA_ERROR_NOT_MAPPED_AS_POINTER: return "CUDA_ERROR_NOT_MAPPED_AS_POINTER";
+        case CUDA_ERROR_ECC_UNCORRECTABLE: return "CUDA_ERROR_ECC_UNCORRECTABLE";
+        case CUDA_ERROR_UNSUPPORTED_LIMIT: return "CUDA_ERROR_UNSUPPORTED_LIMIT";
+        case CUDA_ERROR_CONTEXT_ALREADY_IN_USE: return "CUDA_ERROR_CONTEXT_ALREADY_IN_USE";
+        case CUDA_ERROR_INVALID_SOURCE: return "CUDA_ERROR_INVALID_SOURCE";
+        case CUDA_ERROR_FILE_NOT_FOUND: return "CUDA_ERROR_FILE_NOT_FOUND";
+        case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND: return "CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND";
+        case CUDA_ERROR_SHARED_OBJECT_INIT_FAILED: return "CUDA_ERROR_SHARED_OBJECT_INIT_FAILED";
+        case CUDA_ERROR_OPERATING_SYSTEM: return "CUDA_ERROR_OPERATING_SYSTEM";
+        case CUDA_ERROR_INVALID_HANDLE: return "CUDA_ERROR_INVALID_HANDLE";
+        case CUDA_ERROR_NOT_FOUND: return "CUDA_ERROR_NOT_FOUND";
+        case CUDA_ERROR_NOT_READY: return "CUDA_ERROR_NOT_READY";
+        case CUDA_ERROR_LAUNCH_FAILED: return "CUDA_ERROR_LAUNCH_FAILED";
+        case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES: return "CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES";
+        case CUDA_ERROR_LAUNCH_TIMEOUT: return "CUDA_ERROR_LAUNCH_TIMEOUT";
+        case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING: return "CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING";
+        case CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED: return "CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED";
+        case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED: return "CUDA_ERROR_PEER_ACCESS_NOT_ENABLED";
+        case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE: return "CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE";
+        case CUDA_ERROR_CONTEXT_IS_DESTROYED: return "CUDA_ERROR_CONTEXT_IS_DESTROYED";
+        case CUDA_ERROR_UNKNOWN: return "CUDA_ERROR_UNKNOWN";
+    }
+    return "Invalid error code";
+}
+
+void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads, int blockSize, unsigned int sharedSize) {
+    if (blockSize == -1)
+        blockSize = ThreadBlockSize;
+    int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
+    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, 0, arguments, NULL);
+    if (result != CUDA_SUCCESS) {
+        stringstream str;
+        str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(str.str());
+    }
+}
+
+void CudaContext::clearBuffer(CudaArray& array) {
+    clearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize()/4);
+}
+
+void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
+    void* args[] = {&memory, &size};
+    executeKernel(clearBufferKernel, args, size, 128);
+}
+
+void CudaContext::addAutoclearBuffer(CUdeviceptr memory, int size) {
+    autoclearBuffers.push_back(memory);
+    autoclearBufferSizes.push_back(size);
+}
+
 //void CudaContext::clearAutoclearBuffers() {
 //    int base = 0;
 //    int total = autoclearBufferSizes.size();
@@ -454,219 +514,217 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 //    executeKernel(reduceFloat4Kernel, bufferSize, 128);
 //}
 //
-//void CudaContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {
-//    // Recursively tag atoms as belonging to a particular molecule.
-//
-//    atomMolecule[atom] = molecule;
-//    for (int i = 0; i < (int) atomBonds[atom].size(); i++)
-//        if (atomMolecule[atomBonds[atom][i]] == -1)
-//            tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
-//}
-//
-///**
-// * This class ensures that atom reordering doesn't break virtual sites.
-// */
-//class CudaContext::VirtualSiteInfo : public CudaForceInfo {
-//public:
-//    VirtualSiteInfo(const System& system) : CudaForceInfo(0) {
-//        for (int i = 0; i < system.getNumParticles(); i++) {
-//            if (system.isVirtualSite(i)) {
-//                siteTypes.push_back(&typeid(system.getVirtualSite(i)));
-//                vector<int> particles;
-//                particles.push_back(i);
-//                for (int j = 0; j < system.getVirtualSite(i).getNumParticles(); j++)
-//                    particles.push_back(system.getVirtualSite(i).getParticle(j));
-//                siteParticles.push_back(particles);
-//                vector<double> weights;
-//                if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
-//                    // A two particle average.
-//
-//                    const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
-//                    weights.push_back(site.getWeight(0));
-//                    weights.push_back(site.getWeight(1));
-//                }
-//                else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
-//                    // A three particle average.
-//
-//                    const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
-//                    weights.push_back(site.getWeight(0));
-//                    weights.push_back(site.getWeight(1));
-//                    weights.push_back(site.getWeight(2));
-//                }
-//                else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
-//                    // An out of plane site.
-//
-//                    const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
-//                    weights.push_back(site.getWeight12());
-//                    weights.push_back(site.getWeight13());
-//                    weights.push_back(site.getWeightCross());
-//                }
-//                siteWeights.push_back(weights);
-//            }
-//        }
-//    }
-//    int getNumParticleGroups() {
-//        return siteTypes.size();
-//    }
-//    void getParticlesInGroup(int index, std::vector<int>& particles) {
-//        particles = siteParticles[index];
-//    }
-//    bool areGroupsIdentical(int group1, int group2) {
-//        if (siteTypes[group1] != siteTypes[group2])
-//            return false;
-//        int numParticles = siteWeights[group1].size();
-//        if (siteWeights[group2].size() != numParticles)
-//            return false;
-//        for (int i = 0; i < numParticles; i++)
-//            if (siteWeights[group1][i] != siteWeights[group2][i])
-//                return false;
-//        return true;
-//    }
-//private:
-//    vector<const type_info*> siteTypes;
-//    vector<vector<int> > siteParticles;
-//    vector<vector<double> > siteWeights;
-//};
-//
-//
-//void CudaContext::findMoleculeGroups() {
-//    // The first time this is called, we need to identify all the molecules in the system.
-//    
-//    if (moleculeGroups.size() == 0) {
-//        // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
-//
-//        addForce(new VirtualSiteInfo(system));
-//
-//        // First make a list of every other atom to which each atom is connect by a constraint or force group.
-//
-//        vector<vector<int> > atomBonds(system.getNumParticles());
-//        for (int i = 0; i < system.getNumConstraints(); i++) {
-//            int particle1, particle2;
-//            double distance;
-//            system.getConstraintParameters(i, particle1, particle2, distance);
-//            atomBonds[particle1].push_back(particle2);
-//            atomBonds[particle2].push_back(particle1);
-//        }
-//        for (int i = 0; i < (int) forces.size(); i++) {
-//            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
-//                vector<int> particles;
-//                forces[i]->getParticlesInGroup(j, particles);
-//                for (int k = 0; k < (int) particles.size(); k++)
-//                    for (int m = 0; m < (int) particles.size(); m++)
-//                        if (k != m)
-//                            atomBonds[particles[k]].push_back(particles[m]);
-//            }
-//        }
-//
-//        // Now tag atoms by which molecule they belong to.
-//
-//        vector<int> atomMolecule(numAtoms, -1);
-//        int numMolecules = 0;
-//        for (int i = 0; i < numAtoms; i++)
-//            if (atomMolecule[i] == -1)
-//                tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
-//        vector<vector<int> > atomIndices(numMolecules);
-//        for (int i = 0; i < numAtoms; i++)
-//            atomIndices[atomMolecule[i]].push_back(i);
-//
-//        // Construct a description of each molecule.
-//
-//        molecules.resize(numMolecules);
-//        for (int i = 0; i < numMolecules; i++) {
-//            molecules[i].atoms = atomIndices[i];
-//            molecules[i].groups.resize(forces.size());
-//        }
-//        for (int i = 0; i < system.getNumConstraints(); i++) {
-//            int particle1, particle2;
-//            double distance;
-//            system.getConstraintParameters(i, particle1, particle2, distance);
-//            molecules[atomMolecule[particle1]].constraints.push_back(i);
-//        }
-//        for (int i = 0; i < (int) forces.size(); i++)
-//            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
-//                vector<int> particles;
-//                forces[i]->getParticlesInGroup(j, particles);
-//                molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
-//            }
-//    }
-//
-//    // Sort them into groups of identical molecules.
-//
-//    vector<Molecule> uniqueMolecules;
-//    vector<vector<int> > moleculeInstances;
-//    vector<vector<int> > moleculeOffsets;
-//    for (int molIndex = 0; molIndex < (int) molecules.size(); molIndex++) {
-//        Molecule& mol = molecules[molIndex];
-//
-//        // See if it is identical to another molecule.
-//
-//        bool isNew = true;
-//        for (int j = 0; j < (int) uniqueMolecules.size() && isNew; j++) {
-//            Molecule& mol2 = uniqueMolecules[j];
-//            bool identical = (mol.atoms.size() == mol2.atoms.size() && mol.constraints.size() == mol2.constraints.size());
-//
-//            // See if the atoms are identical.
-//
-//            int atomOffset = mol2.atoms[0]-mol.atoms[0];
-//            for (int i = 0; i < (int) mol.atoms.size() && identical; i++) {
-//                if (mol.atoms[i] != mol2.atoms[i]-atomOffset || system.getParticleMass(mol.atoms[i]) != system.getParticleMass(mol2.atoms[i]))
-//                    identical = false;
-//                for (int k = 0; k < (int) forces.size(); k++)
-//                    if (!forces[k]->areParticlesIdentical(mol.atoms[i], mol2.atoms[i]))
-//                        identical = false;
-//            }
-//            
-//            // See if the constraints are identical.
-//
-//            for (int i = 0; i < (int) mol.constraints.size() && identical; i++) {
-//                int c1particle1, c1particle2, c2particle1, c2particle2;
-//                double distance1, distance2;
-//                system.getConstraintParameters(mol.constraints[i], c1particle1, c1particle2, distance1);
-//                system.getConstraintParameters(mol2.constraints[i], c2particle1, c2particle2, distance2);
-//                if (c1particle1 != c2particle1-atomOffset || c1particle2 != c2particle2-atomOffset || distance1 != distance2)
-//                    identical = false;
-//            }
-//
-//            // See if the force groups are identical.
-//
-//            for (int i = 0; i < (int) forces.size() && identical; i++) {
-//                if (mol.groups[i].size() != mol2.groups[i].size())
-//                    identical = false;
-//                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++)
-//                    if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
-//                        identical = false;
-//            }
-//            if (identical) {
-//                moleculeInstances[j].push_back(molIndex);
-//                moleculeOffsets[j].push_back(mol.atoms[0]);
-//                isNew = false;
-//            }
-//        }
-//        if (isNew) {
-//            uniqueMolecules.push_back(mol);
-//            moleculeInstances.push_back(vector<int>());
-//            moleculeInstances[moleculeInstances.size()-1].push_back(molIndex);
-//            moleculeOffsets.push_back(vector<int>());
-//            moleculeOffsets[moleculeOffsets.size()-1].push_back(mol.atoms[0]);
-//        }
-//    }
-//    moleculeGroups.resize(moleculeInstances.size());
-//    for (int i = 0; i < (int) moleculeInstances.size(); i++)
-//    {
-//        moleculeGroups[i].instances = moleculeInstances[i];
-//        moleculeGroups[i].offsets = moleculeOffsets[i];
-//        vector<int>& atoms = uniqueMolecules[i].atoms;
-//        moleculeGroups[i].atoms.resize(atoms.size());
-//        for (int j = 0; j < (int) atoms.size(); j++)
-//            moleculeGroups[i].atoms[j] = atoms[j]-atoms[0];
-//    }
-//}
-//
-//void CudaContext::invalidateMolecules() {
-//    moleculesInvalid = true;
-//}
-//
-//
+void CudaContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {
+    // Recursively tag atoms as belonging to a particular molecule.
+
+    atomMolecule[atom] = molecule;
+    for (int i = 0; i < (int) atomBonds[atom].size(); i++)
+        if (atomMolecule[atomBonds[atom][i]] == -1)
+            tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
+}
+
+/**
+ * This class ensures that atom reordering doesn't break virtual sites.
+ */
+class CudaContext::VirtualSiteInfo : public CudaForceInfo {
+public:
+    VirtualSiteInfo(const System& system) : CudaForceInfo(0) {
+        for (int i = 0; i < system.getNumParticles(); i++) {
+            if (system.isVirtualSite(i)) {
+                siteTypes.push_back(&typeid(system.getVirtualSite(i)));
+                vector<int> particles;
+                particles.push_back(i);
+                for (int j = 0; j < system.getVirtualSite(i).getNumParticles(); j++)
+                    particles.push_back(system.getVirtualSite(i).getParticle(j));
+                siteParticles.push_back(particles);
+                vector<double> weights;
+                if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                    // A two particle average.
+
+                    const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
+                    weights.push_back(site.getWeight(0));
+                    weights.push_back(site.getWeight(1));
+                }
+                else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
+                    // A three particle average.
+
+                    const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
+                    weights.push_back(site.getWeight(0));
+                    weights.push_back(site.getWeight(1));
+                    weights.push_back(site.getWeight(2));
+                }
+                else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
+                    // An out of plane site.
+
+                    const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
+                    weights.push_back(site.getWeight12());
+                    weights.push_back(site.getWeight13());
+                    weights.push_back(site.getWeightCross());
+                }
+                siteWeights.push_back(weights);
+            }
+        }
+    }
+    int getNumParticleGroups() {
+        return siteTypes.size();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        particles = siteParticles[index];
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        if (siteTypes[group1] != siteTypes[group2])
+            return false;
+        int numParticles = siteWeights[group1].size();
+        if (siteWeights[group2].size() != numParticles)
+            return false;
+        for (int i = 0; i < numParticles; i++)
+            if (siteWeights[group1][i] != siteWeights[group2][i])
+                return false;
+        return true;
+    }
+private:
+    vector<const type_info*> siteTypes;
+    vector<vector<int> > siteParticles;
+    vector<vector<double> > siteWeights;
+};
+
+void CudaContext::findMoleculeGroups() {
+    // The first time this is called, we need to identify all the molecules in the system.
+    
+    if (moleculeGroups.size() == 0) {
+        // Add a ForceInfo that makes sure reordering doesn't break virtual sites.
+
+        addForce(new VirtualSiteInfo(system));
+
+        // First make a list of every other atom to which each atom is connect by a constraint or force group.
+
+        vector<vector<int> > atomBonds(system.getNumParticles());
+        for (int i = 0; i < system.getNumConstraints(); i++) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(i, particle1, particle2, distance);
+            atomBonds[particle1].push_back(particle2);
+            atomBonds[particle2].push_back(particle1);
+        }
+        for (int i = 0; i < (int) forces.size(); i++) {
+            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+                vector<int> particles;
+                forces[i]->getParticlesInGroup(j, particles);
+                for (int k = 0; k < (int) particles.size(); k++)
+                    for (int m = 0; m < (int) particles.size(); m++)
+                        if (k != m)
+                            atomBonds[particles[k]].push_back(particles[m]);
+            }
+        }
+
+        // Now tag atoms by which molecule they belong to.
+
+        vector<int> atomMolecule(numAtoms, -1);
+        int numMolecules = 0;
+        for (int i = 0; i < numAtoms; i++)
+            if (atomMolecule[i] == -1)
+                tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
+        vector<vector<int> > atomIndices(numMolecules);
+        for (int i = 0; i < numAtoms; i++)
+            atomIndices[atomMolecule[i]].push_back(i);
+
+        // Construct a description of each molecule.
+
+        molecules.resize(numMolecules);
+        for (int i = 0; i < numMolecules; i++) {
+            molecules[i].atoms = atomIndices[i];
+            molecules[i].groups.resize(forces.size());
+        }
+        for (int i = 0; i < system.getNumConstraints(); i++) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(i, particle1, particle2, distance);
+            molecules[atomMolecule[particle1]].constraints.push_back(i);
+        }
+        for (int i = 0; i < (int) forces.size(); i++)
+            for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+                vector<int> particles;
+                forces[i]->getParticlesInGroup(j, particles);
+                molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
+            }
+    }
+
+    // Sort them into groups of identical molecules.
+
+    vector<Molecule> uniqueMolecules;
+    vector<vector<int> > moleculeInstances;
+    vector<vector<int> > moleculeOffsets;
+    for (int molIndex = 0; molIndex < (int) molecules.size(); molIndex++) {
+        Molecule& mol = molecules[molIndex];
+
+        // See if it is identical to another molecule.
+
+        bool isNew = true;
+        for (int j = 0; j < (int) uniqueMolecules.size() && isNew; j++) {
+            Molecule& mol2 = uniqueMolecules[j];
+            bool identical = (mol.atoms.size() == mol2.atoms.size() && mol.constraints.size() == mol2.constraints.size());
+
+            // See if the atoms are identical.
+
+            int atomOffset = mol2.atoms[0]-mol.atoms[0];
+            for (int i = 0; i < (int) mol.atoms.size() && identical; i++) {
+                if (mol.atoms[i] != mol2.atoms[i]-atomOffset || system.getParticleMass(mol.atoms[i]) != system.getParticleMass(mol2.atoms[i]))
+                    identical = false;
+                for (int k = 0; k < (int) forces.size(); k++)
+                    if (!forces[k]->areParticlesIdentical(mol.atoms[i], mol2.atoms[i]))
+                        identical = false;
+            }
+            
+            // See if the constraints are identical.
+
+            for (int i = 0; i < (int) mol.constraints.size() && identical; i++) {
+                int c1particle1, c1particle2, c2particle1, c2particle2;
+                double distance1, distance2;
+                system.getConstraintParameters(mol.constraints[i], c1particle1, c1particle2, distance1);
+                system.getConstraintParameters(mol2.constraints[i], c2particle1, c2particle2, distance2);
+                if (c1particle1 != c2particle1-atomOffset || c1particle2 != c2particle2-atomOffset || distance1 != distance2)
+                    identical = false;
+            }
+
+            // See if the force groups are identical.
+
+            for (int i = 0; i < (int) forces.size() && identical; i++) {
+                if (mol.groups[i].size() != mol2.groups[i].size())
+                    identical = false;
+                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++)
+                    if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
+                        identical = false;
+            }
+            if (identical) {
+                moleculeInstances[j].push_back(molIndex);
+                moleculeOffsets[j].push_back(mol.atoms[0]);
+                isNew = false;
+            }
+        }
+        if (isNew) {
+            uniqueMolecules.push_back(mol);
+            moleculeInstances.push_back(vector<int>());
+            moleculeInstances[moleculeInstances.size()-1].push_back(molIndex);
+            moleculeOffsets.push_back(vector<int>());
+            moleculeOffsets[moleculeOffsets.size()-1].push_back(mol.atoms[0]);
+        }
+    }
+    moleculeGroups.resize(moleculeInstances.size());
+    for (int i = 0; i < (int) moleculeInstances.size(); i++)
+    {
+        moleculeGroups[i].instances = moleculeInstances[i];
+        moleculeGroups[i].offsets = moleculeOffsets[i];
+        vector<int>& atoms = uniqueMolecules[i].atoms;
+        moleculeGroups[i].atoms.resize(atoms.size());
+        for (int j = 0; j < (int) atoms.size(); j++)
+            moleculeGroups[i].atoms[j] = atoms[j]-atoms[0];
+    }
+}
+
+void CudaContext::invalidateMolecules() {
+    moleculesInvalid = true;
+}
+
 //void OpenCLContext::validateMolecules() {
 //    moleculesInvalid = false;
 //    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
