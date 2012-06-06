@@ -951,6 +951,27 @@ double ReferenceCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool inclu
     return obc->computeBornEnergyForces(posData, charges, forceData);
 }
 
+void ReferenceCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
+    int numParticles = force.getNumParticles();
+    ObcParameters* obcParameters = obc->getObcParameters();
+    if (numParticles != obcParameters->getAtomicRadii().size())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    vector<RealOpenMM> atomicRadii(numParticles);
+    vector<RealOpenMM> scaleFactors(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        charges[i] = (RealOpenMM) charge;
+        atomicRadii[i] = (RealOpenMM) radius;
+        scaleFactors[i] = (RealOpenMM) scalingFactor;
+    }
+    obcParameters->setAtomicRadii(atomicRadii);
+    obcParameters->setScaledRadiusFactors(scaleFactors);
+}
+
 ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
     if (gbvi) {
         GBVIParameters * gBVIParameters = gbvi->getGBVIParameters();

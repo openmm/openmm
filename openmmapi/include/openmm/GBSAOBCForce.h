@@ -153,6 +153,18 @@ public:
      * @param distance    the cutoff distance, measured in nm
      */
     void setCutoffDistance(double distance);
+    /**
+     * Update the particle parameters in a Context to match those stored in this Force object.  This method
+     * provides an efficient method to update certain parameters in an existing Context without needing to
+     * reinitialize it.  Simply call setParticleParameters() to modify this object's parameters, then call
+     * updateParametersInState() to copy them over to the Context.
+     * 
+     * The only information this method updates is the values of per-particle parameters.  All other aspects
+     * of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be changed
+     * by reinitializing the Context.  Furthermore, this method cannot be used to add new particles, only to
+     * change the parameters of existing ones.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

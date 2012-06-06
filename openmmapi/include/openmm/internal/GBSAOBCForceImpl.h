@@ -58,6 +58,7 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+    void updateParametersInContext(ContextImpl& context);
 private:
     GBSAOBCForce& owner;
     Kernel kernel;

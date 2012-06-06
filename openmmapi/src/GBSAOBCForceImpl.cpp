@@ -66,3 +66,7 @@ std::vector<std::string> GBSAOBCForceImpl::getKernelNames() {
     names.push_back(CalcGBSAOBCForceKernel::Name());
     return names;
 }
+
+void GBSAOBCForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcGBSAOBCForceKernel>().copyParametersToContext(context, owner);
+}

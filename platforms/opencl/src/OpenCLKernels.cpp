@@ -1797,6 +1797,34 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
     return 0.0;
 }
 
+void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    int numParticles = force.getNumParticles();
+    if (numParticles != cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    OpenCLArray<mm_float4>& posq = cl.getPosq();
+    posq.download();
+    vector<mm_float2> paramsVector(numParticles);
+    const double dielectricOffset = 0.009;
+    for (int i = 0; i < numParticles; i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        radius -= dielectricOffset;
+        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
+        posq[i].w = (float) charge;
+    }
+    posq.upload();
+    params->upload(paramsVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLCustomGBForceInfo : public OpenCLForceInfo {
 public:
     OpenCLCustomGBForceInfo(int requiredBuffers, const CustomGBForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {

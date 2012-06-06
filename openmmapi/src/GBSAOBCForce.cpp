@@ -78,3 +78,7 @@ void GBSAOBCForce::setCutoffDistance(double distance) {
 ForceImpl* GBSAOBCForce::createImpl() {
     return new GBSAOBCForceImpl(*this);
 }
+
+void GBSAOBCForce::updateParametersInContext(Context& context) {
+    dynamic_cast<GBSAOBCForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

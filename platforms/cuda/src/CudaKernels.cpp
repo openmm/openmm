@@ -1044,6 +1044,10 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
 	return 0.0;
 }
 
+void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
+}
+
 class CudaCalcGBVIForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const GBVIForce& force) : force(force) {

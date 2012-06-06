@@ -575,6 +575,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GBSAOBCForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) = 0;
 };
 
 /**
