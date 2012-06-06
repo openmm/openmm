@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -190,6 +190,17 @@ public:
      * @param parameters    the list of parameters for the angle
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, const std::vector<double>& parameters);
+    /**
+     * Update the per-angle parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setAngleParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * This method has several limitations.  The only information it updates is the values of per-angle parameters.
+     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * the Context.  The set of particles involved in a angle cannot be changed, nor can new angles be added.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

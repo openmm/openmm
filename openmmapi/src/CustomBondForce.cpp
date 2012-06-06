@@ -118,3 +118,6 @@ ForceImpl* CustomBondForce::createImpl() {
     return new CustomBondForceImpl(*this);
 }
 
+void CustomBondForce::updateParametersInContext(Context& context) {
+    dynamic_cast<CustomBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -97,6 +97,16 @@ public:
      * @param k            the force constant for the torsion
      */
     void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k);
+    /**
+     * Update the per-torsion parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setTorsionParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * The only information this method updates is the values of per-torsion parameters.  The set of particles involved
+     * in a torsion cannot be changed, nor can new torsions be added.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

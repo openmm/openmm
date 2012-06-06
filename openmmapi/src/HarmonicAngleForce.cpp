@@ -66,3 +66,7 @@ void HarmonicAngleForce::setAngleParameters(int index, int particle1, int partic
 ForceImpl* HarmonicAngleForce::createImpl() {
     return new HarmonicAngleForceImpl(*this);
 }
+
+void HarmonicAngleForce::updateParametersInContext(Context& context) {
+    dynamic_cast<HarmonicAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

@@ -62,6 +62,7 @@ public:
     }
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;
+    void updateParametersInContext(ContextImpl& context);
 private:
     HarmonicBondForce& owner;
     Kernel kernel;

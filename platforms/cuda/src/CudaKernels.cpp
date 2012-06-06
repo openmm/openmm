@@ -255,6 +255,10 @@ double CudaCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool inclu
     return 0.0;
 }
 
+void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
+}
+
 class CudaCalcCustomBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const CustomBondForce& force) : force(force) {
@@ -327,6 +331,10 @@ void CudaCalcCustomBondForceKernel::updateGlobalParams(ContextImpl& context) {
         SetCustomBondGlobalParams(globalParamValues);
 }
 
+void CudaCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
+}
+
 class CudaCalcHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const HarmonicAngleForce& force) : force(force) {
@@ -378,6 +386,10 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
 
 double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
 }
 
 class CudaCalcCustomAngleForceKernel::ForceInfo : public CudaForceInfo {
@@ -454,6 +466,10 @@ void CudaCalcCustomAngleForceKernel::updateGlobalParams(ContextImpl& context) {
         SetCustomAngleGlobalParams(globalParamValues);
 }
 
+void CudaCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
+}
+
 class CudaCalcPeriodicTorsionForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const PeriodicTorsionForce& force) : force(force) {
@@ -508,6 +524,10 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
 
 double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
 }
 
 class CudaCalcRBTorsionForceKernel::ForceInfo : public CudaForceInfo {
@@ -570,6 +590,10 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
 
 double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
 }
 
 class CudaCalcCMAPTorsionForceKernel::ForceInfo : public CudaForceInfo {
@@ -744,6 +768,10 @@ void CudaCalcCustomTorsionForceKernel::updateGlobalParams(ContextImpl& context) 
     }
     if (changed)
         SetCustomTorsionGlobalParams(globalParamValues);
+}
+
+void CudaCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
 }
 
 class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {

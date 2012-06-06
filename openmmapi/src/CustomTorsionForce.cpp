@@ -122,3 +122,6 @@ ForceImpl* CustomTorsionForce::createImpl() {
     return new CustomTorsionForceImpl(*this);
 }
 
+void CustomTorsionForce::updateParametersInContext(Context& context) {
+    dynamic_cast<CustomTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

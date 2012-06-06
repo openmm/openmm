@@ -351,6 +351,29 @@ double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool inc
     return 0.0;
 }
 
+void OpenCLCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    if (numBonds != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    
+    // Record the per-bond parameters.
+    
+    vector<mm_float2> paramVector(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        int atom1, atom2;
+        double length, k;
+        force.getBondParameters(startIndex+i, atom1, atom2, length, k);
+        paramVector[i] = mm_float2((cl_float) length, (cl_float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLCustomBondForceInfo : public OpenCLForceInfo {
 public:
     OpenCLCustomBondForceInfo(const CustomBondForce& force) : OpenCLForceInfo(0), force(force) {
@@ -467,6 +490,31 @@ double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool inclu
     return 0.0;
 }
 
+void OpenCLCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    if (numBonds != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    
+    // Record the per-bond parameters.
+    
+    vector<vector<cl_float> > paramVector(numBonds);
+    vector<double> parameters;
+    for (int i = 0; i < numBonds; i++) {
+        int atom1, atom2;
+        force.getBondParameters(startIndex+i, atom1, atom2, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLHarmonicAngleForceInfo : public OpenCLForceInfo {
 public:
     OpenCLHarmonicAngleForceInfo(const HarmonicAngleForce& force) : OpenCLForceInfo(0), force(force) {
@@ -525,6 +573,29 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
 
 double OpenCLCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void OpenCLCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    if (numAngles != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    
+    // Record the per-angle parameters.
+    
+    vector<mm_float2> paramVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        int atom1, atom2, atom3;
+        double angle, k;
+        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
+        paramVector[i] = mm_float2((cl_float) angle, (cl_float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
 }
 
 class OpenCLCustomAngleForceInfo : public OpenCLForceInfo {
@@ -644,6 +715,31 @@ double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool incl
     return 0.0;
 }
 
+void OpenCLCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    if (numAngles != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    
+    // Record the per-angle parameters.
+    
+    vector<vector<cl_float> > paramVector(numAngles);
+    vector<double> parameters;
+    for (int i = 0; i < numAngles; i++) {
+        int atom1, atom2, atom3;
+        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLPeriodicTorsionForceInfo : public OpenCLForceInfo {
 public:
     OpenCLPeriodicTorsionForceInfo(const PeriodicTorsionForce& force) : OpenCLForceInfo(0), force(force) {
@@ -692,7 +788,6 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
         double phase, k;
         force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], periodicity, phase, k);
         paramVector[i] = mm_float4((cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f);
-
     }
     params->upload(paramVector);
     map<string, string> replacements;
@@ -704,6 +799,29 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
 
 double OpenCLCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void OpenCLCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    if (numTorsions != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    
+    // Record the per-torsion parameters.
+    
+    vector<mm_float4> paramVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int atom1, atom2, atom3, atom4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
+        paramVector[i] = mm_float4((cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
 }
 
 class OpenCLRBTorsionForceInfo : public OpenCLForceInfo {
@@ -765,6 +883,29 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
 
 double OpenCLCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void OpenCLCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    if (numTorsions != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    
+    // Record the per-torsion parameters.
+    
+    vector<mm_float8> paramVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int atom1, atom2, atom3, atom4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
+        paramVector[i] = mm_float8((cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
 }
 
 class OpenCLCMAPTorsionForceInfo : public OpenCLForceInfo {
@@ -970,6 +1111,31 @@ double OpenCLCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool in
             globals->upload(globalParamValues);
     }
     return 0.0;
+}
+
+void OpenCLCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    if (numTorsions != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    
+    // Record the per-torsion parameters.
+    
+    vector<vector<cl_float> > paramVector(numTorsions);
+    vector<double> parameters;
+    for (int i = 0; i < numTorsions; i++) {
+        int atom1, atom2, atom3, atom4;
+        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
 }
 
 class OpenCLNonbondedForceInfo : public OpenCLForceInfo {

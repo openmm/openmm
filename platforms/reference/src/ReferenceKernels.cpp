@@ -326,7 +326,7 @@ void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, cons
     numBonds = force.getNumBonds();
     bondIndexArray = allocateIntArray(numBonds, 2);
     bondParamArray = allocateRealArray(numBonds, 2);
-    for (int i = 0; i < force.getNumBonds(); ++i) {
+    for (int i = 0; i < numBonds; ++i) {
         int particle1, particle2;
         double length, k;
         force.getBondParameters(i, particle1, particle2, length, k);
@@ -347,6 +347,25 @@ double ReferenceCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool 
     return energy;
 }
 
+void ReferenceCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    if (numBonds != force.getNumBonds())
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numBonds; ++i) {
+        int particle1, particle2;
+        double length, k;
+        force.getBondParameters(i, particle1, particle2, length, k);
+        if (particle1 != bondIndexArray[i][0] || particle2 != bondIndexArray[i][1])
+            throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
+        bondIndexArray[i][0] = particle1;
+        bondIndexArray[i][1] = particle2;
+        bondParamArray[i][0] = (RealOpenMM) length;
+        bondParamArray[i][1] = (RealOpenMM) k;
+    }
+}
+
 ReferenceCalcCustomBondForceKernel::~ReferenceCalcCustomBondForceKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);
@@ -361,7 +380,7 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
     bondIndexArray = allocateIntArray(numBonds, 2);
     bondParamArray = allocateRealArray(numBonds, numParameters);
     vector<double> params;
-    for (int i = 0; i < force.getNumBonds(); ++i) {
+    for (int i = 0; i < numBonds; ++i) {
         int particle1, particle2;
         force.getBondParameters(i, particle1, particle2, params);
         bondIndexArray[i][0] = particle1;
@@ -394,6 +413,24 @@ double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool in
     return energy;
 }
 
+void ReferenceCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+    if (numBonds != force.getNumBonds())
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerBondParameters();
+    vector<double> params;
+    for (int i = 0; i < numBonds; ++i) {
+        int particle1, particle2;
+        force.getBondParameters(i, particle1, particle2, params);
+        if (particle1 != bondIndexArray[i][0] || particle2 != bondIndexArray[i][1])
+            throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
+        for (int j = 0; j < numParameters; j++)
+            bondParamArray[i][j] = (RealOpenMM) params[j];
+    }
+}
+
 ReferenceCalcHarmonicAngleForceKernel::~ReferenceCalcHarmonicAngleForceKernel() {
     disposeIntArray(angleIndexArray, numAngles);
     disposeRealArray(angleParamArray, numAngles);
@@ -403,7 +440,7 @@ void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, con
     numAngles = force.getNumAngles();
     angleIndexArray = allocateIntArray(numAngles, 3);
     angleParamArray = allocateRealArray(numAngles, 2);
-    for (int i = 0; i < force.getNumAngles(); ++i) {
+    for (int i = 0; i < numAngles; ++i) {
         int particle1, particle2, particle3;
         double angle, k;
         force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
@@ -425,6 +462,23 @@ double ReferenceCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool
     return energy;
 }
 
+void ReferenceCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        if (particle1 != angleIndexArray[i][0] || particle2 != angleIndexArray[i][1] || particle3 != angleIndexArray[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        angleParamArray[i][0] = (RealOpenMM) angle;
+        angleParamArray[i][1] = (RealOpenMM) k;
+    }
+}
+
 ReferenceCalcCustomAngleForceKernel::~ReferenceCalcCustomAngleForceKernel() {
     disposeIntArray(angleIndexArray, numAngles);
     disposeRealArray(angleParamArray, numAngles);
@@ -439,7 +493,7 @@ void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const
     angleIndexArray = allocateIntArray(numAngles, 3);
     angleParamArray = allocateRealArray(numAngles, numParameters);
     vector<double> params;
-    for (int i = 0; i < force.getNumAngles(); ++i) {
+    for (int i = 0; i < numAngles; ++i) {
         int particle1, particle2, particle3;
         force.getAngleParameters(i, particle1, particle2, particle3, params);
         angleIndexArray[i][0] = particle1;
@@ -473,6 +527,24 @@ double ReferenceCalcCustomAngleForceKernel::execute(ContextImpl& context, bool i
     return energy;
 }
 
+void ReferenceCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerAngleParameters();
+    vector<double> params;
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1, particle2, particle3;
+        force.getAngleParameters(i, particle1, particle2, particle3, params);
+        if (particle1 != angleIndexArray[i][0] || particle2 != angleIndexArray[i][1] || particle3 != angleIndexArray[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        for (int j = 0; j < numParameters; j++)
+            angleParamArray[i][j] = (RealOpenMM) params[j];
+    }
+}
+
 ReferenceCalcPeriodicTorsionForceKernel::~ReferenceCalcPeriodicTorsionForceKernel() {
     disposeIntArray(torsionIndexArray, numTorsions);
     disposeRealArray(torsionParamArray, numTorsions);
@@ -482,7 +554,7 @@ void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, c
     numTorsions = force.getNumTorsions();
     torsionIndexArray = allocateIntArray(numTorsions, 4);
     torsionParamArray = allocateRealArray(numTorsions, 3);
-    for (int i = 0; i < force.getNumTorsions(); ++i) {
+    for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
@@ -506,6 +578,24 @@ double ReferenceCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bo
     return energy;
 }
 
+void ReferenceCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    if (numTorsions != force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        if (particle1 != torsionIndexArray[i][0] || particle2 != torsionIndexArray[i][1] || particle3 != torsionIndexArray[i][2] || particle4 != torsionIndexArray[i][3])
+            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
+        torsionParamArray[i][0] = (RealOpenMM) k;
+        torsionParamArray[i][1] = (RealOpenMM) phase;
+        torsionParamArray[i][2] = (RealOpenMM) periodicity;
+    }
+}
+
 ReferenceCalcRBTorsionForceKernel::~ReferenceCalcRBTorsionForceKernel() {
     disposeIntArray(torsionIndexArray, numTorsions);
     disposeRealArray(torsionParamArray, numTorsions);
@@ -515,7 +605,7 @@ void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const R
     numTorsions = force.getNumTorsions();
     torsionIndexArray = allocateIntArray(numTorsions, 4);
     torsionParamArray = allocateRealArray(numTorsions, 6);
-    for (int i = 0; i < force.getNumTorsions(); ++i) {
+    for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
@@ -540,6 +630,27 @@ double ReferenceCalcRBTorsionForceKernel::execute(ContextImpl& context, bool inc
     ReferenceRbDihedralBond rbTorsionBond;
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, rbTorsionBond);
     return energy;
+}
+
+void ReferenceCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
+    if (numTorsions != force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        if (particle1 != torsionIndexArray[i][0] || particle2 != torsionIndexArray[i][1] || particle3 != torsionIndexArray[i][2] || particle4 != torsionIndexArray[i][3])
+            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
+        torsionParamArray[i][0] = (RealOpenMM) c0;
+        torsionParamArray[i][1] = (RealOpenMM) c1;
+        torsionParamArray[i][2] = (RealOpenMM) c2;
+        torsionParamArray[i][3] = (RealOpenMM) c3;
+        torsionParamArray[i][4] = (RealOpenMM) c4;
+        torsionParamArray[i][5] = (RealOpenMM) c5;
+    }
 }
 
 void ReferenceCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
@@ -591,7 +702,7 @@ void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, con
     torsionIndexArray = allocateIntArray(numTorsions, 4);
     torsionParamArray = allocateRealArray(numTorsions, numParameters);
     vector<double> params;
-    for (int i = 0; i < force.getNumTorsions(); ++i) {
+    for (int i = 0; i < numTorsions; ++i) {
         int particle1, particle2, particle3, particle4;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, params);
         torsionIndexArray[i][0] = particle1;
@@ -624,6 +735,24 @@ double ReferenceCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool
     ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters);
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, includeEnergy ? &energy : NULL, customTorsion);
     return energy;
+}
+
+void ReferenceCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
+    if (numTorsions != force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerTorsionParameters();
+    vector<double> params;
+    for (int i = 0; i < numTorsions; ++i) {
+        int particle1, particle2, particle3, particle4;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, params);
+        if (particle1 != torsionIndexArray[i][0] || particle2 != torsionIndexArray[i][1] || particle3 != torsionIndexArray[i][2] || particle4 != torsionIndexArray[i][3])
+            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
+        for (int j = 0; j < numParameters; j++)
+            torsionParamArray[i][j] = (RealOpenMM) params[j];
+    }
 }
 
 ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {

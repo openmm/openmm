@@ -60,6 +60,7 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;
+    void updateParametersInContext(ContextImpl& context);
 private:
     CustomBondForce& owner;
     Kernel kernel;

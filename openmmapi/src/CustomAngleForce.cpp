@@ -120,3 +120,6 @@ ForceImpl* CustomAngleForce::createImpl() {
     return new CustomAngleForceImpl(*this);
 }
 
+void CustomAngleForce::updateParametersInContext(Context& context) {
+    dynamic_cast<CustomAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

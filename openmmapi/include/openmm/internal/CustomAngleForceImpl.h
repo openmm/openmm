@@ -59,6 +59,7 @@ public:
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    void updateParametersInContext(ContextImpl& context);
 private:
     CustomAngleForce& owner;
     Kernel kernel;

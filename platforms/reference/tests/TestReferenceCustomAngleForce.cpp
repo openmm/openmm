@@ -90,11 +90,36 @@ void testAngles() {
     init_gen_rand(0, sfmt);
 
     vector<Vec3> positions(4);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context c1(customSystem, integrator1, platform);
+    Context c2(harmonicSystem, integrator2, platform);
     for (int i = 0; i < 10; i++) {
-        VerletIntegrator integrator1(0.01);
-        VerletIntegrator integrator2(0.01);
-        Context c1(customSystem, integrator1, platform);
-        Context c2(harmonicSystem, integrator2, platform);
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
+        c1.setPositions(positions);
+        c2.setPositions(positions);
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = s1.getForces();
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
+        ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
+    }
+    
+    // Try changing the angle parameters and make sure it's still correct.
+    
+    parameters[0] = 1.6;
+    parameters[1] = 0.9;
+    custom->setAngleParameters(0, 0, 1, 2, parameters);
+    parameters[0] = 2.1;
+    parameters[1] = 0.6;
+    custom->setAngleParameters(1, 1, 2, 3, parameters);
+    custom->updateParametersInContext(c1);
+    harmonic->setAngleParameters(0, 0, 1, 2, 1.6, 0.9);
+    harmonic->setAngleParameters(1, 1, 2, 3, 2.1, 0.6);
+    harmonic->updateParametersInContext(c2);
+    {
         for (int j = 0; j < (int) positions.size(); j++)
             positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
         c1.setPositions(positions);

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -187,6 +187,17 @@ public:
      * @param parameters    the list of parameters for the bond
      */
     void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+    /**
+     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * This method has several limitations.  The only information it updates is the values of per-bond parameters.
+     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

@@ -111,6 +111,31 @@ void testTorsions() {
             ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
         ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
     }
+    
+    // Try changing the torsion parameters and make sure it's still correct.
+    
+    parameters[0] = 1.6;
+    parameters[1] = 2;
+    custom->setTorsionParameters(0, 0, 1, 2, 3, parameters);
+    parameters[0] = 2.1;
+    parameters[1] = 3;
+    custom->setTorsionParameters(1, 1, 2, 3, 4, parameters);
+    custom->updateParametersInContext(c1);
+    periodic->setTorsionParameters(0, 0, 1, 2, 3, 2, 1.6, 0.5);
+    periodic->setTorsionParameters(1, 1, 2, 3, 4, 3, 2.1, 0.5);
+    periodic->updateParametersInContext(c2);
+    {
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
+        c1.setPositions(positions);
+        c2.setPositions(positions);
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = s1.getForces();
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
+        ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
+    }
 }
 
 void testRange() {

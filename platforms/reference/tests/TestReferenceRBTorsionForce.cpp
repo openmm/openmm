@@ -67,22 +67,48 @@ void testRBTorsions() {
     positions[3] = Vec3(1, 1, 1);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
-    const vector<Vec3>& forces = state.getForces();
-    double psi = 0.25*PI_M - PI_M;
-    double torque = 0.0;
-    for (int i = 1; i < 6; ++i) {
-        double c = 0.1*(i+1);
-        torque += -c*i*std::pow(std::cos(psi), i-1)*std::sin(psi);
+    {
+        const vector<Vec3>& forces = state.getForces();
+        double psi = 0.25*PI_M - PI_M;
+        double torque = 0.0;
+        for (int i = 1; i < 6; ++i) {
+            double c = 0.1*(i+1);
+            torque += -c*i*std::pow(std::cos(psi), i-1)*std::sin(psi);
+        }
+        ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, -0.5*torque), forces[3], TOL);
+        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+        double energy = 0.0;
+        for (int i = 0; i < 6; ++i) {
+            double c = 0.1*(i+1);
+            energy += c*std::pow(std::cos(psi), i);
+        }
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
     }
-    ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
-    ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, -0.5*torque), forces[3], TOL);
-    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-    double energy = 0.0;
-    for (int i = 0; i < 6; ++i) {
-        double c = 0.1*(i+1);
-        energy += c*std::pow(std::cos(psi), i);
+    
+    // Try changing the torsion parameters and make sure it's still correct.
+    
+    forceField->setTorsionParameters(0, 0, 1, 2, 3, 0.11, 0.22, 0.33, 0.44, 0.55, 0.66);
+    forceField->updateParametersInContext(context);
+    state = context.getState(State::Forces | State::Energy);
+    {
+        const vector<Vec3>& forces = state.getForces();
+        double psi = 0.25*PI_M - PI_M;
+        double torque = 0.0;
+        for (int i = 1; i < 6; ++i) {
+            double c = 0.11*(i+1);
+            torque += -c*i*std::pow(std::cos(psi), i-1)*std::sin(psi);
+        }
+        ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, -0.5*torque), forces[3], TOL);
+        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+        double energy = 0.0;
+        for (int i = 0; i < 6; ++i) {
+            double c = 0.11*(i+1);
+            energy += c*std::pow(std::cos(psi), i);
+        }
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
     }
-    ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
 }
 
 int main() {

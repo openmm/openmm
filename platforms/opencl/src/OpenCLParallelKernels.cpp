@@ -234,6 +234,11 @@ double OpenCLParallelCalcHarmonicBondForceKernel::execute(ContextImpl& context, 
     return 0.0;
 }
 
+void OpenCLParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class OpenCLParallelCalcCustomBondForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcCustomBondForceKernel& kernel, bool includeForce,
@@ -268,6 +273,11 @@ double OpenCLParallelCalcCustomBondForceKernel::execute(ContextImpl& context, bo
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
 }
 
 class OpenCLParallelCalcHarmonicAngleForceKernel::Task : public OpenCLContext::WorkTask {
@@ -306,6 +316,11 @@ double OpenCLParallelCalcHarmonicAngleForceKernel::execute(ContextImpl& context,
     return 0.0;
 }
 
+void OpenCLParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class OpenCLParallelCalcCustomAngleForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcCustomAngleForceKernel& kernel, bool includeForce,
@@ -340,6 +355,11 @@ double OpenCLParallelCalcCustomAngleForceKernel::execute(ContextImpl& context, b
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
 }
 
 class OpenCLParallelCalcPeriodicTorsionForceKernel::Task : public OpenCLContext::WorkTask {
@@ -378,6 +398,11 @@ double OpenCLParallelCalcPeriodicTorsionForceKernel::execute(ContextImpl& contex
     return 0.0;
 }
 
+void OpenCLParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class OpenCLParallelCalcRBTorsionForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcRBTorsionForceKernel& kernel, bool includeForce,
@@ -412,6 +437,11 @@ double OpenCLParallelCalcRBTorsionForceKernel::execute(ContextImpl& context, boo
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
 }
 
 class OpenCLParallelCalcCMAPTorsionForceKernel::Task : public OpenCLContext::WorkTask {
@@ -484,6 +514,11 @@ double OpenCLParallelCalcCustomTorsionForceKernel::execute(ContextImpl& context,
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
 }
 
 class OpenCLParallelCalcNonbondedForceKernel::Task : public OpenCLContext::WorkTask {

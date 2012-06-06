@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -274,6 +274,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicBondForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) = 0;
 };
 
 /**
@@ -302,6 +309,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomBondForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force) = 0;
 };
 
 /**
@@ -330,6 +344,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicAngleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) = 0;
 };
 
 /**
@@ -358,6 +379,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomAngleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) = 0;
 };
 
 /**
@@ -386,6 +414,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the PeriodicTorsionForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) = 0;
 };
 
 /**
@@ -414,6 +449,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RBTorsionForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) = 0;
 };
 
 /**
@@ -470,6 +512,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomTorsionForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) = 0;
 };
 
 /**

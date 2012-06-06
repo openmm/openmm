@@ -243,6 +243,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
 private:
     int numBonds;
     bool hasInitializedKernel;
@@ -276,6 +283,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
 private:
     int numBonds;
     bool hasInitializedKernel;
@@ -312,6 +326,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
 private:
     int numAngles;
     bool hasInitializedKernel;
@@ -345,6 +366,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
 private:
     int numAngles;
     bool hasInitializedKernel;
@@ -381,6 +409,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the PeriodicTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
@@ -414,6 +449,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RBTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;
@@ -482,6 +524,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
 private:
     int numTorsions;
     bool hasInitializedKernel;

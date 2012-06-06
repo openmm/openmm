@@ -68,13 +68,33 @@ void testAngles() {
     positions[3] = Vec3(2, 1, 0);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
-    const vector<Vec3>& forces = state.getForces();
-    double torque1 = 1.1*PI_M/6;
-    double torque2 = 1.2*PI_M/4;
-    ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
-    ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
-    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
-    ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
+    {
+        const vector<Vec3>& forces = state.getForces();
+        double torque1 = 1.1*PI_M/6;
+        double torque2 = 1.2*PI_M/4;
+        ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
+        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+        ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
+    }
+    
+    // Try changing the angle parameters and make sure it's still correct.
+    
+    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3.1, 1.3);
+    forceField->setAngleParameters(1, 1, 2, 3, PI_M/2.1, 1.4);
+    forceField->updateParametersInContext(context);
+    state = context.getState(State::Forces | State::Energy);
+    {
+        const vector<Vec3>& forces = state.getForces();
+        double dtheta1 = (PI_M/2)-(PI_M/3.1);
+        double dtheta2 = (3*PI_M/4)-(PI_M/2.1);
+        double torque1 = 1.3*dtheta1;
+        double torque2 = 1.4*dtheta2;
+        ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
+        ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+        ASSERT_EQUAL_TOL(0.5*1.3*dtheta1*dtheta1 + 0.5*1.4*dtheta2*dtheta2, state.getPotentialEnergy(), TOL);
+    }
 }
 
 int main() {

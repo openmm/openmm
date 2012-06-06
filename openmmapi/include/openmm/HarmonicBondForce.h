@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -88,6 +88,16 @@ public:
      * @param k         the harmonic force constant for the bond, measured in kJ/mol/nm^2
      */
     void setBondParameters(int index, int particle1, int particle2, double length, double k);
+    /**
+     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * The only information this method updates is the values of per-bond parameters.  The set of particles involved
+     * in a bond cannot be changed, nor can new bonds be added.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:
