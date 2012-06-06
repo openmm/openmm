@@ -225,7 +225,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
     // Create utility kernels that are used in multiple places.
 
-    utilities = createProgram(OpenCLKernelSources::utilities);
+    cl::Program utilities = createProgram(OpenCLKernelSources::utilities);
     clearBufferKernel = cl::Kernel(utilities, "clearBuffer");
     clearTwoBuffersKernel = cl::Kernel(utilities, "clearTwoBuffers");
     clearThreeBuffersKernel = cl::Kernel(utilities, "clearThreeBuffers");
@@ -340,25 +340,6 @@ void OpenCLContext::addForce(OpenCLForceInfo* force) {
     forces.push_back(force);
 }
 
-string OpenCLContext::loadSourceFromFile(const string& filename) const {
-    ifstream file((Platform::getDefaultPluginsDirectory()+"/opencl/"+filename).c_str());
-    if (!file.is_open())
-        throw OpenMMException("Unable to load kernel: "+filename);
-    string kernel;
-    string line;
-    while (!file.eof()) {
-        getline(file, line);
-        kernel += line;
-        kernel += '\n';
-    }
-    file.close();
-    return kernel;
-}
-
-string OpenCLContext::loadSourceFromFile(const string& filename, const std::map<std::string, std::string>& replacements) const {
-    return replaceStrings(loadSourceFromFile(filename), replacements);
-}
-
 string OpenCLContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
     string result = input;
     for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
@@ -377,7 +358,7 @@ cl::Program OpenCLContext::createProgram(const string source, const char* optimi
 }
 
 cl::Program OpenCLContext::createProgram(const string source, const map<string, string>& defines, const char* optimizationFlags) {
-    string options = (optimizationFlags == NULL ? defaultOptimizationOptions : optimizationFlags);
+    string options = (optimizationFlags == NULL ? defaultOptimizationOptions : string(optimizationFlags));
     stringstream src;
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;

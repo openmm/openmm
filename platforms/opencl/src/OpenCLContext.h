@@ -242,18 +242,7 @@ public:
         return posCellOffsets;
     }
     /**
-     * Load OpenCL source code from a file in the kernels directory.
-     */
-    std::string loadSourceFromFile(const std::string& filename) const;
-    /**
-     * Load OpenCL source code from a file in the kernels directory.
-     *
-     * @param filename     the file to load
-     * @param replacements a set of strings that should be replaced with new strings wherever they appear in the
-     */
-    std::string loadSourceFromFile(const std::string& filename, const std::map<std::string, std::string>& replacements) const;
-    /**
-     * Replace all occurance of a list of substrings.
+     * Replace all occurrences of a list of substrings.
      *
      * @param input   a string to process
      * @param replacements a set of strings that should be replaced with new strings wherever they appear in the input string
@@ -526,7 +515,6 @@ private:
     cl::Context context;
     cl::Device device;
     cl::CommandQueue queue;
-    cl::Program utilities;
     cl::Kernel clearBufferKernel;
     cl::Kernel clearTwoBuffersKernel;
     cl::Kernel clearThreeBuffersKernel;
