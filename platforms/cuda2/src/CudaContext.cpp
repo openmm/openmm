@@ -32,7 +32,7 @@
 #include "CudaArray.h"
 //#include "CudaBondedUtilities.h"
 #include "CudaForceInfo.h"
-//#include "CudaIntegrationUtilities.h"
+#include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
 //#include "CudaNonbondedUtilities.h"
 #include "hilbert.h"
@@ -40,6 +40,7 @@
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
+#include "CudaExpressionUtilities.h"
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
@@ -66,8 +67,8 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
-        velm(NULL), /*forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
-        bonded(NULL), nonbonded(NULL),*/ thread(NULL) {
+        velm(NULL), /*forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL),*/ integration(NULL), expression(NULL),
+        /*bonded(NULL), nonbonded(NULL),*/ thread(NULL) {
     if (!hasInitializedCuda) {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;
@@ -143,11 +144,17 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, paddedNumAtoms*sizeof(double4), 0));
         posq = CudaArray::create<double4>(paddedNumAtoms, "posq");
         velm = CudaArray::create<double4>(paddedNumAtoms, "velm");
+        compilationDefines["make_real2"] = "make_double2";
+        compilationDefines["make_real3"] = "make_double3";
+        compilationDefines["make_real4"] = "make_double4";
     }
     else {
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, paddedNumAtoms*sizeof(float4), 0));
         posq = CudaArray::create<float4>(paddedNumAtoms, "posq");
         velm = CudaArray::create<float4>(paddedNumAtoms, "velm");
+        compilationDefines["make_real2"] = "make_float2";
+        compilationDefines["make_real3"] = "make_float3";
+        compilationDefines["make_real4"] = "make_float4";
     }
     posCellOffsets.resize(paddedNumAtoms, make_int4(0, 0, 0, 0));
 
@@ -160,8 +167,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     clearFourBuffersKernel = getKernel(utilities, "clearFourBuffers");
     clearFiveBuffersKernel = getKernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = getKernel(utilities, "clearSixBuffers");
-    reduceFloat4Kernel = getKernel(utilities, "reduceFloat4Buffer");
-    reduceForcesKernel = getKernel(utilities, "reduceForces");
 
     // Set defines based on the requested precision.
 
@@ -170,14 +175,21 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["RECIP"] = useDoublePrecision ? "1.0/" : "1.0f/";
     compilationDefines["EXP"] = useDoublePrecision ? "exp" : "expf";
     compilationDefines["LOG"] = useDoublePrecision ? "log" : "logf";
+    compilationDefines["COS"] = useDoublePrecision ? "cos" : "cosf";
+    compilationDefines["SIN"] = useDoublePrecision ? "sin" : "sinf";
+    compilationDefines["TAN"] = useDoublePrecision ? "tan" : "tanf";
+    compilationDefines["ACOS"] = useDoublePrecision ? "acos" : "acosf";
+    compilationDefines["ASIN"] = useDoublePrecision ? "asin" : "asinf";
+    compilationDefines["ATAN"] = useDoublePrecision ? "atan" : "atanf";
     
     // Create the work thread used for parallelization when running on multiple devices.
     
     thread = new WorkThread();
-//    
-//    // Create the integration utilities object.
-//    
-//    integration = new CudaIntegrationUtilities(*this, system);
+    
+    // Create utilities objects.
+    
+    integration = new CudaIntegrationUtilities(*this, system);
+    expression = new CudaExpressionUtilities(*this);
 }
 
 CudaContext::~CudaContext() {
@@ -201,8 +213,10 @@ CudaContext::~CudaContext() {
 //        delete energyBuffer;
 //    if (atomIndex != NULL)
 //        delete atomIndex;
-//    if (integration != NULL)
-//        delete integration;
+    if (integration != NULL)
+        delete integration;
+    if (expression != NULL)
+        delete expression;
 //    if (bonded != NULL)
 //        delete bonded;
 //    if (nonbonded != NULL)
@@ -272,6 +286,18 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     }
     if (!compilationDefines.empty())
         src << endl;
+    if (useDoublePrecision) {
+        src << "typedef double real;\n";
+        src << "typedef double2 real2;\n";
+        src << "typedef double3 real3;\n";
+        src << "typedef double4 real4;\n";
+    }
+    else {
+        src << "typedef float real;\n";
+        src << "typedef float2 real2;\n";
+        src << "typedef float3 real3;\n";
+        src << "typedef float4 real4;\n";
+    }
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
         src << "#define " << iter->first;
         if (!iter->second.empty())
@@ -498,22 +524,7 @@ void CudaContext::addAutoclearBuffer(CUdeviceptr memory, int size) {
 //        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]);
 //    }
 //}
-//
-//void CudaContext::reduceForces() {
-//    if (supports64BitGlobalAtomics)
-//        executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
-//    else
-//        reduceBuffer(*forceBuffers, numForceBuffers);
-//}
-//
-//void CudaContext::reduceBuffer(CudaArray<mm_float4>& array, int numBuffers) {
-//    int bufferSize = array.getSize()/numBuffers;
-//    reduceFloat4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
-//    reduceFloat4Kernel.setArg<cl_int>(1, bufferSize);
-//    reduceFloat4Kernel.setArg<cl_int>(2, numBuffers);
-//    executeKernel(reduceFloat4Kernel, bufferSize, 128);
-//}
-//
+
 void CudaContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {
     // Recursively tag atoms as belonging to a particular molecule.
 

@@ -46,6 +46,7 @@ namespace OpenMM {
 
 class CudaArray;
 class CudaForceInfo;
+class CudaExpressionUtilities;
 class CudaIntegrationUtilities;
 class CudaBondedUtilities;
 class CudaNonbondedUtilities;
@@ -216,25 +217,13 @@ public:
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      *
      * @param memory     the memory to clear
-     * @param size       the number of float/double elements in the buffer
+     * @param size       the number of 4-byte elements in the buffer
      */
     void addAutoclearBuffer(CUdeviceptr memory, int size);
 //    /**
 //     * Clear all buffers that have been registered with addAutoclearBuffer().
 //     */
 //    void clearAutoclearBuffers();
-//    /**
-//     * Given a collection of buffers packed into an array, sum them and store
-//     * the sum in the first buffer.
-//     *
-//     * @param array       the array containing the buffers to reduce
-//     * @param numBuffers  the number of buffers packed into the array
-//     */
-//    void reduceBuffer(CudaArray<mm_float4>& array, int numBuffers);
-//    /**
-//     * Sum the buffesr containing forces.
-//     */
-//    void reduceForces();
     /**
      * Get the current simulation time.
      */
@@ -341,12 +330,18 @@ public:
 //    float4 getInvPeriodicBoxSize() const {
 //        return invPeriodicBoxSize;
 //    }
-//    /**
-//     * Get the CudaIntegrationUtilities for this context.
-//     */
-//    CudaIntegrationUtilities& getIntegrationUtilities() {
-//        return *integration;
-//    }
+    /**
+     * Get the CudaIntegrationUtilities for this context.
+     */
+    CudaIntegrationUtilities& getIntegrationUtilities() {
+        return *integration;
+    }
+    /**
+     * Get the CudaExpressionUtilities for this context.
+     */
+    CudaExpressionUtilities& getExpressionUtilities() {
+        return *expression;
+    }
 //    /**
 //     * Get the CudaBondedUtilities for this context.
 //     */
@@ -445,8 +440,6 @@ private:
     CUfunction clearFourBuffersKernel;
     CUfunction clearFiveBuffersKernel;
     CUfunction clearSixBuffersKernel;
-    CUfunction reduceFloat4Kernel;
-    CUfunction reduceForcesKernel;
     std::vector<CudaForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -461,7 +454,8 @@ private:
     std::vector<CUdeviceptr> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
     std::vector<ReorderListener*> reorderListeners;
-//    CudaIntegrationUtilities* integration;
+    CudaIntegrationUtilities* integration;
+    CudaExpressionUtilities* expression;
 //    CudaBondedUtilities* bonded;
 //    CudaNonbondedUtilities* nonbonded;
     WorkThread* thread;
