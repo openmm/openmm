@@ -1033,6 +1033,10 @@ void CudaCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context
         SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
+void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
+}
+
 class CudaCalcGBSAOBCForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const GBSAOBCForce& force) : force(force) {
@@ -1202,6 +1206,10 @@ void CudaCalcCustomExternalForceKernel::updateGlobalParams(ContextImpl& context)
     }
     if (changed)
         SetCustomExternalGlobalParams(globalParamValues);
+}
+
+void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+    throw OpenMMException("CudaPlatform does not support copyParametersToContext");
 }
 
 void OPENMMCUDA_EXPORT OpenMM::cudaOpenMMInitializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -114,4 +114,8 @@ void CustomExternalForce::setParticleParameters(int index, int particle, const v
 
 ForceImpl* CustomExternalForce::createImpl() {
     return new CustomExternalForceImpl(*this);
+}
+
+void CustomExternalForce::updateParametersInContext(Context& context) {
+    dynamic_cast<CustomExternalForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }

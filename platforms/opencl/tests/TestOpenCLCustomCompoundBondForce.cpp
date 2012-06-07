@@ -121,6 +121,24 @@ void testBond() {
             ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
         ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
     }
+    
+    // Try changing the bond parameters and make sure it's still correct.
+    
+    parameters[0] = 1.6;
+    parameters[3] = 1.3;
+    custom->setBondParameters(0, particles, parameters);
+    custom->updateParametersInContext(c1);
+    bonds->setBondParameters(0, 0, 1, 1.3, 1.6);
+    bonds->setBondParameters(1, 1, 3, 1.3, 1.6);
+    bonds->updateParametersInContext(c2);
+    {
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = s1.getForces();
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
+        ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
+    }
 }
 
 void testPositionDependence() {

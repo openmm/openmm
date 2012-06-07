@@ -98,11 +98,11 @@ void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, boo
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cl.setAtomsWereReordered(false);
-    if (cl.getMoleculesAreInvalid() || (nb.getUseCutoff() && includeNonbonded && cl.getComputeForceCount()%100 == 0)) {
+    if (nb.getUseCutoff() && includeNonbonded && (cl.getMoleculesAreInvalid() || cl.getComputeForceCount()%100 == 0)) {
         cl.reorderAtoms(!cl.getMoleculesAreInvalid());
         nb.updateNeighborListSize();
-        cl.setComputeForceCount(cl.getComputeForceCount()+1);
     }
+    cl.setComputeForceCount(cl.getComputeForceCount()+1);
     cl.clearAutoclearBuffers();
     if (includeNonbonded)
         nb.prepareInteractions();
@@ -1769,6 +1769,28 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
+void OpenCLCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+    int numParticles = force.getNumParticles();
+    if (numParticles != cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<vector<cl_float> > paramVector(numParticles);
+    vector<double> parameters;
+    for (int i = 0; i < numParticles; i++) {
+        force.getParticleParameters(i, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLGBSAOBCForceInfo : public OpenCLForceInfo {
 public:
     OpenCLGBSAOBCForceInfo(int requiredBuffers, const GBSAOBCForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
@@ -1946,7 +1968,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<mm_float4>(8, cl.getInvPeriodicBoxSize());
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
-            computeBornSumKernel.setArg<cl::Buffer>(4, nb.getInteractingTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(3, nb.getInteractingTiles().getDeviceBuffer());
             computeBornSumKernel.setArg<cl_uint>(7, maxTiles);
             force1Kernel.setArg<cl::Buffer>(5, nb.getInteractingTiles().getDeviceBuffer());
             force1Kernel.setArg<cl_uint>(9, maxTiles);
@@ -2901,6 +2923,28 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
     return 0.0;
 }
 
+void OpenCLCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, const CustomGBForce& force) {
+    int numParticles = force.getNumParticles();
+    if (numParticles != cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<vector<cl_float> > paramVector(numParticles);
+    vector<double> parameters;
+    for (int i = 0; i < numParticles; i++) {
+        force.getParticleParameters(i, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLCustomExternalForceInfo : public OpenCLForceInfo {
 public:
     OpenCLCustomExternalForceInfo(const CustomExternalForce& force, int numParticles) : OpenCLForceInfo(0), force(force), indices(numParticles, -1) {
@@ -3024,6 +3068,31 @@ double OpenCLCalcCustomExternalForceKernel::execute(ContextImpl& context, bool i
             globals->upload(globalParamValues);
     }
     return 0.0;
+}
+
+void OpenCLCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumParticles()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumParticles()/numContexts;
+    if (numParticles != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<vector<cl_float> > paramVector(numParticles);
+    vector<double> parameters;
+    for (int i = 0; i < numParticles; i++) {
+        int particle;
+        force.getParticleParameters(startIndex+i, particle, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
 }
 
 class OpenCLCustomHbondForceInfo : public OpenCLForceInfo {
@@ -3536,6 +3605,45 @@ double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     return 0.0;
 }
 
+void OpenCLCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& context, const CustomHbondForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumDonors()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumDonors()/numContexts;
+    if (numDonors != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of donors has changed");
+    if (numAcceptors != force.getNumAcceptors())
+        throw OpenMMException("updateParametersInContext: The number of acceptors has changed");
+    
+    // Record the per-donor parameters.
+    
+    vector<vector<cl_float> > donorParamVector(numDonors);
+    vector<double> parameters;
+    for (int i = 0; i < numDonors; i++) {
+        int d1, d2, d3;
+        force.getDonorParameters(startIndex+i, d1, d2, d3, parameters);
+        donorParamVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            donorParamVector[i][j] = (cl_float) parameters[j];
+    }
+    donorParams->setParameterValues(donorParamVector);
+    
+    // Record the per-acceptor parameters.
+    
+    vector<vector<cl_float> > acceptorParamVector(numAcceptors);
+    for (int i = 0; i < numAcceptors; i++) {
+        int a1, a2, a3;
+        force.getAcceptorParameters(i, a1, a2, a3, parameters);
+        acceptorParamVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            acceptorParamVector[i][j] = (cl_float) parameters[j];
+    }
+    acceptorParams->setParameterValues(acceptorParamVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
+}
+
 class OpenCLCustomCompoundBondForceInfo : public OpenCLForceInfo {
 public:
     OpenCLCustomCompoundBondForceInfo(const CustomCompoundBondForce& force) : OpenCLForceInfo(0), force(force) {
@@ -3826,6 +3934,31 @@ double OpenCLCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bo
             globals->upload(globalParamValues);
     }
     return 0.0;
+}
+
+void OpenCLCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
+    int startIndex = cl.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    if (numBonds != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    
+    // Record the per-bond parameters.
+    
+    vector<vector<cl_float> > paramVector(numBonds);
+    vector<int> particles;
+    vector<double> parameters;
+    for (int i = 0; i < numBonds; i++) {
+        force.getBondParameters(startIndex+i, particles, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+    }
+    params->setParameterValues(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cl.invalidateMolecules();
 }
 
 OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {

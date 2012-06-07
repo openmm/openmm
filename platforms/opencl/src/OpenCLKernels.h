@@ -647,6 +647,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
@@ -736,6 +743,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomGBForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
     bool hasInitializedKernels, needParameterGradient;
     int maxTiles, numComputedValues;
@@ -781,6 +795,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomExternalForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
     int numParticles;
     bool hasInitializedKernel;
@@ -819,6 +840,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomHbondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
     int numDonors, numAcceptors;
     bool hasInitializedKernel;
@@ -865,6 +893,14 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCompoundBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
+
 private:
     int numBonds;
     OpenCLContext& cl;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -265,4 +265,8 @@ ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNo
     // Return a new node that represents it as a simple variable.
     
     return ExpressionTreeNode(new Operation::Variable(name));
+}
+
+void CustomHbondForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcCustomHbondForceKernel>().copyParametersToContext(context, owner);
 }

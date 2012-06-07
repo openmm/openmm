@@ -598,6 +598,11 @@ double OpenCLParallelCalcCustomNonbondedForceKernel::execute(ContextImpl& contex
     return 0.0;
 }
 
+void OpenCLParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class OpenCLParallelCalcCustomExternalForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcCustomExternalForceKernel& kernel, bool includeForce,
@@ -632,6 +637,11 @@ double OpenCLParallelCalcCustomExternalForceKernel::execute(ContextImpl& context
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
 }
 
 class OpenCLParallelCalcCustomHbondForceKernel::Task : public OpenCLContext::WorkTask {
@@ -670,6 +680,11 @@ double OpenCLParallelCalcCustomHbondForceKernel::execute(ContextImpl& context, b
     return 0.0;
 }
 
+void OpenCLParallelCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& context, const CustomHbondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
+}
+
 class OpenCLParallelCalcCustomCompoundBondForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, OpenCLCalcCustomCompoundBondForceKernel& kernel, bool includeForce,
@@ -704,4 +719,9 @@ double OpenCLParallelCalcCustomCompoundBondForceKernel::execute(ContextImpl& con
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force);
 }

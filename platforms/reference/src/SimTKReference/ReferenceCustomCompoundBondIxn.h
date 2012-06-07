@@ -91,6 +91,15 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
 
        ~ReferenceCustomCompoundBondIxn();
 
+      /**---------------------------------------------------------------------------------------
+
+         Get the list atoms in each bond.
+
+         --------------------------------------------------------------------------------------- */
+
+       const std::vector<std::vector<int> >& getBondAtoms() const {
+           return bondAtoms;
+       }
 
       /**---------------------------------------------------------------------------------------
 

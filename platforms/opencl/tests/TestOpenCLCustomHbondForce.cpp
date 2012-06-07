@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -100,7 +100,7 @@ void testHbond() {
     angle->addAngle(1, 2, 3, 1.9, 0.6);
     standardSystem.addForce(angle);
     PeriodicTorsionForce* torsion = new PeriodicTorsionForce();
-    torsion->addTorsion(1, 2, 3, 4, 2, 2.1, 0.7);;
+    torsion->addTorsion(1, 2, 3, 4, 2, 2.1, 0.7);
     standardSystem.addForce(torsion);
 
     // Set the atoms in various positions, and verify that both systems give identical forces and energy.
@@ -109,11 +109,11 @@ void testHbond() {
     init_gen_rand(0, sfmt);
 
     vector<Vec3> positions(5);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context c1(customSystem, integrator1, platform);
+    Context c2(standardSystem, integrator2, platform);
     for (int i = 0; i < 10; i++) {
-        VerletIntegrator integrator1(0.01);
-        VerletIntegrator integrator2(0.01);
-        Context c1(customSystem, integrator1, platform);
-        Context c2(standardSystem, integrator2, platform);
         for (int j = 0; j < (int) positions.size(); j++)
             positions[j] = Vec3(2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt));
         c1.setPositions(positions);
@@ -124,6 +124,28 @@ void testHbond() {
             ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
         ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
     }
+    
+    // Try changing the parameters and make sure it's still correct.
+    
+    parameters.resize(3);
+    parameters[0] = 1.4;
+    parameters[1] = 1.7;
+    parameters[2] = 1.9;
+    custom->setDonorParameters(0, 1, 0, -1, parameters);
+    parameters.resize(2);
+    parameters[0] = 2.2;
+    parameters[1] = 2;
+    custom->setAcceptorParameters(0, 2, 3, 4, parameters);
+    bond->setBondParameters(0, 1, 2, 1.4, 0.4);
+    torsion->setTorsionParameters(0, 1, 2, 3, 4, 2, 2.2, 0.7);
+    custom->updateParametersInContext(c1);
+    bond->updateParametersInContext(c2);
+    torsion->updateParametersInContext(c2);
+    State s1 = c1.getState(State::Forces | State::Energy);
+    State s2 = c2.getState(State::Forces | State::Energy);
+    for (int i = 0; i < customSystem.getNumParticles(); i++)
+        ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
+    ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
 }
 
 void testExclusions() {

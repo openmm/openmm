@@ -257,6 +257,17 @@ public:
      * @param max            the value of the independent variable corresponding to the last element of values
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
+    /**
+     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * This method has several limitations.  The only information it updates is the values of per-bond parameters.
+     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -307,6 +307,18 @@ public:
      * @param max            the value of the independent variable corresponding to the last element of values
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
+    /**
+     * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * This method has several limitations.  The only information it updates is the values of per-particle parameters.
+     * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can
+     * only be changed by reinitializing the Context.  Also, this method cannot be used to add new particles, only to change
+     * the parameters of existing ones.
+     */
+    void updateParametersInContext(Context& context);
 protected:
     ForceImpl* createImpl();
 private:

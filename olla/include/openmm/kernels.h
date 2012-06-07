@@ -596,6 +596,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) = 0;
 };
 
 /**
@@ -693,6 +700,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomGBForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomGBForce& force) = 0;
 };
 
 /**
@@ -721,6 +735,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomExternalForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) = 0;
 };
 
 /**
@@ -754,6 +775,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomHbondForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force) = 0;
 };
 
 /**
@@ -782,6 +810,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCompoundBondForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) = 0;
 };
 
 /**

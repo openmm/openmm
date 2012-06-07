@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -135,6 +135,29 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     context2.setPositions(positions);
     context2.setVelocities(velocities);
     State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
+    }
+    
+    // Try changing the particle parameters and make sure it's still correct.
+    
+    for (int i = 0; i < numMolecules/2; i++) {
+        obc->setParticleParameters(2*i, 1.1, 0.3, 0.6);
+        params[0] = 1.1;
+        params[1] = 0.3;
+        params[2] = 0.6;
+        custom->setParticleParameters(2*i, params);
+        obc->setParticleParameters(2*i+1, -1.1, 0.2, 0.4);
+        params[0] = -1.1;
+        params[1] = 0.2;
+        params[2] = 0.4;
+        custom->setParticleParameters(2*i+1, params);
+    }
+    obc->updateParametersInContext(context1);
+    custom->updateParametersInContext(context2);
+    state1 = context1.getState(State::Forces | State::Energy);
+    state2 = context2.getState(State::Forces | State::Energy);
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
     for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);

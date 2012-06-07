@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -105,6 +105,9 @@ void testParameters() {
     ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
     ASSERT_EQUAL_TOL(3.0*(10*10*10), state.getPotentialEnergy(), TOL);
+    
+    // Try changing the global parameters and make sure it's still correct.
+    
     context.setParameter("scale", 1.5);
     context.setParameter("c", 1.0);
     state = context.getState(State::Forces | State::Energy);
@@ -113,6 +116,22 @@ void testParameters() {
     ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
     ASSERT_EQUAL_TOL(1.5*3.0*(12*12*12), state.getPotentialEnergy(), TOL);
+    
+    // Try changing the per-particle parameters and make sure it's still correct.
+    
+    params[0] = 1.6;
+    params[1] = 2.1;
+    forceField->setParticleParameters(0, params);
+    params[0] = 1.9;
+    params[1] = 2.8;
+    forceField->setParticleParameters(1, params);
+    forceField->updateParametersInContext(context);
+    state = context.getState(State::Forces | State::Energy);
+    forces = state.getForces();
+    force = -1.5*1.6*1.9*3*5.9*(11.8*11.8);
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(1.5*1.6*1.9*(11.8*11.8*11.8), state.getPotentialEnergy(), TOL);
 }
 
 void testManyParameters() {

@@ -192,3 +192,7 @@ ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const Expressio
     
     return ExpressionTreeNode(new Operation::Variable(name));
 }
+
+void CustomCompoundBondForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcCustomCompoundBondForceKernel>().copyParametersToContext(context, owner);
+}

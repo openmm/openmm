@@ -62,6 +62,7 @@ public:
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    void updateParametersInContext(ContextImpl& context);
     /**
      * This is a utility routine that parses the energy expression, identifies the angles and dihedrals
      * in it, and replaces them with variables.

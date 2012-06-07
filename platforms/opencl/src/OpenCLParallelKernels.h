@@ -450,6 +450,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     class Task;
     OpenCLPlatform::PlatformData& data;
@@ -481,6 +488,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomExternalForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
     class Task;
     OpenCLPlatform::PlatformData& data;
@@ -512,6 +526,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomHbondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
     class Task;
     OpenCLPlatform::PlatformData& data;
@@ -543,6 +564,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCompoundBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 private:
     class Task;
     OpenCLPlatform::PlatformData& data;

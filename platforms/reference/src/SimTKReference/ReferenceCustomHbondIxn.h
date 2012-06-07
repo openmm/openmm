@@ -118,6 +118,26 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
       /**---------------------------------------------------------------------------------------
 
+         Get the list of atoms for each donor group.
+
+         --------------------------------------------------------------------------------------- */
+
+      const std::vector<std::vector<int> >& getDonorAtoms() const {
+          return donorAtoms;
+      }
+
+      /**---------------------------------------------------------------------------------------
+
+         Get the list of atoms for each acceptor group.
+
+         --------------------------------------------------------------------------------------- */
+
+      const std::vector<std::vector<int> >& getAcceptorAtoms() const {
+          return acceptorAtoms;
+      }
+
+      /**---------------------------------------------------------------------------------------
+
          Calculate custom hbond interaction
 
          @param atomCoordinates    atom coordinates

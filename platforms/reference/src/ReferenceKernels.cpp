@@ -1041,6 +1041,22 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     return energy;
 }
 
+void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+}
+
 ReferenceCalcGBSAOBCForceKernel::~ReferenceCalcGBSAOBCForceKernel() {
     if (obc) {
         // delete obc->getObcParameters();
@@ -1303,6 +1319,22 @@ double ReferenceCalcCustomGBForceKernel::execute(ContextImpl& context, bool incl
     return energy;
 }
 
+void ReferenceCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, const CustomGBForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+}
+
 ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
 }
@@ -1346,6 +1378,25 @@ double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, boo
     for (int i = 0; i < numParticles; ++i)
         force.calculateForce(particles[i], posData, particleParamArray[i], forceData, includeEnergy ? &energy : NULL);
     return energy;
+}
+
+void ReferenceCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        int particle;
+        vector<double> parameters;
+        force.getParticleParameters(i, particle, parameters);
+        if (particle != particles[i])
+            throw OpenMMException("updateParametersInContext: A particle index has changed");
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
 }
 
 ReferenceCalcCustomHbondForceKernel::~ReferenceCalcCustomHbondForceKernel() {
@@ -1458,6 +1509,37 @@ double ReferenceCalcCustomHbondForceKernel::execute(ContextImpl& context, bool i
     return energy;
 }
 
+void ReferenceCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& context, const CustomHbondForce& force) {
+    if (numDonors != force.getNumDonors())
+        throw OpenMMException("updateParametersInContext: The number of donors has changed");
+    if (numAcceptors != force.getNumAcceptors())
+        throw OpenMMException("updateParametersInContext: The number of acceptors has changed");
+
+    // Record the values.
+
+    vector<double> parameters;
+    int numDonorParameters = force.getNumPerDonorParameters();
+    const vector<vector<int> >& donorAtoms = ixn->getDonorAtoms();
+    for (int i = 0; i < numDonors; ++i) {
+        int d1, d2, d3;
+        force.getDonorParameters(i, d1, d2, d3, parameters);
+        if (d1 != donorAtoms[i][0] || d2 != donorAtoms[i][1] || d3 != donorAtoms[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in a donor group has changed");
+        for (int j = 0; j < numDonorParameters; j++)
+            donorParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    int numAcceptorParameters = force.getNumPerAcceptorParameters();
+    const vector<vector<int> >& acceptorAtoms = ixn->getAcceptorAtoms();
+    for (int i = 0; i < numAcceptors; ++i) {
+        int a1, a2, a3;
+        force.getAcceptorParameters(i, a1, a2, a3, parameters);
+        if (a1 != acceptorAtoms[i][0] || a2 != acceptorAtoms[i][1] || a3 != acceptorAtoms[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in an acceptor group has changed");
+        for (int j = 0; j < numAcceptorParameters; j++)
+            acceptorParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+}
+
 ReferenceCalcCustomCompoundBondForceKernel::~ReferenceCalcCustomCompoundBondForceKernel() {
     disposeRealArray(bondParamArray, numBonds);
     if (ixn != NULL)
@@ -1519,6 +1601,26 @@ double ReferenceCalcCustomCompoundBondForceKernel::execute(ContextImpl& context,
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL);
     return energy;
+}
+
+void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) {
+    if (numBonds != force.getNumBonds())
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerBondParameters();
+    const vector<vector<int> >& bondAtoms = ixn->getBondAtoms();
+    vector<int> particles;
+    vector<double> params;
+    for (int i = 0; i < numBonds; ++i) {
+        force.getBondParameters(i, particles, params);
+        for (int j = 0; j < numParticles; j++)
+            if (particles[j] != bondAtoms[i][j])
+                throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
+        for (int j = 0; j < numParameters; j++)
+            bondParamArray[i][j] = (RealOpenMM) params[j];
+    }
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
