@@ -82,6 +82,7 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    cuCtxSetCurrent(cu.getContext());
 //    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
 //    bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
 //    cu.setAtomsWereReordered(false);
@@ -133,6 +134,7 @@ void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
 }
 
 void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
+    cuCtxSetCurrent(cu.getContext());
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
@@ -158,6 +160,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
 }
 
 void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
+    cuCtxSetCurrent(cu.getContext());
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cu.getUseDoublePrecision()) {
@@ -193,6 +196,7 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
 }
 
 void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
+    cuCtxSetCurrent(cu.getContext());
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
@@ -217,6 +221,7 @@ void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>
 }
 
 void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector<Vec3>& velocities) {
+    cuCtxSetCurrent(cu.getContext());
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cu.getUseDoublePrecision()) {
@@ -250,6 +255,7 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector
 }
 
 void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
+    cuCtxSetCurrent(cu.getContext());
     long long* force = (long long*) cu.getPinnedBuffer();
     cu.getForce().download(force);
     const vector<int>& order = cu.getAtomIndex();
@@ -275,6 +281,7 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
 }
 
 void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
+    cuCtxSetCurrent(cu.getContext());
 //    int version = 1;
 //    stream.write((char*) &version, sizeof(int));
 //    double time = cu.getTime();
@@ -292,6 +299,7 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
 }
 
 void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    cuCtxSetCurrent(cu.getContext());
 //    int version;
 //    stream.read((char*) &version, sizeof(int));
 //    if (version != 1)
@@ -566,90 +574,90 @@ void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& conte
 //    
 //    cu.invalidateMolecules();
 //}
-//
-//class CudaHarmonicAngleForceInfo : public CudaForceInfo {
-//public:
-//    CudaHarmonicAngleForceInfo(const HarmonicAngleForce& force) : CudaForceInfo(0), force(force) {
-//    }
-//    int getNumParticleGroups() {
-//        return force.getNumAngles();
-//    }
-//    void getParticlesInGroup(int index, vector<int>& particles) {
-//        int particle1, particle2, particle3;
-//        double angle, k;
-//        force.getAngleParameters(index, particle1, particle2, particle3, angle, k);
-//        particles.resize(3);
-//        particles[0] = particle1;
-//        particles[1] = particle2;
-//        particles[2] = particle3;
-//    }
-//    bool areGroupsIdentical(int group1, int group2) {
-//        int particle1, particle2, particle3;
-//        double angle1, angle2, k1, k2;
-//        force.getAngleParameters(group1, particle1, particle2, particle3, angle1, k1);
-//        force.getAngleParameters(group2, particle1, particle2, particle3, angle2, k2);
-//        return (angle1 == angle2 && k1 == k2);
-//    }
-//private:
-//    const HarmonicAngleForce& force;
-//};
-//
-//CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
-//    if (params != NULL)
-//        delete params;
-//}
-//
-//void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
-//    numAngles = endIndex-startIndex;
-//    if (numAngles == 0)
-//        return;
-//    vector<vector<int> > atoms(numAngles, vector<int>(3));
-//    params = new CudaArray<mm_float2>(cu, numAngles, "angleParams");
-//    vector<mm_float2> paramVector(numAngles);
-//    for (int i = 0; i < numAngles; i++) {
-//        double angle, k;
-//        force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], angle, k);
-//        paramVector[i] = mm_float2((cl_float) angle, (cl_float) k);
-//
-//    }
-//    params->upload(paramVector);
-//    map<string, string> replacements;
-//    replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicAngleForce;
-//    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float2");
-//    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::angleForce, replacements), force.getForceGroup());
-//    cu.addForce(new CudaHarmonicAngleForceInfo(force));
-//}
-//
-//double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    return 0.0;
-//}
-//
-//void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
-//    if (numAngles != endIndex-startIndex)
-//        throw OpenMMException("updateParametersInContext: The number of angles has changed");
-//    
-//    // Record the per-angle parameters.
-//    
-//    vector<mm_float2> paramVector(numAngles);
-//    for (int i = 0; i < numAngles; i++) {
-//        int atom1, atom2, atom3;
-//        double angle, k;
-//        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
-//        paramVector[i] = mm_float2((cl_float) angle, (cl_float) k);
-//    }
-//    params->upload(paramVector);
-//    
-//    // Mark that the current reordering may be invalid.
-//    
-//    cu.invalidateMolecules();
-//}
-//
+
+class CudaHarmonicAngleForceInfo : public CudaForceInfo {
+public:
+    CudaHarmonicAngleForceInfo(const HarmonicAngleForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(index, particle1, particle2, particle3, angle, k);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        double angle1, angle2, k1, k2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, angle1, k1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, angle2, k2);
+        return (angle1 == angle2 && k1 == k2);
+    }
+private:
+    const HarmonicAngleForce& force;
+};
+
+CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
+    if (params != NULL)
+        delete params;
+}
+
+void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    numAngles = endIndex-startIndex;
+    if (numAngles == 0)
+        return;
+    vector<vector<int> > atoms(numAngles, vector<int>(3));
+    params = CudaArray::create<float2>(numAngles, "angleParams");
+    vector<float2> paramVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        double angle, k;
+        force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], angle, k);
+        paramVector[i] = make_float2((float) angle, (float) k);
+
+    }
+    params->upload(paramVector);
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = CudaKernelSources::harmonicAngleForce;
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
+    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::angleForce, replacements), force.getForceGroup());
+    cu.addForce(new CudaHarmonicAngleForceInfo(force));
+}
+
+double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return 0.0;
+}
+
+void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    if (numAngles != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    
+    // Record the per-angle parameters.
+    
+    vector<float2> paramVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        int atom1, atom2, atom3;
+        double angle, k;
+        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
+        paramVector[i] = make_float2((float) angle, (float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
 //class CudaCustomAngleForceInfo : public CudaForceInfo {
 //public:
 //    CudaCustomAngleForceInfo(const CustomAngleForce& force) : CudaForceInfo(0), force(force) {
@@ -791,262 +799,272 @@ void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& conte
 //    
 //    cu.invalidateMolecules();
 //}
-//
-//class CudaPeriodicTorsionForceInfo : public CudaForceInfo {
-//public:
-//    CudaPeriodicTorsionForceInfo(const PeriodicTorsionForce& force) : CudaForceInfo(0), force(force) {
-//    }
-//    int getNumParticleGroups() {
-//        return force.getNumTorsions();
-//    }
-//    void getParticlesInGroup(int index, vector<int>& particles) {
-//        int particle1, particle2, particle3, particle4, periodicity;
-//        double phase, k;
-//        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, periodicity, phase, k);
-//        particles.resize(4);
-//        particles[0] = particle1;
-//        particles[1] = particle2;
-//        particles[2] = particle3;
-//        particles[3] = particle4;
-//    }
-//    bool areGroupsIdentical(int group1, int group2) {
-//        int particle1, particle2, particle3, particle4, periodicity1, periodicity2;
-//        double phase1, phase2, k1, k2;
-//        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity1, phase1, k1);
-//        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, periodicity2, phase2, k2);
-//        return (periodicity1 == periodicity2 && phase1 == phase2 && k1 == k2);
-//    }
-//private:
-//    const PeriodicTorsionForce& force;
-//};
-//
-//CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
-//    if (params != NULL)
-//        delete params;
-//}
-//
-//void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
-//    numTorsions = endIndex-startIndex;
-//    if (numTorsions == 0)
-//        return;
-//    vector<vector<int> > atoms(numTorsions, vector<int>(4));
-//    params = new CudaArray<mm_float4>(cu, numTorsions, "periodicTorsionParams");
-//    vector<mm_float4> paramVector(numTorsions);
-//    for (int i = 0; i < numTorsions; i++) {
-//        int periodicity;
-//        double phase, k;
-//        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], periodicity, phase, k);
-//        paramVector[i] = mm_float4((cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f);
-//    }
-//    params->upload(paramVector);
-//    map<string, string> replacements;
-//    replacements["COMPUTE_FORCE"] = CudaKernelSources::periodicTorsionForce;
-//    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float4");
-//    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
-//    cu.addForce(new CudaPeriodicTorsionForceInfo(force));
-//}
-//
-//double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    return 0.0;
-//}
-//
-//void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
-//    if (numTorsions != endIndex-startIndex)
-//        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
-//    
-//    // Record the per-torsion parameters.
-//    
-//    vector<mm_float4> paramVector(numTorsions);
-//    for (int i = 0; i < numTorsions; i++) {
-//        int atom1, atom2, atom3, atom4, periodicity;
-//        double phase, k;
-//        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
-//        paramVector[i] = mm_float4((cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f);
-//    }
-//    params->upload(paramVector);
-//    
-//    // Mark that the current reordering may be invalid.
-//    
-//    cu.invalidateMolecules();
-//}
-//
-//class CudaRBTorsionForceInfo : public CudaForceInfo {
-//public:
-//    CudaRBTorsionForceInfo(const RBTorsionForce& force) : CudaForceInfo(0), force(force) {
-//    }
-//    int getNumParticleGroups() {
-//        return force.getNumTorsions();
-//    }
-//    void getParticlesInGroup(int index, vector<int>& particles) {
-//        int particle1, particle2, particle3, particle4;
-//        double c0, c1, c2, c3, c4, c5;
-//        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
-//        particles.resize(4);
-//        particles[0] = particle1;
-//        particles[1] = particle2;
-//        particles[2] = particle3;
-//        particles[3] = particle4;
-//    }
-//    bool areGroupsIdentical(int group1, int group2) {
-//        int particle1, particle2, particle3, particle4;
-//        double c0a, c0b, c1a, c1b, c2a, c2b, c3a, c3b, c4a, c4b, c5a, c5b;
-//        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0a, c1a, c2a, c3a, c4a, c5a);
-//        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, c0b, c1b, c2b, c3b, c4b, c5b);
-//        return (c0a == c0b && c1a == c1b && c2a == c2b && c3a == c3b && c4a == c4b && c5a == c5b);
-//    }
-//private:
-//    const RBTorsionForce& force;
-//};
-//
-//CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
-//    if (params != NULL)
-//        delete params;
-//}
-//
-//void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
-//    numTorsions = endIndex-startIndex;
-//    if (numTorsions == 0)
-//        return;
-//    vector<vector<int> > atoms(numTorsions, vector<int>(4));
-//    params = new CudaArray<mm_float8>(cu, numTorsions, "rbTorsionParams");
-//    vector<mm_float8> paramVector(numTorsions);
-//    for (int i = 0; i < numTorsions; i++) {
-//        double c0, c1, c2, c3, c4, c5;
-//        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], c0, c1, c2, c3, c4, c5);
-//        paramVector[i] = mm_float8((cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f);
-//
-//    }
-//    params->upload(paramVector);
-//    map<string, string> replacements;
-//    replacements["COMPUTE_FORCE"] = CudaKernelSources::rbTorsionForce;
-//    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDeviceBuffer(), "float8");
-//    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
-//    cu.addForce(new CudaRBTorsionForceInfo(force));
-//}
-//
-//double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    return 0.0;
-//}
-//
-//void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
-//    if (numTorsions != endIndex-startIndex)
-//        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
-//    
-//    // Record the per-torsion parameters.
-//    
-//    vector<mm_float8> paramVector(numTorsions);
-//    for (int i = 0; i < numTorsions; i++) {
-//        int atom1, atom2, atom3, atom4;
-//        double c0, c1, c2, c3, c4, c5;
-//        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
-//        paramVector[i] = mm_float8((cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f);
-//    }
-//    params->upload(paramVector);
-//    
-//    // Mark that the current reordering may be invalid.
-//    
-//    cu.invalidateMolecules();
-//}
-//
-//class CudaCMAPTorsionForceInfo : public CudaForceInfo {
-//public:
-//    CudaCMAPTorsionForceInfo(const CMAPTorsionForce& force) : CudaForceInfo(0), force(force) {
-//    }
-//    int getNumParticleGroups() {
-//        return force.getNumTorsions();
-//    }
-//    void getParticlesInGroup(int index, vector<int>& particles) {
-//        int map, a1, a2, a3, a4, b1, b2, b3, b4;
-//        force.getTorsionParameters(index, map, a1, a2, a3, a4, b1, b2, b3, b4);
-//        particles.resize(8);
-//        particles[0] = a1;
-//        particles[1] = a2;
-//        particles[2] = a3;
-//        particles[3] = a4;
-//        particles[4] = b1;
-//        particles[5] = b2;
-//        particles[6] = b3;
-//        particles[7] = b4;
-//    }
-//    bool areGroupsIdentical(int group1, int group2) {
-//        int map1, map2, a1, a2, a3, a4, b1, b2, b3, b4;
-//        force.getTorsionParameters(group1, map1, a1, a2, a3, a4, b1, b2, b3, b4);
-//        force.getTorsionParameters(group2, map2, a1, a2, a3, a4, b1, b2, b3, b4);
-//        return (map1 == map2);
-//    }
-//private:
-//    const CMAPTorsionForce& force;
-//};
-//
-//CudaCalcCMAPTorsionForceKernel::~CudaCalcCMAPTorsionForceKernel() {
-//    if (coefficients != NULL)
-//        delete coefficients;
-//    if (mapPositions != NULL)
-//        delete mapPositions;
-//    if (torsionMaps != NULL)
-//        delete torsionMaps;
-//}
-//
-//void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
-//    int numContexts = cu.getPlatformData().contexts.size();
-//    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
-//    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
-//    numTorsions = endIndex-startIndex;
-//    if (numTorsions == 0)
-//        return;
-//    int numMaps = force.getNumMaps();
-//    vector<mm_float4> coeffVec;
-//    vector<mm_int2> mapPositionsVec(numMaps);
-//    vector<double> energy;
-//    vector<vector<double> > c;
-//    int currentPosition = 0;
-//    for (int i = 0; i < numMaps; i++) {
-//        int size;
-//        force.getMapParameters(i, size, energy);
-//        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
-//        mapPositionsVec[i] = mm_int2(currentPosition, size);
-//        currentPosition += 4*size*size;
-//        for (int j = 0; j < size*size; j++) {
-//            coeffVec.push_back(mm_float4((float) c[j][0], (float) c[j][1], (float) c[j][2], (float) c[j][3]));
-//            coeffVec.push_back(mm_float4((float) c[j][4], (float) c[j][5], (float) c[j][6], (float) c[j][7]));
-//            coeffVec.push_back(mm_float4((float) c[j][8], (float) c[j][9], (float) c[j][10], (float) c[j][11]));
-//            coeffVec.push_back(mm_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
-//        }
-//    }
-//    vector<vector<int> > atoms(numTorsions, vector<int>(8));
-//    vector<cl_int> torsionMapsVec(numTorsions);
-//    for (int i = 0; i < numTorsions; i++)
-//        force.getTorsionParameters(startIndex+i, torsionMapsVec[i], atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], atoms[i][5], atoms[i][6], atoms[i][7]);
-//    coefficients = new CudaArray<mm_float4>(cu, coeffVec.size(), "cmapTorsionCoefficients");
-//    mapPositions = new CudaArray<mm_int2>(cu, numMaps, "cmapTorsionMapPositions");
-//    torsionMaps = new CudaArray<cl_int>(cu, numTorsions, "cmapTorsionMaps");
-//    coefficients->upload(coeffVec);
-//    mapPositions->upload(mapPositionsVec);
-//    torsionMaps->upload(torsionMapsVec);
-//    map<string, string> replacements;
-//    replacements["COEFF"] = cu.getBondedUtilities().addArgument(coefficients->getDeviceBuffer(), "float4");
-//    replacements["MAP_POS"] = cu.getBondedUtilities().addArgument(mapPositions->getDeviceBuffer(), "int2");
-//    replacements["MAPS"] = cu.getBondedUtilities().addArgument(torsionMaps->getDeviceBuffer(), "int");
-//    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
-//    cu.addForce(new CudaCMAPTorsionForceInfo(force));
-//}
-//
-//double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    return 0.0;
-//}
-//
+
+class CudaPeriodicTorsionForceInfo : public CudaForceInfo {
+public:
+    CudaPeriodicTorsionForceInfo(const PeriodicTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4, periodicity1, periodicity2;
+        double phase1, phase2, k1, k2;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity1, phase1, k1);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, periodicity2, phase2, k2);
+        return (periodicity1 == periodicity2 && phase1 == phase2 && k1 == k2);
+    }
+private:
+    const PeriodicTorsionForce& force;
+};
+
+CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
+    if (params != NULL)
+        delete params;
+}
+
+void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
+    if (numTorsions == 0)
+        return;
+    vector<vector<int> > atoms(numTorsions, vector<int>(4));
+    params = CudaArray::create<float4>(numTorsions, "periodicTorsionParams");
+    vector<float4> paramVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int periodicity;
+        double phase, k;
+        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], periodicity, phase, k);
+        paramVector[i] = make_float4((float) k, (float) phase, (float) periodicity, 0.0f);
+    }
+    params->upload(paramVector);
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = CudaKernelSources::periodicTorsionForce;
+    replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float4");
+    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
+    cu.addForce(new CudaPeriodicTorsionForceInfo(force));
+}
+
+double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return 0.0;
+}
+
+void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    if (numTorsions != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    
+    // Record the per-torsion parameters.
+    
+    vector<float4> paramVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int atom1, atom2, atom3, atom4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
+        paramVector[i] = make_float4((float) k, (float) phase, (float) periodicity, 0.0f);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
+class CudaRBTorsionForceInfo : public CudaForceInfo {
+public:
+    CudaRBTorsionForceInfo(const RBTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        double c0a, c0b, c1a, c1b, c2a, c2b, c3a, c3b, c4a, c4b, c5a, c5b;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0a, c1a, c2a, c3a, c4a, c5a);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, c0b, c1b, c2b, c3b, c4b, c5b);
+        return (c0a == c0b && c1a == c1b && c2a == c2b && c3a == c3b && c4a == c4b && c5a == c5b);
+    }
+private:
+    const RBTorsionForce& force;
+};
+
+CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
+    if (params1 != NULL)
+        delete params1;
+    if (params2 != NULL)
+        delete params2;
+}
+
+void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
+    if (numTorsions == 0)
+        return;
+    vector<vector<int> > atoms(numTorsions, vector<int>(4));
+    params1 = CudaArray::create<float4>(numTorsions, "rbTorsionParams1");
+    params2 = CudaArray::create<float2>(numTorsions, "rbTorsionParams2");
+    vector<float4> paramVector1(numTorsions);
+    vector<float2> paramVector2(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], c0, c1, c2, c3, c4, c5);
+        paramVector1[i] = make_float4((float) c0, (float) c1, (float) c2, (float) c3);
+        paramVector2[i] = make_float2((float) c4, (float) c5);
+
+    }
+    params1->upload(paramVector1);
+    params2->upload(paramVector2);
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = CudaKernelSources::rbTorsionForce;
+    replacements["PARAMS1"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float4");
+    replacements["PARAMS2"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float2");
+    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::torsionForce, replacements), force.getForceGroup());
+    cu.addForce(new CudaRBTorsionForceInfo(force));
+}
+
+double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return 0.0;
+}
+
+void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    if (numTorsions != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    
+    // Record the per-torsion parameters.
+    
+    vector<float4> paramVector1(numTorsions);
+    vector<float2> paramVector2(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int atom1, atom2, atom3, atom4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
+        paramVector1[i] = make_float4((float) c0, (float) c1, (float) c2, (float) c3);
+        paramVector2[i] = make_float2((float) c4, (float) c5);
+    }
+    params1->upload(paramVector1);
+    params2->upload(paramVector2);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
+class CudaCMAPTorsionForceInfo : public CudaForceInfo {
+public:
+    CudaCMAPTorsionForceInfo(const CMAPTorsionForce& force) : force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int map, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(index, map, a1, a2, a3, a4, b1, b2, b3, b4);
+        particles.resize(8);
+        particles[0] = a1;
+        particles[1] = a2;
+        particles[2] = a3;
+        particles[3] = a4;
+        particles[4] = b1;
+        particles[5] = b2;
+        particles[6] = b3;
+        particles[7] = b4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int map1, map2, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(group1, map1, a1, a2, a3, a4, b1, b2, b3, b4);
+        force.getTorsionParameters(group2, map2, a1, a2, a3, a4, b1, b2, b3, b4);
+        return (map1 == map2);
+    }
+private:
+    const CMAPTorsionForce& force;
+};
+
+CudaCalcCMAPTorsionForceKernel::~CudaCalcCMAPTorsionForceKernel() {
+    if (coefficients != NULL)
+        delete coefficients;
+    if (mapPositions != NULL)
+        delete mapPositions;
+    if (torsionMaps != NULL)
+        delete torsionMaps;
+}
+
+void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
+    numTorsions = endIndex-startIndex;
+    if (numTorsions == 0)
+        return;
+    int numMaps = force.getNumMaps();
+    vector<float4> coeffVec;
+    vector<int2> mapPositionsVec(numMaps);
+    vector<double> energy;
+    vector<vector<double> > c;
+    int currentPosition = 0;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        mapPositionsVec[i] = make_int2(currentPosition, size);
+        currentPosition += 4*size*size;
+        for (int j = 0; j < size*size; j++) {
+            coeffVec.push_back(make_float4((float) c[j][0], (float) c[j][1], (float) c[j][2], (float) c[j][3]));
+            coeffVec.push_back(make_float4((float) c[j][4], (float) c[j][5], (float) c[j][6], (float) c[j][7]));
+            coeffVec.push_back(make_float4((float) c[j][8], (float) c[j][9], (float) c[j][10], (float) c[j][11]));
+            coeffVec.push_back(make_float4((float) c[j][12], (float) c[j][13], (float) c[j][14], (float) c[j][15]));
+        }
+    }
+    vector<vector<int> > atoms(numTorsions, vector<int>(8));
+    vector<int> torsionMapsVec(numTorsions);
+    for (int i = 0; i < numTorsions; i++)
+        force.getTorsionParameters(startIndex+i, torsionMapsVec[i], atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], atoms[i][5], atoms[i][6], atoms[i][7]);
+    coefficients = CudaArray::create<float4>(coeffVec.size(), "cmapTorsionCoefficients");
+    mapPositions = CudaArray::create<int2>(numMaps, "cmapTorsionMapPositions");
+    torsionMaps = CudaArray::create<int>(numTorsions, "cmapTorsionMaps");
+    coefficients->upload(coeffVec);
+    mapPositions->upload(mapPositionsVec);
+    torsionMaps->upload(torsionMapsVec);
+    map<string, string> replacements;
+    replacements["COEFF"] = cu.getBondedUtilities().addArgument(coefficients->getDevicePointer(), "float4");
+    replacements["MAP_POS"] = cu.getBondedUtilities().addArgument(mapPositions->getDevicePointer(), "int2");
+    replacements["MAPS"] = cu.getBondedUtilities().addArgument(torsionMaps->getDevicePointer(), "int");
+    cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::cmapTorsionForce, replacements), force.getForceGroup());
+    cu.addForce(new CudaCMAPTorsionForceInfo(force));
+}
+
+double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return 0.0;
+}
+
 //class CudaCustomTorsionForceInfo : public CudaForceInfo {
 //public:
 //    CudaCustomTorsionForceInfo(const CustomTorsionForce& force) : CudaForceInfo(0), force(force) {

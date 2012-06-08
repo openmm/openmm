@@ -74,7 +74,7 @@ void CudaBondedUtilities::initialize(const System& system) {
         int numAtoms = forceAtoms[i][0].size();
         int startAtom = 0;
         while (startAtom < numAtoms) {
-            int width = max(numAtoms-startAtom, 4);
+            int width = min(numAtoms-startAtom, 4);
             if (width == 3)
                 width = 4;
             vector<unsigned int> indexVec(width*numBonds);
@@ -136,7 +136,7 @@ string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int 
         int atomsToLoad = min(indexWidth, numAtoms-startAtom);
         for (int j = 0; j < atomsToLoad; j++) {
             s<<"    unsigned int atom"<<(startAtom+j+1)<<" = atoms"<<i<<suffix[j]<<";\n";
-            s<<"    real4 pos"<<(j+1)<<" = posq[atom"<<(j+1)<<"];\n";
+            s<<"    real4 pos"<<(startAtom+j+1)<<" = posq[atom"<<(startAtom+j+1)<<"];\n";
         }
         startAtom += indexWidth;
     }

@@ -493,3 +493,57 @@ inline __device__ void operator*=(double3& a, double b) {
 inline __device__ void operator*=(double4& a, double b) {
     a.x *= b; a.y *= b; a.z *= b; a.w *= b;
 }
+
+// Dot product
+
+inline __device__ float dot(float3 a, float3 b) {
+    return a.x*b.x+a.y*b.y+a.z*b.z;
+}
+
+inline __device__ double dot(double3 a, double3 b) {
+    return a.x*b.x+a.y*b.y+a.z*b.z;
+}
+
+// Cross product
+
+inline __device__ float3 cross(float3 a, float3 b) {
+    return make_float3(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);
+}
+
+inline __device__ float3 cross(float4 a, float4 b) {
+    return make_float3(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);
+}
+
+inline __device__ double3 cross(double3 a, double3 b) {
+    return make_double3(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);
+}
+
+inline __device__ double3 cross(double4 a, double4 b) {
+    return make_double3(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);
+}
+
+// Normalize a vector
+
+inline __device__ float2 normalize(float2 a) {
+    return a*rsqrtf(a.x*a.x+a.y*a.y);
+}
+
+inline __device__ float3 normalize(float3 a) {
+    return a*rsqrtf(a.x*a.x+a.y*a.y+a.z*a.z);
+}
+
+inline __device__ float4 normalize(float4 a) {
+    return a*rsqrtf(a.x*a.x+a.y*a.y+a.z*a.z+a.w*a.w);
+}
+
+inline __device__ double2 normalize(double2 a) {
+    return a*rsqrt(a.x*a.x+a.y*a.y);
+}
+
+inline __device__ double3 normalize(double3 a) {
+    return a*rsqrt(a.x*a.x+a.y*a.y+a.z*a.z);
+}
+
+inline __device__ double4 normalize(double4 a) {
+    return a*rsqrt(a.x*a.x+a.y*a.y+a.z*a.z+a.w*a.w);
+}

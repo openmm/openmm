@@ -299,47 +299,47 @@ private:
 //    std::vector<std::string> globalParamNames;
 //    std::vector<cl_float> globalParamValues;
 //};
-//
-///**
-// * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
-//public:
-//    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcHarmonicAngleForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
-//    }
-//    ~CudaCalcHarmonicAngleForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the HarmonicAngleForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const HarmonicAngleForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the HarmonicAngleForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
-//private:
-//    int numAngles;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaArray<mm_float2>* params;
-//};
-//
+
+/**
+ * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+public:
+    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcHarmonicAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
+    }
+    ~CudaCalcHarmonicAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the HarmonicAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+private:
+    int numAngles;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaArray* params;
+};
+
 ///**
 // * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
 // */
@@ -382,122 +382,123 @@ private:
 //    std::vector<std::string> globalParamNames;
 //    std::vector<cl_float> globalParamValues;
 //};
-//
-///**
-// * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
-//public:
-//    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
-//    }
-//    ~CudaCalcPeriodicTorsionForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the PeriodicTorsionForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const PeriodicTorsionForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the PeriodicTorsionForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
-//private:
-//    int numTorsions;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaArray<mm_float4>* params;
-//};
-//
-///**
-// * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
-//public:
-//    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcRBTorsionForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
-//    }
-//    ~CudaCalcRBTorsionForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the RBTorsionForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const RBTorsionForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the RBTorsionForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
-//private:
-//    int numTorsions;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaArray<mm_float8>* params;
-//};
-//
-///**
-// * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
-//public:
-//    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCMAPTorsionForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
-//    }
-//    ~CudaCalcCMAPTorsionForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CMAPTorsionForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CMAPTorsionForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//private:
-//    int numTorsions;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaArray<mm_float4>* coefficients;
-//    CudaArray<mm_int2>* mapPositions;
-//    CudaArray<cl_int>* torsionMaps;
-//};
-//
+
+/**
+ * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+public:
+    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
+    }
+    ~CudaCalcPeriodicTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the PeriodicTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const PeriodicTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the PeriodicTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+private:
+    int numTorsions;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaArray* params;
+};
+
+/**
+ * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+public:
+    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcRBTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params1(NULL), params2(NULL) {
+    }
+    ~CudaCalcRBTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RBTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const RBTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RBTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
+private:
+    int numTorsions;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaArray* params1;
+    CudaArray* params2;
+};
+
+/**
+ * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+public:
+    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCMAPTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
+    }
+    ~CudaCalcCMAPTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMAPTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CMAPTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numTorsions;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaArray* coefficients;
+    CudaArray* mapPositions;
+    CudaArray* torsionMaps;
+};
+
 ///**
 // * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
 // */
