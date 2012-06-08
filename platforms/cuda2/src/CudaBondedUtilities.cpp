@@ -26,6 +26,7 @@
 
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
+#include "CudaKernelSources.h"
 #include "openmm/OpenMMException.h"
 #include "CudaNonbondedUtilities.h"
 #include <iostream>
@@ -81,8 +82,8 @@ void CudaBondedUtilities::initialize(const System& system) {
                 for (int atom = 0; atom < width; atom++)
                     indexVec[bond*width+atom] = forceAtoms[i][bond][startAtom+atom];
             }
-            CudaArray* indices = CudaArray::create<unsigned int>(indexVec.size(), "bondedIndices");
-            indices->upload(indexVec);
+            CudaArray* indices = new CudaArray(numBonds, 4*width, "bondedIndices");
+            indices->upload(&indexVec[0]);
             atomIndices[i].push_back(indices);
             startAtom += width;
         }
@@ -91,13 +92,14 @@ void CudaBondedUtilities::initialize(const System& system) {
     // Create the kernel.
 
     stringstream s;
+    s<<CudaKernelSources::vectorOps;
     for (int i = 0; i < (int) prefixCode.size(); i++)
         s<<prefixCode[i];
-    s<<"extern \"C\" __global__ void computeBondedForces(long* __restrict__ forceBuffer, real* __restrict__ energyBuffer, const real4* __restrict__ posq, int groups";
+    s<<"extern \"C\" __global__ void computeBondedForces(unsigned long long* __restrict__ forceBuffer, real* __restrict__ energyBuffer, const real4* __restrict__ posq, int groups";
     for (int force = 0; force < numForces; force++) {
         for (int i = 0; i < (int) atomIndices[force].size(); i++) {
             int indexWidth = atomIndices[force][i]->getElementSize()/4;
-            string indexType = "unsigned int"+(indexWidth == 1 ? "" : context.intToString(indexWidth));
+            string indexType = "uint"+context.intToString(indexWidth);
             s<<", const "<<indexType<<"* __restrict__ atomIndices"<<force<<"_"<<i;
         }
     }
@@ -129,10 +131,10 @@ string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int 
     for (int i = 0; i < (int) atomIndices[forceIndex].size(); i++) {
         int indexWidth = atomIndices[forceIndex][i]->getElementSize()/4;
         suffix = (indexWidth == 1 ? suffix1 : suffix4);
-        string indexType = "unsigned int"+(indexWidth == 1 ? "" : context.intToString(indexWidth));
+        string indexType = "uint"+context.intToString(indexWidth);
         s<<"    "<<indexType<<" atoms"<<i<<" = atomIndices"<<forceIndex<<"_"<<i<<"[index];\n";
-        s<<"    "<<indexType<<" buffers = bufferIndices"<<forceIndex<<"[index];\n";
-        for (int j = 0; j < indexWidth; j++) {
+        int atomsToLoad = min(indexWidth, numAtoms-startAtom);
+        for (int j = 0; j < atomsToLoad; j++) {
             s<<"    unsigned int atom"<<(startAtom+j+1)<<" = atoms"<<i<<suffix[j]<<";\n";
             s<<"    real4 pos"<<(j+1)<<" = posq[atom"<<(j+1)<<"];\n";
         }
@@ -140,34 +142,28 @@ string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int 
     }
     s<<computeForce<<"\n";
     for (int i = 0; i < numAtoms; i++) {
-        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"], (long) (force.x*0xFFFFFFFF));\n";
-        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (long) (force.x*0xFFFFFFFF));\n";
-        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], (long) (force.x*0xFFFFFFFF));\n";
+        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"], static_cast<unsigned long long>((long long) (force"<<(i+1)<<".x*0xFFFFFFFF)));\n";
+        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force"<<(i+1)<<".y*0xFFFFFFFF)));\n";
+        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>((long long) (force"<<(i+1)<<".z*0xFFFFFFFF)));\n";
+        s<<"    __threadfence_block();\n";
     }
     s<<"}\n";
     return s.str();
 }
 
 void CudaBondedUtilities::computeInteractions(int groups) {
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//        for (int i = 0; i < (int) forceSets.size(); i++) {
-//            int index = 0;
-//            cl::Kernel& kernel = kernels[i];
-//            kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
-//            kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
-//            kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
-//            index++;
-//            for (int j = 0; j < (int) forceSets[i].size(); j++) {
-//                kernel.setArg<cl::Buffer>(index++, atomIndices[forceSets[i][j]]->getDeviceBuffer());
-//                kernel.setArg<cl::Buffer>(index++, bufferIndices[forceSets[i][j]]->getDeviceBuffer());
-//            }
-//            for (int j = 0; j < (int) arguments.size(); j++)
-//                kernel.setArg<cl::Memory>(index++, *arguments[j]);
-//        }
-//    }
-//    for (int i = 0; i < (int) kernels.size(); i++) {
-//        kernels[i].setArg<cl_int>(3, groups);
-//        context.executeKernel(kernels[i], maxBonds);
-//    }
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernelArgs.push_back(&context.getForce().getDevicePointer());
+        kernelArgs.push_back(&context.getEnergyBuffer().getDevicePointer());
+        kernelArgs.push_back(&context.getPosq().getDevicePointer());
+        kernelArgs.push_back(NULL);
+        for (int i = 0; i < (int) atomIndices.size(); i++)
+            for (int j = 0; j < (int) atomIndices[i].size(); j++)
+                kernelArgs.push_back(&atomIndices[i][j]->getDevicePointer());
+        for (int i = 0; i < (int) arguments.size(); i++)
+            kernelArgs.push_back(&arguments[i]);
+    }
+    kernelArgs[3] = &groups;
+    context.executeKernel(kernel, &kernelArgs[0], maxBonds);
 }

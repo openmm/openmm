@@ -30,7 +30,7 @@
 #include <cmath>
 #include "CudaContext.h"
 #include "CudaArray.h"
-//#include "CudaBondedUtilities.h"
+#include "CudaBondedUtilities.h"
 #include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
@@ -67,8 +67,8 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
-        velm(NULL), /*forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL),*/ integration(NULL), expression(NULL),
-        /*bonded(NULL), nonbonded(NULL),*/ thread(NULL) {
+        velm(NULL), force(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), expression(NULL),
+        bonded(NULL), /*nonbonded(NULL),*/ thread(NULL) {
     if (!hasInitializedCuda) {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;
@@ -138,10 +138,9 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
     int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
-//    bonded = new CudaBondedUtilities(*this);
+    bonded = new CudaBondedUtilities(*this);
 //    nonbonded = new CudaNonbondedUtilities(*this);
     if (useDoublePrecision) {
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, paddedNumAtoms*sizeof(double4), 0));
         posq = CudaArray::create<double4>(paddedNumAtoms, "posq");
         velm = CudaArray::create<double4>(paddedNumAtoms, "velm");
         compilationDefines["make_real2"] = "make_double2";
@@ -149,7 +148,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_real4"] = "make_double4";
     }
     else {
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, paddedNumAtoms*sizeof(float4), 0));
         posq = CudaArray::create<float4>(paddedNumAtoms, "posq");
         velm = CudaArray::create<float4>(paddedNumAtoms, "velm");
         compilationDefines["make_real2"] = "make_float2";
@@ -203,22 +201,16 @@ CudaContext::~CudaContext() {
         delete posq;
     if (velm != NULL)
         delete velm;
-//    if (force != NULL)
-//        delete force;
-//    if (forceBuffers != NULL)
-//        delete forceBuffers;
-//    if (longForceBuffer != NULL)
-//        delete longForceBuffer;
-//    if (energyBuffer != NULL)
-//        delete energyBuffer;
-//    if (atomIndex != NULL)
-//        delete atomIndex;
+    if (force != NULL)
+        delete force;
+    if (energyBuffer != NULL)
+        delete energyBuffer;
     if (integration != NULL)
         delete integration;
     if (expression != NULL)
         delete expression;
-//    if (bonded != NULL)
-//        delete bonded;
+    if (bonded != NULL)
+        delete bonded;
 //    if (nonbonded != NULL)
 //        delete nonbonded;
     if (thread != NULL)
@@ -229,6 +221,17 @@ CudaContext::~CudaContext() {
 }
 
 void CudaContext::initialize() {
+    string errorMessage = "Error initializing Context";
+    if (useDoublePrecision) {
+        energyBuffer = CudaArray::create<double>(numThreadBlocks*ThreadBlockSize, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*4, numThreadBlocks*ThreadBlockSize);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
+    }
+    else {
+        energyBuffer = CudaArray::create<float>(numThreadBlocks*ThreadBlockSize, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*6, numThreadBlocks*ThreadBlockSize);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
+    }
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
         if (useDoublePrecision)
@@ -237,11 +240,10 @@ void CudaContext::initialize() {
             ((float4*) pinnedBuffer)[i] = make_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (float) (1.0/mass));
     }
     velm->upload(pinnedBuffer);
-//    bonded->initialize(system);
-    force = CudaArray::create<long3>(paddedNumAtoms, "force");
-    addAutoclearBuffer(force->getDevicePointer(), force->getSize()*6);
-    energyBuffer = CudaArray::create<float>(numThreadBlocks*ThreadBlockSize, "energyBuffer");
-    addAutoclearBuffer(energyBuffer->getDevicePointer(), energyBuffer->getSize());
+    bonded->initialize(system);
+    force = CudaArray::create<long long>(paddedNumAtoms*3, "force");
+    addAutoclearBuffer(force->getDevicePointer(), force->getSize()*force->getElementSize());
+    addAutoclearBuffer(energyBuffer->getDevicePointer(), energyBuffer->getSize()*energyBuffer->getElementSize());
     atomIndexDevice = CudaArray::create<int>(paddedNumAtoms, "atomIndex");
     atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
@@ -448,82 +450,63 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
 }
 
 void CudaContext::clearBuffer(CudaArray& array) {
-    clearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize()/4);
+    clearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize());
 }
 
 void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
-    void* args[] = {&memory, &size};
+    int words = size/4;
+    void* args[] = {&memory, &words};
     executeKernel(clearBufferKernel, args, size, 128);
 }
 
 void CudaContext::addAutoclearBuffer(CUdeviceptr memory, int size) {
     autoclearBuffers.push_back(memory);
-    autoclearBufferSizes.push_back(size);
+    autoclearBufferSizes.push_back(size/4);
 }
 
-//void CudaContext::clearAutoclearBuffers() {
-//    int base = 0;
-//    int total = autoclearBufferSizes.size();
-//    while (total-base >= 6) {
-//        clearSixBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-//        clearSixBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-//        clearSixBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-//        clearSixBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-//        clearSixBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-//        clearSixBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-//        clearSixBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-//        clearSixBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-//        clearSixBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
-//        clearSixBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
-//        clearSixBuffersKernel.setArg<cl::Memory>(10, *autoclearBuffers[base+5]);
-//        clearSixBuffersKernel.setArg<cl_int>(11, autoclearBufferSizes[base+5]);
-//        executeKernel(clearSixBuffersKernel, max(max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), autoclearBufferSizes[base+5]), 128);
-//        base += 6;
-//    }
-//    if (total-base == 5) {
-//        clearFiveBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-//        clearFiveBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-//        clearFiveBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-//        clearFiveBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-//        clearFiveBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-//        clearFiveBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-//        clearFiveBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-//        clearFiveBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-//        clearFiveBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
-//        clearFiveBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
-//        executeKernel(clearFiveBuffersKernel, max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), 128);
-//    }
-//    else if (total-base == 4) {
-//        clearFourBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-//        clearFourBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-//        clearFourBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-//        clearFourBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-//        clearFourBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-//        clearFourBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-//        clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-//        clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-//        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), 128);
-//    }
-//    else if (total-base == 3) {
-//        clearThreeBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-//        clearThreeBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-//        clearThreeBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-//        clearThreeBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-//        clearThreeBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-//        clearThreeBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-//        executeKernel(clearThreeBuffersKernel, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), 128);
-//    }
-//    else if (total-base == 2) {
-//        clearTwoBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-//        clearTwoBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-//        clearTwoBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-//        clearTwoBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-//        executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
-//    }
-//    else if (total-base == 1) {
-//        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]);
-//    }
-//}
+void CudaContext::clearAutoclearBuffers() {
+    int base = 0;
+    int total = autoclearBufferSizes.size();
+    while (total-base >= 6) {
+        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
+                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
+                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2],
+                        &autoclearBuffers[base+3], &autoclearBufferSizes[base+3],
+                        &autoclearBuffers[base+4], &autoclearBufferSizes[base+4],
+                        &autoclearBuffers[base+5], &autoclearBufferSizes[base+5]};
+        executeKernel(clearSixBuffersKernel, args, max(max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), autoclearBufferSizes[base+5]), 128);
+        base += 6;
+    }
+    if (total-base == 5) {
+        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
+                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
+                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2],
+                        &autoclearBuffers[base+3], &autoclearBufferSizes[base+3],
+                        &autoclearBuffers[base+4], &autoclearBufferSizes[base+4]};
+        executeKernel(clearFiveBuffersKernel, args, max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), 128);
+    }
+    else if (total-base == 4) {
+        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
+                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
+                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2],
+                        &autoclearBuffers[base+3], &autoclearBufferSizes[base+3]};
+        executeKernel(clearFourBuffersKernel, args, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), 128);
+    }
+    else if (total-base == 3) {
+        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
+                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
+                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2]};
+        executeKernel(clearThreeBuffersKernel, args, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), 128);
+    }
+    else if (total-base == 2) {
+        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
+                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1]};
+        executeKernel(clearTwoBuffersKernel, args, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
+    }
+    else if (total-base == 1) {
+        clearBuffer(autoclearBuffers[base], autoclearBufferSizes[base]*4);
+    }
+}
 
 void CudaContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {
     // Recursively tag atoms as belonging to a particular molecule.
@@ -539,7 +522,7 @@ void CudaContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMo
  */
 class CudaContext::VirtualSiteInfo : public CudaForceInfo {
 public:
-    VirtualSiteInfo(const System& system) : CudaForceInfo(0) {
+    VirtualSiteInfo(const System& system) {
         for (int i = 0; i < system.getNumParticles(); i++) {
             if (system.isVirtualSite(i)) {
                 siteTypes.push_back(&typeid(system.getVirtualSite(i)));

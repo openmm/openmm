@@ -42,7 +42,7 @@ inline __device__ double4 make_double4(double a) {
 
 // Negate a vector.
 
-inline __device__ int2 operator*(int2 a) {
+inline __device__ int2 operator-(int2 a) {
     return make_int2(-a.x, -a.y);
 }
 
@@ -454,4 +454,42 @@ inline __device__ double3 operator*(double a, double3 b) {
 
 inline __device__ double4 operator*(double a, double4 b) {
     return make_double4(a*b.x, a*b.y, a*b.z, a*b.w);
+}
+
+// *= operator (multiply vector by constant)
+
+inline __device__ void operator*=(int2& a, int b) {
+    a.x *= b; a.y *= b;
+}
+
+inline __device__ void operator*=(int3& a, int b) {
+    a.x *= b; a.y *= b; a.z *= b;
+}
+
+inline __device__ void operator*=(int4& a, int b) {
+    a.x *= b; a.y *= b; a.z *= b; a.w *= b;
+}
+
+inline __device__ void operator*=(float2& a, float b) {
+    a.x *= b; a.y *= b;
+}
+
+inline __device__ void operator*=(float3& a, float b) {
+    a.x *= b; a.y *= b; a.z *= b;
+}
+
+inline __device__ void operator*=(float4& a, float b) {
+    a.x *= b; a.y *= b; a.z *= b; a.w *= b;
+}
+
+inline __device__ void operator*=(double2& a, double b) {
+    a.x *= b; a.y *= b;
+}
+
+inline __device__ void operator*=(double3& a, double b) {
+    a.x *= b; a.y *= b; a.z *= b;
+}
+
+inline __device__ void operator*=(double4& a, double b) {
+    a.x *= b; a.y *= b; a.z *= b; a.w *= b;
 }

@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaArray.h"
+#include "CudaContext.h"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -36,7 +37,7 @@ CudaArray::CudaArray(int size, int elementSize, const std::string& name) :
     CUresult result = cuMemAlloc(&pointer, size*elementSize);
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
-        str<<"Error creating array "<<name<<": "<<result;
+        str<<"Error creating array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(str.str());
     }
 }
@@ -46,7 +47,7 @@ CudaArray::~CudaArray() {
         CUresult result = cuMemFree(pointer);
         if (result != CUDA_SUCCESS) {
             std::stringstream str;
-            str<<"Error deleting array "<<name<<": "<<result;
+            str<<"Error deleting array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
             throw OpenMMException(str.str());
         }
     }
@@ -60,7 +61,7 @@ void CudaArray::upload(void* data, bool blocking) {
         result = cuMemcpyHtoDAsync(pointer, data, size*elementSize, 0);
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
-        str<<"Error uploading array "<<name<<": "<<result;
+        str<<"Error uploading array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(str.str());
     }
 }
@@ -73,7 +74,7 @@ void CudaArray::download(void* data, bool blocking) const {
         result = cuMemcpyDtoHAsync(data, pointer, size*elementSize, 0);
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
-        str<<"Error downloading array "<<name<<": "<<result;
+        str<<"Error downloading array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(str.str());
     }
 }

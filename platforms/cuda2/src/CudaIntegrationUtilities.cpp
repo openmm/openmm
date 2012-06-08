@@ -672,15 +672,15 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
         delete vsiteOutOfPlaneWeights;
 }
 
-//void CudaIntegrationUtilities::applyConstraints(double tol) {
-//    applyConstraints(false, tol);
-//}
-//
-//void CudaIntegrationUtilities::applyVelocityConstraints(double tol) {
-//    applyConstraints(true, tol);
-//}
-//
-//void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double tol) {
+void CudaIntegrationUtilities::applyConstraints(double tol) {
+    applyConstraints(false, tol);
+}
+
+void CudaIntegrationUtilities::applyVelocityConstraints(double tol) {
+    applyConstraints(true, tol);
+}
+
+void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double tol) {
 //    bool hasInitialized;
 //    CUfunction settleKernel, shakeKernel, ccmaForceKernel, ccmaUpdateKernel;
 //    if (constrainVelocities) {
@@ -772,19 +772,19 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
 //            }
 //        }
 //    }
-//}
-//
-//void CudaIntegrationUtilities::computeVirtualSites() {
+}
+
+void CudaIntegrationUtilities::computeVirtualSites() {
 //    if (numVsites > 0)
 //        context.executeKernel(vsitePositionKernel, numVsites);
-//}
-//
-//void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
+}
+
+void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
 //    if (numVsites > 0) {
 //        vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
 //        context.executeKernel(vsiteForceKernel, numVsites);
 //    }
-//}
+}
 
 void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {
     if (random != NULL) {

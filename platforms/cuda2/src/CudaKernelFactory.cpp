@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaKernelFactory.h"
+#include "CudaKernels.h"
 //#include "CudaParallelKernels.h"
 #include "CudaPlatform.h"
 #include "openmm/internal/ContextImpl.h"
@@ -66,64 +67,64 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
 //        if (name == CalcCustomCompoundBondForceKernel::Name())
 //            return new CudaParallelCalcCustomCompoundBondForceKernel(name, platform, data, context.getSystem());
 //    }
-//    CudaContext& cl = *data.contexts[0];
-//    if (name == CalcForcesAndEnergyKernel::Name())
-//        return new CudaCalcForcesAndEnergyKernel(name, platform, cl);
-//    if (name == UpdateStateDataKernel::Name())
-//        return new CudaUpdateStateDataKernel(name, platform, cl);
-//    if (name == ApplyConstraintsKernel::Name())
-//        return new CudaApplyConstraintsKernel(name, platform, cl);
-//    if (name == VirtualSitesKernel::Name())
-//        return new CudaVirtualSitesKernel(name, platform, cl);
-//    if (name == CalcHarmonicBondForceKernel::Name())
-//        return new CudaCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
+    CudaContext& cu = *data.contexts[0];
+    if (name == CalcForcesAndEnergyKernel::Name())
+        return new CudaCalcForcesAndEnergyKernel(name, platform, cu);
+    if (name == UpdateStateDataKernel::Name())
+        return new CudaUpdateStateDataKernel(name, platform, cu);
+    if (name == ApplyConstraintsKernel::Name())
+        return new CudaApplyConstraintsKernel(name, platform, cu);
+    if (name == VirtualSitesKernel::Name())
+        return new CudaVirtualSitesKernel(name, platform, cu);
+    if (name == CalcHarmonicBondForceKernel::Name())
+        return new CudaCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomBondForceKernel::Name())
-//        return new CudaCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomBondForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcHarmonicAngleForceKernel::Name())
-//        return new CudaCalcHarmonicAngleForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcHarmonicAngleForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomAngleForceKernel::Name())
-//        return new CudaCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomAngleForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcPeriodicTorsionForceKernel::Name())
-//        return new CudaCalcPeriodicTorsionForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcPeriodicTorsionForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcRBTorsionForceKernel::Name())
-//        return new CudaCalcRBTorsionForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcRBTorsionForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCMAPTorsionForceKernel::Name())
-//        return new CudaCalcCMAPTorsionForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCMAPTorsionForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomTorsionForceKernel::Name())
-//        return new CudaCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcNonbondedForceKernel::Name())
-//        return new CudaCalcNonbondedForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcNonbondedForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomNonbondedForceKernel::Name())
-//        return new CudaCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomNonbondedForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcGBSAOBCForceKernel::Name())
-//        return new CudaCalcGBSAOBCForceKernel(name, platform, cl);
+//        return new CudaCalcGBSAOBCForceKernel(name, platform, cu);
 //    if (name == CalcCustomGBForceKernel::Name())
-//        return new CudaCalcCustomGBForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomGBForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomExternalForceKernel::Name())
-//        return new CudaCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomHbondForceKernel::Name())
-//        return new CudaCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
+//        return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomCompoundBondForceKernel::Name())
-//        return new CudaCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
-//    if (name == IntegrateVerletStepKernel::Name())
-//        return new CudaIntegrateVerletStepKernel(name, platform, cl);
+//        return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
+    if (name == IntegrateVerletStepKernel::Name())
+        return new CudaIntegrateVerletStepKernel(name, platform, cu);
 //    if (name == IntegrateLangevinStepKernel::Name())
-//        return new CudaIntegrateLangevinStepKernel(name, platform, cl);
+//        return new CudaIntegrateLangevinStepKernel(name, platform, cu);
 //    if (name == IntegrateBrownianStepKernel::Name())
-//        return new CudaIntegrateBrownianStepKernel(name, platform, cl);
+//        return new CudaIntegrateBrownianStepKernel(name, platform, cu);
 //    if (name == IntegrateVariableVerletStepKernel::Name())
-//        return new CudaIntegrateVariableVerletStepKernel(name, platform, cl);
+//        return new CudaIntegrateVariableVerletStepKernel(name, platform, cu);
 //    if (name == IntegrateVariableLangevinStepKernel::Name())
-//        return new CudaIntegrateVariableLangevinStepKernel(name, platform, cl);
+//        return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
 //    if (name == IntegrateCustomStepKernel::Name())
-//        return new CudaIntegrateCustomStepKernel(name, platform, cl);
+//        return new CudaIntegrateCustomStepKernel(name, platform, cu);
 //    if (name == ApplyAndersenThermostatKernel::Name())
-//        return new CudaApplyAndersenThermostatKernel(name, platform, cl);
+//        return new CudaApplyAndersenThermostatKernel(name, platform, cu);
 //    if (name == ApplyMonteCarloBarostatKernel::Name())
-//        return new CudaApplyMonteCarloBarostatKernel(name, platform, cl);
-//    if (name == CalcKineticEnergyKernel::Name())
-//        return new CudaCalcKineticEnergyKernel(name, platform, cl);
+//        return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
+    if (name == CalcKineticEnergyKernel::Name())
+        return new CudaCalcKineticEnergyKernel(name, platform, cu);
 //    if (name == RemoveCMMotionKernel::Name())
-//        return new CudaRemoveCMMotionKernel(name, platform, cl);
+//        return new CudaRemoveCMMotionKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

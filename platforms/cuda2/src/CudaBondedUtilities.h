@@ -59,7 +59,7 @@ namespace OpenMM {
  * <li>The positions of those atoms will have been stored in the real4 variables "pos1", "pos2", ....</li>
  * <li>A real variable called "energy" will exist.  Your code should add the potential energy of the
  * bond to that variable.</li>
- * <li>Your code should define real4 variables called "force1", "force2", ... that contain the force to
+ * <li>Your code should define real3 variables called "force1", "force2", ... that contain the force to
  * apply to each atom.</li>
  * </ol>
  * 
@@ -69,8 +69,8 @@ namespace OpenMM {
  * <tt><pre>
  * real4 delta = pos2-pos1;
  * energy += delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
- * real4 force1 = 2.0f*delta;
- * real4 force2 = -2.0f*delta;
+ * real3 force1 = 2.0f*delta;
+ * real3 force2 = -2.0f*delta;
  * </pre></tt>
  * 
  * Interactions will often depend on parameters or other data.  Call addArgument() to provide the data
@@ -129,6 +129,7 @@ private:
     std::vector<std::string> argTypes;
     std::vector<std::vector<CudaArray*> > atomIndices;
     std::vector<std::string> prefixCode;
+    std::vector<void*> kernelArgs;
     int numForceBuffers, maxBonds;
     bool hasInitializedKernels;
 };

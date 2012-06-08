@@ -39,13 +39,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT CudaForceInfo {
 public:
-    CudaForceInfo(int requiredForceBuffers) : requiredForceBuffers(requiredForceBuffers) {
-    }
-    /**
-     * Get the number of force buffers this force requires.
-     */
-    int getRequiredForceBuffers() {
-        return requiredForceBuffers;
+    CudaForceInfo() {
     }
     /**
      * Get whether or not two particles have identical force field parameters.
@@ -63,8 +57,6 @@ public:
      * Get whether two particle groups are identical.
      */
     virtual bool areGroupsIdentical(int group1, int group2);
-private:
-    int requiredForceBuffers;
 };
 
 } // namespace OpenMM

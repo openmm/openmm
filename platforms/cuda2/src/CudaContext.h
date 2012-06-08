@@ -125,41 +125,42 @@ public:
         return *velm;
     }
     /**
-     * Get the array which contains the force on each atom (respresented as a long3 in 64 bit fixed point).
+     * Get the array which contains the force on each atom (represented as three long longs in 64 bit fixed point).
      */
     CudaArray& getForce() {
         return *force;
     }
-//    /**
-//     * Get the array which contains the buffers in which forces are computed.
-//     */
-//    CudaArray<mm_float4>& getForceBuffers() {
-//        return *forceBuffers;
-//    }
-//    /**
-//     * Get the array which contains a contribution to each force represented as 64 bit fixed point.
-//     */
-//    CudaArray<cl_long>& getLongForceBuffer() {
-//        return *longForceBuffer;
-//    }
-//    /**
-//     * Get the array which contains the buffer in which energy is computed.
-//     */
-//    CudaArray<cl_float>& getEnergyBuffer() {
-//        return *energyBuffer;
-//    }
-//    /**
-//     * Get the array which contains the index of each atom.
-//     */
-//    CudaArray<cl_int>& getAtomIndex() {
-//        return *atomIndex;
-//    }
-//    /**
-//     * Get the number of cells by which the positions are offset.
-//     */
-//    std::vector<mm_int4>& getPosCellOffsets() {
-//        return posCellOffsets;
-//    }
+    /**
+     * Get the array which contains the buffer in which energy is computed.
+     */
+    CudaArray& getEnergyBuffer() {
+        return *energyBuffer;
+    }
+    /**
+     * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
+     * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
+     */
+    void* getPinnedBuffer() {
+        return pinnedBuffer;
+    }
+    /**
+     * Get the host-side vector which contains the index of each atom.
+     */
+    const std::vector<int>& getAtomIndex() const {
+        return atomIndex;
+    }
+    /**
+     * Get the array which contains the index of each atom.
+     */
+    CudaArray& getAtomIndexArray() {
+        return *atomIndexDevice;
+    }
+    /**
+     * Get the number of cells by which the positions are offset.
+     */
+    std::vector<int4>& getPosCellOffsets() {
+        return posCellOffsets;
+    }
     /**
      * Replace all occurrences of a list of substrings.
      *
@@ -210,20 +211,20 @@ public:
      * Set all elements of an array to 0.
      *
      * @param memory     the memory to clear
-     * @param size       the number of 4-byte elements in the buffer
+     * @param size       the size of the buffer in bytes
      */
     void clearBuffer(CUdeviceptr memory, int size);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      *
      * @param memory     the memory to clear
-     * @param size       the number of 4-byte elements in the buffer
+     * @param size       the size of the buffer in bytes
      */
     void addAutoclearBuffer(CUdeviceptr memory, int size);
-//    /**
-//     * Clear all buffers that have been registered with addAutoclearBuffer().
-//     */
-//    void clearAutoclearBuffers();
+    /**
+     * Clear all buffers that have been registered with addAutoclearBuffer().
+     */
+    void clearAutoclearBuffers();
     /**
      * Get the current simulation time.
      */
@@ -309,27 +310,27 @@ public:
     /**
      * Convert a CUDA result code to the corresponding string description.
      */
-    std::string getErrorString(CUresult result);
+    static std::string getErrorString(CUresult result);
     
-//    /**
-//     * Get the size of the periodic box.
-//     */
-//    float4 getPeriodicBoxSize() const {
-//        return periodicBoxSize;
-//    }
-//    /**
-//     * Set the size of the periodic box.
-//     */
-//    void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
-//        periodicBoxSize = make_float4((float) xsize, (float) ysize, (float) zsize, 0);
-//        invPeriodicBoxSize = make_float4((float) (1.0/xsize), (float) (1.0/ysize), (float) (1.0/zsize), 0);
-//    }
-//    /**
-//     * Get the inverse of the size of the periodic box.
-//     */
-//    float4 getInvPeriodicBoxSize() const {
-//        return invPeriodicBoxSize;
-//    }
+    /**
+     * Get the size of the periodic box.
+     */
+    double4 getPeriodicBoxSize() const {
+        return periodicBoxSize;
+    }
+    /**
+     * Set the size of the periodic box.
+     */
+    void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
+        periodicBoxSize = make_double4(xsize, ysize, zsize, 0.0);
+        invPeriodicBoxSize = make_double4(1.0/xsize, 1.0/ysize, 1.0/zsize, 0.0);
+    }
+    /**
+     * Get the inverse of the size of the periodic box.
+     */
+    double4 getInvPeriodicBoxSize() const {
+        return invPeriodicBoxSize;
+    }
     /**
      * Get the CudaIntegrationUtilities for this context.
      */
@@ -342,12 +343,12 @@ public:
     CudaExpressionUtilities& getExpressionUtilities() {
         return *expression;
     }
-//    /**
-//     * Get the CudaBondedUtilities for this context.
-//     */
-//    CudaBondedUtilities& getBondedUtilities() {
-//        return *bonded;
-//    }
+    /**
+     * Get the CudaBondedUtilities for this context.
+     */
+    CudaBondedUtilities& getBondedUtilities() {
+        return *bonded;
+    }
 //    /**
 //     * Get the CudaNonbondedUtilities for this context.
 //     */
@@ -428,8 +429,8 @@ private:
     int numThreadBlocks;
     bool useBlockingSync, useDoublePrecision, accumulateInDouble, contextIsValid, atomsWereReordered, moleculesInvalid;
     std::string compiler, tempDir, gpuArchitecture;
-    float4 periodicBoxSize;
-    float4 invPeriodicBoxSize;
+    double4 periodicBoxSize;
+    double4 invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
@@ -456,7 +457,7 @@ private:
     std::vector<ReorderListener*> reorderListeners;
     CudaIntegrationUtilities* integration;
     CudaExpressionUtilities* expression;
-//    CudaBondedUtilities* bonded;
+    CudaBondedUtilities* bonded;
 //    CudaNonbondedUtilities* nonbonded;
     WorkThread* thread;
 };
