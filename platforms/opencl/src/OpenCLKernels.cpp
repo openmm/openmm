@@ -1399,6 +1399,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
     if (numExceptions > 0) {
+        exceptionAtoms.resize(numExceptions);
         vector<vector<int> > atoms(numExceptions, vector<int>(2));
         exceptionParams = new OpenCLArray<mm_float4>(cl, numExceptions, "exceptionParams");
         vector<mm_float4> exceptionParamsVector(numExceptions);
@@ -1406,6 +1407,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             double chargeProd, sigma, epsilon;
             force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
             exceptionParamsVector[i] = mm_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
+            exceptionAtoms[i] = make_pair(atoms[i][0], atoms[i][1]);
         }
         exceptionParams->upload(exceptionParamsVector);
         map<string, string> replacements;
@@ -1553,15 +1555,15 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0)
+        if (exceptionAtoms.size() > exceptions.size() && make_pair(particle1, particle2) == exceptionAtoms[exceptions.size()])
             exceptions.push_back(i);
+        else if (chargeProd != 0.0 || epsilon != 0.0)
+            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     }
     int numContexts = cl.getPlatformData().contexts.size();
     int startIndex = cl.getContextIndex()*exceptions.size()/numContexts;
     int endIndex = (cl.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
-    if ((exceptionParams == NULL && numExceptions > 0) || (exceptionParams != NULL && numExceptions != exceptionParams->getSize()))
-        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
     
     // Record the per-particle parameters.
     

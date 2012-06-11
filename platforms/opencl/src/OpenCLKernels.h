@@ -616,6 +616,7 @@ private:
     cl::Kernel pmeConvolutionKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
+    std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
     int interpolateForceThreads;
     bool hasCoulomb, hasLJ;
