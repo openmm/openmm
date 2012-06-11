@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,6 +62,9 @@ std::string OpenCLBondedUtilities::addArgument(cl::Memory& data, const string& t
 }
 
 void OpenCLBondedUtilities::addPrefixCode(const string& source) {
+    for (int i = 0; i < (int) prefixCode.size(); i++)
+        if (prefixCode[i] == source)
+            return;
     prefixCode.push_back(source);
 }
 
