@@ -30,7 +30,7 @@
 #include "CudaPlatform.h"
 #include "CudaArray.h"
 #include "CudaContext.h"
-//#include "CudaParameterSet.h"
+#include "CudaParameterSet.h"
 #include "CudaSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
@@ -257,48 +257,48 @@ private:
     CudaArray* params;
 };
 
-///**
-// * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
-//public:
-//    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomBondForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
-//    }
-//    ~CudaCalcCustomBondForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomBondForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomBondForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomBondForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
-//private:
-//    int numBonds;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaParameterSet* params;
-//    CudaArray<cl_float>* globals;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//};
+/**
+ * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+public:
+    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomBondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
+    }
+    ~CudaCalcCustomBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
+private:
+    int numBonds;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+};
 
 /**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
@@ -340,48 +340,48 @@ private:
     CudaArray* params;
 };
 
-///**
-// * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
-//public:
-//    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomAngleForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
-//    }
-//    ~CudaCalcCustomAngleForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomAngleForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomAngleForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomAngleForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
-//private:
-//    int numAngles;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaParameterSet* params;
-//    CudaArray<cl_float>* globals;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//};
+/**
+ * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
+public:
+    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
+    }
+    ~CudaCalcCustomAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
+private:
+    int numAngles;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+};
 
 /**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
@@ -499,49 +499,49 @@ private:
     CudaArray* torsionMaps;
 };
 
-///**
-// * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
-//public:
-//    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomTorsionForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
-//    }
-//    ~CudaCalcCustomTorsionForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomTorsionForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomTorsionForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomTorsionForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
-//private:
-//    int numTorsions;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaParameterSet* params;
-//    CudaArray<cl_float>* globals;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//};
-//
+/**
+ * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+public:
+    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
+    }
+    ~CudaCalcCustomTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
+private:
+    int numTorsions;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+};
+
 ///**
 // * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
 // */
@@ -616,6 +616,7 @@ private:
 //    CUfunction pmeConvolutionKernel;
 //    CUfunction pmeInterpolateForceKernel;
 //    std::map<std::string, std::string> pmeDefines;
+//    std::vector<std::pair<int, int> > exceptionAtoms;
 //    double ewaldSelfEnergy, dispersionCoefficient, alpha;
 //    int interpolateForceThreads;
 //    bool hasCoulomb, hasLJ;
@@ -769,50 +770,50 @@ private:
 //    System& system;
 //    CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
 //};
-//
-///**
-// * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CudaCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
-//public:
-//    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomExternalForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
-//    }
-//    ~CudaCalcCustomExternalForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomExternalForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomExternalForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomExternalForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
-//private:
-//    int numParticles;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    System& system;
-//    CudaParameterSet* params;
-//    CudaArray<cl_float>* globals;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//};
-//
+
+/**
+ * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+public:
+    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomExternalForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
+    }
+    ~CudaCalcCustomExternalForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomExternalForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomExternalForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomExternalForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
+private:
+    int numParticles;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    System& system;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+};
+
 ///**
 // * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
 // */
@@ -867,51 +868,51 @@ private:
 //    System& system;
 //    CUfunction donorKernel, acceptorKernel;
 //};
-//
-///**
-// * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
-// */
-//class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
-//public:
-//    CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomCompoundBondForceKernel(name, platform),
-//            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
-//    }
-//    ~CudaCalcCustomCompoundBondForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomCompoundBondForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomCompoundBondForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomCompoundBondForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
-//
-//private:
-//    int numBonds;
-//    CudaContext& cu;
-//    CudaParameterSet* params;
-//    CudaArray<cl_float>* globals;
-//    CudaArray<mm_float4>* tabulatedFunctionParams;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//    std::vector<CudaArray<mm_float4>*> tabulatedFunctions;
-//    System& system;
-//};
+
+/**
+ * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
+public:
+    CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~CudaCalcCustomCompoundBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCompoundBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomCompoundBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomCompoundBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
+
+private:
+    int numBonds;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    System& system;
+};
 
 /**
  * This kernel is invoked by VerletIntegrator to take one time step.

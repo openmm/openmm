@@ -78,20 +78,20 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaVirtualSitesKernel(name, platform, cu);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CudaCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomBondForceKernel::Name())
-//        return new CudaCalcCustomBondForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomBondForceKernel::Name())
+        return new CudaCalcCustomBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new CudaCalcHarmonicAngleForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomAngleForceKernel::Name())
-//        return new CudaCalcCustomAngleForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomAngleForceKernel::Name())
+        return new CudaCalcCustomAngleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new CudaCalcPeriodicTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())
         return new CudaCalcRBTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCMAPTorsionForceKernel::Name())
         return new CudaCalcCMAPTorsionForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomTorsionForceKernel::Name())
-//        return new CudaCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomTorsionForceKernel::Name())
+        return new CudaCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcNonbondedForceKernel::Name())
 //        return new CudaCalcNonbondedForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomNonbondedForceKernel::Name())
@@ -100,12 +100,12 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
 //        return new CudaCalcGBSAOBCForceKernel(name, platform, cu);
 //    if (name == CalcCustomGBForceKernel::Name())
 //        return new CudaCalcCustomGBForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomExternalForceKernel::Name())
-//        return new CudaCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomExternalForceKernel::Name())
+        return new CudaCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcCustomHbondForceKernel::Name())
 //        return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomCompoundBondForceKernel::Name())
-//        return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomCompoundBondForceKernel::Name())
+        return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
         return new CudaIntegrateVerletStepKernel(name, platform, cu);
 //    if (name == IntegrateLangevinStepKernel::Name())

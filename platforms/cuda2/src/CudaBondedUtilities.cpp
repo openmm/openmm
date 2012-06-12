@@ -58,6 +58,9 @@ std::string CudaBondedUtilities::addArgument(CUdeviceptr data, const string& typ
 }
 
 void CudaBondedUtilities::addPrefixCode(const string& source) {
+    for (int i = 0; i < (int) prefixCode.size(); i++)
+        if (prefixCode[i] == source)
+            return;
     prefixCode.push_back(source);
 }
 
@@ -121,16 +124,13 @@ void CudaBondedUtilities::initialize(const System& system) {
 
 string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const string& computeForce) {
     maxBonds = max(maxBonds, numBonds);
-    string suffix1[] = {""};
-    string suffix4[] = {".x", ".y", ".z", ".w"};
-    string* suffix;
+    string suffix[] = {".x", ".y", ".z", ".w"};
     stringstream s;
     s<<"if ((groups&"<<(1<<group)<<") != 0)\n";
     s<<"for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < "<<numBonds<<"; index += blockDim.x*gridDim.x) {\n";
     int startAtom = 0;
     for (int i = 0; i < (int) atomIndices[forceIndex].size(); i++) {
         int indexWidth = atomIndices[forceIndex][i]->getElementSize()/4;
-        suffix = (indexWidth == 1 ? suffix1 : suffix4);
         string indexType = "uint"+context.intToString(indexWidth);
         s<<"    "<<indexType<<" atoms"<<i<<" = atomIndices"<<forceIndex<<"_"<<i<<"[index];\n";
         int atomsToLoad = min(indexWidth, numAtoms-startAtom);

@@ -456,6 +456,50 @@ inline __device__ double4 operator*(double a, double4 b) {
     return make_double4(a*b.x, a*b.y, a*b.z, a*b.w);
 }
 
+// Divide a vector by a constant.
+
+inline __device__ int2 operator/(int2 a, int b) {
+    return make_int2(a.x/b, a.y/b);
+}
+
+inline __device__ int3 operator/(int3 a, int b) {
+    return make_int3(a.x/b, a.y/b, a.z/b);
+}
+
+inline __device__ int4 operator/(int4 a, int b) {
+    return make_int4(a.x/b, a.y/b, a.z/b, a.w/b);
+}
+
+inline __device__ float2 operator/(float2 a, float b) {
+    float scale = 1.0f/b;
+    return a*scale;
+}
+
+inline __device__ float3 operator/(float3 a, float b) {
+    float scale = 1.0f/b;
+    return a*scale;
+}
+
+inline __device__ float4 operator/(float4 a, float b) {
+    float scale = 1.0f/b;
+    return a*scale;
+}
+
+inline __device__ double2 operator/(double2 a, double b) {
+    double scale = 1.0/b;
+    return a*scale;
+}
+
+inline __device__ double3 operator/(double3 a, double b) {
+    double scale = 1.0/b;
+    return a*scale;
+}
+
+inline __device__ double4 operator/(double4 a, double b) {
+    double scale = 1.0/b;
+    return a*scale;
+}
+
 // *= operator (multiply vector by constant)
 
 inline __device__ void operator*=(int2& a, int b) {
