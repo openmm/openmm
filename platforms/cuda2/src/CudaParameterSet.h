@@ -71,7 +71,7 @@ public:
      *
      * @param values on exit, values[i][j] contains the value of parameter j for object i
      */
-    void getParameterValues(std::vector<std::vector<float> >& values) const;
+    void getParameterValues(std::vector<std::vector<float> >& values);
     /**
      * Set the values of all parameters.
      *
@@ -82,7 +82,7 @@ public:
      * Get a set of CudaNonbondedUtilities::ParameterInfo objects which describe the Buffers
      * containing the data.
      */
-    const std::vector<CudaNonbondedUtilities::ParameterInfo>& getBuffers() const {
+    std::vector<CudaNonbondedUtilities::ParameterInfo>& getBuffers() {
         return buffers;
     }
     /**

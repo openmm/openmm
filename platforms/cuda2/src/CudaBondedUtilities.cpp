@@ -66,7 +66,8 @@ void CudaBondedUtilities::addPrefixCode(const string& source) {
 
 void CudaBondedUtilities::initialize(const System& system) {
     int numForces = forceAtoms.size();
-    if (numForces == 0)
+    hasInteractions = (numForces > 0);
+    if (!hasInteractions)
         return;
     
     // Build the lists of atom indices.
@@ -164,6 +165,8 @@ void CudaBondedUtilities::computeInteractions(int groups) {
         for (int i = 0; i < (int) arguments.size(); i++)
             kernelArgs.push_back(&arguments[i]);
     }
+    if (!hasInteractions)
+        return;
     kernelArgs[3] = &groups;
     context.executeKernel(kernel, &kernelArgs[0], maxBonds);
 }

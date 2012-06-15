@@ -77,7 +77,7 @@ CudaParameterSet::~CudaParameterSet() {
         CHECK_RESULT(cuMemFree(buffers[i].getMemory()));
 }
 
-void CudaParameterSet::getParameterValues(vector<vector<float> >& values) const {
+void CudaParameterSet::getParameterValues(vector<vector<float> >& values) {
     values.resize(numObjects);
     for (int i = 0; i < numObjects; i++)
         values[i].resize(numParameters);

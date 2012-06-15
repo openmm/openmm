@@ -41,7 +41,7 @@ namespace OpenMM {
  * sort and the key for sorting it.  Here is an example of a trait class for
  * sorting floats:
  * 
- * class SortTrait : public CudaSort::SortTrait {
+ * class FloatTrait : public CudaSort::SortTrait {
  *     int getDataSize() const {return 4;}
  *     int getKeySize() const {return 4;}
  *     const char* getDataType() const {return "float";}

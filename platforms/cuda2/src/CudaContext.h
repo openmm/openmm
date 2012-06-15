@@ -324,12 +324,28 @@ public:
     void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
         periodicBoxSize = make_double4(xsize, ysize, zsize, 0.0);
         invPeriodicBoxSize = make_double4(1.0/xsize, 1.0/ysize, 1.0/zsize, 0.0);
+        periodicBoxSizeFloat = make_float4((float) xsize, (float) ysize, (float) zsize, 0.0f);
+        invPeriodicBoxSizeFloat = make_float4(1.0f/(float) xsize, 1.0f/(float) ysize, 1.0f/(float) zsize, 0.0f);
     }
     /**
      * Get the inverse of the size of the periodic box.
      */
     double4 getInvPeriodicBoxSize() const {
         return invPeriodicBoxSize;
+    }
+    /**
+     * Get a pointer to the size of the periodic box, represented as either a float4 or double4 depending on
+     * this context's precision.  This value is suitable for passing to kernels as an argument.
+     */
+    void* getPeriodicBoxSizePointer() {
+        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxSize) : reinterpret_cast<void*>(&periodicBoxSizeFloat));
+    }
+    /**
+     * Get a pointer to the inverse of the size of the periodic box, represented as either a float4 or double4 depending on
+     * this context's precision.  This value is suitable for passing to kernels as an argument.
+     */
+    void* getInvPeriodicBoxSizePointer() {
+        return (useDoublePrecision ? reinterpret_cast<void*>(&invPeriodicBoxSize) : reinterpret_cast<void*>(&invPeriodicBoxSizeFloat));
     }
     /**
      * Get the CudaIntegrationUtilities for this context.
@@ -349,12 +365,12 @@ public:
     CudaBondedUtilities& getBondedUtilities() {
         return *bonded;
     }
-//    /**
-//     * Get the CudaNonbondedUtilities for this context.
-//     */
-//    CudaNonbondedUtilities& getNonbondedUtilities() {
-//        return *nonbonded;
-//    }
+    /**
+     * Get the CudaNonbondedUtilities for this context.
+     */
+    CudaNonbondedUtilities& getNonbondedUtilities() {
+        return *nonbonded;
+    }
     /**
      * Get the thread used by this context for executing parallel computations.
      */
@@ -429,8 +445,8 @@ private:
     int numThreadBlocks;
     bool useBlockingSync, useDoublePrecision, accumulateInDouble, contextIsValid, atomsWereReordered, moleculesInvalid;
     std::string compiler, tempDir, gpuArchitecture;
-    double4 periodicBoxSize;
-    double4 invPeriodicBoxSize;
+    float4 periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
+    double4 periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
@@ -458,7 +474,7 @@ private:
     CudaIntegrationUtilities* integration;
     CudaExpressionUtilities* expression;
     CudaBondedUtilities* bonded;
-//    CudaNonbondedUtilities* nonbonded;
+    CudaNonbondedUtilities* nonbonded;
     WorkThread* thread;
 };
 

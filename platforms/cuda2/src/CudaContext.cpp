@@ -34,7 +34,7 @@
 #include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
-//#include "CudaNonbondedUtilities.h"
+#include "CudaNonbondedUtilities.h"
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/Platform.h"
@@ -68,7 +68,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
         velm(NULL), force(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), expression(NULL),
-        bonded(NULL), /*nonbonded(NULL),*/ thread(NULL) {
+        bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (!hasInitializedCuda) {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;
@@ -122,7 +122,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         throw OpenMMException("No compatible CUDA device is available");
     CHECK_RESULT(cuDeviceGet(&device, deviceIndex));
     this->deviceIndex = deviceIndex;
-    compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
     defaultOptimizationOptions = "--use_fast_math";
     unsigned int flags = CU_CTX_MAP_HOST;
     if (useBlockingSync)
@@ -139,13 +138,18 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     int numThreadBlocksPerComputeUnit = 6;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
     bonded = new CudaBondedUtilities(*this);
-//    nonbonded = new CudaNonbondedUtilities(*this);
+    nonbonded = new CudaNonbondedUtilities(*this);
+    int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         posq = CudaArray::create<double4>(paddedNumAtoms, "posq");
         velm = CudaArray::create<double4>(paddedNumAtoms, "velm");
+        compilationDefines["USE_DOUBLE_PRECISION"] = "1";
         compilationDefines["make_real2"] = "make_double2";
         compilationDefines["make_real3"] = "make_double3";
         compilationDefines["make_real4"] = "make_double4";
+        energyBuffer = CudaArray::create<double>(numEnergyBuffers, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else {
         posq = CudaArray::create<float4>(paddedNumAtoms, "posq");
@@ -153,6 +157,9 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_real2"] = "make_float2";
         compilationDefines["make_real3"] = "make_float3";
         compilationDefines["make_real4"] = "make_float4";
+        energyBuffer = CudaArray::create<float>(numEnergyBuffers, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
     }
     posCellOffsets.resize(paddedNumAtoms, make_int4(0, 0, 0, 0));
 
@@ -191,6 +198,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 }
 
 CudaContext::~CudaContext() {
+    cuCtxSetCurrent(context);
     for (int i = 0; i < (int) forces.size(); i++)
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
@@ -211,8 +219,8 @@ CudaContext::~CudaContext() {
         delete expression;
     if (bonded != NULL)
         delete bonded;
-//    if (nonbonded != NULL)
-//        delete nonbonded;
+    if (nonbonded != NULL)
+        delete nonbonded;
     if (thread != NULL)
         delete thread;
     string errorMessage = "Error deleting Context";
@@ -221,17 +229,8 @@ CudaContext::~CudaContext() {
 }
 
 void CudaContext::initialize() {
+    cuCtxSetCurrent(context);
     string errorMessage = "Error initializing Context";
-    if (useDoublePrecision) {
-        energyBuffer = CudaArray::create<double>(numThreadBlocks*ThreadBlockSize, "energyBuffer");
-        int pinnedBufferSize = max(paddedNumAtoms*4, numThreadBlocks*ThreadBlockSize);
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
-    }
-    else {
-        energyBuffer = CudaArray::create<float>(numThreadBlocks*ThreadBlockSize, "energyBuffer");
-        int pinnedBufferSize = max(paddedNumAtoms*6, numThreadBlocks*ThreadBlockSize);
-        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
-    }
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
         if (useDoublePrecision)
@@ -251,7 +250,7 @@ void CudaContext::initialize() {
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
     moleculesInvalid = false;
-//    nonbonded->initialize(system);
+    nonbonded->initialize(system);
 }
 
 void CudaContext::addForce(CudaForceInfo* force) {
@@ -719,226 +718,226 @@ void CudaContext::invalidateMolecules() {
     moleculesInvalid = true;
 }
 
-//void OpenCLContext::validateMolecules() {
-//    moleculesInvalid = false;
-//    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
-//        return;
-//    bool valid = true;
-//    for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
-//        MoleculeGroup& mol = moleculeGroups[group];
-//        vector<int>& instances = mol.instances;
-//        vector<int>& offsets = mol.offsets;
-//        vector<int>& atoms = mol.atoms;
-//        int numMolecules = instances.size();
-//        Molecule& m1 = molecules[instances[0]];
-//        int offset1 = offsets[0];
-//        for (int j = 1; valid && j < numMolecules; j++) {
-//            // See if the atoms are identical.
-//
-//            Molecule& m2 = molecules[instances[j]];
-//            int offset2 = offsets[j];
-//            for (int i = 0; i < (int) atoms.size() && valid; i++) {
-//                for (int k = 0; k < (int) forces.size(); k++)
-//                    if (!forces[k]->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-//                        valid = false;
-//            }
-//
-//            // See if the force groups are identical.
-//
-//            for (int i = 0; i < (int) forces.size() && valid; i++) {
-//                for (int k = 0; k < (int) m1.groups[i].size() && valid; k++)
-//                    if (!forces[i]->areGroupsIdentical(m1.groups[i][k], m2.groups[i][k]))
-//                        valid = false;
-//            }
-//        }
-//    }
-//    if (valid)
-//        return;
-//    
-//    // The list of which molecules are identical is no longer valid.  We need to restore the
-//    // atoms to their original order, rebuild the list of identical molecules, and sort them
-//    // again.
-//    
-//    vector<mm_float4> newPosq(numAtoms);
-//    vector<mm_float4> newVelm(numAtoms);
-//    vector<mm_int4> newCellOffsets(numAtoms);
-//    posq->download();
-//    velm->download();
-//    for (int i = 0; i < numAtoms; i++) {
-//        int index = atomIndex->get(i);
-//        newPosq[index] = posq->get(i);
-//        newVelm[index] = velm->get(i);
-//        newCellOffsets[index] = posCellOffsets[i];
-//    }
-//    for (int i = 0; i < numAtoms; i++) {
-//        posq->set(i, newPosq[i]);
-//        velm->set(i, newVelm[i]);
-//        atomIndex->set(i, i);
-//        posCellOffsets[i] = newCellOffsets[i];
-//    }
-//    posq->upload();
-//    velm->upload();
-//    atomIndex->upload();
-//    findMoleculeGroups();
-//    for (int i = 0; i < (int) reorderListeners.size(); i++)
-//        reorderListeners[i]->execute();
-//}
-//
-//void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
-//    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
-//        return;
-//    if (moleculesInvalid)
-//        validateMolecules();
-//    atomsWereReordered = true;
-//
-//    // Find the range of positions and the number of bins along each axis.
-//
-//    posq->download();
-//    velm->download();
-//    float minx = posq->get(0).x, maxx = posq->get(0).x;
-//    float miny = posq->get(0).y, maxy = posq->get(0).y;
-//    float minz = posq->get(0).z, maxz = posq->get(0).z;
-//    if (nonbonded->getUsePeriodic()) {
-//        minx = miny = minz = 0.0;
-//        maxx = periodicBoxSize.x;
-//        maxy = periodicBoxSize.y;
-//        maxz = periodicBoxSize.z;
-//    }
-//    else {
-//        for (int i = 1; i < numAtoms; i++) {
-//            const mm_float4& pos = posq->get(i);
-//            minx = min(minx, pos.x);
-//            maxx = max(maxx, pos.x);
-//            miny = min(miny, pos.y);
-//            maxy = max(maxy, pos.y);
-//            minz = min(minz, pos.z);
-//            maxz = max(maxz, pos.z);
-//        }
-//    }
-//
-//    // Loop over each group of identical molecules and reorder them.
-//
-//    vector<int> originalIndex(numAtoms);
-//    vector<mm_float4> newPosq(numAtoms);
-//    vector<mm_float4> newVelm(numAtoms);
-//    vector<mm_int4> newCellOffsets(numAtoms);
-//    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
-//        // Find the center of each molecule.
-//
-//        MoleculeGroup& mol = moleculeGroups[group];
-//        int numMolecules = mol.offsets.size();
-//        vector<int>& atoms = mol.atoms;
-//        vector<mm_float4> molPos(numMolecules);
-//        float invNumAtoms = 1.0f/atoms.size();
-//        for (int i = 0; i < numMolecules; i++) {
-//            molPos[i].x = 0.0f;
-//            molPos[i].y = 0.0f;
-//            molPos[i].z = 0.0f;
-//            for (int j = 0; j < (int)atoms.size(); j++) {
-//                int atom = atoms[j]+mol.offsets[i];
-//                const mm_float4& pos = posq->get(atom);
-//                molPos[i].x += pos.x;
-//                molPos[i].y += pos.y;
-//                molPos[i].z += pos.z;
-//            }
-//            molPos[i].x *= invNumAtoms;
-//            molPos[i].y *= invNumAtoms;
-//            molPos[i].z *= invNumAtoms;
-//        }
-//        if (nonbonded->getUsePeriodic()) {
-//            // Move each molecule position into the same box.
-//
-//            for (int i = 0; i < numMolecules; i++) {
-//                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
-//                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
-//                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
-//                float dx = xcell*periodicBoxSize.x;
-//                float dy = ycell*periodicBoxSize.y;
-//                float dz = zcell*periodicBoxSize.z;
-//                if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
-//                    molPos[i].x -= dx;
-//                    molPos[i].y -= dy;
-//                    molPos[i].z -= dz;
-//                    if (enforcePeriodic) {
-//                        for (int j = 0; j < (int) atoms.size(); j++) {
-//                            int atom = atoms[j]+mol.offsets[i];
-//                            mm_float4 p = posq->get(atom);
-//                            p.x -= dx;
-//                            p.y -= dy;
-//                            p.z -= dz;
-//                            posq->set(atom, p);
-//                            posCellOffsets[atom].x -= xcell;
-//                            posCellOffsets[atom].y -= ycell;
-//                            posCellOffsets[atom].z -= zcell;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//
-//        // Select a bin for each molecule, then sort them by bin.
-//
-//        bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
-//        float binWidth;
-//        if (useHilbert)
-//            binWidth = (float)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
-//        else
-//            binWidth = (float)(0.2*nonbonded->getCutoffDistance());
-//        float invBinWidth = 1.0f/binWidth;
-//        int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
-//        int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
-//        vector<pair<int, int> > molBins(numMolecules);
-//        bitmask_t coords[3];
-//        for (int i = 0; i < numMolecules; i++) {
-//            int x = (int) ((molPos[i].x-minx)*invBinWidth);
-//            int y = (int) ((molPos[i].y-miny)*invBinWidth);
-//            int z = (int) ((molPos[i].z-minz)*invBinWidth);
-//            int bin;
-//            if (useHilbert) {
-//                coords[0] = x;
-//                coords[1] = y;
-//                coords[2] = z;
-//                bin = (int) hilbert_c2i(3, 8, coords);
-//            }
-//            else {
-//                int yodd = y&1;
-//                int zodd = z&1;
-//                bin = z*xbins*ybins;
-//                bin += (zodd ? ybins-y : y)*xbins;
-//                bin += (yodd ? xbins-x : x);
-//            }
-//            molBins[i] = pair<int, int>(bin, i);
-//        }
-//        sort(molBins.begin(), molBins.end());
-//
-//        // Reorder the atoms.
-//
-//        for (int i = 0; i < numMolecules; i++) {
-//            for (int j = 0; j < (int)atoms.size(); j++) {
-//                int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
-//                int newIndex = mol.offsets[i]+atoms[j];
-//                originalIndex[newIndex] = atomIndex->get(oldIndex);
-//                newPosq[newIndex] = posq->get(oldIndex);
-//                newVelm[newIndex] = velm->get(oldIndex);
-//                newCellOffsets[newIndex] = posCellOffsets[oldIndex];
-//            }
-//        }
-//    }
-//
-//    // Update the streams.
-//
-//    for (int i = 0; i < numAtoms; i++) {
-//        posq->set(i, newPosq[i]);
-//        velm->set(i, newVelm[i]);
-//        atomIndex->set(i, originalIndex[i]);
-//        posCellOffsets[i] = newCellOffsets[i];
-//    }
-//    posq->upload();
-//    velm->upload();
-//    atomIndex->upload();
-//    for (int i = 0; i < (int) reorderListeners.size(); i++)
-//        reorderListeners[i]->execute();
-//}
+void CudaContext::validateMolecules() {
+    moleculesInvalid = false;
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
+        return;
+    bool valid = true;
+    for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
+        MoleculeGroup& mol = moleculeGroups[group];
+        vector<int>& instances = mol.instances;
+        vector<int>& offsets = mol.offsets;
+        vector<int>& atoms = mol.atoms;
+        int numMolecules = instances.size();
+        Molecule& m1 = molecules[instances[0]];
+        int offset1 = offsets[0];
+        for (int j = 1; valid && j < numMolecules; j++) {
+            // See if the atoms are identical.
+
+            Molecule& m2 = molecules[instances[j]];
+            int offset2 = offsets[j];
+            for (int i = 0; i < (int) atoms.size() && valid; i++) {
+                for (int k = 0; k < (int) forces.size(); k++)
+                    if (!forces[k]->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                        valid = false;
+            }
+
+            // See if the force groups are identical.
+
+            for (int i = 0; i < (int) forces.size() && valid; i++) {
+                for (int k = 0; k < (int) m1.groups[i].size() && valid; k++)
+                    if (!forces[i]->areGroupsIdentical(m1.groups[i][k], m2.groups[i][k]))
+                        valid = false;
+            }
+        }
+    }
+    if (valid)
+        return;
+    
+    // The list of which molecules are identical is no longer valid.  We need to restore the
+    // atoms to their original order, rebuild the list of identical molecules, and sort them
+    // again.
+    
+    vector<float4> oldPosq(paddedNumAtoms);
+    vector<float4> newPosq(paddedNumAtoms);
+    vector<float4> oldVelm(paddedNumAtoms);
+    vector<float4> newVelm(paddedNumAtoms);
+    vector<int4> newCellOffsets(numAtoms);
+    posq->download(oldPosq);
+    velm->download(oldVelm);
+    for (int i = 0; i < numAtoms; i++) {
+        int index = atomIndex[i];
+        newPosq[index] = oldPosq[i];
+        newVelm[index] = oldVelm[i];
+        newCellOffsets[index] = posCellOffsets[i];
+    }
+    for (int i = 0; i < numAtoms; i++) {
+        atomIndex[i] = i;
+        posCellOffsets[i] = newCellOffsets[i];
+    }
+    posq->upload(newPosq);
+    velm->upload(newVelm);
+    atomIndexDevice->upload(atomIndex);
+    findMoleculeGroups();
+    for (int i = 0; i < (int) reorderListeners.size(); i++)
+        reorderListeners[i]->execute();
+}
+
+void CudaContext::reorderAtoms(bool enforcePeriodic) {
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
+        return;
+    if (moleculesInvalid)
+        validateMolecules();
+    atomsWereReordered = true;
+
+    // Find the range of positions and the number of bins along each axis.
+
+    vector<float4> oldPosq(paddedNumAtoms);
+    vector<float4> oldVelm(paddedNumAtoms);
+    posq->download(oldPosq);
+    velm->download(oldVelm);
+    float minx = oldPosq[0].x, maxx = oldPosq[0].x;
+    float miny = oldPosq[0].y, maxy = oldPosq[0].y;
+    float minz = oldPosq[0].z, maxz = oldPosq[0].z;
+    if (nonbonded->getUsePeriodic()) {
+        minx = miny = minz = 0.0;
+        maxx = periodicBoxSize.x;
+        maxy = periodicBoxSize.y;
+        maxz = periodicBoxSize.z;
+    }
+    else {
+        for (int i = 1; i < numAtoms; i++) {
+            const float4& pos = oldPosq[i];
+            minx = min(minx, pos.x);
+            maxx = max(maxx, pos.x);
+            miny = min(miny, pos.y);
+            maxy = max(maxy, pos.y);
+            minz = min(minz, pos.z);
+            maxz = max(maxz, pos.z);
+        }
+    }
+
+    // Loop over each group of identical molecules and reorder them.
+
+    vector<int> originalIndex(numAtoms);
+    vector<float4> newPosq(paddedNumAtoms);
+    vector<float4> newVelm(paddedNumAtoms);
+    vector<int4> newCellOffsets(numAtoms);
+    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
+        // Find the center of each molecule.
+
+        MoleculeGroup& mol = moleculeGroups[group];
+        int numMolecules = mol.offsets.size();
+        vector<int>& atoms = mol.atoms;
+        vector<float4> molPos(numMolecules);
+        float invNumAtoms = 1.0f/atoms.size();
+        for (int i = 0; i < numMolecules; i++) {
+            molPos[i].x = 0.0f;
+            molPos[i].y = 0.0f;
+            molPos[i].z = 0.0f;
+            for (int j = 0; j < (int)atoms.size(); j++) {
+                int atom = atoms[j]+mol.offsets[i];
+                const float4& pos = oldPosq[atom];
+                molPos[i].x += pos.x;
+                molPos[i].y += pos.y;
+                molPos[i].z += pos.z;
+            }
+            molPos[i].x *= invNumAtoms;
+            molPos[i].y *= invNumAtoms;
+            molPos[i].z *= invNumAtoms;
+        }
+        if (nonbonded->getUsePeriodic()) {
+            // Move each molecule position into the same box.
+
+            for (int i = 0; i < numMolecules; i++) {
+                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
+                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
+                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
+                float dx = xcell*periodicBoxSize.x;
+                float dy = ycell*periodicBoxSize.y;
+                float dz = zcell*periodicBoxSize.z;
+                if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
+                    molPos[i].x -= dx;
+                    molPos[i].y -= dy;
+                    molPos[i].z -= dz;
+                    if (enforcePeriodic) {
+                        for (int j = 0; j < (int) atoms.size(); j++) {
+                            int atom = atoms[j]+mol.offsets[i];
+                            float4 p = oldPosq[atom];
+                            p.x -= dx;
+                            p.y -= dy;
+                            p.z -= dz;
+                            oldPosq[atom] = p;
+                            posCellOffsets[atom].x -= xcell;
+                            posCellOffsets[atom].y -= ycell;
+                            posCellOffsets[atom].z -= zcell;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Select a bin for each molecule, then sort them by bin.
+
+        bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
+        float binWidth;
+        if (useHilbert)
+            binWidth = (float)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
+        else
+            binWidth = (float)(0.2*nonbonded->getCutoffDistance());
+        float invBinWidth = 1.0f/binWidth;
+        int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
+        int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
+        vector<pair<int, int> > molBins(numMolecules);
+        bitmask_t coords[3];
+        for (int i = 0; i < numMolecules; i++) {
+            int x = (int) ((molPos[i].x-minx)*invBinWidth);
+            int y = (int) ((molPos[i].y-miny)*invBinWidth);
+            int z = (int) ((molPos[i].z-minz)*invBinWidth);
+            int bin;
+            if (useHilbert) {
+                coords[0] = x;
+                coords[1] = y;
+                coords[2] = z;
+                bin = (int) hilbert_c2i(3, 8, coords);
+            }
+            else {
+                int yodd = y&1;
+                int zodd = z&1;
+                bin = z*xbins*ybins;
+                bin += (zodd ? ybins-y : y)*xbins;
+                bin += (yodd ? xbins-x : x);
+            }
+            molBins[i] = pair<int, int>(bin, i);
+        }
+        sort(molBins.begin(), molBins.end());
+
+        // Reorder the atoms.
+
+        for (int i = 0; i < numMolecules; i++) {
+            for (int j = 0; j < (int)atoms.size(); j++) {
+                int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
+                int newIndex = mol.offsets[i]+atoms[j];
+                originalIndex[newIndex] = atomIndex[oldIndex];
+                newPosq[newIndex] = oldPosq[oldIndex];
+                newVelm[newIndex] = oldVelm[oldIndex];
+                newCellOffsets[newIndex] = posCellOffsets[oldIndex];
+            }
+        }
+    }
+
+    // Update the streams.
+
+    for (int i = 0; i < numAtoms; i++) {
+        atomIndex[i] = originalIndex[i];
+        posCellOffsets[i] = newCellOffsets[i];
+    }
+    posq->upload(newPosq);
+    velm->upload(newVelm);
+    atomIndexDevice->upload(atomIndex);
+    for (int i = 0; i < (int) reorderListeners.size(); i++)
+        reorderListeners[i]->execute();
+}
 
 struct CudaContext::WorkThread::ThreadData {
     ThreadData(std::queue<CudaContext::WorkTask*>& tasks, bool& waiting,  bool& finished,

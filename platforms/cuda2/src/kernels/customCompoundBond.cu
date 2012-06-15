@@ -1,14 +1,14 @@
 /**
  * Convert a real4 to a real3 by removing its last element.
  */
-__device__ real3 ccb_trim(real4 v) {
+inline __device__ real3 ccb_trim(real4 v) {
     return make_real3(v.x, v.y, v.z);
 }
 
 /**
  * Compute the difference between two vectors, setting the fourth component to the squared magnitude.
  */
-__device__ real4 ccb_delta(real4 vec1, real4 vec2) {
+inline __device__ real4 ccb_delta(real4 vec1, real4 vec2) {
     real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
@@ -38,7 +38,7 @@ __device__ real ccb_computeAngle(real4 vec1, real4 vec2) {
 /**
  * Compute the cross product of two vectors, setting the fourth component to the squared magnitude.
  */
-__device__ real4 ccb_computeCross(real4 vec1, real4 vec2) {
+inline __device__ real4 ccb_computeCross(real4 vec1, real4 vec2) {
     real3 cp = cross(vec1, vec2);
     return make_real4(cp.x, cp.y, cp.z, cp.x*cp.x+cp.y*cp.y+cp.z*cp.z);
 }

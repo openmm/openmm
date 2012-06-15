@@ -131,7 +131,7 @@ private:
     std::vector<std::string> prefixCode;
     std::vector<void*> kernelArgs;
     int numForceBuffers, maxBonds;
-    bool hasInitializedKernels;
+    bool hasInitializedKernels, hasInteractions;
 };
 
 } // namespace OpenMM

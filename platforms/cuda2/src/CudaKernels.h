@@ -34,6 +34,7 @@
 #include "CudaSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include <cufft.h>
 
 namespace OpenMM {
 
@@ -542,87 +543,86 @@ private:
     std::vector<float> globalParamValues;
 };
 
-///**
-// * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
-// */
-//class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
-//public:
-//    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcNonbondedForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
-//            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDTheta(NULL),
-//            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
-//    }
-//    ~CudaCalcNonbondedForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the NonbondedForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const NonbondedForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @param includeDirect  true if direct space interactions should be included
-//     * @param includeReciprocal  true if reciprocal space interactions should be included
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the NonbondedForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
-//private:
-//    struct SortTrait {
-//        typedef mm_int2 DataType;
-//        typedef cl_int KeyType;
-//        static const char* clDataType() {return "int2";}
-//        static const char* clKeyType() {return "int";}
-//        static const char* clMinKey() {return "INT_MIN";}
-//        static const char* clMaxKey() {return "INT_MAX";}
-//        static const char* clMaxValue() {return "(int2) (INT_MAX, INT_MAX)";}
-//        static const char* clSortKey() {return "value.y";}
-//    };
-//    CudaContext& cu;
-//    bool hasInitializedKernel;
-//    CudaArray<mm_float2>* sigmaEpsilon;
-//    CudaArray<mm_float4>* exceptionParams;
-//    CudaArray<mm_float2>* cosSinSums;
-//    CudaArray<mm_float2>* pmeGrid;
-//    CudaArray<mm_float2>* pmeGrid2;
-//    CudaArray<cl_float>* pmeBsplineModuliX;
-//    CudaArray<cl_float>* pmeBsplineModuliY;
-//    CudaArray<cl_float>* pmeBsplineModuliZ;
-//    CudaArray<mm_float4>* pmeBsplineTheta;
-//    CudaArray<mm_float4>* pmeBsplineDTheta;
-//    CudaArray<cl_int>* pmeAtomRange;
-//    CudaArray<mm_int2>* pmeAtomGridIndex;
-//    CudaSort<SortTrait>* sort;
-//    CudaFFT3D* fft;
-//    CUfunction ewaldSumsKernel;
-//    CUfunction ewaldForcesKernel;
-//    CUfunction pmeGridIndexKernel;
-//    CUfunction pmeAtomRangeKernel;
-//    CUfunction pmeZIndexKernel;
-//    CUfunction pmeUpdateBsplinesKernel;
-//    CUfunction pmeSpreadChargeKernel;
-//    CUfunction pmeFinishSpreadChargeKernel;
-//    CUfunction pmeConvolutionKernel;
-//    CUfunction pmeInterpolateForceKernel;
-//    std::map<std::string, std::string> pmeDefines;
-//    std::vector<std::pair<int, int> > exceptionAtoms;
-//    double ewaldSelfEnergy, dispersionCoefficient, alpha;
-//    int interpolateForceThreads;
-//    bool hasCoulomb, hasLJ;
-//    static const int PmeOrder = 5;
-//};
-//
+/**
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
+ */
+class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+public:
+    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcNonbondedForceKernel(name, platform),
+            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDTheta(NULL),
+            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
+    }
+    ~CudaCalcNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the NonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const NonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @param includeDirect  true if direct space interactions should be included
+     * @param includeReciprocal  true if reciprocal space interactions should be included
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the NonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+private:
+    class SortTrait : public CudaSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "INT_MIN";}
+        const char* getMaxKey() const {return "INT_MAX";}
+        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getSortKey() const {return "value.y";}
+    };
+    CudaContext& cu;
+    bool hasInitializedFFT;
+    CudaArray* sigmaEpsilon;
+    CudaArray* exceptionParams;
+    CudaArray* cosSinSums;
+    CudaArray* pmeGrid;
+    CudaArray* pmeBsplineModuliX;
+    CudaArray* pmeBsplineModuliY;
+    CudaArray* pmeBsplineModuliZ;
+    CudaArray* pmeBsplineTheta;
+    CudaArray* pmeBsplineDTheta;
+    CudaArray* pmeAtomRange;
+    CudaArray* pmeAtomGridIndex;
+    CudaSort* sort;
+    cufftHandle fft;
+    CUfunction ewaldSumsKernel;
+    CUfunction ewaldForcesKernel;
+    CUfunction pmeGridIndexKernel;
+    CUfunction pmeAtomRangeKernel;
+    CUfunction pmeZIndexKernel;
+    CUfunction pmeUpdateBsplinesKernel;
+    CUfunction pmeSpreadChargeKernel;
+    CUfunction pmeFinishSpreadChargeKernel;
+    CUfunction pmeConvolutionKernel;
+    CUfunction pmeInterpolateForceKernel;
+    std::map<std::string, std::string> pmeDefines;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    int interpolateForceThreads;
+    bool hasCoulomb, hasLJ;
+    static const int PmeOrder = 5;
+};
+
 ///**
 // * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
 // */

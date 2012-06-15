@@ -38,7 +38,7 @@ namespace OpenMM {
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
- * ways.  First, it can be used to create Kernels that evaluate nonbonded interactions.  Clients
+ * ways.  First, it can be used to create kernels that evaluate nonbonded interactions.  Clients
  * only need to provide the code for evaluating a single interaction and the list of parameters it depends on.
  * A complete kernel is then synthesized using an appropriate algorithm to evaluate all interactions on all
  * atoms.
@@ -64,209 +64,199 @@ namespace OpenMM {
 class OPENMM_EXPORT CudaNonbondedUtilities {
 public:
     class ParameterInfo;
-//    CudaNonbondedUtilities(CudaContext& context);
-//    ~CudaNonbondedUtilities();
-//    /**
-//     * Add a nonbonded interaction to be evaluated by the default interaction kernel.
-//     *
-//     * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
-//     * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
-//     * @param usesExclusions specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
-//     * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
-//     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
-//     * @param kernel         the code to evaluate the interaction
-//     * @param forceGroup     the force group in which the interaction should be calculated
-//     */
-//    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup);
-//    /**
-//     * Add a per-atom parameter that the default interaction kernel may depend on.
-//     */
-//    void addParameter(const ParameterInfo& parameter);
-//    /**
-//     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
-//     */
-//    void addArgument(const ParameterInfo& parameter);
-//    /**
-//     * Specify the list of exclusions that an interaction outside the default kernel will depend on.
-//     * 
-//     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
-//     */
-//    void requestExclusions(const std::vector<std::vector<int> >& exclusionList);
-//    /**
-//     * Initialize this object in preparation for a simulation.
-//     */
-//    void initialize(const System& system);
-//    /**
-//     * Get the number of force buffers required for nonbonded forces.
-//     */
-//    int getNumForceBuffers() {
-//        return numForceBuffers;
-//    }
-//    /**
-//     * Get the number of energy buffers required for nonbonded forces.
-//     */
-//    int getNumEnergyBuffers() {
-//        return numForceThreadBlocks*forceThreadBlockSize;
-//    }
-//    /**
-//     * Get whether a cutoff is being used.
-//     */
-//    bool getUseCutoff() {
-//        return useCutoff;
-//    }
-//    /**
-//     * Get whether periodic boundary conditions are being used.
-//     */
-//    bool getUsePeriodic() {
-//        return usePeriodic;
-//    }
-//    /**
-//     * Get whether there is one force buffer per atom block.
-//     */
-//    bool getForceBufferPerAtomBlock() {
-//        return forceBufferPerAtomBlock;
-//    }
-//    /**
-//     * Get the number of work groups used for computing nonbonded forces.
-//     */
-//    int getNumForceThreadBlocks() {
-//        return numForceThreadBlocks;
-//    }
-//    /**
-//     * Get the size of each work group used for computing nonbonded forces.
-//     */
-//    int getForceThreadBlockSize() {
-//        return forceThreadBlockSize;
-//    }
-//    /**
-//     * Get the cutoff distance.
-//     */
-//    double getCutoffDistance() {
-//        return cutoff;
-//    }
-//    /**
-//     * Get whether any interactions have been added.
-//     */
-//    bool getHasInteractions() {
-//        return cutoff != -1.0;
-//    }
-//    /**
-//     * Get the force group in which nonbonded interactions should be computed.
-//     */
-//    int getForceGroup() {
-//        return nonbondedForceGroup;
-//    }
-//    /**
-//     * Prepare to compute interactions.  This updates the neighbor list.
-//     */
-//    void prepareInteractions();
-//    /**
-//     * Compute the nonbonded interactions.
-//     */
-//    void computeInteractions();
-//    /**
-//     * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
-//     */
-//    void updateNeighborListSize();
-//    /**
-//     * Get the array containing the center of each atom block.
-//     */
-//    CudaArray<mm_float4>& getBlockCenters() {
-//        return *blockCenter;
-//    }
-//    /**
-//     * Get the array containing the dimensions of each atom block.
-//     */
-//    CudaArray<mm_float4>& getBlockBoundingBoxes() {
-//        return *blockBoundingBox;
-//    }
-//    /**
-//     * Get the array whose first element contains the number of tiles with interactions.
-//     */
-//    CudaArray<cl_uint>& getInteractionCount() {
-//        return *interactionCount;
-//    }
-//    /**
-//     * Get the array containing tiles with interactions.
-//     */
-//    CudaArray<mm_ushort2>& getInteractingTiles() {
-//        return *interactingTiles;
-//    }
-//    /**
-//     * Get the array containing flags for tiles with interactions.
-//     */
-//    CudaArray<cl_uint>& getInteractionFlags() {
-//        return *interactionFlags;
-//    }
-//    /**
-//     * Get the array containing exclusion flags.
-//     */
-//    CudaArray<cl_uint>& getExclusions() {
-//        return *exclusions;
-//    }
-//    /**
-//     * Get the array containing the index into the exclusion array for each tile.
-//     */
-//    CudaArray<cl_uint>& getExclusionIndices() {
-//        return *exclusionIndices;
-//    }
-//    /**
-//     * Get the array listing where the exclusion data starts for each row.
-//     */
-//    CudaArray<cl_uint>& getExclusionRowIndices() {
-//        return *exclusionRowIndices;
-//    }
-//    /**
-//     * Get the index of the first tile this context is responsible for processing.
-//     */
-//    int getStartTileIndex() const {
-//        return startTileIndex;
-//    }
-//    /**
-//     * Get the total number of tiles this context is responsible for processing.
-//     */
-//    int getNumTiles() const {
-//        return numTiles;
-//    }
-//    /**
-//     * Set the range of tiles that should be processed by this context.
-//     */
-//    void setTileRange(int startTileIndex, int numTiles);
-//    /**
-//     * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
-//     * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
-//     * the same neighbor list.
-//     * 
-//     * @param source        the source code for evaluating the force and energy
-//     * @param params        the per-atom parameters this kernel may depend on
-//     * @param arguments     arrays (other than per-atom parameters) that should be passed as arguments to the kernel
-//     * @param useExclusions specifies whether exclusions are applied to this interaction
-//     * @param isSymmetric   specifies whether the interaction is symmetric
-//     */
-//    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const;
+    CudaNonbondedUtilities(CudaContext& context);
+    ~CudaNonbondedUtilities();
+    /**
+     * Add a nonbonded interaction to be evaluated by the default interaction kernel.
+     *
+     * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
+     * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
+     * @param usesExclusions specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
+     * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
+     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
+     * @param kernel         the code to evaluate the interaction
+     * @param forceGroup     the force group in which the interaction should be calculated
+     */
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup);
+    /**
+     * Add a per-atom parameter that the default interaction kernel may depend on.
+     */
+    void addParameter(const ParameterInfo& parameter);
+    /**
+     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     */
+    void addArgument(const ParameterInfo& parameter);
+    /**
+     * Specify the list of exclusions that an interaction outside the default kernel will depend on.
+     * 
+     * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
+     */
+    void requestExclusions(const std::vector<std::vector<int> >& exclusionList);
+    /**
+     * Initialize this object in preparation for a simulation.
+     */
+    void initialize(const System& system);
+    /**
+     * Get the number of energy buffers required for nonbonded forces.
+     */
+    int getNumEnergyBuffers() {
+        return numForceThreadBlocks*forceThreadBlockSize;
+    }
+    /**
+     * Get whether a cutoff is being used.
+     */
+    bool getUseCutoff() {
+        return useCutoff;
+    }
+    /**
+     * Get whether periodic boundary conditions are being used.
+     */
+    bool getUsePeriodic() {
+        return usePeriodic;
+    }
+    /**
+     * Get the number of work groups used for computing nonbonded forces.
+     */
+    int getNumForceThreadBlocks() {
+        return numForceThreadBlocks;
+    }
+    /**
+     * Get the size of each work group used for computing nonbonded forces.
+     */
+    int getForceThreadBlockSize() {
+        return forceThreadBlockSize;
+    }
+    /**
+     * Get the cutoff distance.
+     */
+    double getCutoffDistance() {
+        return cutoff;
+    }
+    /**
+     * Get whether any interactions have been added.
+     */
+    bool getHasInteractions() {
+        return cutoff != -1.0;
+    }
+    /**
+     * Get the force group in which nonbonded interactions should be computed.
+     */
+    int getForceGroup() {
+        return nonbondedForceGroup;
+    }
+    /**
+     * Prepare to compute interactions.  This updates the neighbor list.
+     */
+    void prepareInteractions();
+    /**
+     * Compute the nonbonded interactions.
+     */
+    void computeInteractions();
+    /**
+     * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
+     */
+    void updateNeighborListSize();
+    /**
+     * Get the array containing the center of each atom block.
+     */
+    CudaArray& getBlockCenters() {
+        return *blockCenter;
+    }
+    /**
+     * Get the array containing the dimensions of each atom block.
+     */
+    CudaArray& getBlockBoundingBoxes() {
+        return *blockBoundingBox;
+    }
+    /**
+     * Get the array whose first element contains the number of tiles with interactions.
+     */
+    CudaArray& getInteractionCount() {
+        return *interactionCount;
+    }
+    /**
+     * Get the array containing tiles with interactions.
+     */
+    CudaArray& getInteractingTiles() {
+        return *interactingTiles;
+    }
+    /**
+     * Get the array containing flags for tiles with interactions.
+     */
+    CudaArray& getInteractionFlags() {
+        return *interactionFlags;
+    }
+    /**
+     * Get the array containing exclusion flags.
+     */
+    CudaArray& getExclusions() {
+        return *exclusions;
+    }
+    /**
+     * Get the array containing the index into the exclusion array for each tile.
+     */
+    CudaArray& getExclusionIndices() {
+        return *exclusionIndices;
+    }
+    /**
+     * Get the array listing where the exclusion data starts for each row.
+     */
+    CudaArray& getExclusionRowIndices() {
+        return *exclusionRowIndices;
+    }
+    /**
+     * Get the index of the first tile this context is responsible for processing.
+     */
+    int getStartTileIndex() const {
+        return startTileIndex;
+    }
+    /**
+     * Get the total number of tiles this context is responsible for processing.
+     */
+    int getNumTiles() const {
+        return numTiles;
+    }
+    /**
+     * Set the range of tiles that should be processed by this context.
+     */
+    void setTileRange(int startTileIndex, int numTiles);
+    /**
+     * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
+     * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
+     * the same neighbor list.
+     * 
+     * @param source        the source code for evaluating the force and energy
+     * @param params        the per-atom parameters this kernel may depend on
+     * @param arguments     arrays (other than per-atom parameters) that should be passed as arguments to the kernel
+     * @param useExclusions specifies whether exclusions are applied to this interaction
+     * @param isSymmetric   specifies whether the interaction is symmetric
+     */
+    CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric);
 private:
-//    static int findExclusionIndex(int x, int y, const std::vector<cl_uint>& exclusionIndices, const std::vector<cl_uint>& exclusionRowIndices);
-//    CudaContext& context;
-//    cl::Kernel forceKernel;
-//    cl::Kernel findBlockBoundsKernel;
-//    cl::Kernel findInteractingBlocksKernel;
-//    cl::Kernel findInteractionsWithinBlocksKernel;
-//    CudaArray<cl_uint>* exclusions;
-//    CudaArray<cl_uint>* exclusionIndices;
-//    CudaArray<cl_uint>* exclusionRowIndices;
-//    CudaArray<mm_ushort2>* interactingTiles;
-//    CudaArray<cl_uint>* interactionFlags;
-//    CudaArray<cl_uint>* interactionCount;
-//    CudaArray<mm_float4>* blockCenter;
-//    CudaArray<mm_float4>* blockBoundingBox;
-//    std::vector<std::vector<int> > atomExclusions;
-//    std::vector<ParameterInfo> parameters;
-//    std::vector<ParameterInfo> arguments;
-//    std::string kernelSource;
-//    std::map<std::string, std::string> kernelDefines;
-//    double cutoff;
-//    bool useCutoff, usePeriodic, forceBufferPerAtomBlock, deviceIsCpu, anyExclusions;
-//    int numForceBuffers, startTileIndex, numTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup;
+    static int findExclusionIndex(int x, int y, const std::vector<unsigned int>& exclusionIndices, const std::vector<unsigned int>& exclusionRowIndices);
+    CudaContext& context;
+    CUfunction forceKernel;
+    CUfunction findBlockBoundsKernel;
+    CUfunction findInteractingBlocksKernel;
+    CUfunction findInteractionsWithinBlocksKernel;
+    CudaArray* exclusions;
+    CudaArray* exclusionIndices;
+    CudaArray* exclusionRowIndices;
+    CudaArray* interactingTiles;
+    CudaArray* interactionFlags;
+    CudaArray* interactionCount;
+    CudaArray* blockCenter;
+    CudaArray* blockBoundingBox;
+    unsigned int* pinnedInteractionCount;
+    std::vector<void*> forceArgs, findBlockBoundsArgs, findInteractingBlocksArgs, findInteractionsWithinBlocksArgs;
+    std::vector<std::vector<int> > atomExclusions;
+    std::vector<ParameterInfo> parameters;
+    std::vector<ParameterInfo> arguments;
+    std::string kernelSource;
+    std::map<std::string, std::string> kernelDefines;
+    double cutoff;
+    bool useCutoff, usePeriodic, anyExclusions;
+    int startTileIndex, numTiles, maxTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup, numAtoms;
 };
 
 /**
@@ -309,7 +299,7 @@ public:
     int getSize() const {
         return size;
     }
-    CUdeviceptr getMemory() const {
+    CUdeviceptr& getMemory() {
         return memory;
     }
 private:
