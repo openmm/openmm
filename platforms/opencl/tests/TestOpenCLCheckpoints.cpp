@@ -63,7 +63,7 @@ void compareStates(State& s1, State& s2) {
         ASSERT_EQUAL_VEC(b1, b2, TOL);
         ASSERT_EQUAL_VEC(c1, c2, TOL);
         for (map<string, double>::const_iterator iter = s1.getParameters().begin(); iter != s1.getParameters().end(); ++iter)
-            ASSERT_EQUAL(iter->second, s2.getParameters().at(iter->first));
+            ASSERT_EQUAL(iter->second, (*s2.getParameters().find(iter->first)).second);
     }
 }
 

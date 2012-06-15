@@ -11,12 +11,16 @@ extern "C" {
 typedef unsigned long long bitmask_t;
 /* define the halfmask_t type as an integer of 1/2 the size of bitmask_t */
 typedef unsigned int halfmask_t;
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #define WINDOWS_EXPORT __declspec(dllexport)
+#endif
 #else
 #include <stdint.h>
 /* define the bitmask_t type as an integer of sufficient size */
 typedef uint64_t bitmask_t;
 /* define the halfmask_t type as an integer of 1/2 the size of bitmask_t */
 typedef uint32_t halfmask_t;
+#define WINDOWS_EXPORT
 #endif
 
 /*****************************************************************
@@ -33,7 +37,7 @@ typedef uint32_t halfmask_t;
  *      nDims*nBits <= (sizeof index) * (bits_per_byte)
  */
 
-void hilbert_i2c(unsigned nDims, unsigned nBits, bitmask_t index, bitmask_t coord[]);
+void WINDOWS_EXPORT hilbert_i2c(unsigned nDims, unsigned nBits, bitmask_t index, bitmask_t coord[]);
 
 /*****************************************************************
  * hilbert_c2i
@@ -49,7 +53,7 @@ void hilbert_i2c(unsigned nDims, unsigned nBits, bitmask_t index, bitmask_t coor
  *      nDims*nBits <= (sizeof bitmask_t) * (bits_per_byte)
  */
 
-bitmask_t hilbert_c2i(unsigned nDims, unsigned nBits, bitmask_t const coord[]);
+bitmask_t WINDOWS_EXPORT hilbert_c2i(unsigned nDims, unsigned nBits, bitmask_t const coord[]);
 
 /*****************************************************************
  * hilbert_cmp, hilbert_ieee_cmp
@@ -68,8 +72,8 @@ bitmask_t hilbert_c2i(unsigned nDims, unsigned nBits, bitmask_t const coord[]);
  *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
  */
 
-int hilbert_cmp(unsigned nDims, unsigned nBytes, unsigned nBits, void const* coord1, void const* coord2);
-int hilbert_ieee_cmp(unsigned nDims, double const* coord1, double const* coord2);
+int WINDOWS_EXPORT hilbert_cmp(unsigned nDims, unsigned nBytes, unsigned nBits, void const* coord1, void const* coord2);
+int WINDOWS_EXPORT hilbert_ieee_cmp(unsigned nDims, double const* coord1, double const* coord2);
 
 /*****************************************************************
  * hilbert_box_vtx
@@ -89,10 +93,10 @@ int hilbert_ieee_cmp(unsigned nDims, double const* coord1, double const* coord2)
  * Assumptions:
  *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
  */
-unsigned
+unsigned WINDOWS_EXPORT
 hilbert_box_vtx(unsigned nDims, unsigned nBytes, unsigned nBits,
 		int findMin, void* c1, void* c2);
-unsigned
+unsigned WINDOWS_EXPORT
 hilbert_ieee_box_vtx(unsigned nDims,
 		     int findMin, double* c1, double* c2);
 
@@ -112,10 +116,10 @@ hilbert_ieee_box_vtx(unsigned nDims,
  * Assumptions:
  *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
  */
-unsigned
+unsigned WINDOWS_EXPORT
 hilbert_box_pt(unsigned nDims, unsigned nBytes, unsigned nBits,
 	       int findMin, void* coord1, void* coord2);
-unsigned
+unsigned WINDOWS_EXPORT
 hilbert_ieee_box_pt(unsigned nDims,
 		    int findMin, double* c1, double* c2);
 
@@ -140,7 +144,7 @@ hilbert_ieee_box_pt(unsigned nDims,
  * Assumptions:
  *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
  */
-int
+int WINDOWS_EXPORT
 hilbert_nextinbox(unsigned nDims, unsigned nBytes, unsigned nBits,
 		  int findPrev, void* coord1, void* coord2,
 		  void const* point);
@@ -159,7 +163,7 @@ hilbert_nextinbox(unsigned nDims, unsigned nBytes, unsigned nBits,
  *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
  */
 
-void
+void WINDOWS_EXPORT
 hilbert_incr(unsigned nDims, unsigned nBits, bitmask_t coord[]);
 
 #ifdef __cplusplus
