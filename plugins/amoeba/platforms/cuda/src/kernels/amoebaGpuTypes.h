@@ -28,6 +28,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels/gputypes.h"
+#include "OpenMM.h"
+#include "openmm/Vec3.h"
 #include "amoebaCudaTypes.h"
 
 #include <map>
@@ -105,11 +107,16 @@ struct _amoebaGpuContext {
     // buffer indices used for mapping torques onto forces 
 
     int torqueMapForce4Delete;
-    CUDAStream<int4>* psMultipoleParticlesTorqueBufferIndices;
+    CUDAStream<int4>*    psMultipoleParticlesTorqueBufferIndices;
     CUDAStream<float4>*  psTorqueMapForce4; 
 
     CUDAStream<float>* psMolecularDipole;
     CUDAStream<float>* psMolecularQuadrupole;
+
+    
+    CUDAStream<unsigned int>* psPotentialWorkUnit;
+    CUDAStream<float4>* psPotentialGrid;
+    CUDAStream<float>*  psPotential;
 
     // molecular frame multipoles
 
@@ -284,6 +291,13 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
 
 extern "C"
+void gpuSetupElectrostaticPotentialCalculation( amoebaGpuContext amoebaGpu, const std::vector< OpenMM::Vec3 >& inputGrid );
+extern "C"
+void gpuLoadElectrostaticPotential( amoebaGpuContext amoebaGpu, unsigned int gridSize, std::vector< double >& outputElectrostaticPotential );
+extern "C"
+void gpuCleanupElectrostaticPotentialCalculation( amoebaGpuContext amoebaGpu );
+
+extern "C"
 void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu , float innerDielectric, float solventDielectric,
                                 const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge,
                                 int includeCavityTerm, float probeRadius, float surfaceAreaFactor);
@@ -322,8 +336,5 @@ void amoebaGpuSetConstants(amoebaGpuContext gpu, int updateFlag );
 
 extern "C"
 void gpuSetAmoebaBondOffsets(amoebaGpuContext gpu);
-
-extern "C"
-void gpuCopyWorkUnit(amoebaGpuContext gpu);
 
 #endif //__AMOEBA_GPUTYPES_H__

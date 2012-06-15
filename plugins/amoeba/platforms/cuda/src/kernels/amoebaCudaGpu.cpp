@@ -37,6 +37,7 @@
 #define MAX_PARAMETER_PRINT 10
 
 #include "openmm/OpenMMException.h"
+#include "openmm/Vec3.h"
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 
@@ -383,6 +384,21 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     
     totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameDipole, log );
     totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psLabFrameQuadrupole, log );
+    (void) fflush( log );
+
+    (void) fprintf( log, "     potentialGridSize                  %u\n",      amoebaGpu->amoebaSim.potentialGridSize);
+    (void) fprintf( log, "     paddedPotentialGridSize            %u\n",      amoebaGpu->amoebaSim.paddedPotentialGridSize);
+    (void) fprintf( log, "     potentialWorkUnits                 %u\n",      amoebaGpu->amoebaSim.potentialWorkUnits );
+
+    totalMemory += gpuPrintCudaStreamUnsignedInt( amoebaGpu->psPotentialWorkUnit, log );
+    (void) fprintf( log, "     pPotentialWorkUnit                 %p\n",      amoebaGpu->amoebaSim.pPotentialWorkUnit);
+
+    totalMemory += gpuPrintCudaStreamFloat4( amoebaGpu->psPotentialGrid, log );
+    (void) fprintf( log, "     pPotentialGrid                     %p\n",      amoebaGpu->amoebaSim.pPotentialGrid);
+
+    totalMemory += gpuPrintCudaStreamFloat( amoebaGpu->psPotential, log );
+    (void) fprintf( log, "     pPotential                         %p\n",      amoebaGpu->amoebaSim.pPotential);
+    (void) fflush( log );
     
     (void) fprintf( log, "     polarizationType                   %d\n",      amoebaGpu->amoebaSim.polarizationType );
     (void) fprintf( log, "     maxCovalentDegreeSz                %d\n",      amoebaGpu->maxCovalentDegreeSz );
@@ -1471,6 +1487,123 @@ void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
         }
 
     }
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Allocate data structs associated w/ calculation of electrostatic potential
+
+   @param amoebaGpu        amoebaGpu context
+   @param inputGrid        input grid over which potential is to be calculated
+
+   --------------------------------------------------------------------------------------- */
+
+void gpuSetupElectrostaticPotentialCalculation( amoebaGpuContext amoebaGpu, const std::vector< OpenMM::Vec3 >& inputGrid )
+{
+    // ---------------------------------------------------------------------------------------
+
+    const unsigned int grid                       = amoebaGpu->gpuContext->grid;
+
+    const unsigned int potentialGridSize          = inputGrid.size();
+    amoebaGpu->amoebaSim.potentialGridSize        = potentialGridSize;
+    amoebaGpu->amoebaSim.paddedPotentialGridSize  = (potentialGridSize + grid - 1)/grid;
+    amoebaGpu->amoebaSim.paddedPotentialGridSize *= grid;
+
+    const unsigned int atoms                      = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
+
+    const unsigned int particleDim                = atoms/grid;
+    const unsigned int cells                      = (particleDim*amoebaGpu->amoebaSim.paddedPotentialGridSize)/grid; 
+
+    CUDAStream<unsigned int>* psPotentialWorkUnit = new CUDAStream<unsigned int>(cells, 1u, "PotentialWorkUnit");
+    unsigned int* pWorkList                       = psPotentialWorkUnit->_pSysData;
+    amoebaGpu->psPotentialWorkUnit                = psPotentialWorkUnit;
+    amoebaGpu->amoebaSim.pPotentialWorkUnit       = psPotentialWorkUnit->_pDevStream[0];
+    unsigned int count                            = 0;
+    for (unsigned int y = 0; y < particleDim; y++)
+    {
+        for (unsigned int x = 0; x < (amoebaGpu->amoebaSim.paddedPotentialGridSize/grid); x++)
+        {
+            pWorkList[count++] = (x << 17) | (y << 2);
+        }
+    }
+    amoebaGpu->amoebaSim.potentialWorkUnits = cells;
+    psPotentialWorkUnit->Upload();
+
+
+#ifdef AMOEBA_DEBUG
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "gpuSetupElectrostaticPotentialCalculation:: Potential grid=%u %u buffers=%u ttl=%u particleDim=%u cells=%u\n", 
+                        potentialGridSize,  amoebaGpu->amoebaSim.paddedPotentialGridSize, amoebaGpu->gpuContext->sim.outputBuffers,
+                        amoebaGpu->amoebaSim.paddedPotentialGridSize*amoebaGpu->gpuContext->sim.outputBuffers, particleDim, cells );
+    }    
+#endif
+
+    // load grid 
+ 
+    amoebaGpu->psPotentialGrid = new CUDAStream<float4>( potentialGridSize,  1, "PotentialGrid");
+    for( int ii = 0; ii < potentialGridSize; ii++ ){
+        amoebaGpu->psPotentialGrid->_pSysData[ii].x = inputGrid[ii][0];
+        amoebaGpu->psPotentialGrid->_pSysData[ii].y = inputGrid[ii][1];
+        amoebaGpu->psPotentialGrid->_pSysData[ii].z = inputGrid[ii][2];
+    }
+    amoebaGpu->psPotentialGrid->Upload();
+
+    // allocate memory for potential buffers and zero
+
+    amoebaGpu->psPotential = new CUDAStream<float>( amoebaGpu->amoebaSim.paddedPotentialGridSize,  amoebaGpu->gpuContext->sim.outputBuffers, "Potential");
+    memset( amoebaGpu->psPotential->_pSysData,      0, sizeof(float)*amoebaGpu->amoebaSim.paddedPotentialGridSize*amoebaGpu->gpuContext->sim.outputBuffers);
+    amoebaGpu->psPotential->Upload();
+
+    amoebaGpu->amoebaSim.pPotentialGrid = amoebaGpu->psPotentialGrid->_pDevData;
+    amoebaGpu->amoebaSim.pPotential     = amoebaGpu->psPotential->_pDevData;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Load output potential
+
+   @param amoebaGpu                    amoebaGpu context
+   @param gridSize                     grid size
+   @param outputElectrostaticPotential output potential
+
+   --------------------------------------------------------------------------------------- */
+
+void gpuLoadElectrostaticPotential( amoebaGpuContext amoebaGpu, unsigned int gridSize, std::vector< double >& outputElectrostaticPotential ){
+ 
+    // ---------------------------------------------------------------------------------------
+
+    outputElectrostaticPotential.resize( gridSize );
+    amoebaGpu->psPotential->Download();
+    for( int ii = 0; ii < gridSize; ii++ ){
+        outputElectrostaticPotential[ii] = amoebaGpu->psPotential->_pSysData[ii];
+    }
+
+    return;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Deallocate data structs associated w/ calculation of electrostatic potential
+
+   @param amoebaGpu        amoebaGpu context
+
+   --------------------------------------------------------------------------------------- */
+
+void gpuCleanupElectrostaticPotentialCalculation( amoebaGpuContext amoebaGpu ){
+ 
+    // ---------------------------------------------------------------------------------------
+
+    delete amoebaGpu->psPotentialWorkUnit;
+    amoebaGpu->psPotentialWorkUnit              = NULL;
+    amoebaGpu->amoebaSim.pPotentialWorkUnit     = NULL;
+
+    delete amoebaGpu->psPotentialGrid;
+    amoebaGpu->psPotentialGrid                  = NULL;
+    amoebaGpu->amoebaSim.pPotentialGrid         = NULL;
+
+    delete amoebaGpu->psPotential;
+    amoebaGpu->psPotential                      = NULL;
+    amoebaGpu->amoebaSim.pPotential             = NULL;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -4805,34 +4938,6 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
 */
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
     }
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Track iterations for MI dipoles
-
-   @param amoebaGpu            amoebaGpuContext reference
-   @param iteration            MI iteration
-
-   --------------------------------------------------------------------------------------- */
-
-void gpuCopyWorkUnit( amoebaGpuContext amoebaGpu ){
-
-// ---------------------------------------------------------------------------------------
-/*
-    gpuContext gpu = amoebaGpu->gpuContext;
-    gpu->psInteractingWorkUnit->Download();
-    gpu->psWorkUnit->Download();
-    amoebaGpu->psWorkUnit->Download();
-    for( unsigned int ii = 0; ii < gpu->psInteractingWorkUnit->_length; ii++ ){
-        gpu->psWorkUnit->_pSysData[ii]            = amoebaGpu->psWorkUnit->_pSysData[ii];
-    }    
-    gpu->psInteractingWorkUnit->Upload();
-    gpu->psWorkUnit->Upload();
-*/
-
-// ---------------------------------------------------------------------------------------
-
 }
 
 #undef  AMOEBA_DEBUG

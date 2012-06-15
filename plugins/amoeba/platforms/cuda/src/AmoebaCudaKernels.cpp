@@ -798,9 +798,6 @@ double CudaCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bo
 static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
 
     amoebaGpuContext gpu = data.getAmoebaGpu();
-    if( data.getMultipoleForceCount() == 0 ){
-        gpuCopyWorkUnit( gpu );
-    }
     data.incrementMultipoleForceCount();
 
     if( 0 && data.getLog() ){
@@ -835,6 +832,30 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
 
     if( 0 && data.getLog() ){
         (void) fprintf( data.getLog(), "completed computeAmoebaMultipoleForce\n" );
+        (void) fflush( data.getLog());
+    }
+}
+
+static void computeAmoebaMultipolePotential( AmoebaCudaData& data, const std::vector< Vec3 >& inputGrid,
+                                             std::vector< double >& outputElectrostaticPotential) {
+
+    amoebaGpuContext gpu = data.getAmoebaGpu();
+
+    // load grid to board and allocate board memory for potential buffers
+    // calculate potential
+    // load potential into return vector
+    // deallocate board memory
+
+    gpuSetupElectrostaticPotentialCalculation( gpu, inputGrid );
+    data.setGpuInitialized( false );
+    data.initializeGpu();
+ 
+    kCalculateAmoebaMultipolePotential( gpu );
+    gpuLoadElectrostaticPotential( gpu, inputGrid.size(), outputElectrostaticPotential );
+    gpuCleanupElectrostaticPotentialCalculation( gpu );
+
+    if( 0 && data.getLog() ){
+        (void) fprintf( data.getLog(), "completed computeAmoebaMultipolePotential\n" );
         (void) fflush( data.getLog());
     }
 }
@@ -1046,6 +1067,12 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
 double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     computeAmoebaMultipoleForce( data );
     return 0.0;
+}
+
+void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context,  const std::vector< Vec3 >& inputGrid,
+                                                                   std::vector< double >& outputElectrostaticPotential) {
+    computeAmoebaMultipolePotential( data, inputGrid, outputElectrostaticPotential );
+    return;
 }
 
 /* -------------------------------------------------------------------------- *

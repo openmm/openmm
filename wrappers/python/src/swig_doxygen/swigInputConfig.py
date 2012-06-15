@@ -286,8 +286,10 @@ UNITS = {
 ("AmoebaMultipoleForce",                 "getCovalentMap")                                :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getCovalentMaps")                               :  ( None, ()),
 ("AmoebaMultipoleForce",                 "getScalingDistanceCutoff")                      :  ( 'unit.nanometer', ()),
-#("AmoebaMultipoleForce",                 "getElectricConstant")                           :  ( '1/(unit.nanometer*unit.kilojoule_per_mole)', ()),
 ("AmoebaMultipoleForce",                 "getElectricConstant")                           :  ( None, ()),
+#("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( None, ('unit.kilojoule_per_mole')),
+#("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( ('unit.kilojoule_per_mole'), ()),
+("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( None, ()),
 
 ("AmoebaOutOfPlaneBendForce",            "getNumOutOfPlaneBends")                         :  ( None, ()),
 ("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendCubic")            :  ( None,()),

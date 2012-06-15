@@ -32,6 +32,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
 #include "openmm/amoebaKernels.h"
+#include <stdio.h>
 
 using namespace OpenMM;
 
@@ -137,3 +138,9 @@ void AmoebaMultipoleForceImpl::getCovalentDegree( const AmoebaMultipoleForce& fo
     }   
     return;
 }
+
+void AmoebaMultipoleForceImpl::getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                                          std::vector< double >& outputElectrostaticPotential ){
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().getElectrostaticPotential(context, inputGrid, outputElectrostaticPotential);
+}
+

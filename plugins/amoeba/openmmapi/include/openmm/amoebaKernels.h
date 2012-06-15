@@ -370,6 +370,10 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+
+    virtual void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                            std::vector< double >& outputElectrostaticPotential ) = 0;
+
 };
 
 /**

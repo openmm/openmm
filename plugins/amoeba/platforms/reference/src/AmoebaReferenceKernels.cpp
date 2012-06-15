@@ -563,6 +563,11 @@ double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bo
     return static_cast<double>(energy);
 }
 
+void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                                                        std::vector< double >& outputElectrostaticPotential ){
+    return;
+}
+
 ///* -------------------------------------------------------------------------- *
 // *                       AmoebaGeneralizedKirkwood                            *
 // * -------------------------------------------------------------------------- */

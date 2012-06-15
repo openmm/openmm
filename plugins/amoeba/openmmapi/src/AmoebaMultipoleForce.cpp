@@ -33,6 +33,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
+#include <stdio.h>
 
 using namespace OpenMM;
 using std::string;
@@ -130,22 +131,6 @@ double AmoebaMultipoleForce::getMutualInducedTargetEpsilon( void ) const {
 void AmoebaMultipoleForce::setMutualInducedTargetEpsilon( double inputMutualInducedTargetEpsilon ) {
     mutualInducedTargetEpsilon = inputMutualInducedTargetEpsilon;
 }
-/*
-double AmoebaMultipoleForce::getScalingDistanceCutoff( void ) const {
-    return scalingDistanceCutoff;
-}
-
-void AmoebaMultipoleForce::setScalingDistanceCutoff( double inputScalingDistanceCutoff ) {
-    scalingDistanceCutoff = inputScalingDistanceCutoff;
-}
-
-double AmoebaMultipoleForce::getElectricConstant( void ) const {
-    return electricConstant;
-}
-
-void AmoebaMultipoleForce::setElectricConstant( double inputElectricConstant ) {
-    electricConstant = inputElectricConstant;
-} */
 
 double AmoebaMultipoleForce::getEwaldErrorTolerance() const {
     return ewaldErrorTol;
@@ -252,6 +237,10 @@ void AmoebaMultipoleForce::getCovalentMaps(int index, std::vector< std::vector<i
         }
         covalentLists[jj] = covalentAtoms;
     }
+}
+
+void AmoebaMultipoleForce::getElectrostaticPotential( const std::vector< Vec3 >& inputGrid, Context& context, std::vector< double >& outputElectrostaticPotential ){
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);
 }
 
 ForceImpl* AmoebaMultipoleForce::createImpl() {

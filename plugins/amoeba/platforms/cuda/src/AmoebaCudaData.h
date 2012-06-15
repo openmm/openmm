@@ -188,6 +188,13 @@ public:
      */
     void setUseVdwNeighborList( int useVdwNeighborList ); 
 
+    /**
+     * Set flag indicating whether gpu is initialized
+     * 
+     * @param flag indicating gpu is initialized
+     */
+    void setGpuInitialized( bool gpuInitialized ); 
+
     CudaPlatform::PlatformData& cudaPlatformData;
 
 private:

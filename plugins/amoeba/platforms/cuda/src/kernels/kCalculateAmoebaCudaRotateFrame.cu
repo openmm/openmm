@@ -493,3 +493,65 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
     }
 
 }
+
+void kCalculateAmoebaMultipolePotential(amoebaGpuContext amoebaGpu ) 
+{
+    std::string methodName = "kCalculateAmoebaMultipolePotential";
+
+    // compute lab frame moments
+
+    cudaComputeAmoebaLabFrameMoments( amoebaGpu );
+
+    if( 0 ){
+        gpuContext gpu                       = amoebaGpu->gpuContext;
+        std::vector<int> fileId;
+        //fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psLabFrameDipole,     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaLoadCudaFloatArray( gpu->natoms,  9, amoebaGpu->psLabFrameQuadrupole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaLabMoments", fileId, outputVector );
+    }   
+
+    // compute fixed E-field and mutual induced field 
+
+    if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
+
+        cudaComputeAmoebaFixedEField( amoebaGpu );
+        cudaComputeAmoebaMutualInducedField( amoebaGpu );
+
+    } else {
+
+        gpuContext gpu = amoebaGpu->gpuContext;
+        kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+        LAUNCHERROR("kFindBlockBoundsPeriodic");
+        kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+        LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+
+        compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+
+        //compactStream( gpu->compactPlan, 
+        //               gpu->sim.pInteractingWorkUnit, unsigned int* dOut
+        //               amoebaGpu->psWorkUnit->_pDevData, const unsigned int* dIn
+        //               gpu->sim.pInteractionFlag,        const unsigned int* dValid
+        //               gpu->sim.workUnits,               gpu
+        //               gpu->sim.pInteractionCount);
+        kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+        LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
+
+        cudaComputeAmoebaPmeFixedEField( amoebaGpu );
+        cudaComputeAmoebaPmeMutualInducedField( amoebaGpu );
+    }
+
+    // check if induce dipole calculation converged -- abort if it did not
+
+    if( amoebaGpu->mutualInducedDone == 0 ){
+       throw OpenMM::OpenMMException("Induced dipole calculation did not converge" );
+    }
+
+    // calculate electrostatic potential
+
+    cudaComputeAmoebaElectrostaticPotential( amoebaGpu );
+
+}

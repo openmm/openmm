@@ -147,6 +147,13 @@ struct cudaAmoebaGmxSimulation {
     float* pMolecularDipole; 
     float* pMolecularQuadrupole; 
 
+    unsigned int paddedPotentialGridSize;
+    unsigned int potentialGridSize;
+    unsigned int* pPotentialWorkUnit;
+    unsigned int potentialWorkUnits;
+    float4* pPotentialGrid; 
+    float*  pPotential; 
+
     float* pLabFrameDipole;
     float* pLabFrameQuadrupole;
 

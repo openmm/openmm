@@ -21,7 +21,7 @@
 <xsl:variable name="vector_tortor_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::vector&lt;std::vector&lt;double')]/@id"/>
 
 <!-- Do not generate functions for the following classes -->
-<xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'System', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl', 'OpenMMException', 'Force', 'ForceImpl')"/>
+<xsl:variable name="skip_classes" select="('Vec3', 'Context', 'Kernel', 'System', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl', 'OpenMMException', 'Force', 'ForceImpl')"/>
 <!-- Do not generate the following functions -->
 <xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
 <!-- Suppress any function which references any of the following classes -->
@@ -46,7 +46,6 @@ static <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select
 typedef struct OpenMM_<xsl:value-of select="concat(@name, '_struct OpenMM_', @name, ';')"/>
  </xsl:for-each>
 
-typedef struct OpenMM_IntArray_struct OpenMM_IntArray;
 typedef struct OpenMM_2D_IntArray_struct OpenMM_2D_IntArray;
 typedef struct OpenMM_3D_DoubleArray_struct OpenMM_3D_DoubleArray;
 

@@ -42,7 +42,7 @@ struct KirkwoodParticle {
 
     float dBornRadius;
     float dBornRadiusPolar;
-//    float padding;
+    //float padding;
 
 };
 

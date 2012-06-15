@@ -35,6 +35,7 @@
 #include "openmm/internal/ForceImpl.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/Kernel.h"
+#include "openmm/Vec3.h"
 #include <utility>
 #include <string>
 
@@ -80,6 +81,10 @@ public:
      * @param covalentDegree      covalent degrees for the CovalentEnd lists
      */
     static void getCovalentDegree( const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree );
+
+    void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                    std::vector< double >& outputElectrostaticPotential );
+ 
 
 private:
     AmoebaMultipoleForce& owner;

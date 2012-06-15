@@ -116,6 +116,10 @@ void AmoebaCudaData::setContextImpl( void* inputContextImpl ) {
     contextImpl = inputContextImpl;
 }
 
+void AmoebaCudaData::setGpuInitialized( bool inputGpuInitialized) {
+    gpuInitialized = inputGpuInitialized;
+}
+
 void AmoebaCudaData::initializeGpu( void ) {
 
     if( !gpuInitialized ){

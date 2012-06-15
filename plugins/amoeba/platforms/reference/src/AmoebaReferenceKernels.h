@@ -384,6 +384,15 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /** 
+     * Execute the kernel to calculate the electrostatic potential
+     *
+     * @param context        the context in which to execute this kernel
+     * @param inputGrid      input grid coordinates
+     * @param outputElectrostaticPotential output potential 
+     */
+    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                   std::vector< double >& outputElectrostaticPotential );
 private:
     int numMultipoles;
     int polarizationType;

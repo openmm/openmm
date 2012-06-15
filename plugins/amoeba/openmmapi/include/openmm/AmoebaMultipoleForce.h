@@ -35,6 +35,7 @@
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/windowsExport.h"
+#include "openmm/Vec3.h"
 
 #include <sstream>
 #include <vector>
@@ -303,34 +304,6 @@ public:
     void setMutualInducedTargetEpsilon( double inputMutualInducedTargetEpsilon ); 
     
     /**
-     * Get the scaling distance cutoff (nm)
-     * 
-     * @return scaling distance cutoff
-     */
-    //double getScalingDistanceCutoff( void ) const;
-    
-    /**
-     * Set the scaling distance cutoff
-     * 
-     * @param scaling distance cutoff
-     */
-    //void setScalingDistanceCutoff( double inputScalingDistanceCutoff ); 
-    
-    /**
-     * Get the electric constant
-      
-     * @return the electric constant
-     */
-    //double getElectricConstant( void ) const;
-    
-    /**
-     * Set the electric constant
-     * 
-     * @param the electric constant
-     */
-    //void setElectricConstant( double inputElectricConstant ); 
-
-    /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
@@ -344,7 +317,19 @@ public:
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
      */
     void setEwaldErrorTolerance(double tol);
-    
+
+    /**
+     * Get the electrostatic potential.
+     *
+     * @param inputGrid    input grid points over which the potential is to be evaluated
+     * @param context      context
+     * @param outputElectrostaticPotential output potential 
+     */
+
+    void getElectrostaticPotential( const std::vector< Vec3 >& inputGrid,
+                                    Context& context, std::vector< double >& outputElectrostaticPotential );
+
+
 protected:
     ForceImpl* createImpl();
 private:

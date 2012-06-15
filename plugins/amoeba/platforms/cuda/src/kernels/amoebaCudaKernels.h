@@ -52,6 +52,7 @@ extern void kCalculateAmoebaLocalForces(amoebaGpuContext gpu);
 extern void SetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool performGk );
+extern void kCalculateAmoebaMultipolePotential(amoebaGpuContext amoebaGpu );
 
 // vdw
 
@@ -105,6 +106,7 @@ extern void cudaWriteFloat4AndFloat1ArraysToFile( int numberOfAtoms, const std::
 extern void SetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu, int addTorqueToForce );
+extern void cudaComputeAmoebaElectrostaticPotential( amoebaGpuContext amoebaGpu );
 
 extern void SetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaPmeDirectElectrostaticSim( amoebaGpuContext amoebaGpu );

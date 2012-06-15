@@ -30,6 +30,7 @@
 #include "openmm/OpenMMException.h"
 
 #include <stdio.h>
+#include <sstream>
 
 using namespace std;
 
@@ -587,7 +588,9 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
         // check for nans
 
         if( currentEpsilon != currentEpsilon ){
-             throw OpenMM::OpenMMException("GkFieldBySOR: Nans detected in induced dipole calculation.");
+             std::stringstream msg;            
+             msg << "GkFieldBySOR: Nans detected in induced dipole calculation at iteration=" << iteration << " call=" << timestep << ".";
+             throw OpenMM::OpenMMException( msg.str() );
         }
 
         // converged?
