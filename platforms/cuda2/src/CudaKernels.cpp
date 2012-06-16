@@ -82,7 +82,7 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cu.setAtomsWereReordered(false);
@@ -134,7 +134,7 @@ void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
 }
 
 void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
@@ -160,7 +160,7 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
 }
 
 void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cu.getUseDoublePrecision()) {
@@ -196,7 +196,7 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
 }
 
 void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
@@ -221,7 +221,7 @@ void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>
 }
 
 void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector<Vec3>& velocities) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cu.getUseDoublePrecision()) {
@@ -255,7 +255,7 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector
 }
 
 void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     long long* force = (long long*) cu.getPinnedBuffer();
     cu.getForce().download(force);
     const vector<int>& order = cu.getAtomIndex();
@@ -281,7 +281,7 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
 }
 
 void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
 //    int version = 1;
 //    stream.write((char*) &version, sizeof(int));
 //    double time = cu.getTime();
@@ -299,7 +299,7 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
 }
 
 void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
 //    int version;
 //    stream.read((char*) &version, sizeof(int));
 //    if (version != 1)
@@ -330,20 +330,19 @@ void CudaApplyConstraintsKernel::initialize(const System& system) {
 }
 
 void CudaApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
-//    if (!hasInitializedKernel) {
-//        hasInitializedKernel = true;
-//        map<string, string> defines;
-//        defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-//        CUmodule module = cu.createModule(CudaKernelSources::constraints, defines);
-//        applyDeltasKernel = cu.getKernel(module, "applyPositionDeltas");
-//        applyDeltasKernel.setArg<cu::Buffer>(0, cu.getPosq().getDevicePointer());
-//        applyDeltasKernel.setArg<cu::Buffer>(1, cu.getIntegrationUtilities().getPosDelta().getDevicePointer());
-//    }
-//    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-//    cu.clearBuffer(integration.getPosDelta());
-//    integration.applyConstraints(tol);
-//    cu.executeKernel(applyDeltasKernel, cu.getNumAtoms());
-//    integration.computeVirtualSites();
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        map<string, string> defines;
+        defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+        CUmodule module = cu.createModule(CudaKernelSources::constraints, defines);
+        applyDeltasKernel = cu.getKernel(module, "applyPositionDeltas");
+    }
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    cu.clearBuffer(integration.getPosDelta());
+    integration.applyConstraints(tol);
+    void* args[] = {&cu.getPosq().getDevicePointer(), &cu.getIntegrationUtilities().getPosDelta().getDevicePointer()};
+    cu.executeKernel(applyDeltasKernel, args, cu.getNumAtoms());
+    integration.computeVirtualSites();
 }
 
 void CudaVirtualSitesKernel::initialize(const System& system) {
@@ -380,13 +379,13 @@ private:
 };
 
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
 }
 
 void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
@@ -394,7 +393,7 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
     if (numBonds == 0)
         return;
     vector<vector<int> > atoms(numBonds, vector<int>(2));
-    params = CudaArray::create<float2>(numBonds, "bondParams");
+    params = CudaArray::create<float2>(cu, numBonds, "bondParams");
     vector<float2> paramVector(numBonds);
     for (int i = 0; i < numBonds; i++) {
         double length, k;
@@ -414,7 +413,7 @@ double CudaCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool inclu
 }
 
 void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
@@ -467,7 +466,7 @@ private:
 };
 
 CudaCalcCustomBondForceKernel::~CudaCalcCustomBondForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
     if (globals != NULL)
@@ -475,7 +474,7 @@ CudaCalcCustomBondForceKernel::~CudaCalcCustomBondForceKernel() {
 }
 
 void CudaCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
@@ -518,7 +517,7 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(force.getNumGlobalParameters(), "customBondGlobals");
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customBondGlobals");
         globals->upload(globalParamValues);
         string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -556,7 +555,7 @@ double CudaCalcCustomBondForceKernel::execute(ContextImpl& context, bool include
 }
 
 void CudaCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
@@ -609,13 +608,13 @@ private:
 };
 
 CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
 }
 
 void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
@@ -623,7 +622,7 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
     if (numAngles == 0)
         return;
     vector<vector<int> > atoms(numAngles, vector<int>(3));
-    params = CudaArray::create<float2>(numAngles, "angleParams");
+    params = CudaArray::create<float2>(cu, numAngles, "angleParams");
     vector<float2> paramVector(numAngles);
     for (int i = 0; i < numAngles; i++) {
         double angle, k;
@@ -644,7 +643,7 @@ double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool incl
 }
 
 void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
@@ -698,7 +697,7 @@ private:
 };
 
 CudaCalcCustomAngleForceKernel::~CudaCalcCustomAngleForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
     if (globals != NULL)
@@ -706,7 +705,7 @@ CudaCalcCustomAngleForceKernel::~CudaCalcCustomAngleForceKernel() {
 }
 
 void CudaCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
@@ -749,7 +748,7 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
         variables[name] = "angleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(force.getNumGlobalParameters(), "customAngleGlobals");
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customAngleGlobals");
         globals->upload(globalParamValues);
         string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -787,7 +786,7 @@ double CudaCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includ
 }
 
 void CudaCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
@@ -846,7 +845,7 @@ CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
 }
 
 void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -854,7 +853,7 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
     if (numTorsions == 0)
         return;
     vector<vector<int> > atoms(numTorsions, vector<int>(4));
-    params = CudaArray::create<float4>(numTorsions, "periodicTorsionParams");
+    params = CudaArray::create<float4>(cu, numTorsions, "periodicTorsionParams");
     vector<float4> paramVector(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
         int periodicity;
@@ -875,7 +874,7 @@ double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool in
 }
 
 void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -934,7 +933,7 @@ CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
 }
 
 void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -942,8 +941,8 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
     if (numTorsions == 0)
         return;
     vector<vector<int> > atoms(numTorsions, vector<int>(4));
-    params1 = CudaArray::create<float4>(numTorsions, "rbTorsionParams1");
-    params2 = CudaArray::create<float2>(numTorsions, "rbTorsionParams2");
+    params1 = CudaArray::create<float4>(cu, numTorsions, "rbTorsionParams1");
+    params2 = CudaArray::create<float2>(cu, numTorsions, "rbTorsionParams2");
     vector<float4> paramVector1(numTorsions);
     vector<float2> paramVector2(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
@@ -968,7 +967,7 @@ double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeF
 }
 
 void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context, const RBTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -1034,7 +1033,7 @@ CudaCalcCMAPTorsionForceKernel::~CudaCalcCMAPTorsionForceKernel() {
 }
 
 void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -1064,9 +1063,9 @@ void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAP
     vector<int> torsionMapsVec(numTorsions);
     for (int i = 0; i < numTorsions; i++)
         force.getTorsionParameters(startIndex+i, torsionMapsVec[i], atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], atoms[i][5], atoms[i][6], atoms[i][7]);
-    coefficients = CudaArray::create<float4>(coeffVec.size(), "cmapTorsionCoefficients");
-    mapPositions = CudaArray::create<int2>(numMaps, "cmapTorsionMapPositions");
-    torsionMaps = CudaArray::create<int>(numTorsions, "cmapTorsionMaps");
+    coefficients = CudaArray::create<float4>(cu, coeffVec.size(), "cmapTorsionCoefficients");
+    mapPositions = CudaArray::create<int2>(cu, numMaps, "cmapTorsionMapPositions");
+    torsionMaps = CudaArray::create<int>(cu, numTorsions, "cmapTorsionMaps");
     coefficients->upload(coeffVec);
     mapPositions->upload(mapPositionsVec);
     torsionMaps->upload(torsionMapsVec);
@@ -1121,7 +1120,7 @@ CudaCalcCustomTorsionForceKernel::~CudaCalcCustomTorsionForceKernel() {
 }
 
 void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -1164,7 +1163,7 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
         variables[name] = "torsionParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(force.getNumGlobalParameters(), "customTorsionGlobals");
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customTorsionGlobals");
         globals->upload(globalParamValues);
         string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -1202,7 +1201,7 @@ double CudaCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool incl
 }
 
 void CudaCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
@@ -1260,7 +1259,7 @@ private:
 };
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (sigmaEpsilon != NULL)
         delete sigmaEpsilon;
     if (exceptionParams != NULL)
@@ -1310,7 +1309,7 @@ static int findFFTDimension(int minimum) {
 }
 
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
 
     // Identify which exceptions are 1-4 interactions.
 
@@ -1328,7 +1327,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    sigmaEpsilon = CudaArray::create<float2>(numParticles, "sigmaEpsilon");
+    sigmaEpsilon = CudaArray::create<float2>(cu, numParticles, "sigmaEpsilon");
     CudaArray& posq = cu.getPosq();
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
@@ -1400,7 +1399,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         ewaldSumsKernel = cu.getKernel(module, "calculateEwaldCosSinSums");
         ewaldForcesKernel = cu.getKernel(module, "calculateEwaldForces");
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double2) : sizeof(float2));
-        cosSinSums = new CudaArray((2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
+        cosSinSums = new CudaArray(cu, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
     }
     else if (force.getNonbondedMethod() == NonbondedForce::PME) {
         // Compute the PME parameters.
@@ -1433,14 +1432,14 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         // Create required data structures.
 
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        pmeGrid = new CudaArray(gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
+        pmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
         cu.addAutoclearBuffer(pmeGrid->getDevicePointer(), pmeGrid->getSize()*sizeof(float2));
-        pmeBsplineModuliX = new CudaArray(gridSizeX, elementSize, "pmeBsplineModuliX");
-        pmeBsplineModuliY = new CudaArray(gridSizeY, elementSize, "pmeBsplineModuliY");
-        pmeBsplineModuliZ = new CudaArray(gridSizeZ, elementSize, "pmeBsplineModuliZ");
-        pmeBsplineTheta = new CudaArray(PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
-        pmeAtomRange = CudaArray::create<int>(gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-        pmeAtomGridIndex = CudaArray::create<int2>(numParticles, "pmeAtomGridIndex");
+        pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
+        pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
+        pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+        pmeBsplineTheta = new CudaArray(cu, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
+        pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
+        pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
         sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
         cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, CUFFT_C2C);
         if (result != CUFFT_SUCCESS)
@@ -1537,7 +1536,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     if (numExceptions > 0) {
         exceptionAtoms.resize(numExceptions);
         vector<vector<int> > atoms(numExceptions, vector<int>(2));
-        exceptionParams = CudaArray::create<float4>(numExceptions, "exceptionParams");
+        exceptionParams = CudaArray::create<float4>(cu, numExceptions, "exceptionParams");
         vector<float4> exceptionParamsVector(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             double chargeProd, sigma, epsilon;
@@ -1596,7 +1595,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
     
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (force.getNumParticles() != cu.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     if (!hasCoulomb || !hasLJ) {
@@ -1702,7 +1701,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //};
 //
 //CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (params != NULL)
 //        delete params;
 //    if (globals != NULL)
@@ -1714,7 +1713,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //}
 //
 //void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    int forceIndex;
 //    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
 //        ;
@@ -1838,7 +1837,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //}
 //
 //void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    int numParticles = force.getNumParticles();
 //    if (numParticles != cu.getNumAtoms())
 //        throw OpenMMException("updateParametersInContext: The number of particles has changed");
@@ -1875,7 +1874,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //};
 //
 //CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (params != NULL)
 //        delete params;
 //    if (bornSum != NULL)
@@ -1893,7 +1892,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //}
 //
 //void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (cu.getPlatformData().contexts.size() > 1)
 //        throw OpenMMException("GBSAOBCForce does not support using multiple CUDA devices");
 //    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
@@ -2059,7 +2058,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
 //    // Make sure the new parameters are acceptable.
 //    
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    int numParticles = force.getNumParticles();
 //    if (numParticles != cu.getNumAtoms())
 //        throw OpenMMException("updateParametersInContext: The number of particles has changed");
@@ -2117,7 +2116,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //};
 //
 //CudaCalcCustomGBForceKernel::~CudaCalcCustomGBForceKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (params != NULL)
 //        delete params;
 //    if (computedValues != NULL)
@@ -2139,7 +2138,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //}
 //
 //void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (cu.getPlatformData().contexts.size() > 1)
 //        throw OpenMMException("CustomGBForce does not support using multiple CUDA devices");
 //    bool useExclusionsForValue = false;
@@ -2998,7 +2997,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
 //}
 //
 //void CudaCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, const CustomGBForce& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    int numParticles = force.getNumParticles();
 //    if (numParticles != cu.getNumAtoms())
 //        throw OpenMMException("updateParametersInContext: The number of particles has changed");
@@ -3053,7 +3052,7 @@ private:
 };
 
 CudaCalcCustomExternalForceKernel::~CudaCalcCustomExternalForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
     if (globals != NULL)
@@ -3061,7 +3060,7 @@ CudaCalcCustomExternalForceKernel::~CudaCalcCustomExternalForceKernel() {
 }
 
 void CudaCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumParticles()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumParticles()/numContexts;
@@ -3110,7 +3109,7 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
         variables[name] = "particleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(force.getNumGlobalParameters(), "customExternalGlobals");
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customExternalGlobals");
         globals->upload(globalParamValues);
         string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -3148,7 +3147,7 @@ double CudaCalcCustomExternalForceKernel::execute(ContextImpl& context, bool inc
 }
 
 void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumParticles()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumParticles()/numContexts;
@@ -3250,7 +3249,7 @@ void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& con
 //};
 //
 //CudaCalcCustomHbondForceKernel::~CudaCalcCustomHbondForceKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (donorParams != NULL)
 //        delete donorParams;
 //    if (acceptorParams != NULL)
@@ -3291,7 +3290,7 @@ void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& con
 //void CudaCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
 //    // Record the lists of donors and acceptors, and the parameters for each one.
 //
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    int numContexts = cu.getPlatformData().contexts.size();
 //    int startIndex = cu.getContextIndex()*force.getNumDonors()/numContexts;
 //    int endIndex = (cu.getContextIndex()+1)*force.getNumDonors()/numContexts;
@@ -3686,7 +3685,7 @@ void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& con
 //}
 //
 //void CudaCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& context, const CustomHbondForce& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    int numContexts = cu.getPlatformData().contexts.size();
 //    int startIndex = cu.getContextIndex()*force.getNumDonors()/numContexts;
 //    int endIndex = (cu.getContextIndex()+1)*force.getNumDonors()/numContexts;
@@ -3751,7 +3750,7 @@ private:
 };
 
 CudaCalcCustomCompoundBondForceKernel::~CudaCalcCustomCompoundBondForceKernel() {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
     if (globals != NULL)
@@ -3763,7 +3762,7 @@ CudaCalcCustomCompoundBondForceKernel::~CudaCalcCustomCompoundBondForceKernel() 
 }
 
 void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, const CustomCompoundBondForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
@@ -3799,7 +3798,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         functions[name] = &fp;
         tabulatedFunctionParamsVec[i] = make_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), (float) values.size()-2);
         vector<float4> f = cu.getExpressionUtilities().computeFunctionCoefficients(values, min, max);
-        CudaArray* array = CudaArray::create<float4>(values.size()-1, "TabulatedFunction");
+        CudaArray* array = CudaArray::create<float4>(cu, values.size()-1, "TabulatedFunction");
         tabulatedFunctions.push_back(array);
         array->upload(f);
         string arrayName = cu.getBondedUtilities().addArgument(array->getDevicePointer(), "float4");
@@ -3807,7 +3806,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
     }
     string functionParamsName;
     if (force.getNumFunctions() > 0) {
-        tabulatedFunctionParams = CudaArray::create<float4>(tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
+        tabulatedFunctionParams = CudaArray::create<float4>(cu, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters");
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
         functionParamsName = cu.getBondedUtilities().addArgument(tabulatedFunctionParams->getDevicePointer(), "float4");
     }
@@ -3832,7 +3831,7 @@ void CudaCalcCustomCompoundBondForceKernel::initialize(const System& system, con
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals = CudaArray::create<float>(force.getNumGlobalParameters(), "customCompoundBondGlobals");
+        globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customCompoundBondGlobals");
         globals->upload(globalParamValues);
         string argName = cu.getBondedUtilities().addArgument(globals->getDevicePointer(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -4020,7 +4019,7 @@ double CudaCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool
 }
 
 void CudaCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
@@ -4049,7 +4048,7 @@ CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 }
 
 void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -4101,295 +4100,303 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
     cu.setStepCount(cu.getStepCount()+1);
 }
 
-//CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
-//    cuCtxSetCurrent(cu.getContext());
-//    if (params != NULL)
-//        delete params;
-//}
-//
-//void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-//    cuCtxSetCurrent(cu.getContext());
-//    cu.getPlatformData().initializeContexts(system);
-//    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-//    map<string, string> defines;
-//    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-//    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-//    CUmodule module = cu.createModule(CudaKernelSources::langevin, defines, "");
-//    kernel1 = cu.getKernel(module, "integrateLangevinPart1");
-//    kernel2 = cu.getKernel(module, "integrateLangevinPart2");
-//    params = new CudaArray<cl_float>(cu, 3, "langevinParams");
-//    prevStepSize = -1.0;
-//}
-//
-//void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
-//    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-//    int numAtoms = cu.getNumAtoms();
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//        kernel1.setArg<cu::Buffer>(0, cu.getVelm().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(1, cu.getForce().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(2, integration.getPosDelta().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(3, params->getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(4, integration.getStepSize().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(5, integration.getRandom().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(0, cu.getPosq().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(1, integration.getPosDelta().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(2, cu.getVelm().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(3, integration.getStepSize().getDevicePointer());
-//    }
-//    double temperature = integrator.getTemperature();
-//    double friction = integrator.getFriction();
-//    double stepSize = integrator.getStepSize();
-//    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-//        // Calculate the integration parameters.
-//
-//        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-//        double kT = BOLTZ*temperature;
-//        double vscale = exp(-stepSize/tau);
-//        double fscale = (1-vscale)*tau;
-//        double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
-//        vector<cl_float> p(params->getSize());
-//        p[0] = (cl_float) vscale;
-//        p[1] = (cl_float) fscale;
-//        p[2] = (cl_float) noisescale;
-//        params->upload(p);
-//        integration.getStepSize()[0].y = (cl_float) stepSize;
-//        integration.getStepSize().upload();
-//        prevTemp = temperature;
-//        prevFriction = friction;
-//        prevStepSize = stepSize;
-//    }
-//
-//    // Call the first integration kernel.
-//
-//    kernel1.setArg<cl_uint>(6, integration.prepareRandomNumbers(cu.getPaddedNumAtoms()));
-//    cu.executeKernel(kernel1, numAtoms);
-//
-//    // Apply constraints.
-//
-//    integration.applyConstraints(integrator.getConstraintTolerance());
-//
-//    // Call the second integration kernel.
-//
-//    cu.executeKernel(kernel2, numAtoms);
-//    integration.computeVirtualSites();
-//
-//    // Update the time and step count.
-//
-//    cu.setTime(cu.getTime()+stepSize);
-//    cu.setStepCount(cu.getStepCount()+1);
-//}
-//
-//CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
-//}
-//
-//void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-//    cuCtxSetCurrent(cu.getContext());
-//    cu.getPlatformData().initializeContexts(system);
-//    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-//    map<string, string> defines;
-//    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-//    CUmodule module = cu.createModule(CudaKernelSources::brownian, defines, "");
-//    kernel1 = cu.getKernel(module, "integrateBrownianPart1");
-//    kernel2 = cu.getKernel(module, "integrateBrownianPart2");
-//    prevStepSize = -1.0;
-//}
-//
-//void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
-//    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-//    int numAtoms = cu.getNumAtoms();
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//        kernel1.setArg<cu::Buffer>(2, cu.getForce().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(3, integration.getPosDelta().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(4, cu.getVelm().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(5, integration.getRandom().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(1, cu.getPosq().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(2, cu.getVelm().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(3, integration.getPosDelta().getDevicePointer());
-//    }
-//    double temperature = integrator.getTemperature();
-//    double friction = integrator.getFriction();
-//    double stepSize = integrator.getStepSize();
-//    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-//        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-//        kernel1.setArg<cl_float>(0, (cl_float) (tau*stepSize));
-//        kernel1.setArg<cl_float>(1, (cl_float) (sqrt(2.0f*BOLTZ*temperature*stepSize*tau)));
-//        kernel2.setArg<cl_float>(0, (cl_float) (1.0/stepSize));
-//        prevTemp = temperature;
-//        prevFriction = friction;
-//        prevStepSize = stepSize;
-//    }
-//
-//    // Call the first integration kernel.
-//
-//    kernel1.setArg<cl_uint>(6, integration.prepareRandomNumbers(cu.getPaddedNumAtoms()));
-//    cu.executeKernel(kernel1, numAtoms);
-//
-//    // Apply constraints.
-//
-//    integration.applyConstraints(integrator.getConstraintTolerance());
-//
-//    // Call the second integration kernel.
-//
-//    cu.executeKernel(kernel2, numAtoms);
-//    integration.computeVirtualSites();
-//
-//    // Update the time and step count.
-//
-//    cu.setTime(cu.getTime()+stepSize);
-//    cu.setStepCount(cu.getStepCount()+1);
-//}
-//
-//CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() {
-//}
-//
-//void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
-//    cuCtxSetCurrent(cu.getContext());
-//    cu.getPlatformData().initializeContexts(system);
-//    CUmodule module = cu.createModule(CudaKernelSources::verlet, "");
-//    kernel1 = cu.getKernel(module, "integrateVerletPart1");
-//    kernel2 = cu.getKernel(module, "integrateVerletPart2");
-//    selectSizeKernel = cu.getKernel(module, "selectVerletStepSize");
-//    blockSize = min(min(256, system.getNumParticles()), (int) cu.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
-//}
-//
-//double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
-//    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-//    int numAtoms = cu.getNumAtoms();
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//        kernel1.setArg<cl_int>(0, numAtoms);
-//        kernel1.setArg<cu::Buffer>(1, cu.getIntegrationUtilities().getStepSize().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(2, cu.getPosq().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(3, cu.getVelm().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(4, cu.getForce().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(5, integration.getPosDelta().getDevicePointer());
-//        kernel2.setArg<cl_int>(0, numAtoms);
-//        kernel2.setArg<cu::Buffer>(1, cu.getIntegrationUtilities().getStepSize().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(2, cu.getPosq().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(3, cu.getVelm().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(4, integration.getPosDelta().getDevicePointer());
-//        selectSizeKernel.setArg<cl_int>(0, numAtoms);
-//        selectSizeKernel.setArg<cu::Buffer>(3, cu.getIntegrationUtilities().getStepSize().getDevicePointer());
-//        selectSizeKernel.setArg<cu::Buffer>(4, cu.getVelm().getDevicePointer());
-//        selectSizeKernel.setArg<cu::Buffer>(5, cu.getForce().getDevicePointer());
-//        selectSizeKernel.setArg(6, blockSize*sizeof(cl_float), NULL);
-//    }
-//
-//    // Select the step size to use.
-//
-//    float maxStepSize = (float)(maxTime-cu.getTime());
-//    selectSizeKernel.setArg<cl_float>(1, maxStepSize);
-//    selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getErrorTolerance());
-//    cu.executeKernel(selectSizeKernel, blockSize, blockSize);
-//
-//    // Call the first integration kernel.
-//
-//    cu.executeKernel(kernel1, numAtoms);
-//
-//    // Apply constraints.
-//
-//    integration.applyConstraints(integrator.getConstraintTolerance());
-//
-//    // Call the second integration kernel.
-//
-//    cu.executeKernel(kernel2, numAtoms);
-//    integration.computeVirtualSites();
-//
-//    // Update the time and step count.
-//
-//    cu.getIntegrationUtilities().getStepSize().download();
-//    double dt = cu.getIntegrationUtilities().getStepSize()[0].y;
-//    double time = cu.getTime()+dt;
-//    if (dt == maxStepSize)
-//        time = maxTime; // Avoid round-off error
-//    cu.setTime(time);
-//    cu.setStepCount(cu.getStepCount()+1);
-//    return dt;
-//}
-//
-//CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKernel() {
-//    cuCtxSetCurrent(cu.getContext());
-//    if (params != NULL)
-//        delete params;
-//}
-//
-//void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
-//    cuCtxSetCurrent(cu.getContext());
-//    cu.getPlatformData().initializeContexts(system);
-//    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-//    map<string, string> defines;
-//    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-//    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-//    CUmodule module = cu.createModule(CudaKernelSources::langevin, defines, "");
-//    kernel1 = cu.getKernel(module, "integrateLangevinPart1");
-//    kernel2 = cu.getKernel(module, "integrateLangevinPart2");
-//    selectSizeKernel = cu.getKernel(module, "selectLangevinStepSize");
-//    params = new CudaArray<cl_float>(cu, 3, "langevinParams");
-//    blockSize = min(256, system.getNumParticles());
-//    blockSize = max(blockSize, params->getSize());
-//    blockSize = min(blockSize, (int) cu.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
-//}
-//
-//double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
-//    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-//    int numAtoms = cu.getNumAtoms();
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//        kernel1.setArg<cu::Buffer>(0, cu.getVelm().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(1, cu.getForce().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(2, integration.getPosDelta().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(3, params->getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(4, integration.getStepSize().getDevicePointer());
-//        kernel1.setArg<cu::Buffer>(5, integration.getRandom().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(0, cu.getPosq().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(1, integration.getPosDelta().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(2, cu.getVelm().getDevicePointer());
-//        kernel2.setArg<cu::Buffer>(3, integration.getStepSize().getDevicePointer());
-//        selectSizeKernel.setArg<cu::Buffer>(4, integration.getStepSize().getDevicePointer());
-//        selectSizeKernel.setArg<cu::Buffer>(5, cu.getVelm().getDevicePointer());
-//        selectSizeKernel.setArg<cu::Buffer>(6, cu.getForce().getDevicePointer());
-//        selectSizeKernel.setArg<cu::Buffer>(7, params->getDevicePointer());
-//        selectSizeKernel.setArg(8, params->getSize()*sizeof(cl_float), NULL);
-//        selectSizeKernel.setArg(9, blockSize*sizeof(cl_float), NULL);
-//    }
-//
-//    // Select the step size to use.
-//
-//    float maxStepSize = (float)(maxTime-cu.getTime());
-//    selectSizeKernel.setArg<cl_float>(0, maxStepSize);
-//    selectSizeKernel.setArg<cl_float>(1, (cl_float) integrator.getErrorTolerance());
-//    selectSizeKernel.setArg<cl_float>(2, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
-//    selectSizeKernel.setArg<cl_float>(3, (cl_float) (BOLTZ*integrator.getTemperature()));
-//    cu.executeKernel(selectSizeKernel, blockSize, blockSize);
-//
-//    // Call the first integration kernel.
-//
-//    kernel1.setArg<cl_uint>(6, integration.prepareRandomNumbers(cu.getPaddedNumAtoms()));
-//    cu.executeKernel(kernel1, numAtoms);
-//
-//    // Apply constraints.
-//
-//    integration.applyConstraints(integrator.getConstraintTolerance());
-//
-//    // Call the second integration kernel.
-//
-//    cu.executeKernel(kernel2, numAtoms);
-//    integration.computeVirtualSites();
-//
-//    // Update the time and step count.
-//
-//    cu.getIntegrationUtilities().getStepSize().download();
-//    double dt = cu.getIntegrationUtilities().getStepSize()[0].y;
-//    double time = cu.getTime()+dt;
-//    if (dt == maxStepSize)
-//        time = maxTime; // Avoid round-off error
-//    cu.setTime(time);
-//    cu.setStepCount(cu.getStepCount()+1);
-//    return dt;
-//}
-//
+CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
+    cu.setAsCurrent();
+    if (params != NULL)
+        delete params;
+}
+
+void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
+    cu.setAsCurrent();
+    cu.getPlatformData().initializeContexts(system);
+    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    CUmodule module = cu.createModule(CudaKernelSources::langevin, defines, "");
+    kernel1 = cu.getKernel(module, "integrateLangevinPart1");
+    kernel2 = cu.getKernel(module, "integrateLangevinPart2");
+    params = new CudaArray(cu, 3, cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "langevinParams");
+    prevStepSize = -1.0;
+}
+
+void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Calculate the integration parameters.
+
+        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        double kT = BOLTZ*temperature;
+        double vscale = exp(-stepSize/tau);
+        double fscale = (1-vscale)*tau;
+        double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
+        if (cu.getUseDoublePrecision()) {
+            vector<double> p(params->getSize());
+            p[0] = vscale;
+            p[1] = fscale;
+            p[2] = noisescale;
+            params->upload(p);
+            double2 ss = make_double2(0, stepSize);
+            integration.getStepSize().upload(&ss);
+        }
+        else {
+            vector<float> p(params->getSize());
+            p[0] = (float) vscale;
+            p[1] = (float) fscale;
+            p[2] = (float) noisescale;
+            params->upload(p);
+            float2 ss = make_float2(0, (float) stepSize);
+            integration.getStepSize().upload(&ss);
+        }
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+
+    // Call the first integration kernel.
+
+    int randomIndex = integration.prepareRandomNumbers(cu.getPaddedNumAtoms());
+    void* args1[] = {&cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &params->getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
+    cu.executeKernel(kernel1, args1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    void* args2[] = {&cu.getPosq().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    cu.executeKernel(kernel2, args2, numAtoms);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cu.setTime(cu.getTime()+stepSize);
+    cu.setStepCount(cu.getStepCount()+1);
+}
+
+CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
+}
+
+void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
+    cu.setAsCurrent();
+    cu.getPlatformData().initializeContexts(system);
+    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    CUmodule module = cu.createModule(CudaKernelSources::brownian, defines, "");
+    kernel1 = cu.getKernel(module, "integrateBrownianPart1");
+    kernel2 = cu.getKernel(module, "integrateBrownianPart2");
+    prevStepSize = -1.0;
+}
+
+void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+    double tauDt = tau*stepSize;
+    double noise = sqrt(2.0f*BOLTZ*temperature*stepSize*tau);
+    float stepSizeFloat = (float) stepSize;
+    float tauDtFloat = (float) tauDt;
+    float noiseFloat = (float) noise;
+
+    // Call the first integration kernel.
+
+    int randomIndex = integration.prepareRandomNumbers(cu.getPaddedNumAtoms());
+    void* args1[] = {cu.getUseDoublePrecision() ? (void*) &tauDt : (void*) &tauDtFloat,
+            cu.getUseDoublePrecision() ? (void*) &noise : (void*) &noiseFloat,
+            &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
+    cu.executeKernel(kernel1, args1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    void* args2[] = {cu.getUseDoublePrecision() ? (void*) &stepSize : (void*) &stepSizeFloat,
+            &cu.getPosq().getDevicePointer(), &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel2, args2, numAtoms);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cu.setTime(cu.getTime()+stepSize);
+    cu.setStepCount(cu.getStepCount()+1);
+}
+
+CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() {
+}
+
+void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
+    cu.setAsCurrent();
+    cu.getPlatformData().initializeContexts(system);
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    CUmodule module = cu.createModule(CudaKernelSources::verlet, defines, "");
+    kernel1 = cu.getKernel(module, "integrateVerletPart1");
+    kernel2 = cu.getKernel(module, "integrateVerletPart2");
+    selectSizeKernel = cu.getKernel(module, "selectVerletStepSize");
+    blockSize = min(256, system.getNumParticles());
+}
+
+double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+
+    // Select the step size to use.
+
+    double maxStepSize = maxTime-cu.getTime();
+    float maxStepSizeFloat = (float) maxStepSize;
+    double tol = integrator.getErrorTolerance();
+    float tolFloat = (float) tol;
+    void* argsSelect[] = {cu.getUseDoublePrecision() ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
+            cu.getUseDoublePrecision() ? (void*) &tol : (void*) &tolFloat,
+            &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer()};
+    int sharedSize = blockSize*(cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
+
+    // Call the first integration kernel.
+
+    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel1, args1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel2, args2, numAtoms);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    double dt, time;
+    if (cu.getUseDoublePrecision()) {
+        double2 stepSize;
+        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cu.getTime()+dt;
+        if (dt == maxStepSize)
+            time = maxTime; // Avoid round-off error
+    }
+    else {
+        float2 stepSize;
+        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cu.getTime()+dt;
+        if (dt == maxStepSizeFloat)
+            time = maxTime; // Avoid round-off error
+    }
+    cu.setTime(time);
+    cu.setStepCount(cu.getStepCount()+1);
+    return dt;
+}
+
+CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKernel() {
+    cu.setAsCurrent();
+    if (params != NULL)
+        delete params;
+}
+
+void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
+    cu.setAsCurrent();
+    cu.getPlatformData().initializeContexts(system);
+    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    CUmodule module = cu.createModule(CudaKernelSources::langevin, defines, "");
+    kernel1 = cu.getKernel(module, "integrateLangevinPart1");
+    kernel2 = cu.getKernel(module, "integrateLangevinPart2");
+    selectSizeKernel = cu.getKernel(module, "selectLangevinStepSize");
+    params = CudaArray::create<float>(cu, 3, "langevinParams");
+    blockSize = min(256, system.getNumParticles());
+    blockSize = max(blockSize, params->getSize());
+}
+
+double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+
+    // Select the step size to use.
+
+    double maxStepSize = maxTime-cu.getTime();
+    float maxStepSizeFloat = (float) maxStepSize;
+    double tol = integrator.getErrorTolerance();
+    float tolFloat = (float) tol;
+    double tau = integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction();
+    float tauFloat = (float) tau;
+    double kT = BOLTZ*integrator.getTemperature();
+    float kTFloat = (float) kT;
+    void* argsSelect[] = {cu.getUseDoublePrecision() ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
+            cu.getUseDoublePrecision() ? (void*) &tol : (void*) &tolFloat,
+            cu.getUseDoublePrecision() ? (void*) &tau : (void*) &tauFloat,
+            cu.getUseDoublePrecision() ? (void*) &kT : (void*) &kTFloat,
+            &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &params->getDevicePointer()};
+    int sharedSize = blockSize*(cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
+
+    // Call the first integration kernel.
+
+    int randomIndex = integration.prepareRandomNumbers(cu.getPaddedNumAtoms());
+    void* args1[] = {&cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &params->getDevicePointer(), &integration.getStepSize().getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex};
+    cu.executeKernel(kernel1, args1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    void* args2[] = {&cu.getPosq().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+            &cu.getVelm().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
+    cu.executeKernel(kernel2, args2, numAtoms);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    double dt, time;
+    if (cu.getUseDoublePrecision()) {
+        double2 stepSize;
+        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cu.getTime()+dt;
+        if (dt == maxStepSize)
+            time = maxTime; // Avoid round-off error
+    }
+    else {
+        float2 stepSize;
+        cu.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cu.getTime()+dt;
+        if (dt == maxStepSizeFloat)
+            time = maxTime; // Avoid round-off error
+    }
+    cu.setTime(time);
+    cu.setStepCount(cu.getStepCount()+1);
+    return dt;
+}
+
 //class CudaIntegrateCustomStepKernel::ReorderListener : public CudaContext::ReorderListener {
 //public:
 //    ReorderListener(CudaContext& cu, CudaParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValues, bool& deviceValuesAreCurrent) :
@@ -4433,7 +4440,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 //};
 //
 //CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (globalValues != NULL)
 //        delete globalValues;
 //    if (contextParameterValues != NULL)
@@ -4451,7 +4458,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 //}
 //
 //void CudaIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    cu.getPlatformData().initializeContexts(system);
 //    cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
 //    numGlobalVariables = integrator.getNumGlobalVariables();
@@ -4956,13 +4963,13 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 //}
 //
 //CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (atomGroups != NULL)
 //        delete atomGroups;
 //}
 //
 //void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    randomSeed = thermostat.getRandomNumberSeed();
 //    map<string, string> defines;
 //    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -4997,7 +5004,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 //}
 //
 //CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (savedPositions != NULL)
 //        delete savedPositions;
 //    if (moleculeAtoms != NULL)
@@ -5007,7 +5014,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 //}
 //
 //void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    savedPositions = new CudaArray<mm_float4>(cu, cu.getPaddedNumAtoms(), "savedPositions");
 //    CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
 //    kernel = cu.getKernel(module, "scalePositions");
@@ -5056,7 +5063,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 //}
 
 void CudaCalcKineticEnergyKernel::initialize(const System& system) {
-    cuCtxSetCurrent(cu.getContext());
+    cu.setAsCurrent();
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -5089,13 +5096,13 @@ double CudaCalcKineticEnergyKernel::execute(ContextImpl& context) {
 }
 
 //CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    if (cmMomentum != NULL)
 //        delete cmMomentum;
 //}
 //
 //void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
-//    cuCtxSetCurrent(cu.getContext());
+//    cu.setAsCurrent();
 //    frequency = force.getFrequency();
 //    int numAtoms = cu.getNumAtoms();
 //    cmMomentum = new CudaArray<mm_float4>(cu, (numAtoms+CudaContext::ThreadBlockSize-1)/CudaContext::ThreadBlockSize, "cmMomentum");

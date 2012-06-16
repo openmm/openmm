@@ -135,6 +135,7 @@ private:
     CudaArray* ccmaDelta2;
     CudaArray* ccmaConverged;
     int* ccmaConvergedMemory;
+    CUevent ccmaEvent;
     CudaArray* vsite2AvgAtoms;
     CudaArray* vsite2AvgWeights;
     CudaArray* vsite3AvgAtoms;
@@ -143,7 +144,6 @@ private:
     CudaArray* vsiteOutOfPlaneWeights;
     int randomPos;
     int lastSeed, numVsites;
-    bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels;
     struct ShakeCluster;
     struct ConstraintOrderer;
 };

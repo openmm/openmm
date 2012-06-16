@@ -108,14 +108,14 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
         return new CudaIntegrateVerletStepKernel(name, platform, cu);
-//    if (name == IntegrateLangevinStepKernel::Name())
-//        return new CudaIntegrateLangevinStepKernel(name, platform, cu);
-//    if (name == IntegrateBrownianStepKernel::Name())
-//        return new CudaIntegrateBrownianStepKernel(name, platform, cu);
-//    if (name == IntegrateVariableVerletStepKernel::Name())
-//        return new CudaIntegrateVariableVerletStepKernel(name, platform, cu);
-//    if (name == IntegrateVariableLangevinStepKernel::Name())
-//        return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
+    if (name == IntegrateLangevinStepKernel::Name())
+        return new CudaIntegrateLangevinStepKernel(name, platform, cu);
+    if (name == IntegrateBrownianStepKernel::Name())
+        return new CudaIntegrateBrownianStepKernel(name, platform, cu);
+    if (name == IntegrateVariableVerletStepKernel::Name())
+        return new CudaIntegrateVariableVerletStepKernel(name, platform, cu);
+    if (name == IntegrateVariableLangevinStepKernel::Name())
+        return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
 //    if (name == IntegrateCustomStepKernel::Name())
 //        return new CudaIntegrateCustomStepKernel(name, platform, cu);
 //    if (name == ApplyAndersenThermostatKernel::Name())

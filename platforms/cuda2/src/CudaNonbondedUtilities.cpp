@@ -169,14 +169,14 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         exclusionIndicesVec.push_back(iter->second);
     }
     exclusionRowIndicesVec[++currentRow] = exclusionIndicesVec.size();
-    exclusionIndices = CudaArray::create<unsigned int>(exclusionIndicesVec.size(), "exclusionIndices");
-    exclusionRowIndices = CudaArray::create<unsigned int>(exclusionRowIndicesVec.size(), "exclusionRowIndices");
+    exclusionIndices = CudaArray::create<unsigned int>(context, exclusionIndicesVec.size(), "exclusionIndices");
+    exclusionRowIndices = CudaArray::create<unsigned int>(context, exclusionRowIndicesVec.size(), "exclusionRowIndices");
     exclusionIndices->upload(exclusionIndicesVec);
     exclusionRowIndices->upload(exclusionRowIndicesVec);
 
     // Record the exclusion data.
 
-    exclusions = CudaArray::create<unsigned int>(tilesWithExclusions.size()*CudaContext::TileSize, "exclusions");
+    exclusions = CudaArray::create<unsigned int>(context, tilesWithExclusions.size()*CudaContext::TileSize, "exclusions");
     vector<unsigned int> exclusionVec(exclusions->getSize());
     for (int i = 0; i < exclusions->getSize(); ++i)
         exclusionVec[i] = 0xFFFFFFFF;
@@ -231,11 +231,11 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             maxTiles = numTiles;
         if (maxTiles < 1)
             maxTiles = 1;
-        interactingTiles = CudaArray::create<ushort2>(maxTiles, "interactingTiles");
-        interactionFlags = CudaArray::create<unsigned int>(maxTiles, "interactionFlags");
-        interactionCount = CudaArray::create<unsigned int>(1, "interactionCount");
-        blockCenter = CudaArray::create<float4>(numAtomBlocks, "blockCenter");
-        blockBoundingBox = CudaArray::create<float4>(numAtomBlocks, "blockBoundingBox");
+        interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
+        interactionFlags = CudaArray::create<unsigned int>(context, maxTiles, "interactionFlags");
+        interactionCount = CudaArray::create<unsigned int>(context, 1, "interactionCount");
+        blockCenter = CudaArray::create<float4>(context, numAtomBlocks, "blockCenter");
+        blockBoundingBox = CudaArray::create<float4>(context, numAtomBlocks, "blockBoundingBox");
         CHECK_RESULT(cuMemHostAlloc((void**) &pinnedInteractionCount, sizeof(unsigned int), 0));
         pinnedInteractionCount[0] = 0;
         interactionCount->upload(pinnedInteractionCount);
@@ -330,11 +330,11 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     if (maxTiles > numTiles)
         maxTiles = numTiles;
     delete interactingTiles;
-    interactingTiles = CudaArray::create<ushort2>(maxTiles, "interactingTiles");
+    interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
     forceArgs[8] = &interactingTiles->getDevicePointer();
     findInteractingBlocksArgs[5] = &interactingTiles->getDevicePointer();
     delete interactionFlags;
-    interactionFlags = CudaArray::create<unsigned int>(maxTiles, "interactionFlags");
+    interactionFlags = CudaArray::create<unsigned int>(context, maxTiles, "interactionFlags");
     forceArgs[13] = &interactionFlags->getDevicePointer();
     findInteractingBlocksArgs[6] = &interactionFlags->getDevicePointer();
     findInteractionsWithinBlocksArgs[3] = &interactingTiles->getDevicePointer();

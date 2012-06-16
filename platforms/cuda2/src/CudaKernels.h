@@ -942,133 +942,126 @@ private:
     CUfunction kernel1, kernel2;
 };
 
-///**
-// * This kernel is invoked by LangevinIntegrator to take one time step.
-// */
-//class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-//public:
-//    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateLangevinStepKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false), params(NULL) {
-//    }
-//    ~CudaIntegrateLangevinStepKernel();
-//    /**
-//     * Initialize the kernel, setting up the particle masses.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the LangevinIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const LangevinIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the LangevinIntegrator this kernel is being used for
-//     */
-//    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
-//private:
-//    CudaContext& cu;
-//    double prevTemp, prevFriction, prevStepSize;
-//    bool hasInitializedKernels;
-//    CudaArray<cl_float>* params;
-//    CUfunction kernel1, kernel2;
-//};
-//
-///**
-// * This kernel is invoked by BrownianIntegrator to take one time step.
-// */
-//class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
-//public:
-//    CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateBrownianStepKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false), prevTemp(-1), prevFriction(-1), prevStepSize(-1) {
-//    }
-//    ~CudaIntegrateBrownianStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the BrownianIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const BrownianIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the BrownianIntegrator this kernel is being used for
-//     */
-//    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
-//private:
-//    CudaContext& cu;
-//    double prevTemp, prevFriction, prevStepSize;
-//    bool hasInitializedKernels;
-//    CUfunction kernel1, kernel2;
-//};
-//
-///**
-// * This kernel is invoked by VariableVerletIntegrator to take one time step.
-// */
-//class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
-//public:
-//    CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableVerletStepKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false) {
-//    }
-//    ~CudaIntegrateVariableVerletStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the VerletIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const VariableVerletIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the VerletIntegrator this kernel is being used for
-//     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-//     * @return the size of the step that was taken
-//     */
-//    double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
-//private:
-//    CudaContext& cu;
-//    bool hasInitializedKernels;
-//    int blockSize;
-//    CUfunction kernel1, kernel2, selectSizeKernel;
-//};
-//
-///**
-// * This kernel is invoked by VariableLangevinIntegrator to take one time step.
-// */
-//class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
-//public:
-//    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableLangevinStepKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false), params(NULL) {
-//    }
-//    ~CudaIntegrateVariableLangevinStepKernel();
-//    /**
-//     * Initialize the kernel, setting up the particle masses.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the VariableLangevinIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the VariableLangevinIntegrator this kernel is being used for
-//     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-//     * @return the size of the step that was taken
-//     */
-//    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
-//private:
-//    CudaContext& cu;
-//    bool hasInitializedKernels;
-//    int blockSize;
-//    CudaArray<cl_float>* params;
-//    CUfunction kernel1, kernel2, selectSizeKernel;
-//    double prevTemp, prevFriction, prevErrorTol;
-//};
-//
+/**
+ * This kernel is invoked by LangevinIntegrator to take one time step.
+ */
+class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+public:
+    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateLangevinStepKernel(name, platform), cu(cu), params(NULL) {
+    }
+    ~CudaIntegrateLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the LangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const LangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+private:
+    CudaContext& cu;
+    double prevTemp, prevFriction, prevStepSize;
+    CudaArray* params;
+    CUfunction kernel1, kernel2;
+};
+
+/**
+ * This kernel is invoked by BrownianIntegrator to take one time step.
+ */
+class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+public:
+    CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateBrownianStepKernel(name, platform), cu(cu) {
+    }
+    ~CudaIntegrateBrownianStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BrownianIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BrownianIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
+private:
+    CudaContext& cu;
+    double prevTemp, prevFriction, prevStepSize;
+    CUfunction kernel1, kernel2;
+};
+
+/**
+ * This kernel is invoked by VariableVerletIntegrator to take one time step.
+ */
+class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+public:
+    CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableVerletStepKernel(name, platform), cu(cu) {
+    }
+    ~CudaIntegrateVariableVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
+     */
+    double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+private:
+    CudaContext& cu;
+    int blockSize;
+    CUfunction kernel1, kernel2, selectSizeKernel;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableLangevinStepKernel(name, platform),
+            cu(cu), params(NULL) {
+    }
+    ~CudaIntegrateVariableLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
+     */
+    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+private:
+    CudaContext& cu;
+    int blockSize;
+    CudaArray* params;
+    CUfunction kernel1, kernel2, selectSizeKernel;
+    double prevTemp, prevFriction, prevErrorTol;
+};
+
 ///**
 // * This kernel is invoked by CustomIntegrator to take one time step.
 // */

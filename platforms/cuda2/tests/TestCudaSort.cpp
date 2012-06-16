@@ -67,7 +67,7 @@ void verifySorting(vector<float> array) {
             platform.getPropertyDefaultValue(CudaPlatform::CudaCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaTempDirectory()));
     CudaContext& context = *platformData.contexts[0];
     context.initialize();
-    CudaArray data(array.size(), 4, "sortData");
+    CudaArray data(context, array.size(), 4, "sortData");
     data.upload(array);
     CudaSort sort(context, new SortTrait(), array.size());
     sort.sort(data);

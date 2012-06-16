@@ -73,11 +73,11 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
 
     // Create workspace arrays.
 
-    dataRange = new CudaArray(2, trait->getKeySize(), "sortDataRange");
-    bucketOffset = CudaArray::create<uint1>(numBuckets, "bucketOffset");
-    bucketOfElement = CudaArray::create<uint1>(length, "bucketOfElement");
-    offsetInBucket = CudaArray::create<uint1>(length, "offsetInBucket");
-    buckets = new CudaArray(length, trait->getDataSize(), "buckets");
+    dataRange = new CudaArray(context, 2, trait->getKeySize(), "sortDataRange");
+    bucketOffset = CudaArray::create<uint1>(context, numBuckets, "bucketOffset");
+    bucketOfElement = CudaArray::create<uint1>(context, length, "bucketOfElement");
+    offsetInBucket = CudaArray::create<uint1>(context, length, "offsetInBucket");
+    buckets = new CudaArray(context, length, trait->getDataSize(), "buckets");
 }
 
 CudaSort::~CudaSort() {

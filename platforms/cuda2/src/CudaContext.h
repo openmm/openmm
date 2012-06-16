@@ -89,6 +89,17 @@ public:
         return context;
     }
     /**
+     * Get whether the CUcontext associated with this object is currently a valid contex.
+     */
+    bool getContextIsValid() const {
+        return contextIsValid;
+    }
+    /**
+     * Set the CUcontext associated with this object to be the current context.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void setAsCurrent();
+    /**
      * Get the CUdevice associated with this object.
      */
     CUdevice getDevice() {

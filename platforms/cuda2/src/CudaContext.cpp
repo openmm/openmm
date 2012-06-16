@@ -141,23 +141,23 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     nonbonded = new CudaNonbondedUtilities(*this);
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
-        posq = CudaArray::create<double4>(paddedNumAtoms, "posq");
-        velm = CudaArray::create<double4>(paddedNumAtoms, "velm");
+        posq = CudaArray::create<double4>(*this, paddedNumAtoms, "posq");
+        velm = CudaArray::create<double4>(*this, paddedNumAtoms, "velm");
         compilationDefines["USE_DOUBLE_PRECISION"] = "1";
         compilationDefines["make_real2"] = "make_double2";
         compilationDefines["make_real3"] = "make_double3";
         compilationDefines["make_real4"] = "make_double4";
-        energyBuffer = CudaArray::create<double>(numEnergyBuffers, "energyBuffer");
+        energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else {
-        posq = CudaArray::create<float4>(paddedNumAtoms, "posq");
-        velm = CudaArray::create<float4>(paddedNumAtoms, "velm");
+        posq = CudaArray::create<float4>(*this, paddedNumAtoms, "posq");
+        velm = CudaArray::create<float4>(*this, paddedNumAtoms, "velm");
         compilationDefines["make_real2"] = "make_float2";
         compilationDefines["make_real3"] = "make_float3";
         compilationDefines["make_real4"] = "make_float4";
-        energyBuffer = CudaArray::create<float>(numEnergyBuffers, "energyBuffer");
+        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
     }
@@ -198,7 +198,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 }
 
 CudaContext::~CudaContext() {
-    cuCtxSetCurrent(context);
+    setAsCurrent();
     for (int i = 0; i < (int) forces.size(); i++)
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
@@ -226,6 +226,7 @@ CudaContext::~CudaContext() {
     string errorMessage = "Error deleting Context";
     if (contextIsValid)
         CHECK_RESULT(cuCtxDestroy(context));
+    contextIsValid = false;
 }
 
 void CudaContext::initialize() {
@@ -240,10 +241,10 @@ void CudaContext::initialize() {
     }
     velm->upload(pinnedBuffer);
     bonded->initialize(system);
-    force = CudaArray::create<long long>(paddedNumAtoms*3, "force");
+    force = CudaArray::create<long long>(*this, paddedNumAtoms*3, "force");
     addAutoclearBuffer(force->getDevicePointer(), force->getSize()*force->getElementSize());
     addAutoclearBuffer(energyBuffer->getDevicePointer(), energyBuffer->getSize()*energyBuffer->getElementSize());
-    atomIndexDevice = CudaArray::create<int>(paddedNumAtoms, "atomIndex");
+    atomIndexDevice = CudaArray::create<int>(*this, paddedNumAtoms, "atomIndex");
     atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
         atomIndex[i] = i;
@@ -255,6 +256,11 @@ void CudaContext::initialize() {
 
 void CudaContext::addForce(CudaForceInfo* force) {
     forces.push_back(force);
+}
+
+void CudaContext::setAsCurrent() {
+    if (contextIsValid)
+        cuCtxSetCurrent(context);
 }
 
 string CudaContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {

@@ -29,8 +29,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/System.h"
+
+
 /**
- * This tests the CUDA implementation of VerletIntegrator.
+ * This tests the CUDA implementation of BrownianIntegrator.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -39,7 +42,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
+#include "openmm/BrownianIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -50,29 +53,13 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-/**
- * Compute the energy of a state, taking into account the half step offset between
- * positions and velocities.
- */
-
-static double computeEnergy(const State& state, const System& system, double dt) {
-    const vector<Vec3>& v = state.getVelocities();
-    const vector<Vec3>& f = state.getForces();
-    double energy = 0.0;
-    for (int i = 0; i < system.getNumParticles(); i++) {
-        double m = system.getParticleMass(i);
-        Vec3 vel = v[i]+f[i]*(0.5*dt/m);
-        energy += 0.5*m*vel.dot(vel);
-    }
-    return energy+state.getPotentialEnergy();
-}
-
 void testSingleBond() {
     CudaPlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    VerletIntegrator integrator(0.01);
+    double dt = 0.01;
+    BrownianIntegrator integrator(0, 0.1, dt);
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -82,34 +69,68 @@ void testSingleBond() {
     positions[1] = Vec3(1, 0, 0);
     context.setPositions(positions);
 
-    // This is simply a harmonic oscillator, so compare it to the analytical solution.
+    // This is simply an overdamped harmonic oscillator, so compare it to the analytical solution.
 
-    const double freq = 1.0;;
-    State state = context.getState(State::Energy);
-    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
+    double rate = 2*1.0/(0.1*2.0);
     for (int i = 0; i < 1000; ++i) {
-        state = context.getState(State::Positions | State::Velocities | State::Energy);
+        State state = context.getState(State::Positions | State::Velocities);
         double time = state.getTime();
-        double expectedDist = 1.5+0.5*std::cos(freq*time);
+        double expectedDist = 1.5+0.5*std::exp(-rate*time);
         ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
         ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
-        double expectedSpeed = -0.5*freq*std::sin(freq*time);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
-        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        if (i > 0) {
+            double expectedSpeed = -0.5*rate*std::exp(-rate*(time-0.5*dt));
+            ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.11);
+            ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.11);
+        }
         integrator.step(1);
     }
-    ASSERT_EQUAL_TOL(10.0, context.getState(0).getTime(), 1e-5);
+}
+
+void testTemperature() {
+    const int numParticles = 8;
+    const int numBonds = numParticles-1;
+    const double temp = 10.0;
+    CudaPlatform platform;
+    System system;
+    BrownianIntegrator integrator(temp, 2.0, 0.01);
+    HarmonicBondForce* forceField = new HarmonicBondForce();
+    for (int i = 0; i < numParticles; ++i)
+        system.addParticle(2.0);
+    for (int i = 0; i < numBonds; ++i)
+        forceField->addBond(i, i+1, 1.0, 5.0);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        positions[i] = Vec3(i, 0, 0);
+    context.setPositions(positions);
+
+    // Let it equilibrate.
+
+    integrator.step(10000);
+
+    // Now run it for a while and see if the temperature is correct.
+
+    double pe = 0.0;
+    const int steps = 50000;
+    for (int i = 0; i < steps; ++i) {
+        State state = context.getState(State::Energy);
+        pe += state.getPotentialEnergy();
+        integrator.step(1);
+    }
+    pe /= steps;
+    double expected = 0.5*numBonds*BOLTZ*temp;
+    ASSERT_USUALLY_EQUAL_TOL(expected, pe, 0.1*expected);
 }
 
 void testConstraints() {
     const int numParticles = 8;
     const int numConstraints = 5;
-    const double temp = 100.0;
+    const double temp = 20.0;
     CudaPlatform platform;
     System system;
-    VerletIntegrator integrator(0.001);
+    BrownianIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -129,7 +150,7 @@ void testConstraints() {
     init_gen_rand(0, sfmt);
 
     for (int i = 0; i < numParticles; ++i) {
-        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        positions[i] = Vec3(i, 0, 0);
         velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
     }
     context.setPositions(positions);
@@ -137,9 +158,8 @@ void testConstraints() {
 
     // Simulate it and see whether the constraints remain satisfied.
 
-    double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
+        State state = context.getState(State::Positions);
         for (int j = 0; j < numConstraints; ++j) {
             int particle1, particle2;
             double distance;
@@ -149,84 +169,75 @@ void testConstraints() {
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 1e-4);
         }
-        double energy = computeEnergy(state, system, integrator.getStepSize());
-        if (i == 1)
-            initialEnergy = energy;
-        else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
 }
 
-void testConstrainedClusters() {
-    const int numParticles = 7;
-    const double temp = 500.0;
+void testRandomSeed() {
+    const int numParticles = 8;
+    const double temp = 100.0;
+    const double collisionFreq = 10.0;
     CudaPlatform platform;
     System system;
-    VerletIntegrator integrator(0.001);
-    integrator.setConstraintTolerance(1e-5);
+    BrownianIntegrator integrator(temp, 2.0, 0.001);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.addParticle(i > 1 ? 1.0 : 10.0);
-        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+        system.addParticle(2.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
-    system.addConstraint(0, 1, 1.0);
-    system.addConstraint(0, 2, 1.0);
-    system.addConstraint(0, 3, 1.0);
-    system.addConstraint(0, 4, 1.0);
-    system.addConstraint(1, 5, 1.0);
-    system.addConstraint(1, 6, 1.0);
-    system.addConstraint(2, 3, sqrt(2.0));
-    system.addConstraint(2, 4, sqrt(2.0));
-    system.addConstraint(3, 4, sqrt(2.0));
-    system.addConstraint(5, 6, sqrt(2.0));
     system.addForce(forceField);
-    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
-    positions[0] = Vec3(0, 0, 0);
-    positions[1] = Vec3(1, 0, 0);
-    positions[2] = Vec3(-1, 0, 0);
-    positions[3] = Vec3(0, 1, 0);
-    positions[4] = Vec3(0, 0, 1);
-    positions[5] = Vec3(2, 0, 0);
-    positions[6] = Vec3(1, 1, 0);
     vector<Vec3> velocities(numParticles);
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+        velocities[i] = Vec3(0, 0, 0);
+    }
 
-    for (int i = 0; i < numParticles; ++i)
-        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    // Try twice with the same random seed.
+
+    integrator.setRandomNumberSeed(5);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocities(velocities);
+    integrator.step(10);
+    State state1 = context.getState(State::Positions);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state2 = context.getState(State::Positions);
 
-    // Simulate it and see whether the constraints remain satisfied.
+    // Try twice with a different random seed.
 
-    double initialEnergy = 0.0;
-    for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
-        for (int j = 0; j < system.getNumConstraints(); ++j) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(j, particle1, particle2, distance);
-            Vec3 p1 = state.getPositions()[particle1];
-            Vec3 p2 = state.getPositions()[particle2];
-            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(distance, dist, 2e-5);
+    integrator.setRandomNumberSeed(10);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state3 = context.getState(State::Positions);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state4 = context.getState(State::Positions);
+
+    // Compare the results.
+
+    for (int i = 0; i < numParticles; i++) {
+        for (int j = 0; j < 3; j++) {
+            ASSERT(state1.getPositions()[i][j] == state2.getPositions()[i][j]);
+            ASSERT(state3.getPositions()[i][j] == state4.getPositions()[i][j]);
+            ASSERT(state1.getPositions()[i][j] != state3.getPositions()[i][j]);
         }
-        double energy = computeEnergy(state, system, integrator.getStepSize());
-        if (i == 1)
-            initialEnergy = energy;
-        else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-        integrator.step(1);
     }
 }
 
 int main() {
     try {
         testSingleBond();
+        testTemperature();
         testConstraints();
-        testConstrainedClusters();
+        testRandomSeed();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
@@ -235,4 +246,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-

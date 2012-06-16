@@ -35,6 +35,8 @@
 
 namespace OpenMM {
 
+class CudaContext;
+
 /**
  * This class encapsulates a block of CUDA device memory.  It provides a simplified API
  * for working with it and for copying data to and from device memory.
@@ -46,21 +48,23 @@ public:
      * Create a CudaArray object.  The object is allocated on the heap with the "new" operator.
      * The template argument is the data type of each array element.
      *
+     * @param context           the context for which to create the array
      * @param size              the number of elements in the array
      * @param name              the name of the array
      */
     template <class T>
-    static CudaArray* create(int size, const std::string& name) {
-        return new CudaArray(size, sizeof(T), name);
+    static CudaArray* create(CudaContext& context, int size, const std::string& name) {
+        return new CudaArray(context, size, sizeof(T), name);
     }
     /**
      * Create a CudaArray object.
      *
+     * @param context           the context for which to create the array
      * @param size              the number of elements in the array
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
      */
-    CudaArray(int size, int elementSize, const std::string& name);
+    CudaArray(CudaContext& context, int size, int elementSize, const std::string& name);
     ~CudaArray();
     /**
      * Get the number of elements in the array.
@@ -123,6 +127,7 @@ public:
      */
     void download(void* data, bool blocking = true) const;
 private:
+    CudaContext& context;
     CUdeviceptr pointer;
     int size, elementSize;
     bool ownsMemory;

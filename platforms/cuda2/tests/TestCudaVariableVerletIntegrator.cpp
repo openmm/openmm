@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the CUDA implementation of VerletIntegrator.
+ * This tests the CUDA implementation of VariableVerletIntegrator.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -39,7 +39,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
+#include "openmm/VariableVerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -72,7 +72,7 @@ void testSingleBond() {
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    VerletIntegrator integrator(0.01);
+    VariableVerletIntegrator integrator(1e-6);
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -97,10 +97,9 @@ void testSingleBond() {
         ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
         ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
         integrator.step(1);
     }
-    ASSERT_EQUAL_TOL(10.0, context.getState(0).getTime(), 1e-5);
 }
 
 void testConstraints() {
@@ -109,7 +108,7 @@ void testConstraints() {
     const double temp = 100.0;
     CudaPlatform platform;
     System system;
-    VerletIntegrator integrator(0.001);
+    VariableVerletIntegrator integrator(1e-5);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -140,15 +139,15 @@ void testConstraints() {
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
-        for (int j = 0; j < numConstraints; ++j) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(j, particle1, particle2, distance);
-            Vec3 p1 = state.getPositions()[particle1];
-            Vec3 p2 = state.getPositions()[particle2];
-            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(distance, dist, 1e-4);
-        }
+            for (int j = 0; j < numConstraints; ++j) {
+                int particle1, particle2;
+                double distance;
+                system.getConstraintParameters(j, particle1, particle2, distance);
+                Vec3 p1 = state.getPositions()[particle1];
+                Vec3 p2 = state.getPositions()[particle2];
+                double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+                ASSERT_EQUAL_TOL(distance, dist, 1e-4);
+            }
         double energy = computeEnergy(state, system, integrator.getStepSize());
         if (i == 1)
             initialEnergy = energy;
@@ -156,6 +155,14 @@ void testConstraints() {
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
+    double finalTime = context.getState(State::Positions).getTime();
+    ASSERT(finalTime > 0.1);
+
+    // Now try the stepTo() method.
+
+    finalTime += 0.5;
+    integrator.stepTo(finalTime);
+    ASSERT_EQUAL(finalTime, context.getState(State::Positions).getTime());
 }
 
 void testConstrainedClusters() {
@@ -163,7 +170,7 @@ void testConstrainedClusters() {
     const double temp = 500.0;
     CudaPlatform platform;
     System system;
-    VerletIntegrator integrator(0.001);
+    VariableVerletIntegrator integrator(1e-5);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -220,6 +227,7 @@ void testConstrainedClusters() {
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
+    ASSERT(context.getState(State::Positions).getTime() > 0.1);
 }
 
 int main() {
@@ -235,4 +243,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-

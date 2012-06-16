@@ -101,22 +101,22 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
         ccmaConvergedMemory(NULL), vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
-        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
+        vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL) {
     // Create workspace arrays.
 
     if (context.getUseDoublePrecision()) {
-        posDelta = CudaArray::create<double4>(context.getPaddedNumAtoms(), "posDelta");
+        posDelta = CudaArray::create<double4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<double4> deltas(posDelta->getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
-        stepSize = CudaArray::create<double2>(1, "stepSize");
+        stepSize = CudaArray::create<double2>(context, 1, "stepSize");
         vector<double2> step(1, make_double2(0.0f, 0.0f));
         stepSize->upload(step);
     }
     else {
-        posDelta = CudaArray::create<float4>(context.getPaddedNumAtoms(), "posDelta");
+        posDelta = CudaArray::create<float4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<float4> deltas(posDelta->getSize(), make_float4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
-        stepSize = CudaArray::create<float2>(1, "stepSize");
+        stepSize = CudaArray::create<float2>(context, 1, "stepSize");
         vector<float2> step(1, make_float2(0.0f, 0.0f));
         stepSize->upload(step);
     }
@@ -125,13 +125,13 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
 
     map<string, string> velocityDefines;
     velocityDefines["CONSTRAIN_VELOCITIES"] = "1";
-//    CUmodule settleModule = context.createModule(CudaKernelSources::settle);
-//    settlePosKernel = context.getKernel(settleModule, "applySettle");
-//    settleVelKernel = context.getKernel(settleModule, "constrainVelocities");
-//    CUmodule shakeModule = context.createModule(CudaKernelSources::shakeHydrogens);
-//    shakePosKernel = context.getKernel(shakeModule, "applyShakeToHydrogens");
-//    shakeModule = context.createModule(CudaKernelSources::shakeHydrogens, velocityDefines);
-//    shakeVelKernel = context.getKernel(shakeModule, "applyShakeToHydrogens");
+    CUmodule settleModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::settle);
+    settlePosKernel = context.getKernel(settleModule, "applySettle");
+    settleVelKernel = context.getKernel(settleModule, "constrainVelocities");
+    CUmodule shakeModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::shakeHydrogens);
+    shakePosKernel = context.getKernel(shakeModule, "applyShakeToHydrogens");
+    shakeModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::shakeHydrogens, velocityDefines);
+    shakeVelKernel = context.getKernel(shakeModule, "applyShakeToHydrogens");
 
     // Record the set of constraints and how many constraints each atom is involved in.
 
@@ -210,8 +210,8 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
             isShakeAtom[atom2] = true;
             isShakeAtom[atom3] = true;
         }
-        settleAtoms = CudaArray::create<int4>(atoms.size(), "settleAtoms");
-        settleParams = CudaArray::create<float2>(params.size(), "settleParams");
+        settleAtoms = CudaArray::create<int4>(context, atoms.size(), "settleAtoms");
+        settleParams = CudaArray::create<float2>(context, params.size(), "settleParams");
         settleAtoms->upload(atoms);
         settleParams->upload(params);
     }
@@ -292,8 +292,8 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 isShakeAtom[cluster.peripheralID[2]] = true;
             ++index;
         }
-        shakeAtoms = CudaArray::create<int4>(atoms.size(), "shakeAtoms");
-        shakeParams = CudaArray::create<float4>(params.size(), "shakeParams");
+        shakeAtoms = CudaArray::create<int4>(context, atoms.size(), "shakeAtoms");
+        shakeParams = CudaArray::create<float4>(context, params.size(), "shakeParams");
         shakeAtoms->upload(atoms);
         shakeParams->upload(params);
     }
@@ -475,36 +475,67 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
 
         // Record the CCMA data structures.
 
-        ccmaAtoms = CudaArray::create<int2>(numCCMA, "CcmaAtoms");
-        ccmaDistance = CudaArray::create<float4>(numCCMA, "CcmaDistance");
-        ccmaAtomConstraints = CudaArray::create<int>(numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
-        ccmaNumAtomConstraints = CudaArray::create<int>(numAtoms, "CcmaAtomConstraintsIndex");
-        ccmaDelta1 = CudaArray::create<float>(numCCMA, "CcmaDelta1");
-        ccmaDelta2 = CudaArray::create<float>(numCCMA, "CcmaDelta2");
-        ccmaConverged = CudaArray::create<int>(2, "CcmaConverged");
+        ccmaAtoms = CudaArray::create<int2>(context, numCCMA, "CcmaAtoms");
+        ccmaAtomConstraints = CudaArray::create<int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
+        ccmaNumAtomConstraints = CudaArray::create<int>(context, numAtoms, "CcmaAtomConstraintsIndex");
+        ccmaConverged = CudaArray::create<int>(context, 2, "CcmaConverged");
         CHECK_RESULT2(cuMemHostAlloc((void**) &ccmaConvergedMemory, 2*sizeof(int), 0), "Error allocating pinned memory");
-        ccmaReducedMass = CudaArray::create<float>(numCCMA, "CcmaReducedMass");
-        ccmaConstraintMatrixColumn = CudaArray::create<int>(numCCMA*maxRowElements, "ConstraintMatrixColumn");
-        ccmaConstraintMatrixValue = CudaArray::create<float>(numCCMA*maxRowElements, "ConstraintMatrixValue");
+        ccmaConstraintMatrixColumn = CudaArray::create<int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         vector<int2> atomsVec(ccmaAtoms->getSize());
-        vector<float4> distanceVec(ccmaDistance->getSize());
         vector<int> atomConstraintsVec(ccmaAtomConstraints->getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
-        vector<float> reducedMassVec(ccmaReducedMass->getSize());
         vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn->getSize());
-        vector<float> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
-        for (int i = 0; i < numCCMA; i++) {
-            int index = constraintOrder[i];
-            int c = ccmaConstraints[index];
-            atomsVec[i].x = atom1[c];
-            atomsVec[i].y = atom2[c];
-            distanceVec[i].w = (float) distance[c];
-            reducedMassVec[i] = (float) (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
-            for (unsigned int j = 0; j < matrix[index].size(); j++) {
-                constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
-                constraintMatrixValueVec[i+j*numCCMA] = (float) matrix[index][j].second;
+        if (context.getUseDoublePrecision()) {
+            ccmaDistance = CudaArray::create<double4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1 = CudaArray::create<double>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2 = CudaArray::create<double>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass = CudaArray::create<double>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue = CudaArray::create<double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+            vector<double4> distanceVec(ccmaDistance->getSize());
+            vector<double> reducedMassVec(ccmaReducedMass->getSize());
+            vector<double> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
+            for (int i = 0; i < numCCMA; i++) {
+                int index = constraintOrder[i];
+                int c = ccmaConstraints[index];
+                atomsVec[i].x = atom1[c];
+                atomsVec[i].y = atom2[c];
+                distanceVec[i].w = distance[c];
+                reducedMassVec[i] = (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
+                for (unsigned int j = 0; j < matrix[index].size(); j++) {
+                    constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
+                    constraintMatrixValueVec[i+j*numCCMA] = matrix[index][j].second;
+                }
+                constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
             }
-            constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
+            ccmaDistance->upload(distanceVec);
+            ccmaReducedMass->upload(reducedMassVec);
+            ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
+        }
+        else {
+            ccmaDistance = CudaArray::create<float4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1 = CudaArray::create<float>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2 = CudaArray::create<float>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass = CudaArray::create<float>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue = CudaArray::create<float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+            vector<float4> distanceVec(ccmaDistance->getSize());
+            vector<float> reducedMassVec(ccmaReducedMass->getSize());
+            vector<float> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
+            for (int i = 0; i < numCCMA; i++) {
+                int index = constraintOrder[i];
+                int c = ccmaConstraints[index];
+                atomsVec[i].x = atom1[c];
+                atomsVec[i].y = atom2[c];
+                distanceVec[i].w = (float) distance[c];
+                reducedMassVec[i] = (float) (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
+                for (unsigned int j = 0; j < matrix[index].size(); j++) {
+                    constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
+                    constraintMatrixValueVec[i+j*numCCMA] = (float) matrix[index][j].second;
+                }
+                constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
+            }
+            ccmaDistance->upload(distanceVec);
+            ccmaReducedMass->upload(reducedMassVec);
+            ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
         }
         for (unsigned int i = 0; i < atomConstraints.size(); i++) {
             numAtomConstraintsVec[i] = atomConstraints[i].size();
@@ -514,27 +545,25 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
             }
         }
         ccmaAtoms->upload(atomsVec);
-        ccmaDistance->upload(distanceVec);
         ccmaAtomConstraints->upload(atomConstraintsVec);
         ccmaNumAtomConstraints->upload(numAtomConstraintsVec);
-        ccmaReducedMass->upload(reducedMassVec);
         ccmaConstraintMatrixColumn->upload(constraintMatrixColumnVec);
-        ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
 
         // Create the CCMA kernels.
 
         map<string, string> defines;
         defines["NUM_CONSTRAINTS"] = context.intToString(numCCMA);
         defines["NUM_ATOMS"] = context.intToString(numAtoms);
-//        CUmodule ccmaModule = context.createModule(CudaKernelSources::ccma, defines);
-//        ccmaDirectionsKernel = context.getKernel(ccmaModule, "computeConstraintDirections");
-//        ccmaPosForceKernel = context.getKernel(ccmaModule, "computeConstraintForce");
-//        ccmaMultiplyKernel = context.getKernel(ccmaModule, "multiplyByConstraintMatrix");
-//        ccmaPosUpdateKernel = context.getKernel(ccmaModule, "updateAtomPositions");
-//        defines["CONSTRAIN_VELOCITIES"] = "1";
-//        ccmaModule = context.createModule(CudaKernelSources::ccma, defines);
-//        ccmaVelForceKernel = context.getKernel(ccmaModule, "computeConstraintForce");
-//        ccmaVelUpdateKernel = context.getKernel(ccmaModule, "updateAtomPositions");
+        CUmodule ccmaModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ccma, defines);
+        ccmaDirectionsKernel = context.getKernel(ccmaModule, "computeConstraintDirections");
+        ccmaPosForceKernel = context.getKernel(ccmaModule, "computeConstraintForce");
+        ccmaMultiplyKernel = context.getKernel(ccmaModule, "multiplyByConstraintMatrix");
+        ccmaPosUpdateKernel = context.getKernel(ccmaModule, "updateAtomPositions");
+        defines["CONSTRAIN_VELOCITIES"] = "1";
+        ccmaModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ccma, defines);
+        ccmaVelForceKernel = context.getKernel(ccmaModule, "computeConstraintForce");
+        ccmaVelUpdateKernel = context.getKernel(ccmaModule, "updateAtomPositions");
+        CHECK_RESULT2(cuEventCreate(&ccmaEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for CCMA");
     }
     
     // Build the list of virtual sites.
@@ -573,12 +602,12 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     int num2Avg = vsite2AvgAtomVec.size();
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
-    vsite2AvgAtoms = CudaArray::create<int4>(max(1, num2Avg), "vsite2AvgAtoms");
-    vsite2AvgWeights = CudaArray::create<float2>(max(1, num2Avg), "vsite2AvgWeights");
-    vsite3AvgAtoms = CudaArray::create<int4>(max(1, num3Avg), "vsite3AvgAtoms");
-    vsite3AvgWeights = CudaArray::create<float4>(max(1, num3Avg), "vsite3AvgWeights");
-    vsiteOutOfPlaneAtoms = CudaArray::create<int4>(max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
-    vsiteOutOfPlaneWeights = CudaArray::create<float4>(max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+    vsite2AvgAtoms = CudaArray::create<int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
+    vsite2AvgWeights = CudaArray::create<float2>(context, max(1, num2Avg), "vsite2AvgWeights");
+    vsite3AvgAtoms = CudaArray::create<int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
+    vsite3AvgWeights = CudaArray::create<float4>(context, max(1, num3Avg), "vsite3AvgWeights");
+    vsiteOutOfPlaneAtoms = CudaArray::create<int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
+    vsiteOutOfPlaneWeights = CudaArray::create<float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
     if (num2Avg > 0) {
         vsite2AvgAtoms->upload(vsite2AvgAtomVec);
         vsite2AvgWeights->upload(vsite2AvgWeightVec);
@@ -620,6 +649,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
 }
 
 CudaIntegrationUtilities::~CudaIntegrationUtilities() {
+    context.setAsCurrent();
     if (posDelta != NULL)
         delete posDelta;
     if (settleAtoms != NULL)
@@ -681,97 +711,69 @@ void CudaIntegrationUtilities::applyVelocityConstraints(double tol) {
 }
 
 void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double tol) {
-//    bool hasInitialized;
-//    CUfunction settleKernel, shakeKernel, ccmaForceKernel, ccmaUpdateKernel;
-//    if (constrainVelocities) {
-//        hasInitialized = hasInitializedVelConstraintKernels;
-//        settleKernel = settleVelKernel;
-//        shakeKernel = shakeVelKernel;
-//        ccmaForceKernel = ccmaVelForceKernel;
-//        ccmaUpdateKernel = ccmaVelUpdateKernel;
-//        hasInitializedVelConstraintKernels = true;
-//    }
-//    else {
-//        hasInitialized = hasInitializedPosConstraintKernels;
-//        settleKernel = settlePosKernel;
-//        shakeKernel = shakePosKernel;
-//        ccmaForceKernel = ccmaPosForceKernel;
-//        ccmaUpdateKernel = ccmaPosUpdateKernel;
-//        hasInitializedPosConstraintKernels = true;
-//    }
-//    if (settleAtoms != NULL) {
-//        if (!hasInitialized) {
-//            settleKernel.setArg<int>(0, settleAtoms->getSize());
-//            settleKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-//            settleKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
-//            settleKernel.setArg<cl::Buffer>(4, context.getVelm().getDeviceBuffer());
-//            settleKernel.setArg<cl::Buffer>(5, settleAtoms->getDeviceBuffer());
-//            settleKernel.setArg<cl::Buffer>(6, settleParams->getDeviceBuffer());
-//        }
-//        settleKernel.setArg<float>(1, (float) tol);
-//        context.executeKernel(settleKernel, settleAtoms->getSize());
-//    }
-//    if (shakeAtoms != NULL) {
-//        if (!hasInitialized) {
-//            shakeKernel.setArg<int>(0, shakeAtoms->getSize());
-//            shakeKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-//            shakeKernel.setArg<cl::Buffer>(3, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
-//            shakeKernel.setArg<cl::Buffer>(4, shakeAtoms->getDeviceBuffer());
-//            shakeKernel.setArg<cl::Buffer>(5, shakeParams->getDeviceBuffer());
-//        }
-//        shakeKernel.setArg<float>(1, (float) tol);
-//        context.executeKernel(shakeKernel, shakeAtoms->getSize());
-//    }
-//    if (ccmaAtoms != NULL) {
-//        if (!hasInitialized) {
-//            ccmaDirectionsKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
-//            ccmaDirectionsKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
-//            ccmaDirectionsKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-//            ccmaForceKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
-//            ccmaForceKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
-//            ccmaForceKernel.setArg<cl::Buffer>(2, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
-//            ccmaForceKernel.setArg<cl::Buffer>(3, ccmaReducedMass->getDeviceBuffer());
-//            ccmaForceKernel.setArg<cl::Buffer>(4, ccmaDelta1->getDeviceBuffer());
-//            ccmaForceKernel.setArg<cl::Buffer>(5, ccmaConverged->getDeviceBuffer());
-//            ccmaMultiplyKernel.setArg<cl::Buffer>(0, ccmaDelta1->getDeviceBuffer());
-//            ccmaMultiplyKernel.setArg<cl::Buffer>(1, ccmaDelta2->getDeviceBuffer());
-//            ccmaMultiplyKernel.setArg<cl::Buffer>(2, ccmaConstraintMatrixColumn->getDeviceBuffer());
-//            ccmaMultiplyKernel.setArg<cl::Buffer>(3, ccmaConstraintMatrixValue->getDeviceBuffer());
-//            ccmaMultiplyKernel.setArg<cl::Buffer>(4, ccmaConverged->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(0, ccmaNumAtomConstraints->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(1, ccmaAtomConstraints->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(2, ccmaDistance->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(3, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(4, context.getVelm().getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(5, ccmaDelta1->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(6, ccmaDelta2->getDeviceBuffer());
-//            ccmaUpdateKernel.setArg<cl::Buffer>(7, ccmaConverged->getDeviceBuffer());
-//        }
-//        ccmaForceKernel.setArg<float>(6, (float) tol);
-//        context.executeKernel(ccmaDirectionsKernel, ccmaAtoms->getSize());
-//        const int checkInterval = 4;
-//        cl::Event event;
-//        for (int i = 0; i < 150; i++) {
-//            ccmaForceKernel.setArg<int>(7, i);
-//            if (i == 0) {
-//                ccmaConvergedMemory[0] = 1;
-//                ccmaConvergedMemory[1] = 0;
-//                context.getQueue().enqueueWriteBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(int), ccmaConvergedMemory);
-//            }
-//            context.executeKernel(ccmaForceKernel, ccmaAtoms->getSize());
-//            if ((i+1)%checkInterval == 0)
-//                context.getQueue().enqueueReadBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(int), ccmaConvergedMemory, NULL, &event);
-//            ccmaMultiplyKernel.setArg<int>(5, i);
-//            context.executeKernel(ccmaMultiplyKernel, ccmaAtoms->getSize());
-//            ccmaUpdateKernel.setArg<int>(8, i);
-//            context.executeKernel(ccmaUpdateKernel, context.getNumAtoms());
-//            if ((i+1)%checkInterval == 0) {
-//                event.wait();
-//                if (ccmaConvergedMemory[i%2])
-//                    break;
-//            }
-//        }
-//    }
+    CUfunction settleKernel, shakeKernel, ccmaForceKernel, ccmaUpdateKernel;
+    if (constrainVelocities) {
+        settleKernel = settleVelKernel;
+        shakeKernel = shakeVelKernel;
+        ccmaForceKernel = ccmaVelForceKernel;
+        ccmaUpdateKernel = ccmaVelUpdateKernel;
+    }
+    else {
+        settleKernel = settlePosKernel;
+        shakeKernel = shakePosKernel;
+        ccmaForceKernel = ccmaPosForceKernel;
+        ccmaUpdateKernel = ccmaPosUpdateKernel;
+    }
+    float floatTol = (float) tol;
+    if (settleAtoms != NULL) {
+        int numClusters = settleAtoms->getSize();
+        void* args[] = {&numClusters, &floatTol, &context.getPosq().getDevicePointer(),
+                &posDelta->getDevicePointer(), &context.getVelm().getDevicePointer(),
+                &settleAtoms->getDevicePointer(), &settleParams->getDevicePointer()};
+        context.executeKernel(settleKernel, args, settleAtoms->getSize());
+    }
+    if (shakeAtoms != NULL) {
+        int numClusters = shakeAtoms->getSize();
+        void* args[] = {&numClusters, &floatTol, &context.getPosq().getDevicePointer(),
+                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
+                &shakeAtoms->getDevicePointer(), &shakeParams->getDevicePointer()};
+        context.executeKernel(shakeKernel, args, shakeAtoms->getSize());
+    }
+    if (ccmaAtoms != NULL) {
+        void* directionsArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(), &context.getPosq().getDevicePointer()};
+        context.executeKernel(ccmaDirectionsKernel, directionsArgs, ccmaAtoms->getSize());
+        int i;
+        void* forceArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(),
+                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
+                &ccmaReducedMass->getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaConverged->getDevicePointer(),
+                &floatTol, &i};
+        void* multiplyArgs[] = {&ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
+                &ccmaConstraintMatrixColumn->getDevicePointer(), &ccmaConstraintMatrixValue->getDevicePointer(), &ccmaConverged->getDevicePointer(), &i};
+        void* updateArgs[] = {&ccmaNumAtomConstraints->getDevicePointer(), &ccmaAtomConstraints->getDevicePointer(), &ccmaDistance->getDevicePointer(),
+                constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
+                &context.getVelm().getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
+                &ccmaConverged->getDevicePointer(), &i};
+        const int checkInterval = 4;
+        for (i = 0; i < 150; i++) {
+            if (i == 0) {
+                ccmaConvergedMemory[0] = 1;
+                ccmaConvergedMemory[1] = 0;
+                cuMemcpyHtoD(ccmaConverged->getDevicePointer(), ccmaConvergedMemory, 2*sizeof(int));
+            }
+            context.executeKernel(ccmaForceKernel, forceArgs, ccmaAtoms->getSize());
+            if ((i+1)%checkInterval == 0) {
+                cuMemcpyDtoH(ccmaConvergedMemory, ccmaConverged->getDevicePointer(), 2*sizeof(int));
+                CHECK_RESULT2(cuEventRecord(ccmaEvent, 0), "Error recording event for CCMA");
+            }
+            context.executeKernel(ccmaMultiplyKernel, multiplyArgs, ccmaAtoms->getSize());
+            context.executeKernel(ccmaUpdateKernel, updateArgs, context.getNumAtoms());
+            if ((i+1)%checkInterval == 0) {
+                CHECK_RESULT2(cuEventSynchronize(ccmaEvent), "Error synchronizing on event for CCMA");
+                if (ccmaConvergedMemory[i%2])
+                    break;
+            }
+        }
+    }
 }
 
 void CudaIntegrationUtilities::computeVirtualSites() {
@@ -796,8 +798,8 @@ void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumb
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random = CudaArray::create<float4>(32*context.getPaddedNumAtoms(), "random");
-    randomSeed = CudaArray::create<int4>(context.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
+    random = CudaArray::create<float4>(context, 32*context.getPaddedNumAtoms(), "random");
+    randomSeed = CudaArray::create<int4>(context, context.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
     randomPos = random->getSize();
 
     // Use a quick and dirty RNG to pick seeds for the real random number generator.
@@ -826,7 +828,7 @@ int CudaIntegrationUtilities::prepareRandomNumbers(int numValues) {
     }
     if (numValues > random->getSize()) {
         delete random;
-        random = CudaArray::create<float4>(numValues, "random");
+        random = CudaArray::create<float4>(context, numValues, "random");
     }
     int size = random->getSize();
     void* args[] = {&size, &random->getDevicePointer(), &randomSeed->getDevicePointer()};

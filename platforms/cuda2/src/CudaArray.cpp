@@ -32,8 +32,8 @@
 
 using namespace OpenMM;
 
-CudaArray::CudaArray(int size, int elementSize, const std::string& name) :
-        size(size), elementSize(elementSize), name(name), ownsMemory(true) {
+CudaArray::CudaArray(CudaContext& context, int size, int elementSize, const std::string& name) :
+        context(context), size(size), elementSize(elementSize), name(name), ownsMemory(true) {
     CUresult result = cuMemAlloc(&pointer, size*elementSize);
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
@@ -43,7 +43,7 @@ CudaArray::CudaArray(int size, int elementSize, const std::string& name) :
 }
 
 CudaArray::~CudaArray() {
-    if (ownsMemory) {
+    if (ownsMemory && context.getContextIsValid()) {
         CUresult result = cuMemFree(pointer);
         if (result != CUDA_SUCCESS) {
             std::stringstream str;
