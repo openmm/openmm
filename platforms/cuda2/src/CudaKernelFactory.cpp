@@ -118,13 +118,13 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
 //    if (name == IntegrateCustomStepKernel::Name())
 //        return new CudaIntegrateCustomStepKernel(name, platform, cu);
-//    if (name == ApplyAndersenThermostatKernel::Name())
-//        return new CudaApplyAndersenThermostatKernel(name, platform, cu);
-//    if (name == ApplyMonteCarloBarostatKernel::Name())
-//        return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
+    if (name == ApplyAndersenThermostatKernel::Name())
+        return new CudaApplyAndersenThermostatKernel(name, platform, cu);
+    if (name == ApplyMonteCarloBarostatKernel::Name())
+        return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == CalcKineticEnergyKernel::Name())
         return new CudaCalcKineticEnergyKernel(name, platform, cu);
-//    if (name == RemoveCMMotionKernel::Name())
-//        return new CudaRemoveCMMotionKernel(name, platform, cu);
+    if (name == RemoveCMMotionKernel::Name())
+        return new CudaRemoveCMMotionKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

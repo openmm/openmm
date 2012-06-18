@@ -4961,106 +4961,109 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 //            localPerDofValues[3*i+j][variable] = (float) values[order[i]][j];
 //    deviceValuesAreCurrent = false;
 //}
-//
-//CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
-//    cu.setAsCurrent();
-//    if (atomGroups != NULL)
-//        delete atomGroups;
-//}
-//
-//void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
-//    cu.setAsCurrent();
-//    randomSeed = thermostat.getRandomNumberSeed();
-//    map<string, string> defines;
-//    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-//    CUmodule module = cu.createModule(CudaKernelSources::andersenThermostat, defines);
-//    kernel = cu.getKernel(module, "applyAndersenThermostat");
-//    cu.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
-//
-//    // Create the arrays with the group definitions.
-//
-//    vector<vector<int> > groups = AndersenThermostatImpl::calcParticleGroups(system);
-//    atomGroups = new CudaArray<int>(cu, cu.getNumAtoms(), "atomGroups");
-//    vector<int> atoms(atomGroups->getSize());
-//    for (int i = 0; i < (int) groups.size(); i++) {
-//        for (int j = 0; j < (int) groups[i].size(); j++)
-//            atoms[groups[i][j]] = i;
-//    }
-//    atomGroups->upload(atoms);
-//}
-//
-//void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//        kernel.setArg<cu::Buffer>(2, cu.getVelm().getDevicePointer());
-//        kernel.setArg<cu::Buffer>(3, cu.getIntegrationUtilities().getStepSize().getDevicePointer());
-//        kernel.setArg<cu::Buffer>(4, cu.getIntegrationUtilities().getRandom().getDevicePointer());
-//        kernel.setArg<cu::Buffer>(6, atomGroups->getDevicePointer());
-//    }
-//    kernel.setArg<cl_float>(0, (cl_float) context.getParameter(AndersenThermostat::CollisionFrequency()));
-//    kernel.setArg<cl_float>(1, (cl_float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature())));
-//    kernel.setArg<cl_uint>(5, cu.getIntegrationUtilities().prepareRandomNumbers(cu.getPaddedNumAtoms()));
-//    cu.executeKernel(kernel, cu.getNumAtoms());
-//}
-//
-//CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
-//    cu.setAsCurrent();
-//    if (savedPositions != NULL)
-//        delete savedPositions;
-//    if (moleculeAtoms != NULL)
-//        delete moleculeAtoms;
-//    if (moleculeStartIndex != NULL)
-//        delete moleculeStartIndex;
-//}
-//
-//void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
-//    cu.setAsCurrent();
-//    savedPositions = new CudaArray<mm_float4>(cu, cu.getPaddedNumAtoms(), "savedPositions");
-//    CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
-//    kernel = cu.getKernel(module, "scalePositions");
-//}
-//
-//void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
-//    if (!hasInitializedKernels) {
-//        hasInitializedKernels = true;
-//
-//        // Create the arrays with the molecule definitions.
-//
-//        vector<vector<int> > molecules = context.getMolecules();
-//        numMolecules = molecules.size();
-//        moleculeAtoms = new CudaArray<int>(cu, cu.getNumAtoms(), "moleculeAtoms");
-//        moleculeStartIndex = new CudaArray<int>(cu, numMolecules+1, "moleculeStartIndex");
-//        vector<int> atoms(moleculeAtoms->getSize());
-//        vector<int> startIndex(moleculeStartIndex->getSize());
-//        int index = 0;
-//        for (int i = 0; i < numMolecules; i++) {
-//            startIndex[i] = index;
-//            for (int j = 0; j < (int) molecules[i].size(); j++)
-//                atoms[index++] = molecules[i][j];
-//        }
-//        startIndex[numMolecules] = index;
-//        moleculeAtoms->upload(atoms);
-//        moleculeStartIndex->upload(startIndex);
-//
-//        // Initialize the kernel arguments.
-//        
-//        kernel.setArg<cl_int>(1, numMolecules);
-//        kernel.setArg<cu::Buffer>(4, cu.getPosq().getDevicePointer());
-//        kernel.setArg<cu::Buffer>(5, moleculeAtoms->getDevicePointer());
-//        kernel.setArg<cu::Buffer>(6, moleculeStartIndex->getDevicePointer());
-//    }
-//    cu.getQueue().enqueueCopyBuffer(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), 0, 0, cu.getPosq().getSize()*sizeof(mm_float4));
-//    kernel.setArg<cl_float>(0, (cl_float) scale);
-//    kernel.setArg<mm_float4>(2, cu.getPeriodicBoxSize());
-//    kernel.setArg<mm_float4>(3, cu.getInvPeriodicBoxSize());
-//    cu.executeKernel(kernel, cu.getNumAtoms());
-//    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
-//        cu.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
-//}
-//
-//void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-//    cu.getQueue().enqueueCopyBuffer(savedPositions->getDevicePointer(), cu.getPosq().getDevicePointer(), 0, 0, cu.getPosq().getSize()*sizeof(mm_float4));
-//}
+
+CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
+    cu.setAsCurrent();
+    if (atomGroups != NULL)
+        delete atomGroups;
+}
+
+void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
+    cu.setAsCurrent();
+    randomSeed = thermostat.getRandomNumberSeed();
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    CUmodule module = cu.createModule(CudaKernelSources::andersenThermostat, defines);
+    kernel = cu.getKernel(module, "applyAndersenThermostat");
+    cu.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
+
+    // Create the arrays with the group definitions.
+
+    vector<vector<int> > groups = AndersenThermostatImpl::calcParticleGroups(system);
+    atomGroups = CudaArray::create<int>(cu, cu.getNumAtoms(), "atomGroups");
+    vector<int> atoms(atomGroups->getSize());
+    for (int i = 0; i < (int) groups.size(); i++) {
+        for (int j = 0; j < (int) groups[i].size(); j++)
+            atoms[groups[i][j]] = i;
+    }
+    atomGroups->upload(atoms);
+}
+
+void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
+    float frequency = (float) context.getParameter(AndersenThermostat::CollisionFrequency());
+    float kT = (float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature()));
+    int randomIndex = cu.getIntegrationUtilities().prepareRandomNumbers(cu.getPaddedNumAtoms());
+    void* args[] = {&frequency, &kT, &cu.getVelm().getDevicePointer(), &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
+            &cu.getIntegrationUtilities().getRandom().getDevicePointer(), &randomIndex, &atomGroups->getDevicePointer()};
+    cu.executeKernel(kernel, args, cu.getNumAtoms());
+}
+
+CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
+    cu.setAsCurrent();
+    if (savedPositions != NULL)
+        delete savedPositions;
+    if (moleculeAtoms != NULL)
+        delete moleculeAtoms;
+    if (moleculeStartIndex != NULL)
+        delete moleculeStartIndex;
+}
+
+void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+    cu.setAsCurrent();
+    savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
+    CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
+    kernel = cu.getKernel(module, "scalePositions");
+}
+
+void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+
+        // Create the arrays with the molecule definitions.
+
+        vector<vector<int> > molecules = context.getMolecules();
+        numMolecules = molecules.size();
+        moleculeAtoms = CudaArray::create<int>(cu, cu.getNumAtoms(), "moleculeAtoms");
+        moleculeStartIndex = CudaArray::create<int>(cu, numMolecules+1, "moleculeStartIndex");
+        vector<int> atoms(moleculeAtoms->getSize());
+        vector<int> startIndex(moleculeStartIndex->getSize());
+        int index = 0;
+        for (int i = 0; i < numMolecules; i++) {
+            startIndex[i] = index;
+            for (int j = 0; j < (int) molecules[i].size(); j++)
+                atoms[index++] = molecules[i][j];
+        }
+        startIndex[numMolecules] = index;
+        moleculeAtoms->upload(atoms);
+        moleculeStartIndex->upload(startIndex);
+
+        // Initialize the kernel arguments.
+        
+    }
+    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
+    CUresult result = cuMemcpyDtoD(savedPositions->getDevicePointer(), cu.getPosq().getDevicePointer(), bytesToCopy);
+    if (result != CUDA_SUCCESS) {
+        std::stringstream m;
+        m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(m.str());
+    }        
+    float scalef = (float) scale;
+    void* args[] = {&scalef, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
+            &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
+    cu.executeKernel(kernel, args, cu.getNumAtoms());
+    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
+        cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
+}
+
+void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
+    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
+    CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
+    if (result != CUDA_SUCCESS) {
+        std::stringstream m;
+        m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(m.str());
+    }
+}
 
 void CudaCalcKineticEnergyKernel::initialize(const System& system) {
     cu.setAsCurrent();
@@ -5095,36 +5098,30 @@ double CudaCalcKineticEnergyKernel::execute(ContextImpl& context) {
     return 0.5*energy;
 }
 
-//CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {
-//    cu.setAsCurrent();
-//    if (cmMomentum != NULL)
-//        delete cmMomentum;
-//}
-//
-//void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
-//    cu.setAsCurrent();
-//    frequency = force.getFrequency();
-//    int numAtoms = cu.getNumAtoms();
-//    cmMomentum = new CudaArray<mm_float4>(cu, (numAtoms+CudaContext::ThreadBlockSize-1)/CudaContext::ThreadBlockSize, "cmMomentum");
-//    double totalMass = 0.0;
-//    for (int i = 0; i < numAtoms; i++)
-//        totalMass += system.getParticleMass(i);
-//    map<string, string> defines;
-//    defines["INVERSE_TOTAL_MASS"] = cu.doubleToString(1.0/totalMass);
-//    CUmodule module = cu.createModule(CudaKernelSources::removeCM, defines);
-//    kernel1 = cu.getKernel(module, "calcCenterOfMassMomentum");
-//    kernel1.setArg<cl_int>(0, numAtoms);
-//    kernel1.setArg<cu::Buffer>(1, cu.getVelm().getDevicePointer());
-//    kernel1.setArg<cu::Buffer>(2, cmMomentum->getDevicePointer());
-//    kernel1.setArg(3, CudaContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-//    kernel2 = cu.getKernel(module, "removeCenterOfMassMomentum");
-//    kernel2.setArg<cl_int>(0, numAtoms);
-//    kernel2.setArg<cu::Buffer>(1, cu.getVelm().getDevicePointer());
-//    kernel2.setArg<cu::Buffer>(2, cmMomentum->getDevicePointer());
-//    kernel2.setArg(3, CudaContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-//}
-//
-//void CudaRemoveCMMotionKernel::execute(ContextImpl& context) {
-//    cu.executeKernel(kernel1, cu.getNumAtoms());
-//    cu.executeKernel(kernel2, cu.getNumAtoms());
-//}
+CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {
+    cu.setAsCurrent();
+    if (cmMomentum != NULL)
+        delete cmMomentum;
+}
+
+void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
+    cu.setAsCurrent();
+    frequency = force.getFrequency();
+    int numAtoms = cu.getNumAtoms();
+    cmMomentum = CudaArray::create<float4>(cu, (numAtoms+CudaContext::ThreadBlockSize-1)/CudaContext::ThreadBlockSize, "cmMomentum");
+    double totalMass = 0.0;
+    for (int i = 0; i < numAtoms; i++)
+        totalMass += system.getParticleMass(i);
+    map<string, string> defines;
+    defines["INVERSE_TOTAL_MASS"] = cu.doubleToString(1.0/totalMass);
+    CUmodule module = cu.createModule(CudaKernelSources::removeCM, defines);
+    kernel1 = cu.getKernel(module, "calcCenterOfMassMomentum");
+    kernel2 = cu.getKernel(module, "removeCenterOfMassMomentum");
+}
+
+void CudaRemoveCMMotionKernel::execute(ContextImpl& context) {
+    int numAtoms = cu.getNumAtoms();
+    void* args[] = {&numAtoms, &cu.getVelm().getDevicePointer(), &cmMomentum->getDevicePointer()};
+    cu.executeKernel(kernel1, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
+    cu.executeKernel(kernel2, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
+}

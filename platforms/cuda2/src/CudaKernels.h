@@ -1150,79 +1150,78 @@ private:
 //    std::vector<int> requiredUniform;
 //    std::vector<std::string> parameterNames;
 //};
-//
-///**
-// * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
-// */
-//class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
-//public:
-//    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyAndersenThermostatKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false), atomGroups(NULL) {
-//    }
-//    ~CudaApplyAndersenThermostatKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param thermostat the AndersenThermostat this kernel will be used for
-//     */
-//    void initialize(const System& system, const AndersenThermostat& thermostat);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void execute(ContextImpl& context);
-//private:
-//    CudaContext& cu;
-//    bool hasInitializedKernels;
-//    int randomSeed;
-//    CudaArray<cl_int>* atomGroups;
-//    CUfunction kernel;
-//};
-//
-///**
-// * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
-// */
-//class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
-//public:
-//    CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
-//    }
-//    ~CudaApplyMonteCarloBarostatKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param barostat   the MonteCarloBarostat this kernel will be used for
-//     */
-//    void initialize(const System& system, const MonteCarloBarostat& barostat);
-//    /**
-//     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
-//     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
-//     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
-//     * is changed.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param scale      the scale factor by which to multiply particle positions
-//     */
-//    void scaleCoordinates(ContextImpl& context, double scale);
-//    /**
-//     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-//     * scaleCoordinates() was last called.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void restoreCoordinates(ContextImpl& context);
-//private:
-//    CudaContext& cu;
-//    bool hasInitializedKernels;
-//    int numMolecules;
-//    CudaArray<mm_float4>* savedPositions;
-//    CudaArray<cl_int>* moleculeAtoms;
-//    CudaArray<cl_int>* moleculeStartIndex;
-//    CUfunction kernel;
-//};
+
+/**
+ * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
+ */
+class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+public:
+    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyAndersenThermostatKernel(name, platform), cu(cu),
+            atomGroups(NULL) {
+    }
+    ~CudaApplyAndersenThermostatKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param thermostat the AndersenThermostat this kernel will be used for
+     */
+    void initialize(const System& system, const AndersenThermostat& thermostat);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+    CudaContext& cu;
+    int randomSeed;
+    CudaArray* atomGroups;
+    CUfunction kernel;
+};
+
+/**
+ * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
+ */
+class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+public:
+    CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
+            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+    }
+    ~CudaApplyMonteCarloBarostatKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     */
+    void initialize(const System& system, const MonteCarloBarostat& barostat);
+    /**
+     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
+     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
+     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
+     * is changed.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param scale      the scale factor by which to multiply particle positions
+     */
+    void scaleCoordinates(ContextImpl& context, double scale);
+    /**
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
+     * scaleCoordinates() was last called.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void restoreCoordinates(ContextImpl& context);
+private:
+    CudaContext& cu;
+    bool hasInitializedKernels;
+    int numMolecules;
+    CudaArray* savedPositions;
+    CudaArray* moleculeAtoms;
+    CudaArray* moleculeStartIndex;
+    CUfunction kernel;
+};
 
 /**
  * This kernel is invoked to calculate the kinetic energy of the system.
@@ -1248,33 +1247,33 @@ private:
     std::vector<double> masses;
 };
 
-///**
-// * This kernel is invoked to remove center of mass motion from the system.
-// */
-//class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
-//public:
-//    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu), cmMomentum(NULL) {
-//    }
-//    ~CudaRemoveCMMotionKernel();
-//    /**
-//     * Initialize the kernel, setting up the particle masses.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CMMotionRemover this kernel will be used for
-//     */
-//    void initialize(const System& system, const CMMotionRemover& force);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void execute(ContextImpl& context);
-//private:
-//    CudaContext& cu;
-//    int frequency;
-//    CudaArray<mm_float4>* cmMomentum;
-//    CUfunction kernel1, kernel2;
-//};
+/**
+ * This kernel is invoked to remove center of mass motion from the system.
+ */
+class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
+public:
+    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu), cmMomentum(NULL) {
+    }
+    ~CudaRemoveCMMotionKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMMotionRemover this kernel will be used for
+     */
+    void initialize(const System& system, const CMMotionRemover& force);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+    CudaContext& cu;
+    int frequency;
+    CudaArray* cmMomentum;
+    CUfunction kernel1, kernel2;
+};
 
 } // namespace OpenMM
 
