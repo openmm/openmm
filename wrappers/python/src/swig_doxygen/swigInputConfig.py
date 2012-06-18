@@ -185,7 +185,7 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
 # This is a list of units to attach to return values and method args.
 # Indexed by (ClassName, MethodsName)
 UNITS = {
-("*", "getConstraintTolerance") : ("unit.dimensionless", ()),
+("*", "getConstraintTolerance") : (None, ()),
 ("*", "getCutoffDistance") : ("unit.nanometers", ()),
 ("*", "getDefaultCollisionFrequency") : ("1/unit.picosecond", ()),
 ("*", "getDefaultPeriodicBoxVectors")
@@ -214,9 +214,9 @@ UNITS = {
 ("*", "getPlatform") : (None, ()),
 ("*", "getPlatformByName") : (None, ()),
 ("*", "getRandomNumberSeed") : (None, ()),
-("*", "getReactionFieldDielectric") : ("unit.dimensionless", ()),
-("*", "getSoluteDielectric") : ("unit.dimensionless", ()),
-("*", "getSolventDielectric") : ("unit.dimensionless", ()),
+("*", "getReactionFieldDielectric") : (None, ()),
+("*", "getSoluteDielectric") : (None, ()),
+("*", "getSolventDielectric") : (None, ()),
 ("*", "getStepSize") : ("unit.picosecond", ()),
 ("*", "getSystem") : (None, ()),
 ("*", "getUseDispersionCorrection") : (None, ()),
@@ -236,7 +236,7 @@ UNITS = {
 ("SerializationProxy", "getTypeName") : (None, ()),
 
 # check getSurfaceAreaFactor
-("AmoebaGeneralizedKirkwoodForce",       "getParticleParameters")                         :  (None, ('unit.elementary_charge', 'unit.nanometer', 'unit.dimensionless')),
+("AmoebaGeneralizedKirkwoodForce",       "getParticleParameters")                         :  (None, ('unit.elementary_charge', 'unit.nanometer', None)),
 ("AmoebaGeneralizedKirkwoodForce",       "getDielectricOffset")                           :  ( 'unit.nanometer', ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getIncludeCavityTerm")                          :  ( None,()),
 ("AmoebaGeneralizedKirkwoodForce",       "getProbeRadius")                                :  ( 'unit.nanometer', ()),
@@ -317,7 +317,7 @@ UNITS = {
 ("AmoebaUreyBradleyForce",                "getAmoebaGlobalUreyBradleyQuartic")             :  ( None, ()),
 ("AmoebaUreyBradleyForce",                "getUreyBradleyParameters")                      :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)')),
 
-("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, ('unit.dimensionless', 'unit.dimensionless', 'unit.dimensionless', 'unit.nanometer', 'unit.kilojoule_per_mole', 'unit.dimensionless')),
+("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, None, None, 'unit.nanometer', 'unit.kilojoule_per_mole', None)),
 ("AmoebaVdwForce",                        "getSigmaCombiningRule")                         :  ( None, ()),
 ("AmoebaVdwForce",                        "getEpsilonCombiningRule")                       :  ( None, ()),
 ("AmoebaVdwForce",                        "getParticleExclusions")                         :  ( None, ()),
@@ -420,7 +420,7 @@ UNITS = {
 ("GBSAOBCForce", "getNonbondedMethod") : (None, ()),
 ("GBSAOBCForce", "getParticleParameters")
  : (None, ('unit.elementary_charge',
-           'unit.nanometer', 'unit.dimensionless')),
+           'unit.nanometer', None)),
 ("GBVIForce", "getNonbondedMethod") : (None, ()),
 ("GBVIForce", "getBornRadiusScalingMethod") : (None, ()),
 ("GBVIForce", "getQuinticLowerLimitFactor") : (None, ()),
@@ -433,12 +433,12 @@ UNITS = {
 ("GBSAOBCSoftcoreForce", "getNonbondedMethod") : (None, ()),
 ("GBSAOBCSoftcoreForce", "getParticleParameters")
  : (None, ('unit.elementary_charge', 'unit.nanometer',
-           'unit.dimensionless', 'unit.dimensionless')),
+           None, None)),
 ("GBSAOBCSoftcoreForce", "getNonPolarPrefactor")
  : ('unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)', ()),
 ("GBVISoftcoreForce", "getParticleParameters")
  : (None, ('unit.elementary_charge', 'unit.nanometer',
-           'unit.kilojoule_per_mole', 'unit.dimensionless')),
+           'unit.kilojoule_per_mole', None)),
 ("GBVISoftcoreForce", "getBondParameters")
  : (None, (None, None, 'unit.nanometer')),
 ("GBVISoftcoreForce", "getNonbondedMethod") : (None, ()),
@@ -463,12 +463,12 @@ UNITS = {
 ("NonbondedSoftcoreForce", "getNonbondedMethod") : (None, ()),
 ("NonbondedSoftcoreForce", "getParticleParameters")
  : (None, ('unit.elementary_charge', 'unit.nanometer',
-           'unit.kilojoule_per_mole', 'unit.dimensionless')),
+           'unit.kilojoule_per_mole', None)),
 ("NonbondedSoftcoreForce", "getExceptionParameters")
  : (None, (None, None,
            'unit.elementary_charge*unit.elementary_charge',
            'unit.nanometer', 'unit.kilojoule_per_mole',
-           'unit.dimensionless')),
+           None)),
 ("PeriodicTorsionForce", "getTorsionParameters")
  : (None, (None, None, None, None,
            None, 'unit.radian', 'unit.kilojoule_per_mole')),
