@@ -143,12 +143,18 @@ class Modeller(object):
         deleteSet = set(toDelete)
         for chain in self.topology.chains():
             if chain not in deleteSet:
-                newChain = newTopology.addChain()
+                needNewChain = True;
                 for residue in chain.residues():
                     if residue not in deleteSet:
-                        newResidue = newTopology.addResidue(residue.name, newChain)
+                        needNewResidue = True
                         for atom in residue.atoms():
                             if atom not in deleteSet:
+                                if needNewChain:
+                                    newChain = newTopology.addChain()
+                                    needNewChain = False;
+                                if needNewResidue:
+                                    newResidue = newTopology.addResidue(residue.name, newChain)
+                                    needNewResidue = False;
                                 newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
                                 newAtoms[atom] = newAtom
                                 newPositions.append(deepcopy(self.positions[atom.index]))
