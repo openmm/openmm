@@ -569,11 +569,11 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     // Build the list of virtual sites.
     
     vector<int4> vsite2AvgAtomVec;
-    vector<float2> vsite2AvgWeightVec;
+    vector<double2> vsite2AvgWeightVec;
     vector<int4> vsite3AvgAtomVec;
-    vector<float4> vsite3AvgWeightVec;
+    vector<double4> vsite3AvgWeightVec;
     vector<int4> vsiteOutOfPlaneAtomVec;
-    vector<float4> vsiteOutOfPlaneWeightVec;
+    vector<double4> vsiteOutOfPlaneWeightVec;
     for (int i = 0; i < numAtoms; i++) {
         if (system.isVirtualSite(i)) {
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -581,21 +581,21 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
                 
                 const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
                 vsite2AvgAtomVec.push_back(make_int4(i, site.getParticle(0), site.getParticle(1), 0));
-                vsite2AvgWeightVec.push_back(make_float2((float) site.getWeight(0), (float) site.getWeight(1)));
+                vsite2AvgWeightVec.push_back(make_double2(site.getWeight(0), site.getWeight(1)));
             }
             else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A three particle average.
                 
                 const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
                 vsite3AvgAtomVec.push_back(make_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
-                vsite3AvgWeightVec.push_back(make_float4((float) site.getWeight(0), (float) site.getWeight(1), (float) site.getWeight(2), 0.0f));
+                vsite3AvgWeightVec.push_back(make_double4(site.getWeight(0), site.getWeight(1), site.getWeight(2), 0.0));
             }
             else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
                 // An out of plane site.
                 
                 const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
                 vsiteOutOfPlaneAtomVec.push_back(make_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
-                vsiteOutOfPlaneWeightVec.push_back(make_float4((float) site.getWeight12(), (float) site.getWeight13(), (float) site.getWeightCross(), 0.0f));
+                vsiteOutOfPlaneWeightVec.push_back(make_double4(site.getWeight12(), site.getWeight13(), site.getWeightCross(), 0.0));
             }
         }
     }
@@ -603,48 +603,59 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
     vsite2AvgAtoms = CudaArray::create<int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
-    vsite2AvgWeights = CudaArray::create<float2>(context, max(1, num2Avg), "vsite2AvgWeights");
     vsite3AvgAtoms = CudaArray::create<int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
-    vsite3AvgWeights = CudaArray::create<float4>(context, max(1, num3Avg), "vsite3AvgWeights");
     vsiteOutOfPlaneAtoms = CudaArray::create<int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
-    vsiteOutOfPlaneWeights = CudaArray::create<float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
-    if (num2Avg > 0) {
+    if (num2Avg > 0)
         vsite2AvgAtoms->upload(vsite2AvgAtomVec);
-        vsite2AvgWeights->upload(vsite2AvgWeightVec);
-    }
-    if (num3Avg > 0) {
+    if (num3Avg > 0)
         vsite3AvgAtoms->upload(vsite3AvgAtomVec);
-        vsite3AvgWeights->upload(vsite3AvgWeightVec);
-    }
-    if (numOutOfPlane > 0) {
+    if (numOutOfPlane > 0)
         vsiteOutOfPlaneAtoms->upload(vsiteOutOfPlaneAtomVec);
-        vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+    if (context.getUseDoublePrecision()) {
+        vsite2AvgWeights = CudaArray::create<double2>(context, max(1, num2Avg), "vsite2AvgWeights");
+        vsite3AvgWeights = CudaArray::create<double4>(context, max(1, num3Avg), "vsite3AvgWeights");
+        vsiteOutOfPlaneWeights = CudaArray::create<double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        if (num2Avg > 0)
+            vsite2AvgWeights->upload(vsite2AvgWeightVec);
+        if (num3Avg > 0)
+            vsite3AvgWeights->upload(vsite3AvgWeightVec);
+        if (numOutOfPlane > 0)
+            vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
     }
-    
+    else {
+        vsite2AvgWeights = CudaArray::create<float2>(context, max(1, num2Avg), "vsite2AvgWeights");
+        vsite3AvgWeights = CudaArray::create<float4>(context, max(1, num3Avg), "vsite3AvgWeights");
+        vsiteOutOfPlaneWeights = CudaArray::create<float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        if (num2Avg > 0) {
+            vector<float2> floatWeights(num2Avg);
+            for (int i = 0; i < num2Avg; i++)
+                floatWeights[i] = make_float2((float) vsite2AvgWeightVec[i].x, (float) vsite2AvgWeightVec[i].y);
+            vsite2AvgWeights->upload(floatWeights);
+        }
+        if (num3Avg > 0) {
+            vector<float4> floatWeights(num3Avg);
+            for (int i = 0; i < num3Avg; i++)
+                floatWeights[i] = make_float4((float) vsite3AvgWeightVec[i].x, (float) vsite3AvgWeightVec[i].y, (float) vsite3AvgWeightVec[i].z, 0.0f);
+            vsite3AvgWeights->upload(floatWeights);
+        }
+        if (numOutOfPlane > 0) {
+            vector<float4> floatWeights(numOutOfPlane);
+            for (int i = 0; i < numOutOfPlane; i++)
+                floatWeights[i] = make_float4((float) vsiteOutOfPlaneWeightVec[i].x, (float) vsiteOutOfPlaneWeightVec[i].y, (float) vsiteOutOfPlaneWeightVec[i].z, 0.0f);
+            vsiteOutOfPlaneWeights->upload(floatWeights);
+        }
+    }
+
     // Create the kernels for virtual sites.
 
     map<string, string> defines;
     defines["NUM_2_AVERAGE"] = context.intToString(num2Avg);
     defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
-//    CUmodule vsiteModule = context.createModule(CudaKernelSources::virtualSites, defines);
-//    vsitePositionKernel = context.getKernel(vsiteModule, "computeVirtualSites");
-//    vsitePositionKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-//    vsitePositionKernel.setArg<cl::Buffer>(1, vsite2AvgAtoms->getDeviceBuffer());
-//    vsitePositionKernel.setArg<cl::Buffer>(2, vsite2AvgWeights->getDeviceBuffer());
-//    vsitePositionKernel.setArg<cl::Buffer>(3, vsite3AvgAtoms->getDeviceBuffer());
-//    vsitePositionKernel.setArg<cl::Buffer>(4, vsite3AvgWeights->getDeviceBuffer());
-//    vsitePositionKernel.setArg<cl::Buffer>(5, vsiteOutOfPlaneAtoms->getDeviceBuffer());
-//    vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneWeights->getDeviceBuffer());
-//    vsiteForceKernel = context.getKernel(vsiteModule, "distributeForces");
-//    vsiteForceKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-//    // Skip argument 1: the force array hasn't been created yet.
-//    vsiteForceKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());
-//    vsiteForceKernel.setArg<cl::Buffer>(3, vsite2AvgWeights->getDeviceBuffer());
-//    vsiteForceKernel.setArg<cl::Buffer>(4, vsite3AvgAtoms->getDeviceBuffer());
-//    vsiteForceKernel.setArg<cl::Buffer>(5, vsite3AvgWeights->getDeviceBuffer());
-//    vsiteForceKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneAtoms->getDeviceBuffer());
-//    vsiteForceKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
+    CUmodule vsiteModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::virtualSites, defines);
+    vsitePositionKernel = context.getKernel(vsiteModule, "computeVirtualSites");
+    vsiteForceKernel = context.getKernel(vsiteModule, "distributeForces");
     numVsites = num2Avg+num3Avg+numOutOfPlane;
 }
 
@@ -777,15 +788,22 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
 }
 
 void CudaIntegrationUtilities::computeVirtualSites() {
-//    if (numVsites > 0)
-//        context.executeKernel(vsitePositionKernel, numVsites);
+    if (numVsites > 0) {
+        void* args[] = {&context.getPosq().getDevicePointer(), &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
+                &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
+                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer()};
+        context.executeKernel(vsitePositionKernel, args, numVsites);
+    }
 }
 
 void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
-//    if (numVsites > 0) {
-//        vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
-//        context.executeKernel(vsiteForceKernel, numVsites);
-//    }
+    if (numVsites > 0) {
+        void* args[] = {&context.getPosq().getDevicePointer(), &context.getForce().getDevicePointer(),
+                &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
+                &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
+                &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer()};
+        context.executeKernel(vsiteForceKernel, args, numVsites);
+    }
 }
 
 void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {
