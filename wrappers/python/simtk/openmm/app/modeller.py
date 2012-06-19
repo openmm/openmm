@@ -271,7 +271,7 @@ class Modeller(object):
             maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
             box = (maxSize+2*padding)*Vec3(1, 1, 1)
         else:
-            box = topology.getUnitCellDimensions()
+            box = self.topology.getUnitCellDimensions()
             if box is None:
                 raise ValueError('Neither the box size nor padding was specified, and the Topology does not define unit cell dimensions')
         box = box.value_in_unit(nanometer)
