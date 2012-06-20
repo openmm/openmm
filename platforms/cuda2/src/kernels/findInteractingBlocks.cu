@@ -218,7 +218,7 @@ extern "C" __global__ void findInteractionsWithinBlocks(real4 periodicBoxSize, r
             if (index == 0)
                 allFlags = flags[threadIdx.x]+flags[threadIdx.x+4]+flags[threadIdx.x+8]+flags[threadIdx.x+12]+flags[threadIdx.x+16]+flags[threadIdx.x+20]+flags[threadIdx.x+24]+flags[threadIdx.x+28];
 #else
-            unsigned int allFlags = __ballot(delta.x*delta.x+delta.y*delta.y+delta.z*delta.z > CUTOFF_SQUARED);
+            unsigned int allFlags = __ballot(delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < CUTOFF_SQUARED);
 #endif
 
             // Sum the flags.

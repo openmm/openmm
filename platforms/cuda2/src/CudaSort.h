@@ -46,9 +46,9 @@ namespace OpenMM {
  *     int getKeySize() const {return 4;}
  *     const char* getDataType() const {return "float";}
  *     const char* getKeyType() const {return "float";}
- *     const char* getMinKey() const {return "-MAXFLOAT";}
- *     const char* getMaxKey() const {return "MAXFLOAT";}
- *     const char* getMaxValue() const {return "MAXFLOAT";}
+ *     const char* getMinKey() const {return "-3.40282e+38f";}
+ *     const char* getMaxKey() const {return "3.40282e+38f";}
+ *     const char* getMaxValue() const {return "3.40282e+38f";}
  *     const char* getSortKey() const {return "value";}
  * };
  *
