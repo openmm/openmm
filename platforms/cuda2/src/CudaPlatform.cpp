@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cctype>
 #include <sstream>
+#include <cstdio>
 
 using namespace OpenMM;
 using namespace std;
@@ -87,7 +88,10 @@ CudaPlatform::CudaPlatform() {
     setPropertyDefaultValue(CudaTempDirectory(), string(getenv("TEMP")));
 #else
     setPropertyDefaultValue(CudaCompiler(), "/usr/local/cuda/bin/nvcc");
-    setPropertyDefaultValue(CudaTempDirectory(), string(getenv("TMPDIR")));
+    char* tmpdir = getenv("TMPDIR");
+    if (tmpdir == NULL)
+        tmpdir = P_tmpdir;
+    setPropertyDefaultValue(CudaTempDirectory(), string(tmpdir));
 #endif
 }
 
