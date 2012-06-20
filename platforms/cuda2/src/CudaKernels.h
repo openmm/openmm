@@ -623,50 +623,49 @@ private:
     static const int PmeOrder = 5;
 };
 
-///**
-// * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
-// */
-//class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
-//public:
-//    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomNonbondedForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
-//    }
-//    ~CudaCalcCustomNonbondedForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomNonbondedForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomNonbondedForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomNonbondedForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
-//private:
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    CudaParameterSet* params;
-//    CudaArray<cl_float>* globals;
-//    CudaArray<mm_float4>* tabulatedFunctionParams;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//    std::vector<CudaArray<mm_float4>*> tabulatedFunctions;
-//    System& system;
-//};
-//
+/**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomNonbondedForceKernel(name, platform),
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~CudaCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+private:
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    System& system;
+};
+
 ///**
 // * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
 // */
@@ -814,60 +813,58 @@ private:
     std::vector<float> globalParamValues;
 };
 
-///**
-// * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
-// */
-//class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
-//public:
-//    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomHbondForceKernel(name, platform),
-//            hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-//            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
-//            tabulatedFunctionParams(NULL), system(system) {
-//    }
-//    ~CudaCalcCustomHbondForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomHbondForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomHbondForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomHbondForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
-//private:
-//    int numDonors, numAcceptors;
-//    bool hasInitializedKernel;
-//    CudaContext& cu;
-//    CudaParameterSet* donorParams;
-//    CudaParameterSet* acceptorParams;
-//    CudaArray<cl_float>* globals;
-//    CudaArray<mm_int4>* donors;
-//    CudaArray<mm_int4>* acceptors;
-//    CudaArray<mm_int4>* donorBufferIndices;
-//    CudaArray<mm_int4>* acceptorBufferIndices;
-//    CudaArray<mm_int4>* donorExclusions;
-//    CudaArray<mm_int4>* acceptorExclusions;
-//    CudaArray<mm_float4>* tabulatedFunctionParams;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//    std::vector<CudaArray<mm_float4>*> tabulatedFunctions;
-//    System& system;
-//    CUfunction donorKernel, acceptorKernel;
-//};
+/**
+ * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
+public:
+    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomHbondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
+            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~CudaCalcCustomHbondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomHbondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomHbondForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomHbondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
+private:
+    int numDonors, numAcceptors;
+    bool hasInitializedKernel;
+    CudaContext& cu;
+    CudaParameterSet* donorParams;
+    CudaParameterSet* acceptorParams;
+    CudaArray* globals;
+    CudaArray* donors;
+    CudaArray* acceptors;
+    CudaArray* donorExclusions;
+    CudaArray* acceptorExclusions;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<void*> donorArgs, acceptorArgs;
+    System& system;
+    CUfunction donorKernel, acceptorKernel;
+};
 
 /**
  * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
@@ -1062,94 +1059,98 @@ private:
     double prevTemp, prevFriction, prevErrorTol;
 };
 
-///**
-// * This kernel is invoked by CustomIntegrator to take one time step.
-// */
-//class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
-//public:
-//    CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
-//            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), energy(NULL),
-//            uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
-//    }
-//    ~CudaIntegrateCustomStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the CustomIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the CustomIntegrator this kernel is being used for
-//     * @param forcesAreValid if the context has been modified since the last time step, this will be
-//     *                       false to show that cached forces are invalid and must be recalculated.
-//     *                       On exit, this should specify whether the cached forces are valid at the
-//     *                       end of the step.
-//     */
-//    void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
-//    /**
-//     * Get the values of all global variables.
-//     *
-//     * @param context   the context in which to execute this kernel
-//     * @param values    on exit, this contains the values
-//     */
-//    void getGlobalVariables(ContextImpl& context, std::vector<double>& values) const;
-//    /**
-//     * Set the values of all global variables.
-//     *
-//     * @param context   the context in which to execute this kernel
-//     * @param values    a vector containing the values
-//     */
-//    void setGlobalVariables(ContextImpl& context, const std::vector<double>& values);
-//    /**
-//     * Get the values of a per-DOF variable.
-//     *
-//     * @param context   the context in which to execute this kernel
-//     * @param variable  the index of the variable to get
-//     * @param values    on exit, this contains the values
-//     */
-//    void getPerDofVariable(ContextImpl& context, int variable, std::vector<Vec3>& values) const;
-//    /**
-//     * Set the values of a per-DOF variable.
-//     *
-//     * @param context   the context in which to execute this kernel
-//     * @param variable  the index of the variable to get
-//     * @param values    a vector containing the values
-//     */
-//    void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
-//private:
-//    class ReorderListener;
-//    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
-//    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
-//    void recordChangedParameters(ContextImpl& context);
-//    CudaContext& cu;
-//    double prevStepSize;
-//    int numGlobalVariables;
-//    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters;
-//    mutable bool localValuesAreCurrent;
-//    CudaArray<cl_float>* globalValues;
-//    CudaArray<cl_float>* contextParameterValues;
-//    CudaArray<cl_float>* sumBuffer;
-//    CudaArray<cl_float>* energy;
-//    CudaArray<mm_float4>* uniformRandoms;
-//    CudaArray<mm_int4>* randomSeed;
-//    CudaParameterSet* perDofValues;
-//    mutable std::vector<std::vector<cl_float> > localPerDofValues;
-//    std::vector<std::vector<CUfunction> > kernels;
-//    CUfunction sumEnergyKernel, randomKernel;
-//    std::vector<CustomIntegrator::ComputationType> stepType;
-//    std::vector<bool> needsForces;
-//    std::vector<bool> needsEnergy;
-//    std::vector<bool> invalidatesForces;
-//    std::vector<bool> merged;
-//    std::vector<int> forceGroup;
-//    std::vector<int> requiredGaussian;
-//    std::vector<int> requiredUniform;
-//    std::vector<std::string> parameterNames;
-//};
+/**
+ * This kernel is invoked by CustomIntegrator to take one time step.
+ */
+class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
+public:
+    CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), energy(NULL),
+            uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
+    }
+    ~CudaIntegrateCustomStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the CustomIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const CustomIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Get the values of all global variables.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param values    on exit, this contains the values
+     */
+    void getGlobalVariables(ContextImpl& context, std::vector<double>& values) const;
+    /**
+     * Set the values of all global variables.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param values    a vector containing the values
+     */
+    void setGlobalVariables(ContextImpl& context, const std::vector<double>& values);
+    /**
+     * Get the values of a per-DOF variable.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param variable  the index of the variable to get
+     * @param values    on exit, this contains the values
+     */
+    void getPerDofVariable(ContextImpl& context, int variable, std::vector<Vec3>& values) const;
+    /**
+     * Set the values of a per-DOF variable.
+     *
+     * @param context   the context in which to execute this kernel
+     * @param variable  the index of the variable to get
+     * @param values    a vector containing the values
+     */
+    void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
+private:
+    class ReorderListener;
+    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    void recordChangedParameters(ContextImpl& context);
+    CudaContext& cu;
+    double prevStepSize;
+    int numGlobalVariables;
+    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters;
+    mutable bool localValuesAreCurrent;
+    CudaArray* globalValues;
+    CudaArray* contextParameterValues;
+    CudaArray* sumBuffer;
+    CudaArray* energy;
+    CudaArray* uniformRandoms;
+    CudaArray* randomSeed;
+    CudaParameterSet* perDofValues;
+    mutable std::vector<std::vector<float> > localPerDofValuesFloat;
+    mutable std::vector<std::vector<double> > localPerDofValuesDouble;
+    std::vector<float> contextValuesFloat;
+    std::vector<double> contextValuesDouble;
+    std::vector<std::vector<CUfunction> > kernels;
+    std::vector<std::vector<std::vector<void*> > > kernelArgs;
+    CUfunction sumEnergyKernel, randomKernel;
+    std::vector<CustomIntegrator::ComputationType> stepType;
+    std::vector<bool> needsForces;
+    std::vector<bool> needsEnergy;
+    std::vector<bool> invalidatesForces;
+    std::vector<bool> merged;
+    std::vector<int> forceGroup;
+    std::vector<int> requiredGaussian;
+    std::vector<int> requiredUniform;
+    std::vector<std::string> parameterNames;
+};
 
 /**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.

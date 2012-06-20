@@ -51,8 +51,9 @@ public:
      * @param name             the name of the parameter set
      * @param bufferPerParameter  if true, a separate buffer is created for each parameter.  If false,
      *                            multiple parameters may be combined into a single buffer.
+     * @param useDoublePrecision  whether values should be stored as single or double precision
      */
-    CudaParameterSet(CudaContext& context, int numParameters, int numObjects, const std::string& name, bool bufferPerParameter=false);
+    CudaParameterSet(CudaContext& context, int numParameters, int numObjects, const std::string& name, bool bufferPerParameter=false, bool useDoublePrecision=false);
     ~CudaParameterSet();
     /**
      * Get the number of parameters.
@@ -71,13 +72,15 @@ public:
      *
      * @param values on exit, values[i][j] contains the value of parameter j for object i
      */
-    void getParameterValues(std::vector<std::vector<float> >& values);
+    template <class T>
+    void getParameterValues(std::vector<std::vector<T> >& values);
     /**
      * Set the values of all parameters.
      *
      * @param values values[i][j] contains the value of parameter j for object i
      */
-    void setParameterValues(const std::vector<std::vector<float> >& values);
+    template <class T>
+    void setParameterValues(const std::vector<std::vector<T> >& values);
     /**
      * Get a set of CudaNonbondedUtilities::ParameterInfo objects which describe the Buffers
      * containing the data.
@@ -95,8 +98,7 @@ public:
     std::string getParameterSuffix(int index, const std::string& extraSuffix = "") const;
 private:
     CudaContext& context;
-    int numParameters;
-    int numObjects;
+    int numParameters, numObjects, elementSize;
     std::string name;
     std::vector<CudaNonbondedUtilities::ParameterInfo> buffers;
 };

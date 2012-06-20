@@ -39,11 +39,12 @@ using namespace std;
         throw OpenMMException(m.str());\
     }
 
-CudaParameterSet::CudaParameterSet(CudaContext& context, int numParameters, int numObjects, const string& name, bool bufferPerParameter) :
+CudaParameterSet::CudaParameterSet(CudaContext& context, int numParameters, int numObjects, const string& name, bool bufferPerParameter, bool useDoublePrecision) :
             context(context), numParameters(numParameters), numObjects(numObjects), name(name) {
     int params = numParameters;
     int bufferCount = 0;
-    int elementSize = 4;
+    elementSize = (useDoublePrecision ? sizeof(double) : sizeof(float));
+    string elementType = (useDoublePrecision ? "double" : "float");
     CUdeviceptr pointer;
     string errorMessage = "Error creating parameter set "+name;
     if (!bufferPerParameter) {
@@ -51,14 +52,14 @@ CudaParameterSet::CudaParameterSet(CudaContext& context, int numParameters, int 
             CHECK_RESULT(cuMemAlloc(&pointer, numObjects*elementSize*4));
             std::stringstream name;
             name << "param" << (++bufferCount);
-            buffers.push_back(CudaNonbondedUtilities::ParameterInfo(name.str(), "float", 4, elementSize*4, pointer));
+            buffers.push_back(CudaNonbondedUtilities::ParameterInfo(name.str(), elementType, 4, elementSize*4, pointer));
             params -= 4;
         }
         if (params > 1) {
             CHECK_RESULT(cuMemAlloc(&pointer, numObjects*elementSize*2));
             std::stringstream name;
             name << "param" << (++bufferCount);
-            buffers.push_back(CudaNonbondedUtilities::ParameterInfo(name.str(), "float", 2, elementSize*2, pointer));
+            buffers.push_back(CudaNonbondedUtilities::ParameterInfo(name.str(), elementType, 2, elementSize*2, pointer));
             params -= 2;
         }
     }
@@ -66,50 +67,55 @@ CudaParameterSet::CudaParameterSet(CudaContext& context, int numParameters, int 
             CHECK_RESULT(cuMemAlloc(&pointer, numObjects*elementSize));
         std::stringstream name;
         name << "param" << (++bufferCount);
-        buffers.push_back(CudaNonbondedUtilities::ParameterInfo(name.str(), "float", 1, elementSize, pointer));
+        buffers.push_back(CudaNonbondedUtilities::ParameterInfo(name.str(), elementType, 1, elementSize, pointer));
         params--;
     }
 }
 
 CudaParameterSet::~CudaParameterSet() {
-    string errorMessage = "Error freeing device memory";
-    for (int i = 0; i < (int) buffers.size(); i++)
-        CHECK_RESULT(cuMemFree(buffers[i].getMemory()));
+    if (context.getContextIsValid()) {
+        string errorMessage = "Error freeing device memory";
+        for (int i = 0; i < (int) buffers.size(); i++)
+            CHECK_RESULT(cuMemFree(buffers[i].getMemory()));
+    }
 }
 
-void CudaParameterSet::getParameterValues(vector<vector<float> >& values) {
+template <class T>
+void CudaParameterSet::getParameterValues(vector<vector<T> >& values) {
+    if (sizeof(T) != elementSize)
+        throw OpenMMException("Called getParameterValues() with vector of wrong type");
     values.resize(numObjects);
     for (int i = 0; i < numObjects; i++)
         values[i].resize(numParameters);
     int base = 0;
     string errorMessage = "Error downloading parameter set "+name;
     for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getType() == "float4") {
-            vector<float4> data(numObjects);
+        if (buffers[i].getSize() == 4*elementSize) {
+            vector<T> data(4*numObjects);
             CHECK_RESULT(cuMemcpyDtoH(&data[0], buffers[i].getMemory(), numObjects*buffers[i].getSize()));
             for (int j = 0; j < numObjects; j++) {
-                values[j][base] = data[j].x;
+                values[j][base] = data[4*j];
                 if (base+1 < numParameters)
-                    values[j][base+1] = data[j].y;
+                    values[j][base+1] = data[4*j+1];
                 if (base+2 < numParameters)
-                    values[j][base+2] = data[j].z;
+                    values[j][base+2] = data[4*j+2];
                 if (base+3 < numParameters)
-                    values[j][base+3] = data[j].w;
+                    values[j][base+3] = data[4*j+3];
             }
             base += 4;
         }
-        else if (buffers[i].getType() == "float2") {
-            vector<float2> data(numObjects);
+        else if (buffers[i].getSize() == 2*elementSize) {
+            vector<T> data(2*numObjects);
             CHECK_RESULT(cuMemcpyDtoH(&data[0], buffers[i].getMemory(), numObjects*buffers[i].getSize()));
             for (int j = 0; j < numObjects; j++) {
-                values[j][base] = data[j].x;
+                values[j][base] = data[2*j];
                 if (base+1 < numParameters)
-                    values[j][base+1] = data[j].y;
+                    values[j][base+1] = data[2*j+1];
             }
             base += 2;
         }
-        else if (buffers[i].getType() == "float") {
-            vector<float> data(numObjects);
+        else if (buffers[i].getSize() == elementSize) {
+            vector<T> data(numObjects);
             CHECK_RESULT(cuMemcpyDtoH(&data[0], buffers[i].getMemory(), numObjects*buffers[i].getSize()));
             for (int j = 0; j < numObjects; j++)
                 values[j][base] = data[j];
@@ -120,36 +126,39 @@ void CudaParameterSet::getParameterValues(vector<vector<float> >& values) {
     }
 }
 
-void CudaParameterSet::setParameterValues(const vector<vector<float> >& values) {
+template <class T>
+void CudaParameterSet::setParameterValues(const vector<vector<T> >& values) {
+    if (sizeof(T) != elementSize)
+        throw OpenMMException("Called setParameterValues() with vector of wrong type");
     int base = 0;
     string errorMessage = "Error uploading parameter set "+name;
     for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getType() == "float4") {
-            vector<float4> data(numObjects);
+        if (buffers[i].getSize() == 4*elementSize) {
+            vector<T> data(4*numObjects);
             for (int j = 0; j < numObjects; j++) {
-                data[j].x = values[j][base];
+                data[4*j] = values[j][base];
                 if (base+1 < numParameters)
-                    data[j].y = values[j][base+1];
+                    data[4*j+1] = values[j][base+1];
                 if (base+2 < numParameters)
-                    data[j].z = values[j][base+2];
+                    data[4*j+2] = values[j][base+2];
                 if (base+3 < numParameters)
-                    data[j].w = values[j][base+3];
+                    data[4*j+3] = values[j][base+3];
             }
             CHECK_RESULT(cuMemcpyHtoD(buffers[i].getMemory(), &data[0], numObjects*buffers[i].getSize()));
             base += 4;
         }
-        else if (buffers[i].getType() == "float2") {
-            vector<float2> data(numObjects);
+        else if (buffers[i].getSize() == 2*elementSize) {
+            vector<T> data(2*numObjects);
             for (int j = 0; j < numObjects; j++) {
-                data[j].x = values[j][base];
+                data[2*j] = values[j][base];
                 if (base+1 < numParameters)
-                    data[j].y = values[j][base+1];
+                    data[2*j+1] = values[j][base+1];
             }
             CHECK_RESULT(cuMemcpyHtoD(buffers[i].getMemory(), &data[0], numObjects*buffers[i].getSize()));
             base += 2;
         }
-        else if (buffers[i].getType() == "float") {
-            vector<float> data(numObjects);
+        else if (buffers[i].getSize() == elementSize) {
+            vector<T> data(numObjects);
             for (int j = 0; j < numObjects; j++)
                 data[j] = values[j][base];
             CHECK_RESULT(cuMemcpyHtoD(buffers[i].getMemory(), &data[0], numObjects*buffers[i].getSize()));
@@ -164,16 +173,26 @@ string CudaParameterSet::getParameterSuffix(int index, const std::string& extraS
     const string suffixes[] = {".x", ".y", ".z", ".w"};
     int buffer = -1;
     for (int i = 0; buffer == -1 && i < (int) buffers.size(); i++) {
-        if (index*sizeof(float) < buffers[i].getSize())
+        if (index*elementSize < buffers[i].getSize())
             buffer = i;
         else
-            index -= buffers[i].getSize()/sizeof(float);
+            index -= buffers[i].getSize()/elementSize;
     }
     if (buffer == -1)
         throw OpenMMException("Internal error: Illegal argument to CudaParameterSet::getParameterSuffix() ("+name+")");
     stringstream suffix;
     suffix << (buffer+1) << extraSuffix;
-    if (buffers[buffer].getType() != "float")
+    if (buffers[buffer].getSize() != elementSize)
         suffix << suffixes[index];
     return suffix.str();
+}
+
+/**
+ * Define template instantiations for float and double versions of getParameterValues() and setParameterValues().
+ */
+namespace OpenMM {
+template void CudaParameterSet::getParameterValues<float>(vector<vector<float> >& values);
+template void CudaParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
+template void CudaParameterSet::getParameterValues<double>(vector<vector<double> >& values);
+template void CudaParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
 }

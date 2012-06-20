@@ -94,7 +94,7 @@ public:
      * Copy the values in a vector to the device memory.
      */
     template <class T>
-    void upload(std::vector<T>& data) {
+    void upload(const std::vector<T>& data) {
         if (sizeof(T) != elementSize || data.size() != size)
             throw OpenMMException("Error uploading array "+name+": The specified vector does not match the size of the array");
         upload(&data[0], true);
@@ -117,7 +117,7 @@ public:
      * @param blocking if true, this call will block until the transfer is complete.  If false,
      *                 the source array  must be in page-locked memory.
      */
-    void upload(void* data, bool blocking = true);
+    void upload(const void* data, bool blocking = true);
     /**
      * Copy the values in the device memory to an array.
      * 

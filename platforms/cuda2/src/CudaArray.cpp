@@ -53,7 +53,7 @@ CudaArray::~CudaArray() {
     }
 }
 
-void CudaArray::upload(void* data, bool blocking) {
+void CudaArray::upload(const void* data, bool blocking) {
     CUresult result;
     if (blocking)
         result = cuMemcpyHtoD(pointer, data, size*elementSize);

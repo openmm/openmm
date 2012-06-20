@@ -945,6 +945,10 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
         reorderListeners[i]->execute();
 }
 
+void CudaContext::addReorderListener(ReorderListener* listener) {
+    reorderListeners.push_back(listener);
+}
+
 struct CudaContext::WorkThread::ThreadData {
     ThreadData(std::queue<CudaContext::WorkTask*>& tasks, bool& waiting,  bool& finished,
             pthread_mutex_t& queueLock, pthread_cond_t& waitForTaskCondition, pthread_cond_t& queueEmptyCondition) :

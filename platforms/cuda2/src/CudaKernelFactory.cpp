@@ -94,16 +94,16 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())
         return new CudaCalcNonbondedForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomNonbondedForceKernel::Name())
-//        return new CudaCalcCustomNonbondedForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomNonbondedForceKernel::Name())
+        return new CudaCalcCustomNonbondedForceKernel(name, platform, cu, context.getSystem());
 //    if (name == CalcGBSAOBCForceKernel::Name())
 //        return new CudaCalcGBSAOBCForceKernel(name, platform, cu);
 //    if (name == CalcCustomGBForceKernel::Name())
 //        return new CudaCalcCustomGBForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomExternalForceKernel::Name())
         return new CudaCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
-//    if (name == CalcCustomHbondForceKernel::Name())
-//        return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomHbondForceKernel::Name())
+        return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new CudaCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
@@ -116,8 +116,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaIntegrateVariableVerletStepKernel(name, platform, cu);
     if (name == IntegrateVariableLangevinStepKernel::Name())
         return new CudaIntegrateVariableLangevinStepKernel(name, platform, cu);
-//    if (name == IntegrateCustomStepKernel::Name())
-//        return new CudaIntegrateCustomStepKernel(name, platform, cu);
+    if (name == IntegrateCustomStepKernel::Name())
+        return new CudaIntegrateCustomStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CudaApplyAndersenThermostatKernel(name, platform, cu);
     if (name == ApplyMonteCarloBarostatKernel::Name())
