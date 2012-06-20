@@ -860,6 +860,17 @@ static void computeAmoebaMultipolePotential( AmoebaCudaData& data, const std::ve
     }
 }
 
+static void computeAmoebaSystemMultipoleMoments( AmoebaCudaData& data, const Vec3& origin,
+                                                 std::vector< double >& outputMultipoleMonents) {
+
+    amoebaGpuContext gpu = data.getAmoebaGpu();
+
+    data.setGpuInitialized( false );
+    data.initializeGpu();
+    kCalculateAmoebaSystemMultipoleMoments( gpu, origin, outputMultipoleMonents );
+
+}
+
 class CudaCalcAmoebaMultipoleForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const AmoebaMultipoleForce& force) : force(force) {
@@ -1072,6 +1083,12 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
 void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context,  const std::vector< Vec3 >& inputGrid,
                                                                    std::vector< double >& outputElectrostaticPotential) {
     computeAmoebaMultipolePotential( data, inputGrid, outputElectrostaticPotential );
+    return;
+}
+
+void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context,  const Vec3& origin,
+                                                                   std::vector< double >& outputMultipoleMonents) {
+    computeAmoebaSystemMultipoleMoments( data, origin, outputMultipoleMonents);
     return;
 }
 

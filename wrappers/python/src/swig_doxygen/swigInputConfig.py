@@ -290,6 +290,7 @@ UNITS = {
 #("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( None, ('unit.kilojoule_per_mole')),
 #("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( ('unit.kilojoule_per_mole'), ()),
 ("AmoebaMultipoleForce",                 "getElectrostaticPotential")                     :  ( None, ()),
+("AmoebaMultipoleForce",                 "getSystemMultipoleMoments")                     :  ( None, ()),
 
 ("AmoebaOutOfPlaneBendForce",            "getNumOutOfPlaneBends")                         :  ( None, ()),
 ("AmoebaOutOfPlaneBendForce",            "getAmoebaGlobalOutOfPlaneBendCubic")            :  ( None,()),

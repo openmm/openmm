@@ -568,6 +568,11 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextI
     return;
 }
 
+void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, const Vec3& origin,
+                                                                        std::vector< double >& outputMultipoleMonents){
+    return;
+}
+
 ///* -------------------------------------------------------------------------- *
 // *                       AmoebaGeneralizedKirkwood                            *
 // * -------------------------------------------------------------------------- */

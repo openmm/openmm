@@ -393,6 +393,20 @@ public:
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential );
+
+    /**
+     * Get the system multipole moments
+     *
+     * @param origin       origin
+     * @param context      context
+     * @param outputMultipoleMonents (charge,
+                                      dipole_x, dipole_y, dipole_z,
+                                      quadrupole_xx, quadrupole_xy, quadrupole_xz,
+                                      quadrupole_yx, quadrupole_yy, quadrupole_yz,
+                                      quadrupole_zx, quadrupole_zy, quadrupole_zz )
+     */
+    void getSystemMultipoleMoments(ContextImpl& context, const Vec3& origin, std::vector< double >& outputMultipoleMonents);
+
 private:
     int numMultipoles;
     int polarizationType;

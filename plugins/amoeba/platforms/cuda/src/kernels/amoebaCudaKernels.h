@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "amoebaGpuTypes.h"
+#include "openmm/Vec3.h"
 
 #include <string>
 #include <vector>
@@ -53,6 +54,7 @@ extern void SetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool performGk );
 extern void kCalculateAmoebaMultipolePotential(amoebaGpuContext amoebaGpu );
+extern void kCalculateAmoebaSystemMultipoleMoments(amoebaGpuContext amoebaGpu, const OpenMM::Vec3& origin, std::vector< double >& outputMultipoleMonents );
 
 // vdw
 

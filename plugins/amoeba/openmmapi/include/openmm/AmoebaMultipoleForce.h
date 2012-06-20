@@ -330,6 +330,20 @@ public:
                                     Context& context, std::vector< double >& outputElectrostaticPotential );
 
 
+    /**
+     * Get the system multipole moments
+     *
+     * @param origin       origin
+     * @param context      context
+     * @param outputMultipoleMonents (charge,
+                                      dipole_x, dipole_y, dipole_z,
+                                      quadrupole_xx, quadrupole_xy, quadrupole_xz,
+                                      quadrupole_yx, quadrupole_yy, quadrupole_yz,
+                                      quadrupole_zx, quadrupole_zy, quadrupole_zz )
+     */
+
+    void getSystemMultipoleMoments( const Vec3& origin, Context& context, std::vector< double >& outputMultipoleMonents );
+
 protected:
     ForceImpl* createImpl();
 private:

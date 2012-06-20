@@ -243,6 +243,10 @@ void AmoebaMultipoleForce::getElectrostaticPotential( const std::vector< Vec3 >&
     dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);
 }
 
+void AmoebaMultipoleForce::getSystemMultipoleMoments( const Vec3& origin, Context& context, std::vector< double >& outputMultipoleMonents ){
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getSystemMultipoleMoments(getContextImpl(context), origin, outputMultipoleMonents);
+}
+
 ForceImpl* AmoebaMultipoleForce::createImpl() {
     return new AmoebaMultipoleForceImpl(*this);
 }

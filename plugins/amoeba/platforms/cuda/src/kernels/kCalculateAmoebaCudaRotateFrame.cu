@@ -63,23 +63,23 @@ void GetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext amoebaGpu)
 __device__ static float normVector3( float* vector )
 {
 
-    float norm                    = DOT3( vector, vector );
-    float returnNorm              = SQRT( norm );
-    norm                          = returnNorm > 0.0f ? 1.0f/returnNorm : 0.0f;
+    float norm                     = DOT3( vector, vector );
+    float returnNorm               = SQRT( norm );
+    norm                           = returnNorm > 0.0f ? 1.0f/returnNorm : 0.0f;
 
-    vector[0]                    *= norm;
-    vector[1]                    *= norm;
-    vector[2]                    *= norm;
+    vector[0]                     *= norm;
+    vector[1]                     *= norm;
+    vector[2]                     *= norm;
 
     return returnNorm;
 }
 
-// ZThenX     == 0
-// Bisector   == 1
-// ZBisect    == 2
-// ThreeFold  == 3
-// ZOnly      == 4
-// NoAxisType == 5
+// ZThenX      == 0
+// Bisector    == 1
+// ZBisect     == 2
+// ThreeFold   == 3
+// ZOnly       == 4
+// NoAxisType  == 5
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
@@ -92,53 +92,53 @@ __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 void kCudaComputeCheckChiral_kernel( void )
 {
 
-    const int AD          = 0;
-    const int BD          = 1;
-    const int CD          = 2;
-    const int C           = 3;
+    const int AD           = 0;
+    const int BD           = 1;
+    const int CD           = 2;
+    const int C            = 3;
     float delta[4][3];
  
-    float4* particleCoord        = cSim.pPosq;
-    int4* multiPoleParticles     = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
-    float* labFrameDipole        = cAmoebaSim.pLabFrameDipole;
-    float* labFrameQuadrupole    = cAmoebaSim.pLabFrameQuadrupole;
+    float4* particleCoord         = cSim.pPosq;
+    int4* multiPoleParticles      = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
+    float* labFrameDipole         = cAmoebaSim.pLabFrameDipole;
+    float* labFrameQuadrupole     = cAmoebaSim.pLabFrameQuadrupole;
  
     // ---------------------------------------------------------------------------------------
  
-    int particleIndex            = blockIdx.x*blockDim.x + threadIdx.x;
-    int numberOfParticles        = cSim.atoms;
+    int particleIndex             = blockIdx.x*blockDim.x + threadIdx.x;
+    int numberOfParticles         = cSim.atoms;
     while( particleIndex < numberOfParticles )
     { 
         // skip z-then-x
     
-        int axisType             = multiPoleParticles[particleIndex].w; 
+        int axisType              = multiPoleParticles[particleIndex].w; 
         if( axisType != 0 && multiPoleParticles[particleIndex].x >= 0 && multiPoleParticles[particleIndex].y >=0 && multiPoleParticles[particleIndex].z >= 0 )
         {
      
             // ---------------------------------------------------------------------------------------
          
-            int particleA                = particleIndex;
-            int particleB                = multiPoleParticles[particleIndex].z;
-            int particleC                = multiPoleParticles[particleIndex].x;
-            int particleD                = multiPoleParticles[particleIndex].y;
+            int particleA                 = particleIndex;
+            int particleB                 = multiPoleParticles[particleIndex].z;
+            int particleC                 = multiPoleParticles[particleIndex].x;
+            int particleD                 = multiPoleParticles[particleIndex].y;
         
-            delta[AD][0]                 = particleCoord[particleA].x - particleCoord[particleD].x;
-            delta[AD][1]                 = particleCoord[particleA].y - particleCoord[particleD].y;
-            delta[AD][2]                 = particleCoord[particleA].z - particleCoord[particleD].z;
+            delta[AD][0]                  = particleCoord[particleA].x - particleCoord[particleD].x;
+            delta[AD][1]                  = particleCoord[particleA].y - particleCoord[particleD].y;
+            delta[AD][2]                  = particleCoord[particleA].z - particleCoord[particleD].z;
         
-            delta[BD][0]                 = particleCoord[particleB].x - particleCoord[particleD].x;
-            delta[BD][1]                 = particleCoord[particleB].y - particleCoord[particleD].y;
-            delta[BD][2]                 = particleCoord[particleB].z - particleCoord[particleD].z;
+            delta[BD][0]                  = particleCoord[particleB].x - particleCoord[particleD].x;
+            delta[BD][1]                  = particleCoord[particleB].y - particleCoord[particleD].y;
+            delta[BD][2]                  = particleCoord[particleB].z - particleCoord[particleD].z;
         
-            delta[CD][0]                 = particleCoord[particleC].x - particleCoord[particleD].x;
-            delta[CD][1]                 = particleCoord[particleC].y - particleCoord[particleD].y;
-            delta[CD][2]                 = particleCoord[particleC].z - particleCoord[particleD].z;
+            delta[CD][0]                  = particleCoord[particleC].x - particleCoord[particleD].x;
+            delta[CD][1]                  = particleCoord[particleC].y - particleCoord[particleD].y;
+            delta[CD][2]                  = particleCoord[particleC].z - particleCoord[particleD].z;
         
-            delta[C][0]                  = delta[BD][1]*delta[CD][2] - delta[BD][2]*delta[CD][1];
-            delta[C][1]                  = delta[CD][1]*delta[AD][2] - delta[CD][2]*delta[AD][1];
-            delta[C][2]                  = delta[AD][1]*delta[BD][2] - delta[AD][2]*delta[BD][1];
+            delta[C][0]                   = delta[BD][1]*delta[CD][2] - delta[BD][2]*delta[CD][1];
+            delta[C][1]                   = delta[CD][1]*delta[AD][2] - delta[CD][2]*delta[AD][1];
+            delta[C][2]                   = delta[AD][1]*delta[BD][2] - delta[AD][2]*delta[BD][1];
          
-            float volume                 = delta[C][0]*delta[AD][0] + delta[C][1]*delta[BD][0] + delta[C][2]*delta[CD][0];
+            float volume                  = delta[C][0]*delta[AD][0] + delta[C][1]*delta[BD][0] + delta[C][2]*delta[CD][0];
             if( volume < 0.0 ){
                 labFrameDipole[particleIndex*3+1]            *= -1.0f; // pole(3,i)
                 labFrameQuadrupole[particleIndex*9+1]        *= -1.0f; // pole(6,i)  && pole(8,i)
@@ -148,7 +148,7 @@ void kCudaComputeCheckChiral_kernel( void )
             }
         }
     
-        particleIndex                += gridDim.x*blockDim.x;
+        particleIndex                 += gridDim.x*blockDim.x;
     }    
 }
 
@@ -167,12 +167,12 @@ void kCudaComputeLabFrameMoments_kernel( void )
     float vectorY[3];
     float vectorZ[3];
  
-    int particleIndex            = blockIdx.x*blockDim.x + threadIdx.x;
+    int particleIndex             = blockIdx.x*blockDim.x + threadIdx.x;
 
-    float4* particleCoord        = cSim.pPosq;
-    int4* multiPoleParticles     = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
-    float* labFrameDipole        = cAmoebaSim.pLabFrameDipole;
-    float* labFrameQuadrupole    = cAmoebaSim.pLabFrameQuadrupole;
+    float4* particleCoord         = cSim.pPosq;
+    int4* multiPoleParticles      = cAmoebaSim.pMultipoleParticlesIdsAndAxisType;
+    float* labFrameDipole         = cAmoebaSim.pLabFrameDipole;
+    float* labFrameQuadrupole     = cAmoebaSim.pLabFrameQuadrupole;
  
     // get coordinates of this atom and the z & x axis atoms
     // compute the vector between the atoms and 1/sqrt(d2), d2 is distance between
@@ -187,212 +187,212 @@ void kCudaComputeLabFrameMoments_kernel( void )
 
         if( multiPoleParticles[particleIndex].x >= 0 && multiPoleParticles[particleIndex].z >= 0 )
         {
-            float4 coordinatesThisParticle   = particleCoord[particleIndex];
+            float4 coordinatesThisParticle    = particleCoord[particleIndex];
          
-            int multipoleParticleIndex       = multiPoleParticles[particleIndex].z;
-            float4 coordinatesAxisParticle   = particleCoord[multipoleParticleIndex];
+            int multipoleParticleIndex        = multiPoleParticles[particleIndex].z;
+            float4 coordinatesAxisParticle    = particleCoord[multipoleParticleIndex];
          
-            vectorZ[0]                       = coordinatesAxisParticle.x - coordinatesThisParticle.x;
-            vectorZ[1]                       = coordinatesAxisParticle.y - coordinatesThisParticle.y;
-            vectorZ[2]                       = coordinatesAxisParticle.z - coordinatesThisParticle.z;
+            vectorZ[0]                        = coordinatesAxisParticle.x - coordinatesThisParticle.x;
+            vectorZ[1]                        = coordinatesAxisParticle.y - coordinatesThisParticle.y;
+            vectorZ[2]                        = coordinatesAxisParticle.z - coordinatesThisParticle.z;
               
-            multipoleParticleIndex           = multiPoleParticles[particleIndex].x; 
-            coordinatesAxisParticle          = particleCoord[multipoleParticleIndex];
+            multipoleParticleIndex            = multiPoleParticles[particleIndex].x; 
+            coordinatesAxisParticle           = particleCoord[multipoleParticleIndex];
          
-            vectorX[0]                       = coordinatesAxisParticle.x - coordinatesThisParticle.x;
-            vectorX[1]                       = coordinatesAxisParticle.y - coordinatesThisParticle.y;
-            vectorX[2]                       = coordinatesAxisParticle.z - coordinatesThisParticle.z;
+            vectorX[0]                        = coordinatesAxisParticle.x - coordinatesThisParticle.x;
+            vectorX[1]                        = coordinatesAxisParticle.y - coordinatesThisParticle.y;
+            vectorX[2]                        = coordinatesAxisParticle.z - coordinatesThisParticle.z;
          
-            int axisType                     = multiPoleParticles[particleIndex].w; 
+            int axisType                      = multiPoleParticles[particleIndex].w; 
     
             /*
                 z-only
                    (1) norm z
                    (2) select random x
-                   (3) x = x - (x.z)z
+                   (3) x  = x - (x.z)z
                    (4) norm x
         
                 z-then-x
                    (1) norm z
                    (2) norm x (not needed)
-                   (3) x = x - (x.z)z
+                   (3) x  = x - (x.z)z
                    (4) norm x
         
                 bisector
                    (1) norm z
                    (2) norm x 
-                   (3) z = x + z
+                   (3) z  = x + z
                    (4) norm z
-                   (5) x = x - (x.z)z 
+                   (5) x  = x - (x.z)z 
                    (6) norm x 
         
                 z-bisect
                    (1) norm z
                    (2) norm x 
                    (3) norm y 
-                   (3) x = x + y
+                   (3) x  = x + y
                    (4) norm x
-                   (5) x = x - (x.z)z 
+                   (5) x  = x - (x.z)z 
                    (6) norm x 
         
                 3-fold
                    (1) norm z
                    (2) norm x 
                    (3) norm y 
-                   (4) z = x + y + z
+                   (4) z  = x + y + z
                    (5) norm z
-                   (6) x = x - (x.z)z 
+                   (6) x  = x - (x.z)z 
                    (7) norm x 
         
             */
         
             // branch based on axis type
              
-            float sum                   = normVector3( vectorZ );
+            float sum                    = normVector3( vectorZ );
         
-            if( axisType == 1 ){
+            if( axisType  == 1 ){
         
                 // bisector
                 
-                sum                     = normVector3( vectorX );
+                sum                      = normVector3( vectorX );
                 
-                vectorZ[0]             += vectorX[0];
-                vectorZ[1]             += vectorX[1];
-                vectorZ[2]             += vectorX[2];
+                vectorZ[0]              += vectorX[0];
+                vectorZ[1]              += vectorX[1];
+                vectorZ[2]              += vectorX[2];
            
-                sum                     = normVector3( vectorZ );
+                sum                      = normVector3( vectorZ );
         
-            } else if( axisType == 2 || axisType == 3 ){ 
+            } else if( axisType  == 2 || axisType == 3 ){ 
          
                 // z-bisect
         
-                multipoleParticleIndex  = multiPoleParticles[particleIndex].y; 
+                multipoleParticleIndex   = multiPoleParticles[particleIndex].y; 
                 if( multipoleParticleIndex >= 0 && multipoleParticleIndex < cSim.atoms ){
-                    coordinatesAxisParticle = particleCoord[multipoleParticleIndex];
-                    vectorY[0]              = coordinatesAxisParticle.x - coordinatesThisParticle.x;
-                    vectorY[1]              = coordinatesAxisParticle.y - coordinatesThisParticle.y;
-                    vectorY[2]              = coordinatesAxisParticle.z - coordinatesThisParticle.z;
+                    coordinatesAxisParticle  = particleCoord[multipoleParticleIndex];
+                    vectorY[0]               = coordinatesAxisParticle.x - coordinatesThisParticle.x;
+                    vectorY[1]               = coordinatesAxisParticle.y - coordinatesThisParticle.y;
+                    vectorY[2]               = coordinatesAxisParticle.z - coordinatesThisParticle.z;
             
-                    sum                     = normVector3( vectorY );
-                    sum                     = normVector3( vectorX );
+                    sum                      = normVector3( vectorY );
+                    sum                      = normVector3( vectorX );
             
-                    if( axisType == 2 ){
+                    if( axisType  == 2 ){
             
-                        vectorX[0]         += vectorY[0];
-                        vectorX[1]         += vectorY[1];
-                        vectorX[2]         += vectorY[2];
-                        sum                 = normVector3( vectorX );
+                        vectorX[0]          += vectorY[0];
+                        vectorX[1]          += vectorY[1];
+                        vectorX[2]          += vectorY[2];
+                        sum                  = normVector3( vectorX );
              
                     } else { 
              
                         // 3-fold
                 
-                        vectorZ[0]         += vectorX[0] + vectorY[0];
-                        vectorZ[1]         += vectorX[1] + vectorY[1];
-                        vectorZ[2]         += vectorX[2] + vectorY[2];
-                        sum                 = normVector3( vectorZ );
+                        vectorZ[0]          += vectorX[0] + vectorY[0];
+                        vectorZ[1]          += vectorX[1] + vectorY[1];
+                        vectorZ[2]          += vectorX[2] + vectorY[2];
+                        sum                  = normVector3( vectorZ );
                     }
                 }
          
             } else if( axisType >= 4 ){ 
         
-                vectorX[0]             = 0.1f;
-                vectorX[1]             = 0.1f;
-                vectorX[2]             = 0.1f;
+                vectorX[0]              = 0.1f;
+                vectorX[1]              = 0.1f;
+                vectorX[2]              = 0.1f;
             }
             
-            // x = x - (x.z)z
+            // x  = x - (x.z)z
         
-            float dot         = vectorZ[0]*vectorX[0] + vectorZ[1]*vectorX[1] + vectorZ[2]*vectorX[2];
+            float dot          = vectorZ[0]*vectorX[0] + vectorZ[1]*vectorX[1] + vectorZ[2]*vectorX[2];
                 
-            vectorX[0]       -= dot*vectorZ[0];
-            vectorX[1]       -= dot*vectorZ[1];
-            vectorX[2]       -= dot*vectorZ[2];
+            vectorX[0]        -= dot*vectorZ[0];
+            vectorX[1]        -= dot*vectorZ[1];
+            vectorX[2]        -= dot*vectorZ[2];
              
-            sum               = normVector3( vectorX );
+            sum                = normVector3( vectorX );
         
-            vectorY[0]        = (vectorZ[1]*vectorX[2]) - (vectorZ[2]*vectorX[1]);
-            vectorY[1]        = (vectorZ[2]*vectorX[0]) - (vectorZ[0]*vectorX[2]);
-            vectorY[2]        = (vectorZ[0]*vectorX[1]) - (vectorZ[1]*vectorX[0]);
+            vectorY[0]         = (vectorZ[1]*vectorX[2]) - (vectorZ[2]*vectorX[1]);
+            vectorY[1]         = (vectorZ[2]*vectorX[0]) - (vectorZ[0]*vectorX[2]);
+            vectorY[2]         = (vectorZ[0]*vectorX[1]) - (vectorZ[1]*vectorX[0]);
          
             // use identity rotation matrix for unrecognized axis types
         
             if( axisType < 0 || axisType > 4 ){
         
-                vectorX[0] = 1.0f;
-                vectorX[1] = 0.0f;
-                vectorX[2] = 0.0f;
+                vectorX[0]  = 1.0f;
+                vectorX[1]  = 0.0f;
+                vectorX[2]  = 0.0f;
         
-                vectorY[0] = 0.0f;
-                vectorY[1] = 1.0f;
-                vectorY[2] = 0.0f;
+                vectorY[0]  = 0.0f;
+                vectorY[1]  = 1.0f;
+                vectorY[2]  = 0.0f;
         
-                vectorZ[0] = 0.0f;
-                vectorZ[1] = 0.0f;
-                vectorZ[2] = 1.0f;
+                vectorZ[0]  = 0.0f;
+                vectorZ[1]  = 0.0f;
+                vectorZ[2]  = 1.0f;
             }
         
-            unsigned int offset           = 3*particleIndex;
+            unsigned int offset            = 3*particleIndex;
     
             float molDipole[3];
-            molDipole[0]                  = labFrameDipole[offset];
-            molDipole[1]                  = labFrameDipole[offset+1];
-            molDipole[2]                  = labFrameDipole[offset+2];
+            molDipole[0]                   = labFrameDipole[offset];
+            molDipole[1]                   = labFrameDipole[offset+1];
+            molDipole[2]                   = labFrameDipole[offset+2];
             
             // set out-of-range elements to 0.0f
          
-            labFrameDipole[offset]        = molDipole[0]*vectorX[0] + molDipole[1]*vectorY[0] + molDipole[2]*vectorZ[0];
-            labFrameDipole[offset+1]      = molDipole[0]*vectorX[1] + molDipole[1]*vectorY[1] + molDipole[2]*vectorZ[1];
-            labFrameDipole[offset+2]      = molDipole[0]*vectorX[2] + molDipole[1]*vectorY[2] + molDipole[2]*vectorZ[2];
+            labFrameDipole[offset]         = molDipole[0]*vectorX[0] + molDipole[1]*vectorY[0] + molDipole[2]*vectorZ[0];
+            labFrameDipole[offset+1]       = molDipole[0]*vectorX[1] + molDipole[1]*vectorY[1] + molDipole[2]*vectorZ[1];
+            labFrameDipole[offset+2]       = molDipole[0]*vectorX[2] + molDipole[1]*vectorY[2] + molDipole[2]*vectorZ[2];
             
             // ---------------------------------------------------------------------------------------
             
             float mPole[3][3];
-            offset                        = 9*particleIndex;
+            offset                         = 9*particleIndex;
             
-            mPole[0][0]                   = labFrameQuadrupole[offset];
-            mPole[0][1]                   = labFrameQuadrupole[offset+1];
-            mPole[0][2]                   = labFrameQuadrupole[offset+2];
+            mPole[0][0]                    = labFrameQuadrupole[offset];
+            mPole[0][1]                    = labFrameQuadrupole[offset+1];
+            mPole[0][2]                    = labFrameQuadrupole[offset+2];
         
-            mPole[1][0]                   = labFrameQuadrupole[offset+3];
-            mPole[1][1]                   = labFrameQuadrupole[offset+4];
-            mPole[1][2]                   = labFrameQuadrupole[offset+5];
+            mPole[1][0]                    = labFrameQuadrupole[offset+3];
+            mPole[1][1]                    = labFrameQuadrupole[offset+4];
+            mPole[1][2]                    = labFrameQuadrupole[offset+5];
         
-            mPole[2][0]                   = labFrameQuadrupole[offset+6];
-            mPole[2][1]                   = labFrameQuadrupole[offset+7];
-            mPole[2][2]                   = labFrameQuadrupole[offset+8];
+            mPole[2][0]                    = labFrameQuadrupole[offset+6];
+            mPole[2][1]                    = labFrameQuadrupole[offset+7];
+            mPole[2][2]                    = labFrameQuadrupole[offset+8];
         
-            labFrameQuadrupole[offset+8]  = vectorX[2]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
-            labFrameQuadrupole[offset+8] += vectorY[2]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
-            labFrameQuadrupole[offset+8] += vectorZ[2]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
+            labFrameQuadrupole[offset+8]   = vectorX[2]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
+            labFrameQuadrupole[offset+8]  += vectorY[2]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
+            labFrameQuadrupole[offset+8]  += vectorZ[2]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
     
-            labFrameQuadrupole[offset+4]  = vectorX[1]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
-            labFrameQuadrupole[offset+4] += vectorY[1]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
-            labFrameQuadrupole[offset+4] += vectorZ[1]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
+            labFrameQuadrupole[offset+4]   = vectorX[1]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
+            labFrameQuadrupole[offset+4]  += vectorY[1]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
+            labFrameQuadrupole[offset+4]  += vectorZ[1]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
     
-            labFrameQuadrupole[offset+5]  = vectorX[1]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
-            labFrameQuadrupole[offset+5] += vectorY[1]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
-            labFrameQuadrupole[offset+5] += vectorZ[1]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
+            labFrameQuadrupole[offset+5]   = vectorX[1]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
+            labFrameQuadrupole[offset+5]  += vectorY[1]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
+            labFrameQuadrupole[offset+5]  += vectorZ[1]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
     
-            labFrameQuadrupole[offset]    = vectorX[0]*(vectorX[0]*mPole[0][0] + vectorY[0]*mPole[0][1] + vectorZ[0]*mPole[0][2]);
-            labFrameQuadrupole[offset]   += vectorY[0]*(vectorX[0]*mPole[1][0] + vectorY[0]*mPole[1][1] + vectorZ[0]*mPole[1][2]);
-            labFrameQuadrupole[offset]   += vectorZ[0]*(vectorX[0]*mPole[2][0] + vectorY[0]*mPole[2][1] + vectorZ[0]*mPole[2][2]);
+            labFrameQuadrupole[offset]     = vectorX[0]*(vectorX[0]*mPole[0][0] + vectorY[0]*mPole[0][1] + vectorZ[0]*mPole[0][2]);
+            labFrameQuadrupole[offset]    += vectorY[0]*(vectorX[0]*mPole[1][0] + vectorY[0]*mPole[1][1] + vectorZ[0]*mPole[1][2]);
+            labFrameQuadrupole[offset]    += vectorZ[0]*(vectorX[0]*mPole[2][0] + vectorY[0]*mPole[2][1] + vectorZ[0]*mPole[2][2]);
     
-            labFrameQuadrupole[offset+1]  = vectorX[0]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
-            labFrameQuadrupole[offset+1] += vectorY[0]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
-            labFrameQuadrupole[offset+1] += vectorZ[0]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
+            labFrameQuadrupole[offset+1]   = vectorX[0]*(vectorX[1]*mPole[0][0] + vectorY[1]*mPole[0][1] + vectorZ[1]*mPole[0][2]);
+            labFrameQuadrupole[offset+1]  += vectorY[0]*(vectorX[1]*mPole[1][0] + vectorY[1]*mPole[1][1] + vectorZ[1]*mPole[1][2]);
+            labFrameQuadrupole[offset+1]  += vectorZ[0]*(vectorX[1]*mPole[2][0] + vectorY[1]*mPole[2][1] + vectorZ[1]*mPole[2][2]);
     
-            labFrameQuadrupole[offset+2]  = vectorX[0]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
-            labFrameQuadrupole[offset+2] += vectorY[0]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
-            labFrameQuadrupole[offset+2] += vectorZ[0]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
+            labFrameQuadrupole[offset+2]   = vectorX[0]*(vectorX[2]*mPole[0][0] + vectorY[2]*mPole[0][1] + vectorZ[2]*mPole[0][2]);
+            labFrameQuadrupole[offset+2]  += vectorY[0]*(vectorX[2]*mPole[1][0] + vectorY[2]*mPole[1][1] + vectorZ[2]*mPole[1][2]);
+            labFrameQuadrupole[offset+2]  += vectorZ[0]*(vectorX[2]*mPole[2][0] + vectorY[2]*mPole[2][1] + vectorZ[2]*mPole[2][2]);
      
-            labFrameQuadrupole[offset+3]  = labFrameQuadrupole[offset+1];
-            labFrameQuadrupole[offset+6]  = labFrameQuadrupole[offset+2];
-            labFrameQuadrupole[offset+7]  = labFrameQuadrupole[offset+5];
+            labFrameQuadrupole[offset+3]   = labFrameQuadrupole[offset+1];
+            labFrameQuadrupole[offset+6]   = labFrameQuadrupole[offset+2];
+            labFrameQuadrupole[offset+7]   = labFrameQuadrupole[offset+5];
     
         }
 
-        particleIndex                += gridDim.x*blockDim.x;
+        particleIndex                 += gridDim.x*blockDim.x;
     }
      
 }
@@ -402,10 +402,10 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
 
    // ---------------------------------------------------------------------------------------
 
-    gpuContext gpu    = amoebaGpu->gpuContext;
+    gpuContext gpu     = amoebaGpu->gpuContext;
 
-    int numBlocks     = gpu->sim.blocks;
-    int numThreads    = gpu->sim.threads_per_block;
+    int numBlocks      = gpu->sim.blocks;
+    int numThreads     = gpu->sim.threads_per_block;
 
     // copy molecular moments to lab frame moment arrays
     // check if chiral center requires moments to have sign flipped
@@ -422,16 +422,16 @@ void cudaComputeAmoebaLabFrameMoments( amoebaGpuContext amoebaGpu )
 
 }
 
-void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood ) 
+static void kSetupAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood ) 
 {
-    std::string methodName = "kCalculateAmoebaMultipoleForces";
+    std::string methodName  = "kSetupAmoebaMultipoleForces";
 
     // compute lab frame moments
 
     cudaComputeAmoebaLabFrameMoments( amoebaGpu );
 
     if( 0 ){
-        gpuContext gpu                       = amoebaGpu->gpuContext;
+        gpuContext gpu                        = amoebaGpu->gpuContext;
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
@@ -448,14 +448,14 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
         cudaComputeAmoebaMutualInducedAndGkField( amoebaGpu );
     } else {
 
-        if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
+        if( amoebaGpu->multipoleNonbondedMethod  == AMOEBA_NO_CUTOFF ){
 
             cudaComputeAmoebaFixedEField( amoebaGpu );
             cudaComputeAmoebaMutualInducedField( amoebaGpu );
 
         } else {
 
-            gpuContext gpu = amoebaGpu->gpuContext;
+            gpuContext gpu  = amoebaGpu->gpuContext;
             kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
             LAUNCHERROR("kFindBlockBoundsPeriodic");
             kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
@@ -480,13 +480,20 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     // check if induce dipole calculation converged -- abort if it did not
 
-    if( amoebaGpu->mutualInducedDone == 0 ){
+    if( amoebaGpu->mutualInducedDone  == 0 ){
        throw OpenMM::OpenMMException("Induced dipole calculation did not converge" );
     }
 
+}
+
+void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood ) 
+{
+
+    kSetupAmoebaMultipoleForces(amoebaGpu, hasAmoebaGeneralizedKirkwood ); 
+
     // calculate electrostatic forces
 
-    if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
+    if( amoebaGpu->multipoleNonbondedMethod  == AMOEBA_NO_CUTOFF ){
         cudaComputeAmoebaElectrostatic( amoebaGpu, (hasAmoebaGeneralizedKirkwood ? 0 : 1) );
     } else {
         cudaComputeAmoebaPmeElectrostatic( amoebaGpu );
@@ -496,62 +503,156 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
 void kCalculateAmoebaMultipolePotential(amoebaGpuContext amoebaGpu ) 
 {
-    std::string methodName = "kCalculateAmoebaMultipolePotential";
 
-    // compute lab frame moments
+    // setup
 
-    cudaComputeAmoebaLabFrameMoments( amoebaGpu );
-
-    if( 0 ){
-        gpuContext gpu                       = amoebaGpu->gpuContext;
-        std::vector<int> fileId;
-        //fileId.push_back( 0 );
-        VectorOfDoubleVectors outputVector;
-        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psLabFrameDipole,     outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaLoadCudaFloatArray( gpu->natoms,  9, amoebaGpu->psLabFrameQuadrupole, outputVector, gpu->psAtomIndex->_pSysData, 1.0f );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaLabMoments", fileId, outputVector );
-    }   
-
-    // compute fixed E-field and mutual induced field 
-
-    if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
-
-        cudaComputeAmoebaFixedEField( amoebaGpu );
-        cudaComputeAmoebaMutualInducedField( amoebaGpu );
-
-    } else {
-
-        gpuContext gpu = amoebaGpu->gpuContext;
-        kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
-        LAUNCHERROR("kFindBlockBoundsPeriodic");
-        kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
-        LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
-
-        compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-
-        //compactStream( gpu->compactPlan, 
-        //               gpu->sim.pInteractingWorkUnit, unsigned int* dOut
-        //               amoebaGpu->psWorkUnit->_pDevData, const unsigned int* dIn
-        //               gpu->sim.pInteractionFlag,        const unsigned int* dValid
-        //               gpu->sim.workUnits,               gpu
-        //               gpu->sim.pInteractionCount);
-        kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-        LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
-
-        cudaComputeAmoebaPmeFixedEField( amoebaGpu );
-        cudaComputeAmoebaPmeMutualInducedField( amoebaGpu );
-    }
-
-    // check if induce dipole calculation converged -- abort if it did not
-
-    if( amoebaGpu->mutualInducedDone == 0 ){
-       throw OpenMM::OpenMMException("Induced dipole calculation did not converge" );
-    }
+    kSetupAmoebaMultipoleForces(amoebaGpu, false ); 
 
     // calculate electrostatic potential
 
     cudaComputeAmoebaElectrostaticPotential( amoebaGpu );
+
+}
+
+void kCalculateAmoebaSystemMultipoleMoments(amoebaGpuContext amoebaGpu, const OpenMM::Vec3& origin, std::vector< double >& outputMultipoleMoments ) 
+{
+
+    // setup
+
+    kSetupAmoebaMultipoleForces(amoebaGpu, false ); 
+
+    gpuContext gpu         = amoebaGpu->gpuContext;
+
+    gpu->psPosq4->Download();
+    gpu->psVelm4->Download();
+    float4* posq           = gpu->psPosq4->_pSysData;    
+    float4* velm           = gpu->psVelm4->_pSysData;    
+    float totalMass        = 0.0f;
+    float centerOfMass[3]  = { 0.0f, 0.0f, 0.0f };
+    for( unsigned int ii  = 0; ii < gpu->natoms; ii++ ){
+        float mass;
+        if( velm->w > 0.0f ){
+            mass        = 1.0f/velm[ii].w;
+        } else {
+            mass        = 0.0f;
+        }
+        totalMass        += mass;
+        centerOfMass[0]  += mass*posq[ii].x;
+        centerOfMass[1]  += mass*posq[ii].y;
+        centerOfMass[2]  += mass*posq[ii].z;
+    }
+
+    std::vector<float4>  posqLocal(gpu->natoms);
+    if( totalMass > 0.0f ){
+        centerOfMass[0]  /= totalMass;
+        centerOfMass[1]  /= totalMass;
+        centerOfMass[2]  /= totalMass;
+    }
+    for( unsigned int ii  = 0; ii < gpu->natoms; ii++ ){
+        posqLocal[ii].x = posq[ii].x  - centerOfMass[0];
+        posqLocal[ii].y = posq[ii].y  - centerOfMass[1];
+        posqLocal[ii].z = posq[ii].z  - centerOfMass[2];
+        posqLocal[ii].w = posq[ii].w;
+    }
+
+    float netchg  = 0.0f;
+
+    float xdpl    = 0.0f;
+    float ydpl    = 0.0f;
+    float zdpl    = 0.0f;
+
+    float xxqdp   = 0.0f;
+    float xyqdp   = 0.0f;
+    float xzqdp   = 0.0f;
+
+    float yxqdp   = 0.0f;
+    float yyqdp   = 0.0f;
+    float yzqdp   = 0.0f;
+
+    float zxqdp   = 0.0f;
+    float zyqdp   = 0.0f;
+    float zzqdp   = 0.0f;
+
+    amoebaGpu->psLabFrameDipole->Download();
+    float* labFrameDipole      = amoebaGpu->psLabFrameDipole->_pSysData;    
+
+    amoebaGpu->psInducedDipole->Download();
+    float* inducedDipole       = amoebaGpu->psInducedDipole->_pSysData;    
+
+    amoebaGpu->psLabFrameQuadrupole->Download();
+    float* labFrameQuadrupole  = amoebaGpu->psLabFrameQuadrupole->_pSysData;    
+    for( unsigned int ii  = 0; ii < gpu->natoms; ii++ ){
+
+        netchg              += posqLocal[ii].w;
+
+        float netDipoleX     = (labFrameDipole[3*ii]    + inducedDipole[3*ii]);
+        float netDipoleY     = (labFrameDipole[3*ii+1]  + inducedDipole[3*ii+1]);
+        float netDipoleZ     = (labFrameDipole[3*ii+2]  + inducedDipole[3*ii+2]);
+
+        xdpl    += posqLocal[ii].x*posqLocal[ii].w + netDipoleX;
+        ydpl    += posqLocal[ii].y*posqLocal[ii].w + netDipoleY;
+        zdpl    += posqLocal[ii].z*posqLocal[ii].w + netDipoleZ;
+
+        xxqdp   += posqLocal[ii].x*posqLocal[ii].x*posqLocal[ii].w + 2.0f*posqLocal[ii].x*netDipoleX;
+        xyqdp   += posqLocal[ii].x*posqLocal[ii].y*posqLocal[ii].w + posqLocal[ii].x*netDipoleY + posqLocal[ii].y*netDipoleX;
+        xzqdp   += posqLocal[ii].x*posqLocal[ii].z*posqLocal[ii].w + posqLocal[ii].x*netDipoleZ + posqLocal[ii].z*netDipoleX;
+
+        yxqdp   += posqLocal[ii].y*posqLocal[ii].x*posqLocal[ii].w + posqLocal[ii].y*netDipoleX + posqLocal[ii].x*netDipoleY;
+        yyqdp   += posqLocal[ii].y*posqLocal[ii].y*posqLocal[ii].w + 2.0f*posqLocal[ii].y*netDipoleY;
+        yzqdp   += posqLocal[ii].y*posqLocal[ii].z*posqLocal[ii].w + posqLocal[ii].y*netDipoleZ + posqLocal[ii].z*netDipoleY;
+
+        zxqdp   += posqLocal[ii].z*posqLocal[ii].x*posqLocal[ii].w + posqLocal[ii].z*netDipoleX + posqLocal[ii].x*netDipoleZ;
+        zyqdp   += posqLocal[ii].z*posqLocal[ii].y*posqLocal[ii].w + posqLocal[ii].z*netDipoleY + posqLocal[ii].y*netDipoleZ;
+        zzqdp   += posqLocal[ii].z*posqLocal[ii].z*posqLocal[ii].w + 2.0f*posqLocal[ii].z*netDipoleZ;
+
+    }
+
+//  convert the quadrupole from traced to traceless form
+ 
+    float qave   = (xxqdp + yyqdp + zzqdp)/3.0f;
+          xxqdp  = 1.5f*(xxqdp-qave);
+          xyqdp  = 1.5f*xyqdp;
+          xzqdp  = 1.5f*xzqdp;
+          yxqdp  = 1.5f*yxqdp;
+          yyqdp  = 1.5f*(yyqdp-qave);
+          yzqdp  = 1.5f*yzqdp;
+          zxqdp  = 1.5f*zxqdp;
+          zyqdp  = 1.5f*zyqdp;
+          zzqdp  = 1.5f*(zzqdp-qave);
+
+//  add the traceless atomic quadrupoles to total quadrupole
+
+    for( unsigned int ii  = 0; ii < gpu->natoms; ii++ ){
+        xxqdp  = xxqdp + 3.0f*labFrameQuadrupole[9*ii];
+        xyqdp  = xyqdp + 3.0f*labFrameQuadrupole[9*ii+1];
+        xzqdp  = xzqdp + 3.0f*labFrameQuadrupole[9*ii+2];
+        yxqdp  = yxqdp + 3.0f*labFrameQuadrupole[9*ii+3];
+        yyqdp  = yyqdp + 3.0f*labFrameQuadrupole[9*ii+4];
+        yzqdp  = yzqdp + 3.0f*labFrameQuadrupole[9*ii+5];
+        zxqdp  = zxqdp + 3.0f*labFrameQuadrupole[9*ii+6];
+        zyqdp  = zyqdp + 3.0f*labFrameQuadrupole[9*ii+7];
+        zzqdp  = zzqdp + 3.0f*labFrameQuadrupole[9*ii+8];
+    }
+ 
+    float debye                = 4.80321f;
+    outputMultipoleMoments.resize( 13 );
+
+    outputMultipoleMoments[0]  = netchg;
+
+    outputMultipoleMoments[1]  = xdpl*debye;
+    outputMultipoleMoments[2]  = ydpl*debye;
+    outputMultipoleMoments[3]  = zdpl*debye;
+    
+    outputMultipoleMoments[4]  = xxqdp*debye;
+    outputMultipoleMoments[5]  = xyqdp*debye;
+    outputMultipoleMoments[6]  = xzqdp*debye;
+
+    outputMultipoleMoments[7]  = yxqdp*debye;
+    outputMultipoleMoments[8]  = yyqdp*debye;
+    outputMultipoleMoments[9]  = yzqdp*debye;
+
+    outputMultipoleMoments[10] = zxqdp*debye;
+    outputMultipoleMoments[11] = zyqdp*debye;
+    outputMultipoleMoments[12] = zzqdp*debye;
 
 }
