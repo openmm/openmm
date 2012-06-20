@@ -67,8 +67,7 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
-        velm(NULL), force(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), expression(NULL),
-        bonded(NULL), nonbonded(NULL), thread(NULL) {
+        velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (!hasInitializedCuda) {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;
