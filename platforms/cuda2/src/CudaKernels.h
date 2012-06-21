@@ -666,57 +666,55 @@ private:
     System& system;
 };
 
-///**
-// * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
-// */
-//class CudaCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
-//public:
-//    CudaCalcGBSAOBCForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGBSAOBCForceKernel(name, platform), cu(cu),
-//            hasCreatedKernels(false), params(NULL), bornSum(NULL), longBornSum(NULL), bornRadii(NULL), bornForce(NULL),
-//            longBornForce(NULL), obcChain(NULL) {
-//    }
-//    ~CudaCalcGBSAOBCForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the GBSAOBCForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const GBSAOBCForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the GBSAOBCForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
-//private:
-//    double prefactor;
-//    bool hasCreatedKernels;
-//    int maxTiles;
-//    CudaContext& cu;
-//    CudaArray<mm_float2>* params;
-//    CudaArray<cl_float>* bornSum;
-//    CudaArray<cl_long>* longBornSum;
-//    CudaArray<cl_float>* bornRadii;
-//    CudaArray<cl_float>* bornForce;
-//    CudaArray<cl_long>* longBornForce;
-//    CudaArray<cl_float>* obcChain;
-//    CUfunction computeBornSumKernel;
-//    CUfunction reduceBornSumKernel;
-//    CUfunction force1Kernel;
-//    CUfunction reduceBornForceKernel;
-//};
-//
+/**
+ * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
+ */
+class CudaCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
+public:
+    CudaCalcGBSAOBCForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGBSAOBCForceKernel(name, platform), cu(cu),
+            hasCreatedKernels(false), params(NULL), bornSum(NULL), bornRadii(NULL), bornForce(NULL), obcChain(NULL) {
+    }
+    ~CudaCalcGBSAOBCForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GBSAOBCForce this kernel will be used for
+     */
+    void initialize(const System& system, const GBSAOBCForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the GBSAOBCForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
+private:
+    double prefactor;
+    bool hasCreatedKernels;
+    int maxTiles;
+    CudaContext& cu;
+    CudaArray* params;
+    CudaArray* bornSum;
+    CudaArray* bornRadii;
+    CudaArray* bornForce;
+    CudaArray* obcChain;
+    CUfunction computeBornSumKernel;
+    CUfunction reduceBornSumKernel;
+    CUfunction force1Kernel;
+    CUfunction reduceBornForceKernel;
+    std::vector<void*> computeSumArgs, force1Args;
+};
+
 ///**
 // * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
 // */

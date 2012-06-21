@@ -1421,6 +1421,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
         pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
         pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
+        if (cu.getUseDoublePrecision())
+            pmeDefines["USE_DOUBLE_PRECISION"] = "1";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
         pmeUpdateBsplinesKernel = cu.getKernel(module, "updateBsplines");
         pmeAtomRangeKernel = cu.getKernel(module, "findAtomRangeForGrid");
@@ -1573,11 +1575,17 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), PmeOrder*PmeOrder*PmeOrder);
         void* finishSpreadArgs[] = {&pmeGrid->getDevicePointer()};
         cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, pmeGrid->getSize());
-        cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+        else
+            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
         void* convolutionArgs[] = {&pmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &pmeBsplineModuliX->getDevicePointer(),
                 &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeConvolutionKernel, convolutionArgs, cu.getNumAtoms());
-        cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+        else
+            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         interpolateForceThreads = 64;
@@ -1859,231 +1867,191 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
     cu.invalidateMolecules();
 }
 
-//class CudaGBSAOBCForceInfo : public CudaForceInfo {
-//public:
-//    CudaGBSAOBCForceInfo(int requiredBuffers, const GBSAOBCForce& force) : CudaForceInfo(requiredBuffers), force(force) {
-//    }
-//    bool areParticlesIdentical(int particle1, int particle2) {
-//        double charge1, charge2, radius1, radius2, scale1, scale2;
-//        force.getParticleParameters(particle1, charge1, radius1, scale1);
-//        force.getParticleParameters(particle2, charge2, radius2, scale2);
-//        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
-//    }
-//private:
-//    const GBSAOBCForce& force;
-//};
-//
-//CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
-//    cu.setAsCurrent();
-//    if (params != NULL)
-//        delete params;
-//    if (bornSum != NULL)
-//        delete bornSum;
-//    if (longBornSum != NULL)
-//        delete longBornSum;
-//    if (bornRadii != NULL)
-//        delete bornRadii;
-//    if (bornForce != NULL)
-//        delete bornForce;
-//    if (longBornForce != NULL)
-//        delete longBornForce;
-//    if (obcChain != NULL)
-//        delete obcChain;
-//}
-//
-//void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
-//    cu.setAsCurrent();
-//    if (cu.getPlatformData().contexts.size() > 1)
-//        throw OpenMMException("GBSAOBCForce does not support using multiple CUDA devices");
-//    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
-//    params = new CudaArray<mm_float2>(cu, cu.getPaddedNumAtoms(), "gbsaObcParams");
-//    bornRadii = new CudaArray<cl_float>(cu, cu.getPaddedNumAtoms(), "bornRadii");
-//    obcChain = new CudaArray<cl_float>(cu, cu.getPaddedNumAtoms(), "obcChain");
-//    if (cu.getSupports64BitGlobalAtomics()) {
-//        longBornSum = new CudaArray<cl_long>(cu, cu.getPaddedNumAtoms(), "longBornSum");
-//        longBornForce = new CudaArray<cl_long>(cu, cu.getPaddedNumAtoms(), "longBornForce");
-//        bornForce = new CudaArray<cl_float>(cu, cu.getPaddedNumAtoms(), "bornForce");
-//        cu.addAutoclearBuffer(longBornSum->getDevicePointer(), 2*longBornSum->getSize());
-//        cu.addAutoclearBuffer(longBornForce->getDevicePointer(), 2*longBornForce->getSize());
-//    }
-//    else {
-//        bornSum = new CudaArray<cl_float>(cu, cu.getPaddedNumAtoms()*nb.getNumForceBuffers(), "bornSum");
-//        bornForce = new CudaArray<cl_float>(cu, cu.getPaddedNumAtoms()*nb.getNumForceBuffers(), "bornForce");
-//        cu.addAutoclearBuffer(bornSum->getDevicePointer(), bornSum->getSize());
-//        cu.addAutoclearBuffer(bornForce->getDevicePointer(), bornForce->getSize());
-//    }
-//    CudaArray<mm_float4>& posq = cu.getPosq();
-//    int numParticles = force.getNumParticles();
-//    vector<mm_float2> paramsVector(numParticles);
-//    const double dielectricOffset = 0.009;
-//    for (int i = 0; i < numParticles; i++) {
-//        double charge, radius, scalingFactor;
-//        force.getParticleParameters(i, charge, radius, scalingFactor);
-//        radius -= dielectricOffset;
-//        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
-//        posq[i].w = (float) charge;
-//    }
-//    posq.upload();
-//    params->upload(paramsVector);
-//    prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
-//    bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
-//    bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
-//    string source = CudaKernelSources::gbsaObc2;
-//    nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source, force.getForceGroup());
-//    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(cl_float2), params->getDevicePointer()));;
-//    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("bornForce", "float", 1, sizeof(cl_float), bornForce->getDevicePointer()));;
-//    cu.addForce(new CudaGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
-//}
-//
-//double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
-//    bool deviceIsCpu = (cu.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
-//    if (!hasCreatedKernels) {
-//        // These Kernels cannot be created in initialize(), because the CudaNonbondedUtilities has not been initialized yet then.
-//
-//        hasCreatedKernels = true;
-//        maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : 0);
-//        map<string, string> defines;
-//        if (nb.getForceBufferPerAtomBlock())
-//            defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
-//        if (nb.getUseCutoff())
-//            defines["USE_CUTOFF"] = "1";
-//        if (nb.getUsePeriodic())
-//            defines["USE_PERIODIC"] = "1";
-//        defines["CUTOFF_SQUARED"] = cu.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
-//        defines["PREFACTOR"] = cu.doubleToString(prefactor);
-//        defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-//        defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-//        defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-//        defines["FORCE_WORK_GROUP_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
-//        string platformVendor = cu::Platform(cu.getDevice().getInfo<CL_DEVICE_PLATFORM>()).getInfo<CL_PLATFORM_VENDOR>();
-//        if (platformVendor == "Apple")
-//            defines["USE_APPLE_WORKAROUND"] = "1";
-//        string file;
-//        if (deviceIsCpu)
-//            file = CudaKernelSources::gbsaObc_cpu;
-//        else if (cu.getSIMDWidth() == 32)
-//            file = CudaKernelSources::gbsaObc_nvidia;
-//        else
-//            file = CudaKernelSources::gbsaObc_default;
-//        CUmodule module = cu.createModule(file, defines);
-//        bool useLong = (cu.getSupports64BitGlobalAtomics() && !deviceIsCpu);
-//        int index = 0;
-//        computeBornSumKernel = cu.getKernel(module, "computeBornSum");
-//        computeBornSumKernel.setArg<cu::Buffer>(index++, (useLong ? longBornSum->getDevicePointer() : bornSum->getDevicePointer()));
-//        computeBornSumKernel.setArg<cu::Buffer>(index++, cu.getPosq().getDevicePointer());
-//        computeBornSumKernel.setArg<cu::Buffer>(index++, params->getDevicePointer());
-//        if (nb.getUseCutoff()) {
-//            computeBornSumKernel.setArg<cu::Buffer>(index++, nb.getInteractingTiles().getDevicePointer());
-//            computeBornSumKernel.setArg<cu::Buffer>(index++, nb.getInteractionCount().getDevicePointer());
-//            index += 2; // The periodic box size arguments are set when the kernel is executed.
-//            computeBornSumKernel.setArg<cl_uint>(index++, maxTiles);
-//            if (cu.getSIMDWidth() == 32 || deviceIsCpu)
-//                computeBornSumKernel.setArg<cu::Buffer>(index++, nb.getInteractionFlags().getDevicePointer());
-//        }
-//        else
-//            computeBornSumKernel.setArg<cl_uint>(index++, cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
-//        if (cu.getSIMDWidth() == 32) {
-//            computeBornSumKernel.setArg<cu::Buffer>(index++, nb.getExclusionIndices().getDevicePointer());
-//            computeBornSumKernel.setArg<cu::Buffer>(index++, nb.getExclusionRowIndices().getDevicePointer());
-//        }
-//        force1Kernel = cu.getKernel(module, "computeGBSAForce1");
-//        index = 0;
-//        force1Kernel.setArg<cu::Buffer>(index++, (useLong ? cu.getLongForceBuffer().getDevicePointer() : cu.getForceBuffers().getDevicePointer()));
-//        force1Kernel.setArg<cu::Buffer>(index++, (useLong ? longBornForce->getDevicePointer() : bornForce->getDevicePointer()));
-//        force1Kernel.setArg<cu::Buffer>(index++, cu.getEnergyBuffer().getDevicePointer());
-//        force1Kernel.setArg<cu::Buffer>(index++, cu.getPosq().getDevicePointer());
-//        force1Kernel.setArg<cu::Buffer>(index++, bornRadii->getDevicePointer());
-//        if (nb.getUseCutoff()) {
-//            force1Kernel.setArg<cu::Buffer>(index++, nb.getInteractingTiles().getDevicePointer());
-//            force1Kernel.setArg<cu::Buffer>(index++, nb.getInteractionCount().getDevicePointer());
-//            index += 2; // The periodic box size arguments are set when the kernel is executed.
-//            force1Kernel.setArg<cl_uint>(index++, maxTiles);
-//            if (cu.getSIMDWidth() == 32 || deviceIsCpu)
-//                force1Kernel.setArg<cu::Buffer>(index++, nb.getInteractionFlags().getDevicePointer());
-//        }
-//        else
-//            force1Kernel.setArg<cl_uint>(index++, cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
-//        if (cu.getSIMDWidth() == 32) {
-//            force1Kernel.setArg<cu::Buffer>(index++, nb.getExclusionIndices().getDevicePointer());
-//            force1Kernel.setArg<cu::Buffer>(index++, nb.getExclusionRowIndices().getDevicePointer());
-//        }
-//        module = cu.createModule(CudaKernelSources::gbsaObcReductions, defines);
-//        reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
-//        reduceBornSumKernel.setArg<cl_int>(0, cu.getPaddedNumAtoms());
-//        reduceBornSumKernel.setArg<cl_int>(1, nb.getNumForceBuffers());
-//        reduceBornSumKernel.setArg<cl_float>(2, 1.0f);
-//        reduceBornSumKernel.setArg<cl_float>(3, 0.8f);
-//        reduceBornSumKernel.setArg<cl_float>(4, 4.85f);
-//        reduceBornSumKernel.setArg<cu::Buffer>(5, (useLong ? longBornSum->getDevicePointer() : bornSum->getDevicePointer()));
-//        reduceBornSumKernel.setArg<cu::Buffer>(6, params->getDevicePointer());
-//        reduceBornSumKernel.setArg<cu::Buffer>(7, bornRadii->getDevicePointer());
-//        reduceBornSumKernel.setArg<cu::Buffer>(8, obcChain->getDevicePointer());
-//        reduceBornForceKernel = cu.getKernel(module, "reduceBornForce");
-//        index = 0;
-//        reduceBornForceKernel.setArg<cl_int>(index++, cu.getPaddedNumAtoms());
-//        reduceBornForceKernel.setArg<cl_int>(index++, nb.getNumForceBuffers());
-//        reduceBornForceKernel.setArg<cu::Buffer>(index++, bornForce->getDevicePointer());
-//        if (useLong)
-//            reduceBornForceKernel.setArg<cu::Buffer>(index++, longBornForce->getDevicePointer());
-//        reduceBornForceKernel.setArg<cu::Buffer>(index++, cu.getEnergyBuffer().getDevicePointer());
-//        reduceBornForceKernel.setArg<cu::Buffer>(index++, params->getDevicePointer());
-//        reduceBornForceKernel.setArg<cu::Buffer>(index++, bornRadii->getDevicePointer());
-//        reduceBornForceKernel.setArg<cu::Buffer>(index++, obcChain->getDevicePointer());
-//    }
-//    if (nb.getUseCutoff()) {
-//        computeBornSumKernel.setArg<mm_float4>(5, cu.getPeriodicBoxSize());
-//        computeBornSumKernel.setArg<mm_float4>(6, cu.getInvPeriodicBoxSize());
-//        force1Kernel.setArg<mm_float4>(7, cu.getPeriodicBoxSize());
-//        force1Kernel.setArg<mm_float4>(8, cu.getInvPeriodicBoxSize());
-//        if (maxTiles < nb.getInteractingTiles().getSize()) {
-//            maxTiles = nb.getInteractingTiles().getSize();
-//            computeBornSumKernel.setArg<cu::Buffer>(3, nb.getInteractingTiles().getDevicePointer());
-//            computeBornSumKernel.setArg<cl_uint>(7, maxTiles);
-//            force1Kernel.setArg<cu::Buffer>(5, nb.getInteractingTiles().getDevicePointer());
-//            force1Kernel.setArg<cl_uint>(9, maxTiles);
-//            if (cu.getSIMDWidth() == 32 || deviceIsCpu) {
-//                computeBornSumKernel.setArg<cu::Buffer>(8, nb.getInteractionFlags().getDevicePointer());
-//                force1Kernel.setArg<cu::Buffer>(10, nb.getInteractionFlags().getDevicePointer());
-//            }
-//        }
-//    }
-//    cu.executeKernel(computeBornSumKernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
-//    cu.executeKernel(reduceBornSumKernel, cu.getPaddedNumAtoms());
-//    cu.executeKernel(force1Kernel, nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
-//    cu.executeKernel(reduceBornForceKernel, cu.getPaddedNumAtoms());
-//    return 0.0;
-//}
-//
-//void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
-//    // Make sure the new parameters are acceptable.
-//    
-//    cu.setAsCurrent();
-//    int numParticles = force.getNumParticles();
-//    if (numParticles != cu.getNumAtoms())
-//        throw OpenMMException("updateParametersInContext: The number of particles has changed");
-//    
-//    // Record the per-particle parameters.
-//    
-//    CudaArray<mm_float4>& posq = cu.getPosq();
-//    posq.download();
-//    vector<mm_float2> paramsVector(numParticles);
-//    const double dielectricOffset = 0.009;
-//    for (int i = 0; i < numParticles; i++) {
-//        double charge, radius, scalingFactor;
-//        force.getParticleParameters(i, charge, radius, scalingFactor);
-//        radius -= dielectricOffset;
-//        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
-//        posq[i].w = (float) charge;
-//    }
-//    posq.upload();
-//    params->upload(paramsVector);
-//    
-//    // Mark that the current reordering may be invalid.
-//    
-//    cu.invalidateMolecules();
-//}
-//
+class CudaGBSAOBCForceInfo : public CudaForceInfo {
+public:
+    CudaGBSAOBCForceInfo(const GBSAOBCForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+    }
+private:
+    const GBSAOBCForce& force;
+};
+
+CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
+    cu.setAsCurrent();
+    if (params != NULL)
+        delete params;
+    if (bornSum != NULL)
+        delete bornSum;
+    if (bornRadii != NULL)
+        delete bornRadii;
+    if (bornForce != NULL)
+        delete bornForce;
+    if (obcChain != NULL)
+        delete obcChain;
+}
+
+void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+    cu.setAsCurrent();
+    if (cu.getPlatformData().contexts.size() > 1)
+        throw OpenMMException("GBSAOBCForce does not support using multiple CUDA devices");
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    params = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "gbsaObcParams");
+    if (cu.getUseDoublePrecision()) {
+        bornRadii = CudaArray::create<double>(cu, cu.getPaddedNumAtoms(), "bornRadii");
+        obcChain = CudaArray::create<double>(cu, cu.getPaddedNumAtoms(), "obcChain");
+    }
+    else {
+        bornRadii = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "bornRadii");
+        obcChain = CudaArray::create<float>(cu, cu.getPaddedNumAtoms(), "obcChain");
+    }
+    bornSum = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "bornSum");
+    bornForce = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "bornForce");
+    cu.addAutoclearBuffer(bornSum->getDevicePointer(), bornSum->getSize()*sizeof(long long));
+    cu.addAutoclearBuffer(bornForce->getDevicePointer(), bornForce->getSize()*sizeof(long long));
+    CudaArray& posq = cu.getPosq();
+    float4* posqf = (float4*) cu.getPinnedBuffer();
+    double4* posqd = (double4*) cu.getPinnedBuffer();
+    vector<float2> paramsVector(cu.getPaddedNumAtoms());
+    const double dielectricOffset = 0.009;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        radius -= dielectricOffset;
+        paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
+        if (cu.getUseDoublePrecision())
+            posqd[i] = make_double4(0, 0, 0, charge);
+        else
+            posqf[i] = make_float4(0, 0, 0, (float) charge);
+    }
+    posq.upload(cu.getPinnedBuffer());
+    params->upload(paramsVector);
+    prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
+    bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
+    string source = CudaKernelSources::gbsaObc2;
+    nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source, force.getForceGroup());
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(float2), params->getDevicePointer()));;
+    nb.addParameter(CudaNonbondedUtilities::ParameterInfo("bornForce", "long long", 1, sizeof(long long), bornForce->getDevicePointer()));;
+    cu.addForce(new CudaGBSAOBCForceInfo(force));
+}
+
+double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    if (!hasCreatedKernels) {
+        // These Kernels cannot be created in initialize(), because the CudaNonbondedUtilities has not been initialized yet then.
+
+        hasCreatedKernels = true;
+        maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
+        map<string, string> defines;
+        if (nb.getUseCutoff())
+            defines["USE_CUTOFF"] = "1";
+        if (nb.getUsePeriodic())
+            defines["USE_PERIODIC"] = "1";
+        defines["CUTOFF_SQUARED"] = cu.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
+        defines["PREFACTOR"] = cu.doubleToString(prefactor);
+        defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+        defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+        defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+        defines["FORCE_WORK_GROUP_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
+        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::gbsaObc1, defines);
+        computeBornSumKernel = cu.getKernel(module, "computeBornSum");
+        computeSumArgs.push_back(&bornSum->getDevicePointer());
+        computeSumArgs.push_back(&cu.getPosq().getDevicePointer());
+        computeSumArgs.push_back(&params->getDevicePointer());
+        if (nb.getUseCutoff()) {
+            computeSumArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
+            computeSumArgs.push_back(&nb.getInteractionCount().getDevicePointer());
+            computeSumArgs.push_back(cu.getPeriodicBoxSizePointer());
+            computeSumArgs.push_back(cu.getInvPeriodicBoxSizePointer());
+            computeSumArgs.push_back(&maxTiles);
+            computeSumArgs.push_back(&nb.getInteractionFlags().getDevicePointer());
+        }
+        else
+            computeSumArgs.push_back(&maxTiles);
+        computeSumArgs.push_back(&nb.getExclusionIndices().getDevicePointer());
+        computeSumArgs.push_back(&nb.getExclusionRowIndices().getDevicePointer());
+        force1Kernel = cu.getKernel(module, "computeGBSAForce1");
+        force1Args.push_back(&cu.getForce().getDevicePointer());
+        force1Args.push_back(&bornForce->getDevicePointer());
+        force1Args.push_back(&cu.getEnergyBuffer().getDevicePointer());
+        force1Args.push_back(&cu.getPosq().getDevicePointer());
+        force1Args.push_back(&bornRadii->getDevicePointer());
+        if (nb.getUseCutoff()) {
+            force1Args.push_back(&nb.getInteractingTiles().getDevicePointer());
+            force1Args.push_back(&nb.getInteractionCount().getDevicePointer());
+            force1Args.push_back(cu.getPeriodicBoxSizePointer());
+            force1Args.push_back(cu.getInvPeriodicBoxSizePointer());
+            force1Args.push_back(&maxTiles);
+            force1Args.push_back(&nb.getInteractionFlags().getDevicePointer());
+        }
+        else
+            force1Args.push_back(&maxTiles);
+        force1Args.push_back(&nb.getExclusionIndices().getDevicePointer());
+        force1Args.push_back(&nb.getExclusionRowIndices().getDevicePointer());
+        module = cu.createModule(CudaKernelSources::gbsaObcReductions, defines);
+        reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
+        reduceBornForceKernel = cu.getKernel(module, "reduceBornForce");
+    }
+    if (nb.getUseCutoff()) {
+        if (maxTiles < nb.getInteractingTiles().getSize()) {
+            maxTiles = nb.getInteractingTiles().getSize();
+            computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
+            force1Args[5] = &nb.getInteractingTiles().getDevicePointer();
+            computeSumArgs[8] = &nb.getInteractionFlags().getDevicePointer();
+            force1Args[10] = &nb.getInteractionFlags().getDevicePointer();
+        }
+    }
+    cu.executeKernel(computeBornSumKernel, &computeSumArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    float alpha = 1.0f, beta = 0.8f, gamma = 4.85f;
+    void* reduceSumArgs[] = {&alpha, &beta, &gamma, &bornSum->getDevicePointer(), &params->getDevicePointer(),
+            &bornRadii->getDevicePointer(), &obcChain->getDevicePointer()};
+    cu.executeKernel(reduceBornSumKernel, reduceSumArgs, cu.getPaddedNumAtoms());
+    cu.executeKernel(force1Kernel, &force1Args[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    void* reduceForceArgs[] = {&bornForce->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params->getDevicePointer(),
+            &bornRadii->getDevicePointer(), &obcChain->getDevicePointer()};
+    cu.executeKernel(reduceBornForceKernel, &reduceForceArgs[0], cu.getPaddedNumAtoms());
+    return 0.0;
+}
+
+void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cu.setAsCurrent();
+    int numParticles = force.getNumParticles();
+    if (numParticles != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    CudaArray& posq = cu.getPosq();
+    float4* posqf = (float4*) cu.getPinnedBuffer();
+    double4* posqd = (double4*) cu.getPinnedBuffer();
+    posq.download(cu.getPinnedBuffer());
+    vector<float2> paramsVector(cu.getPaddedNumAtoms());
+    const double dielectricOffset = 0.009;
+    for (int i = 0; i < numParticles; i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        radius -= dielectricOffset;
+        paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
+        if (cu.getUseDoublePrecision())
+            posqd[i].w = charge;
+        else
+            posqf[i].w = (float) charge;
+    }
+    posq.upload(cu.getPinnedBuffer());
+    params->upload(paramsVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
 //class CudaCustomGBForceInfo : public CudaForceInfo {
 //public:
 //    CudaCustomGBForceInfo(int requiredBuffers, const CustomGBForce& force) : CudaForceInfo(requiredBuffers), force(force) {
@@ -2870,7 +2838,7 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
 //            perParticleValueKernel.setArg<cu::Buffer>(index++, tabulatedFunctionParams->getDevicePointer());
 //        }
 //        index = 0;
-//        pairEnergyKernel.setArg<cu::Buffer>(index++, useLong ? cu.getLongForceBuffer().getDevicePointer() : cu.getForceBuffers().getDevicePointer());
+//        pairEnergyKernel.setArg<cu::Buffer>(index++, useLong ? cu.getLongForceBuffer().getDevicePointer() : cu.getForce().getDevicePointer());
 //        pairEnergyKernel.setArg<cu::Buffer>(index++, cu.getEnergyBuffer().getDevicePointer());
 //        pairEnergyKernel.setArg(index++, (deviceIsCpu ? CudaContext::TileSize : nb.getForceThreadBlockSize())*sizeof(cl_float4), NULL);
 //        pairEnergyKernel.setArg<cu::Buffer>(index++, cu.getPosq().getDevicePointer());
@@ -2927,7 +2895,7 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
 //        index = 0;
 //        perParticleEnergyKernel.setArg<cl_int>(index++, cu.getPaddedNumAtoms());
 //        perParticleEnergyKernel.setArg<cl_int>(index++, nb.getNumForceBuffers());
-//        perParticleEnergyKernel.setArg<cu::Buffer>(index++, cu.getForceBuffers().getDevicePointer());
+//        perParticleEnergyKernel.setArg<cu::Buffer>(index++, cu.getForce().getDevicePointer());
 //        perParticleEnergyKernel.setArg<cu::Buffer>(index++, cu.getEnergyBuffer().getDevicePointer());
 //        perParticleEnergyKernel.setArg<cu::Buffer>(index++, cu.getPosq().getDevicePointer());
 //        if (globals != NULL)
@@ -2947,7 +2915,7 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
 //        }
 //        if (needParameterGradient) {
 //            index = 0;
-//            gradientChainRuleKernel.setArg<cu::Buffer>(index++, cu.getForceBuffers().getDevicePointer());
+//            gradientChainRuleKernel.setArg<cu::Buffer>(index++, cu.getForce().getDevicePointer());
 //            gradientChainRuleKernel.setArg<cu::Buffer>(index++, cu.getPosq().getDevicePointer());
 //            if (globals != NULL)
 //                gradientChainRuleKernel.setArg<cu::Buffer>(index++, globals->getDevicePointer());

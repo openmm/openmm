@@ -179,6 +179,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["RECIP"] = useDoublePrecision ? "1.0/" : "1.0f/";
     compilationDefines["EXP"] = useDoublePrecision ? "exp" : "expf";
     compilationDefines["LOG"] = useDoublePrecision ? "log" : "logf";
+    compilationDefines["POW"] = useDoublePrecision ? "pow" : "powf";
     compilationDefines["COS"] = useDoublePrecision ? "cos" : "cosf";
     compilationDefines["SIN"] = useDoublePrecision ? "sin" : "sinf";
     compilationDefines["TAN"] = useDoublePrecision ? "tan" : "tanf";
