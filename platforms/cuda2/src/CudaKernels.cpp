@@ -37,7 +37,7 @@
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
 #include "CudaIntegrationUtilities.h"
-//#include "CudaNonbondedUtilities.h"
+#include "CudaNonbondedUtilities.h"
 #include "CudaKernelSources.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/Operation.h"
@@ -282,48 +282,62 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
 
 void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
     cu.setAsCurrent();
-//    int version = 1;
-//    stream.write((char*) &version, sizeof(int));
-//    double time = cu.getTime();
-//    stream.write((char*) &time, sizeof(double));
-//    cu.getPosq().download();
-//    stream.write((char*) &cu.getPosq()[0], sizeof(mm_float4)*cu.getPosq().getSize());
-//    cu.getVelm().download();
-//    stream.write((char*) &cu.getVelm()[0], sizeof(mm_float4)*cu.getVelm().getSize());
-//    stream.write((char*) &cu.getAtomIndex()[0], sizeof(cl_int)*cu.getAtomIndex().getSize());
-//    stream.write((char*) &cu.getPosCellOffsets()[0], sizeof(mm_int4)*cu.getPosCellOffsets().size());
-//    mm_float4 box = cu.getPeriodicBoxSize();
-//    stream.write((char*) &box, sizeof(mm_float4));
-//    cu.getIntegrationUtilities().createCheckpoint(stream);
-//    SimTKOpenMMUtilities::createCheckpoint(stream);
+    int version = 1;
+    stream.write((char*) &version, sizeof(int));
+    double time = cu.getTime();
+    stream.write((char*) &time, sizeof(double));
+    int stepCount = cu.getStepCount();
+    stream.write((char*) &stepCount, sizeof(int));
+    int computeForceCount = cu.getComputeForceCount();
+    stream.write((char*) &computeForceCount, sizeof(int));
+    int bufferSize = cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
+    char* buffer = (char*) cu.getPinnedBuffer();
+    cu.getPosq().download(buffer);
+    stream.write(buffer, bufferSize);
+    cu.getVelm().download(buffer);
+    stream.write(buffer, bufferSize);
+    stream.write((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
+    stream.write((char*) &cu.getPosCellOffsets()[0], sizeof(int4)*cu.getPosCellOffsets().size());
+    double4 box = cu.getPeriodicBoxSize();
+    stream.write((char*) &box, sizeof(double4));
+    cu.getIntegrationUtilities().createCheckpoint(stream);
+    SimTKOpenMMUtilities::createCheckpoint(stream);
 }
 
 void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
     cu.setAsCurrent();
-//    int version;
-//    stream.read((char*) &version, sizeof(int));
-//    if (version != 1)
-//        throw OpenMMException("Checkpoint was created with a different version of OpenMM");
-//    double time;
-//    stream.read((char*) &time, sizeof(double));
-//    vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
-//    for (int i = 0; i < (int) contexts.size(); i++)
-//        contexts[i]->setTime(time);
-//    stream.read((char*) &cu.getPosq()[0], sizeof(mm_float4)*cu.getPosq().getSize());
-//    cu.getPosq().upload();
-//    stream.read((char*) &cu.getVelm()[0], sizeof(mm_float4)*cu.getVelm().getSize());
-//    cu.getVelm().upload();
-//    stream.read((char*) &cu.getAtomIndex()[0], sizeof(cl_int)*cu.getAtomIndex().getSize());
-//    cu.getAtomIndex().upload();
-//    stream.read((char*) &cu.getPosCellOffsets()[0], sizeof(mm_int4)*cu.getPosCellOffsets().size());
-//    mm_float4 box;
-//    stream.read((char*) &box, sizeof(mm_float4));
-//    for (int i = 0; i < (int) contexts.size(); i++)
-//        contexts[i]->setPeriodicBoxSize(box.x, box.y, box.z);
-//    cu.getIntegrationUtilities().loadCheckpoint(stream);
-//    SimTKOpenMMUtilities::loadCheckpoint(stream);
-//    for (int i = 0; i < cu.getReorderListeners().size(); i++)
-//        cu.getReorderListeners()[i]->execute();
+    int version;
+    stream.read((char*) &version, sizeof(int));
+    if (version != 1)
+        throw OpenMMException("Checkpoint was created with a different version of OpenMM");
+    double time;
+    stream.read((char*) &time, sizeof(double));
+    int stepCount, computeForceCount;
+    stream.read((char*) &stepCount, sizeof(int));
+    stream.read((char*) &computeForceCount, sizeof(int));
+    vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
+    for (int i = 0; i < (int) contexts.size(); i++) {
+        contexts[i]->setTime(time);
+        contexts[i]->setStepCount(stepCount);
+        contexts[i]->setComputeForceCount(computeForceCount);
+    }
+    int bufferSize = cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
+    char* buffer = (char*) cu.getPinnedBuffer();
+    stream.read(buffer, bufferSize);
+    cu.getPosq().upload(buffer);
+    stream.read(buffer, bufferSize);
+    cu.getVelm().upload(buffer);
+    stream.read((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
+    cu.getAtomIndexArray().upload(cu.getAtomIndex());
+    stream.read((char*) &cu.getPosCellOffsets()[0], sizeof(int4)*cu.getPosCellOffsets().size());
+    double4 box;
+    stream.read((char*) &box, sizeof(double4));
+    for (int i = 0; i < (int) contexts.size(); i++)
+        contexts[i]->setPeriodicBoxSize(box.x, box.y, box.z);
+    cu.getIntegrationUtilities().loadCheckpoint(stream);
+    SimTKOpenMMUtilities::loadCheckpoint(stream);
+    for (int i = 0; i < cu.getReorderListeners().size(); i++)
+        cu.getReorderListeners()[i]->execute();
 }
 
 void CudaApplyConstraintsKernel::initialize(const System& system) {
@@ -840,6 +854,7 @@ private:
 };
 
 CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
+    cu.setAsCurrent();
     if (params != NULL)
         delete params;
 }
@@ -926,6 +941,7 @@ private:
 };
 
 CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
+    cu.setAsCurrent();
     if (params1 != NULL)
         delete params1;
     if (params2 != NULL)
@@ -3983,8 +3999,8 @@ CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 }
 
 void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
@@ -3995,6 +4011,7 @@ void CudaIntegrateVerletStepKernel::initialize(const System& system, const Verle
 }
 
 void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
     double dt = integrator.getStepSize();
@@ -4042,8 +4059,8 @@ CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
 }
 
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
     cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -4056,6 +4073,7 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
 }
 
 void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
     double temperature = integrator.getTemperature();
@@ -4120,8 +4138,8 @@ CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 }
 
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
     cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -4133,6 +4151,7 @@ void CudaIntegrateBrownianStepKernel::initialize(const System& system, const Bro
 }
 
 void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
     double temperature = integrator.getTemperature();
@@ -4175,8 +4194,8 @@ CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() 
 }
 
 void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
-    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
@@ -4188,6 +4207,7 @@ void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, con
 }
 
 double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
 
@@ -4252,8 +4272,8 @@ CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKerne
 }
 
 void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
-    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
     cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
@@ -4268,6 +4288,7 @@ void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, c
 }
 
 double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
 
@@ -4412,8 +4433,8 @@ CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
 }
 
 void CudaIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
-    cu.setAsCurrent();
     cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
     cu.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
@@ -4492,6 +4513,7 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
 }
 
 void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
     int numSteps = integrator.getNumComputations();

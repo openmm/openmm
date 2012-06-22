@@ -814,8 +814,8 @@ int main() {
         testBlockInteractions(true);
         testDispersionCorrection();
         testChangingParameters();
-//        testParallelComputation(false);
-//        testParallelComputation(true);
+        testParallelComputation(false);
+        testParallelComputation(true);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

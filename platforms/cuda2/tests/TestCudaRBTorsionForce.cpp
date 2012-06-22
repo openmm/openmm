@@ -143,7 +143,7 @@ void testParallelComputation() {
 int main() {
     try {
         testRBTorsions();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

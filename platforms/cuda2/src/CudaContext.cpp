@@ -113,7 +113,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
                 deviceIndex = i;
                 bestSpeed = speed;
                 bestCompute = major;
-                gpuArchitecture = intToString(major)+intToString(minor);
             }
         }
     }
@@ -121,6 +120,9 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         throw OpenMMException("No compatible CUDA device is available");
     CHECK_RESULT(cuDeviceGet(&device, deviceIndex));
     this->deviceIndex = deviceIndex;
+    int major, minor;
+    CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
+    gpuArchitecture = intToString(major)+intToString(minor);
     defaultOptimizationOptions = "--use_fast_math";
     unsigned int flags = CU_CTX_MAP_HOST;
     if (useBlockingSync)

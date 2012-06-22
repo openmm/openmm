@@ -205,7 +205,7 @@ int main() {
     try {
         testBond();
         testPositionDependence();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

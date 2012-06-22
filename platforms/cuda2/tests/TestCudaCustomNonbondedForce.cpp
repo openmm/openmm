@@ -424,7 +424,7 @@ int main() {
         testPeriodic();
         testTabulatedFunction();
         testCoulombLennardJones();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

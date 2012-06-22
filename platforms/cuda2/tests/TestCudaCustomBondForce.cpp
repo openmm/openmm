@@ -169,7 +169,7 @@ int main() {
     try {
         testBonds();
         testManyParameters();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

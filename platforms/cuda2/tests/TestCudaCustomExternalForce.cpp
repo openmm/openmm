@@ -166,7 +166,7 @@ int main() {
     try {
         testForce();
         testManyParameters();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

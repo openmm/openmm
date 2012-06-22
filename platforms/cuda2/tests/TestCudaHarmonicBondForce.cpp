@@ -121,7 +121,7 @@ void testParallelComputation() {
 int main() {
     try {
         testBonds();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

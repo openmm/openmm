@@ -205,7 +205,7 @@ int main() {
     try {
         testTorsions();
         testRange();
-//        testParallelComputation();
+        testParallelComputation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

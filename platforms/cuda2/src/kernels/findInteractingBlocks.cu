@@ -101,13 +101,14 @@ __device__ void storeInteractionData(ushort2* buffer, int* valid, short* sum, us
 extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, const real4* __restrict__ blockCenter,
         const real4* __restrict__ blockBoundingBox, unsigned int* __restrict__ interactionCount, ushort2* __restrict__ interactingTiles,
         unsigned int* __restrict__ interactionFlags, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int startTileIndex,
-        unsigned int endTileIndex) {
+        unsigned int numTiles) {
     __shared__ ushort2 buffer[BUFFER_SIZE];
     __shared__ int valid[BUFFER_SIZE];
     __shared__ short sum[BUFFER_SIZE];
     __shared__ ushort2 temp[BUFFER_SIZE];
     __shared__ int bufferFull;
     __shared__ int globalIndex;
+    unsigned int endTileIndex = startTileIndex+numTiles;
     int valuesInBuffer = 0;
     if (threadIdx.x == 0)
         bufferFull = false;

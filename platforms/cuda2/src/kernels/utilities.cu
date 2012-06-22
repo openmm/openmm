@@ -73,34 +73,4 @@ __global__ void clearSixBuffers(int* __restrict__ buffer1, int size1, int* __res
     clearSingleBuffer(buffer6, size6);
 }
 
-/**
- * Sum a collection of buffers into the first one.
- */
-
-__global__ void reduceFloat4Buffer(float4* __restrict__ buffer, int bufferSize, int numBuffers) {
-    int index = blockDim.x*blockIdx.x+threadIdx.x;
-    int totalSize = bufferSize*numBuffers;
-    while (index < bufferSize) {
-        float4 sum = buffer[index];
-        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
-            sum += buffer[i];
-        buffer[index] = sum;
-        index += blockDim.x*gridDim.x;
-    }
-}
-
-/**
- * Sum the various buffers containing forces.
- */
-__global__ void reduceForces(const long* __restrict__ longBuffer, float4* __restrict__ buffer, int bufferSize, int numBuffers) {
-    int totalSize = bufferSize*numBuffers;
-    float scale = 1.0f/(float) 0xFFFFFFFF;
-    for (int index = blockDim.x*blockIdx.x+threadIdx.x; index < bufferSize; index += blockDim.x*gridDim.x) {
-        float4 sum = make_float4(scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0.0f);
-        for (int i = index; i < totalSize; i += bufferSize)
-            sum += buffer[i];
-        buffer[index] = sum;
-    }
-}
-
 }

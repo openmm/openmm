@@ -26,7 +26,7 @@
 
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
-//#include "CudaParallelKernels.h"
+#include "CudaParallelKernels.h"
 #include "CudaPlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
@@ -35,38 +35,38 @@ using namespace OpenMM;
 
 KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
-//    if (data.contexts.size() > 1) {
-//        // We are running in parallel on multiple devices, so we may want to create a parallel kernel.
-//        
-//        if (name == CalcForcesAndEnergyKernel::Name())
-//            return new CudaParallelCalcForcesAndEnergyKernel(name, platform, data);
-//        if (name == CalcHarmonicBondForceKernel::Name())
-//            return new CudaParallelCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomBondForceKernel::Name())
-//            return new CudaParallelCalcCustomBondForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcHarmonicAngleForceKernel::Name())
-//            return new CudaParallelCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomAngleForceKernel::Name())
-//            return new CudaParallelCalcCustomAngleForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcPeriodicTorsionForceKernel::Name())
-//            return new CudaParallelCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcRBTorsionForceKernel::Name())
-//            return new CudaParallelCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCMAPTorsionForceKernel::Name())
-//            return new CudaParallelCalcCMAPTorsionForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomTorsionForceKernel::Name())
-//            return new CudaParallelCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcNonbondedForceKernel::Name())
-//            return new CudaParallelCalcNonbondedForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomNonbondedForceKernel::Name())
-//            return new CudaParallelCalcCustomNonbondedForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomExternalForceKernel::Name())
-//            return new CudaParallelCalcCustomExternalForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomHbondForceKernel::Name())
-//            return new CudaParallelCalcCustomHbondForceKernel(name, platform, data, context.getSystem());
-//        if (name == CalcCustomCompoundBondForceKernel::Name())
-//            return new CudaParallelCalcCustomCompoundBondForceKernel(name, platform, data, context.getSystem());
-//    }
+    if (data.contexts.size() > 1) {
+        // We are running in parallel on multiple devices, so we may want to create a parallel kernel.
+        
+        if (name == CalcForcesAndEnergyKernel::Name())
+            return new CudaParallelCalcForcesAndEnergyKernel(name, platform, data);
+        if (name == CalcHarmonicBondForceKernel::Name())
+            return new CudaParallelCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomBondForceKernel::Name())
+            return new CudaParallelCalcCustomBondForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcHarmonicAngleForceKernel::Name())
+            return new CudaParallelCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomAngleForceKernel::Name())
+            return new CudaParallelCalcCustomAngleForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcPeriodicTorsionForceKernel::Name())
+            return new CudaParallelCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcRBTorsionForceKernel::Name())
+            return new CudaParallelCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCMAPTorsionForceKernel::Name())
+            return new CudaParallelCalcCMAPTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomTorsionForceKernel::Name())
+            return new CudaParallelCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcNonbondedForceKernel::Name())
+            return new CudaParallelCalcNonbondedForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomNonbondedForceKernel::Name())
+            return new CudaParallelCalcCustomNonbondedForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomExternalForceKernel::Name())
+            return new CudaParallelCalcCustomExternalForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomHbondForceKernel::Name())
+            return new CudaParallelCalcCustomHbondForceKernel(name, platform, data, context.getSystem());
+        if (name == CalcCustomCompoundBondForceKernel::Name())
+            return new CudaParallelCalcCustomCompoundBondForceKernel(name, platform, data, context.getSystem());
+    }
     CudaContext& cu = *data.contexts[0];
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CudaCalcForcesAndEnergyKernel(name, platform, cu);
