@@ -30,6 +30,7 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     minimum = buffer[0];
+    barrier(CLK_LOCAL_MEM_FENCE);
     buffer[get_local_id(0)] = maximum;
     barrier(CLK_LOCAL_MEM_FENCE);
     for (uint step = 1; step < get_local_size(0); step *= 2) {

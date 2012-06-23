@@ -36,7 +36,7 @@ float computeAngle(float4 vec1, float4 vec2) {
         float scale = vec1.w*vec2.w;
         angle = asin(SQRT(dot(crossProduct, crossProduct)/scale));
         if (cosine < 0.0f)
-            angle = M_PI-angle;
+            angle = PI-angle;
     }
     else
        angle = acos(cosine);

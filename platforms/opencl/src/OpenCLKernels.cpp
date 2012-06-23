@@ -3517,7 +3517,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
     defines["NUM_DONORS"] = intToString(numDonors);
     defines["NUM_ACCEPTORS"] = intToString(numAcceptors);
-    defines["M_PI"] = doubleToString(M_PI);
+    defines["PI"] = doubleToString(M_PI);
     if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff) {
         defines["USE_CUTOFF"] = "1";
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
