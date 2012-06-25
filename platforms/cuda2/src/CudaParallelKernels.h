@@ -83,7 +83,7 @@ private:
     std::vector<int> contextTiles;
     CudaArray* contextForces;
     void* pinnedPositionBuffer;
-    void* pinnedForceBuffer;
+    long long* pinnedForceBuffer;
     CUfunction sumKernel;
 };
 
