@@ -581,8 +581,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     defines["NUM_2_AVERAGE"] = OpenCLExpressionUtilities::intToString(num2Avg);
     defines["NUM_3_AVERAGE"] = OpenCLExpressionUtilities::intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = OpenCLExpressionUtilities::intToString(numOutOfPlane);
-    cl::Program ccmaProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
-    vsitePositionKernel = cl::Kernel(ccmaProgram, "computeVirtualSites");
+    cl::Program vsiteProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
+    vsitePositionKernel = cl::Kernel(vsiteProgram, "computeVirtualSites");
     vsitePositionKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
     vsitePositionKernel.setArg<cl::Buffer>(1, vsite2AvgAtoms->getDeviceBuffer());
     vsitePositionKernel.setArg<cl::Buffer>(2, vsite2AvgWeights->getDeviceBuffer());
@@ -590,7 +590,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vsitePositionKernel.setArg<cl::Buffer>(4, vsite3AvgWeights->getDeviceBuffer());
     vsitePositionKernel.setArg<cl::Buffer>(5, vsiteOutOfPlaneAtoms->getDeviceBuffer());
     vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneWeights->getDeviceBuffer());
-    vsiteForceKernel = cl::Kernel(ccmaProgram, "distributeForces");
+    vsiteForceKernel = cl::Kernel(vsiteProgram, "distributeForces");
     vsiteForceKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
     // Skip argument 1: the force array hasn't been created yet.
     vsiteForceKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());

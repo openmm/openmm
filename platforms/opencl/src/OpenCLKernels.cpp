@@ -227,6 +227,10 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     stream.write((char*) &version, sizeof(int));
     double time = cl.getTime();
     stream.write((char*) &time, sizeof(double));
+    int stepCount = cl.getStepCount();
+    stream.write((char*) &stepCount, sizeof(int));
+    int computeForceCount = cl.getComputeForceCount();
+    stream.write((char*) &computeForceCount, sizeof(int));
     cl.getPosq().download();
     stream.write((char*) &cl.getPosq()[0], sizeof(mm_float4)*cl.getPosq().getSize());
     cl.getVelm().download();
@@ -246,9 +250,15 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     double time;
     stream.read((char*) &time, sizeof(double));
+    int stepCount, computeForceCount;
+    stream.read((char*) &stepCount, sizeof(int));
+    stream.read((char*) &computeForceCount, sizeof(int));
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
-    for (int i = 0; i < (int) contexts.size(); i++)
+    for (int i = 0; i < (int) contexts.size(); i++) {
         contexts[i]->setTime(time);
+        contexts[i]->setStepCount(stepCount);
+        contexts[i]->setComputeForceCount(computeForceCount);
+    }
     stream.read((char*) &cl.getPosq()[0], sizeof(mm_float4)*cl.getPosq().getSize());
     cl.getPosq().upload();
     stream.read((char*) &cl.getVelm()[0], sizeof(mm_float4)*cl.getVelm().getSize());
@@ -1434,7 +1444,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl::Program program = cl.createProgram(file, pmeDefines);
             pmeUpdateBsplinesKernel = cl::Kernel(program, "updateBsplines");
             pmeAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
-	    if (!deviceIsCpu)
+            if (!deviceIsCpu)
                 pmeZIndexKernel = cl::Kernel(program, "recordZIndex");
             pmeSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
             pmeConvolutionKernel = cl::Kernel(program, "reciprocalConvolution");
@@ -1448,10 +1458,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
             pmeAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange->getDeviceBuffer());
             pmeAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-	    if (!deviceIsCpu) {
+            if (!deviceIsCpu) {
                 pmeZIndexKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
                 pmeZIndexKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-	    }
+            }
             pmeSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
@@ -2809,7 +2819,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
         /// \todo Eliminate this argument and make local to the kernel. For *_default.cl kernel can actually make it TileSize rather than getForceThreadBlockSize as only half the workgroup stores to it as was done with nonbonded_default.cl.
         /// \todo Also make the previous __local argument local as was done with nonbonded_default.cl.
-        pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : nb.getForceThreadBlockSize())*sizeof(cl_float4), NULL);
+        pairEnergyKernel.setArg(index++, (deviceIsCpu ? OpenCLContext::TileSize : 1), NULL);
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
@@ -3308,7 +3318,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
             throw OpenMMException("CustomHbondForce: OpenCLPlatform does not support more than four exclusions per acceptor");
     }
     donorExclusions = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondDonorExclusions");
-    acceptorExclusions = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondAcceptorExclusions");
+    acceptorExclusions = new OpenCLArray<mm_int4>(cl, numAcceptors, "customHbondAcceptorExclusions");
     donorExclusions->upload(donorExclusionVector);
     acceptorExclusions->upload(acceptorExclusionVector);
 

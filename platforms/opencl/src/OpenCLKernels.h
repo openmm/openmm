@@ -629,7 +629,7 @@ private:
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
     /**
@@ -656,7 +656,6 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    bool hasInitializedKernel;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLArray<cl_float>* globals;
