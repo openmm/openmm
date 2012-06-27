@@ -106,9 +106,15 @@ public:
         return device;
     }
     /**
+     * Get the compute capability of the device associated with this object.
+     */
+    double getComputeCapability() const {
+        return computeCapability;
+    }
+    /**
      * Get the index of the CUdevice associated with this object.
      */
-    int getDeviceIndex() {
+    int getDeviceIndex() const {
         return deviceIndex;
     }
     /**
@@ -444,7 +450,7 @@ private:
     void validateMolecules();
     static bool hasInitializedCuda;
     const System& system;
-    double time;
+    double time, computeCapability;
     CudaPlatform::PlatformData& platformData;
     int deviceIndex;
     int contextIndex;

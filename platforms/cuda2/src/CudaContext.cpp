@@ -123,6 +123,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     int major, minor;
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
     gpuArchitecture = intToString(major)+intToString(minor);
+    computeCapability = major+0.1*minor;
     defaultOptimizationOptions = "--use_fast_math";
     unsigned int flags = CU_CTX_MAP_HOST;
     if (useBlockingSync)

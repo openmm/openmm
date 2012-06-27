@@ -98,8 +98,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomNonbondedForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())
         return new CudaCalcGBSAOBCForceKernel(name, platform, cu);
-//    if (name == CalcCustomGBForceKernel::Name())
-//        return new CudaCalcCustomGBForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcCustomGBForceKernel::Name())
+        return new CudaCalcCustomGBForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomExternalForceKernel::Name())
         return new CudaCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())

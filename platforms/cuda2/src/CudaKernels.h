@@ -715,58 +715,58 @@ private:
     std::vector<void*> computeSumArgs, force1Args;
 };
 
-///**
-// * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
-// */
-//class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
-//public:
-//    CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomGBForceKernel(name, platform),
-//            hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
-//            valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
-//    }
-//    ~CudaCalcCustomGBForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomGBForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomGBForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the CustomGBForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
-//private:
-//    bool hasInitializedKernels, needParameterGradient;
-//    int maxTiles, numComputedValues;
-//    CudaContext& cu;
-//    CudaParameterSet* params;
-//    CudaParameterSet* computedValues;
-//    CudaParameterSet* energyDerivs;
-//    CudaArray<cl_long>* longEnergyDerivs;
-//    CudaArray<cl_float>* globals;
-//    CudaArray<cl_float>* valueBuffers;
-//    CudaArray<cl_long>* longValueBuffers;
-//    CudaArray<mm_float4>* tabulatedFunctionParams;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<cl_float> globalParamValues;
-//    std::vector<CudaArray<mm_float4>*> tabulatedFunctions;
-//    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
-//    System& system;
-//    CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
-//};
+/**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+public:
+    CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomGBForceKernel(name, platform),
+            hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
+            valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~CudaCalcCustomGBForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomGBForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomGBForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
+private:
+    bool hasInitializedKernels, needParameterGradient;
+    int maxTiles, numComputedValues;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaParameterSet* computedValues;
+    CudaParameterSet* energyDerivs;
+    CudaArray* longEnergyDerivs;
+    CudaArray* globals;
+    CudaArray* valueBuffers;
+    CudaArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
+    System& system;
+    CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    std::vector<void*> pairValueArgs, perParticleValueArgs, pairEnergyArgs, perParticleEnergyArgs, gradientChainRuleArgs;
+};
 
 /**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.

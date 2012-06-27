@@ -52,7 +52,7 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
     numForceThreadBlocks = 2*multiprocessors;
-    forceThreadBlockSize = 256;
+    forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
 }
 
 CudaNonbondedUtilities::~CudaNonbondedUtilities() {
@@ -441,8 +441,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    string file;
-    CUmodule program = context.createModule(context.replaceStrings(CudaKernelSources::vectorOps+CudaKernelSources::nonbonded, replacements), defines);
+    CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
 
     // Set arguments to the Kernel.
