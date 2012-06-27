@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -41,7 +41,8 @@ Kernel::Kernel(KernelImpl* impl) : impl(impl) {
 }
 
 Kernel::Kernel(const Kernel& copy) : impl(copy.impl) {
-    impl->referenceCount++;
+    if (impl)
+        impl->referenceCount++;
 }
 
 Kernel::~Kernel() {
@@ -53,8 +54,14 @@ Kernel::~Kernel() {
 }
 
 Kernel& Kernel::operator=(const Kernel& copy) {
+    if (impl) {
+        impl->referenceCount--;
+        if (impl->referenceCount == 0)
+            delete impl;
+    }
     impl = copy.impl;
-    impl->referenceCount++;
+    if (impl)
+        impl->referenceCount++;
     return *this;
 }
 

@@ -229,7 +229,6 @@ CudaContext::~CudaContext() {
     string errorMessage = "Error deleting Context";
     if (contextIsValid)
         CHECK_RESULT(cuCtxDestroy(context));
-    contextIsValid = false;
 }
 
 void CudaContext::initialize() {

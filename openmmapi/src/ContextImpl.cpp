@@ -118,6 +118,14 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
 ContextImpl::~ContextImpl() {
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         delete forceImpls[i];
+    
+    // Make sure all kernels get properly deleted before contextDestroyed() is called.
+    
+    initializeForcesKernel = Kernel();
+    kineticEnergyKernel = Kernel();
+    updateStateDataKernel = Kernel();
+    applyConstraintsKernel = Kernel();
+    virtualSitesKernel = Kernel();
     platform->contextDestroyed(*this);
 }
 
