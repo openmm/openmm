@@ -2009,7 +2009,6 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             force1Args.push_back(&maxTiles);
         force1Args.push_back(&nb.getExclusionIndices().getDevicePointer());
         force1Args.push_back(&nb.getExclusionRowIndices().getDevicePointer());
-        module = cu.createModule(CudaKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
         reduceBornForceKernel = cu.getKernel(module, "reduceBornForce");
     }

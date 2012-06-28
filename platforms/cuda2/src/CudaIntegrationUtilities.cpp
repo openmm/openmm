@@ -121,18 +121,6 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         stepSize->upload(step);
     }
 
-    // Create kernels for enforcing constraints.
-
-    map<string, string> velocityDefines;
-    velocityDefines["CONSTRAIN_VELOCITIES"] = "1";
-    CUmodule settleModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::settle);
-    settlePosKernel = context.getKernel(settleModule, "applySettle");
-    settleVelKernel = context.getKernel(settleModule, "constrainVelocities");
-    CUmodule shakeModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::shakeHydrogens);
-    shakePosKernel = context.getKernel(shakeModule, "applyShakeToHydrogens");
-    shakeModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::shakeHydrogens, velocityDefines);
-    shakeVelKernel = context.getKernel(shakeModule, "applyShakeToHydrogens");
-
     // Record the set of constraints and how many constraints each atom is involved in.
 
     int numConstraints = system.getNumConstraints();
@@ -548,22 +536,6 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         ccmaAtomConstraints->upload(atomConstraintsVec);
         ccmaNumAtomConstraints->upload(numAtomConstraintsVec);
         ccmaConstraintMatrixColumn->upload(constraintMatrixColumnVec);
-
-        // Create the CCMA kernels.
-
-        map<string, string> defines;
-        defines["NUM_CONSTRAINTS"] = context.intToString(numCCMA);
-        defines["NUM_ATOMS"] = context.intToString(numAtoms);
-        CUmodule ccmaModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ccma, defines);
-        ccmaDirectionsKernel = context.getKernel(ccmaModule, "computeConstraintDirections");
-        ccmaPosForceKernel = context.getKernel(ccmaModule, "computeConstraintForce");
-        ccmaMultiplyKernel = context.getKernel(ccmaModule, "multiplyByConstraintMatrix");
-        ccmaPosUpdateKernel = context.getKernel(ccmaModule, "updateAtomPositions");
-        defines["CONSTRAIN_VELOCITIES"] = "1";
-        ccmaModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ccma, defines);
-        ccmaVelForceKernel = context.getKernel(ccmaModule, "computeConstraintForce");
-        ccmaVelUpdateKernel = context.getKernel(ccmaModule, "updateAtomPositions");
-        CHECK_RESULT2(cuEventCreate(&ccmaEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for CCMA");
     }
     
     // Build the list of virtual sites.
@@ -646,17 +618,30 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         }
     }
 
-    // Create the kernels for virtual sites.
+    // Create the kernels used by this class.
 
     map<string, string> defines;
+    defines["NUM_CCMA_CONSTRAINTS"] = context.intToString(numCCMA);
+    defines["NUM_ATOMS"] = context.intToString(numAtoms);
     defines["NUM_2_AVERAGE"] = context.intToString(num2Avg);
     defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
-    CUmodule vsiteModule = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::virtualSites, defines);
-    vsitePositionKernel = context.getKernel(vsiteModule, "computeVirtualSites");
-    vsiteForceKernel = context.getKernel(vsiteModule, "distributeForces");
+    CUmodule module = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::integrationUtilities, defines);
+    settlePosKernel = context.getKernel(module, "applySettleToPositions");
+    settleVelKernel = context.getKernel(module, "applySettleToVelocities");
+    shakePosKernel = context.getKernel(module, "applyShakeToPositions");
+    shakeVelKernel = context.getKernel(module, "applyShakeToVelocities");
+    ccmaDirectionsKernel = context.getKernel(module, "computeCCMAConstraintDirections");
+    ccmaPosForceKernel = context.getKernel(module, "computeCCMAPositionConstraintForce");
+    ccmaVelForceKernel = context.getKernel(module, "computeCCMAVelocityConstraintForce");
+    ccmaMultiplyKernel = context.getKernel(module, "multiplyByCCMAConstraintMatrix");
+    ccmaUpdateKernel = context.getKernel(module, "updateCCMAAtomPositions");
+    CHECK_RESULT2(cuEventCreate(&ccmaEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for CCMA");
+    vsitePositionKernel = context.getKernel(module, "computeVirtualSites");
+    vsiteForceKernel = context.getKernel(module, "distributeVirtualSiteForces");
     numVsites = num2Avg+num3Avg+numOutOfPlane;
+    randomKernel = context.getKernel(module, "generateRandomNumbers");
 }
 
 CudaIntegrationUtilities::~CudaIntegrationUtilities() {
@@ -722,18 +707,16 @@ void CudaIntegrationUtilities::applyVelocityConstraints(double tol) {
 }
 
 void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double tol) {
-    CUfunction settleKernel, shakeKernel, ccmaForceKernel, ccmaUpdateKernel;
+    CUfunction settleKernel, shakeKernel, ccmaForceKernel;
     if (constrainVelocities) {
         settleKernel = settleVelKernel;
         shakeKernel = shakeVelKernel;
         ccmaForceKernel = ccmaVelForceKernel;
-        ccmaUpdateKernel = ccmaVelUpdateKernel;
     }
     else {
         settleKernel = settlePosKernel;
         shakeKernel = shakePosKernel;
         ccmaForceKernel = ccmaPosForceKernel;
-        ccmaUpdateKernel = ccmaPosUpdateKernel;
     }
     float floatTol = (float) tol;
     if (settleAtoms != NULL) {
@@ -831,11 +814,6 @@ void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumb
         seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
     }
     randomSeed->upload(seed);
-
-    // Create the kernel.
-
-    CUmodule randomModule = context.createModule(CudaKernelSources::random);
-    randomKernel = context.getKernel(randomModule, "generateRandomNumbers");
 }
 
 int CudaIntegrationUtilities::prepareRandomNumbers(int numValues) {

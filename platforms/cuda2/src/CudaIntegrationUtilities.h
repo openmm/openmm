@@ -113,7 +113,7 @@ private:
     CUfunction ccmaDirectionsKernel;
     CUfunction ccmaPosForceKernel, ccmaVelForceKernel;
     CUfunction ccmaMultiplyKernel;
-    CUfunction ccmaPosUpdateKernel, ccmaVelUpdateKernel;
+    CUfunction ccmaUpdateKernel;
     CUfunction vsitePositionKernel, vsiteForceKernel;
     CUfunction randomKernel;
     CudaArray* posDelta;
