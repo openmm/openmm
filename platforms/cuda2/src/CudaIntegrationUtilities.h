@@ -133,8 +133,8 @@ private:
     CudaArray* ccmaConstraintMatrixValue;
     CudaArray* ccmaDelta1;
     CudaArray* ccmaDelta2;
-    CudaArray* ccmaConverged;
     int* ccmaConvergedMemory;
+    CUdeviceptr ccmaConvergedDeviceMemory;
     CUevent ccmaEvent;
     CudaArray* vsite2AvgAtoms;
     CudaArray* vsite2AvgWeights;
