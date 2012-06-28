@@ -228,11 +228,7 @@ extern "C" __global__ void findInteractionsWithinBlocks(real4 periodicBoxSize, r
                 // Count how many flags are set, and based on that decide whether to compute all interactions
                 // or only a fraction of them.
 
-                unsigned int bits = (allFlags&0x55555555) + ((allFlags>>1)&0x55555555);
-                bits = (bits&0x33333333) + ((bits>>2)&0x33333333);
-                bits = (bits&0x0F0F0F0F) + ((bits>>4)&0x0F0F0F0F);
-                bits = (bits&0x00FF00FF) + ((bits>>8)&0x00FF00FF);
-                bits = (bits&0x0000FFFF) + ((bits>>16)&0x0000FFFF);
+                int bits = __popc(allFlags);
                 interactionFlags[pos] = (bits > 12 ? 0xFFFFFFFF : allFlags);
             }
             lasty = y;
