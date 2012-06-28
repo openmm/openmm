@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2011 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -162,6 +162,11 @@ protected:
      * It will also get called again if the application calls reinitialize() on the Context.
      */
     void initialize(ContextImpl& context);
+    /**
+     * This will be called by the Context when it is destroyed to let the Integrator do any necessary
+     * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
+     */
+    void cleanup();
     /**
      * When the user modifies the state, we need to mark that the forces need to be recalculated.
      */

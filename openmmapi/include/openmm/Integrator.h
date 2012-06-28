@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -99,6 +99,11 @@ protected:
      * It will also get called again if the application calls reinitialize() on the Context.
      */
     virtual void initialize(ContextImpl& context) = 0;
+    /**
+     * This will be called by the Context when it is destroyed to let the Integrator do any necessary
+     * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
+     */
+    virtual void cleanup() = 0;
     /**
      * Get the names of all Kernels used by this Integrator.
      */

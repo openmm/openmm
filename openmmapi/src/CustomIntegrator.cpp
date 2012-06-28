@@ -63,6 +63,10 @@ void CustomIntegrator::initialize(ContextImpl& contextRef) {
     }
 }
 
+void CustomIntegrator::cleanup() {
+    kernel = Kernel();
+}
+
 void CustomIntegrator::stateChanged(State::DataType changed) {
     forcesAreValid = false;
 }

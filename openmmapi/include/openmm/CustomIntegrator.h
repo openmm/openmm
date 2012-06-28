@@ -409,6 +409,11 @@ protected:
      */
     void initialize(ContextImpl& context);
     /**
+     * This will be called by the Context when it is destroyed to let the Integrator do any necessary
+     * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
+     */
+    void cleanup();
+    /**
      * When the user modifies the state, we need to mark that the forces need to be recalculated.
      */
     void stateChanged(State::DataType changed);
