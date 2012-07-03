@@ -1411,6 +1411,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         replacements["KMAX_Z"] = cu.intToString(kmaxz);
         replacements["EXP_COEFFICIENT"] = cu.doubleToString(-1.0/(4.0*alpha*alpha));
         replacements["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
+        replacements["M_PI"] = cu.doubleToString(M_PI);
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::ewald, replacements);
         ewaldSumsKernel = cu.getKernel(module, "calculateEwaldCosSinSums");
         ewaldForcesKernel = cu.getKernel(module, "calculateEwaldForces");
@@ -1437,6 +1438,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
         pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
         pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
+        pmeDefines["M_PI"] = cu.doubleToString(M_PI);
         if (cu.getUseDoublePrecision())
             pmeDefines["USE_DOUBLE_PRECISION"] = "1";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);

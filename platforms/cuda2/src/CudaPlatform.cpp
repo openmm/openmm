@@ -36,7 +36,9 @@
 #include <cctype>
 #include <sstream>
 #include <cstdio>
-
+#ifdef _MSC_VER
+    #include <Windows.h>
+#endif
 using namespace OpenMM;
 using namespace std;
 
@@ -84,7 +86,15 @@ CudaPlatform::CudaPlatform() {
     setPropertyDefaultValue(CudaUseBlockingSync(), "true");
     setPropertyDefaultValue(CudaPrecision(), "single");
 #ifdef _MSC_VER
-    setPropertyDefaultValue(CudaCompiler(), "nvcc");
+    char* bindir = getenv("CUDA_BIN_PATH");
+	string nvcc = (bindir == NULL ? "nvcc.exe" : string(bindir)+"\\nvcc.exe");
+    int length = GetShortPathName(nvcc.c_str(), NULL, 0);
+	if (length > 0) {
+		vector<char> shortName(length);
+	    GetShortPathName(nvcc.c_str(), &shortName[0], length);
+		nvcc = string(&shortName[0]);
+	}
+    setPropertyDefaultValue(CudaCompiler(), nvcc);
     setPropertyDefaultValue(CudaTempDirectory(), string(getenv("TEMP")));
 #else
     setPropertyDefaultValue(CudaCompiler(), "/usr/local/cuda/bin/nvcc");

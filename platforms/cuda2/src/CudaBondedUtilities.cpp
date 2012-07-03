@@ -79,14 +79,13 @@ void CudaBondedUtilities::initialize(const System& system) {
         int startAtom = 0;
         while (startAtom < numAtoms) {
             int width = min(numAtoms-startAtom, 4);
-            if (width == 3)
-                width = 4;
-            vector<unsigned int> indexVec(width*numBonds);
+			int paddedWidth = (width == 3 ? 4 : width);
+            vector<unsigned int> indexVec(paddedWidth*numBonds);
             for (int bond = 0; bond < numBonds; bond++) {
                 for (int atom = 0; atom < width; atom++)
-                    indexVec[bond*width+atom] = forceAtoms[i][bond][startAtom+atom];
+                    indexVec[bond*paddedWidth+atom] = forceAtoms[i][bond][startAtom+atom];
             }
-            CudaArray* indices = new CudaArray(context, numBonds, 4*width, "bondedIndices");
+            CudaArray* indices = new CudaArray(context, numBonds, 4*paddedWidth, "bondedIndices");
             indices->upload(&indexVec[0]);
             atomIndices[i].push_back(indices);
             startAtom += width;
