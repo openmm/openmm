@@ -448,6 +448,11 @@ private:
      * of molecules and resort the atoms.
      */
     void validateMolecules();
+    /**
+     * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
+     */
+    template <class Real, class Real4>
+    void reorderAtomsImpl(bool enforcePeriodic);
     static bool hasInitializedCuda;
     const System& system;
     double time, computeCapability;

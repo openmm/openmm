@@ -234,8 +234,14 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
         interactionFlags = CudaArray::create<unsigned int>(context, maxTiles, "interactionFlags");
         interactionCount = CudaArray::create<unsigned int>(context, 1, "interactionCount");
-        blockCenter = CudaArray::create<float4>(context, numAtomBlocks, "blockCenter");
-        blockBoundingBox = CudaArray::create<float4>(context, numAtomBlocks, "blockBoundingBox");
+        if (context.getUseDoublePrecision()) {
+            blockCenter = CudaArray::create<double4>(context, numAtomBlocks, "blockCenter");
+            blockBoundingBox = CudaArray::create<double4>(context, numAtomBlocks, "blockBoundingBox");
+        }
+        else {
+            blockCenter = CudaArray::create<float4>(context, numAtomBlocks, "blockCenter");
+            blockBoundingBox = CudaArray::create<float4>(context, numAtomBlocks, "blockBoundingBox");
+        }
         CHECK_RESULT(cuMemHostAlloc((void**) &pinnedInteractionCount, sizeof(unsigned int), 0));
         pinnedInteractionCount[0] = 0;
         interactionCount->upload(pinnedInteractionCount);

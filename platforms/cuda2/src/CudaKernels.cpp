@@ -1451,7 +1451,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         pmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-        cu.addAutoclearBuffer(pmeGrid->getDevicePointer(), pmeGrid->getSize()*sizeof(float2));
+        cu.addAutoclearBuffer(pmeGrid->getDevicePointer(), pmeGrid->getSize()*2*elementSize);
         pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
         pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
         pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -1459,7 +1459,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
         pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
         sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
-        cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, CUFFT_C2C);
+        cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2Z : CUFFT_C2C);
         if (result != CUFFT_SUCCESS)
             throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
         hasInitializedFFT = true;

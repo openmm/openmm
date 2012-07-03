@@ -1,5 +1,5 @@
-real4 torsionParams1 = PARAMS1[index];
-real2 torsionParams2 = PARAMS2[index];
+float4 torsionParams1 = PARAMS1[index];
+float2 torsionParams2 = PARAMS2[index];
 if (theta < 0)
     theta += PI;
 else

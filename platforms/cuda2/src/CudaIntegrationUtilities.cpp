@@ -717,16 +717,17 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
         ccmaForceKernel = ccmaPosForceKernel;
     }
     float floatTol = (float) tol;
+    void* tolPointer = (context.getUseDoublePrecision() ? (void*) &tol : (void*) &floatTol);
     if (settleAtoms != NULL) {
         int numClusters = settleAtoms->getSize();
-        void* args[] = {&numClusters, &floatTol, &context.getPosq().getDevicePointer(),
+        void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(),
                 &posDelta->getDevicePointer(), &context.getVelm().getDevicePointer(),
                 &settleAtoms->getDevicePointer(), &settleParams->getDevicePointer()};
         context.executeKernel(settleKernel, args, settleAtoms->getSize());
     }
     if (shakeAtoms != NULL) {
         int numClusters = shakeAtoms->getSize();
-        void* args[] = {&numClusters, &floatTol, &context.getPosq().getDevicePointer(),
+        void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(),
                 constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
                 &shakeAtoms->getDevicePointer(), &shakeParams->getDevicePointer()};
         context.executeKernel(shakeKernel, args, shakeAtoms->getSize());
@@ -738,7 +739,7 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
         void* forceArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(),
                 constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
                 &ccmaReducedMass->getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaConvergedDeviceMemory,
-                &floatTol, &i};
+                tolPointer, &i};
         void* multiplyArgs[] = {&ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
                 &ccmaConstraintMatrixColumn->getDevicePointer(), &ccmaConstraintMatrixValue->getDevicePointer(), &ccmaConvergedDeviceMemory, &i};
         void* updateArgs[] = {&ccmaNumAtomConstraints->getDevicePointer(), &ccmaAtomConstraints->getDevicePointer(), &ccmaDistance->getDevicePointer(),

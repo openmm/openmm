@@ -766,25 +766,43 @@ void CudaContext::validateMolecules() {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
     
-    vector<float4> oldPosq(paddedNumAtoms);
-    vector<float4> newPosq(paddedNumAtoms);
-    vector<float4> oldVelm(paddedNumAtoms);
-    vector<float4> newVelm(paddedNumAtoms);
     vector<int4> newCellOffsets(numAtoms);
-    posq->download(oldPosq);
-    velm->download(oldVelm);
-    for (int i = 0; i < numAtoms; i++) {
-        int index = atomIndex[i];
-        newPosq[index] = oldPosq[i];
-        newVelm[index] = oldVelm[i];
-        newCellOffsets[index] = posCellOffsets[i];
+    if (useDoublePrecision) {
+        vector<double4> oldPosq(paddedNumAtoms);
+        vector<double4> newPosq(paddedNumAtoms);
+        vector<double4> oldVelm(paddedNumAtoms);
+        vector<double4> newVelm(paddedNumAtoms);
+        posq->download(oldPosq);
+        velm->download(oldVelm);
+        for (int i = 0; i < numAtoms; i++) {
+            int index = atomIndex[i];
+            newPosq[index] = oldPosq[i];
+            newVelm[index] = oldVelm[i];
+            newCellOffsets[index] = posCellOffsets[i];
+        }
+        posq->upload(newPosq);
+        velm->upload(newVelm);
+    }
+    else {
+        vector<float4> oldPosq(paddedNumAtoms);
+        vector<float4> newPosq(paddedNumAtoms);
+        vector<float4> oldVelm(paddedNumAtoms);
+        vector<float4> newVelm(paddedNumAtoms);
+        posq->download(oldPosq);
+        velm->download(oldVelm);
+        for (int i = 0; i < numAtoms; i++) {
+            int index = atomIndex[i];
+            newPosq[index] = oldPosq[i];
+            newVelm[index] = oldVelm[i];
+            newCellOffsets[index] = posCellOffsets[i];
+        }
+        posq->upload(newPosq);
+        velm->upload(newVelm);
     }
     for (int i = 0; i < numAtoms; i++) {
         atomIndex[i] = i;
         posCellOffsets[i] = newCellOffsets[i];
     }
-    posq->upload(newPosq);
-    velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
     for (int i = 0; i < (int) reorderListeners.size(); i++)
@@ -797,16 +815,23 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
     if (moleculesInvalid)
         validateMolecules();
     atomsWereReordered = true;
+    if (useDoublePrecision)
+        reorderAtomsImpl<double, double4>(enforcePeriodic);
+    else
+        reorderAtomsImpl<float, float4>(enforcePeriodic);
+}
 
+template <class Real, class Real4>
+void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
     // Find the range of positions and the number of bins along each axis.
 
-    vector<float4> oldPosq(paddedNumAtoms);
-    vector<float4> oldVelm(paddedNumAtoms);
+    vector<Real4> oldPosq(paddedNumAtoms);
+    vector<Real4> oldVelm(paddedNumAtoms);
     posq->download(oldPosq);
     velm->download(oldVelm);
-    float minx = oldPosq[0].x, maxx = oldPosq[0].x;
-    float miny = oldPosq[0].y, maxy = oldPosq[0].y;
-    float minz = oldPosq[0].z, maxz = oldPosq[0].z;
+    Real minx = oldPosq[0].x, maxx = oldPosq[0].x;
+    Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
+    Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
     if (nonbonded->getUsePeriodic()) {
         minx = miny = minz = 0.0;
         maxx = periodicBoxSize.x;
@@ -815,7 +840,7 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
     }
     else {
         for (int i = 1; i < numAtoms; i++) {
-            const float4& pos = oldPosq[i];
+            const Real4& pos = oldPosq[i];
             minx = min(minx, pos.x);
             maxx = max(maxx, pos.x);
             miny = min(miny, pos.y);
@@ -828,8 +853,8 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
     // Loop over each group of identical molecules and reorder them.
 
     vector<int> originalIndex(numAtoms);
-    vector<float4> newPosq(paddedNumAtoms);
-    vector<float4> newVelm(paddedNumAtoms);
+    vector<Real4> newPosq(paddedNumAtoms);
+    vector<Real4> newVelm(paddedNumAtoms);
     vector<int4> newCellOffsets(numAtoms);
     for (int group = 0; group < (int) moleculeGroups.size(); group++) {
         // Find the center of each molecule.
@@ -837,15 +862,15 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
         MoleculeGroup& mol = moleculeGroups[group];
         int numMolecules = mol.offsets.size();
         vector<int>& atoms = mol.atoms;
-        vector<float4> molPos(numMolecules);
-        float invNumAtoms = 1.0f/atoms.size();
+        vector<Real4> molPos(numMolecules);
+        Real invNumAtoms = (Real) (1.0/atoms.size());
         for (int i = 0; i < numMolecules; i++) {
             molPos[i].x = 0.0f;
             molPos[i].y = 0.0f;
             molPos[i].z = 0.0f;
             for (int j = 0; j < (int)atoms.size(); j++) {
                 int atom = atoms[j]+mol.offsets[i];
-                const float4& pos = oldPosq[atom];
+                const Real4& pos = oldPosq[atom];
                 molPos[i].x += pos.x;
                 molPos[i].y += pos.y;
                 molPos[i].z += pos.z;
@@ -861,9 +886,9 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
                 int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
                 int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
                 int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
-                float dx = xcell*periodicBoxSize.x;
-                float dy = ycell*periodicBoxSize.y;
-                float dz = zcell*periodicBoxSize.z;
+                Real dx = xcell*periodicBoxSize.x;
+                Real dy = ycell*periodicBoxSize.y;
+                Real dz = zcell*periodicBoxSize.z;
                 if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
                     molPos[i].x -= dx;
                     molPos[i].y -= dy;
@@ -871,7 +896,7 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
                     if (enforcePeriodic) {
                         for (int j = 0; j < (int) atoms.size(); j++) {
                             int atom = atoms[j]+mol.offsets[i];
-                            float4 p = oldPosq[atom];
+                            Real4 p = oldPosq[atom];
                             p.x -= dx;
                             p.y -= dy;
                             p.z -= dz;
@@ -888,12 +913,12 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
         // Select a bin for each molecule, then sort them by bin.
 
         bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
-        float binWidth;
+        Real binWidth;
         if (useHilbert)
-            binWidth = (float)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
+            binWidth = (Real)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
-            binWidth = (float)(0.2*nonbonded->getCutoffDistance());
-        float invBinWidth = 1.0f/binWidth;
+            binWidth = (Real)(0.2*nonbonded->getCutoffDistance());
+        Real invBinWidth = (Real) (1.0/binWidth);
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
         vector<pair<int, int> > molBins(numMolecules);
