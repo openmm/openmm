@@ -1448,6 +1448,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
         pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
         pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+        cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
 
         // Create required data structures.
 
@@ -1606,9 +1607,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
-        interpolateForceThreads = 64;
-        int interpolateSharedSize = 2*interpolateForceThreads*PmeOrder*(cu.getUseDoublePrecision() ? sizeof(double3) : sizeof(float3));
-        cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), interpolateForceThreads, interpolateSharedSize);
+        cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms());
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {
@@ -1970,6 +1969,8 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             defines["USE_CUTOFF"] = "1";
         if (nb.getUsePeriodic())
             defines["USE_PERIODIC"] = "1";
+        if (cu.getComputeCapability() >= 3.0 && !cu.getUseDoublePrecision())
+            defines["ENABLE_SHUFFLE"] = "1";
         defines["CUTOFF_SQUARED"] = cu.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
         defines["PREFACTOR"] = cu.doubleToString(prefactor);
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());

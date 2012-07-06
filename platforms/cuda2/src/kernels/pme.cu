@@ -77,18 +77,16 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, unsi
         for (int baseIndex = blockIdx.x*BUFFER_SIZE; baseIndex < NUM_ATOMS; baseIndex += gridDim.x*BUFFER_SIZE) {
             // Load the next block of atoms into the buffers.
 
-            if (threadIdx.x < BUFFER_SIZE) {
-                int atomIndex = baseIndex+threadIdx.x;
-                if (atomIndex < NUM_ATOMS) {
-                    real4 pos = posq[atomIndex];
-                    charge[threadIdx.x] = pos.w;
-                    pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-                    pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-                    pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-                    basex[threadIdx.x] = (int) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X);
-                    basey[threadIdx.x] = (int) ((pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y);
-                    basez[threadIdx.x] = (int) ((pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z);
-                }
+            int atomIndex = baseIndex+threadIdx.x;
+            if (atomIndex < NUM_ATOMS) {
+                real4 pos = posq[atomIndex];
+                charge[threadIdx.x] = pos.w;
+                pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+                pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+                pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+                basex[threadIdx.x] = (int) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X);
+                basey[threadIdx.x] = (int) ((pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y);
+                basez[threadIdx.x] = (int) ((pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z);
             }
             __syncthreads();
             int lastIndex = min(BUFFER_SIZE, NUM_ATOMS-baseIndex);
@@ -162,12 +160,11 @@ extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, re
 
 extern "C" __global__ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers, const real2* __restrict__ pmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    extern __shared__ real3 bsplinesCache[];
-    real3* data = &bsplinesCache[threadIdx.x*PME_ORDER];
-    real3* ddata = &bsplinesCache[threadIdx.x*PME_ORDER + blockDim.x*PME_ORDER];
+    real3 data[PME_ORDER];
+    real3 ddata[PME_ORDER];
     const real scale = RECIP(PME_ORDER-1);
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
-        real4 force = make_real4(0);
+        real3 force = make_real3(0);
         real4 pos = posq[atom];
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
@@ -204,19 +201,25 @@ extern "C" __global__ void gridInterpolateForce(const real4* __restrict__ posq, 
         // Compute the force on this atom.
 
         for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xindex = gridIndex.x+ix;
-            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            int xbase = gridIndex.x+ix;
+            xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
+            real dx = data[ix].x;
+            real ddx = ddata[ix].x;
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int yindex = gridIndex.y+iy;
-                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                int ybase = gridIndex.y+iy;
+                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                ybase = xbase + ybase*GRID_SIZE_Z;
+                real dy = data[iy].y;
+                real ddy = ddata[iy].y;
                 for (int iz = 0; iz < PME_ORDER; iz++) {
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-                    int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
+                    int index = ybase + zindex;
                     real gridvalue = pmeGrid[index].x;
-                    force.x += ddata[ix].x*data[iy].y*data[iz].z*gridvalue;
-                    force.y += data[ix].x*ddata[iy].y*data[iz].z*gridvalue;
-                    force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
+                    force.x += ddx*dy*data[iz].z*gridvalue;
+                    force.y += dx*ddy*data[iz].z*gridvalue;
+                    force.z += dx*dy*ddata[iz].z*gridvalue;
                 }
             }
         }

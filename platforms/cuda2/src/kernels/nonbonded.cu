@@ -35,9 +35,11 @@ extern "C" __global__ void computeNonbonded(
 #endif
     real energy = 0.0f;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
-    __shared__ real tempBuffer[3*THREAD_BLOCK_SIZE];
     __shared__ unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __shared__ int exclusionIndex[WARPS_PER_GROUP];
+#ifndef ENABLE_SHUFFLE
+    __shared__ real tempBuffer[3*THREAD_BLOCK_SIZE];
+#endif
     
     do {
         // Extract the coordinates of this tile
@@ -186,18 +188,46 @@ extern "C" __global__ void computeNonbonded(
 #ifdef USE_CUTOFF
                                 }
 #endif
-#ifdef USE_SYMMETRIC
+#ifdef ENABLE_SHUFFLE
+    #ifdef USE_SYMMETRIC
+                                delta *= dEdR;
+                                force -= delta;
+                                for (int i = 16; i >= 1; i /= 2) {
+                                    delta.x += __shfl_xor(delta.x, i, 32);
+                                    delta.y += __shfl_xor(delta.y, i, 32);
+                                    delta.z += __shfl_xor(delta.z, i, 32);
+                                }
+                                if (tgx == 0) {
+                                    localData[tbx+j].fx += delta.x;
+                                    localData[tbx+j].fy += delta.y;
+                                    localData[tbx+j].fz += delta.z;
+                                }
+    #else
+                                force -= dEdR1;
+                                for (int i = 16; i >= 1; i /= 2) {
+                                    dEdR2.x += __shfl_xor(dEdR2.x, i, 32);
+                                    dEdR2.y += __shfl_xor(dEdR2.y, i, 32);
+                                    dEdR2.z += __shfl_xor(dEdR2.z, i, 32);
+                                }
+                                if (tgx == 0) {
+                                    localData[tbx+j].fx += dEdR2.x;
+                                    localData[tbx+j].fy += dEdR2.y;
+                                    localData[tbx+j].fz += dEdR2.z;
+                                }
+    #endif
+#else
+    #ifdef USE_SYMMETRIC
                                 delta *= dEdR;
                                 force -= delta;
                                 tempBuffer[bufferIndex] = delta.x;
                                 tempBuffer[bufferIndex+1] = delta.y;
                                 tempBuffer[bufferIndex+2] = delta.z;
-#else
+    #else
                                 force -= dEdR1;
                                 tempBuffer[bufferIndex] = dEdR2.x;
                                 tempBuffer[bufferIndex+1] = dEdR2.y;
                                 tempBuffer[bufferIndex+2] = dEdR2.z;
-#endif
+    #endif
 
                                 // Sum the forces on atom2.
 
@@ -211,6 +241,7 @@ extern "C" __global__ void computeNonbonded(
                                     localData[tbx+j].fy += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
                                     localData[tbx+j].fz += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
                                 }
+#endif
                             }
                         }
                     }
@@ -285,14 +316,12 @@ extern "C" __global__ void computeNonbonded(
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0xFFFFFFFF)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0xFFFFFFFF)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0xFFFFFFFF)));
-            __threadfence_block();
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0xFFFFFFFF)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0xFFFFFFFF)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0xFFFFFFFF)));
-            __threadfence_block();
         }
         pos++;
     } while (pos < end);

@@ -87,10 +87,11 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
 #endif
     unsigned int lasty = 0xFFFFFFFF;
     __shared__ AtomData1 localData[FORCE_WORK_GROUP_SIZE];
-    __shared__ real tempBuffer[FORCE_WORK_GROUP_SIZE];
     __shared__ unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __shared__ int exclusionIndex[WARPS_PER_GROUP];
-    
+#ifndef ENABLE_SHUFFLE
+    __shared__ real tempBuffer[FORCE_WORK_GROUP_SIZE];
+#endif    
     do {
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
@@ -204,7 +205,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                                tempBuffer[threadIdx.x] = 0.0f;
+                                real sum = 0;
 #ifdef USE_CUTOFF
                                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
 #else
@@ -236,16 +237,24 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
                                                          (params1.y*params1.y*invR)*(l_ij2-u_ij2));
                                         if (params2.x < params1.y-r)
                                             term += 2.0f*(RECIP(params2.x)-l_ij);
-                                        tempBuffer[threadIdx.x] = term;
+                                        sum = term;
                                     }
                                 }
 
                                 // Sum the forces on atom j.
 
+#ifdef ENABLE_SHUFFLE
+                                for (int i = 16; i >= 1; i /= 2)
+                                    sum += __shfl_xor(sum, i, 32);
+                                if (tgx == 0)
+                                    localData[tbx+j].bornSum += sum;
+#else
+                                tempBuffer[threadIdx.x] = sum;
                                 if (tgx % 4 == 0)
                                     tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1]+tempBuffer[threadIdx.x+2]+tempBuffer[threadIdx.x+3];
                                 if (tgx == 0)
                                     localData[tbx+j].bornSum += tempBuffer[threadIdx.x]+tempBuffer[threadIdx.x+4]+tempBuffer[threadIdx.x+8]+tempBuffer[threadIdx.x+12]+tempBuffer[threadIdx.x+16]+tempBuffer[threadIdx.x+20]+tempBuffer[threadIdx.x+24]+tempBuffer[threadIdx.x+28];
+#endif
                             }
                         }
                     }
@@ -351,10 +360,12 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
     real energy = 0;
     unsigned int lasty = 0xFFFFFFFF;
     __shared__ AtomData2 localData[FORCE_WORK_GROUP_SIZE];
-    __shared__ real4 tempBuffer[FORCE_WORK_GROUP_SIZE];
     __shared__ unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __shared__ int exclusionIndex[WARPS_PER_GROUP];
-    
+#ifndef ENABLE_SHUFFLE
+    __shared__ real4 tempBuffer[FORCE_WORK_GROUP_SIZE];
+#endif    
+
     do {
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
@@ -466,7 +477,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                         for (unsigned int j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 real4 posq2 = make_real4(localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z, localData[tbx+j].q);
-                                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                                real4 delta = make_real4(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z, 0);
 #ifdef USE_PERIODIC
                                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
@@ -503,15 +514,30 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                                 force.x -= delta.x;
                                 force.y -= delta.y;
                                 force.z -= delta.z;
-                                tempBuffer[threadIdx.x] = make_real4(delta.x, delta.y, delta.z, dGpol_dalpha2_ij*bornRadius1);
+                                delta.w = dGpol_dalpha2_ij*bornRadius1;
 #ifdef USE_CUTOFF
                                 }
                                 else
-                                    tempBuffer[threadIdx.x] = make_real4(0);
+                                    delta = make_real4(0);
 #endif
 
                                 // Sum the forces on atom j.
 
+#ifdef ENABLE_SHUFFLE
+                                for (int i = 16; i >= 1; i /= 2) {
+                                    delta.x += __shfl_xor(delta.x, i, 32);
+                                    delta.y += __shfl_xor(delta.y, i, 32);
+                                    delta.z += __shfl_xor(delta.z, i, 32);
+                                    delta.w += __shfl_xor(delta.w, i, 32);
+                                }
+                                if (tgx == 0) {
+                                    localData[tbx+j].fx += delta.x;
+                                    localData[tbx+j].fy += delta.y;
+                                    localData[tbx+j].fz += delta.z;
+                                    localData[tbx+j].fw += delta.w;
+                                }
+#else
+                                tempBuffer[threadIdx.x] = delta;
                                 if (tgx % 4 == 0)
                                     tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1]+tempBuffer[threadIdx.x+2]+tempBuffer[threadIdx.x+3];
                                 if (tgx == 0) {
@@ -521,6 +547,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                                     localData[tbx+j].fz += sum.z;
                                     localData[tbx+j].fw += sum.w;
                                 }
+#endif
                             }
                         }
                     }
