@@ -1,10 +1,12 @@
 #define TILE_SIZE 32
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
+DEFINE_ACCUM
+
 typedef struct {
     real x, y, z;
     real q;
-    real fx, fy, fz;
+    accum fx, fy, fz;
     ATOM_PARAMETER_DATA
 #ifndef PARAMETER_SIZE_IS_EVEN
     real padding;
@@ -47,7 +49,7 @@ extern "C" __global__ void computeNonbonded(
         const unsigned int tbx = threadIdx.x - tgx;
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
         unsigned int x, y;
-        real3 force = make_real3(0);
+        accum3 force = make_accum3(0);
         if (pos < end) {
 #ifdef USE_CUTOFF
             if (numTiles <= maxTiles) {
@@ -124,9 +126,13 @@ extern "C" __global__ void computeNonbonded(
                     COMPUTE_INTERACTION
                     energy += 0.5f*tempEnergy;
 #ifdef USE_SYMMETRIC
-                    force -= delta*dEdR;
+                    force.x -= delta.x*dEdR;
+                    force.y -= delta.y*dEdR;
+                    force.z -= delta.z*dEdR;
 #else
-                    force -= dEdR1;
+                    force.x -= dEdR1.x;
+                    force.y -= dEdR1.y;
+                    force.z -= dEdR1.z;
 #endif
 #ifdef USE_EXCLUSIONS
                     excl >>= 1;
@@ -191,7 +197,9 @@ extern "C" __global__ void computeNonbonded(
 #ifdef ENABLE_SHUFFLE
     #ifdef USE_SYMMETRIC
                                 delta *= dEdR;
-                                force -= delta;
+                                force.x -= delta.x;
+                                force.y -= delta.y;
+                                force.z -= delta.z;
                                 for (int i = 16; i >= 1; i /= 2) {
                                     delta.x += __shfl_xor(delta.x, i, 32);
                                     delta.y += __shfl_xor(delta.y, i, 32);
@@ -203,7 +211,9 @@ extern "C" __global__ void computeNonbonded(
                                     localData[tbx+j].fz += delta.z;
                                 }
     #else
-                                force -= dEdR1;
+                                force.x -= dEdR1.x;
+                                force.y -= dEdR1.y;
+                                force.z -= dEdR1.z;
                                 for (int i = 16; i >= 1; i /= 2) {
                                     dEdR2.x += __shfl_xor(dEdR2.x, i, 32);
                                     dEdR2.y += __shfl_xor(dEdR2.y, i, 32);
@@ -218,12 +228,16 @@ extern "C" __global__ void computeNonbonded(
 #else
     #ifdef USE_SYMMETRIC
                                 delta *= dEdR;
-                                force -= delta;
+                                force.x -= delta.x;
+                                force.y -= delta.y;
+                                force.z -= delta.z;
                                 tempBuffer[bufferIndex] = delta.x;
                                 tempBuffer[bufferIndex+1] = delta.y;
                                 tempBuffer[bufferIndex+2] = delta.z;
     #else
-                                force -= dEdR1;
+                                force.x -= dEdR1.x;
+                                force.y -= dEdR1.y;
+                                force.z -= dEdR1.z;
                                 tempBuffer[bufferIndex] = dEdR2.x;
                                 tempBuffer[bufferIndex+1] = dEdR2.y;
                                 tempBuffer[bufferIndex+2] = dEdR2.z;
@@ -287,12 +301,16 @@ extern "C" __global__ void computeNonbonded(
                             energy += tempEnergy;
 #ifdef USE_SYMMETRIC
                             delta *= dEdR;
-                            force -= delta;
+                            force.x -= delta.x;
+                            force.y -= delta.y;
+                            force.z -= delta.z;
                             localData[tbx+tj].fx += delta.x;
                             localData[tbx+tj].fy += delta.y;
                             localData[tbx+tj].fz += delta.z;
 #else
-                            force -= dEdR1;
+                            force.x -= dEdR1.x;
+                            force.y -= dEdR1.y;
+                            force.z -= dEdR1.z;
                             localData[tbx+tj].fx += dEdR2.x;
                             localData[tbx+tj].fy += dEdR2.y;
                             localData[tbx+tj].fz += dEdR2.z;

@@ -1977,7 +1977,20 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
         defines["FORCE_WORK_GROUP_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
-        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::gbsaObc1, defines);
+        map<string, string> replacements;
+        stringstream defineAccum;
+        if (cu.getAccumulateInDouble()) {
+            defineAccum << "typedef double accum;\n";
+            defineAccum << "typedef double4 accum4;\n";
+            defines["make_accum4"] = "make_double4";
+        }
+        else {
+            defineAccum << "typedef real accum;\n";
+            defineAccum << "typedef real4 accum4;\n";
+            defines["make_accum4"] = "make_real4";
+        }
+        replacements["DEFINE_ACCUM"] = defineAccum.str();
+        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::gbsaObc1, replacements), defines);
         computeBornSumKernel = cu.getKernel(module, "computeBornSum");
         computeSumArgs.push_back(&bornSum->getDevicePointer());
         computeSumArgs.push_back(&cu.getPosq().getDevicePointer());
@@ -2422,7 +2435,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         map<string, string> replacements;
         string n2EnergyStr = n2EnergySource.str();
         replacements["COMPUTE_INTERACTION"] = n2EnergyStr;
-        stringstream extraArgs, atomParams, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2, declareTemps, setTemps;
+        stringstream extraArgs, atomParams, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", const float* globals";
         pairEnergyUsesParam.resize(params->getBuffers().size(), false);
@@ -2459,15 +2472,13 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         extraArgs << ", unsigned long long* __restrict__ derivBuffers";
         for (int i = 0; i < force.getNumComputedValues(); i++) {
             string index = cu.intToString(i+1);
-            atomParams << "real deriv" << index << ";\n";
+            atomParams << "accum deriv" << index << ";\n";
             clearLocal << "localData[localAtomIndex].deriv" << index << " = 0;\n";
-            declare1 << "real deriv" << index << "_1 = 0;\n";
+            declare1 << "accum deriv" << index << "_1 = 0;\n";
             load2 << "real deriv" << index << "_2 = 0;\n";
             recordDeriv << "localData[atom2].deriv" << index << " += deriv" << index << "_2;\n";
             storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")\n";
             storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")\n";
-            declareTemps << "__local real tempDerivBuffer" << index << "[64];\n";
-            setTemps << "tempDerivBuffer" << index << "[threadIdx.x] = deriv" << index << "_1;\n";
             atomParamSize++;
         }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
@@ -2481,9 +2492,19 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["RECORD_DERIVATIVE_2"] = recordDeriv.str();
         replacements["STORE_DERIVATIVES_1"] = storeDerivs1.str();
         replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
-        replacements["DECLARE_TEMP_BUFFERS"] = declareTemps.str();
-        replacements["SET_TEMP_BUFFERS"] = setTemps.str();
         map<string, string> defines;
+        stringstream defineAccum;
+        if (cu.getAccumulateInDouble()) {
+            defineAccum << "typedef double accum;\n";
+            defineAccum << "typedef double3 accum3;\n";
+            defines["make_accum3"] = "make_double3";
+        }
+        else {
+            defineAccum << "typedef real accum;\n";
+            defineAccum << "typedef real3 accum3;\n";
+            defines["make_accum3"] = "make_real3";
+        }
+        replacements["DEFINE_ACCUM"] = defineAccum.str();
         if (useCutoff)
             defines["USE_CUTOFF"] = "1";
         if (usePeriodic)

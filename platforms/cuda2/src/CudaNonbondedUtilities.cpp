@@ -445,10 +445,22 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
-    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
+    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision() && !context.getAccumulateInDouble())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
         defines["ENABLE_SHUFFLE"] = "1";
+    stringstream defineAccum;
+    if (context.getAccumulateInDouble()) {
+        defineAccum << "typedef double accum;\n";
+        defineAccum << "typedef double3 accum3;\n";
+        defines["make_accum3"] = "make_double3";
+    }
+    else {
+        defineAccum << "typedef real accum;\n";
+        defineAccum << "typedef real3 accum3;\n";
+        defines["make_accum3"] = "make_real3";
+    }
+    replacements["DEFINE_ACCUM"] = defineAccum.str();
     CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
 

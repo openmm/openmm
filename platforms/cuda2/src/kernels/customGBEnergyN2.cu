@@ -2,10 +2,11 @@
 #define STORE_DERIVATIVE_2(INDEX) atomicAdd(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].deriv##INDEX*0xFFFFFFFF)));
 #define TILE_SIZE 32
 
+DEFINE_ACCUM
 
 typedef struct {
     real4 posq;
-    real3 force;
+    accum3 force;
     ATOM_PARAMETER_DATA
 #ifdef NEED_PADDING
     float padding;
@@ -46,7 +47,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
         const unsigned int tbx = threadIdx.x - tgx;
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
         unsigned int x, y;
-        real3 force = make_real3(0);
+        accum3 force = make_accum3(0);
         DECLARE_ATOM1_DERIVATIVES
         if (pos < end) {
 #ifdef USE_CUTOFF
@@ -122,7 +123,9 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     }
                     energy += 0.5f*tempEnergy;
                     delta *= dEdR;
-                    force -= delta;
+                    force.x -= delta.x;
+                    force.y -= delta.y;
+                    force.z -= delta.z;
 #ifdef USE_CUTOFF
                     }
 #endif
@@ -140,7 +143,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     localData[localAtomIndex].posq = posq[j];
                     LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
                 }
-                localData[localAtomIndex].force = make_real3(0);
+                localData[localAtomIndex].force = make_accum3(0);
                 CLEAR_LOCAL_DERIVATIVES
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
@@ -185,9 +188,13 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                         }
                         energy += tempEnergy;
                         delta *= dEdR;
-                        force -= delta;
+                        force.x -= delta.x;
+                        force.y -= delta.y;
+                        force.z -= delta.z;
                         atom2 = tbx+tj;
-                        localData[atom2].force += delta;
+                        localData[atom2].force.x += delta.x;
+                        localData[atom2].force.y += delta.y;
+                        localData[atom2].force.z += delta.z;
                         RECORD_DERIVATIVE_2
 #ifdef USE_CUTOFF
                         }
