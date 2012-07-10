@@ -132,6 +132,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         flags += CU_CTX_SCHED_SPIN;
     CHECK_RESULT(cuCtxCreate(&context, flags, device));
     contextIsValid = true;
+    CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
