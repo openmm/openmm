@@ -88,15 +88,15 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     if (name == CalcAmoebaPiTorsionForceKernel::Name())
         return new CudaCalcAmoebaPiTorsionForceKernel(name, platform, cu, context.getSystem());
 
-//    if (name == CalcAmoebaStretchBendForceKernel::Name())
-//        return new CudaCalcAmoebaStretchBendForceKernel(name, platform, cu, context.getSystem());
-//
-//    if (name == CalcAmoebaOutOfPlaneBendForceKernel::Name())
-//        return new CudaCalcAmoebaOutOfPlaneBendForceKernel(name, platform, cu, context.getSystem());
-//
-//    if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
-//        return new CudaCalcAmoebaTorsionTorsionForceKernel(name, platform, cu, context.getSystem());
-//
+    if (name == CalcAmoebaStretchBendForceKernel::Name())
+        return new CudaCalcAmoebaStretchBendForceKernel(name, platform, cu, context.getSystem());
+
+    if (name == CalcAmoebaOutOfPlaneBendForceKernel::Name())
+        return new CudaCalcAmoebaOutOfPlaneBendForceKernel(name, platform, cu, context.getSystem());
+
+    if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
+        return new CudaCalcAmoebaTorsionTorsionForceKernel(name, platform, cu, context.getSystem());
+
 //    if (name == CalcAmoebaMultipoleForceKernel::Name())
 //        return new CudaCalcAmoebaMultipoleForceKernel(name, platform, cu, context.getSystem());
 //

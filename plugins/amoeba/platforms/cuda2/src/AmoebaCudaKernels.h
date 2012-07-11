@@ -253,6 +253,7 @@ private:
     int numStretchBends;
     CudaContext& cu;
     System& system;
+    CudaArray* params;
 };
 
 /**
@@ -283,6 +284,7 @@ private:
     int numOutOfPlaneBends;
     CudaContext& cu;
     System& system;
+    CudaArray* params;
 };
 
 /**
@@ -314,6 +316,9 @@ private:
     int numTorsionTorsionGrids;
     CudaContext& cu;
     System& system;
+    CudaArray* gridValues;
+    CudaArray* gridParams;
+    CudaArray* torsionParams;
 };
 
 /**
