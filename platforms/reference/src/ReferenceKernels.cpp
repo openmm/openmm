@@ -1059,7 +1059,7 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
 
 ReferenceCalcGBSAOBCForceKernel::~ReferenceCalcGBSAOBCForceKernel() {
     if (obc) {
-        // delete obc->getObcParameters();
+        delete obc->getObcParameters();
         delete obc;
     }
 }
