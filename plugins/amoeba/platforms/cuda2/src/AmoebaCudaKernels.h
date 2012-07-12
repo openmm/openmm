@@ -432,6 +432,14 @@ private:
     class ForceInfo;
     CudaContext& cu;
     System& system;
+    bool hasInitializedNonbonded;
+    CudaArray* sigmaEpsilon;
+    CudaArray* bondReductionAtoms;
+    CudaArray* bondReductionFactors;
+    CudaArray* tempPosq;
+    CudaArray* tempForces;
+    CudaNonbondedUtilities* nonbonded;
+    CUfunction prepareKernel, spreadKernel;
 };
 
 /**
