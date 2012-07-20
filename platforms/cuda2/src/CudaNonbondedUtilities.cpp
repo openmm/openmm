@@ -177,9 +177,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     // Record the exclusion data.
 
     exclusions = CudaArray::create<unsigned int>(context, tilesWithExclusions.size()*CudaContext::TileSize, "exclusions");
-    vector<unsigned int> exclusionVec(exclusions->getSize());
-    for (int i = 0; i < exclusions->getSize(); ++i)
-        exclusionVec[i] = 0xFFFFFFFF;
+    vector<unsigned int> exclusionVec(exclusions->getSize(), 0xFFFFFFFF);
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
         int x = atom1/CudaContext::TileSize;
         int offset1 = atom1-x*CudaContext::TileSize;
@@ -249,7 +247,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 
     // Create kernels.
 
-    forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
+    if (kernelSource.size() > 0)
+        forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
     if (useCutoff) {
         map<string, string> defines;
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
@@ -291,6 +290,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 }
 
 int CudaNonbondedUtilities::findExclusionIndex(int x, int y, const vector<unsigned int>& exclusionIndices, const vector<unsigned int>& exclusionRowIndices) {
+    if (x < y)
+        throw OpenMMException("Internal error: called findExclusionIndex with x<y");
     int start = exclusionRowIndices[x];
     int end = exclusionRowIndices[x+1];
     for (int i = start; i < end; i++)
@@ -317,7 +318,7 @@ void CudaNonbondedUtilities::prepareInteractions() {
 }
 
 void CudaNonbondedUtilities::computeInteractions() {
-    if (cutoff != -1.0)
+    if (kernelSource.size() > 0)
         context.executeKernel(forceKernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
 }
 

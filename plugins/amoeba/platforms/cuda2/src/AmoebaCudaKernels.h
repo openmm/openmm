@@ -30,8 +30,10 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
-#include "CudaContext.h"
 #include "CudaArray.h"
+#include "CudaContext.h"
+#include "CudaSort.h"
+#include <cufft.h>
 
 namespace OpenMM {
 
@@ -371,9 +373,46 @@ public:
 
 private:
     class ForceInfo;
+    void initializeScaleFactors();
     int numMultipoles;
+    bool hasInitializedScaleFactors;
     CudaContext& cu;
     System& system;
+    std::vector<int3> covalentFlagValues;
+    std::vector<int2> polarizationFlagValues;
+    CudaArray* multipoleParticles;
+    CudaArray* torqueBufferIndices;
+    CudaArray* molecularDipoles;
+    CudaArray* molecularQuadrupoles;
+    CudaArray* labFrameDipoles;
+    CudaArray* labFrameQuadrupoles;
+    CudaArray* field;
+    CudaArray* fieldPolar;
+    CudaArray* dampingAndThole;
+    CudaArray* inducedDipole;
+    CudaArray* inducedDipolePolar;
+    CudaArray* currentEpsilon;
+    CudaArray* polarizability;
+    CudaArray* covalentFlags;
+    CudaArray* polarizationGroupFlags;
+    CudaArray* pmeGrid;
+    CudaArray* pmeBsplineModuliX;
+    CudaArray* pmeBsplineModuliY;
+    CudaArray* pmeBsplineModuliZ;
+    CudaArray* pmeTheta1;
+    CudaArray* pmeTheta2;
+    CudaArray* pmeIgrid;
+    CudaArray* pmePhi;
+    CudaArray* pmePhid;
+    CudaArray* pmePhip;
+    CudaArray* pmePhidp;
+    CudaArray* pmeBsplineTheta;
+    CudaArray* pmeBsplineDTheta;
+    CudaArray* pmeAtomRange;
+    CudaArray* pmeAtomGridIndex;
+    CudaSort* sort;
+    cufftHandle fft;
+    CUfunction computeMomentsKernel, computeFixedFieldKernel;
 };
 
 /**

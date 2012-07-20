@@ -233,6 +233,10 @@ public:
     void clearBuffer(CUdeviceptr memory, int size);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
+     */
+    void addAutoclearBuffer(CudaArray& array);
+    /**
+     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      *
      * @param memory     the memory to clear
      * @param size       the size of the buffer in bytes

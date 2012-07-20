@@ -97,9 +97,9 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
         return new CudaCalcAmoebaTorsionTorsionForceKernel(name, platform, cu, context.getSystem());
 
-//    if (name == CalcAmoebaMultipoleForceKernel::Name())
-//        return new CudaCalcAmoebaMultipoleForceKernel(name, platform, cu, context.getSystem());
-//
+    if (name == CalcAmoebaMultipoleForceKernel::Name())
+        return new CudaCalcAmoebaMultipoleForceKernel(name, platform, cu, context.getSystem());
+
 //    if (name == CalcAmoebaGeneralizedKirkwoodForceKernel::Name())
 //        return new CudaCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, cu, context.getSystem());
 

@@ -232,8 +232,20 @@ public:
      * @param isSymmetric   specifies whether the interaction is symmetric
      */
     CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric);
-private:
+    /**
+     * This is a utility routine for locating data in the exclusions array.  It takes the (x,y) indices of a tile,
+     * and returns the location in the array where the data for that tile begins.
+     * 
+     * This routine requires that x >= y.  If not, it will throw an exception.
+     * 
+     * @param x                   the x index of the tile
+     * @param y                   the y index of the tile
+     * @param exclusionIndices    the content of the exclusionIndices array
+     * @param exclusionRowIndices the content of the exclusionRowIndices array
+     * @return the index in the exclusions array at which the data for that tile begins
+     */
     static int findExclusionIndex(int x, int y, const std::vector<unsigned int>& exclusionIndices, const std::vector<unsigned int>& exclusionRowIndices);
+private:
     CudaContext& context;
     CUfunction forceKernel;
     CUfunction findBlockBoundsKernel;

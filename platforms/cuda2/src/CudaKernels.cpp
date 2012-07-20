@@ -1454,7 +1454,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         pmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-        cu.addAutoclearBuffer(pmeGrid->getDevicePointer(), pmeGrid->getSize()*2*elementSize);
+        cu.addAutoclearBuffer(*pmeGrid);
         pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
         pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
         pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -1928,8 +1928,8 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     }
     bornSum = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "bornSum");
     bornForce = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "bornForce");
-    cu.addAutoclearBuffer(bornSum->getDevicePointer(), bornSum->getSize()*sizeof(long long));
-    cu.addAutoclearBuffer(bornForce->getDevicePointer(), bornForce->getSize()*sizeof(long long));
+    cu.addAutoclearBuffer(*bornSum);
+    cu.addAutoclearBuffer(*bornForce);
     CudaArray& posq = cu.getPosq();
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
@@ -2757,7 +2757,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
             cu.getNonbondedUtilities().addArgument(arguments[i]);
     }
     cu.addForce(new CudaCustomGBForceInfo(force));
-    cu.addAutoclearBuffer(longEnergyDerivs->getDevicePointer(), sizeof(long long)*longEnergyDerivs->getSize());
+    cu.addAutoclearBuffer(*longEnergyDerivs);
 }
 
 double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -2766,7 +2766,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         hasInitializedKernels = true;
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
         valueBuffers = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "customGBValueBuffers");
-        cu.addAutoclearBuffer(valueBuffers->getDevicePointer(), sizeof(long long)*valueBuffers->getSize());
+        cu.addAutoclearBuffer(*valueBuffers);
         cu.clearBuffer(valueBuffers->getDevicePointer(), sizeof(long long)*valueBuffers->getSize());
         pairValueArgs.push_back(&cu.getPosq().getDevicePointer());
         pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());

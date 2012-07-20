@@ -127,6 +127,12 @@ public:
      *                 the destination array must be in page-locked memory.
      */
     void download(void* data, bool blocking = true) const;
+    /**
+     * Copy the values in the device memory to a second array.
+     * 
+     * @param dest     the destination array to copy to
+     */
+    void copyTo(CudaArray& dest) const;
 private:
     CudaContext& context;
     CUdeviceptr pointer;

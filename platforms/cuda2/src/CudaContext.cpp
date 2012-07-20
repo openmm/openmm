@@ -468,6 +468,10 @@ void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
     executeKernel(clearBufferKernel, args, size, 128);
 }
 
+void CudaContext::addAutoclearBuffer(CudaArray& array) {
+    addAutoclearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize());
+}
+
 void CudaContext::addAutoclearBuffer(CUdeviceptr memory, int size) {
     autoclearBuffers.push_back(memory);
     autoclearBufferSizes.push_back(size/4);
