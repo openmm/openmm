@@ -91,6 +91,10 @@ __device__ void loadVdw14_7Shared( struct Vdw14_7Particle* sA, unsigned int atom
 __device__ void getVdw14_7CombindedSigmaEpsilon_kernel( int sigmaCombiningRule, float iSigma, float jSigma, float* combindedSigma,
                                                         int epsilonCombiningRule, float iEpsilon, float jEpsilon, float* combindedEpsilon )
 {
+    // ARITHMETIC = 1
+    // GEOMETRIC  = 2
+    // CUBIC-MEAN = 3
+
     if( sigmaCombiningRule == 1 ){
         *combindedSigma      = iSigma + jSigma;
     } else if( sigmaCombiningRule == 2 ){
@@ -101,14 +105,17 @@ __device__ void getVdw14_7CombindedSigmaEpsilon_kernel( int sigmaCombiningRule, 
         *combindedSigma      = 2.0f*( iSigma2*iSigma + jSigma2*jSigma )/( iSigma2 + jSigma2 );
     }
 
+    // ARITHMETIC = 1
+    // GEOMETRIC  = 2
+    // HARMONIC   = 3
+    // HHG        = 4
+
     if( epsilonCombiningRule == 1 ){
-        *combindedEpsilon    = iEpsilon + jEpsilon;
+        *combindedEpsilon    = 0.5f*(iEpsilon + jEpsilon);
     } else if( epsilonCombiningRule == 2 ){
-        *combindedEpsilon    = 2.0f*sqrtf( iEpsilon*jEpsilon );
+        *combindedEpsilon    = sqrtf( iEpsilon*jEpsilon );
     } else if( epsilonCombiningRule == 3 ){
-        float iEpsilon2      = iEpsilon*iEpsilon;
-        float jEpsilon2      = jEpsilon*jEpsilon;
-        *combindedEpsilon    = 2.0f*( iEpsilon2*iEpsilon + jEpsilon2*jEpsilon )/( iEpsilon2 + jEpsilon2 );
+        *combindedEpsilon    = 2.0f*( iEpsilon*jEpsilon )/( iEpsilon + jEpsilon );
     } else {
         float epsilonS       = sqrtf( iEpsilon ) + sqrtf( jEpsilon );
         *combindedEpsilon    = 4.0f*( iEpsilon*jEpsilon )/( epsilonS*epsilonS );
@@ -215,7 +222,7 @@ __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float c
     float gTau                                   = combindedEpsilon*tau7*r6*gammaHal*tmp*tmp;
  
     *energy                                      = combindedEpsilon*combindedSigma7*tau7*( (combindedSigma7*gammaHal*rhoInverse) - 2.0f);
-    float deltaE                                 = (-7.0f*(dTau*(*energy) + gTau))*rI;
+    float deltaE                                 = (-7.0f*(dTau*(*energy) + gTau));
  
     if( r > cAmoebaSim.vdwTaperCutoff ){ 
 
@@ -226,10 +233,11 @@ __device__ void calculateVdw14_7PairIxn_kernel( float combindedSigma,    float c
         *energy *= taper;
     }
 
+    deltaE                                      *= rI;
+
     force[0]                                    *= deltaE;
     force[1]                                    *= deltaE;
     force[2]                                    *= deltaE;
-
 
 }
 

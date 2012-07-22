@@ -310,7 +310,6 @@ void gpuSetAmoebaGrycukParameters( amoebaGpuContext amoebaGpu , float innerDiele
 extern "C"
 void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<int>& indexIVs, 
-                                const std::vector<int>& indexClasses, 
                                 const std::vector<float>& sigmas,
                                 const std::vector<float>& epsilons,
                                 const std::vector<float>& reductions,

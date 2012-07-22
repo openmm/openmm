@@ -110,7 +110,7 @@ struct ElectrostaticParticle {
 #define one 1.0f
 
 __device__ void calculateElectrostaticPairIxnOrig_kernel( ElectrostaticParticle& atomI,   ElectrostaticParticle& atomJ,
-                                                      float* scalingFactors, float4*  outputForce, float4  outputTorque[2]){
+                                                          float* scalingFactors, float4*  outputForce, float4  outputTorque[2]){
   
     float deltaR[3];
     

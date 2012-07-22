@@ -1886,7 +1886,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     } else if( nonbondedMethod == 1 ){
         amoebaGpu->multipoleNonbondedMethod = AMOEBA_PARTICLE_MESH_EWALD;
     } else {
-        throw OpenMM::OpenMMException("multipoleNonbondedMethod not recognized.\n" );
+        throw OpenMM::OpenMMException("MultipoleNonbondedMethod not recognized.\n" );
     }
 
     amoebaGpu->amoebaSim.sqrtPi                      = std::sqrt( 3.14159265358f );
@@ -2030,7 +2030,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 
         // polarization covalent info
 
-        const int minCovalentPolarizationIndex                                = minCovalentPolarizationIndices[ii];
+        const int minCovalentPolarizationIndex              = minCovalentPolarizationIndices[ii];
         amoebaGpu->polarizationDegree[particlesOffset]      = minCovalentPolarizationIndex;
 
         for( unsigned int jj = 4; jj < covalentInfo.size(); jj++ ){
@@ -2463,7 +2463,6 @@ static void lookupVdwTaper( float r, double vdwTaperCut, double delta,
 extern "C"
 void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<int>& indexIVs, 
-                                const std::vector<int>& indexClasses, 
                                 const std::vector<float>& sigmas,
                                 const std::vector<float>& epsilons,
                                 const std::vector<float>& reductions,
@@ -2484,7 +2483,7 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     amoebaGpu->amoebaSim.vdwUsePBC         = usePBC;
     amoebaGpu->amoebaSim.vdwCutoff         = cutoff;
     amoebaGpu->amoebaSim.vdwCutoff2        = cutoff*cutoff;
-    double vdwTaper                         = 0.90f;
+    double vdwTaper                        = 0.90f;
     if( vdwTaper < 1.0 ){
         double vdwTaperCoefficients[6];
         double vdwCut       = cutoff;

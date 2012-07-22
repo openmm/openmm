@@ -801,7 +801,8 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     data.incrementMultipoleForceCount();
 
     if( 0 && data.getLog() ){
-        (void) fprintf( data.getLog(), "In computeAmoebaMultipoleForce hasAmoebaGeneralizedKirkwood=%d\n", data.getHasAmoebaGeneralizedKirkwood() );
+        (void) fprintf( data.getLog(), "In computeAmoebaMultipoleForce hasAmoebaGeneralizedKirkwood=%d\n",
+                        data.getHasAmoebaGeneralizedKirkwood() );
         (void) fflush( data.getLog());
     }
 
@@ -929,7 +930,6 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     std::vector<int> minCovalentIndices(numMultipoles);
     std::vector<int> minCovalentPolarizationIndices(numMultipoles);
 
-    //float scalingDistanceCutoff = static_cast<float>(force.getScalingDistanceCutoff());
     float scalingDistanceCutoff = 50.0f;
 
     std::vector<AmoebaMultipoleForce::CovalentType> covalentList;
@@ -1007,7 +1007,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     }
 
     int polarizationType = static_cast<int>(force.getPolarizationType());
-    int nonbondedMethod = static_cast<int>(force.getNonbondedMethod());
+    int nonbondedMethod  = static_cast<int>(force.getNonbondedMethod());
     if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
          throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
     }
@@ -1170,6 +1170,7 @@ static void computeAmoebaVdwForce( AmoebaCudaData& data ) {
 
     // Vdw14_7F
     kCalculateAmoebaVdw14_7Forces(gpu, data.getUseVdwNeighborList());
+
 }
 
 /* -------------------------------------------------------------------------- *
@@ -1181,11 +1182,12 @@ public:
     ForceInfo(const AmoebaVdwForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        int iv1, iv2, class1, class2;
+        int iv1, iv2;
+        int classIndex1, classIndex2;
         double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
-        force.getParticleParameters(particle1, iv1, class1, sigma1, epsilon1, reduction1);
-        force.getParticleParameters(particle2, iv2, class2, sigma2, epsilon2, reduction2);
-        return (class1 == class2 && sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
+        force.getParticleParameters(particle1, iv1, classIndex1, sigma1, epsilon1, reduction1);
+        force.getParticleParameters(particle2, iv2, classIndex2, sigma2, epsilon2, reduction2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2);
     }
 private:
     const AmoebaVdwForce& force;
@@ -1207,31 +1209,30 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     int numParticles = system.getNumParticles();
 
     std::vector<int> indexIVs(numParticles);
-    std::vector<int> indexClasses(numParticles);
     std::vector< std::vector<int> > allExclusions(numParticles);
     std::vector<float> sigmas(numParticles);
     std::vector<float> epsilons(numParticles);
     std::vector<float> reductions(numParticles);
     for( int ii = 0; ii < numParticles; ii++ ){
 
-        int indexIV, indexClass;
+        int indexIV;
+        int classIndex;
         double sigma, epsilon, reduction;
         std::vector<int> exclusions;
 
-        force.getParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
+        force.getParticleParameters( ii, indexIV, classIndex, sigma, epsilon, reduction );
         force.getParticleExclusions( ii, exclusions );
         for( unsigned int jj = 0; jj < exclusions.size(); jj++ ){
            allExclusions[ii].push_back( exclusions[jj] );
         }
 
         indexIVs[ii]      = indexIV;
-        indexClasses[ii]  = indexClass;
         sigmas[ii]        = static_cast<float>( sigma );
         epsilons[ii]      = static_cast<float>( epsilon );
         reductions[ii]    = static_cast<float>( reduction );
     }   
 
-    gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, indexClasses, sigmas, epsilons, reductions,
+    gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, sigmas, epsilons, reductions,
                                force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
                                allExclusions, force.getPBC(), static_cast<float>(force.getCutoff()) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
