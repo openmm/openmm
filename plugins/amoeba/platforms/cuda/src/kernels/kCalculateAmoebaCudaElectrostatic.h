@@ -276,14 +276,14 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
             offset                 = (x + tgx + warp*cSim.paddedNumberOfAtoms);
             add3dArray( 3*offset, localParticle.force,  outputTorque );
 
-            offset                              = (y + tgx + warp*cSim.paddedNumberOfAtoms);
+            offset                 = (y + tgx + warp*cSim.paddedNumberOfAtoms);
             add3dArray( 3*offset, sA[threadIdx.x].force,  outputTorque );
 
 #else
             offset                 = (x + tgx + (y >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray(         3*offset, localParticle.force, outputTorque );
 
-            offset                              = (y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
+            offset                 = (y + tgx + (x >> GRIDBITS) * cSim.paddedNumberOfAtoms);
             load3dArray(       3*offset, sA[threadIdx.x].force, outputTorque );
 
 #endif

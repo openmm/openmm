@@ -939,8 +939,6 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
 
     gpuContext gpu = amoebaGpu->gpuContext;
 
-    // apparently debug array can take up nontrivial no. registers
-
     static unsigned int threadsPerBlock = 0;
     if( threadsPerBlock == 0 ){
         unsigned int maxThreads;

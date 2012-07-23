@@ -456,6 +456,16 @@ void cudaComputeAmoebaMapTorqueAndAddToForce( amoebaGpuContext amoebaGpu, CUDASt
   
     gpuContext gpu    = amoebaGpu->gpuContext;
 
+    // The default is to use the Cuda force4 output buffers to collect the forces on each particle arising from the torques: a torque on
+	// particle-i will be mapped into a force on particle-j, where particle-j is one of particles defining the molecular frame axes
+	// associated w/ particle-i. 
+
+	// if amoebaGpu->amoebaSim.maxTorqueBufferIndex > amoebaGpu->gpuContext->sim.outputBuffers, then 
+	// the number of force4 output buffers is too small to accomodate the number of particles whose torques contribute to the force
+	// on at least one particle. In this case, the CUDAStream amoebaGpu->psTorqueMapForce4 is used instead to collect the forces.
+	// amoebaClearMapTorqueForce_kernel() clears these buffers; the call to amoebaAddMapTorqueForceToForce_kernel() below
+	// add the torques from the amoebaGpu->psTorqueMapForce4 buffers to the force4 CUDAStream
+
     if( amoebaGpu->amoebaSim.maxTorqueBufferIndex > amoebaGpu->gpuContext->sim.outputBuffers && amoebaGpu->psTorqueMapForce4 != amoebaGpu->gpuContext->psForce4 && amoebaGpu->psTorqueMapForce4 ){
         amoebaClearMapTorqueForce_kernel<<< gpu->sim.blocks, gpu->sim.threads_per_block>>> ( );
         LAUNCHERROR("amoebaClearMapTorqueForce");

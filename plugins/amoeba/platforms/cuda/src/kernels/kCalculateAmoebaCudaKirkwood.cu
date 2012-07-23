@@ -95,9 +95,9 @@ __device__ void loadKirkwoodShared( struct KirkwoodParticle* sA, unsigned int at
 }
 
 __device__ void calculateKirkwoodPairIxnOrig_kernel( KirkwoodParticle& atomI,       KirkwoodParticle& atomJ,
-                                                 float*  outputForce,           float outputTorque[2][3],
-                                                 float*  outputBorn,            float*  outputBornPolar,
-                                                 float* outputEnergy
+                                                     float*  outputForce,           float outputTorque[2][3],
+                                                     float*  outputBorn,            float*  outputBornPolar,
+                                                     float* outputEnergy
 
  ){
 
@@ -2004,7 +2004,6 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     // Tinker's Born1 && E-diff
 
-    //kCalculateObcGbsaForces2( amoebaGpu->gpuContext );
     kCalculateGrycukGbsaForces2( amoebaGpu );
     kCalculateAmoebaKirkwoodEDiff( amoebaGpu );
 
