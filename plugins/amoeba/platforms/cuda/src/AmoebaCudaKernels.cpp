@@ -816,8 +816,7 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
             kCalculateAmoebaGrycukBornRadii( gpu );
             kReduceGrycukGbsaBornSum( gpu );
         } else {
-            kCalculateObcGbsaBornSum(gpu->gpuContext);
-            kReduceObcGbsaBornSum(gpu->gpuContext);
+            throw OpenMMException("AmoebaGeneralizedKirkwood: Born radii must be calcualted using the Grycuk algorithm." );
        }
     }   
 
