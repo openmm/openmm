@@ -53,12 +53,17 @@
 using namespace OpenMM;
 const double TOL = 1e-4;
 
-void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod, AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
-                                              double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces, double& energy, FILE* log ){
+// setup for 2 ammonia molecules
+
+static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
+                                                     AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+                                                     double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces, double& energy, FILE* log ){
 
     // beginning of Multipole setup
 
     System system;
+
+    // box
 
     double boxDimension                               = 0.6;
     Vec3 a( boxDimension, 0.0, 0.0 );
@@ -68,6 +73,7 @@ void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbon
 
     AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
     int numberOfParticles                             = 8;
+
     amoebaMultipoleForce->setNonbondedMethod( nonbondedMethod );
     amoebaMultipoleForce->setPolarizationType( polarizationType );
     amoebaMultipoleForce->setCutoffDistance( cutoff );
@@ -141,7 +147,7 @@ void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbon
     amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
     amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
 
-    // CovalentMaps
+    // covalent maps
 
     std::vector< int > covalentMap;
     covalentMap.resize(0);
@@ -266,10 +272,11 @@ void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbon
     covalentMap.push_back( 7 );
     amoebaMultipoleForce->setCovalentMap( 7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
 
-    AmoebaHarmonicBondForce* amoebaHarmonicBondForce  = new AmoebaHarmonicBondForce();
-    int numberOfBonds                                 = 6; 
+    // 1-2 bonds needed 
 
-    // addParticle: particle1, particle2, length, quadraticK
+    AmoebaHarmonicBondForce* amoebaHarmonicBondForce  = new AmoebaHarmonicBondForce();
+
+    // addBond: particle1, particle2, length, quadraticK
 
     amoebaHarmonicBondForce->addBond( 0, 1,   0.0000000e+00,   0.0000000e+00 );
     amoebaHarmonicBondForce->addBond( 0, 2,   0.0000000e+00,   0.0000000e+00 );
@@ -306,21 +313,36 @@ void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbon
     energy                           = state.getPotentialEnergy();
 }
 
-void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
-                          std::vector<Vec3>& expectedForces,
-                          std::vector<Vec3>& forces, double tolerance, FILE* log ) {
+// compare forces and energies 
+
+static void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
+                                 std::vector<Vec3>& expectedForces,
+                                 std::vector<Vec3>& forces, double tolerance, FILE* log ) {
 
 
 //#define AMOEBA_DEBUG
 #ifdef AMOEBA_DEBUG
     if( log ){
         double conversion = 1.0/4.184;
-        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy );
+        double energyAbsDiff = fabs( expectedEnergy - energy );   
+        double energyRelDiff =  2.0*energyAbsDiff/( fabs( expectedEnergy ) + fabs( energy ) + 1.0e-08 );   
+        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
+                        conversion*energyAbsDiff, conversion*energyRelDiff );
         if( conversion != 1.0 )conversion *= -0.1;
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
+
+            double expectedNorm = sqrt( expectedForces[ii][0]*expectedForces[ii][0] +
+                                        expectedForces[ii][1]*expectedForces[ii][1] +
+                                        expectedForces[ii][2]*expectedForces[ii][2] );
+
+            double norm         = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
+            double absDiff      = fabs( norm - expectedNorm );
+            double relDiff      = 2.0*absDiff/(fabs( norm ) + fabs( expectedNorm ) + 1.0e-08);
+
+            (void) fprintf( log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
+                            conversion*absDiff, conversion*relDiff,
                             conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
-                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2] );
+                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], conversion*expectedNorm, conversion*norm );
         }
         (void) fflush( log );
         conversion = 1.0;
@@ -341,9 +363,80 @@ void compareForcesEnergy( std::string& testName, double expectedEnergy, double e
     ASSERT_EQUAL_TOL_MOD( expectedEnergy, energy, tolerance, testName );
 }
 
-// test multipole direct polarization
+// compare relative differences in force norms and energies 
 
-void testMultipoleAmmoniaDirectPolarization( FILE* log ) {
+static void compareForceNormsEnergy( std::string& testName, double expectedEnergy, double energy,
+                                     std::vector<Vec3>& expectedForces,
+                                     std::vector<Vec3>& forces, double tolerance, FILE* log ) {
+
+
+//#define AMOEBA_DEBUG
+#ifdef AMOEBA_DEBUG
+    if( log ){
+        double conversion = 1.0/4.184;
+        double energyAbsDiff = fabs( expectedEnergy - energy );   
+        double energyRelDiff =  2.0*energyAbsDiff/( fabs( expectedEnergy ) + fabs( energy ) + 1.0e-08 );   
+        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e  absDiff=%15.7e relDiff=%15.7e\n", testName.c_str(), conversion*expectedEnergy, conversion*energy,
+                        conversion*energyAbsDiff, conversion*energyRelDiff );
+        if( conversion != 1.0 )conversion *= -0.1;
+        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+
+            double expectedNorm = sqrt( expectedForces[ii][0]*expectedForces[ii][0] +
+                                        expectedForces[ii][1]*expectedForces[ii][1] +
+                                        expectedForces[ii][2]*expectedForces[ii][2] );
+
+            double norm         = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
+            double absDiff      = fabs( (norm - expectedNorm) );
+            double relDiff      = 2.0*absDiff/(fabs( norm ) + fabs( expectedNorm ) + 1.0e-08);
+
+            (void) fprintf( log, "%6u %15.7e %15.7e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]  %15.7e %15.7e\n", ii,
+                            fabs(conversion)*absDiff, relDiff,
+                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
+                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2], 
+                            fabs(conversion)*expectedNorm, fabs(conversion)*norm );
+        }
+        (void) fflush( log );
+        conversion = 1.0;
+        (void) fprintf( log, "\n%s: expected energy=%14.7e %14.7e no conversion\n", testName.c_str(), conversion*expectedEnergy, conversion*energy );
+        if( conversion != 1.0 )conversion = -1.0;
+        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
+                            conversion*expectedForces[ii][0], conversion*expectedForces[ii][1], conversion*expectedForces[ii][2],
+                            conversion*forces[ii][0], conversion*forces[ii][1], conversion*forces[ii][2] );
+        }
+        (void) fflush( log );
+    }
+#endif
+
+    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+        double expectedNorm = sqrt( expectedForces[ii][0]*expectedForces[ii][0] +
+                                    expectedForces[ii][1]*expectedForces[ii][1] +
+                                    expectedForces[ii][2]*expectedForces[ii][2] );
+
+        double norm         = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
+        double absDiff      = fabs( norm - expectedNorm );
+        double relDiff      = 2.0*absDiff/(fabs( norm ) + fabs( expectedNorm ) + 1.0e-08);
+
+        if( relDiff > tolerance && absDiff > 0.001 ){
+            std::stringstream details;
+            details << testName << "Relative difference in norms " << relDiff << " larger than allowed tolerance at particle=" << ii;
+            details << ": norms=" << norm << " expected norm=" << expectedNorm; 
+            throwException(__FILE__, __LINE__, details.str());
+        }
+    }
+    double energyAbsDiff = fabs( expectedEnergy - energy );   
+    double energyRelDiff =  2.0*energyAbsDiff/( fabs( expectedEnergy ) + fabs( energy ) + 1.0e-08 );   
+    if( energyRelDiff > tolerance ){
+        std::stringstream details;
+        details << testName << "Relative difference in energies " << energyRelDiff << " larger than allowed tolerance.";
+        details << "Energies=" << energy << " expected energy=" << expectedEnergy; 
+        throwException(__FILE__, __LINE__, details.str());
+    }
+}
+
+// test multipole direct polarization for system comprised of two ammonia molecules; no cutoff
+
+static void testMultipoleAmmoniaDirectPolarization( FILE* log ) {
 
     std::string testName      = "testMultipoleAmmoniaDirectPolarization";
 
@@ -372,9 +465,9 @@ void testMultipoleAmmoniaDirectPolarization( FILE* log ) {
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
-// test multipole mutual polarization
+// test multipole mutual polarization for system comprised of two ammonia molecules; no cutoff
 
-void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
+static void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
 
     std::string testName      = "testMultipoleAmmoniaMutualPolarization";
 
@@ -403,43 +496,18 @@ void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
-// test multipole mutual polarization using PME
+// setup for box of 4 water molecules -- used to test PME
 
-void testMultipoleAmmoniaPMEMutualPolarization( FILE* log ) {
-
-    std::string testName      = "testMultipoleAmmoniaMutualPolarization";
-
-    int numberOfParticles     = 8;
-    int inputPmeGridDimension = 80;
-    double cutoff             = 0.28;
-    std::vector<Vec3> forces;
-    double energy;
-
-    setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                             cutoff, inputPmeGridDimension, forces, energy, log );
-    std::vector<Vec3> expectedForces(numberOfParticles);
-
-    double expectedEnergy     = -3.8843855e+00*4.184;
-
-    expectedForces[0]         = Vec3(  -5.5121003e+02,  -1.7325162e+01,   8.1781763e+01 );
-    expectedForces[1]         = Vec3(   2.5644285e+01,   3.4249929e+01,  -1.6040819e+01 );
-    expectedForces[2]         = Vec3(   2.9751974e+01,  -3.0851062e+01,  -3.1741707e+01 );
-    expectedForces[3]         = Vec3(   1.6147883e+02,   1.3744637e+01,  -2.6982931e+01 );
-    expectedForces[4]         = Vec3(  -3.1289925e+02,  -3.3127430e+00,  -5.9526840e+01 );
-    expectedForces[5]         = Vec3(   1.3046796e+02,  -3.8528176e+01,   4.9662804e+00 );
-    expectedForces[6]         = Vec3(   4.6654349e+02,   2.5146526e+00,   7.4042527e+01 );
-    expectedForces[7]         = Vec3(   1.2682825e+02,   3.9078836e+01,   3.8640742e+00 );
-
-    double tolerance          = 1.0e-04;
-    compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
-}
-
-void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod, AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
-                                            double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces, double& energy, FILE* log ){
+static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
+                                                   AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+                                                   double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces,
+                                                   double& energy, FILE* log ){
 
     // beginning of Multipole setup
 
     System system;
+
+    // box dimensions
 
     double boxDimension                               = 1.8643;
     Vec3 a( boxDimension, 0.0, 0.0 );
@@ -541,9 +609,11 @@ void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::AmoebaNonbonde
     
     } 
  
+    // 1-2 bonds needed
+
     AmoebaHarmonicBondForce* amoebaHarmonicBondForce  = new AmoebaHarmonicBondForce();
 
-    // addParticle: particle1, particle2, length, quadraticK
+    // addBond: particle1, particle2, length, quadraticK
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
         amoebaHarmonicBondForce->addBond( jj, jj+1,   0.0000000e+00,   0.0000000e+00 );
@@ -582,9 +652,9 @@ void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::AmoebaNonbonde
     energy                           = state.getPotentialEnergy();
 }
 
-// test multipole mutual polarization using PME
+// test multipole direct polarization using PME for box of water
 
-void testMultipoleWaterPMEDirectPolarization( FILE* log ) {
+static void testMultipoleWaterPMEDirectPolarization( FILE* log ) {
 
     std::string testName      = "testMultipoleWaterDirectPolarization";
 
@@ -617,9 +687,9 @@ void testMultipoleWaterPMEDirectPolarization( FILE* log ) {
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
-// test multipole mutual polarization using PME
+// test multipole mutual polarization using PME for box of water
 
-void testMultipoleWaterPMEMutualPolarization( FILE* log ) {
+static void testMultipoleWaterPMEMutualPolarization( FILE* log ) {
 
     std::string testName      = "testMultipoleWaterMutualPolarization";
 
@@ -652,6 +722,471 @@ void testMultipoleWaterPMEMutualPolarization( FILE* log ) {
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
+// check validation of traceless/symmetric quadrupole tensor
+
+static void testQuadrupoleValidation( FILE* log ){
+
+    std::string testName      = "checkQuadrupoleValidation";
+
+    int numberOfParticles     = 12;
+    int pmeGridDimension      = 20;
+    double cutoff             = 0.70;
+
+    // beginning of Multipole setup
+
+    System system;
+
+    double boxDimension                               = 1.8643;
+    Vec3 a( boxDimension, 0.0, 0.0 );
+    Vec3 b( 0.0, boxDimension, 0.0 );
+    Vec3 c( 0.0, 0.0, boxDimension );
+    system.setDefaultPeriodicBoxVectors( a, b, c );
+
+    AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
+    std::vector<Vec3> expectedForces(numberOfParticles);
+    amoebaMultipoleForce->setNonbondedMethod( AmoebaMultipoleForce::PME );
+    amoebaMultipoleForce->setPolarizationType( AmoebaMultipoleForce::Direct );
+    amoebaMultipoleForce->setCutoffDistance( 0.7 );
+    amoebaMultipoleForce->setMutualInducedTargetEpsilon( 1.0e-06 );
+    amoebaMultipoleForce->setMutualInducedMaxIterations( 500 );
+    amoebaMultipoleForce->setAEwald( 5.4459052e+00 );
+    amoebaMultipoleForce->setEwaldErrorTolerance( 1.0e-04 );
+
+    std::vector<int> pmeGridDimensions( 3 );
+    pmeGridDimensions[0] = pmeGridDimensions[1] = pmeGridDimensions[2] = pmeGridDimension;
+    amoebaMultipoleForce->setPmeGridDimensions( pmeGridDimensions );
+
+    for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
+        system.addParticle( 1.5995000e+01 );
+        system.addParticle( 1.0080000e+00 );
+        system.addParticle( 1.0080000e+00 );
+    }
+
+    std::vector<double> oxygenMolecularDipole(3);
+    std::vector<double> oxygenMolecularQuadrupole(9);
+
+    oxygenMolecularDipole[0]     =   0.0000000e+00;
+    oxygenMolecularDipole[1]     =   0.0000000e+00;
+    oxygenMolecularDipole[2]     =   7.5561214e-03;
+
+    oxygenMolecularQuadrupole[0] =   3.5403072e-04;
+    oxygenMolecularQuadrupole[1] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[2] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[3] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[4] =  -3.9025708e-04;
+    oxygenMolecularQuadrupole[5] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[6] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[7] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[8] =   3.6226356e-05;
+
+    std::vector<double> hydrogenMolecularDipole(3);
+    std::vector<double> hydrogenMolecularQuadrupole(9);
+    hydrogenMolecularDipole[0]     =  -2.0420949e-03;
+    hydrogenMolecularDipole[1]     =   0.0000000e+00;
+    hydrogenMolecularDipole[2]     =  -3.0787530e-03;
+
+    hydrogenMolecularQuadrupole[0] =  -3.4284825e-05;
+    hydrogenMolecularQuadrupole[1] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[2] =  -1.8948597e-06;
+    hydrogenMolecularQuadrupole[3] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[4] =  -1.0024088e-04;
+    hydrogenMolecularQuadrupole[5] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[6] =  -1.8948597e-06;
+    hydrogenMolecularQuadrupole[7] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[8] =   1.3452570e-04;
+
+    for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
+        amoebaMultipoleForce->addParticle( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
+                                            3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
+        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
+                                            3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
+        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
+                                            3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
+    }
+
+    // CovalentMaps
+/*
+    std::vector< int > covalentMap;
+    for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
+        covalentMap.resize(0);
+        covalentMap.push_back( jj+1 );
+        covalentMap.push_back( jj+2 );
+        amoebaMultipoleForce->setCovalentMap( jj, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+
+        covalentMap.resize(0);
+        covalentMap.push_back( jj );
+        covalentMap.push_back( jj+1 );
+        covalentMap.push_back( jj+2 );
+        amoebaMultipoleForce->setCovalentMap( jj,   static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+        amoebaMultipoleForce->setCovalentMap( jj+1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+        amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    
+        covalentMap.resize(0);
+        covalentMap.push_back( jj );
+        amoebaMultipoleForce->setCovalentMap( jj+1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+        amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    
+        covalentMap.resize(0);
+        covalentMap.push_back( jj+2 );
+        amoebaMultipoleForce->setCovalentMap( jj+1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    
+        covalentMap.resize(0);
+        covalentMap.push_back( jj+1 );
+        amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    
+    } 
+*/ 
+    AmoebaHarmonicBondForce* amoebaHarmonicBondForce  = new AmoebaHarmonicBondForce();
+
+    // addBond: particle1, particle2, length, quadraticK
+
+    for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
+        amoebaHarmonicBondForce->addBond( jj, jj+1,   0.0000000e+00,   0.0000000e+00 );
+        amoebaHarmonicBondForce->addBond( jj, jj+2,   0.0000000e+00,   0.0000000e+00 );
+    }
+
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( -2.5500000e+01 ); 
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( 3.7931250e+02 ); 
+    system.addForce(amoebaHarmonicBondForce);
+
+    std::vector<Vec3> positions(numberOfParticles);
+
+    positions[0]              = Vec3(  -8.7387270e-01,   5.3220410e-01,    7.4214000e-03 );
+    positions[1]              = Vec3(  -9.6050090e-01,   5.1173410e-01,   -2.2202700e-02 );
+    positions[2]              = Vec3(  -8.5985900e-01,   4.9658230e-01,    1.0283390e-01 );
+    positions[3]              = Vec3(   9.1767100e-02,  -7.8956650e-01,    4.3804200e-01 );
+    positions[4]              = Vec3(   1.2333420e-01,  -7.0267430e-01,    4.2611550e-01 );
+    positions[5]              = Vec3(   1.7267090e-01,  -8.2320810e-01,    4.8124750e-01 );
+    positions[6]              = Vec3(   8.6290110e-01,   6.2153500e-02,    4.1280850e-01 );
+    positions[7]              = Vec3(   8.6385200e-01,   1.2684730e-01,    3.3887060e-01 );
+    positions[8]              = Vec3(   9.5063550e-01,   5.3173300e-02,    4.4799160e-01 );
+    positions[9]              = Vec3(   5.0844930e-01,   2.8684740e-01,   -6.9293750e-01 );
+    positions[10]             = Vec3(   6.0459330e-01,   3.0620510e-01,   -7.0100130e-01 );
+    positions[11]             = Vec3(   5.0590640e-01,   1.8880920e-01,   -6.8813470e-01 );
+
+    system.addForce(amoebaMultipoleForce);
+
+    std::string platformName;
+    platformName = "Cuda";
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName( platformName ) );
+
+    context.setPositions(positions);
+
+    // traceless quadrupole
+
+    try {
+        oxygenMolecularQuadrupole[4] += 0.1;
+        amoebaMultipoleForce->setMultipoleParameters( 0, -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, 1, 2, -1,
+                                                       3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
+        State state                      = context.getState(State::Forces | State::Energy);
+        std::stringstream buffer;        
+        buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
+        throw OpenMMException(buffer.str());
+    } catch(const std::exception& e) {
+    }
+    oxygenMolecularQuadrupole[4] -= 0.1;
+
+    // symmetric quadrupole
+
+    // XY and YX components
+
+    try {
+        oxygenMolecularQuadrupole[1] += 0.1;
+        amoebaMultipoleForce->setMultipoleParameters( 0, -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, 1, 2, -1,
+                                                       3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
+        State state                      = context.getState(State::Forces | State::Energy);
+        std::stringstream buffer;        
+        buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
+        throw OpenMMException(buffer.str());
+    } catch(const std::exception& e) {
+    }
+    oxygenMolecularQuadrupole[1] -= 0.1;
+
+    // XZ and ZX components
+
+    try {
+        oxygenMolecularQuadrupole[2] += 0.1;
+        amoebaMultipoleForce->setMultipoleParameters( 0, -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, 1, 2, -1,
+                                                       3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
+        State state                      = context.getState(State::Forces | State::Energy);
+        std::stringstream buffer;        
+        buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
+        throw OpenMMException(buffer.str());
+    } catch(const std::exception& e) {
+    }
+    oxygenMolecularQuadrupole[2] -= 0.1;
+
+    // YZ and ZY components
+
+    try {
+        oxygenMolecularQuadrupole[5] += 0.1;
+        amoebaMultipoleForce->setMultipoleParameters( 0, -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, 1, 2, -1,
+                                                       3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
+        State state                      = context.getState(State::Forces | State::Energy);
+        std::stringstream buffer;        
+        buffer << "Exception not thrown for quadrupole tensor w/ nonzero trace.";
+        throw OpenMMException(buffer.str());
+    } catch(const std::exception& e) {
+    }
+    oxygenMolecularQuadrupole[5] -= 0.1;
+
+}
+
+// setup for box of 2 water molecules and 3 ions
+
+static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
+                                                          AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+                                                          double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces,
+                                                          double& energy, FILE* log ){
+
+    // beginning of Multipole setup
+
+    System system;
+
+    // box dimensions
+
+    double boxDimensions[3]                           = { 6.7538, 7.2977, 7.4897 };
+    Vec3 a( boxDimensions[0], 0.0, 0.0 );
+    Vec3 b( 0.0, boxDimensions[1], 0.0 );
+    Vec3 c( 0.0, 0.0, boxDimensions[2] );
+    system.setDefaultPeriodicBoxVectors( a, b, c );
+
+
+    AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
+    int numberOfParticles                             = 8;
+    int numberOfWaters                                = 2;
+    int numberOfIons                                  = numberOfParticles - numberOfWaters*3;
+
+    amoebaMultipoleForce->setNonbondedMethod( nonbondedMethod );
+    amoebaMultipoleForce->setPolarizationType( polarizationType );
+    amoebaMultipoleForce->setCutoffDistance( cutoff );
+    amoebaMultipoleForce->setMutualInducedTargetEpsilon( 1.0e-06 );
+    amoebaMultipoleForce->setMutualInducedMaxIterations( 500 );
+    amoebaMultipoleForce->setAEwald( 5.4459052e+00 );
+    amoebaMultipoleForce->setEwaldErrorTolerance( 1.0e-04 );
+
+    std::vector<int> pmeGridDimension( 3 );
+    pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2] = inputPmeGridDimension;
+    amoebaMultipoleForce->setPmeGridDimensions( pmeGridDimension );
+
+    // 2 ions
+
+    system.addParticle( 3.5453000e+01  );
+    system.addParticle( 2.2990000e+01 );
+
+    std::vector<double> ionDipole(3);
+    std::vector<double> ionQuadrupole(9);
+
+    ionDipole[0]     =   0.0000000e+00;
+    ionDipole[1]     =   0.0000000e+00;
+    ionDipole[2]     =   0.0000000e+00;
+
+    ionQuadrupole[0] =   0.0000000e+00;
+    ionQuadrupole[1] =   0.0000000e+00;
+    ionQuadrupole[2] =   0.0000000e+00;
+    ionQuadrupole[3] =   0.0000000e+00;
+    ionQuadrupole[4] =   0.0000000e+00;
+    ionQuadrupole[5] =   0.0000000e+00;
+    ionQuadrupole[6] =   0.0000000e+00;
+    ionQuadrupole[7] =   0.0000000e+00;
+    ionQuadrupole[8] =   0.0000000e+00;
+    amoebaMultipoleForce->addParticle(  -1.0000000e+00, ionDipole, ionQuadrupole, 5, -1, -1, -1,   3.9000000e-01,   3.9842202e-01,   4.0000000e-03 );
+    amoebaMultipoleForce->addParticle(   1.0000000e+00, ionDipole, ionQuadrupole, 5, -1, -1, -1,   3.9000000e-01,   2.2209062e-01,   1.2000000e-04 );
+
+    // waters
+
+    for( unsigned int jj = 2; jj < numberOfParticles; jj += 3 ){
+        system.addParticle( 1.5995000e+01 );
+        system.addParticle( 1.0080000e+00 );
+        system.addParticle( 1.0080000e+00 );
+    }
+
+    std::vector<double> oxygenMolecularDipole(3);
+    std::vector<double> oxygenMolecularQuadrupole(9);
+
+    oxygenMolecularDipole[0]     =   0.0000000e+00;
+    oxygenMolecularDipole[1]     =   0.0000000e+00;
+    oxygenMolecularDipole[2]     =   7.5561214e-03;
+
+    oxygenMolecularQuadrupole[0] =   3.5403072e-04;
+    oxygenMolecularQuadrupole[1] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[2] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[3] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[4] =  -3.9025708e-04;
+    oxygenMolecularQuadrupole[5] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[6] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[7] =   0.0000000e+00;
+    oxygenMolecularQuadrupole[8] =   3.6226356e-05;
+
+    std::vector<double> hydrogenMolecularDipole(3);
+    std::vector<double> hydrogenMolecularQuadrupole(9);
+    hydrogenMolecularDipole[0]     =  -2.0420949e-03;
+    hydrogenMolecularDipole[1]     =   0.0000000e+00;
+    hydrogenMolecularDipole[2]     =  -3.0787530e-03;
+
+    hydrogenMolecularQuadrupole[0] =  -3.4284825e-05;
+    hydrogenMolecularQuadrupole[1] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[2] =  -1.8948597e-06;
+    hydrogenMolecularQuadrupole[3] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[4] =  -1.0024088e-04;
+    hydrogenMolecularQuadrupole[5] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[6] =  -1.8948597e-06;
+    hydrogenMolecularQuadrupole[7] =   0.0000000e+00;
+    hydrogenMolecularQuadrupole[8] =   1.3452570e-04;
+
+    for( unsigned int jj = 2; jj < numberOfParticles; jj += 3 ){
+        amoebaMultipoleForce->addParticle( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
+                                            3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
+        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
+                                            3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
+        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
+                                            3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
+    }
+
+    // CovalentMaps
+
+    std::vector< int > covalentMap;
+    covalentMap.resize(0);
+    covalentMap.push_back( 0 );
+    amoebaMultipoleForce->setCovalentMap( 0, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+
+    covalentMap.resize(0);
+    covalentMap.push_back( 1 );
+    amoebaMultipoleForce->setCovalentMap( 1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+
+    for( unsigned int jj = 2; jj < numberOfParticles; jj += 3 ){
+        covalentMap.resize(0);
+        covalentMap.push_back( jj+1 );
+        covalentMap.push_back( jj+2 );
+        amoebaMultipoleForce->setCovalentMap( jj, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+
+        covalentMap.resize(0);
+        covalentMap.push_back( jj );
+        covalentMap.push_back( jj+1 );
+        covalentMap.push_back( jj+2 );
+        amoebaMultipoleForce->setCovalentMap( jj,   static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+        amoebaMultipoleForce->setCovalentMap( jj+1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+        amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    
+        covalentMap.resize(0);
+        covalentMap.push_back( jj );
+        amoebaMultipoleForce->setCovalentMap( jj+1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+        amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(0), covalentMap );
+    
+        covalentMap.resize(0);
+        covalentMap.push_back( jj+2 );
+        amoebaMultipoleForce->setCovalentMap( jj+1, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    
+        covalentMap.resize(0);
+        covalentMap.push_back( jj+1 );
+        amoebaMultipoleForce->setCovalentMap( jj+2, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(1), covalentMap );
+    
+    } 
+ 
+    // 1-2 bonds needed
+
+    AmoebaHarmonicBondForce* amoebaHarmonicBondForce  = new AmoebaHarmonicBondForce();
+
+    // addBond: particle1, particle2, length, quadraticK
+
+    for( unsigned int jj = 2; jj < numberOfParticles; jj += 3 ){
+        amoebaHarmonicBondForce->addBond( jj, jj+1,   0.0000000e+00,   0.0000000e+00 );
+        amoebaHarmonicBondForce->addBond( jj, jj+2,   0.0000000e+00,   0.0000000e+00 );
+    }
+
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( -2.5500000e+01 ); 
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( 3.7931250e+02 ); 
+    system.addForce(amoebaHarmonicBondForce);
+
+    std::vector<Vec3> positions(numberOfParticles);
+
+    positions[0]              = Vec3(  -1.4364000e+00,  -1.2848000e+00,    5.1940000e-01 );
+    positions[1]              = Vec3(  -3.2644000e+00,   2.3620000e+00,    1.3643000e+00 );
+    positions[2]              = Vec3(  -2.3780000e+00,   1.8976000e+00,   -1.5921000e+00 );
+    positions[3]              = Vec3(  -2.3485183e+00,   1.8296632e+00,   -1.5310146e+00 );
+    positions[4]              = Vec3(  -2.3784362e+00,   1.8623910e+00,   -1.6814092e+00 );
+    positions[5]              = Vec3(  -2.1821000e+00,  -1.0808000e+00,    2.9547000e+00 );
+    positions[6]              = Vec3(  -2.1198155e+00,  -1.0925202e+00,    2.8825940e+00 );
+    positions[7]              = Vec3(  -2.1537255e+00,  -1.0076218e+00,    3.0099797e+00 );
+
+    system.addForce(amoebaMultipoleForce);
+
+    std::string platformName;
+    platformName = "Cuda";
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName( platformName ) );
+
+    context.setPositions(positions);
+    State state                      = context.getState(State::Forces | State::Energy);
+    forces                           = state.getForces();
+    energy                           = state.getPotentialEnergy();
+}
+
+// test multipole mutual polarization using PME for system comprised of 2 ions and 2 waters
+
+static void testMultipoleIonsAndWaterPMEDirectPolarization( FILE* log ) {
+
+    std::string testName      = "testMultipoleIonsAndWaterDirectPolarization";
+
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 64;
+    double cutoff             = 0.70;
+    std::vector<Vec3> forces;
+    double energy;
+
+    setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct, 
+                                                  cutoff, inputPmeGridDimension, forces, energy, log );
+    std::vector<Vec3> expectedForces(numberOfParticles);
+
+    double expectedEnergy     =  -4.6859568e+01;
+
+    expectedForces[0]         = Vec3(  -9.1266563e+00,   1.5193632e+01,  -4.0047974e+00 );
+    expectedForces[1]         = Vec3(  -1.0497973e+00,   1.4622548e+01,   1.1789324e+01 );
+    expectedForces[2]         = Vec3(  -3.2564644e+00,   6.5325105e+00,  -2.9698616e+00 );
+    expectedForces[3]         = Vec3(   3.0687040e+00,  -8.4253665e-01,  -3.4081010e+00 );
+    expectedForces[4]         = Vec3(   1.1407201e+00,  -3.1491550e+00,  -1.1326031e+00 );
+    expectedForces[5]         = Vec3(  -6.1046529e+00,   9.5686061e-01,   1.1506333e-01 );
+    expectedForces[6]         = Vec3(   1.9275403e+00,  -5.6007439e-01,  -4.8387346e+00 );
+    expectedForces[7]         = Vec3(   4.0644209e+00,  -3.3666305e+00,  -1.7022384e+00 );
+
+    double tolerance          = 5.0e-04;
+    compareForceNormsEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+}
+
+// test multipole mutual polarization using PME for system comprised of 2 ions and 2 waters
+
+static void testMultipoleIonsAndWaterPMEMutualPolarization( FILE* log ) {
+
+    std::string testName      = "testMultipoleIonsAndWaterMutualPolarization";
+
+    int numberOfParticles     = 8;
+    int inputPmeGridDimension = 64;
+    double cutoff             = 0.70;
+    std::vector<Vec3> forces;
+    double energy;
+
+    setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
+                                                  cutoff, inputPmeGridDimension, forces, energy, log );
+    std::vector<Vec3> expectedForces(numberOfParticles);
+
+    double expectedEnergy     = -4.6859424e+01;
+
+    expectedForces[0]         = Vec3(  -9.1272358e+00,   1.5191516e+01,  -4.0058826e+00 );
+    expectedForces[1]         = Vec3(  -1.0497156e+00,   1.4622425e+01,   1.1789420e+01 );
+    expectedForces[2]         = Vec3(  -3.2560478e+00,   6.5289712e+00,  -2.9779483e+00 );
+    expectedForces[3]         = Vec3(   3.0672153e+00,  -8.4407797e-01,  -3.4094884e+00 );
+    expectedForces[4]         = Vec3(   1.1382586e+00,  -3.1512949e+00,  -1.1387028e+00 );
+    expectedForces[5]         = Vec3(  -6.1050295e+00,   9.5345692e-01,   1.1488832e-01 );
+    expectedForces[6]         = Vec3(   1.9319945e+00,  -5.5747599e-01,  -4.8469044e+00 );
+    expectedForces[7]         = Vec3(   4.0622614e+00,  -3.3687594e+00,  -1.6986575e+00 );
+
+    //double tolerance          = 1.0e-03;
+    //compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    double tolerance          = 5.0e-04;
+    compareForceNormsEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+}
+
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
@@ -659,7 +1194,6 @@ int main( int numberOfArguments, char* argv[] ) {
         registerAmoebaCudaKernelFactories();
 
         FILE* log = NULL;
-        //FILE* log = stderr;
 
         // tests using two ammonia molecules
 
@@ -673,10 +1207,17 @@ int main( int numberOfArguments, char* argv[] ) {
 
         // test multipole direct & mutual polarization using PME
 
-        //testMultipoleAmmoniaPMEMutualPolarization( log );
-
         testMultipoleWaterPMEDirectPolarization( log );
         testMultipoleWaterPMEMutualPolarization( log );
+
+        // check validation of traceless/symmetric quadrupole tensor
+
+        testQuadrupoleValidation( log );
+
+        // system w/ 2 ions and 2 water molecules
+
+        testMultipoleIonsAndWaterPMEMutualPolarization( log );
+        testMultipoleIonsAndWaterPMEDirectPolarization( log );
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

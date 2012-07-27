@@ -53,6 +53,7 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
     if (owner.getNumMultipoles() != system.getNumParticles())
         throw OpenMMException("AmoebaMultipoleForce must have exactly as many particles as the System it belongs to.");
 
+    double quadrupoleValidationTolerance = 1.0e-05;
     for( int ii = 0; ii < system.getNumParticles(); ii++ ){
 
         int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
@@ -62,6 +63,39 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
         owner.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY,
                                       thole, dampingFactor, polarity );
+
+       // check quadrupole is traceless and symmetric
+
+       double trace = fabs( molecularQuadrupole[0] + molecularQuadrupole[4] + molecularQuadrupole[8] );
+       if( trace > quadrupoleValidationTolerance ){
+             std::stringstream buffer;
+             buffer << "AmoebaMultipoleForce: qudarupole for particle=" << ii;
+             buffer << " has nonzero trace: " << trace << "; AMOEBA plugin assumes traceless quadrupole.";
+             throw OpenMMException(buffer.str());
+       }
+       if( fabs( molecularQuadrupole[1] - molecularQuadrupole[3] ) > quadrupoleValidationTolerance  ){
+             std::stringstream buffer;
+             buffer << "AmoebaMultipoleForce: XY and YX components of quadrupole for particle=" << ii;
+             buffer << "  are not equal: [" << molecularQuadrupole[1] << " " << molecularQuadrupole[3] << "];";
+             buffer << " AMOEBA plugin assumes symmetric quadrupole tensor.";
+             throw OpenMMException(buffer.str());
+       }
+
+       if( fabs( molecularQuadrupole[2] - molecularQuadrupole[6] ) > quadrupoleValidationTolerance  ){
+             std::stringstream buffer;
+             buffer << "AmoebaMultipoleForce: XZ and ZX components of quadrupole for particle=" << ii;
+             buffer << "  are not equal: [" << molecularQuadrupole[2] << " " << molecularQuadrupole[6] << "];";
+             buffer << " AMOEBA plugin assumes symmetric quadrupole tensor.";
+             throw OpenMMException(buffer.str());
+       }
+
+       if( fabs( molecularQuadrupole[5] - molecularQuadrupole[7] ) > quadrupoleValidationTolerance  ){
+             std::stringstream buffer;
+             buffer << "AmoebaMultipoleForce: YZ and ZY components of quadrupole for particle=" << ii;
+             buffer << "  are not equal: [" << molecularQuadrupole[5] << " " << molecularQuadrupole[7] << "];";
+             buffer << " AMOEBA plugin assumes symmetric quadrupole tensor.";
+             throw OpenMMException(buffer.str());
+       }
 
        // only 'Z-then-X', 'Bisector', Z-Bisect, ThreeFold  currently handled
 
