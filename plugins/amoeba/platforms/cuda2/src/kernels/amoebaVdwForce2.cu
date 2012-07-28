@@ -15,13 +15,11 @@
     real sigma = 2*(sigmaEpsilon1.x*sigma1_2 + sigmaEpsilon2.x*sigma2_2)/(sigma1_2+sigma2_2);
 #endif
 #if EPSILON_COMBINING_RULE == 1
-    real epsilon = sigmaEpsilon1.y + sigmaEpsilon2.y;
+    real epsilon = 0.5f*(sigmaEpsilon1.y + sigmaEpsilon2.y);
 #elif EPSILON_COMBINING_RULE == 2
-    real epsilon = 2*SQRT(sigmaEpsilon1.y*sigmaEpsilon2.y);
+    real epsilon = SQRT(sigmaEpsilon1.y*sigmaEpsilon2.y);
 #elif EPSILON_COMBINING_RULE == 3
-    real epsilon1_2 = sigmaEpsilon1.x*sigmaEpsilon1.x;
-    real epsilon2_2 = sigmaEpsilon2.x*sigmaEpsilon2.x;
-    real epsilon = 2*(sigmaEpsilon1.x*epsilon1_2 + sigmaEpsilon2.x*epsilon2_2)/(epsilon1_2+epsilon2_2);
+    real epsilon = 2*(sigmaEpsilon1.y*sigmaEpsilon2.y)/(sigmaEpsilon1.y+sigmaEpsilon2.y);
 #else
     real epsilon_s = SQRT(sigmaEpsilon1.y) + SQRT(sigmaEpsilon2.y);
     real epsilon = 4*sigmaEpsilon1.y*sigmaEpsilon2.y/(epsilon_s*epsilon_s);
@@ -39,13 +37,14 @@
     real tmp = sigma7*invRho;
     real gTau = epsilon*tau7*r6*1.12f*tmp*tmp;
     real termEnergy = epsilon*sigma7*tau7*((sigma7*1.12f*invRho)-2.0f);
-    real deltaE = (-7.0f*(dTau*termEnergy+gTau))*invR;
+    real deltaE = -7.0f*(dTau*termEnergy+gTau);
     if (r > TAPER_CUTOFF) {
-        real taper = TAPER_C0+r*(TAPER_C1+r*(TAPER_C2+r*(TAPER_C3+r*(TAPER_C4+r*TAPER_C5))));
-        real dtaper = TAPER_C1+r*(2*TAPER_C2+r*(3*TAPER_C3+r*(4*TAPER_C4+r*5*TAPER_C5)));
+        real x = r-TAPER_CUTOFF;
+        real taper = 1+x*x*x*(TAPER_C3+x*(TAPER_C4+x*TAPER_C5));
+        real dtaper = x*x*(3*TAPER_C3+x*(4*TAPER_C4+x*5*TAPER_C5));
         deltaE = termEnergy*dtaper + deltaE*taper;
         termEnergy *= taper;
     }
     tempEnergy += (includeInteraction ? termEnergy : 0);
-    dEdR -= (includeInteraction ? deltaE : 0);
+    dEdR -= (includeInteraction ? deltaE*invR : 0);
 }

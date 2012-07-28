@@ -3,13 +3,18 @@
 
 typedef struct {
     real4 posq;
-    real3 field, fieldPolar, dipole;
+    real3 force, dipole, inducedDipole, inducedDipolePolar;
     real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
-    real quadrupoleYY, quadrupoleYZ, quadrupoleZZ;
+    real quadrupoleYY, quadrupoleYZ;
     float thole, damp;
 } AtomData;
 
-inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const float2* __restrict__ dampingAndThole) {
+__device__ void computeOneInteractionF1(AtomData& atom1, volatile AtomData& atom2, float dScale, float pScale, float mScale, real& energy, real3& outputForce);
+__device__ void computeOneInteractionT1(AtomData& atom1, volatile AtomData& atom2, float dScale, float pScale, float mScale, real3& outputForce);
+__device__ void computeOneInteractionT3(AtomData& atom1, volatile AtomData& atom2, float dScale, float pScale, float mScale, real3& outputForce);
+
+inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
+        const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
     data.posq = posq[atom];
     data.dipole.x = labFrameDipole[atom*3];
     data.dipole.y = labFrameDipole[atom*3+1];
@@ -19,64 +24,15 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.quadrupoleXZ = labFrameQuadrupole[atom*5+2];
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
-    data.quadrupoleZZ = 1-data.quadrupoleXX-data.quadrupoleYY;
+    data.inducedDipole.x = inducedDipole[atom*3];
+    data.inducedDipole.y = inducedDipole[atom*3+1];
+    data.inducedDipole.z = inducedDipole[atom*3+2];
+    data.inducedDipolePolar.x = inducedDipolePolar[atom*3];
+    data.inducedDipolePolar.y = inducedDipolePolar[atom*3+1];
+    data.inducedDipolePolar.z = inducedDipolePolar[atom*3+2];
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
-}
-
-__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, real3& field1, real3& field2) {
-    real rI = RSQRT(dot(deltaR, deltaR));
-    real r = RECIP(rI);
-    real r2I = rI*rI;
-
-    real rr3 = rI*r2I;
-    real rr5 = 3*rr3*r2I;
-    real rr7 = 5*rr5*r2I;
- 
-    // get scaling factors, if needed
-    
-    float damp = atom1.damp*atom2.damp;
-    real dampExp;
-    if (damp != 0) {
-
-        // get scaling factors
-      
-        real ratio = r/damp;
-        float pGamma = atom2.thole > atom1.thole ? atom1.thole : atom2.thole; 
-        damp = ratio*ratio*ratio*pGamma;
-        dampExp = EXP(-damp);
-    }
-    else
-        dampExp = 0;
-      
-    rr3 *= 1 - dampExp;
-    rr5 *= 1 - (1+damp)*dampExp;
-    rr7 *= 1 - (1+damp+(0.6f*damp*damp))*dampExp;
-      
-    real rr5_2 = 2*rr5;
- 
-    real3 qDotDelta;
-    qDotDelta.x = deltaR.x*atom2.quadrupoleXX + deltaR.y*atom2.quadrupoleXY + deltaR.z*atom2.quadrupoleXZ;
-    qDotDelta.y = deltaR.x*atom2.quadrupoleXY + deltaR.y*atom2.quadrupoleYY + deltaR.z*atom2.quadrupoleYZ;
-    qDotDelta.z = deltaR.x*atom2.quadrupoleXZ + deltaR.y*atom2.quadrupoleYZ + deltaR.z*atom2.quadrupoleZZ;
- 
-    real dotdd = dot(deltaR, atom2.dipole);
-    real dotqd = dot(deltaR, qDotDelta);
-
-    real factor = -rr3*atom2.posq.w + rr5*dotdd - rr7*dotqd;
- 
-    field1 = deltaR*factor - rr3*atom2.dipole + rr5_2*qDotDelta;
- 
-    qDotDelta.x = deltaR.x*atom1.quadrupoleXX + deltaR.y*atom1.quadrupoleXY + deltaR.z*atom1.quadrupoleXZ;
-    qDotDelta.y = deltaR.x*atom1.quadrupoleXY + deltaR.y*atom1.quadrupoleYY + deltaR.z*atom1.quadrupoleYZ;
-    qDotDelta.z = deltaR.x*atom1.quadrupoleXZ + deltaR.y*atom1.quadrupoleYZ + deltaR.z*atom1.quadrupoleZZ;
- 
-    dotdd = dot(deltaR, atom1.dipole);
-    dotqd = dot(deltaR, qDotDelta);
-    factor = rr3*atom1.posq.w + rr5*dotdd + rr7*dotqd;
- 
-    field2 = deltaR*factor - rr3*atom1.dipole - rr5_2*qDotDelta;
 }
 
 __device__ real computeDScaleFactor(unsigned int polarizationGroup) {
@@ -84,11 +40,6 @@ __device__ real computeDScaleFactor(unsigned int polarizationGroup) {
 }
 
 __device__ float computeMScaleFactor(uint2 covalent) {
-//        int f1 = (value == 0 || value == 1 ? 1 : 0);
-//        int f2 = (value == 0 || value == 2 ? 1 : 0);
-    // 0 = 12 or 13: x and y: 0
-    // 1 = 14: x: 0.4
-    // 2 = 15: y: 0.8
     bool x = (covalent.x & 1);
     bool y = (covalent.y & 1);
     return (x ? (y ? 0.0f : 0.4f) : (y ? 0.8f : 1.0f));
@@ -102,16 +53,17 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
 }
 
 /**
- * Compute nonbonded interactions.
+ * Compute electrostatic interactions.
  */
-extern "C" __global__ void computeFixedField(
-        unsigned long long* __restrict__ fieldBuffers, unsigned long long* __restrict__ fieldPolarBuffers, const real4* __restrict__ posq,
-        const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices,
+extern "C" __global__ void computeElectrostatics(
+        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer,
+        const real4* __restrict__ posq, const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices,
         const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
         const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const unsigned int* __restrict__ interactionFlags,
 #endif
-        const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const float2* __restrict__ dampingAndThole) {
+        const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole,
+        const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
 #ifdef USE_CUTOFF
@@ -123,6 +75,7 @@ extern "C" __global__ void computeFixedField(
     unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
 #endif
+    real energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
     __shared__ unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __shared__ int exclusionIndex[WARPS_PER_GROUP];
@@ -137,8 +90,6 @@ extern "C" __global__ void computeFixedField(
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
         unsigned int x, y;
         AtomData data;
-        data.field = make_real3(0);
-        data.fieldPolar = make_real3(0);
         if (pos < end) {
 #ifdef USE_CUTOFF
             if (numTiles <= maxTiles) {
@@ -157,7 +108,8 @@ extern "C" __global__ void computeFixedField(
                 }
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
-            loadAtomData(data, atom1, posq, labFrameDipole, labFrameQuadrupole, dampingAndThole);
+            loadAtomData(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
+            data.force = make_real3(0);
             
             // Locate the exclusion data for this tile.
 
@@ -174,50 +126,73 @@ extern "C" __global__ void computeFixedField(
             else if (x == y) {
                 // This tile is on the diagonal.
 
-                const unsigned int localAtomIndex = threadIdx.x;
-                localData[localAtomIndex].posq = data.posq;
-                localData[localAtomIndex].dipole = data.dipole;
-                localData[localAtomIndex].quadrupoleXX = data.quadrupoleXX;
-                localData[localAtomIndex].quadrupoleXY = data.quadrupoleXY;
-                localData[localAtomIndex].quadrupoleXZ = data.quadrupoleXZ;
-                localData[localAtomIndex].quadrupoleYY = data.quadrupoleYY;
-                localData[localAtomIndex].quadrupoleYZ = data.quadrupoleYZ;
-                localData[localAtomIndex].quadrupoleZZ = data.quadrupoleZZ;
-                localData[localAtomIndex].thole = data.thole; // IS THIS CORRECT?
-                localData[localAtomIndex].damp = data.damp; // IS THIS CORRECT?
+                localData[threadIdx.x].posq = data.posq;
+                localData[threadIdx.x].dipole = data.dipole;
+                localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
+                localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
+                localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
+                localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
+                localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
+                localData[threadIdx.x].inducedDipole = data.inducedDipole;
+                localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
+                localData[threadIdx.x].thole = data.thole; // IS THIS CORRECT?
+                localData[threadIdx.x].damp = data.damp; // IS THIS CORRECT?
                 uint2 covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
                 unsigned int polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
+                
+                // Compute forces.
+                
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    int atom2 = tbx+j;
-                    real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
-#ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-#endif
-                    real3 field1;
-                    real3 field2;
-                    computeOneInteraction(data, localData[atom2], delta, field1, field2);
-                    atom2 = y*TILE_SIZE+j;
+                    int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real3 tempForce;
+                        real tempEnergy;
                         float d = computeDScaleFactor(polarizationGroup);
-                        data.field += d*field1;
                         float p = computePScaleFactor(covalent, polarizationGroup);
-                        data.fieldPolar += p*field1;
+                        float m = computeMScaleFactor(covalent);
+                        computeOneInteractionF1(data, localData[tbx+j], d, p, m, tempEnergy, tempForce);
+                        data.force += tempForce;
+                        energy += 0.5f*tempEnergy;
                     }
                     covalent.x >>= 1;
                     covalent.y >>= 1;
                     polarizationGroup >>= 1;
                 }
+                data.force *= ENERGY_SCALE_FACTOR;
+                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                
+                // Compute torques.
+                
+                data.force = make_real3(0);
+                covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
+                polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                    int atom2 = y*TILE_SIZE+j;
+                    if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real3 tempForce;
+                        float d = computeDScaleFactor(polarizationGroup);
+                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        float m = computeMScaleFactor(covalent);
+                        computeOneInteractionT1(data, localData[tbx+j], d, p, m, tempForce);
+                        data.force += tempForce;
+                    }
+                    covalent.x >>= 1;
+                    covalent.y >>= 1;
+                    polarizationGroup >>= 1;
+                }
+                data.force *= ENERGY_SCALE_FACTOR;
+                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
             }
             else {
                 // This is an off-diagonal tile.
 
-                const unsigned int localAtomIndex = threadIdx.x;
                 unsigned int j = y*TILE_SIZE + tgx;
-                loadAtomData(localData[localAtomIndex], j, posq, labFrameDipole, labFrameQuadrupole, dampingAndThole);
-                localData[localAtomIndex].field = make_real3(0);
-                localData[localAtomIndex].fieldPolar = make_real3(0);
+                loadAtomData(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
+                localData[threadIdx.x].force = make_real3(0);
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
                 if (!hasExclusions && flags != 0xFFFFFFFF) {
@@ -300,55 +275,81 @@ extern "C" __global__ void computeFixedField(
                     covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));
                     covalent.y = (covalent.y >> tgx) | (covalent.y << (TILE_SIZE - tgx));
                     polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
+                    
+                    // Compute forces.
+                    
                     unsigned int tj = tgx;
                     for (j = 0; j < TILE_SIZE; j++) {
-                        int atom2 = tbx+tj;
-                        real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
-#ifdef USE_PERIODIC
-                        delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                        delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                        delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-#endif
-                        real3 field1;
-                        real3 field2;
-                        computeOneInteraction(data, localData[atom2], delta, field1, field2);
+                        int atom2 = y*TILE_SIZE+tj;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                            real3 tempForce;
+                            real tempEnergy;
                             float d = computeDScaleFactor(polarizationGroup);
-                            data.field += d*field1;
-                            localData[atom2].field += d*field2;
                             float p = computePScaleFactor(covalent, polarizationGroup);
-                            data.fieldPolar += p*field1;
-                            localData[atom2].fieldPolar += p*field2;
+                            float m = computeMScaleFactor(covalent);
+                            computeOneInteractionF1(data, localData[tbx+tj], d, p, m, tempEnergy, tempForce);
+                            data.force += tempForce;
+                            localData[tbx+tj].force -= tempForce;
+                            energy += tempEnergy;
                         }
                         covalent.x >>= 1;
                         covalent.y >>= 1;
                         polarizationGroup >>= 1;
                         tj = (tj + 1) & (TILE_SIZE - 1);
                     }
+                    data.force *= ENERGY_SCALE_FACTOR;
+                    localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+                    if (pos < end) {
+                        unsigned int offset = x*TILE_SIZE + tgx;
+                        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                        offset = y*TILE_SIZE + tgx;
+                        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    }
+                    
+                    // Compute torques.
+                    
+                    covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
+                    polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
+                    covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));
+                    covalent.y = (covalent.y >> tgx) | (covalent.y << (TILE_SIZE - tgx));
+                    polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
+                    for (j = 0; j < TILE_SIZE; j++) {
+                        int atom2 = y*TILE_SIZE+tj;
+                        if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                            real3 tempForce;
+                            float d = computeDScaleFactor(polarizationGroup);
+                            float p = computePScaleFactor(covalent, polarizationGroup);
+                            float m = computeMScaleFactor(covalent);
+                            computeOneInteractionT1(data, localData[tbx+tj], d, p, m, tempForce);
+                            data.force += tempForce;
+                            computeOneInteractionT3(data, localData[tbx+tj], d, p, m, tempForce);
+                            localData[tbx+tj].force += tempForce;
+                        }
+                        covalent.x >>= 1;
+                        covalent.y >>= 1;
+                        polarizationGroup >>= 1;
+                        tj = (tj + 1) & (TILE_SIZE - 1);
+                    }
+                    data.force *= ENERGY_SCALE_FACTOR;
+                    localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+                    if (pos < end) {
+                        unsigned int offset = x*TILE_SIZE + tgx;
+                        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                        offset = y*TILE_SIZE + tgx;
+                        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    }
                 }
             }
         }
-        
-        // Write results.
-        
-        if (pos < end) {
-            const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&fieldBuffers[offset], static_cast<unsigned long long>((long long) (data.field.x*0xFFFFFFFF)));
-            atomicAdd(&fieldBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.y*0xFFFFFFFF)));
-            atomicAdd(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.z*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarBuffers[offset], static_cast<unsigned long long>((long long) (data.fieldPolar.x*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.y*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.z*0xFFFFFFFF)));
-        }
-        if (pos < end && x != y) {
-            const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&fieldBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0xFFFFFFFF)));
-            atomicAdd(&fieldBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0xFFFFFFFF)));
-            atomicAdd(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.x*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.y*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.z*0xFFFFFFFF)));
-        }
         pos++;
     } while (pos < end);
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 }

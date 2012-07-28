@@ -8,10 +8,10 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
  
     // code common to ZThenX and Bisector
     
-    for (int particleIndex = blockIdx.x*blockDim.x+threadIdx.x; particleIndex < NUM_ATOMS; particleIndex += gridDim.x*blockDim.x) {
-        int4 particles = multipoleParticles[particleIndex];
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
+        int4 particles = multipoleParticles[atom];
         if (particles.x >= 0 && particles.z >= 0) {
-            real4 thisParticlePos = posq[particleIndex];
+            real4 thisParticlePos = posq[atom];
             real4 posZ = posq[particles.z];
             real3 vectorZ = make_real3(posZ.x-thisParticlePos.x, posZ.y-thisParticlePos.y, posZ.z-thisParticlePos.z);
             real4 posX = posq[particles.x];
@@ -149,7 +149,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
         
             // Transform the dipole
             
-            unsigned int offset = 3*particleIndex;
+            unsigned int offset = 3*atom;
             real molDipole[3];
             molDipole[0] = molecularDipoles[offset];
             molDipole[1] = molecularDipoles[offset+1];
@@ -164,55 +164,47 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             
             // Transform the quadrupole
             
-            real mPole[3][3];
-            offset = 9*particleIndex;
-            mPole[0][0] = molecularQuadrupoles[offset];
-            mPole[0][1] = molecularQuadrupoles[offset+1];
-            mPole[0][2] = molecularQuadrupoles[offset+2];
-        
-            mPole[1][0] = molecularQuadrupoles[offset+3];
-            mPole[1][1] = molecularQuadrupoles[offset+4];
-            mPole[1][2] = molecularQuadrupoles[offset+5];
-        
-            mPole[2][0] = molecularQuadrupoles[offset+6];
-            mPole[2][1] = molecularQuadrupoles[offset+7];
-            mPole[2][2] = molecularQuadrupoles[offset+8];
+            offset = 5*atom;
+            real mPoleXX = molecularQuadrupoles[offset];
+            real mPoleXY = molecularQuadrupoles[offset+1];
+            real mPoleXZ = molecularQuadrupoles[offset+2];
+            real mPoleYY = molecularQuadrupoles[offset+3];
+            real mPoleYZ = molecularQuadrupoles[offset+4];
+            real mPoleZZ = 1-mPoleXX-mPoleYY;
         
             if (reverse) {
-                mPole[0][1] *= -1;
-                mPole[1][0] *= -1;
-                mPole[1][2] *= -1;
-                mPole[2][1] *= -1;
+                mPoleXY *= -1;
+                mPoleYZ *= -1;
             }
             
-            labFrameQuadrupoles[offset+8] = vectorX.z*(vectorX.z*mPole[0][0] + vectorY.z*mPole[0][1] + vectorZ.z*mPole[0][2]);
-            labFrameQuadrupoles[offset+8] += vectorY.z*(vectorX.z*mPole[1][0] + vectorY.z*mPole[1][1] + vectorZ.z*mPole[1][2]);
-            labFrameQuadrupoles[offset+8] += vectorZ.z*(vectorX.z*mPole[2][0] + vectorY.z*mPole[2][1] + vectorZ.z*mPole[2][2]);
-    
-            labFrameQuadrupoles[offset+4] = vectorX.y*(vectorX.y*mPole[0][0] + vectorY.y*mPole[0][1] + vectorZ.y*mPole[0][2]);
-            labFrameQuadrupoles[offset+4] += vectorY.y*(vectorX.y*mPole[1][0] + vectorY.y*mPole[1][1] + vectorZ.y*mPole[1][2]);
-            labFrameQuadrupoles[offset+4] += vectorZ.y*(vectorX.y*mPole[2][0] + vectorY.y*mPole[2][1] + vectorZ.y*mPole[2][2]);
-    
-            labFrameQuadrupoles[offset+5] = vectorX.y*(vectorX.z*mPole[0][0] + vectorY.z*mPole[0][1] + vectorZ.z*mPole[0][2]);
-            labFrameQuadrupoles[offset+5] += vectorY.y*(vectorX.z*mPole[1][0] + vectorY.z*mPole[1][1] + vectorZ.z*mPole[1][2]);
-            labFrameQuadrupoles[offset+5] += vectorZ.y*(vectorX.z*mPole[2][0] + vectorY.z*mPole[2][1] + vectorZ.z*mPole[2][2]);
-    
-            labFrameQuadrupoles[offset] = vectorX.x*(vectorX.x*mPole[0][0] + vectorY.x*mPole[0][1] + vectorZ.x*mPole[0][2]);
-            labFrameQuadrupoles[offset] += vectorY.x*(vectorX.x*mPole[1][0] + vectorY.x*mPole[1][1] + vectorZ.x*mPole[1][2]);
-            labFrameQuadrupoles[offset] += vectorZ.x*(vectorX.x*mPole[2][0] + vectorY.x*mPole[2][1] + vectorZ.x*mPole[2][2]);
-    
-            labFrameQuadrupoles[offset+1] = vectorX.x*(vectorX.y*mPole[0][0] + vectorY.y*mPole[0][1] + vectorZ.y*mPole[0][2]);
-            labFrameQuadrupoles[offset+1] += vectorY.x*(vectorX.y*mPole[1][0] + vectorY.y*mPole[1][1] + vectorZ.y*mPole[1][2]);
-            labFrameQuadrupoles[offset+1] += vectorZ.x*(vectorX.y*mPole[2][0] + vectorY.y*mPole[2][1] + vectorZ.y*mPole[2][2]);
-    
-            labFrameQuadrupoles[offset+2] = vectorX.x*(vectorX.z*mPole[0][0] + vectorY.z*mPole[0][1] + vectorZ.z*mPole[0][2]);
-            labFrameQuadrupoles[offset+2] += vectorY.x*(vectorX.z*mPole[1][0] + vectorY.z*mPole[1][1] + vectorZ.z*mPole[1][2]);
-            labFrameQuadrupoles[offset+2] += vectorZ.x*(vectorX.z*mPole[2][0] + vectorY.z*mPole[2][1] + vectorZ.z*mPole[2][2]);
-     
-            labFrameQuadrupoles[offset+3] = labFrameQuadrupoles[offset+1];
-            labFrameQuadrupoles[offset+6] = labFrameQuadrupoles[offset+2];
-            labFrameQuadrupoles[offset+7] = labFrameQuadrupoles[offset+5];
+            labFrameQuadrupoles[offset] = vectorX.x*(vectorX.x*mPoleXX + vectorY.x*mPoleXY + vectorZ.x*mPoleXZ);
+                                        + vectorY.x*(vectorX.x*mPoleXY + vectorY.x*mPoleYY + vectorZ.x*mPoleYZ);
+                                        + vectorZ.x*(vectorX.x*mPoleXZ + vectorY.x*mPoleYZ + vectorZ.x*mPoleZZ);
+            labFrameQuadrupoles[offset+1] = vectorX.x*(vectorX.y*mPoleXX + vectorY.y*mPoleXY + vectorZ.y*mPoleXZ);
+                                        + vectorY.x*(vectorX.y*mPoleXY + vectorY.y*mPoleYY + vectorZ.y*mPoleYZ);
+                                        + vectorZ.x*(vectorX.y*mPoleXZ + vectorY.y*mPoleYZ + vectorZ.y*mPoleZZ);
+            labFrameQuadrupoles[offset+2] = vectorX.x*(vectorX.z*mPoleXX + vectorY.z*mPoleXY + vectorZ.z*mPoleXZ);
+                                        + vectorY.x*(vectorX.z*mPoleXY + vectorY.z*mPoleYY + vectorZ.z*mPoleYZ);
+                                        + vectorZ.x*(vectorX.z*mPoleXZ + vectorY.z*mPoleYZ + vectorZ.z*mPoleZZ);
+            labFrameQuadrupoles[offset+3] = vectorX.y*(vectorX.y*mPoleXX + vectorY.y*mPoleXY + vectorZ.y*mPoleXZ);
+                                        + vectorY.y*(vectorX.y*mPoleXY + vectorY.y*mPoleYY + vectorZ.y*mPoleYZ);
+                                        + vectorZ.y*(vectorX.y*mPoleXZ + vectorY.y*mPoleYZ + vectorZ.y*mPoleZZ);
+            labFrameQuadrupoles[offset+4] = vectorX.y*(vectorX.z*mPoleXX + vectorY.z*mPoleXY + vectorZ.z*mPoleXZ);
+                                        + vectorY.y*(vectorX.z*mPoleXY + vectorY.z*mPoleYY + vectorZ.z*mPoleYZ);
+                                        + vectorZ.y*(vectorX.z*mPoleXZ + vectorY.z*mPoleYZ + vectorZ.z*mPoleZZ);
         }
     }
 }
 
+extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fieldBuffers, const long long* __restrict__ fieldPolarBuffers,
+        real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability) {
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
+        real scale = polarizability[atom]/(real) 0xFFFFFFFF;
+        inducedDipole[3*atom] = scale*fieldBuffers[atom];
+        inducedDipole[3*atom+1] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS];
+        inducedDipole[3*atom+2] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS*2];
+        inducedDipolePolar[3*atom] = scale*fieldPolarBuffers[atom];
+        inducedDipolePolar[3*atom+1] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS];
+        inducedDipolePolar[3*atom+2] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2];
+    }
+}

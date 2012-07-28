@@ -374,14 +374,14 @@ public:
 private:
     class ForceInfo;
     void initializeScaleFactors();
-    int numMultipoles;
+    int numMultipoles, maxInducedIterations;
+    double inducedEpsilon;
     bool hasInitializedScaleFactors;
     CudaContext& cu;
     System& system;
     std::vector<int3> covalentFlagValues;
     std::vector<int2> polarizationFlagValues;
     CudaArray* multipoleParticles;
-    CudaArray* torqueBufferIndices;
     CudaArray* molecularDipoles;
     CudaArray* molecularQuadrupoles;
     CudaArray* labFrameDipoles;
@@ -412,7 +412,7 @@ private:
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
     cufftHandle fft;
-    CUfunction computeMomentsKernel, computeFixedFieldKernel;
+    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, electrostaticsKernel;
 };
 
 /**
