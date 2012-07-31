@@ -3332,6 +3332,7 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu, int updateFlag )
     SetCalculateAmoebaLocalForcesSim( amoebaGpu );
     SetCalculateAmoebaCudaUtilitiesSim( amoebaGpu );
     SetCalculateAmoebaMultipoleForcesSim( amoebaGpu );
+    SetCalculateAmoebaMultipolePotentialSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEFieldSim( amoebaGpu );
     SetCalculateAmoebaCudaVdw14_7Sim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedFieldSim( amoebaGpu );

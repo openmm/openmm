@@ -48,13 +48,22 @@ extern void SetCalculateAmoebaLocalForcesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaLocalForcesSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaLocalForces(amoebaGpuContext gpu);
 
-// multipole
+// multipole forces
 
 extern void SetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaMultipoleForcesSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool performGk );
+extern void kSetupAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaGeneralizedKirkwood );
+
+// multipole potential
+
+extern void SetCalculateAmoebaMultipolePotentialSim(amoebaGpuContext gpu);
+extern void GetCalculateAmoebaMultipolePotentialSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaMultipolePotential(amoebaGpuContext amoebaGpu );
-extern void kCalculateAmoebaSystemMultipoleMoments(amoebaGpuContext amoebaGpu, const OpenMM::Vec3& origin, std::vector< double >& outputMultipoleMonents );
+
+// system multipole moments
+
+extern void kCalculateAmoebaSystemMultipoleMoments(amoebaGpuContext amoebaGpu, std::vector< double >& outputMultipoleMonents );
 
 // vdw
 

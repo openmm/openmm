@@ -24,6 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "amoebaScaleFactors.h"
+
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(512, 1)
