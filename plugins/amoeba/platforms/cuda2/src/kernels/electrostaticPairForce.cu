@@ -92,12 +92,12 @@ __device__ void computeOneInteractionT3(AtomData& atom1, volatile AtomData& atom
     real dsc7 = rr7*scale7*dScale;
     real psc7 = rr7*scale7*pScale;
 
-    real atom2quadrupoleZZ = 1-atom2.quadrupoleXX-atom2.quadrupoleYY;
+    real atom2quadrupoleZZ = -(atom2.quadrupoleXX+atom2.quadrupoleYY);
     real qJr_0 = atom2.quadrupoleXX*xr + atom2.quadrupoleXY*yr + atom2.quadrupoleXZ*zr;
     real qJr_1 = atom2.quadrupoleXY*xr + atom2.quadrupoleYY*yr + atom2.quadrupoleYZ*zr;
     real qJr_2 = atom2.quadrupoleXZ*xr + atom2.quadrupoleYZ*yr + atom2quadrupoleZZ*zr;
 
-    real atom1quadrupoleZZ = 1-atom1.quadrupoleXX-atom1.quadrupoleYY;
+    real atom1quadrupoleZZ = -(atom1.quadrupoleXX+atom1.quadrupoleYY);
     real qIr_0 = atom1.quadrupoleXX*xr + atom1.quadrupoleXY*yr + atom1.quadrupoleXZ*zr;
     real qIr_1 = atom1.quadrupoleXY*xr + atom1.quadrupoleYY*yr + atom1.quadrupoleYZ*zr;
     real qIr_2 = atom1.quadrupoleXZ*xr + atom1.quadrupoleYZ*yr + atom1quadrupoleZZ*zr;

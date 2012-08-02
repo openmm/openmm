@@ -388,6 +388,7 @@ private:
     CudaArray* labFrameQuadrupoles;
     CudaArray* field;
     CudaArray* fieldPolar;
+    CudaArray* torque;
     CudaArray* dampingAndThole;
     CudaArray* inducedDipole;
     CudaArray* inducedDipolePolar;
@@ -412,7 +413,7 @@ private:
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
     cufftHandle fft;
-    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, electrostaticsKernel;
+    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, electrostaticsKernel, mapTorqueKernel;
 };
 
 /**

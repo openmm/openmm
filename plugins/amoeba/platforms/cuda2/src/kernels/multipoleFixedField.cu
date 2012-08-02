@@ -19,7 +19,7 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.quadrupoleXZ = labFrameQuadrupole[atom*5+2];
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
-    data.quadrupoleZZ = 1-data.quadrupoleXX-data.quadrupoleYY;
+    data.quadrupoleZZ = -(data.quadrupoleXX+data.quadrupoleYY);
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
