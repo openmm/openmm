@@ -1384,8 +1384,8 @@ int main( int numberOfArguments, char* argv[] ) {
 
         // test mutual polarization, no cutoff
 
-//        testMultipoleAmmoniaMutualPolarization( log );
-//
+        testMultipoleAmmoniaMutualPolarization( log );
+
 //        // test multipole direct & mutual polarization using PME
 //
 //        testMultipoleWaterPMEDirectPolarization( log );

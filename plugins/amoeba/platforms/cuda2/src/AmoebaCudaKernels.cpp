@@ -865,9 +865,9 @@ private:
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false),
-        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL),
-        labFrameDipoles(NULL), labFrameQuadrupoles(NULL), field(NULL), fieldPolar(NULL), torque(NULL), dampingAndThole(NULL),
-        inducedDipole(NULL), inducedDipolePolar(NULL), currentEpsilon(NULL), polarizability(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
+        multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL),
+        field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL),
+        inducedDipole(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), polarizability(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
         pmeGrid(NULL) {
 }
 
@@ -887,6 +887,10 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         delete field;
     if (fieldPolar != NULL)
         delete fieldPolar;
+    if (inducedField != NULL)
+        delete inducedField;
+    if (inducedFieldPolar != NULL)
+        delete inducedFieldPolar;
     if (torque != NULL)
         delete torque;
     if (dampingAndThole != NULL)
@@ -895,8 +899,8 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         delete inducedDipole;
     if (inducedDipolePolar != NULL)
         delete inducedDipolePolar;
-    if (currentEpsilon != NULL)
-        delete currentEpsilon;
+    if (inducedDipoleErrors != NULL)
+        delete inducedDipoleErrors;
     if (polarizability != NULL)
         delete polarizability;
     if (covalentFlags != NULL)
@@ -971,6 +975,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     torque = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "torque");
     inducedDipole = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipole");
     inducedDipolePolar = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipolePolar");
+    inducedDipoleErrors = new CudaArray(cu, cu.getNumThreadBlocks(), sizeof(float2), "inducedDipoleErrors");
     cu.addAutoclearBuffer(*field);
     cu.addAutoclearBuffer(*fieldPolar);
     cu.addAutoclearBuffer(*torque);
@@ -1009,9 +1014,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     if (force.getPolarizationType() == AmoebaMultipoleForce::Mutual) {
         maxInducedIterations = force.getMutualInducedMaxIterations();
         inducedEpsilon = force.getMutualInducedTargetEpsilon();
+        inducedField = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "inducedField");
+        inducedFieldPolar = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "inducedFieldPolar");
     }
     else
-        maxInducedIterations == 0;
+        maxInducedIterations = 0;
     
     // Create the kernels.
 
@@ -1032,6 +1039,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     mapTorqueKernel = cu.getKernel(module, "mapTorqueToForce");
     module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleFixedField, defines);
     computeFixedFieldKernel = cu.getKernel(module, "computeFixedField");
+    if (maxInducedIterations > 0) {
+        module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleInducedField, defines);
+        computeInducedFieldKernel = cu.getKernel(module, "computeInducedField");
+        updateInducedFieldKernel = cu.getKernel(module, "updateInducedFieldBySOR");
+    }
     stringstream electrostaticsSource;
     electrostaticsSource << CudaKernelSources::vectorOps;
     electrostaticsSource << CudaAmoebaKernelSources::multipoleElectrostatics;
@@ -1436,8 +1448,26 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
             &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
         cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
+        vector<float2> errors;
         for (int i = 0; i < maxInducedIterations; i++) {
-            
+            cu.clearBuffer(*inducedField);
+            cu.clearBuffer(*inducedFieldPolar);
+            void* computeInducedFieldArgs[] = {&inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
+                &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &startTileIndex, &numTileIndices,
+                &dampingAndThole->getDevicePointer()};
+            cu.executeKernel(computeInducedFieldKernel, computeInducedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &inducedField->getDevicePointer(),
+                &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
+                &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
+            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize);
+            inducedDipoleErrors->download(errors);
+            double total1 = 0.0, total2 = 0.0;
+            for (int j = 0; j < (int) errors.size(); j++) {
+                total1 += errors[j].x;
+                total2 += errors[j].y;
+            }
+            if (48.033324*sqrt(max(total1, total2)/cu.getNumAtoms()) < inducedEpsilon)
+                break;
         }
         
         // Compute electrostatic force.

@@ -388,11 +388,13 @@ private:
     CudaArray* labFrameQuadrupoles;
     CudaArray* field;
     CudaArray* fieldPolar;
+    CudaArray* inducedField;
+    CudaArray* inducedFieldPolar;
     CudaArray* torque;
     CudaArray* dampingAndThole;
     CudaArray* inducedDipole;
     CudaArray* inducedDipolePolar;
-    CudaArray* currentEpsilon;
+    CudaArray* inducedDipoleErrors;
     CudaArray* polarizability;
     CudaArray* covalentFlags;
     CudaArray* polarizationGroupFlags;
@@ -413,7 +415,7 @@ private:
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
     cufftHandle fft;
-    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, electrostaticsKernel, mapTorqueKernel;
+    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
 };
 
 /**
