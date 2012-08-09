@@ -64,7 +64,7 @@ public:
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
-     * @param particle3    the index of the fourth particle forming the torsion
+     * @param particle4    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
      * @param phase        the phase offset of the torsion, measured in radians
      * @param k            the force constant for the torsion
@@ -78,7 +78,7 @@ public:
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
-     * @param particle3    the index of the fourth particle forming the torsion
+     * @param particle4    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
      * @param phase        the phase offset of the torsion, measured in radians
      * @param k            the force constant for the torsion
@@ -91,7 +91,7 @@ public:
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
-     * @param particle3    the index of the fourth particle forming the torsion
+     * @param particle4    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
      * @param phase        the phase offset of the torsion, measured in radians
      * @param k            the force constant for the torsion

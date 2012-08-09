@@ -73,6 +73,12 @@ namespace OpenMM {
  * force->addPerParticleParameter("epsilon");
  * </pre></tt>
  *
+ * The expression <i>must</i> be symmetric with respect to the two particles.  It typically will only be evaluated once
+ * for each pair of particles, and no guarantee is made about which particle will be identified as "particle 1".  In the
+ * above example, the energy only depends on the products sigma1*sigma2 and epsilon1*epsilon2, both of which are unchanged
+ * if the labels 1 and 2 are reversed.  In contrast, if it depended on the difference sigma1-sigma2, the results would
+ * be undefined, because reversing the labels 1 and 2 would change the energy.
+ * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  The names of per-particle parameters

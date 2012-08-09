@@ -64,7 +64,7 @@ public:
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
-     * @param particle3    the index of the fourth particle forming the torsion
+     * @param particle4    the index of the fourth particle forming the torsion
      * @param c0           the coefficient of the constant term, measured in kJ/mol
      * @param c1           the coefficient of the 1st order term, measured in kJ/mol
      * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
@@ -81,7 +81,7 @@ public:
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
-     * @param particle3    the index of the fourth particle forming the torsion
+     * @param particle4    the index of the fourth particle forming the torsion
      * @param c0           the coefficient of the constant term, measured in kJ/mol
      * @param c1           the coefficient of the 1st order term, measured in kJ/mol
      * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
@@ -97,7 +97,7 @@ public:
      * @param particle1    the index of the first particle forming the torsion
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
-     * @param particle3    the index of the fourth particle forming the torsion
+     * @param particle4    the index of the fourth particle forming the torsion
      * @param c0           the coefficient of the constant term, measured in kJ/mol
      * @param c1           the coefficient of the 1st order term, measured in kJ/mol
      * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
