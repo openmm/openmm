@@ -618,6 +618,10 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextI
 
 ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system) :
        CalcAmoebaVdwForceKernel(name, platform), system(system) {
+    useNeighborList = 0;
+    usePBC = 0;
+    cutoff = 1.0e+10;
+
 }
 
 ReferenceCalcAmoebaVdwForceKernel::~ReferenceCalcAmoebaVdwForceKernel() {
@@ -656,14 +660,27 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     }   
     sigmaCombiningRule   = force.getSigmaCombiningRule();
     epsilonCombiningRule = force.getEpsilonCombiningRule();
+    useNeighborList      = force.getUseNeighborList();
+    usePBC               = force.getPBC();
+    cutoff               = force.getCutoff();
 }
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    AmoebaReferenceVdwForce vdwForce( sigmaCombiningRule, epsilonCombiningRule, AmoebaReferenceVdwForce::NoCutoff );
-    RealOpenMM energy      = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, indexClasses, sigmas, epsilons, reductions, allExclusions, forceData);
+    AmoebaReferenceVdwForce vdwForce( sigmaCombiningRule, epsilonCombiningRule );
+    if( useNeighborList ){
+        vdwForce.setCutoff( cutoff );
+        if( usePBC ){
+            vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffPeriodic);
+        } else {
+            vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffNonPeriodic);
+        }
+    } else {
+        vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::NoCutoff );
+    }
+    RealOpenMM energy = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, indexClasses, sigmas, epsilons, reductions, allExclusions, forceData);
     return static_cast<double>(energy);
 }
 

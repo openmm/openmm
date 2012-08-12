@@ -53,6 +53,16 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
     if (owner.getNumMultipoles() != system.getNumParticles())
         throw OpenMMException("AmoebaMultipoleForce must have exactly as many particles as the System it belongs to.");
 
+    // check cutoff < 0.5*boxSize
+
+    if (owner.getNonbondedMethod() == AmoebaMultipoleForce::PME) {
+        Vec3 boxVectors[3];
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double cutoff = owner.getCutoffDistance();
+        if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
+            throw OpenMMException("AmoebaMultipoleForce: The cutoff distance cannot be greater than half the periodic box size.");
+    }   
+
     double quadrupoleValidationTolerance = 1.0e-05;
     for( int ii = 0; ii < system.getNumParticles(); ii++ ){
 

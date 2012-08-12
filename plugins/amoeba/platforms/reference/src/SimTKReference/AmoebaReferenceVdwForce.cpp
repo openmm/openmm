@@ -32,12 +32,12 @@ using OpenMM::RealVec;
 
 AmoebaReferenceVdwForce::AmoebaReferenceVdwForce( ) : _nonbondedMethod(NoCutoff) {
 
+    _cutoff  = 1.0e+10;
     setSigmaCombiningRule( "ARITHMETIC" );
     setEpsilonCombiningRule( "GEOMETRIC" );
 }
 
-AmoebaReferenceVdwForce::AmoebaReferenceVdwForce( const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule, NonbondedMethod nonbondedMethod ) :
-                                                  _nonbondedMethod(nonbondedMethod) {
+AmoebaReferenceVdwForce::AmoebaReferenceVdwForce( const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule ) : _nonbondedMethod(NoCutoff) {
 
     setSigmaCombiningRule( sigmaCombiningRule );
     setEpsilonCombiningRule( epsilonCombiningRule );
@@ -49,6 +49,14 @@ AmoebaReferenceVdwForce::NonbondedMethod AmoebaReferenceVdwForce::getNonbondedMe
 
 void AmoebaReferenceVdwForce::setNonbondedMethod( AmoebaReferenceVdwForce::NonbondedMethod nonbondedMethod ){
     _nonbondedMethod = nonbondedMethod;
+}
+
+void AmoebaReferenceVdwForce::setCutoff( double cutoff ){
+    _cutoff = cutoff;
+}
+
+double AmoebaReferenceVdwForce::getCutoff( void ) const {
+    return _cutoff;
 }
 
 void AmoebaReferenceVdwForce::setSigmaCombiningRule( const std::string& sigmaCombiningRule ){
@@ -116,7 +124,7 @@ RealOpenMM AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule( RealOpenMM e
 }
 
 RealOpenMM AmoebaReferenceVdwForce::geometricEpsilonCombiningRule( RealOpenMM epsilonI, RealOpenMM epsilonJ ) const {
-    return 2.0*SQRT(epsilonI*epsilonJ);
+    return SQRT(epsilonI*epsilonJ);
 }
 
 RealOpenMM AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule( RealOpenMM epsilonI, RealOpenMM epsilonJ ) const {
@@ -199,7 +207,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculatePairIxn( RealOpenMM combindedSigma,
 
 }
 
-RealOpenMM AmoebaReferenceVdwForce::calculateNoCutoffForceAndEnergy( int numParticles,
+RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergyNoCutoff( int numParticles,
                                                                      const vector<RealVec>& particlePositions,
                                                                      const std::vector<int>& indexIVs, 
                                                                      const std::vector<int>& indexClasses, 
@@ -211,7 +219,88 @@ RealOpenMM AmoebaReferenceVdwForce::calculateNoCutoffForceAndEnergy( int numPart
 
     // ---------------------------------------------------------------------------------------
 
-    //static const std::string methodName = "AmoebaReferenceVdwForce::calculateNoCutoffForceAndEnergy";
+    static const RealOpenMM zero          = 0.0;
+    static const RealOpenMM one           = 1.0;
+    static const RealOpenMM two           = 2.0;
+
+    // ---------------------------------------------------------------------------------------
+
+    // set reduced coordinates
+
+    std::vector<Vec3> reducedPositions;
+    reducedPositions.resize(numParticles);
+    for( unsigned int ii = 0; ii <  static_cast<unsigned int>(numParticles); ii++ ){
+        if( reductions[ii] != zero ){
+            int reductionIndex     = indexIVs[ii];
+            reducedPositions[ii]   = Vec3( reductions[ii]*( particlePositions[ii][0] - particlePositions[reductionIndex][0] ) + particlePositions[reductionIndex][0], 
+                                           reductions[ii]*( particlePositions[ii][1] - particlePositions[reductionIndex][1] ) + particlePositions[reductionIndex][1], 
+                                           reductions[ii]*( particlePositions[ii][2] - particlePositions[reductionIndex][2] ) + particlePositions[reductionIndex][2] ); 
+        } else {
+            reducedPositions[ii] = Vec3( particlePositions[ii][0], particlePositions[ii][1], particlePositions[ii][2] ); 
+        }
+    }
+ 
+    // loop over all ixns
+    //    (1) initialize exclusion vector
+
+    RealOpenMM energy = zero;
+    std::vector<unsigned int> exclusions(numParticles, 0);
+    for( unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++ ){
+ 
+        RealOpenMM sigmaI      = sigmas[ii];
+        RealOpenMM epsilonI    = epsilons[ii];
+        for( unsigned int jj = 0; jj < allExclusions[ii].size(); jj++ ){
+            exclusions[allExclusions[ii][jj]] = 1;
+        }
+
+        for( unsigned int jj = ii+1; jj < static_cast<unsigned int>(numParticles); jj++ ){
+            if( exclusions[jj] == 0 ){
+
+                RealOpenMM combindedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj] );
+                RealOpenMM combindedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj] );
+
+                Vec3 force;
+                energy                     += calculatePairIxn( combindedSigma, combindedEpsilon,
+                                                                reducedPositions[ii], reducedPositions[jj],
+                                                                force );
+                
+                if( indexIVs[ii] == ii ){
+                    forces[ii][0] -= force[0];
+                    forces[ii][1] -= force[1];
+                    forces[ii][2] -= force[2];
+                } else {
+                    addReducedForce( ii, indexIVs[ii], reductions[ii], -one, force, forces );
+                }
+                if( indexIVs[jj] == jj ){
+                    forces[jj][0] += force[0];
+                    forces[jj][1] += force[1];
+                    forces[jj][2] += force[2];
+                } else {
+                    addReducedForce( jj, indexIVs[jj], reductions[jj], one, force, forces );
+                }
+
+            }
+        }
+
+        for( unsigned int jj = 0; jj < allExclusions[ii].size(); jj++ ){
+            exclusions[allExclusions[ii][jj]] = 0;
+        }
+    }
+
+    return energy;
+}
+
+RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergyApplyCutoff( int numParticles,
+                                                                        const vector<RealVec>& particlePositions,
+                                                                        const std::vector<int>& indexIVs, 
+                                                                        const std::vector<int>& indexClasses, 
+                                                                        const std::vector<RealOpenMM>& sigmas,
+                                                                        const std::vector<RealOpenMM>& epsilons,
+                                                                        const std::vector<RealOpenMM>& reductions,
+                                                                        const std::vector< std::vector<int> >& allExclusions,
+                                                                        vector<RealVec>& forces ) const {
+
+    // ---------------------------------------------------------------------------------------
 
     static const RealOpenMM zero          = 0.0;
     static const RealOpenMM one           = 1.0;
@@ -295,11 +384,24 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy( int numParticles,
                                                              vector<RealVec>& forces ) const {
 
     
-    if( getNonbondedMethod() == NoCutoff || 1 ){
-        return calculateNoCutoffForceAndEnergy( numParticles, particlePositions, 
+    if( getNonbondedMethod() == NoCutoff ){
+        return calculateForceAndEnergyNoCutoff( numParticles, particlePositions, 
                                                 indexIVs, indexClasses, sigmas, epsilons,
                                                 reductions, allExclusions, forces );
+    } else {
+        return calculateForceAndEnergyApplyCutoff( numParticles, particlePositions, 
+                                                   indexIVs, indexClasses, sigmas, epsilons,
+                                                   reductions, allExclusions, forces );
     }
 
 }    
+/*
+    double cutoff = force.getCutoff();
+    double taperCutoff = cutoff*0.9;
+    replacements["CUTOFF_DISTANCE"] = cu.doubleToString(force.getCutoff());
+    replacements["TAPER_CUTOFF"] = cu.doubleToString(taperCutoff);
+    replacements["TAPER_C3"] = cu.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
+    replacements["TAPER_C4"] = cu.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
+    replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
 
+*/

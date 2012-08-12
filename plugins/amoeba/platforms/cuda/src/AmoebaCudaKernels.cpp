@@ -29,12 +29,14 @@
 #include "kernels/amoebaGpuTypes.h"
 #include "kernels/cudaKernels.h"
 #include "kernels/amoebaCudaKernels.h"
+#include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
 #include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaForceInfo.h"
 
+#include <stdio.h>
 #include <cmath>
 #ifdef _MSC_VER
 #include <windows.h>
@@ -1239,11 +1241,21 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
                         force.getPBC(), force.getUseNeighborList() );
     }
     data.setUseVdwNeighborList( force.getUseNeighborList() );
+    if (force.getUseDispersionCorrection())
+        data.dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
+    else
+        data.dispersionCoefficient = 0.0;               
 }
 
 double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    _gpuContext* gpu = data.cudaPlatformData.gpu;
     computeAmoebaVdwForce( data );
-    return 0.0;
+    if (data.dispersionCoefficient != 0.0) {
+        double Answer = data.dispersionCoefficient/(gpu->sim.periodicBoxSizeX*gpu->sim.periodicBoxSizeY*gpu->sim.periodicBoxSizeZ);
+        return Answer;
+    } else {
+        return 0.0;
+    }
 }
 
 /* -------------------------------------------------------------------------- *
@@ -1318,3 +1330,4 @@ double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, boo
     computeAmoebaWcaDispersionForce( data );
     return 0.0;
 }
+

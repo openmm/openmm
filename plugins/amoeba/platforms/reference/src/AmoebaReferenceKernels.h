@@ -29,6 +29,7 @@
 
 #include "openmm/System.h"
 #include "openmm/amoebaKernels.h"
+#include "SimTKReference/ReferenceNeighborList.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 namespace OpenMM {
@@ -430,33 +431,6 @@ private:
     System& system;
 };
 
-// /**
-//  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
-// public:
-//     ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaMultipoleForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     System& system;
-// };
-
 /**
  * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
  */
@@ -482,6 +456,9 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numParticles;
+    int useNeighborList;
+    int usePBC;
+    double cutoff;
     std::vector<int> indexIVs;
     std::vector<int> indexClasses;
     std::vector< std::vector<int> > allExclusions;
@@ -491,6 +468,7 @@ private:
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
     System& system;
+    NeighborList* neighborList;
 };
 
 /**

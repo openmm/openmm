@@ -41,6 +41,8 @@
 
 namespace OpenMM {
 
+class System;
+
 /**
  * This is the internal implementation of AmoebaVdwForce.
  */
@@ -61,6 +63,11 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+    /**
+     * Compute the coefficient which, when divided by the periodic box volume, gives the
+     * long range dispersion correction to the energy.
+     */
+    static double calcDispersionCorrection(const System& system, const AmoebaVdwForce& force);
 private:
     AmoebaVdwForce& owner;
     Kernel kernel;
@@ -69,3 +76,4 @@ private:
 } // namespace OpenMM
 
 #endif /*OPENMM_AMOEBA_VDW_FORCE_IMPL_H_*/
+

@@ -197,6 +197,8 @@ public:
 
     CudaPlatform::PlatformData& cudaPlatformData;
 
+    double dispersionCoefficient;
+    
 private:
 
     amoebaGpuContext amoebaGpu;
@@ -217,3 +219,4 @@ private:
 } // namespace OpenMM
 
 #endif /*AMOEBA_CUDA_DATA_H_*/
+

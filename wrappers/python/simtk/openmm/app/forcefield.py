@@ -2793,6 +2793,11 @@ class AmoebaVdwGenerator:
             else:
                 force.setCutoff(nonbondedCutoff)
 
+            # dispersion correction
+
+            if ('useDispersionCorrection' in args):
+                force.setUseDispersionCorrection(int(args['useDispersionCorrection']))
+
             if (nonbondedMethod == PME):
                 force.setPBC(1)
                 force.setUseNeighborList(1)
