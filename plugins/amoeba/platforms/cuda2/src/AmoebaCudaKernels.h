@@ -373,10 +373,20 @@ public:
 
 private:
     class ForceInfo;
+    class SortTrait : public CudaSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "INT_MIN";}
+        const char* getMaxKey() const {return "INT_MAX";}
+        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
+        const char* getSortKey() const {return "value.y";}
+    };
     void initializeScaleFactors();
     int numMultipoles, maxInducedIterations;
     double inducedEpsilon;
-    bool hasInitializedScaleFactors;
+    bool hasInitializedScaleFactors, hasInitializedFFT;
     CudaContext& cu;
     System& system;
     std::vector<int3> covalentFlagValues;
@@ -404,18 +414,19 @@ private:
     CudaArray* pmeBsplineModuliZ;
     CudaArray* pmeTheta1;
     CudaArray* pmeTheta2;
+    CudaArray* pmeTheta3;
     CudaArray* pmeIgrid;
     CudaArray* pmePhi;
     CudaArray* pmePhid;
     CudaArray* pmePhip;
     CudaArray* pmePhidp;
-    CudaArray* pmeBsplineTheta;
-    CudaArray* pmeBsplineDTheta;
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
+    CUfunction pmeUpdateBsplinesKernel, pmeAtomRangeKernel, pmeSpreadFixedMultipolesKernel, pmeConvolutionKernel, pmeFixedPotentialKernel, pmeFixedForceKernel;
+    static const int PmeOrder = 5;
 };
 
 /**
@@ -475,6 +486,7 @@ private:
     CudaContext& cu;
     System& system;
     bool hasInitializedNonbonded;
+    double dispersionCoefficient;
     CudaArray* sigmaEpsilon;
     CudaArray* bondReductionAtoms;
     CudaArray* bondReductionFactors;

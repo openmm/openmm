@@ -25,7 +25,101 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.thole = temp.y;
 }
 
-__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, real3& field1, real3& field2) {
+#ifdef USE_EWALD
+__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, float dScale, float pScale, real3* fields) {
+    real r2 = dot(deltaR, deltaR);
+    if (r2 <= CUTOFF_SQUARED) {
+        // calculate the error function damping terms
+
+        real r = SQRT(r2);
+        real ralpha = EWALD_ALPHA*r;
+        real bn0 = erfc(ralpha)/r;
+        real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
+        real alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
+        real exp2a = EXP(-(ralpha*ralpha));
+        alsq2n *= alsq2;
+        real bn1 = (bn0+alsq2n*exp2a)/r2;
+        alsq2n *= alsq2;
+        real bn2 = (3*bn1+alsq2n*exp2a)/r2;
+        alsq2n *= alsq2;
+        real bn3 = (5*bn2+alsq2n*exp2a)/r2;
+
+        // compute the error function scaled and unscaled terms
+
+        real scale3 = 1;
+        real scale5 = 1;
+        real scale7 = 1;
+        real damp = atom1.damp*atom2.damp;
+        if (damp != 0) {
+            real ratio = (r/damp);
+            ratio = ratio*ratio*ratio;
+            real pgamma = (atom1.thole < atom2.thole ? atom1.thole : atom2.thole);
+            damp = -pgamma*ratio;
+            if (damp > -50) {
+                real expdamp = EXP(damp);
+                scale3 = 1 - expdamp;
+                scale5 = 1 - expdamp*(1-damp);
+                scale7 = 1 - expdamp*(1-damp+(0.6f*damp*damp));
+            }
+        }
+        real dsc3 = dScale*scale3;
+        real dsc5 = dScale*scale5;
+        real dsc7 = dScale*scale7;
+
+        real psc3 = pScale*scale3;
+        real psc5 = pScale*scale5;
+        real psc7 = pScale*scale7;
+
+        real r3 = r*r2;
+        real r5 = r3*r2;
+        real r7 = r5*r2;
+        real drr3 = (1-dsc3)/r3;
+        real drr5 = 3*(1-dsc5)/r5;
+        real drr7 = 15*(1-dsc7)/r7;
+
+        real prr3 = (1-psc3)/r3;
+        real prr5 = 3*(1-psc5)/r5;
+        real prr7 = 15*(1-psc7)/r7;
+
+        real dir = dot(atom1.dipole, deltaR);
+
+        real3 qi;
+        qi.x = atom1.quadrupoleXX*deltaR.x + atom1.quadrupoleXY*deltaR.y + atom1.quadrupoleXZ*deltaR.z;
+        qi.y = atom1.quadrupoleXY*deltaR.x + atom1.quadrupoleYY*deltaR.y + atom1.quadrupoleYZ*deltaR.z;
+        qi.z = atom1.quadrupoleXZ*deltaR.x + atom1.quadrupoleYZ*deltaR.y + atom1.quadrupoleZZ*deltaR.z;
+        real qir = dot(qi, deltaR);
+
+        real dkr = dot(atom2.dipole, deltaR);
+
+        real3 qk;
+        qk.x = atom2.quadrupoleXX*deltaR.x + atom2.quadrupoleXY*deltaR.y + atom2.quadrupoleXZ*deltaR.z;
+        qk.y = atom2.quadrupoleXY*deltaR.x + atom2.quadrupoleYY*deltaR.y + atom2.quadrupoleYZ*deltaR.z;
+        qk.z = atom2.quadrupoleXZ*deltaR.x + atom2.quadrupoleYZ*deltaR.y + atom2.quadrupoleZZ*deltaR.z;
+        real qkr = dot(qk, deltaR);
+
+        real3 fim = -deltaR*(bn1*atom2.posq.w-bn2*dkr+bn3*qkr) - bn1*atom2.dipole + 2*bn2*qk;
+        real3 fkm = deltaR*(bn1*atom1.posq.w+bn2*dir+bn3*qir) - bn1*atom1.dipole - 2*bn2*qi;
+        real3 fid = -deltaR*(drr3*atom2.posq.w-drr5*dkr+drr7*qkr) - drr3*atom2.dipole + 2*drr5*qk;
+        real3 fkd = deltaR*(drr3*atom1.posq.w+drr5*dir+drr7*qir) - drr3*atom1.dipole - 2*drr5*qi;
+        real3 fip = -deltaR*(prr3*atom2.posq.w-prr5*dkr+prr7*qkr) - prr3*atom2.dipole + 2*prr5*qk;
+        real3 fkp = deltaR*(prr3*atom1.posq.w+prr5*dir+prr7*qir) - prr3*atom1.dipole - 2*prr5*qi;
+
+        // increment the field at each site due to this interaction
+
+        fields[0] = fim-fid;
+        fields[1] = fim-fip;
+        fields[2] = fkm-fkd;
+        fields[3] = fkm-fkp;
+    }
+    else {
+        fields[0] = make_real3(0);
+        fields[1] = make_real3(0);
+        fields[2] = make_real3(0);
+        fields[3] = make_real3(0);
+    }
+}
+#else
+__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, float dScale, float pScale, real3* fields) {
     real rI = RSQRT(dot(deltaR, deltaR));
     real r = RECIP(rI);
     real r2I = rI*rI;
@@ -66,7 +160,9 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
 
     real factor = -rr3*atom2.posq.w + rr5*dotdd - rr7*dotqd;
  
-    field1 = deltaR*factor - rr3*atom2.dipole + rr5_2*qDotDelta;
+    real3 field1 = deltaR*factor - rr3*atom2.dipole + rr5_2*qDotDelta;
+    fields[0] = dScale*field1;
+    fields[1] = pScale*field1;
  
     qDotDelta.x = deltaR.x*atom1.quadrupoleXX + deltaR.y*atom1.quadrupoleXY + deltaR.z*atom1.quadrupoleXZ;
     qDotDelta.y = deltaR.x*atom1.quadrupoleXY + deltaR.y*atom1.quadrupoleYY + deltaR.z*atom1.quadrupoleYZ;
@@ -76,22 +172,14 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
     dotqd = dot(deltaR, qDotDelta);
     factor = rr3*atom1.posq.w + rr5*dotdd + rr7*dotqd;
  
-    field2 = deltaR*factor - rr3*atom1.dipole - rr5_2*qDotDelta;
+    real3 field2 = deltaR*factor - rr3*atom1.dipole - rr5_2*qDotDelta;
+    fields[2] = dScale*field2;
+    fields[3] = pScale*field2;
 }
+#endif
 
 __device__ real computeDScaleFactor(unsigned int polarizationGroup) {
     return (polarizationGroup & 1 ? 0 : 1);
-}
-
-__device__ float computeMScaleFactor(uint2 covalent) {
-//        int f1 = (value == 0 || value == 1 ? 1 : 0);
-//        int f2 = (value == 0 || value == 2 ? 1 : 0);
-    // 0 = 12 or 13: x and y: 0
-    // 1 = 14: x: 0.4
-    // 2 = 15: y: 0.8
-    bool x = (covalent.x & 1);
-    bool y = (covalent.y & 1);
-    return (x ? (y ? 0.0f : 0.4f) : (y ? 0.8f : 1.0f));
 }
 
 __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup) {
@@ -195,15 +283,14 @@ extern "C" __global__ void computeFixedField(
                     delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                     delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                    real3 field1;
-                    real3 field2;
-                    computeOneInteraction(data, localData[atom2], delta, field1, field2);
+                    real3 fields[4];
+                    float d = computeDScaleFactor(polarizationGroup);
+                    float p = computePScaleFactor(covalent, polarizationGroup);
+                    computeOneInteraction(data, localData[atom2], delta, d, p, fields);
                     atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        float d = computeDScaleFactor(polarizationGroup);
-                        data.field += d*field1;
-                        float p = computePScaleFactor(covalent, polarizationGroup);
-                        data.fieldPolar += p*field1;
+                        data.field += fields[0];
+                        data.fieldPolar += fields[1];
                     }
                     covalent.x >>= 1;
                     covalent.y >>= 1;
@@ -230,62 +317,58 @@ extern "C" __global__ void computeFixedField(
                         for (j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 int atom2 = tbx+j;
-                                int bufferIndex = 3*threadIdx.x;
-                                real3 dEdR1 = make_real3(0);
-                                real3 dEdR2 = make_real3(0);
                                 real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
 #ifdef USE_PERIODIC
                                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
-                                if (r2 < CUTOFF_SQUARED) {
-#endif
-                                    real invR = RSQRT(r2);
-                                    real r = RECIP(invR);
-                                    LOAD_ATOM2_PARAMETERS
-                                    atom2 = y*TILE_SIZE+j;
-                                    COMPUTE_INTERACTION
-#ifdef USE_CUTOFF
-                                }
-#endif
+                                real3 fields[4];
+                                computeOneInteraction(data, localData[atom2], delta, 1, 1, fields);
+                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #ifdef ENABLE_SHUFFLE
-                                force.x -= dEdR1.x;
-                                force.y -= dEdR1.y;
-                                force.z -= dEdR1.z;
-                                for (int i = 16; i >= 1; i /= 2) {
-                                    dEdR2.x += __shfl_xor(dEdR2.x, i, 32);
-                                    dEdR2.y += __shfl_xor(dEdR2.y, i, 32);
-                                    dEdR2.z += __shfl_xor(dEdR2.z, i, 32);
-                                }
-                                if (tgx == 0) {
-                                    localData[tbx+j].fx += dEdR2.x;
-                                    localData[tbx+j].fy += dEdR2.y;
-                                    localData[tbx+j].fz += dEdR2.z;
-                                }
+                                    for (int i = 16; i >= 1; i /= 2) {
+                                        fields[2].x += __shfl_xor(fields[2].x, i, 32);
+                                        fields[2].y += __shfl_xor(fields[2].y, i, 32);
+                                        fields[2].z += __shfl_xor(fields[2].z, i, 32);
+                                        fields[3].x += __shfl_xor(fields[3].x, i, 32);
+                                        fields[3].y += __shfl_xor(fields[3].y, i, 32);
+                                        fields[3].z += __shfl_xor(fields[3].z, i, 32);
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].field += fields[2];
+                                        localData[atom2].fieldPolar += fields[3];
+                                    }
 #else
-                                force.x -= dEdR1.x;
-                                force.y -= dEdR1.y;
-                                force.z -= dEdR1.z;
-                                tempBuffer[bufferIndex] = dEdR2.x;
-                                tempBuffer[bufferIndex+1] = dEdR2.y;
-                                tempBuffer[bufferIndex+2] = dEdR2.z;
-
-                                // Sum the forces on atom2.
-
-                                if (tgx % 4 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                }
-                                if (tgx == 0) {
-                                    localData[tbx+j].fx += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                    localData[tbx+j].fy += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                    localData[tbx+j].fz += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                }
+                                    int bufferIndex = 3*threadIdx.x;
+                                    tempBuffer[bufferIndex] = fields[2].x;
+                                    tempBuffer[bufferIndex+1] = fields[2].y;
+                                    tempBuffer[bufferIndex+2] = fields[2].z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].field.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].field.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].field.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
+                                    tempBuffer[bufferIndex] = fields[3].x;
+                                    tempBuffer[bufferIndex+1] = fields[3].y;
+                                    tempBuffer[bufferIndex+2] = fields[3].z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].fieldPolar.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].fieldPolar.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].fieldPolar.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
 #endif
+                                }
                             }
                         }
                     }
@@ -309,16 +392,15 @@ extern "C" __global__ void computeFixedField(
                         delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                        real3 field1;
-                        real3 field2;
-                        computeOneInteraction(data, localData[atom2], delta, field1, field2);
+                        real3 fields[4];
+                        float d = computeDScaleFactor(polarizationGroup);
+                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        computeOneInteraction(data, localData[atom2], delta, d, p, fields);
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                            float d = computeDScaleFactor(polarizationGroup);
-                            data.field += d*field1;
-                            localData[atom2].field += d*field2;
-                            float p = computePScaleFactor(covalent, polarizationGroup);
-                            data.fieldPolar += p*field1;
-                            localData[atom2].fieldPolar += p*field2;
+                            data.field += fields[0];
+                            data.fieldPolar += fields[1];
+                            localData[atom2].field += fields[2];
+                            localData[atom2].fieldPolar += fields[3];
                         }
                         covalent.x >>= 1;
                         covalent.y >>= 1;

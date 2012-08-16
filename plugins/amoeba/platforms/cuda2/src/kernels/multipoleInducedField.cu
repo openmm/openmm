@@ -139,65 +139,61 @@ extern "C" __global__ void computeInducedField(
                     else {
                         // Compute only a subset of the interactions in this tile.
 
-                        for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                        for (j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 int atom2 = tbx+j;
-                                int bufferIndex = 3*threadIdx.x;
-                                real3 dEdR1 = make_real3(0);
-                                real3 dEdR2 = make_real3(0);
-                                real3 delta = localData[atom2].pos-data.pos;
+                                real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
 #ifdef USE_PERIODIC
                                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
-                                if (r2 < CUTOFF_SQUARED) {
-#endif
-                                    real invR = RSQRT(r2);
-                                    real r = RECIP(invR);
-                                    LOAD_ATOM2_PARAMETERS
-                                    atom2 = y*TILE_SIZE+j;
-                                    COMPUTE_INTERACTION
-#ifdef USE_CUTOFF
-                                }
-#endif
+                                real3 fields[4];
+                                computeOneInteraction(data, localData[atom2], delta, fields);
+                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #ifdef ENABLE_SHUFFLE
-                                force.x -= dEdR1.x;
-                                force.y -= dEdR1.y;
-                                force.z -= dEdR1.z;
-                                for (int i = 16; i >= 1; i /= 2) {
-                                    dEdR2.x += __shfl_xor(dEdR2.x, i, 32);
-                                    dEdR2.y += __shfl_xor(dEdR2.y, i, 32);
-                                    dEdR2.z += __shfl_xor(dEdR2.z, i, 32);
-                                }
-                                if (tgx == 0) {
-                                    localData[tbx+j].fx += dEdR2.x;
-                                    localData[tbx+j].fy += dEdR2.y;
-                                    localData[tbx+j].fz += dEdR2.z;
-                                }
+                                    for (int i = 16; i >= 1; i /= 2) {
+                                        fields[2].x += __shfl_xor(fields[2].x, i, 32);
+                                        fields[2].y += __shfl_xor(fields[2].y, i, 32);
+                                        fields[2].z += __shfl_xor(fields[2].z, i, 32);
+                                        fields[3].x += __shfl_xor(fields[3].x, i, 32);
+                                        fields[3].y += __shfl_xor(fields[3].y, i, 32);
+                                        fields[3].z += __shfl_xor(fields[3].z, i, 32);
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].field += fields[2];
+                                        localData[atom2].fieldPolar += fields[3];
+                                    }
 #else
-                                force.x -= dEdR1.x;
-                                force.y -= dEdR1.y;
-                                force.z -= dEdR1.z;
-                                tempBuffer[bufferIndex] = dEdR2.x;
-                                tempBuffer[bufferIndex+1] = dEdR2.y;
-                                tempBuffer[bufferIndex+2] = dEdR2.z;
-
-                                // Sum the forces on atom2.
-
-                                if (tgx % 4 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                }
-                                if (tgx == 0) {
-                                    localData[tbx+j].fx += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                    localData[tbx+j].fy += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                    localData[tbx+j].fz += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                }
+                                    int bufferIndex = 3*threadIdx.x;
+                                    tempBuffer[bufferIndex] = fields[2].x;
+                                    tempBuffer[bufferIndex+1] = fields[2].y;
+                                    tempBuffer[bufferIndex+2] = fields[2].z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].field.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].field.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].field.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
+                                    tempBuffer[bufferIndex] = fields[3].x;
+                                    tempBuffer[bufferIndex+1] = fields[3].y;
+                                    tempBuffer[bufferIndex+2] = fields[3].z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].fieldPolar.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].fieldPolar.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].fieldPolar.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
 #endif
+                                }
                             }
                         }
                     }

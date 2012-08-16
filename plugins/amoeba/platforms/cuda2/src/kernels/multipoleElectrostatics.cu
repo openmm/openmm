@@ -205,63 +205,113 @@ extern "C" __global__ void computeElectrostatics(
                         for (j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 int atom2 = tbx+j;
-                                int bufferIndex = 3*threadIdx.x;
-                                real3 dEdR1 = make_real3(0);
-                                real3 dEdR2 = make_real3(0);
                                 real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
 #ifdef USE_PERIODIC
                                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-#ifdef USE_CUTOFF
-                                if (r2 < CUTOFF_SQUARED) {
-#endif
-                                    real invR = RSQRT(r2);
-                                    real r = RECIP(invR);
-                                    LOAD_ATOM2_PARAMETERS
-                                    atom2 = y*TILE_SIZE+j;
-                                    COMPUTE_INTERACTION
-#ifdef USE_CUTOFF
-                                }
-#endif
+                                real3 tempForce;
+                                real tempEnergy;
+                                computeOneInteractionF1(data, localData[atom2], 1, 1, 1, tempEnergy, tempForce);
+                                data.force += tempForce;
+                                localData[atom2].force -= tempForce;
+                                energy += tempEnergy;
+                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #ifdef ENABLE_SHUFFLE
-                                force.x -= dEdR1.x;
-                                force.y -= dEdR1.y;
-                                force.z -= dEdR1.z;
-                                for (int i = 16; i >= 1; i /= 2) {
-                                    dEdR2.x += __shfl_xor(dEdR2.x, i, 32);
-                                    dEdR2.y += __shfl_xor(dEdR2.y, i, 32);
-                                    dEdR2.z += __shfl_xor(dEdR2.z, i, 32);
-                                }
-                                if (tgx == 0) {
-                                    localData[tbx+j].fx += dEdR2.x;
-                                    localData[tbx+j].fy += dEdR2.y;
-                                    localData[tbx+j].fz += dEdR2.z;
-                                }
+                                    for (int i = 16; i >= 1; i /= 2) {
+                                        tempForce.x += __shfl_xor(tempForce.x, i, 32);
+                                        tempForce.y += __shfl_xor(tempForce.y, i, 32);
+                                        tempForce.z += __shfl_xor(tempForce.z, i, 32);
+                                    }
+                                    if (tgx == 0)
+                                        localData[atom2].force -= tempForce;
 #else
-                                force.x -= dEdR1.x;
-                                force.y -= dEdR1.y;
-                                force.z -= dEdR1.z;
-                                tempBuffer[bufferIndex] = dEdR2.x;
-                                tempBuffer[bufferIndex+1] = dEdR2.y;
-                                tempBuffer[bufferIndex+2] = dEdR2.z;
-
-                                // Sum the forces on atom2.
-
-                                if (tgx % 4 == 0) {
-                                    tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                    tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                    tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                }
-                                if (tgx == 0) {
-                                    localData[tbx+j].fx += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                    localData[tbx+j].fy += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                    localData[tbx+j].fz += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                }
+                                    int bufferIndex = 3*threadIdx.x;
+                                    tempBuffer[bufferIndex] = tempForce.x;
+                                    tempBuffer[bufferIndex+1] = tempForce.y;
+                                    tempBuffer[bufferIndex+2] = tempForce.z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].force.x -= tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].force.y -= tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].force.z -= tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
 #endif
+                                }
                             }
+                        }
+                        data.force *= ENERGY_SCALE_FACTOR;
+                        localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+                        if (pos < end) {
+                            unsigned int offset = x*TILE_SIZE + tgx;
+                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                            offset = y*TILE_SIZE + tgx;
+                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                        }
+                        
+                        // Compute torques.
+
+                        for (j = 0; j < TILE_SIZE; j++) {
+                            if ((flags&(1<<j)) != 0) {
+                                int atom2 = tbx+j;
+                                real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
+#ifdef USE_PERIODIC
+                                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+#endif
+                                real3 tempForce;
+                                computeOneInteractionT1(data, localData[atom2], 1, 1, 1, tempForce);
+                                data.force += tempForce;
+                                computeOneInteractionT3(data, localData[atom2], 1, 1, 1, tempForce);
+                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+#ifdef ENABLE_SHUFFLE
+                                    for (int i = 16; i >= 1; i /= 2) {
+                                        tempForce.x += __shfl_xor(tempForce.x, i, 32);
+                                        tempForce.y += __shfl_xor(tempForce.y, i, 32);
+                                        tempForce.z += __shfl_xor(tempForce.z, i, 32);
+                                    }
+                                    if (tgx == 0)
+                                        localData[atom2].force -= tempForce;
+#else
+                                    int bufferIndex = 3*threadIdx.x;
+                                    tempBuffer[bufferIndex] = tempForce.x;
+                                    tempBuffer[bufferIndex+1] = tempForce.y;
+                                    tempBuffer[bufferIndex+2] = tempForce.z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].force.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].force.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].force.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
+#endif
+                                }
+                            }
+                        }
+                        data.force *= ENERGY_SCALE_FACTOR;
+                        localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+                        if (pos < end) {
+                            unsigned int offset = x*TILE_SIZE + tgx;
+                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                            offset = y*TILE_SIZE + tgx;
+                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
                         }
                     }
                 }
