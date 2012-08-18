@@ -1166,11 +1166,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeUpdateBsplinesKernel = cu.getKernel(module, "updateBsplines");
         pmeAtomRangeKernel = cu.getKernel(module, "findAtomRangeForGrid");
         pmeSpreadFixedMultipolesKernel = cu.getKernel(module, "gridSpreadFixedMultipoles");
+        pmeSpreadInducedDipolesKernel = cu.getKernel(module, "gridSpreadInducedDipoles");
         pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
         pmeFixedPotentialKernel = cu.getKernel(module, "computeFixedPotentialFromGrid");
+        pmeInducedPotentialKernel = cu.getKernel(module, "computeInducedPotentialFromGrid");
         pmeFixedForceKernel = cu.getKernel(module, "computeFixedMultipoleForceAndEnergy");
-//        pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
-//        pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+        pmeInducedForceKernel = cu.getKernel(module, "computeInducedDipoleForceAndEnergy");
+        pmeRecordInducedFieldDipolesKernel = cu.getKernel(module, "recordInducedFieldDipoles");
 //        cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
 
         // Create required data structures.
@@ -1415,12 +1417,15 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(),
             &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        
+        // Map torques to force.
+        
         void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
             &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
         cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
     }
     else {
-        // Compute induced dipoles.
+        // Reciprocal space calculation.
         
         unsigned int maxTiles = nb.getInteractingTiles().getSize();
         void* pmeUpdateBsplinesArgs[] = {&cu.getPosq().getDevicePointer(), &pmeIgrid->getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(),
@@ -1433,9 +1438,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         cu.executeKernel(pmeAtomRangeKernel, pmeAtomRangeArgs, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*PmeOrder*PmeOrder*elementSize);
         void* pmeSpreadFixedMultipolesArgs[] = {&cu.getPosq().getDevicePointer(), &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
             &pmeGrid->getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), &pmeAtomRange->getDevicePointer(),
-            &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(), &pmeTheta3->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
-            cu.getInvPeriodicBoxSizePointer()};
-        cu.executeKernel(pmeSpreadFixedMultipolesKernel, pmeSpreadFixedMultipolesArgs, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*PmeOrder*PmeOrder*elementSize);
+            &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(), &pmeTheta3->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+        cu.executeKernel(pmeSpreadFixedMultipolesKernel, pmeSpreadFixedMultipolesArgs, cu.getNumAtoms());
         if (cu.getUseDoublePrecision())
             cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
         else
@@ -1448,23 +1452,16 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         else
             cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
         void* pmeFixedPotentialArgs[] = {&pmeGrid->getDevicePointer(), &pmePhi->getDevicePointer(), &field->getDevicePointer(),
-            &pmeIgrid->getDevicePointer(), &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(), &pmeTheta3->getDevicePointer(),
-            &labFrameDipoles->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+            &fieldPolar ->getDevicePointer(), &pmeIgrid->getDevicePointer(), &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(),
+            &pmeTheta3->getDevicePointer(), &labFrameDipoles->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeFixedPotentialKernel, pmeFixedPotentialArgs, cu.getNumAtoms());
         void* pmeFixedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
             &cu.getEnergyBuffer().getDevicePointer(), &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
-            &pmePhi->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
+            &pmePhi->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeFixedForceKernel, pmeFixedForceArgs, cu.getNumAtoms());
-        printf("reciprocal:\n");
-        vector<long long> f;
-        printf("force\n");
-        cu.getForce().download(f);
-        for (int i = 0; i < cu.getNumAtoms(); i++)
-            printf("%d: %g %g %g\n", i, f[i]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()*2]/(double) 0xFFFFFFFF);
-//        printf("torque\n");
-//        torque->download(f);
-//        for (int i = 0; i < cu.getNumAtoms(); i++)
-//            printf("%d: %g %g %g\n", i, f[i]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()*2]/(double) 0xFFFFFFFF);
+        
+        // Direct space calculation.
+        
         void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
             &nb.getExclusionIndices().getDevicePointer(), &nb.getExclusionRowIndices().getDevicePointer(),
             &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &startTileIndex, &numTileIndices,
@@ -1475,38 +1472,29 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
             &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
         cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
-        printf("direct:\n");
-        printf("force\n");
-        cu.getForce().download(f);
-        for (int i = 0; i < cu.getNumAtoms(); i++)
-            printf("%d: %g %g %g\n", i, f[i]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()*2]/(double) 0xFFFFFFFF);
-//        printf("torque\n");
-//        torque->download(f);
-//        for (int i = 0; i < cu.getNumAtoms(); i++)
-//            printf("%d: %g %g %g\n", i, f[i]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()*2]/(double) 0xFFFFFFFF);
-//        vector<float> d, dp;
-//        printf("phi\n");
-//        pmePhi->download(d);
-//        for (int i = 0; i < d.size(); i++)
-//            printf("%d: %g\n", i, d[i]);
-//        printf("dipoles\n");
-//        labFrameDipoles->download(d);
-//        for (int i = 0; i < cu.getNumAtoms(); i++)
-//            printf("%d: %g %g %g\n", i, d[3*i], d[3*i+1], d[3*i+2]);
-//        printf("quadrupoles\n");
-//        labFrameQuadrupoles->download(d);
-//        for (int i = 0; i < cu.getNumAtoms(); i++)
-//            printf("%d: %g %g %g %g %g %g\n", i, d[5*i], d[5*i+1], d[5*i+2], d[5*i+3], d[5*i+4], -(d[5*i]+d[5*i+3]));
-//        printf("induced dipoles\n");
-//        inducedDipole->download(d);
-//        inducedDipolePolar->download(dp);
-//        for (int i = 0; i < cu.getNumAtoms(); i++)
-//            printf("%d: %g %g %g, %g %g %g\n", i, d[3*i], d[3*i+1], d[3*i+2], dp[3*i], dp[3*i+1], dp[3*i+2]);
-//        printf("positions\n");
-//        vector<float4> p;
-//        cu.getPosq().download(p);
-//        for (int i = 0; i < cu.getNumAtoms(); i++)
-//            printf("%d: %g %g %g %g\n", i, p[i].x, p[i].y, p[i].z, p[i].w);
+
+        // Reciprocal space calculation for the induced dipoles.
+
+        void* pmeSpreadInducedDipolesArgs[] = {&cu.getPosq().getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
+            &pmeGrid->getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), &pmeAtomRange->getDevicePointer(),
+            &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(), &pmeTheta3->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+        cu.executeKernel(pmeSpreadInducedDipolesKernel, pmeSpreadInducedDipolesArgs, cu.getNumAtoms());
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+        else
+            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+        cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, cu.getNumAtoms());
+        if (cu.getUseDoublePrecision())
+            cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+        else
+            cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+        void* pmeInducedPotentialArgs[] = {&pmeGrid->getDevicePointer(), &pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
+            &pmePhidp->getDevicePointer(), &pmeIgrid->getDevicePointer(), &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(),
+            &pmeTheta3->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+        cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
+//        void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
+//            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+//        cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
         
         
 //        vector<float2> errors;
@@ -1541,11 +1529,14 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(),
             &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-        printf("electrostatic:\n");
-        printf("force\n");
-        cu.getForce().download(f);
-        for (int i = 0; i < cu.getNumAtoms(); i++)
-            printf("%d: %g %g %g\n", i, f[i]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()*2]/(double) 0xFFFFFFFF);
+        void* pmeInducedForceArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
+            &cu.getEnergyBuffer().getDevicePointer(), &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
+            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &pmePhi->getDevicePointer(), &pmePhid->getDevicePointer(),
+            &pmePhip->getDevicePointer(), &pmePhidp->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+        cu.executeKernel(pmeInducedForceKernel, pmeInducedForceArgs, cu.getNumAtoms());
+        
+        // Map torques to force.
+        
         void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
             &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
         cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
