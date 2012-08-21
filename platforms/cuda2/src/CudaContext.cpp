@@ -331,7 +331,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 #ifdef WIN32
     string command = ""+compiler+" --ptx -arch=compute_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #else
-    string command = "\""+compiler+"\" --ptx -arch=compute_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
+    string command = "\""+compiler+"\" --ptx -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
 #endif
     int res = std::system(command.c_str());
     try {
