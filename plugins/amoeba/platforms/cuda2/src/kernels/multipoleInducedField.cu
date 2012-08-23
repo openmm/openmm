@@ -21,6 +21,67 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.thole = temp.y;
 }
 
+#ifdef USE_EWALD
+__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, real3* fields) {
+    real scale1, scale2;
+    real r2 = dot(deltaR, deltaR);
+    if (r2 < CUTOFF_SQUARED) {
+        real rI = RSQRT(r2);
+        real r = RECIP(rI);
+
+        // calculate the error function damping terms
+
+        real ralpha = EWALD_ALPHA*r;
+        real bn0 = erfc(ralpha)*rI;
+        real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
+        real alsq2n = RECIP(SQRT(M_PI)*EWALD_ALPHA);
+        real exp2a = expf(-(ralpha*ralpha));
+        alsq2n *= alsq2;
+        real bn1 = (bn0+alsq2n*exp2a)*rI*rI;
+
+        alsq2n *= alsq2;
+        real bn2 = (3*bn1+alsq2n*exp2a)*rI*rI;
+
+        // compute the error function scaled and unscaled terms
+
+        real scale3 = 1;
+        real scale5 = 1;
+        real damp = atom1.damp*atom2.damp;
+        if (damp != 0) {
+            real ratio = (r/damp);
+            ratio = ratio*ratio*ratio;
+            float pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
+            damp = -pgamma*ratio;
+            if (damp > -50) {
+                real expdamp = EXP(damp);
+                scale3 = 1 - expdamp;
+                scale5 = 1 - expdamp*(1-damp);
+            }
+        }
+        real dsc3 = scale3;
+        real dsc5 = scale5;
+        real r3 = (r*r2);
+        real r5 = (r3*r2);
+        real rr3 = (1-dsc3)/r3;
+        real rr5 = 3*(1-dsc5)/r5;
+
+        scale1 = rr3 - bn1;
+        scale2 = bn2 - rr5;
+    }
+    else {
+        scale1 = 0;
+        scale2 = 0;
+    }
+    real dDotDelta = scale2*dot(deltaR, atom2.inducedDipole);
+    fields[0] = scale1*atom2.inducedDipole + dDotDelta*deltaR;
+    dDotDelta = scale2*dot(deltaR, atom2.inducedDipolePolar);
+    fields[1] = scale1*atom2.inducedDipolePolar + dDotDelta*deltaR;
+    dDotDelta = scale2*dot(deltaR, atom1.inducedDipole);
+    fields[2] = scale1*atom1.inducedDipole + dDotDelta*deltaR;
+    dDotDelta = scale2*dot(deltaR, atom1.inducedDipolePolar);
+    fields[3] = scale1*atom1.inducedDipolePolar + dDotDelta*deltaR;
+}
+#else
 __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 deltaR, real3* fields) {
     real rI = RSQRT(dot(deltaR, deltaR));
     real r = RECIP(rI);
@@ -43,6 +104,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
     dDotDelta = rr5*dot(deltaR, atom1.inducedDipolePolar);
     fields[3] = rr3*atom1.inducedDipolePolar + dDotDelta*deltaR;
 }
+#endif
 
 /**
  * Compute the mutual induced field.
@@ -139,10 +201,10 @@ extern "C" __global__ void computeInducedField(
                     else {
                         // Compute only a subset of the interactions in this tile.
 
-                        for (j = 0; j < TILE_SIZE; j++) {
+                        for (int j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 int atom2 = tbx+j;
-                                real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
+                                real3 delta = localData[atom2].pos-data.pos;
 #ifdef USE_PERIODIC
                                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
@@ -254,18 +316,20 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
         const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar, real* __restrict__ inducedDipole,
         real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors) {
     extern __shared__ real2 buffer[];
-    float polarSOR = 0.55f;
+    const float polarSOR = 0.55f;
+    const real term = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT(M_PI);
+    const real fieldScale = 1/(real) 0xFFFFFFFF;
     real sumErrors = 0;
     real sumPolarErrors = 0;
     for (int atom = blockIdx.x*blockDim.x + threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
-        real scale = polarizability[atom]/(real) 0xFFFFFFFF;
+        real scale = polarizability[atom];
         for (int component = 0; component < 3; component++) {
             int dipoleIndex = 3*atom+component;
             int fieldIndex = atom+component*PADDED_NUM_ATOMS;
             real previousDipole = inducedDipole[dipoleIndex];
             real previousDipolePolar = inducedDipolePolar[dipoleIndex];
-            real newDipole = scale*(fixedField[fieldIndex]+inducedField[fieldIndex]);
-            real newDipolePolar = scale*(fixedFieldPolar[fieldIndex]+inducedFieldPolar[fieldIndex]);
+            real newDipole = scale*((fixedField[fieldIndex]+inducedField[fieldIndex])*fieldScale+term*previousDipole);
+            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+inducedFieldPolar[fieldIndex])*fieldScale+term*previousDipolePolar);
             newDipole = previousDipole + polarSOR*(newDipole-previousDipole);
             newDipolePolar = previousDipolePolar + polarSOR*(newDipolePolar-previousDipolePolar);
             inducedDipole[dipoleIndex] = newDipole;

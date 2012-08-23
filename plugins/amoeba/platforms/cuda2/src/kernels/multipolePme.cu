@@ -864,16 +864,16 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
 }
 
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip,
-        real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, real4 invPeriodicBoxSize) {
-    real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
-    real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
-    real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
+        long long* __restrict__ inducedField, long long* __restrict__ inducedFieldPolar, real4 invPeriodicBoxSize) {
+    real xscale = GRID_SIZE_X*invPeriodicBoxSize.x*0xFFFFFFFF;
+    real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y*0xFFFFFFFF;
+    real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z*0xFFFFFFFF;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedDipole[3*i] -= xscale*phid[10*i+1];
-        inducedDipole[3*i+1] -= yscale*phid[10*i+2];
-        inducedDipole[3*i+2] -= zscale*phid[10*i+3];
-        inducedDipolePolar[3*i] -= xscale*phip[10*i+1];
-        inducedDipolePolar[3*i+1] -= yscale*phip[10*i+2];
-        inducedDipolePolar[3*i+2] -= zscale*phip[10*i+3];
+        inducedField[i] -= (long long) (xscale*phid[10*i+1]);
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (yscale*phid[10*i+2]);
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (zscale*phid[10*i+3]);
+        inducedFieldPolar[i] -= (long long) (xscale*phip[10*i+1]);
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (yscale*phip[10*i+2]);
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (zscale*phip[10*i+3]);
     }
 }

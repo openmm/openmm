@@ -290,14 +290,13 @@ __device__ void computeOneInteractionF2(AtomData& atom1, volatile AtomData& atom
     real scip4 = atom2.inducedDipolePolar.x*xr + atom2.inducedDipolePolar.y*yr + atom2.inducedDipolePolar.z*zr;
 #ifndef DIRECT_POLARIZATION
 #ifdef APPLY_SCALE
-        prefactor1 = 0.5f*(bn2 - usc5);
+    prefactor1 = 0.5f*(bn2 - usc5);
 #else
-        prefactor1 = 0.5f*(bn2 - psc5);
+    prefactor1 = 0.5f*(bn2 - psc5);
 #endif
-        ftm21 += prefactor1*((sci4*atom1.inducedDipolePolar.x + scip4*atom1.inducedDipole.x));
-        ftm22 += prefactor1*((sci4*atom1.inducedDipolePolar.y + scip4*atom1.inducedDipole.y));
-        ftm23 += prefactor1*((sci4*atom1.inducedDipolePolar.z + scip4*atom1.inducedDipole.z));
-   }
+    ftm21 += prefactor1*((sci4*atom1.inducedDipolePolar.x + scip4*atom1.inducedDipole.x));
+    ftm22 += prefactor1*((sci4*atom1.inducedDipolePolar.y + scip4*atom1.inducedDipole.y));
+    ftm23 += prefactor1*((sci4*atom1.inducedDipolePolar.z + scip4*atom1.inducedDipole.z));
 #endif
 
 #ifdef APPLY_SCALE
@@ -461,8 +460,8 @@ __device__ void computeOneInteractionF2(AtomData& atom1, volatile AtomData& atom
     ftm23 += prefactor1*(sci3*atom2.inducedDipolePolar.z + scip3*atom2.inducedDipole.z);
     
     real sci34;
-    real sci4 = atom2.inducedDipole.x*xr + atom2.inducedDipole.y*yr + atom2.inducedDipole.z*zr;
-    real scip4 = atom2.inducedDipolePolar.x*xr + atom2.inducedDipolePolar.y*yr + atom2.inducedDipolePolar.z*zr;
+    sci4 = atom2.inducedDipole.x*xr + atom2.inducedDipole.y*yr + atom2.inducedDipole.z*zr;
+    scip4 = atom2.inducedDipolePolar.x*xr + atom2.inducedDipolePolar.y*yr + atom2.inducedDipolePolar.z*zr;
     sci34 = (sci3*scip4+scip3*sci4);
 
 #ifdef APPLY_SCALE

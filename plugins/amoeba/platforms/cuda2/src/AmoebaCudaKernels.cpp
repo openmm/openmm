@@ -1387,6 +1387,9 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
             &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
         cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
+        
+        // Iterate until the dipoles converge.
+        
         vector<float2> errors;
         for (int i = 0; i < maxInducedIterations; i++) {
             cu.clearBuffer(*inducedField);
@@ -1492,32 +1495,46 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             &pmePhidp->getDevicePointer(), &pmeIgrid->getDevicePointer(), &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(),
             &pmeTheta3->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
-//        void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
-//            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
-//        cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
         
+        // Iterate until the dipoles converge.
         
-//        vector<float2> errors;
-//        for (int i = 0; i < maxInducedIterations; i++) {
-//            cu.clearBuffer(*inducedField);
-//            cu.clearBuffer(*inducedFieldPolar);
-//            void* computeInducedFieldArgs[] = {&inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-//                &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &startTileIndex, &numTileIndices,
-//                &dampingAndThole->getDevicePointer()};
-//            cu.executeKernel(computeInducedFieldKernel, computeInducedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-//            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &inducedField->getDevicePointer(),
-//                &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
-//                &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
-//            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize);
-//            inducedDipoleErrors->download(errors);
-//            double total1 = 0.0, total2 = 0.0;
-//            for (int j = 0; j < (int) errors.size(); j++) {
-//                total1 += errors[j].x;
-//                total2 += errors[j].y;
-//            }
-//            if (48.033324*sqrt(max(total1, total2)/cu.getNumAtoms()) < inducedEpsilon)
-//                break;
-//        }
+        vector<float2> errors;
+        for (int i = 0; i < maxInducedIterations; i++) {
+            cu.clearBuffer(*inducedField);
+            cu.clearBuffer(*inducedFieldPolar);
+            void* computeInducedFieldArgs[] = {&inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
+                &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &startTileIndex, &numTileIndices,
+                &nb.getInteractingTiles().getDevicePointer(), &nb.getInteractionCount().getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), &maxTiles, &nb.getInteractionFlags().getDevicePointer(),
+                &dampingAndThole->getDevicePointer()};
+            cu.executeKernel(computeInducedFieldKernel, computeInducedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+            cu.executeKernel(pmeSpreadInducedDipolesKernel, pmeSpreadInducedDipolesArgs, cu.getNumAtoms());
+            if (cu.getUseDoublePrecision())
+                cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+            else
+                cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_FORWARD);
+            cu.executeKernel(pmeConvolutionKernel, pmeConvolutionArgs, cu.getNumAtoms());
+            if (cu.getUseDoublePrecision())
+                cufftExecZ2Z(fft, (double2*) pmeGrid->getDevicePointer(), (double2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+            else
+                cufftExecC2C(fft, (float2*) pmeGrid->getDevicePointer(), (float2*) pmeGrid->getDevicePointer(), CUFFT_INVERSE);
+            cu.executeKernel(pmeInducedPotentialKernel, pmeInducedPotentialArgs, cu.getNumAtoms());
+            void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
+                &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
+            cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
+            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &inducedField->getDevicePointer(),
+                &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
+                &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
+            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize);
+            inducedDipoleErrors->download(errors);
+            double total1 = 0.0, total2 = 0.0;
+            for (int j = 0; j < (int) errors.size(); j++) {
+                total1 += errors[j].x;
+                total2 += errors[j].y;
+            }
+            if (48.033324*sqrt(max(total1, total2)/cu.getNumAtoms()) < inducedEpsilon)
+                break;
+        }
         
         // Compute electrostatic force.
         
