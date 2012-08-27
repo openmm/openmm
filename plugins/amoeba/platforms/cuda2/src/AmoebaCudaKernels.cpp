@@ -1154,14 +1154,11 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeDefines["NUM_ATOMS"] = cu.intToString(numMultipoles);
         pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
-//        pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(alpha*alpha));
         pmeDefines["GRID_SIZE_X"] = cu.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
         pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
-//        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
         pmeDefines["M_PI"] = cu.doubleToString(M_PI);
-//        if (cu.getUseDoublePrecision())
-//            pmeDefines["USE_DOUBLE_PRECISION"] = "1";
+        pmeDefines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipolePme, pmeDefines);
         pmeUpdateBsplinesKernel = cu.getKernel(module, "updateBsplines");
         pmeAtomRangeKernel = cu.getKernel(module, "findAtomRangeForGrid");
@@ -1401,7 +1398,7 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &inducedField->getDevicePointer(),
                 &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
                 &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
-            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize);
+            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
             inducedDipoleErrors->download(errors);
             double total1 = 0.0, total2 = 0.0;
             for (int j = 0; j < (int) errors.size(); j++) {
@@ -1525,7 +1522,7 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &inducedField->getDevicePointer(),
                 &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
                 &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
-            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize);
+            cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
             inducedDipoleErrors->download(errors);
             double total1 = 0.0, total2 = 0.0;
             for (int j = 0; j < (int) errors.size(); j++) {

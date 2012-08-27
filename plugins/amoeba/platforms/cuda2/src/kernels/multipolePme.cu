@@ -159,6 +159,7 @@ extern "C" __global__ void findAtomRangeForGrid(int2* __restrict__ pmeAtomGridIn
             pmeAtomRange[j] = NUM_ATOMS;
     }
 }
+
 extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex, int* __restrict__ pmeAtomRange,
         const real4* __restrict__ theta1, const real4* __restrict__ theta2, const real4* __restrict__ theta3, real4 invPeriodicBoxSize) {
@@ -468,7 +469,7 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
         phi[20*m+17] = tuv102;
         phi[20*m+18] = tuv012;
         phi[20*m+19] = tuv111;
-        real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT(M_PI);
+        real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
         long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-GRID_SIZE_X*invPeriodicBoxSize.x*tuv100)*0xFFFFFFFF);
         fieldBuffers[m] = fieldx;
         fieldPolarBuffers[m] = fieldx;

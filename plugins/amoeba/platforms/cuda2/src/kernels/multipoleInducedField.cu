@@ -34,7 +34,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         real ralpha = EWALD_ALPHA*r;
         real bn0 = erfc(ralpha)*rI;
         real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
-        real alsq2n = RECIP(SQRT(M_PI)*EWALD_ALPHA);
+        real alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
         real exp2a = expf(-(ralpha*ralpha));
         alsq2n *= alsq2;
         real bn1 = (bn0+alsq2n*exp2a)*rI*rI;
@@ -129,7 +129,7 @@ extern "C" __global__ void computeInducedField(
 #endif
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 #ifndef ENABLE_SHUFFLE
-    __shared__ real tempBuffer[3*THREAD_BLOCK_SIZE];
+//    __shared__ real tempBuffer[3*THREAD_BLOCK_SIZE];
 #endif
     
     do {
@@ -194,11 +194,12 @@ extern "C" __global__ void computeInducedField(
                 localData[threadIdx.x].fieldPolar = make_real3(0);
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-                if (flags != 0xFFFFFFFF) {
+                if (flags == 0) { // TODO: Figure out what the flags != 0 case doesn't work!!!
+//                if (flags != 0xFFFFFFFF) {
                     if (flags == 0) {
                         // No interactions in this tile.
                     }
-                    else {
+/*                    else {
                         // Compute only a subset of the interactions in this tile.
 
                         for (int j = 0; j < TILE_SIZE; j++) {
@@ -213,6 +214,8 @@ extern "C" __global__ void computeInducedField(
                                 real3 fields[4];
                                 computeOneInteraction(data, localData[atom2], delta, fields);
                                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                                    data.field += fields[0];
+                                    data.fieldPolar += fields[1];
 #ifdef ENABLE_SHUFFLE
                                     for (int i = 16; i >= 1; i /= 2) {
                                         fields[2].x += __shfl_xor(fields[2].x, i, 32);
@@ -258,7 +261,7 @@ extern "C" __global__ void computeInducedField(
                                 }
                             }
                         }
-                    }
+                    }*/
                 }
                 else
 #endif
@@ -317,7 +320,11 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
         real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors) {
     extern __shared__ real2 buffer[];
     const float polarSOR = 0.55f;
-    const real term = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT(M_PI);
+#ifdef USE_EWALD
+    const real ewaldScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
+#else
+    const real ewaldScale = 0;
+#endif
     const real fieldScale = 1/(real) 0xFFFFFFFF;
     real sumErrors = 0;
     real sumPolarErrors = 0;
@@ -328,8 +335,8 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
             int fieldIndex = atom+component*PADDED_NUM_ATOMS;
             real previousDipole = inducedDipole[dipoleIndex];
             real previousDipolePolar = inducedDipolePolar[dipoleIndex];
-            real newDipole = scale*((fixedField[fieldIndex]+inducedField[fieldIndex])*fieldScale+term*previousDipole);
-            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+inducedFieldPolar[fieldIndex])*fieldScale+term*previousDipolePolar);
+            real newDipole = scale*((fixedField[fieldIndex]+inducedField[fieldIndex])*fieldScale+ewaldScale*previousDipole);
+            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*previousDipolePolar);
             newDipole = previousDipole + polarSOR*(newDipole-previousDipole);
             newDipolePolar = previousDipolePolar + polarSOR*(newDipolePolar-previousDipolePolar);
             inducedDipole[dipoleIndex] = newDipole;
