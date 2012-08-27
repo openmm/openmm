@@ -1085,7 +1085,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456); // DIVIDE BY INNER DIELECTRIC!!!
     if (force.getPolarizationType() == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
-    double alpha;
+    double alpha = force.getAEwald();
     int gridSizeX, gridSizeY, gridSizeZ;
     if (usePME) {
         vector<int> pmeGridDimension;
@@ -1099,7 +1099,6 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             gridSizeY = findFFTDimension(gridSizeY);
             gridSizeZ = findFFTDimension(gridSizeZ);
         } else {
-            alpha = force.getAEwald();
             gridSizeX = pmeGridDimension[0];
             gridSizeY = pmeGridDimension[1];
             gridSizeZ = pmeGridDimension[2];
