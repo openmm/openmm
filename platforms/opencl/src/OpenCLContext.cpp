@@ -75,6 +75,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         cl::Platform::get(&platforms);
         if (platformIndex < 0 || platformIndex >= platforms.size())
             throw OpenMMException("Illegal value for OpenCL platform index");
+        string platformVendor = platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>();
         vector<cl::Device> devices;
         platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
         const int minThreadBlockSize = 32;
@@ -83,7 +84,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
             int bestSpeed = -1;
             for (int i = 0; i < (int) devices.size(); i++) {
-                if (platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>() == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
+                if (platformVendor == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
                     continue; // Don't use AMD GPUs on OS X due to serious bugs.
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
@@ -131,7 +132,10 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationDefines["WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(ThreadBlockSize);
-        defaultOptimizationOptions = "-cl-fast-relaxed-math";
+        if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
+			defaultOptimizationOptions = "";
+		else
+	        defaultOptimizationOptions = "-cl-fast-relaxed-math";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
@@ -196,7 +200,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         }
         else
             simdWidth = 1;
-        if (platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>() == "Apple" && vendor == "AMD")
+        if (platformVendor == "Apple" && vendor == "AMD")
             compilationDefines["MAC_AMD_WORKAROUND"] = "";
         if (supports64BitGlobalAtomics)
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";

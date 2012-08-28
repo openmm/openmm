@@ -44,7 +44,7 @@ __kernel void applyShakeToHydrogens(int numClusters, float tol, __global const f
 
         // Iterate until convergence.
 
-        bool converged = false;
+        int converged = false;
         int iteration = 0;
         while (iteration < 15 && !converged) {
             converged = true;
