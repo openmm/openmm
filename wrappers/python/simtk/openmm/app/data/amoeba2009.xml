@@ -11324,7 +11324,7 @@
    <Polarize type="389" polarizability="0.00055" thole="0.1100"  />
    <Polarize type="390" polarizability="0.004" thole="0.3900"  />
  </AmoebaMultipoleForce>
-  <AmoebaUreyBradleyForce cubic="0.0" quartic="0.0"  >
+  <AmoebaUreyBradleyForce>
    <UreyBradley class1="74" class2="73" class3="74" k="16003.8" d="0.15537" /> 
  </AmoebaUreyBradleyForce>
 </ForceField>

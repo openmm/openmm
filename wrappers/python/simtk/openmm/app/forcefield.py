@@ -2108,9 +2108,9 @@ class AmoebaTorsionGenerator:
         self.hasBeenCalled = 1
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaTorsionForce]
+        existing = [f for f in existing if type(f) == mm.PeriodicTorsionForce]
         if len(existing) == 0:
-            force = mm.AmoebaTorsionForce()
+            force = mm.PeriodicTorsionForce()
             sys.addForce(force)
         else:
             force = existing[0]
@@ -2134,7 +2134,12 @@ class AmoebaTorsionGenerator:
 
                 if (type1 in types1 and type2 in types2 and type3 in types3 and type4 in types4) or (type4 in types1 and type3 in types2 and type2 in types3 and type1 in types4):
                     hit = 1
-                    force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], self.t1[i],  self.t2[i], self.t3[i])
+                    if self.t1[i][0] != 0:
+                        force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], 1, self.t1[i][1], self.t1[i][0])
+                    if self.t2[i][0] != 0:
+                        force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], 2, self.t2[i][1], self.t2[i][0])
+                    if self.t3[i][0] != 0:
+                        force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], 3, self.t3[i][1], self.t3[i][0])
                     break
 
             if (hit == 0): 
@@ -3904,10 +3909,7 @@ class AmoebaUreyBradleyGenerator:
     """An AmoebaUreyBradleyGenerator constructs a AmoebaUreyBradleyForce."""
     #=============================================================================================
     
-    def __init__(self, cubic, quartic):
-
-        self.cubic = cubic
-        self.quartic = quartic
+    def __init__(self):
 
         self.types1 = []
         self.types2 = []
@@ -3923,10 +3925,10 @@ class AmoebaUreyBradleyGenerator:
     @staticmethod
     def parseElement(element, forceField):
 
-        #  <AmoebaUreyBradleyForce cubic="0.0" quartic="0.0"  >
+        #  <AmoebaUreyBradleyForce>
         #   <UreyBradley class1="74" class2="73" class3="74" k="16003.8" d="0.15537" /> 
 
-        generator = AmoebaUreyBradleyGenerator(float(element.attrib['cubic']), float(element.attrib['quartic']))
+        generator = AmoebaUreyBradleyGenerator()
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
             types = forceField._findAtomTypes(bond, 3)
@@ -3954,16 +3956,13 @@ class AmoebaUreyBradleyGenerator:
         self.hasBeenCalled = 1
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaUreyBradleyForce]
+        existing = [f for f in existing if type(f) == mm.HarmonicBondForce]
 
         if len(existing) == 0:
-            force = mm.AmoebaUreyBradleyForce()
+            force = mm.HarmonicBondForce()
             sys.addForce(force)
         else:
             force = existing[0]
-
-        force.setAmoebaGlobalUreyBradleyCubic(self.cubic)
-        force.setAmoebaGlobalUreyBradleyQuartic(self.quartic)
 
         for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
             if (isConstrained):
@@ -3976,8 +3975,7 @@ class AmoebaUreyBradleyGenerator:
                 types2 = self.types2[i]
                 types3 = self.types3[i]
                 if ((type1 in types1 and type2 in types2 and type3 in types3) or (type3 in types1 and type2 in types2 and type1 in types3)):
-
-                    force.addUreyBradley(angle[0], angle[2], self.length[i], self.k[i])
+                    force.addBond(angle[0], angle[2], self.length[i], 2*self.k[i])
                     break
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
