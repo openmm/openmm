@@ -29,11 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/amoebaKernels.h"
 #include <map>
-#include <stdio.h>
+#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
