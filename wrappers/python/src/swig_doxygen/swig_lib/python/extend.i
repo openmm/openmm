@@ -37,13 +37,15 @@
                  groups = -1)
               -> State
         Get a State object recording the current state information stored in this context.
-           getPositions -- whether to store particle positions in the State
-           getVelocities -- whether to store particle velocities in the State
-           getForces -- whether to store the forces acting on particles in the State
-           getEnergy -- whether to store potential and kinetic energy in the State
-           getParameter -- whether to store context parameters in the State
-           enforcePeriodicBox -- if false, the position of each particle will be whatever position is stored in the Context, regardless of periodic boundary conditions.  If true, particle positions will be translated so the center of every molecule lies in the same periodic box.
-           groups -- a set of bit flags for which force groups to include when computing forces and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
+        
+        Parameters:
+         - getPositions (bool=False) whether to store particle positions in the State
+         - getVelocities (bool=False) whether to store particle velocities in the State
+         - getForces (bool=False) whether to store the forces acting on particles in the State
+         - getEnergy (bool=False) whether to store potential and kinetic energy in the State
+         - getParameter (bool=False) whether to store context parameters in the State
+         - enforcePeriodicBox (bool=False) if false, the position of each particle will be whatever position is stored in the Context, regardless of periodic boundary conditions.  If true, particle positions will be translated so the center of every molecule lies in the same periodic box.
+         - groups (int=-1) a set of bit flags for which force groups to include when computing forces and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
         """
         
         if getPositions: getP=1
@@ -227,6 +229,9 @@ Parameters:
     def __setstate__(self, serializationString):
         system = XmlSerializer.deserializeSystem(serializationString)
         self.this = system.this
+    def getForces(self):
+        """Get the list of Forces in this System"""
+        return [self.getForce(i) for i in range(self.getNumForces())]
   }
 }
 
