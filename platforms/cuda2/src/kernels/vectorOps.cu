@@ -591,3 +591,13 @@ inline __device__ double3 normalize(double3 a) {
 inline __device__ double4 normalize(double4 a) {
     return a*rsqrt(a.x*a.x+a.y*a.y+a.z*a.z+a.w*a.w);
 }
+
+// Strip off the fourth component of a vector.
+
+inline __device__ float3 trimTo3(float4 v) {
+    return make_float3(v.x, v.y, v.z);
+}
+
+inline __device__ double3 trimTo3(double4 v) {
+    return make_double3(v.x, v.y, v.z);
+}

@@ -361,14 +361,13 @@ public:
      *
      * @param origin       origin
      * @param context      context
-     * @param outputMultipoleMonents (charge,
-                                      dipole_x, dipole_y, dipole_z,
-                                      quadrupole_xx, quadrupole_xy, quadrupole_xz,
-                                      quadrupole_yx, quadrupole_yy, quadrupole_yz,
-                                      quadrupole_zx, quadrupole_zy, quadrupole_zz )
+     * @param outputMultipoleMoments (charge,
+     *                                dipole_x, dipole_y, dipole_z,
+     *                                quadrupole_xx, quadrupole_xy, quadrupole_xz,
+     *                                quadrupole_yx, quadrupole_yy, quadrupole_yz,
+     *                                quadrupole_zx, quadrupole_zy, quadrupole_zz )
      */
-
-    void getSystemMultipoleMoments( ContextImpl& context, const Vec3& origin, std::vector< double >& outputMultipoleMonents );
+    void getSystemMultipoleMoments(ContextImpl& context, const Vec3& origin, std::vector<double>& outputMultipoleMoments);
 
 
 private:
@@ -384,6 +383,7 @@ private:
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
+    template <class T, class T4> void computeSystemMultipoleMoments(ContextImpl& context, const Vec3& origin, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations;
     double inducedEpsilon;
     bool hasInitializedScaleFactors, hasInitializedFFT;
@@ -426,7 +426,7 @@ private:
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeUpdateBsplinesKernel, pmeAtomRangeKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeConvolutionKernel, pmeFixedPotentialKernel, pmeInducedPotentialKernel;
-    CUfunction pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
+    CUfunction pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     static const int PmeOrder = 5;
 };
 

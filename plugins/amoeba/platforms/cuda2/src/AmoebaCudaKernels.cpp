@@ -302,7 +302,7 @@ private:
 };
 
 CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
-          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), cu(cu), system(system) {
+          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
 CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::~CudaCalcAmoebaHarmonicInPlaneAngleForceKernel() {
@@ -759,82 +759,6 @@ double CudaCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bo
  *                             AmoebaMultipole                                *
  * -------------------------------------------------------------------------- */
 
-//static void computeAmoebaMultipoleForce( CudaContext& cu ) {
-//
-//    amoebaGpuContext gpu = data.getAmoebaGpu();
-//    data.incrementMultipoleForceCount();
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "In computeAmoebaMultipoleForce hasAmoebaGeneralizedKirkwood=%d\n", data.getHasAmoebaGeneralizedKirkwood() );
-//        (void) fflush( data.getLog());
-//    }
-//
-//    data.initializeGpu();
-//
-//    // calculate Born radii using either the Grycuk or OBC algorithm if GK is active
-//
-//    if( data.getHasAmoebaGeneralizedKirkwood() ){
-//        kClearBornSum( gpu->gpuContext );
-//        if( data.getUseGrycuk() ){
-//            kCalculateAmoebaGrycukBornRadii( gpu );
-//            kReduceGrycukGbsaBornSum( gpu );
-//        } else {
-//            kCalculateObcGbsaBornSum(gpu->gpuContext);
-//            kReduceObcGbsaBornSum(gpu->gpuContext);
-//       }
-//    }   
-//
-//    // multipoles
-//
-//    kCalculateAmoebaMultipoleForces(gpu, data.getHasAmoebaGeneralizedKirkwood() );
-//
-//    // GK
-//
-//    if( data.getHasAmoebaGeneralizedKirkwood() ){
-//        kCalculateAmoebaKirkwood(gpu);
-//    }
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "completed computeAmoebaMultipoleForce\n" );
-//        (void) fflush( data.getLog());
-//    }
-//}
-//
-//static void computeAmoebaMultipolePotential( CudaContext& cu, const std::vector< Vec3 >& inputGrid,
-//                                             std::vector< double >& outputElectrostaticPotential) {
-//
-//    amoebaGpuContext gpu = data.getAmoebaGpu();
-//
-//    // load grid to board and allocate board memory for potential buffers
-//    // calculate potential
-//    // load potential into return vector
-//    // deallocate board memory
-//
-//    gpuSetupElectrostaticPotentialCalculation( gpu, inputGrid );
-//    data.setGpuInitialized( false );
-//    data.initializeGpu();
-// 
-//    kCalculateAmoebaMultipolePotential( gpu );
-//    gpuLoadElectrostaticPotential( gpu, inputGrid.size(), outputElectrostaticPotential );
-//    gpuCleanupElectrostaticPotentialCalculation( gpu );
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "completed computeAmoebaMultipolePotential\n" );
-//        (void) fflush( data.getLog());
-//    }
-//}
-//
-//static void computeAmoebaSystemMultipoleMoments( CudaContext& cu, const Vec3& origin,
-//                                                 std::vector< double >& outputMultipoleMonents) {
-//
-//    amoebaGpuContext gpu = data.getAmoebaGpu();
-//
-//    data.setGpuInitialized( false );
-//    data.initializeGpu();
-//    kCalculateAmoebaSystemMultipoleMoments( gpu, origin, outputMultipoleMonents );
-//
-//}
-
 class CudaCalcAmoebaMultipoleForceKernel::ForceInfo : public CudaForceInfo {
 public:
     ForceInfo(const AmoebaMultipoleForce& force) : force(force) {
@@ -1114,6 +1038,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     computeMomentsKernel = cu.getKernel(module, "computeLabFrameMoments");
     recordInducedDipolesKernel = cu.getKernel(module, "recordInducedDipoles");
     mapTorqueKernel = cu.getKernel(module, "mapTorqueToForce");
+    computePotentialKernel = cu.getKernel(module, "computePotentialAtPoints");
     module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoleFixedField, defines);
     computeFixedFieldKernel = cu.getKernel(module, "computeFixedField");
     if (maxInducedIterations > 0) {
@@ -1169,7 +1094,6 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeFixedForceKernel = cu.getKernel(module, "computeFixedMultipoleForceAndEnergy");
         pmeInducedForceKernel = cu.getKernel(module, "computeInducedDipoleForceAndEnergy");
         pmeRecordInducedFieldDipolesKernel = cu.getKernel(module, "recordInducedFieldDipoles");
-//        cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
 
         // Create required data structures.
 
@@ -1557,16 +1481,163 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
     return 0.0;
 }
 
-void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context,  const std::vector< Vec3 >& inputGrid,
-                                                                   std::vector< double >& outputElectrostaticPotential) {
-//    computeAmoebaMultipolePotential( data, inputGrid, outputElectrostaticPotential );
-    return;
+void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
+    context.calcForcesAndEnergy(false, false, -1);
+    int numPoints = inputGrid.size();
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    CudaArray points(cu, numPoints, 4*elementSize, "points");
+    CudaArray potential(cu, numPoints, elementSize, "potential");
+    
+    // Copy the grid points to the GPU.
+    
+    if (cu.getUseDoublePrecision()) {
+        vector<double4> p(numPoints);
+        for (int i = 0; i < numPoints; i++)
+            p[i] = make_double4(inputGrid[i][0], inputGrid[i][1], inputGrid[i][2], 0);
+        points.upload(p);
+    }
+    else {
+        vector<float4> p(numPoints);
+        for (int i = 0; i < numPoints; i++)
+            p[i] = make_float4((float) inputGrid[i][0], (float) inputGrid[i][1], (float) inputGrid[i][2], 0);
+        points.upload(p);
+    }
+    
+    // Compute the potential.
+    
+    void* computePotentialArgs[] = {&cu.getPosq().getDevicePointer(), &labFrameDipoles->getDevicePointer(),
+        &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(), &points.getDevicePointer(),
+        &potential.getDevicePointer(), &numPoints, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
+    int blockSize = 128;
+    cu.executeKernel(computePotentialKernel, computePotentialArgs, numPoints, blockSize, blockSize*15*elementSize);
+    outputElectrostaticPotential.resize(numPoints);
+    if (cu.getUseDoublePrecision())
+        potential.download(outputElectrostaticPotential);
+    else {
+        vector<float> p(numPoints);
+        potential.download(p);
+        for (int i = 0; i < numPoints; i++)
+            outputElectrostaticPotential[i] = p[i];
+    }
 }
 
-void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context,  const Vec3& origin,
-                                                                   std::vector< double >& outputMultipoleMonents) {
-//    computeAmoebaSystemMultipoleMoments( data, origin, outputMultipoleMonents);
-    return;
+template <class T, class T4>
+void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextImpl& context, const Vec3& origin, vector<double>& outputMultipoleMoments) {
+    // Compute the local coordinates relative to the center of mass.
+    int numAtoms = cu.getNumAtoms();
+    vector<T4> posq, velm;
+    cu.getPosq().download(posq);
+    cu.getVelm().download(velm);
+    double totalMass = 0.0;
+    Vec3 centerOfMass(0, 0, 0);
+    for (int i = 0; i < numAtoms; i++) {
+        double mass = (velm[i].w > 0 ? 1.0/velm[i].w : 0.0);
+        totalMass += mass;
+        centerOfMass[0] += mass*posq[i].x;
+        centerOfMass[1] += mass*posq[i].y;
+        centerOfMass[2] += mass*posq[i].z;
+    }
+    if (totalMass > 0.0) {
+        centerOfMass[0] /= totalMass;
+        centerOfMass[1] /= totalMass;
+        centerOfMass[2] /= totalMass;
+    }
+    vector<double4> posqLocal(numAtoms);
+    for (int i = 0; i < numAtoms; i++) {
+        posqLocal[i].x = posq[i].x - centerOfMass[0];
+        posqLocal[i].y = posq[i].y - centerOfMass[1];
+        posqLocal[i].z = posq[i].z - centerOfMass[2];
+        posqLocal[i].w = posq[i].w;
+    }
+
+    // Compute the multipole moments.
+    
+    double totalCharge = 0.0;
+    double xdpl = 0.0;
+    double ydpl = 0.0;
+    double zdpl = 0.0;
+    double xxqdp = 0.0;
+    double xyqdp = 0.0;
+    double xzqdp = 0.0;
+    double yxqdp = 0.0;
+    double yyqdp = 0.0;
+    double yzqdp = 0.0;
+    double zxqdp = 0.0;
+    double zyqdp = 0.0;
+    double zzqdp = 0.0;
+    vector<T> labDipoleVec, inducedDipoleVec, quadrupoleVec;
+    labFrameDipoles->download(labDipoleVec);
+    inducedDipole->download(inducedDipoleVec);
+    labFrameQuadrupoles->download(quadrupoleVec);
+    for (int i = 0; i < numAtoms; i++) {
+        totalCharge += posqLocal[i].w;
+        double netDipoleX = (labDipoleVec[3*i]    + inducedDipoleVec[3*i]);
+        double netDipoleY = (labDipoleVec[3*i+1]  + inducedDipoleVec[3*i+1]);
+        double netDipoleZ = (labDipoleVec[3*i+2]  + inducedDipoleVec[3*i+2]);
+        xdpl += posqLocal[i].x*posqLocal[i].w + netDipoleX;
+        ydpl += posqLocal[i].y*posqLocal[i].w + netDipoleY;
+        zdpl += posqLocal[i].z*posqLocal[i].w + netDipoleZ;
+        xxqdp += posqLocal[i].x*posqLocal[i].x*posqLocal[i].w + 2*posqLocal[i].x*netDipoleX;
+        xyqdp += posqLocal[i].x*posqLocal[i].y*posqLocal[i].w + posqLocal[i].x*netDipoleY + posqLocal[i].y*netDipoleX;
+        xzqdp += posqLocal[i].x*posqLocal[i].z*posqLocal[i].w + posqLocal[i].x*netDipoleZ + posqLocal[i].z*netDipoleX;
+        yxqdp += posqLocal[i].y*posqLocal[i].x*posqLocal[i].w + posqLocal[i].y*netDipoleX + posqLocal[i].x*netDipoleY;
+        yyqdp += posqLocal[i].y*posqLocal[i].y*posqLocal[i].w + 2*posqLocal[i].y*netDipoleY;
+        yzqdp += posqLocal[i].y*posqLocal[i].z*posqLocal[i].w + posqLocal[i].y*netDipoleZ + posqLocal[i].z*netDipoleY;
+        zxqdp += posqLocal[i].z*posqLocal[i].x*posqLocal[i].w + posqLocal[i].z*netDipoleX + posqLocal[i].x*netDipoleZ;
+        zyqdp += posqLocal[i].z*posqLocal[i].y*posqLocal[i].w + posqLocal[i].z*netDipoleY + posqLocal[i].y*netDipoleZ;
+        zzqdp += posqLocal[i].z*posqLocal[i].z*posqLocal[i].w + 2*posqLocal[i].z*netDipoleZ;
+    }
+
+    // Convert the quadrupole from traced to traceless form.
+ 
+    double qave = (xxqdp + yyqdp + zzqdp)/3;
+    xxqdp = 1.5*(xxqdp-qave);
+    xyqdp = 1.5*xyqdp;
+    xzqdp = 1.5*xzqdp;
+    yxqdp = 1.5*yxqdp;
+    yyqdp = 1.5*(yyqdp-qave);
+    yzqdp = 1.5*yzqdp;
+    zxqdp = 1.5*zxqdp;
+    zyqdp = 1.5*zyqdp;
+    zzqdp = 1.5*(zzqdp-qave);
+
+    // Add the traceless atomic quadrupoles to the total quadrupole moment.
+
+    for (int i = 0; i < numAtoms; i++) {
+        xxqdp = xxqdp + 3*quadrupoleVec[5*i];
+        xyqdp = xyqdp + 3*quadrupoleVec[5*i+1];
+        xzqdp = xzqdp + 3*quadrupoleVec[5*i+2];
+        yxqdp = yxqdp + 3*quadrupoleVec[5*i+1];
+        yyqdp = yyqdp + 3*quadrupoleVec[5*i+3];
+        yzqdp = yzqdp + 3*quadrupoleVec[5*i+4];
+        zxqdp = zxqdp + 3*quadrupoleVec[5*i+2];
+        zyqdp = zyqdp + 3*quadrupoleVec[5*i+4];
+        zzqdp = zzqdp + -3*(quadrupoleVec[5*i]+quadrupoleVec[5*i+3]);
+    }
+ 
+    double debye = 4.80321;
+    outputMultipoleMoments.resize(13);
+    outputMultipoleMoments[0] = totalCharge;
+    outputMultipoleMoments[1] = xdpl*debye;
+    outputMultipoleMoments[2] = ydpl*debye;
+    outputMultipoleMoments[3] = zdpl*debye;
+    outputMultipoleMoments[4] = xxqdp*debye;
+    outputMultipoleMoments[5] = xyqdp*debye;
+    outputMultipoleMoments[6] = xzqdp*debye;
+    outputMultipoleMoments[7] = yxqdp*debye;
+    outputMultipoleMoments[8] = yyqdp*debye;
+    outputMultipoleMoments[9] = yzqdp*debye;
+    outputMultipoleMoments[10] = zxqdp*debye;
+    outputMultipoleMoments[11] = zyqdp*debye;
+    outputMultipoleMoments[12] = zzqdp*debye;
+}
+
+void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, const Vec3& origin, vector<double>& outputMultipoleMoments) {
+    context.calcForcesAndEnergy(false, false, -1);
+    if (cu.getUseDoublePrecision())
+        computeSystemMultipoleMoments<double, double4>(context, origin, outputMultipoleMoments);
+    else
+        computeSystemMultipoleMoments<float, float4>(context, origin, outputMultipoleMoments);
 }
 
 ///* -------------------------------------------------------------------------- *
