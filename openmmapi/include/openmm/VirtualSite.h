@@ -132,7 +132,7 @@ private:
  * r<sub>13</sub> is the vector from particle 1 to particle 3, then the virtual
  * site location is given by
  * 
- * r<sub>1</sub> + w<sub>12</sub>r<sub>12</sub> + w<sub>13</sub>r<sub>13</sub> + w<sub>cross</sub>(r<sub>12</sub>&times;r<sub>13</sub>)
+ * r<sub>1</sub> + w<sub>12</sub>r<sub>12</sub> + w<sub>13</sub>r<sub>13</sub> + w<sub>cross</sub>(r<sub>12</sub> x r<sub>13</sub>)
  * 
  * The three weight factors are user-specified.  This allows the virtual site location
  * to be out of the plane of the three particles.

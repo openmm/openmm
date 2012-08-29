@@ -17,7 +17,7 @@ import xml.etree.ElementTree as etree
 
 INDENT = "   ";
 
-docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt'}
+docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub'}
 
 def trimToSingleSpace(text):
     if text is None or len(text) == 0:
@@ -59,10 +59,13 @@ def getText(subNodePath, node):
 
 OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
 def stripOpenmmPrefix(name, rePattern=OPENMM_RE_PATTERN):
-    m=rePattern.search(name)
-    rValue = "%s%s" % m.group(1,2)
-    rValue.strip()
-    return rValue
+    try:
+        m=rePattern.search(name)
+        rValue = "%s%s" % m.group(1,2)
+        rValue.strip()
+        return rValue
+    except:
+        return name
 
 def findNodes(parent, path, **args):
     nodes = []
@@ -178,9 +181,10 @@ class SwigInputBuilder:
         if (nodeName.split("::")[-1],) in self.skipMethods:
             return
         for baseNodePnt in findNodes(node, "basecompoundref", prot="public"):
-            baseNodeID = baseNodePnt.attrib["refid"]
-            baseNode = self._getNodeByID(baseNodeID)
-            self._findBaseNodes(baseNode, excludedClassNodes)
+            if "refid" in baseNodePnt.attrib:
+                baseNodeID = baseNodePnt.attrib["refid"]
+                baseNode = self._getNodeByID(baseNodeID)
+                self._findBaseNodes(baseNode, excludedClassNodes)
         excludedClassNodes.append(node)
 
 
@@ -195,11 +199,12 @@ class SwigInputBuilder:
             #print className
             #print classNode.toxml()
             for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
-                baseNodeID=baseNodePnt.attrib["refid"]
-                baseNode=self._getNodeByID(baseNodeID)
-                baseName = getText("compoundname", baseNode)
-                if baseName == 'OpenMM::Force':
-                    forceSubclassList.append(shortClassName)
+                if "refid" in baseNodePnt.attrib:
+                    baseNodeID=baseNodePnt.attrib["refid"]
+                    baseNode=self._getNodeByID(baseNodeID)
+                    baseName = getText("compoundname", baseNode)
+                    if baseName == 'OpenMM::Force':
+                        forceSubclassList.append(shortClassName)
         self.fOut.write("%factory(OpenMM::Force& OpenMM::System::getForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
@@ -217,6 +222,8 @@ class SwigInputBuilder:
             for memberNode in findNodes(section, "memberdef", kind="variable", mutable="no", prot="public", static="yes"):
                 vDef = stripOpenmmPrefix(getText("definition", memberNode))
                 iDef = getText("initializer", memberNode)
+                if iDef.startswith("="):
+                    iDef = iDef[1:]
                 self.fOut.write("static %s = %s;\n" % (vDef, iDef))
         self.fOut.write("\n")
 
@@ -255,8 +262,9 @@ class SwigInputBuilder:
                                 self.configModule.MISSING_BASE_CLASSES[className])
 
             for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
-                baseName = stripOpenmmPrefix(getText(".", baseNodePnt))
-                self.fOut.write(" : public %s" % baseName)
+                if "refid" in baseNodePnt.attrib:
+                    baseName = stripOpenmmPrefix(getText(".", baseNodePnt))
+                    self.fOut.write(" : public %s" % baseName)
             self.fOut.write(" {\n")
             self.fOut.write("public:\n")
             self.writeEnumerations(classNode)
@@ -282,6 +290,8 @@ class SwigInputBuilder:
             for valueNode in findNodes(enumNode, "enumvalue", prot="public"):
                 vName = getText("name", valueNode)
                 vInit = getText("initializer", valueNode)
+                if vInit.startswith("="):
+                    vInit = vInit[1:]
                 self.fOut.write("%s%s%s = %s" % (argSep, 2*INDENT, vName, vInit))
                 argSep=",\n"
             self.fOut.write("\n%s};\n" % INDENT)
