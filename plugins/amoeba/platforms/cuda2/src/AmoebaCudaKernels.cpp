@@ -1086,6 +1086,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipolePme, pmeDefines);
         pmeUpdateBsplinesKernel = cu.getKernel(module, "updateBsplines");
         pmeAtomRangeKernel = cu.getKernel(module, "findAtomRangeForGrid");
+        pmeZIndexKernel = cu.getKernel(module, "recordZIndex");
         pmeSpreadFixedMultipolesKernel = cu.getKernel(module, "gridSpreadFixedMultipoles");
         pmeSpreadInducedDipolesKernel = cu.getKernel(module, "gridSpreadInducedDipoles");
         pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
@@ -1358,7 +1359,9 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         sort->sort(*pmeAtomGridIndex);
         void* pmeAtomRangeArgs[] = {&pmeAtomGridIndex->getDevicePointer(), &pmeAtomRange->getDevicePointer(),
             &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
-        cu.executeKernel(pmeAtomRangeKernel, pmeAtomRangeArgs, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*PmeOrder*PmeOrder*elementSize);
+        cu.executeKernel(pmeAtomRangeKernel, pmeAtomRangeArgs, cu.getNumAtoms());
+        void* pmeZIndexArgs[] = {&pmeAtomGridIndex->getDevicePointer(), &cu.getPosq().getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
+        cu.executeKernel(pmeZIndexKernel, pmeZIndexArgs, cu.getNumAtoms());
         void* pmeSpreadFixedMultipolesArgs[] = {&cu.getPosq().getDevicePointer(), &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(),
             &pmeGrid->getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), &pmeAtomRange->getDevicePointer(),
             &pmeTheta1->getDevicePointer(), &pmeTheta2->getDevicePointer(), &pmeTheta3->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};

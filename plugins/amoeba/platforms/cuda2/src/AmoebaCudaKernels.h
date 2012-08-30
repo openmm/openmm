@@ -425,7 +425,7 @@ private:
     CudaSort* sort;
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
-    CUfunction pmeUpdateBsplinesKernel, pmeAtomRangeKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeConvolutionKernel, pmeFixedPotentialKernel, pmeInducedPotentialKernel;
+    CUfunction pmeUpdateBsplinesKernel, pmeAtomRangeKernel, pmeZIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeConvolutionKernel, pmeFixedPotentialKernel, pmeInducedPotentialKernel;
     CUfunction pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     static const int PmeOrder = 5;
 };
