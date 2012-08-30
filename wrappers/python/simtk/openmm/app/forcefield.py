@@ -2794,7 +2794,7 @@ class AmoebaVdwGenerator:
             # cutoff
 
             if ('vdwCutoff' in args):
-                force.setCutoff(float(args['vdwCutoff']))
+                force.setCutoff(args['vdwCutoff'])
             else:
                 force.setCutoff(nonbondedCutoff)
 
