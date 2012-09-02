@@ -665,7 +665,7 @@ static void testMultipoleWaterPMEDirectPolarization( FILE* log ) {
     double energy;
 
     setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct, 
-                                            cutoff, inputPmeGridDimension, forces, energy, log );
+                                           cutoff, inputPmeGridDimension, forces, energy, log );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = 6.4585115e-01;
@@ -941,7 +941,7 @@ static void testQuadrupoleValidation( FILE* log ){
 static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
                                                           AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
                                                           double cutoff, int inputPmeGridDimension, std::string testName,
-                                                          std::vector<Vec3>& forces, double& energy, std::vector< double >& outputMultipoleMoments,
+                                                          std::vector<Vec3>& forces, double& energy,
                                                           std::vector<Vec3>& inputGrid, std::vector< double >& outputGridPotential, FILE* log ){
 
     // beginning of Multipole setup
@@ -1123,10 +1123,7 @@ static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::
 
     context.setPositions(positions);
 
-    if( testName == "testSystemMultipoleMoments" ){
-        Vec3 origin( 0.0, 0.0, 0.0 );
-        amoebaMultipoleForce->getSystemMultipoleMoments( origin, context, outputMultipoleMoments );
-    } else if( testName == "testMultipoleGridPotential" ){
+    if( testName == "testMultipoleGridPotential" ){
         amoebaMultipoleForce->getElectrostaticPotential( inputGrid, context, outputGridPotential );
     } else {
         State state               = context.getState(State::Forces | State::Energy);
@@ -1151,13 +1148,11 @@ static void testMultipoleIonsAndWaterPMEDirectPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    std::vector<double> outputMultipoleMoments;
-
     std::vector<Vec3> inputGrid;
     std::vector<double> outputGridPotential;
 
     setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct, 
-                                                  cutoff, inputPmeGridDimension, testName, forces, energy, outputMultipoleMoments,
+                                                  cutoff, inputPmeGridDimension, testName, forces, energy, 
                                                   inputGrid, outputGridPotential, log );
 
     std::vector<Vec3> expectedForces(numberOfParticles);
@@ -1191,13 +1186,11 @@ static void testMultipoleIonsAndWaterPMEMutualPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    std::vector<double> outputMultipoleMoments;
-
     std::vector<Vec3> inputGrid;
     std::vector<double> outputGridPotential;
 
     setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                                  cutoff, inputPmeGridDimension, testName, forces, energy, outputMultipoleMoments,
+                                                  cutoff, inputPmeGridDimension, testName, forces, energy,
                                                   inputGrid, outputGridPotential, log );
 
     std::vector<Vec3> expectedForces(numberOfParticles);
@@ -1219,57 +1212,6 @@ static void testMultipoleIonsAndWaterPMEMutualPolarization( FILE* log ) {
     compareForceNormsEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 
 }
-
-// test computation of system multipole moments
-
-static void testSystemMultipoleMoments( FILE* log ) {
-
-    std::string testName      = "testSystemMultipoleMoments";
-    
-    int numberOfParticles     = 8;
-    int inputPmeGridDimension = 64;
-    double cutoff             = 0.70;
-
-    std::vector<Vec3> forces;
-    double energy;
-    std::vector<double> outputMultipoleMoments;
-
-    std::vector<Vec3> inputGrid;
-    std::vector<double> outputGridPotential;
-
-    setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                                  cutoff, inputPmeGridDimension, testName, forces, energy, outputMultipoleMoments,
-                                                  inputGrid, outputGridPotential, log );
-
-    std::vector<double> tinkerMoments(13);
-    tinkerMoments[0]  =    0.0000000e+00;
-    tinkerMoments[1]  =   -8.5884599e+00;
-    tinkerMoments[2]  =    1.7447506e+01;
-    tinkerMoments[3]  =    3.9868461e+00;
-    tinkerMoments[4]  =   -2.7977319e+00;
-    tinkerMoments[5]  =   -7.8694903e+00;
-    tinkerMoments[6]  =   -2.6429049e+00;
-    tinkerMoments[7]  =   -7.8694903e+00;
-    tinkerMoments[8]  =    7.4048693e+00;
-    tinkerMoments[9]  =    6.7152875e+00;
-    tinkerMoments[10] =   -2.6429049e+00;
-    tinkerMoments[11] =    6.7152875e+00;
-    tinkerMoments[12] =   -4.6071374e+00;
-
-    double tolerance = 1.0e-04;
-    for( unsigned int ii = 0; ii < tinkerMoments.size(); ii++ ){
-        double difference = fabs( outputMultipoleMoments[ii] - tinkerMoments[ii] );
-        //fprintf( stderr, "%2d %15.7e %15.7e %15.7e %15.7e\n", ii, difference, difference/fabs(tinkerMoments[ii]), outputMultipoleMonents[ii], tinkerMoments[ii] );
-        if( difference > tolerance ){
-            std::stringstream details;
-            details << testName << "Multipole moment " << ii << " does not agree w/ TINKER computed moments: OpenMM=" << outputMultipoleMoments[ii];
-            details << " TINKER=" <<  tinkerMoments[ii]  << " difference=" << difference;
-            throwException(__FILE__, __LINE__, details.str());
-        }
-    }
-
-}
-
 // test computation of multipole potential on a grid 
 
 static void testMultipoleGridPotential( FILE* log ) {
@@ -1282,8 +1224,6 @@ static void testMultipoleGridPotential( FILE* log ) {
 
     std::vector<Vec3> forces;
     double energy;
-
-    std::vector<double> outputMultipoleMoments;
 
     // initialize grid
 
@@ -1320,7 +1260,7 @@ static void testMultipoleGridPotential( FILE* log ) {
     std::vector<double> outputGridPotential;
 
     setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                                  cutoff, inputPmeGridDimension, testName, forces, energy, outputMultipoleMoments,
+                                                  cutoff, inputPmeGridDimension, testName, forces, energy,
                                                   inputGrid, outputGridPotential, log );
 
     // TINKER computed grid values
@@ -1372,8 +1312,9 @@ static void testMultipoleGridPotential( FILE* log ) {
 
 static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
                                                         AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
-                                                        double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces,
-                                                        double& energy, FILE* log ){
+                                                        double cutoff, int inputPmeGridDimension, std::string& testName, 
+                                                        std::vector<Vec3>& forces, double& energy,
+                                                        std::vector< double >& outputMultipoleMoments, FILE* log ){
 
     // beginning of Multipole setup
 
@@ -1493,8 +1434,8 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::Am
         amoebaHarmonicBondForce->addBond( jj, jj+2,   0.0000000e+00,   0.0000000e+00 );
     }
 
-    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( -2.5500000e+01 ); 
-    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( 3.7931250e+02 ); 
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( 0.0 ); 
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( 0.0 ); 
     system.addForce(amoebaHarmonicBondForce);
 
     std::vector<Vec3> positions(numberOfParticles);
@@ -2154,9 +2095,17 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::Am
     Context context(system, integrator, Platform::getPlatformByName( platformName ) );
 
     context.setPositions(positions);
-    State state                      = context.getState(State::Forces | State::Energy);
-    forces                           = state.getForces();
-    energy                           = state.getPotentialEnergy();
+
+    if( testName == "testSystemMultipoleMoments" ){
+        Vec3 origin( 0.0, 0.0, 0.0 );
+        amoebaMultipoleForce->getSystemMultipoleMoments( origin, context, outputMultipoleMoments );
+    } else {
+        State state               = context.getState(State::Forces | State::Energy);
+        forces                    = state.getForces();
+        energy                    = state.getPotentialEnergy();
+    }
+
+    return;
 }
 
 // test multipole mutual polarization using PME for box of water
@@ -2170,9 +2119,11 @@ static void testPMEMutualPolarizationLargeWater( FILE* log ) {
     double cutoff             = 0.70;
     std::vector<Vec3> forces;
     double energy;
+    std::vector< double > outputMultipoleMoments;
 
     setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
-                                                cutoff, inputPmeGridDimension, forces, energy, log );
+                                                cutoff, inputPmeGridDimension, testName,
+                                                forces, energy, outputMultipoleMoments, log );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  -1.3268930e+04;
@@ -2831,6 +2782,66 @@ static void testPMEMutualPolarizationLargeWater( FILE* log ) {
 
 }
 
+// test computation of system multipole moments
+
+static void testSystemMultipoleMoments( FILE* log ) {
+
+    std::string testName      = "testSystemMultipoleMoments";
+    
+    int numberOfParticles     = 648;
+    int inputPmeGridDimension = 24;
+    double cutoff             = 0.70;
+
+    std::vector<Vec3> forces;
+    double energy;
+    std::vector<double> outputMultipoleMoments;
+
+    setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Mutual, 
+                                                cutoff, inputPmeGridDimension, testName,
+                                                forces, energy, outputMultipoleMoments, log );
+
+    std::vector<double> tinkerMoments(13);
+
+    tinkerMoments[0]  =   0.0000000e+00;
+    tinkerMoments[1]  =  -9.1118361e-01;
+    tinkerMoments[2]  =   2.8371876e+00;
+    tinkerMoments[3]  =   5.1518898e+00;
+    tinkerMoments[4]  =  -1.0768808e-01;
+    tinkerMoments[5]  =  -9.0458124e-01;
+    tinkerMoments[6]  =   1.8460385e+00;
+    tinkerMoments[7]  =  -9.0458124e-01;
+    tinkerMoments[8]  =   6.4395591e-02;
+    tinkerMoments[9]  =   1.6692567e-01;
+    tinkerMoments[10] =   1.8460385e-00;
+    tinkerMoments[11] =   1.6692567e-01;
+    tinkerMoments[12] =   4.3292490e-02;
+
+    double tolerance = 1.0e-04;
+    if( log ){
+        (void) fprintf( log, "%s RelativeDifference Tinker OpenMM\n", testName.c_str() );
+    }
+    for( unsigned int ii = 0; ii < tinkerMoments.size(); ii++ ){
+        double difference;
+        if( fabs( tinkerMoments[ii] ) > 0.0 ){
+            difference = fabs( outputMultipoleMoments[ii] - tinkerMoments[ii] )/fabs( tinkerMoments[ii] );
+        } else {
+            difference = fabs( outputMultipoleMoments[ii] - tinkerMoments[ii] );
+        }
+        if( log ){
+            (void) fprintf( log, "%2d %15.7e %15.7e %15.7e\n", ii, difference, tinkerMoments[ii], outputMultipoleMoments[ii] );
+        }
+
+        if( difference > tolerance ){
+            std::stringstream details;
+            details << testName << "Multipole moment " << ii << " does not agree w/ TINKER computed moments: OpenMM=" << outputMultipoleMoments[ii];
+            details << " TINKER=" <<  tinkerMoments[ii]  << " difference=" << difference;
+            throwException(__FILE__, __LINE__, details.str());
+        }
+
+    }
+
+}
+
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
@@ -2872,7 +2883,6 @@ int main( int numberOfArguments, char* argv[] ) {
         testMultipoleGridPotential( log );
 
         // large box of water
-
         testPMEMutualPolarizationLargeWater( log );
 
     } catch(const std::exception& e) {
