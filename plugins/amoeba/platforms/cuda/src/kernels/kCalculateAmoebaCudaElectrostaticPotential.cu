@@ -143,7 +143,11 @@ __device__ void calculateElectrostaticPotentialForAtomGridPoint_kernel( volatile
     float xr                 = atomI.x - gridPoint.x;
     float yr                 = atomI.y - gridPoint.y;
     float zr                 = atomI.z - gridPoint.z;
-   
+
+    xr                      -= floorf(xr*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+    yr                      -= floorf(yr*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+    zr                      -= floorf(zr*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+
     float r2                 = xr*xr + yr*yr + zr*zr;
     float r                  = sqrtf( r2 );
 
