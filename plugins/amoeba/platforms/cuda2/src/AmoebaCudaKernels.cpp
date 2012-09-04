@@ -1051,6 +1051,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         electrostaticsSource << CudaKernelSources::vectorOps;
         electrostaticsSource << CudaAmoebaKernelSources::pmeMultipoleElectrostatics;
         electrostaticsSource << CudaAmoebaKernelSources::pmeElectrostaticPairForce;
+        electrostaticsSource << "#define APPLY_SCALE\n";
+        electrostaticsSource << CudaAmoebaKernelSources::pmeElectrostaticPairForce;
     }
     else {
         electrostaticsSource << CudaKernelSources::vectorOps;

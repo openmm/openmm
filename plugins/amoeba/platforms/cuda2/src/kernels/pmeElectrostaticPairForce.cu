@@ -1,10 +1,14 @@
-#define APPLY_SCALE
-
-__device__ void computeOneInteractionF1(AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, real bn5, float forceFactor,
+__device__ void
 #ifdef APPLY_SCALE
-                                        float dScale, float pScale, float mScale,
+computeOneInteractionF1(
+#else
+computeOneInteractionF1NoScale(
 #endif
-                                        real3& force, real& energy) {
+        AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, real bn5, float forceFactor,
+#ifdef APPLY_SCALE
+        float dScale, float pScale, float mScale,
+#endif
+        real3& force, real& energy) {
     real xr = delta.x;
     real yr = delta.y;
     real zr = delta.z;
@@ -165,11 +169,17 @@ __device__ void computeOneInteractionF1(AtomData& atom1, volatile AtomData& atom
 }
 
 
-__device__ void computeOneInteractionF2(AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, float forceFactor,
+__device__ void
 #ifdef APPLY_SCALE
-                                        float dScale, float pScale, float mScale,
+computeOneInteractionF2(
+#else
+computeOneInteractionF2NoScale(
 #endif
-                                        real3& force, real& energy) {
+        AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, float forceFactor,
+#ifdef APPLY_SCALE
+        float dScale, float pScale, float mScale,
+#endif
+        real3& force, real& energy) {
     const float uScale = 1;
     real xr = delta.x;
     real yr = delta.y;
@@ -601,11 +611,17 @@ __device__ void computeOneInteractionF2(AtomData& atom1, volatile AtomData& atom
 }
 
 
-__device__ void computeOneInteractionT1(AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn
+__device__ void
 #ifdef APPLY_SCALE
-                                        , float dScale, float pScale, float mScale
+computeOneInteractionT1(
+#else
+computeOneInteractionT1NoScale(
 #endif
-                                       ) {
+        AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn
+#ifdef APPLY_SCALE
+        , float dScale, float pScale, float mScale
+#endif
+        ) {
 
     real xr = delta.x;
     real yr = delta.y;
@@ -761,11 +777,17 @@ __device__ void computeOneInteractionT1(AtomData& atom1, volatile AtomData& atom
 }
 
 
-__device__ void computeOneInteractionT2(AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn
+__device__ void
 #ifdef APPLY_SCALE
-                                        , float dScale, float pScale, float mScale
+computeOneInteractionT2(
+#else
+computeOneInteractionT2NoScale(
 #endif
-                                       ) {
+        AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn
+#ifdef APPLY_SCALE
+        , float dScale, float pScale, float mScale
+#endif
+        ) {
 
     real xr = delta.x;
     real yr = delta.y;
@@ -799,13 +821,11 @@ __device__ void computeOneInteractionT2(AtomData& atom1, volatile AtomData& atom
     if (damp != 0) {
         real pgamma = atom1.thole < atom2.thole ? atom1.thole : atom2.thole;
         real ratio = RECIP(rr1*damp);
-            damp = -pgamma*ratio*ratio*ratio;
-        if (damp > -50) {
-            real expdamp = EXP(damp);
-            scale3 = 1 - expdamp;
-            scale5 = 1 - (1-damp)*expdamp;
-            scale7 = 1 - (1-damp+0.6f*damp*damp)*expdamp;
-        }
+        damp = -pgamma*ratio*ratio*ratio;
+        real expdamp = EXP(damp);
+        scale3 = 1 - expdamp;
+        scale5 = 1 - (1-damp)*expdamp;
+        scale7 = 1 - (1-damp+0.6f*damp*damp)*expdamp;
     }
 
     real rr3 = rr1*rr1*rr1;
@@ -927,108 +947,4 @@ __device__ void computeOneInteractionT2(AtomData& atom1, volatile AtomData& atom
     atom1.torque.x += ttm2i1;
     atom1.torque.y += ttm2i2;
     atom1.torque.z += ttm2i3;
-}
-
-__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
-                                      real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    float4 delta;
-    delta.x = atom2.pos.x - atom1.pos.x;
-    delta.y = atom2.pos.y - atom1.pos.y;
-    delta.z = atom2.pos.z - atom1.pos.z;
-
-    // periodic box
-
-    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-
-    delta.w = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-    if (delta.w > CUTOFF_SQUARED)
-        return;
-
-    real r = SQRT(delta.w);
-    real ralpha = EWALD_ALPHA*r;
-
-    real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
-    real alsq2n = 0;
-    if (EWALD_ALPHA > 0)
-        alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
-    real exp2a = EXP(-(ralpha*ralpha));
-
-    real rr1 = RECIP(r);
-    delta.w = rr1;
-    real bn0 = erfc(ralpha)*rr1;
-    energy += forceFactor*atom1.q*atom2.q*bn0;
-    real rr2 = rr1*rr1;
-    alsq2n *= alsq2;
-
-    float4 bn;
-    bn.x = (bn0+alsq2n*exp2a)*rr2;
-
-    alsq2n *= alsq2;
-    bn.y = (3*bn.x+alsq2n*exp2a)*rr2;
-
-    alsq2n *= alsq2;
-    bn.z = (5*bn.y+alsq2n*exp2a)*rr2;
-
-    alsq2n *= alsq2;
-    bn.w = (7*bn.z+alsq2n*exp2a)*rr2;
-
-    alsq2n *= alsq2;
-    real bn5 = (9*bn.w+alsq2n*exp2a)*rr2;
-
-    real3 force;
-
-//    if (hasExclusions) {
-        computeOneInteractionF1(atom1, atom2, delta, bn, bn5, forceFactor, dScale, pScale, mScale, force, energy);
-        computeOneInteractionF2(atom1, atom2, delta, bn, forceFactor, dScale, pScale, mScale, force, energy);
-//    } else {
-//        computeOneInteractionF1(atom1, atom2, delta, bn, bn5, forceFactor, force, energy);
-//        computeOneInteractionF2(atom1, atom2, delta, bn, forceFactor, force, energy);
-//    }
-
-    atom1.force += force;
-    if (forceFactor == 1)
-        atom2.force -= force;
-    
-    computeOneInteractionT1(atom1, atom2, delta, bn, dScale, pScale, mScale);
-    computeOneInteractionT2(atom1, atom2, delta, bn, dScale, pScale, mScale);
-
-    if (forceFactor == 1) {
-        // T3 == T1 w/ particles I and J reversed
-        // T4 == T2 w/ particles I and J reversed
-
-        delta.x = -delta.x;
-        delta.y = -delta.y;
-        delta.z = -delta.z;
-        computeOneInteractionT1(atom2, atom1, delta, bn, dScale, pScale, mScale);
-        computeOneInteractionT2(atom2, atom1, delta, bn, dScale, pScale, mScale);
-
-    }
-}
-
-/**
- * Compute the self energy and self torque.
- */
-__device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy) {
-    real term = 2*EWALD_ALPHA*EWALD_ALPHA;
-    real fterm = -EWALD_ALPHA/SQRT_PI;
-    real cii = atom1.q*atom1.q;
-    real dii = dot(atom1.dipole, atom1.dipole);
-    real qii = 2*(atom1.quadrupoleXX*atom1.quadrupoleXX +
-                  atom1.quadrupoleYY*atom1.quadrupoleYY +
-                  atom1.quadrupoleXX*atom1.quadrupoleYY +
-                  atom1.quadrupoleXY*atom1.quadrupoleXY +
-                  atom1.quadrupoleXZ*atom1.quadrupoleXZ +
-                  atom1.quadrupoleYZ*atom1.quadrupoleYZ);
-    real uii = dot(atom1.dipole, atom1.inducedDipole);
-    real selfEnergy = (cii + term*(dii/3 + 2*term*qii/5));
-    selfEnergy += term*uii/3;
-    selfEnergy *= fterm;
-    energy += selfEnergy;
-
-    // self-torque for PME
-
-    real3 ui = atom1.inducedDipole+atom1.inducedDipolePolar;
-    atom1.torque += ((2/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI)*cross(atom1.dipole, ui);
 }

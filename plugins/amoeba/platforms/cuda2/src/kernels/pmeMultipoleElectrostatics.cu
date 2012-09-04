@@ -8,8 +8,14 @@ typedef struct {
     float thole, damp, padding;
 } AtomData;
 
-__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize);
-__device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy);
+__device__ void computeOneInteractionF1(AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, real bn5, float forceFactor, float dScale, float pScale, float mScale, real3& force, real& energy);
+__device__ void computeOneInteractionF2(AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, float forceFactor, float dScale, float pScale, float mScale, real3& force, real& energy);
+__device__ void computeOneInteractionT1(AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn, float dScale, float pScale, float mScale);
+__device__ void computeOneInteractionT2(AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn, float dScale, float pScale, float mScale);
+__device__ void computeOneInteractionF1NoScale(AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, real bn5, float forceFactor, real3& force, real& energy);
+__device__ void computeOneInteractionF2NoScale(AtomData& atom1, volatile AtomData& atom2, real4 delta, real4 bn, float forceFactor, real3& force, real& energy);
+__device__ void computeOneInteractionT1NoScale(AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn);
+__device__ void computeOneInteractionT2NoScale(AtomData& atom1, volatile AtomData& atom2, const real4 delta, const real4 bn);
 
 inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
@@ -50,6 +56,123 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
     bool y = (covalent.y & 1);
     bool p = (polarizationGroup & 1);
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
+}
+
+__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
+                                      real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+    float4 delta;
+    delta.x = atom2.pos.x - atom1.pos.x;
+    delta.y = atom2.pos.y - atom1.pos.y;
+    delta.z = atom2.pos.z - atom1.pos.z;
+
+    // periodic box
+
+    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+
+    delta.w = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+    if (delta.w > CUTOFF_SQUARED)
+        return;
+
+    real r = SQRT(delta.w);
+    real ralpha = EWALD_ALPHA*r;
+
+    real alsq2 = 2*EWALD_ALPHA*EWALD_ALPHA;
+    real alsq2n = 0;
+    if (EWALD_ALPHA > 0)
+        alsq2n = RECIP(SQRT_PI*EWALD_ALPHA);
+    real exp2a = EXP(-(ralpha*ralpha));
+
+    real rr1 = RECIP(r);
+    delta.w = rr1;
+    real bn0 = erfc(ralpha)*rr1;
+    energy += forceFactor*atom1.q*atom2.q*bn0;
+    real rr2 = rr1*rr1;
+    alsq2n *= alsq2;
+
+    float4 bn;
+    bn.x = (bn0+alsq2n*exp2a)*rr2;
+
+    alsq2n *= alsq2;
+    bn.y = (3*bn.x+alsq2n*exp2a)*rr2;
+
+    alsq2n *= alsq2;
+    bn.z = (5*bn.y+alsq2n*exp2a)*rr2;
+
+    alsq2n *= alsq2;
+    bn.w = (7*bn.z+alsq2n*exp2a)*rr2;
+
+    alsq2n *= alsq2;
+    real bn5 = (9*bn.w+alsq2n*exp2a)*rr2;
+
+    real3 force;
+
+    if (hasExclusions) {
+        computeOneInteractionF1(atom1, atom2, delta, bn, bn5, forceFactor, dScale, pScale, mScale, force, energy);
+        computeOneInteractionF2(atom1, atom2, delta, bn, forceFactor, dScale, pScale, mScale, force, energy);
+    }
+    else {
+        computeOneInteractionF1NoScale(atom1, atom2, delta, bn, bn5, forceFactor, force, energy);
+        computeOneInteractionF2NoScale(atom1, atom2, delta, bn, forceFactor, force, energy);
+    }
+
+    atom1.force += force;
+    if (forceFactor == 1)
+        atom2.force -= force;
+    
+    if (hasExclusions) {
+        computeOneInteractionT1(atom1, atom2, delta, bn, dScale, pScale, mScale);
+        computeOneInteractionT2(atom1, atom2, delta, bn, dScale, pScale, mScale);
+    }
+    else {
+        computeOneInteractionT1NoScale(atom1, atom2, delta, bn);
+        computeOneInteractionT2NoScale(atom1, atom2, delta, bn);
+    }
+
+
+    if (forceFactor == 1) {
+        // T3 == T1 w/ particles I and J reversed
+        // T4 == T2 w/ particles I and J reversed
+
+        delta.x = -delta.x;
+        delta.y = -delta.y;
+        delta.z = -delta.z;
+        if (hasExclusions) {
+            computeOneInteractionT1(atom2, atom1, delta, bn, dScale, pScale, mScale);
+            computeOneInteractionT2(atom2, atom1, delta, bn, dScale, pScale, mScale);
+        }
+        else {
+            computeOneInteractionT1NoScale(atom2, atom1, delta, bn);
+            computeOneInteractionT2NoScale(atom2, atom1, delta, bn);
+        }
+    }
+}
+
+/**
+ * Compute the self energy and self torque.
+ */
+__device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy) {
+    real term = 2*EWALD_ALPHA*EWALD_ALPHA;
+    real fterm = -EWALD_ALPHA/SQRT_PI;
+    real cii = atom1.q*atom1.q;
+    real dii = dot(atom1.dipole, atom1.dipole);
+    real qii = 2*(atom1.quadrupoleXX*atom1.quadrupoleXX +
+                  atom1.quadrupoleYY*atom1.quadrupoleYY +
+                  atom1.quadrupoleXX*atom1.quadrupoleYY +
+                  atom1.quadrupoleXY*atom1.quadrupoleXY +
+                  atom1.quadrupoleXZ*atom1.quadrupoleXZ +
+                  atom1.quadrupoleYZ*atom1.quadrupoleYZ);
+    real uii = dot(atom1.dipole, atom1.inducedDipole);
+    real selfEnergy = (cii + term*(dii/3 + 2*term*qii/5));
+    selfEnergy += term*uii/3;
+    selfEnergy *= fterm;
+    energy += selfEnergy;
+
+    // self-torque for PME
+
+    real3 ui = atom1.inducedDipole+atom1.inducedDipolePolar;
+    atom1.torque += ((2/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI)*cross(atom1.dipole, ui);
 }
 
 /**
@@ -175,120 +298,93 @@ extern "C" __global__ void computeElectrostatics(
                 localData[threadIdx.x].force = make_real3(0);
                 localData[threadIdx.x].torque = make_real3(0);
 #ifdef USE_CUTOFF
-//                unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-//                if (!hasExclusions && flags != 0xFFFFFFFF) {
-//                    if (flags == 0) {
-//                        // No interactions in this tile.
-//                    }
-//                    else {
-//                        // Compute only a subset of the interactions in this tile.
-//
-//                        for (j = 0; j < TILE_SIZE; j++) {
-//                            if ((flags&(1<<j)) != 0) {
-//                                int atom2 = tbx+j;
-//                                computeOneInteraction(data, localData[tbx+j], false, 1, 1, 1, 1, energy, periodicBoxSize, invPeriodicBoxSize));
-//                                data.force += tempForce;
-//                                localData[atom2].force -= tempForce;
-//                                energy += tempEnergy;
-//                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-//#ifdef ENABLE_SHUFFLE
-//                                    for (int i = 16; i >= 1; i /= 2) {
-//                                        tempForce.x += __shfl_xor(tempForce.x, i, 32);
-//                                        tempForce.y += __shfl_xor(tempForce.y, i, 32);
-//                                        tempForce.z += __shfl_xor(tempForce.z, i, 32);
-//                                    }
-//                                    if (tgx == 0)
-//                                        localData[atom2].force -= tempForce;
-//#else
-//                                    int bufferIndex = 3*threadIdx.x;
-//                                    tempBuffer[bufferIndex] = tempForce.x;
-//                                    tempBuffer[bufferIndex+1] = tempForce.y;
-//                                    tempBuffer[bufferIndex+2] = tempForce.z;
-//                                    if (tgx % 4 == 0) {
-//                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-//                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-//                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-//                                    }
-//                                    if (tgx == 0) {
-//                                        localData[atom2].force.x -= tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-//                                        localData[atom2].force.y -= tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-//                                        localData[atom2].force.z -= tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-//                                    }
-//#endif
-//                                }
-//                            }
-//                        }
-//                        data.force *= -ENERGY_SCALE_FACTOR;
-//                        localData[threadIdx.x].force *= -ENERGY_SCALE_FACTOR;
-//                        if (pos < end) {
-//                            unsigned int offset = x*TILE_SIZE + tgx;
-//                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-//                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-//                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
-//                            offset = y*TILE_SIZE + tgx;
-//                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-//                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-//                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
-//                        }
-//                        
-//                        // Compute torques.
-//
-//                        for (j = 0; j < TILE_SIZE; j++) {
-//                            if ((flags&(1<<j)) != 0) {
-//                                int atom2 = tbx+j;
-//                                real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
-//#ifdef USE_PERIODIC
-//                                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-//                                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-//                                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-//#endif
-//                                real3 tempForce;
-//                                computeOneInteractionT1(data, localData[atom2], 1, 1, 1, tempForce);
-//                                data.force += tempForce;
-//                                computeOneInteractionT3(data, localData[atom2], 1, 1, 1, tempForce);
-//                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-//#ifdef ENABLE_SHUFFLE
-//                                    for (int i = 16; i >= 1; i /= 2) {
-//                                        tempForce.x += __shfl_xor(tempForce.x, i, 32);
-//                                        tempForce.y += __shfl_xor(tempForce.y, i, 32);
-//                                        tempForce.z += __shfl_xor(tempForce.z, i, 32);
-//                                    }
-//                                    if (tgx == 0)
-//                                        localData[atom2].force -= tempForce;
-//#else
-//                                    int bufferIndex = 3*threadIdx.x;
-//                                    tempBuffer[bufferIndex] = tempForce.x;
-//                                    tempBuffer[bufferIndex+1] = tempForce.y;
-//                                    tempBuffer[bufferIndex+2] = tempForce.z;
-//                                    if (tgx % 4 == 0) {
-//                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-//                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-//                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-//                                    }
-//                                    if (tgx == 0) {
-//                                        localData[atom2].force.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-//                                        localData[atom2].force.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-//                                        localData[atom2].force.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-//                                    }
-//#endif
-//                                }
-//                            }
-//                        }
-//                        data.force *= ENERGY_SCALE_FACTOR;
-//                        localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
-//                        if (pos < end) {
-//                            unsigned int offset = x*TILE_SIZE + tgx;
-//                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-//                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-//                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
-//                            offset = y*TILE_SIZE + tgx;
-//                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-//                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-//                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
-//                        }
-//                    }
-//                }
-//                else
+                unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
+                if (!hasExclusions && flags != 0xFFFFFFFF) {
+                    if (flags == 0) {
+                        // No interactions in this tile.
+                    }
+                    else {
+                        // Compute only a subset of the interactions in this tile.
+
+                        for (j = 0; j < TILE_SIZE; j++) {
+                            if ((flags&(1<<j)) != 0) {
+                                int atom2 = tbx+j;
+                                real3 oldForce = localData[atom2].force;
+                                real3 oldTorque = localData[atom2].torque;
+                                localData[atom2].force = make_real3(0);
+                                localData[atom2].torque = make_real3(0);
+                                computeOneInteraction(data, localData[tbx+j], false, 1, 1, 1, 1, energy, periodicBoxSize, invPeriodicBoxSize);
+                                real3 newForce = localData[atom2].force;
+                                real3 newTorque = localData[atom2].torque;
+                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+#ifdef ENABLE_SHUFFLE
+                                    for (int i = 16; i >= 1; i /= 2) {
+                                        newForce.x += __shfl_xor(newForce.x, i, 32);
+                                        newForce.y += __shfl_xor(newForce.y, i, 32);
+                                        newForce.z += __shfl_xor(newForce.z, i, 32);
+                                        newTorque.x += __shfl_xor(newTorque.x, i, 32);
+                                        newTorque.y += __shfl_xor(newTorque.y, i, 32);
+                                        newTorque.z += __shfl_xor(newTorque.z, i, 32);
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].force -= newForce;
+                                        localData[atom2].torque -= newTorque;
+                                    }
+#else
+                                    int bufferIndex = 3*threadIdx.x;
+                                    tempBuffer[bufferIndex] = newForce.x;
+                                    tempBuffer[bufferIndex+1] = newForce.y;
+                                    tempBuffer[bufferIndex+2] = newForce.z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].force.x -= tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].force.y -= tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].force.z -= tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
+                                    tempBuffer[bufferIndex] = newTorque.x;
+                                    tempBuffer[bufferIndex+1] = newTorque.y;
+                                    tempBuffer[bufferIndex+2] = newTorque.z;
+                                    if (tgx % 4 == 0) {
+                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
+                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
+                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
+                                    }
+                                    if (tgx == 0) {
+                                        localData[atom2].torque.x -= tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
+                                        localData[atom2].torque.y -= tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
+                                        localData[atom2].torque.z -= tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
+                                    }
+#endif
+                                }
+                            }
+                        }
+                        data.force *= -ENERGY_SCALE_FACTOR;
+                        data.torque *= -ENERGY_SCALE_FACTOR;
+                        localData[threadIdx.x].force *= -ENERGY_SCALE_FACTOR;
+                        localData[threadIdx.x].torque *= -ENERGY_SCALE_FACTOR;
+                        if (pos < end) {
+                            unsigned int offset = x*TILE_SIZE + tgx;
+                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.torque.x*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0xFFFFFFFF)));
+                            offset = y*TILE_SIZE + tgx;
+                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.x*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.y*0xFFFFFFFF)));
+                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.z*0xFFFFFFFF)));
+                        }
+                    }
+                }
+                else
 #endif
                 {
                     // Compute the full set of interactions in this tile.
