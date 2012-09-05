@@ -524,6 +524,9 @@ private:
     class ForceInfo;
     CudaContext& cu;
     System& system;
+    double totalMaximumDispersionEnergy;
+    CudaArray* radiusEpsilon;
+    CUfunction forceKernel;
 };
 
 } // namespace OpenMM

@@ -1867,75 +1867,82 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
     return dispersionCoefficient/(box.x*box.y*box.z);
 }
 
-///* -------------------------------------------------------------------------- *
-// *                           AmoebaWcaDispersion                              *
-// * -------------------------------------------------------------------------- */
-//
-//static void computeAmoebaWcaDispersionForce( CudaContext& cu ) {
-//
-//    data.initializeGpu();
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), "Calling computeAmoebaWcaDispersionForce  " ); (void) fflush( data.getLog() );
-//    }
-//
-//    kCalculateAmoebaWcaDispersionForces( data.getAmoebaGpu() );
-//
-//    if( 0 && data.getLog() ){
-//        (void) fprintf( data.getLog(), " -- completed\n" ); (void) fflush( data.getLog() );
-//    }
-//}
-//
-//class CudaCalcAmoebaWcaDispersionForceKernel::ForceInfo : public CudaForceInfo {
-//public:
-//    ForceInfo(const AmoebaWcaDispersionForce& force) : force(force) {
-//    }
-//    bool areParticlesIdentical(int particle1, int particle2) {
-//        double radius1, radius2, epsilon1, epsilon2;
-//        force.getParticleParameters(particle1, radius1, epsilon1);
-//        force.getParticleParameters(particle2, radius2, epsilon2);
-//        return (radius1 == radius2 && epsilon1 == epsilon2);
-//    }
-//private:
-//    const AmoebaWcaDispersionForce& force;
-//};
-//
-//CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
-//           CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//CudaCalcAmoebaWcaDispersionForceKernel::~CudaCalcAmoebaWcaDispersionForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, const AmoebaWcaDispersionForce& force) {
-//
-//    // per-particle parameters
-//
-//    int numParticles = system.getNumParticles();
-//    std::vector<float> radii(numParticles);
-//    std::vector<float> epsilons(numParticles);
-//    for( int ii = 0; ii < numParticles; ii++ ){
-//
-//        double radius, epsilon;
-//        force.getParticleParameters( ii, radius, epsilon );
-//
-//        radii[ii]         = static_cast<float>( radius );
-//        epsilons[ii]      = static_cast<float>( epsilon );
-//    }   
-//    float totalMaximumDispersionEnergy =  static_cast<float>( AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy( force ) );
-//    gpuSetAmoebaWcaDispersionParameters( data.getAmoebaGpu(), radii, epsilons, totalMaximumDispersionEnergy,
-//                                          static_cast<float>( force.getEpso( )),
-//                                          static_cast<float>( force.getEpsh( )),
-//                                          static_cast<float>( force.getRmino( )),
-//                                          static_cast<float>( force.getRminh( )),
-//                                          static_cast<float>( force.getAwater( )),
-//                                          static_cast<float>( force.getShctd( )),
-//                                          static_cast<float>( force.getDispoff( ) ) );
-//    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
-//}
-//
-//double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    computeAmoebaWcaDispersionForce( data );
-//    return 0.0;
-//}
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaWcaDispersion                              *
+ * -------------------------------------------------------------------------- */
+
+class CudaCalcAmoebaWcaDispersionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaWcaDispersionForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double radius1, radius2, epsilon1, epsilon2;
+        force.getParticleParameters(particle1, radius1, epsilon1);
+        force.getParticleParameters(particle2, radius2, epsilon2);
+        return (radius1 == radius2 && epsilon1 == epsilon2);
+    }
+private:
+    const AmoebaWcaDispersionForce& force;
+};
+
+CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+           CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system), radiusEpsilon(NULL) {
+}
+
+CudaCalcAmoebaWcaDispersionForceKernel::~CudaCalcAmoebaWcaDispersionForceKernel() {
+    if (radiusEpsilon != NULL)
+        delete radiusEpsilon;
+}
+
+void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, const AmoebaWcaDispersionForce& force) {
+    int numParticles = system.getNumParticles();
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    
+    // Record parameters.
+    
+    vector<float2> radiusEpsilonVec(paddedNumAtoms, make_float2(0, 0));
+    for (int i = 0; i < numParticles; i++) {
+        double radius, epsilon;
+        force.getParticleParameters(i, radius, epsilon);
+        radiusEpsilonVec[i] = make_float2((float) radius, (float) epsilon);
+    }
+    radiusEpsilon = CudaArray::create<float2>(cu, paddedNumAtoms, "radiusEpsilon");
+    radiusEpsilon->upload(radiusEpsilonVec);
+    
+    // Create the kernel.
+    
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(numParticles);
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["EPSO"] = cu.doubleToString(force.getEpso());
+    defines["EPSH"] = cu.doubleToString(force.getEpsh());
+    defines["RMINO"] = cu.doubleToString(force.getRmino());
+    defines["RMINH"] = cu.doubleToString(force.getRminh());
+    defines["AWATER"] = cu.doubleToString(force.getAwater());
+    defines["SHCTD"] = cu.doubleToString(force.getEpso());
+    defines["EPSO"] = cu.doubleToString(force.getShctd());
+    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::amoebaWcaForce, defines);
+    forceKernel = cu.getKernel(module, "computeWCAForce");
+    totalMaximumDispersionEnergy =  AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
+
+    // Add an interaction to the default nonbonded kernel.  This doesn't actually do any calculations.  It's
+    // just so that CudaNonbondedUtilities will keep track of the tiles.
+    
+    vector<vector<int> > exclusions;
+    cu.getNonbondedUtilities().addInteraction(false, false, false, 0, exclusions, "", force.getForceGroup());
+    cu.addForce(new ForceInfo(force));
+}
+
+double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    int startTileIndex = nb.getStartTileIndex();
+    int numTileIndices = nb.getNumTiles();
+    int numForceThreadBlocks = nb.getNumForceThreadBlocks();
+    int forceThreadBlockSize = nb.getForceThreadBlockSize();
+    void* forceArgs[] = {&cu.getForce().getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &radiusEpsilon->getDevicePointer()};
+    cu.executeKernel(forceKernel, forceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    return totalMaximumDispersionEnergy;
+}

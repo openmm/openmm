@@ -41,10 +41,8 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
         Platform& platform = Platform::getPlatformByName("CUDA");
         AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
         platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaUreyBradleyForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
@@ -82,9 +80,6 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     if (name == CalcAmoebaHarmonicInPlaneAngleForceKernel::Name())
         return new CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform, cu, context.getSystem());
 
-//    if (name == CalcAmoebaTorsionForceKernel::Name())
-//        return new CudaCalcAmoebaTorsionForceKernel(name, platform, cu, context.getSystem());
-
     if (name == CalcAmoebaPiTorsionForceKernel::Name())
         return new CudaCalcAmoebaPiTorsionForceKernel(name, platform, cu, context.getSystem());
 
@@ -106,11 +101,8 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     if (name == CalcAmoebaVdwForceKernel::Name())
         return new CudaCalcAmoebaVdwForceKernel(name, platform, cu, context.getSystem());
 
-//    if (name == CalcAmoebaWcaDispersionForceKernel::Name())
-//        return new CudaCalcAmoebaWcaDispersionForceKernel(name, platform, cu, context.getSystem());
-//
-//    if (name == CalcAmoebaUreyBradleyForceKernel::Name())
-//        return new CudaCalcAmoebaUreyBradleyForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcAmoebaWcaDispersionForceKernel::Name())
+        return new CudaCalcAmoebaWcaDispersionForceKernel(name, platform, cu, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }
