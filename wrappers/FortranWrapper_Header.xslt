@@ -40,10 +40,7 @@ MODULE OpenMM_Types
 
     ! Global Constants
  <xsl:for-each select="Variable[@context=$openmm_namespace_id]">
-    real*8 OpenMM_<xsl:value-of select="@name"/>
- </xsl:for-each>
- <xsl:for-each select="Variable[@context=$openmm_namespace_id]">
-    parameter(OpenMM_<xsl:value-of select="concat(@name, '=', number(@init), ')')"/>
+    real*8, parameter :: OpenMM_<xsl:value-of select="concat(@name, ' = ', number(@init))"/>
  </xsl:for-each>
 
     ! Type Declarations
@@ -76,12 +73,14 @@ MODULE OpenMM_Types
         integer*8 :: handle = 0
     end type
 
+    type OpenMM_IntArray
+        integer*8 :: handle = 0
+    end type
+
     ! Enumerations
 
-    integer*4 OpenMM_False
-    integer*4 OpenMM_True
-    parameter(OpenMM_False=0)
-    parameter(OpenMM_True=1)
+    integer*4, parameter :: OpenMM_False = 0
+    integer*4, parameter :: OpenMM_True = 1
  <xsl:for-each select="Class[@context=$openmm_namespace_id and empty(index-of($skip_classes, @name))]">
   <xsl:variable name="class_id" select="@id"/>
   <xsl:variable name="class_name" select="@name"/>
@@ -103,153 +102,159 @@ MODULE OpenMM
             real*8 vec(3)
             real*8 scale
             real*8 result(3)
-        end
+        end subroutine
 
         ! OpenMM_Vec3Array
         subroutine OpenMM_Vec3Array_create(result, size)
             use OpenMM_Types; implicit none
             integer*4 size
             type (OpenMM_Vec3Array) result
-        end
+        end subroutine
         subroutine OpenMM_Vec3Array_destroy(destroy)
             use OpenMM_Types; implicit none
             type (OpenMM_Vec3Array) destroy
-        end
+        end subroutine
         function OpenMM_Vec3Array_getSize(target)
             use OpenMM_Types; implicit none
             type (OpenMM_Vec3Array) target
             integer*4 OpenMM_Vec3Array_getSize
-        end
+        end function
         subroutine OpenMM_Vec3Array_resize(target, size)
             use OpenMM_Types; implicit none
             type (OpenMM_Vec3Array) target
             integer*4 size
-        end
+        end subroutine
         subroutine OpenMM_Vec3Array_append(target, vec)
             use OpenMM_Types; implicit none
             type (OpenMM_Vec3Array) target
             real*8 vec(3)
-        end
+        end subroutine
         subroutine OpenMM_Vec3Array_set(target, index, vec)
             use OpenMM_Types; implicit none
             type (OpenMM_Vec3Array) target
             integer*4 index
             real*8 vec(3)
-        end
+        end subroutine
         subroutine OpenMM_Vec3Array_get(target, index, result)
             use OpenMM_Types; implicit none
             type (OpenMM_Vec3Array) target
             integer*4 index
             real*8 result(3)
-        end
+        end subroutine
 
         ! OpenMM_StringArray
         subroutine OpenMM_StringArray_create(result, size)
             use OpenMM_Types; implicit none
             integer*4 size
             type (OpenMM_StringArray) result
-        end
+        end subroutine
         subroutine OpenMM_StringArray_destroy(destroy)
             use OpenMM_Types; implicit none
             type (OpenMM_StringArray) destroy
-        end
+        end subroutine
         function OpenMM_StringArray_getSize(target)
             use OpenMM_Types; implicit none
             type (OpenMM_StringArray) target
             integer*4 OpenMM_StringArray_getSize
-        end
+        end function
         subroutine OpenMM_StringArray_resize(target, size)
             use OpenMM_Types; implicit none
             type (OpenMM_StringArray) target
             integer*4 size
-        end
+        end subroutine
         subroutine OpenMM_StringArray_append(target, str)
             use OpenMM_Types; implicit none
             type (OpenMM_StringArray) target
             character(*) str
-        end
+        end subroutine
         subroutine OpenMM_StringArray_set(target, index, str)
             use OpenMM_Types; implicit none
             type (OpenMM_StringArray) target
             integer*4 index
             character(*) str
-        end
+        end subroutine
         subroutine OpenMM_StringArray_get(target, index, result)
             use OpenMM_Types; implicit none
             type (OpenMM_StringArray) target
             integer*4 index
             character(*) result
-        end
+        end subroutine
 
         ! OpenMM_BondArray
         subroutine OpenMM_BondArray_create(result, size)
             use OpenMM_Types; implicit none
             integer*4 size
             type (OpenMM_BondArray) result
-        end
+        end subroutine
         subroutine OpenMM_BondArray_destroy(destroy)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) destroy
-        end
+        end subroutine
         function OpenMM_BondArray_getSize(target)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) target
             integer*4 OpenMM_BondArray_getSize
-        end
+        end function
         subroutine OpenMM_BondArray_resize(target, size)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) target
             integer*4 size
-        end
+        end subroutine
         subroutine OpenMM_BondArray_append(target, particle1, particle2)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) target
             integer*4 particle1
             integer*4 particle2
-        end
+        end subroutine
         subroutine OpenMM_BondArray_set(target, index, particle1, particle2)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) target
             integer*4 index
             integer*4 particle1
             integer*4 particle2
-        end
+        end subroutine
         subroutine OpenMM_BondArray_get(target, index, particle1, particle2)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) target
             integer*4 index
             integer*4 particle1
             integer*4 particle2
-        end
+        end subroutine
 
         ! OpenMM_ParameterArray
         function OpenMM_ParameterArray_getSize(target)
             use OpenMM_Types; implicit none
             type (OpenMM_ParameterArray) target
             integer*4 OpenMM_ParameterArray_getSize
-        end
+        end function
         subroutine OpenMM_ParameterArray_get(target, name, result)
             use OpenMM_Types; implicit none
             type (OpenMM_ParameterArray) target
             character(*) name
             character(*) result
-        end
+        end subroutine
 
         ! OpenMM_PropertyArray
         function OpenMM_PropertyArray_getSize(target)
             use OpenMM_Types; implicit none
             type (OpenMM_ParameterArray) target
             integer*4 OpenMM_PropertyArray_getSize
-        end
+        end function
         subroutine OpenMM_PropertyArray_get(target, name, result)
             use OpenMM_Types; implicit none
             type (OpenMM_PropertyArray) target
             character(*) name
             character(*) result
-        end
+        end subroutine
+
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'real*8'"/>
  <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
+</xsl:call-template>
+
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'integer*4'"/>
+ <xsl:with-param name="name" select="'OpenMM_IntArray'"/>
 </xsl:call-template>
 
         ! These methods need to be handled specially, since their C++ APIs cannot be directly translated to Fortran.
@@ -260,13 +265,13 @@ MODULE OpenMM
             integer*4 types
             integer*4 enforcePeriodicBox
             type (OpenMM_State) result
-        end
+        end subroutine
 
         subroutine OpenMM_Platform_loadPluginsFromDirectory(directory, result)
             use OpenMM_Types; implicit none
             character(*) directory
             type (OpenMM_StringArray) result
-        end
+        end subroutine
 
  <!-- Class members -->
  <xsl:for-each select="Class[@context=$openmm_namespace_id and empty(index-of($skip_classes, @name))]">
@@ -285,38 +290,38 @@ END MODULE OpenMM
             use OpenMM_Types; implicit none
             integer*4 size
             type (<xsl:value-of select="$name"/>) result
-        end
+        end subroutine
         subroutine <xsl:value-of select="$name"/>_destroy(destroy)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) destroy
-        end
+        end subroutine
         function <xsl:value-of select="$name"/>_getSize(target)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) target
             integer*4 <xsl:value-of select="$name"/>_getSize
-        end
+        end function
         subroutine <xsl:value-of select="$name"/>_resize(target, size)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) target
             integer*4 size
-        end
+        end subroutine
         subroutine <xsl:value-of select="$name"/>_append(target, value)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) target
             <xsl:value-of select="$element_type"/> value
-        end
+        end subroutine
         subroutine <xsl:value-of select="$name"/>_set(target, index, value)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) target
             integer*4 index
             <xsl:value-of select="$element_type"/> value
-        end
+        end subroutine
         subroutine <xsl:value-of select="$name"/>_get(target, index, result)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) target
             integer*4 index
             <xsl:value-of select="$element_type"/> result
-        end
+        end subroutine
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -357,11 +362,8 @@ END MODULE OpenMM
 <xsl:template name="enumeration">
  <xsl:param name="class_name"/>
   <xsl:for-each select="EnumValue">
-    integer*4 OpenMM_<xsl:value-of select="concat($class_name, '_', @name)"/>
- </xsl:for-each>
-  <xsl:for-each select="EnumValue">
-    parameter(OpenMM_<xsl:value-of select="concat($class_name, '_', @name, '=', @init, ')')"/>
- </xsl:for-each>
+    integer*4, parameter :: OpenMM_<xsl:value-of select="concat($class_name, '_', @name, ' = ', @init)"/>
+  </xsl:for-each>
  <xsl:value-of select="$newline"/>
 </xsl:template>
 
@@ -383,7 +385,7 @@ END MODULE OpenMM
    </xsl:call-template>
    <xsl:value-of select="$newline"/>
   </xsl:for-each>
- <xsl:value-of select="'        end'"/>
+ <xsl:value-of select="'        end subroutine'"/>
 </xsl:template>
 
 <!-- Print out the declaration for a destructor -->
@@ -391,7 +393,7 @@ END MODULE OpenMM
         subroutine OpenMM_<xsl:value-of select="concat(@name, '_destroy(destroy)')"/>
             use OpenMM_Types; implicit none
             type (OpenMM_<xsl:value-of select="concat(@name, ') destroy', $newline)"/>
- <xsl:value-of select="'        end'"/>
+ <xsl:value-of select="'        end subroutine'"/>
 </xsl:template>
 
 <!-- Print out the declaration for a method -->
@@ -460,7 +462,14 @@ END MODULE OpenMM
    </xsl:call-template>
   <xsl:value-of select="$newline"/>
  </xsl:if>
- <xsl:value-of select="'        end'"/>
+ <xsl:choose>
+  <xsl:when test="$has_return">
+   <xsl:value-of select="'        end function'"/>
+  </xsl:when>
+  <xsl:otherwise>
+   <xsl:value-of select="'        end subroutine'"/>
+  </xsl:otherwise>
+ </xsl:choose>
 </xsl:template>
 
 <!-- Print out the description of an argument -->
