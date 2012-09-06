@@ -1921,8 +1921,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
     defines["RMINO"] = cu.doubleToString(force.getRmino());
     defines["RMINH"] = cu.doubleToString(force.getRminh());
     defines["AWATER"] = cu.doubleToString(force.getAwater());
-    defines["SHCTD"] = cu.doubleToString(force.getEpso());
-    defines["EPSO"] = cu.doubleToString(force.getShctd());
+    defines["SHCTD"] = cu.doubleToString(force.getShctd());
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::amoebaWcaForce, defines);
     forceKernel = cu.getKernel(module, "computeWCAForce");
     totalMaximumDispersionEnergy =  AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);

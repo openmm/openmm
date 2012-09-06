@@ -231,8 +231,6 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
                 if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                     real3 tempForce;
                     real tempEnergy;
-                    if (atom2 != 0)
-                        continue;
                     computeOneInteraction(data, localData[tbx+j], rmixo, rmixh, emixo, emixh, tempForce, tempEnergy);
                     data.force += tempForce;
                     localData[tbx+j].force -= tempForce;
@@ -249,12 +247,14 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
-            offset = y*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+            if (x != y) {
+                offset = y*TILE_SIZE + tgx;
+                atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+            }
         }
         pos++;
     } while (pos < end);
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] -= AWATER*energy;
 }
