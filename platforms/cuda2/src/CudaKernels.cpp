@@ -1343,11 +1343,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    sigmaEpsilon = CudaArray::create<float2>(cu, numParticles, "sigmaEpsilon");
+    sigmaEpsilon = CudaArray::create<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     CudaArray& posq = cu.getPosq();
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
-    vector<float2> sigmaEpsilonVector(numParticles);
+    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms());
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
     hasCoulomb = false;
@@ -1654,7 +1654,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     posq.download(cu.getPinnedBuffer());
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
-    vector<float2> sigmaEpsilonVector(force.getNumParticles());
+    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms());
     double sumSquaredCharges = 0.0;
     const vector<int>& order = cu.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {

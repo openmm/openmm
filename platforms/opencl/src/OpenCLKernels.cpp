@@ -1229,9 +1229,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    sigmaEpsilon = new OpenCLArray<mm_float2>(cl, numParticles, "sigmaEpsilon");
+    sigmaEpsilon = new OpenCLArray<mm_float2>(cl, cl.getPaddedNumAtoms(), "sigmaEpsilon");
     OpenCLArray<mm_float4>& posq = cl.getPosq();
-    vector<mm_float2> sigmaEpsilonVector(numParticles);
+    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms());
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
     hasCoulomb = false;
@@ -1579,7 +1579,7 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     
     OpenCLArray<mm_float4>& posq = cl.getPosq();
     posq.download();
-    vector<mm_float2> sigmaEpsilonVector(force.getNumParticles());
+    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms());
     double sumSquaredCharges = 0.0;
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {
