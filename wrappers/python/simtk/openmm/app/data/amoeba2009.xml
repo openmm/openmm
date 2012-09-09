@@ -392,6 +392,34 @@
   <Type name="390" class="83" element="Cl" mass="35.453"/>
  </AtomTypes>
  <Residues>
+  <Residue name="ACE">
+   <Atom name="HH31" type="209"/>
+   <Atom name="CH3" type="208"/>
+   <Atom name="HH32" type="209"/>
+   <Atom name="HH33" type="209"/>
+   <Atom name="C" type="210"/>
+   <Atom name="O" type="211"/>
+   <Bond from="0" to="1"/>
+   <Bond from="1" to="2"/>
+   <Bond from="1" to="3"/>
+   <Bond from="1" to="4"/>
+   <Bond from="4" to="5"/>
+   <ExternalBond from="4"/>
+  </Residue>
+  <Residue name="NME">
+   <Atom name="N" type="214"/>
+   <Atom name="H" type="215"/>
+   <Atom name="CH3" type="216"/>
+   <Atom name="HH31" type="217"/>
+   <Atom name="HH32" type="217"/>
+   <Atom name="HH33" type="217"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="2" to="3"/>
+   <Bond from="2" to="4"/>
+   <Bond from="2" to="5"/>
+   <ExternalBond from="0"/>
+  </Residue>
   <Residue name="ALA">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
