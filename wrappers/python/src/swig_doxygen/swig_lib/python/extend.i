@@ -6,13 +6,16 @@
                             int getParameters,
                             int enforcePeriodic,
                             int groups) {
+    State state;
+    Py_BEGIN_ALLOW_THREADS
     int types = 0;
     if (getPositions) types |= State::Positions;
     if (getVelocities) types |= State::Velocities;
     if (getForces) types |= State::Forces;
     if (getEnergy) types |= State::Energy;
     if (getParameters) types |= State::Parameters;
-    State state = self->getState(types, enforcePeriodic, groups);
+    state = self->getState(types, enforcePeriodic, groups);
+    Py_END_ALLOW_THREADS
     return _convertStateToLists(state);
   }
 
@@ -122,13 +125,16 @@ Parameters:
                             int getParameters,
                             int enforcePeriodic,
                             int groups) {
+    State state;
+    Py_BEGIN_ALLOW_THREADS
     int types = 0;
     if (getPositions) types |= State::Positions;
     if (getVelocities) types |= State::Velocities;
     if (getForces) types |= State::Forces;
     if (getEnergy) types |= State::Energy;
     if (getParameters) types |= State::Parameters;
-    State state = self->getState(copy, types, enforcePeriodic, groups);
+    state = self->getState(copy, types, enforcePeriodic, groups);
+    Py_END_ALLOW_THREADS
     return _convertStateToLists(state);
   }
 
