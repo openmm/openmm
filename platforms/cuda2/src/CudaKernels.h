@@ -549,7 +549,7 @@ private:
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
+            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), originalPmeGrid(NULL), reciprocalPmeGrid(NULL), convolvedPmeGrid(NULL),
             pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDTheta(NULL),
             pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
     }
@@ -595,7 +595,13 @@ private:
     CudaArray* sigmaEpsilon;
     CudaArray* exceptionParams;
     CudaArray* cosSinSums;
-    CudaArray* pmeGrid;
+
+
+    //TODO: separate into realpmeGrid, complex pmegrid, and resultpmeGrid
+    CudaArray* originalPmeGrid;
+    CudaArray* reciprocalPmeGrid;
+    CudaArray* convolvedPmeGrid;
+
     CudaArray* pmeBsplineModuliX;
     CudaArray* pmeBsplineModuliY;
     CudaArray* pmeBsplineModuliZ;
@@ -604,7 +610,10 @@ private:
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
-    cufftHandle fft;
+
+    cufftHandle fftForward;
+    cufftHandle fftBackward;
+
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;
@@ -613,6 +622,9 @@ private:
     CUfunction pmeUpdateBsplinesKernel;
     CUfunction pmeSpreadChargeKernel;
     CUfunction pmeFinishSpreadChargeKernel;
+    /* TESTING ENERGY KERNEL */
+    CUfunction pmeEvalEnergyKernel;
+
     CUfunction pmeConvolutionKernel;
     CUfunction pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
