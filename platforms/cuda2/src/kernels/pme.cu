@@ -53,6 +53,7 @@ extern "C" __global__ void findAtomRangeForGrid(int2* __restrict__ pmeAtomGridIn
     }
 
     // Fill in values beyond the last atom.
+    
     if (blockIdx.x == gridDim.x-1 && threadIdx.x == blockDim.x-1) {
         int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
         for (int j = last+1; j <= gridSize; ++j)
@@ -139,13 +140,11 @@ reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict_
                       const real* __restrict__ pmeBsplineModuliX,
                       const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ, 
                       real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-
-    //R2C stores into a half complex matrix where the last dimension is cut by half
+    // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
     const real recipScaleFactor = RECIP(M_PI*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
 
-    for( int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x ) {
-
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
         // real indices
         int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
         int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
@@ -180,14 +179,11 @@ reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict_
 }
 
 extern "C" __global__
-void gridEvaluateEnergy(const real * __restrict__ originalGrid, const real * __restrict convolvedGrid, real * __restrict__ energyBuffer) {
-
+void gridEvaluateEnergy(const real* __restrict__ originalGrid, const real* __restrict__ convolvedGrid, real* __restrict__ energyBuffer) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     real energy = 0;
-
-    for( int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x ) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
         energy += originalGrid[index]*convolvedGrid[index];
-    }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5*energy;
 }
 
@@ -213,16 +209,15 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
+        
         real3 dr = make_real3(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z);
         data[PME_ORDER-1] = make_real3(0);
         data[1] = dr;
         data[0] = make_real3(1)-dr;
 
-         
         for (int j = 3; j < PME_ORDER; j++) {
             real div = RECIP(j-1);
             data[j-1] = div*dr*data[j-2];
-             
             for (int k = 1; k < (j-1); k++)
                 data[j-k-1] = div*((dr+make_real3(k))*data[j-k-2] + (make_real3(j-k)-dr)*data[j-k-1]);
             data[0] = div*(make_real3(1)-dr)*data[0];
@@ -233,7 +228,6 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
             ddata[j] = data[j-1]-data[j];
         data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
         
-         
         for (int j = 1; j < (PME_ORDER-1); j++)
             data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
         data[0] = scale*(make_real3(1)-dr)*data[0];
@@ -266,7 +260,6 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
             }
         }
         real q = pos.w*EPSILON_FACTOR;
-       
         forceBuffers[atom] +=  static_cast<unsigned long long>((long long) (-q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x*0xFFFFFFFF));
         forceBuffers[atom+PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y*0xFFFFFFFF));
         forceBuffers[atom+2*PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z*0xFFFFFFFF));

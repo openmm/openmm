@@ -595,13 +595,9 @@ private:
     CudaArray* sigmaEpsilon;
     CudaArray* exceptionParams;
     CudaArray* cosSinSums;
-
-
-    //TODO: separate into realpmeGrid, complex pmegrid, and resultpmeGrid
     CudaArray* originalPmeGrid;
     CudaArray* reciprocalPmeGrid;
     CudaArray* convolvedPmeGrid;
-
     CudaArray* pmeBsplineModuliX;
     CudaArray* pmeBsplineModuliY;
     CudaArray* pmeBsplineModuliZ;
@@ -610,10 +606,8 @@ private:
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
-
     cufftHandle fftForward;
     cufftHandle fftBackward;
-
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;
@@ -622,9 +616,7 @@ private:
     CUfunction pmeUpdateBsplinesKernel;
     CUfunction pmeSpreadChargeKernel;
     CUfunction pmeFinishSpreadChargeKernel;
-    /* TESTING ENERGY KERNEL */
     CUfunction pmeEvalEnergyKernel;
-
     CUfunction pmeConvolutionKernel;
     CUfunction pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
