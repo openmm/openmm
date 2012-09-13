@@ -260,8 +260,8 @@ extern "C" __global__ void computeElectrostatics(
                 localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
                 localData[threadIdx.x].inducedDipole = data.inducedDipole;
                 localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
-                localData[threadIdx.x].thole = data.thole; // IS THIS CORRECT?
-                localData[threadIdx.x].damp = data.damp; // IS THIS CORRECT?
+                localData[threadIdx.x].thole = data.thole;
+                localData[threadIdx.x].damp = data.damp;
                 uint2 covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
                 unsigned int polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
                 

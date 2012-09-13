@@ -37,6 +37,8 @@
 
 namespace OpenMM {
 
+class CudaCalcAmoebaGeneralizedKirkwoodForceKernel;
+
 /**
  * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
@@ -427,6 +429,7 @@ private:
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
     CUfunction pmeUpdateBsplinesKernel, pmeAtomRangeKernel, pmeZIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeConvolutionKernel, pmeFixedPotentialKernel, pmeInducedPotentialKernel;
     CUfunction pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
+    CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
 };
 
@@ -453,10 +456,38 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Perform the computation of Born radii.
+     */
+    void computeBornRadii();
+    /**
+     * Perform the final parts of the force/energy computation.
+     */
+    void finishComputation(CudaArray& torque, CudaArray& labFrameDipoles, CudaArray& labFrameQuadrupoles, CudaArray& inducedDipole, CudaArray& inducedDipolePolar, CudaArray& dampingAndThole, CudaArray& covalentFlags, CudaArray& polarizationGroupFlags);
+    CudaArray* getBornRadii() {
+        return bornRadii;
+    }
+    CudaArray* getField() {
+        return field;
+    }
+    CudaArray* getInducedDipoles() {
+        return inducedDipoleS;
+    }
+    CudaArray* getInducedDipolesPolar() {
+        return inducedDipolePolarS;
+    }
 private:
     class ForceInfo;
     CudaContext& cu;
     System& system;
+    CudaArray* params;
+    CudaArray* bornSum;
+    CudaArray* bornRadii;
+    CudaArray* bornForce;
+    CudaArray* field;
+    CudaArray* inducedDipoleS;
+    CudaArray* inducedDipolePolarS;
+    CUfunction computeBornSumKernel, reduceBornSumKernel, gkForceKernel, chainRuleKernel, ediffKernel;
 };
 
 /**

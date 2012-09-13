@@ -7,6 +7,10 @@ typedef struct {
     real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ, quadrupoleZZ;
     float thole, damp;
+#ifdef USE_GK
+    real3 gkField;
+    real bornRadius;
+#endif
 } AtomData;
 
 inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const float2* __restrict__ dampingAndThole) {
@@ -178,6 +182,205 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
 }
 #endif
 
+#ifdef USE_GK
+__device__ void computeOneGkInteraction(AtomData& atom1, AtomData& atom2, real3 delta, real3* fields) {
+    real a[4][4];
+    real gc[5];
+    real gux[11],guy[11],guz[11];
+    real gqxx[5],gqxy[5];
+    real gqxz[5],gqyy[5];
+    real gqyz[5],gqzz[5];
+
+    real ci = atom1.posq.w;
+    real ck = atom2.posq.w;
+
+    real uxi = atom1.dipole.x;
+    real uyi = atom1.dipole.y;
+    real uzi = atom1.dipole.z;
+    real uxk = atom2.dipole.x;
+    real uyk = atom2.dipole.y;
+    real uzk = atom2.dipole.z;
+
+    real qxxi = atom1.quadrupoleXX;
+    real qxyi = atom1.quadrupoleXY;
+    real qxzi = atom1.quadrupoleXZ;
+    real qyyi = atom1.quadrupoleYY;
+    real qyzi = atom1.quadrupoleYZ;
+    real qzzi = atom1.quadrupoleZZ;
+    real qxxk = atom2.quadrupoleXX;
+    real qxyk = atom2.quadrupoleXY;
+    real qxzk = atom2.quadrupoleXZ;
+    real qyyk = atom2.quadrupoleYY;
+    real qyzk = atom2.quadrupoleYZ;
+    real qzzk = atom2.quadrupoleZZ;
+
+    real xr2 = delta.x*delta.x;
+    real yr2 = delta.y*delta.y;
+    real zr2 = delta.z*delta.z;
+    real r2 = xr2 + yr2 + zr2;
+
+    real rb2 = atom1.bornRadius*atom2.bornRadius;
+    real expterm = EXP(-r2/(GK_C*rb2));
+    real expc = expterm / GK_C;
+    real dexpc = -2/(GK_C*rb2);
+    real gf2 = RECIP(r2+rb2*expterm);
+    real gf = SQRT(gf2);
+    real gf3 = gf2*gf;
+    real gf5 = gf3*gf2;
+    real gf7 = gf5*gf2;
+
+    // reaction potential auxiliary terms
+
+    a[0][0] = gf;
+    a[1][0] = -gf3;
+    a[2][0] = 3*gf5;
+    a[3][0] = -15*gf7;
+
+    // reaction potential gradient auxiliary terms
+
+    real expc1 = 1 - expc;
+    a[0][1] = expc1*a[1][0];
+    a[1][1] = expc1*a[2][0];
+    a[2][1] = expc1*a[3][0];
+
+    // dipole second reaction potential gradient auxiliary term
+
+    real expcdexpc = -expc*dexpc;
+    a[1][2] = expc1*a[2][1] + expcdexpc*a[2][0];
+
+    // multiply the auxillary terms by dielectric functions;
+
+    a[0][1] = GK_FC*a[0][1];
+    a[1][0] = GK_FD*a[1][0];
+    a[1][1] = GK_FD*a[1][1];
+    a[1][2] = GK_FD*a[1][2];
+    a[2][0] = GK_FQ*a[2][0];
+    a[2][1] = GK_FQ*a[2][1];
+
+    // unweighted dipole reaction potential tensor
+
+    gux[1] = delta.x*a[1][0];
+    guy[1] = delta.y*a[1][0];
+    guz[1] = delta.z*a[1][0];
+
+    // unweighted reaction potential gradient tensor
+
+    gc[2] = delta.x*a[0][1];
+    gc[3] = delta.y*a[0][1];
+    gc[4] = delta.z*a[0][1];
+    gux[2] = a[1][0] + xr2*a[1][1];
+    gux[3] = delta.x*delta.y*a[1][1];
+    gux[4] = delta.x*delta.z*a[1][1];
+    guy[2] = gux[3];
+    guy[3] = a[1][0] + yr2*a[1][1];
+    guy[4] = delta.y*delta.z*a[1][1];
+    guz[2] = gux[4];
+    guz[3] = guy[4];
+    guz[4] = a[1][0] + zr2*a[1][1];
+    gqxx[2] = delta.x*(2*a[2][0]+xr2*a[2][1]);
+    gqxx[3] = delta.y*xr2*a[2][1];
+    gqxx[4] = delta.z*xr2*a[2][1];
+    gqyy[2] = delta.x*yr2*a[2][1];
+    gqyy[3] = delta.y*(2*a[2][0]+yr2*a[2][1]);
+    gqyy[4] = delta.z*yr2*a[2][1];
+    gqzz[2] = delta.x*zr2*a[2][1];
+    gqzz[3] = delta.y*zr2*a[2][1];
+    gqzz[4] = delta.z*(2*a[2][0]+zr2*a[2][1]);
+    gqxy[2] = delta.y*(a[2][0]+xr2*a[2][1]);
+    gqxy[3] = delta.x*(a[2][0]+yr2*a[2][1]);
+    gqxy[4] = delta.z*delta.x*delta.y*a[2][1];
+    gqxz[2] = delta.z*(a[2][0]+xr2*a[2][1]);
+    gqxz[3] = gqxy[4];
+    gqxz[4] = delta.x*(a[2][0]+zr2*a[2][1]);
+    gqyz[2] = gqxy[4];
+    gqyz[3] = delta.z*(a[2][0]+yr2*a[2][1]);
+    gqyz[4] = delta.y*(a[2][0]+zr2*a[2][1]);
+
+    // unweighted dipole second reaction potential gradient tensor
+
+    gux[5] = delta.x*(3*a[1][1]+xr2*a[1][2]);
+    gux[6] = delta.y*(a[1][1]+xr2*a[1][2]);
+    gux[7] = delta.z*(a[1][1]+xr2*a[1][2]);
+    gux[8] = delta.x*(a[1][1]+yr2*a[1][2]);
+    gux[9] = delta.z*delta.x*delta.y*a[1][2];
+    gux[10] = delta.x*(a[1][1]+zr2*a[1][2]);
+    guy[5] = delta.y*(a[1][1]+xr2*a[1][2]);
+    guy[6] = delta.x*(a[1][1]+yr2*a[1][2]);
+    guy[7] = gux[9];
+    guy[8] = delta.y*(3*a[1][1]+yr2*a[1][2]);
+    guy[9] = delta.z*(a[1][1]+yr2*a[1][2]);
+    guy[10] = delta.y*(a[1][1]+zr2*a[1][2]);
+    guz[5] = delta.z*(a[1][1]+xr2*a[1][2]);
+    guz[6] = gux[9];
+    guz[7] = delta.x*(a[1][1]+zr2*a[1][2]);
+    guz[8] = delta.z*(a[1][1]+yr2*a[1][2]);
+    guz[9] = delta.y*(a[1][1]+zr2*a[1][2]);
+    guz[10] = delta.z*(3*a[1][1]+zr2*a[1][2]);
+
+    // generalized Kirkwood permanent reaction field
+
+    fields[0].x = uxk*gux[2] + uyk*gux[3] + uzk*gux[4]
+                                   + 0.5f*(ck*gux[1] + qxxk*gux[5]
+                                   + qyyk*gux[8] + qzzk*gux[10]
+                                   + 2*(qxyk*gux[6]+qxzk*gux[7]
+                                   + qyzk*gux[9]))
+                                   + 0.5f*(ck*gc[2] + qxxk*gqxx[2]
+                                   + qyyk*gqyy[2] + qzzk*gqzz[2]
+                                   + 2*(qxyk*gqxy[2]+qxzk*gqxz[2]
+                                   + qyzk*gqyz[2]));
+
+    fields[0].y = uxk*guy[2] + uyk*guy[3] + uzk*guy[4]
+                                   + 0.5f*(ck*guy[1] + qxxk*guy[5]
+                                   + qyyk*guy[8] + qzzk*guy[10]
+                                   + 2*(qxyk*guy[6]+qxzk*guy[7]
+                                   + qyzk*guy[9]))
+                                   + 0.5f*(ck*gc[3] + qxxk*gqxx[3]
+                                   + qyyk*gqyy[3] + qzzk*gqzz[3]
+                                   + 2*(qxyk*gqxy[3]+qxzk*gqxz[3]
+                                   + qyzk*gqyz[3]));
+
+    fields[0].z = uxk*guz[2] + uyk*guz[3] + uzk*guz[4]
+                                   + 0.5f*(ck*guz[1] + qxxk*guz[5]
+                                   + qyyk*guz[8] + qzzk*guz[10]
+                                   + 2*(qxyk*guz[6]+qxzk*guz[7]
+                                   + qyzk*guz[9]))
+                                   + 0.5f*(ck*gc[4] + qxxk*gqxx[4]
+                                   + qyyk*gqyy[4] + qzzk*gqzz[4]
+                                   + 2*(qxyk*gqxy[4]+qxzk*gqxz[4]
+                                   + qyzk*gqyz[4]));
+
+    fields[1].x = uxi*gux[2] + uyi*gux[3] + uzi*gux[4]
+                                   - 0.5f*(ci*gux[1] + qxxi*gux[5]
+                                   + qyyi*gux[8] + qzzi*gux[10]
+                                   + 2*(qxyi*gux[6]+qxzi*gux[7]
+                                   + qyzi*gux[9]))
+                                   - 0.5f*(ci*gc[2] + qxxi*gqxx[2]
+                                   + qyyi*gqyy[2] + qzzi*gqzz[2]
+                                   + 2*(qxyi*gqxy[2]+qxzi*gqxz[2]
+                                   + qyzi*gqyz[2]));
+
+    fields[1].y = uxi*guy[2] + uyi*guy[3] + uzi*guy[4]
+                                   - 0.5f*(ci*guy[1] + qxxi*guy[5]
+                                   + qyyi*guy[8] + qzzi*guy[10]
+                                   + 2*(qxyi*guy[6]+qxzi*guy[7]
+                                   + qyzi*guy[9]))
+                                   - 0.5f*(ci*gc[3]      + qxxi*gqxx[3]
+                                   + qyyi*gqyy[3] + qzzi*gqzz[3]
+                                   + 2*(qxyi*gqxy[3]+qxzi*gqxz[3]
+                                   + qyzi*gqyz[3]));
+
+    fields[1].z = uxi*guz[2] + uyi*guz[3] + uzi*guz[4]
+                                   - 0.5f*(ci*guz[1] + qxxi*guz[5]
+                                   + qyyi*guz[8] + qzzi*guz[10]
+                                   + 2*(qxyi*guz[6]+qxzi*guz[7]
+                                   + qyzi*guz[9]))
+                                   - 0.5f*(ci*gc[4] + qxxi*gqxx[4]
+                                   + qyyi*gqyy[4] + qzzi*gqzz[4]
+                                   + 2*(qxyi*gqxy[4]+qxzi*gqxz[4]
+                                   + qyzi*gqyz[4]));
+}
+#endif
+
 __device__ real computeDScaleFactor(unsigned int polarizationGroup) {
     return (polarizationGroup & 1 ? 0 : 1);
 }
@@ -198,6 +401,8 @@ extern "C" __global__ void computeFixedField(
         const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
         const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const unsigned int* __restrict__ interactionFlags,
+#elif defined USE_GK
+        const real* __restrict__ bornRadii, unsigned long long* __restrict__ gkFieldBuffers,
 #endif
         const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const float2* __restrict__ dampingAndThole) {
     unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
@@ -246,6 +451,9 @@ extern "C" __global__ void computeFixedField(
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             loadAtomData(data, atom1, posq, labFrameDipole, labFrameQuadrupole, dampingAndThole);
+#ifdef USE_GK
+            data.bornRadius = bornRadii[atom1];
+#endif
             
             // Locate the exclusion data for this tile.
 
@@ -271,26 +479,32 @@ extern "C" __global__ void computeFixedField(
                 localData[localAtomIndex].quadrupoleYY = data.quadrupoleYY;
                 localData[localAtomIndex].quadrupoleYZ = data.quadrupoleYZ;
                 localData[localAtomIndex].quadrupoleZZ = data.quadrupoleZZ;
-                localData[localAtomIndex].thole = data.thole; // IS THIS CORRECT?
-                localData[localAtomIndex].damp = data.damp; // IS THIS CORRECT?
+                localData[localAtomIndex].thole = data.thole;
+                localData[localAtomIndex].damp = data.damp;
+#ifdef USE_GK
+                localData[localAtomIndex].bornRadius = data.bornRadius;
+#endif
                 uint2 covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
                 unsigned int polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    int atom2 = tbx+j;
-                    real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
+                    real3 delta = trimTo3(localData[tbx+j].posq-data.posq);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                     delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                     delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                    real3 fields[4];
-                    float d = computeDScaleFactor(polarizationGroup);
-                    float p = computePScaleFactor(covalent, polarizationGroup);
-                    computeOneInteraction(data, localData[atom2], delta, d, p, fields);
-                    atom2 = y*TILE_SIZE+j;
+                    int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real3 fields[4];
+                        float d = computeDScaleFactor(polarizationGroup);
+                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        computeOneInteraction(data, localData[tbx+j], delta, d, p, fields);
                         data.field += fields[0];
                         data.fieldPolar += fields[1];
+#ifdef USE_GK
+                        computeOneGkInteraction(data, localData[tbx+j], delta, fields);
+                        data.gkField += fields[0];
+#endif
                     }
                     covalent.x >>= 1;
                     covalent.y >>= 1;
@@ -305,6 +519,10 @@ extern "C" __global__ void computeFixedField(
                 loadAtomData(localData[localAtomIndex], j, posq, labFrameDipole, labFrameQuadrupole, dampingAndThole);
                 localData[localAtomIndex].field = make_real3(0);
                 localData[localAtomIndex].fieldPolar = make_real3(0);
+#ifdef USE_GK
+                localData[localAtomIndex].bornRadius = bornRadii[j];
+                localData[localAtomIndex].gkField = make_real3(0);
+#endif
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
                 if (!hasExclusions && flags != 0xFFFFFFFF) {
@@ -385,22 +603,27 @@ extern "C" __global__ void computeFixedField(
                     polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
                     unsigned int tj = tgx;
                     for (j = 0; j < TILE_SIZE; j++) {
-                        int atom2 = tbx+tj;
-                        real3 delta = make_real3(localData[atom2].posq.x-data.posq.x, localData[atom2].posq.y-data.posq.y, localData[atom2].posq.z-data.posq.z);
+                        real3 delta = trimTo3(localData[tbx+tj].posq-data.posq);
 #ifdef USE_PERIODIC
                         delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                         delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                        real3 fields[4];
-                        float d = computeDScaleFactor(polarizationGroup);
-                        float p = computePScaleFactor(covalent, polarizationGroup);
-                        computeOneInteraction(data, localData[atom2], delta, d, p, fields);
+                        int atom2 = y*TILE_SIZE+tj;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                            real3 fields[4];
+                            float d = computeDScaleFactor(polarizationGroup);
+                            float p = computePScaleFactor(covalent, polarizationGroup);
+                            computeOneInteraction(data, localData[tbx+tj], delta, d, p, fields);
                             data.field += fields[0];
                             data.fieldPolar += fields[1];
-                            localData[atom2].field += fields[2];
-                            localData[atom2].fieldPolar += fields[3];
+                            localData[tbx+tj].field += fields[2];
+                            localData[tbx+tj].fieldPolar += fields[3];
+#ifdef USE_GK
+                            computeOneGkInteraction(data, localData[tbx+tj], delta, fields);
+                            data.gkField += fields[0];
+                            localData[tbx+tj].gkField += fields[1];
+#endif
                         }
                         covalent.x >>= 1;
                         covalent.y >>= 1;
@@ -421,6 +644,11 @@ extern "C" __global__ void computeFixedField(
             atomicAdd(&fieldPolarBuffers[offset], static_cast<unsigned long long>((long long) (data.fieldPolar.x*0xFFFFFFFF)));
             atomicAdd(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.y*0xFFFFFFFF)));
             atomicAdd(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.z*0xFFFFFFFF)));
+#ifdef USE_GK
+            atomicAdd(&gkFieldBuffers[offset], static_cast<unsigned long long>((long long) (data.gkField.x*0xFFFFFFFF)));
+            atomicAdd(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.gkField.y*0xFFFFFFFF)));
+            atomicAdd(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.gkField.z*0xFFFFFFFF)));
+#endif
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
@@ -430,6 +658,11 @@ extern "C" __global__ void computeFixedField(
             atomicAdd(&fieldPolarBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.x*0xFFFFFFFF)));
             atomicAdd(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.y*0xFFFFFFFF)));
             atomicAdd(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.z*0xFFFFFFFF)));
+#ifdef USE_GK
+            atomicAdd(&gkFieldBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].gkField.x*0xFFFFFFFF)));
+            atomicAdd(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].gkField.y*0xFFFFFFFF)));
+            atomicAdd(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].gkField.z*0xFFFFFFFF)));
+#endif
         }
         pos++;
     } while (pos < end);

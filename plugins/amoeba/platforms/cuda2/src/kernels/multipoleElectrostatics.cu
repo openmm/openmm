@@ -135,8 +135,8 @@ extern "C" __global__ void computeElectrostatics(
                 localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
                 localData[threadIdx.x].inducedDipole = data.inducedDipole;
                 localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
-                localData[threadIdx.x].thole = data.thole; // IS THIS CORRECT?
-                localData[threadIdx.x].damp = data.damp; // IS THIS CORRECT?
+                localData[threadIdx.x].thole = data.thole;
+                localData[threadIdx.x].damp = data.damp;
                 uint2 covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
                 unsigned int polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
                 
@@ -260,6 +260,8 @@ extern "C" __global__ void computeElectrostatics(
                         
                         // Compute torques.
 
+                        data.force = make_real3(0);
+                        localData[threadIdx.x].force = make_real3(0);
                         for (j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
                                 int atom2 = tbx+j;
@@ -362,6 +364,8 @@ extern "C" __global__ void computeElectrostatics(
                     
                     // Compute torques.
                     
+                    data.force = make_real3(0);
+                    localData[threadIdx.x].force = make_real3(0);
                     covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
                     polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
                     covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));

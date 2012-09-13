@@ -27,6 +27,7 @@
 #include "AmoebaCudaKernels.h"
 #include "CudaAmoebaKernelSources.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
 #include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
@@ -794,7 +795,7 @@ CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::stri
         field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL),
         inducedDipole(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), polarizability(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
         pmeGrid(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeTheta1(NULL), pmeTheta2(NULL), pmeTheta3(NULL),
-        pmeIgrid(NULL), pmePhi(NULL), pmePhid(NULL), pmePhip(NULL), pmePhidp(NULL), pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
+        pmeIgrid(NULL), pmePhi(NULL), pmePhid(NULL), pmePhip(NULL), pmePhidp(NULL), pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), gkKernel(NULL) {
 }
 
 CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
@@ -999,6 +1000,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         maxInducedIterations = 0;
     bool usePME = (force.getNonbondedMethod() == AmoebaMultipoleForce::PME);
     
+    // See whether there's an AmoebaGeneralizedKirkwoodForce in the System.
+
+    const AmoebaGeneralizedKirkwoodForce* gk = NULL;
+    for (int i = 0; i < system.getNumForces() && gk == NULL; i++)
+        gk = dynamic_cast<const AmoebaGeneralizedKirkwoodForce*>(&system.getForce(i));
+    double innerDielectric = (gk == NULL ? 1.0 : gk->getSoluteDielectric());
+    
     // Create the kernels.
 
     map<string, string> defines;
@@ -1006,7 +1014,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456); // DIVIDE BY INNER DIELECTRIC!!!
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/innerDielectric);
     if (force.getPolarizationType() == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
     double alpha = force.getAEwald();
@@ -1033,6 +1041,14 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         defines["USE_CUTOFF"] = "";
         defines["USE_PERIODIC"] = "";
         defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+    }
+    if (gk != NULL) {
+        defines["USE_GK"] = "";
+        defines["GK_C"] = cu.doubleToString(2.455);
+        double solventDielectric = gk->getSolventDielectric();
+        defines["GK_FC"] = cu.doubleToString(1*(1-solventDielectric)/(0+1*solventDielectric));
+        defines["GK_FD"] = cu.doubleToString(2*(1-solventDielectric)/(1+2*solventDielectric));
+        defines["GK_FQ"] = cu.doubleToString(3*(1-solventDielectric)/(2+3*solventDielectric));
     }
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipoles, defines);
     computeMomentsKernel = cu.getKernel(module, "computeLabFrameMoments");
@@ -1284,8 +1300,14 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
 }
 
 double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (!hasInitializedScaleFactors)
+    if (!hasInitializedScaleFactors) {
         initializeScaleFactors();
+        for (int i = 0; i < (int) context.getForceImpls().size() && gkKernel == NULL; i++) {
+            AmoebaGeneralizedKirkwoodForceImpl* gkImpl = dynamic_cast<AmoebaGeneralizedKirkwoodForceImpl*>(context.getForceImpls()[i]);
+            if (gkImpl != NULL)
+                gkKernel = dynamic_cast<CudaCalcAmoebaGeneralizedKirkwoodForceKernel*>(&gkImpl->getKernel().getImpl());
+        }
+    }
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     
     // Compute the lab frame moments.
@@ -1302,14 +1324,41 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
     if (pmeGrid == NULL) {
         // Compute induced dipoles.
         
-        void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-            &nb.getExclusionIndices().getDevicePointer(), &nb.getExclusionRowIndices().getDevicePointer(),
-            &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &startTileIndex, &numTileIndices,
-            &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
-        cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-        void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
-            &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
-        cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
+        if (gkKernel == NULL) {
+            void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
+                &nb.getExclusionIndices().getDevicePointer(), &nb.getExclusionRowIndices().getDevicePointer(),
+                &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &startTileIndex, &numTileIndices,
+                &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+            void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
+                &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
+            cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
+        }
+        else {
+            gkKernel->computeBornRadii();
+            void* computeFixedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
+                &nb.getExclusionIndices().getDevicePointer(), &nb.getExclusionRowIndices().getDevicePointer(),
+                &covalentFlags->getDevicePointer(), &polarizationGroupFlags->getDevicePointer(), &startTileIndex, &numTileIndices,
+                &gkKernel->getBornRadii()->getDevicePointer(), &gkKernel->getField()->getDevicePointer(),
+                &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
+            cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+            vector<long long> f;
+            gkKernel->getField()->download(f);
+            printf("field\n");
+            for (int i = 0; i < 3*cu.getNumAtoms(); i++)
+                printf("%d %g\n", i, f[i]/(double) 0xFFFFFFFF);
+            void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
+                &gkKernel->getField()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(),
+                &gkKernel->getInducedDipolesPolar()->getDevicePointer(), &inducedDipole->getDevicePointer(),
+                &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
+            cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
+            vector<float> d, dp;
+            gkKernel->getInducedDipoles()->download(d);
+            gkKernel->getInducedDipolesPolar()->download(dp);
+            printf("dipoles\n");
+            for (int i = 0; i < cu.getNumAtoms(); i++)
+                printf("%d %g %g %g, %g %g %g\n", i, d[3*i], d[3*i+1], d[3*i+2], dp[3*i], dp[3*i+1], dp[3*i+2]);
+        }
         
         // Iterate until the dipoles converge.
         
@@ -1343,6 +1392,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &inducedDipole->getDevicePointer(),
             &inducedDipolePolar->getDevicePointer(), &dampingAndThole->getDevicePointer()};
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        if (gkKernel != NULL)
+            gkKernel->finishComputation(*torque, *labFrameDipoles, *labFrameQuadrupoles, *inducedDipole, *inducedDipolePolar, *dampingAndThole, *covalentFlags, *polarizationGroupFlags);
         
         // Map torques to force.
         
@@ -1645,85 +1696,180 @@ void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& 
         computeSystemMultipoleMoments<float, float4>(context, origin, outputMultipoleMoments);
 }
 
-///* -------------------------------------------------------------------------- *
-// *                       AmoebaGeneralizedKirkwood                            *
-// * -------------------------------------------------------------------------- */
-//
-//class CudaCalcAmoebaGeneralizedKirkwoodForceKernel::ForceInfo : public CudaForceInfo {
-//public:
-//    ForceInfo(const AmoebaGeneralizedKirkwoodForce& force) : force(force) {
-//    }
-//    bool areParticlesIdentical(int particle1, int particle2) {
-//        double charge1, charge2, radius1, radius2, scale1, scale2;
-//        force.getParticleParameters(particle1, charge1, radius1, scale1);
-//        force.getParticleParameters(particle2, charge2, radius2, scale2);
-//        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
-//    }
-//private:
-//    const AmoebaGeneralizedKirkwoodForce& force;
-//};
-//
-//CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
-//           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//CudaCalcAmoebaGeneralizedKirkwoodForceKernel::~CudaCalcAmoebaGeneralizedKirkwoodForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
-//
-//    data.setHasAmoebaGeneralizedKirkwood( true );
-//
-//    int numParticles = system.getNumParticles();
-//
-//    std::vector<float> radius(numParticles);
-//    std::vector<float> scale(numParticles);
-//    std::vector<float> charge(numParticles);
-//
-//    for( int ii = 0; ii < numParticles; ii++ ){
-//        double particleCharge, particleRadius, scalingFactor;
-//        force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor);
-//        radius[ii]  = static_cast<float>( particleRadius );
-//        scale[ii]   = static_cast<float>( scalingFactor );
-//        charge[ii]  = static_cast<float>( particleCharge );
-//    }   
-//    if( data.getUseGrycuk() ){
-//
-//        gpuSetAmoebaGrycukParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
-//                                      static_cast<float>( force.getSolventDielectric() ), 
-//                                      radius, scale, charge,
-//                                      force.getIncludeCavityTerm(),
-//                                      static_cast<float>( force.getProbeRadius() ), 
-//                                      static_cast<float>( force.getSurfaceAreaFactor() ) ); 
-//        
-//    } else {
-//
-//        gpuSetAmoebaObcParameters( data.getAmoebaGpu(), static_cast<float>(force.getSoluteDielectric() ), 
-//                                   static_cast<float>( force.getSolventDielectric() ), 
-//                                   radius, scale, charge,
-//                                   force.getIncludeCavityTerm(),
-//                                   static_cast<float>( force.getProbeRadius() ), 
-//                                   static_cast<float>( force.getSurfaceAreaFactor() ) ); 
-//
-//    }
-//    data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
-//}
-//
-//double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    // handled in computeAmoebaMultipoleForce()
-//    return 0.0;
-//}
-//
-//static void computeAmoebaVdwForce( CudaContext& cu ) {
-//
-//    amoebaGpuContext gpu = data.getAmoebaGpu();
-//    data.initializeGpu();
-//
-//    // Vdw14_7F
-//    kCalculateAmoebaVdw14_7Forces(gpu, data.getUseVdwNeighborList());
-//}
+/* -------------------------------------------------------------------------- *
+ *                       AmoebaGeneralizedKirkwood                            *
+ * -------------------------------------------------------------------------- */
+
+class CudaCalcAmoebaGeneralizedKirkwoodForceKernel::ForceInfo : public CudaForceInfo {
+public:
+    ForceInfo(const AmoebaGeneralizedKirkwoodForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+    }
+private:
+    const AmoebaGeneralizedKirkwoodForce& force;
+};
+
+CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), params(NULL), bornRadii(NULL), field(NULL), inducedDipoleS(NULL),
+           inducedDipolePolarS(NULL), bornSum(NULL), bornForce(NULL) {
+}
+
+CudaCalcAmoebaGeneralizedKirkwoodForceKernel::~CudaCalcAmoebaGeneralizedKirkwoodForceKernel() {
+    cu.setAsCurrent();
+    if (params != NULL)
+        delete params;
+    if (bornRadii != NULL)
+        delete bornRadii;
+    if (field != NULL)
+        delete field;
+    if (inducedDipoleS != NULL)
+        delete inducedDipoleS;
+    if (inducedDipolePolarS != NULL)
+        delete inducedDipolePolarS;
+    if (bornSum != NULL)
+        delete bornSum;
+    if (bornForce != NULL)
+        delete bornForce;
+}
+
+void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
+    cu.setAsCurrent();
+    if (cu.getPlatformData().contexts.size() > 1)
+        throw OpenMMException("AmoebaGeneralizedKirkwoodForce does not support using multiple CUDA devices");
+    const AmoebaMultipoleForce* multipoles = NULL;
+    for (int i = 0; i < system.getNumForces() && multipoles == NULL; i++)
+        multipoles = dynamic_cast<const AmoebaMultipoleForce*>(&system.getForce(i));
+    if (multipoles == NULL)
+        throw OpenMMException("AmoebaGeneralizedKirkwoodForce requires the System to also contain an AmoebaMultipoleForce");
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    params = CudaArray::create<float2>(cu, paddedNumAtoms, "amoebaGkParams");
+    bornRadii = new CudaArray(cu, paddedNumAtoms, elementSize, "bornRadii");
+    field = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkField");
+    bornSum = CudaArray::create<long long>(cu, paddedNumAtoms, "bornSum");
+    bornForce = CudaArray::create<long long>(cu, paddedNumAtoms, "bornForce");
+    inducedDipoleS = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipoleS");
+    inducedDipolePolarS = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipolePolarS");
+    cu.addAutoclearBuffer(*field);
+    cu.addAutoclearBuffer(*bornSum);
+    cu.addAutoclearBuffer(*bornForce);
+    vector<float2> paramsVector(paddedNumAtoms);
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
+        
+        // Make sure the charge matches the one specified by the AmoebaMultipoleForce.
+        
+        double charge2, thole, damping, polarity;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        multipoles->getMultipoleParameters(i, charge2, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        if (charge != charge2)
+            throw OpenMMException("AmoebaGeneralizedKirkwoodForce and AmoebaMultipoleForce must specify the same charge for every atom");
+    }
+    params->upload(paramsVector);
+    
+    // Create the kernels.
+    
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(paddedNumAtoms);
+    defines["THREAD_BLOCK_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
+    defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+    defines["GK_C"] = cu.doubleToString(2.455);
+    double solventDielectric = force.getSolventDielectric();
+    defines["GK_FC"] = cu.doubleToString(1*(1-solventDielectric)/(0+1*solventDielectric));
+    defines["GK_FD"] = cu.doubleToString(2*(1-solventDielectric)/(1+2*solventDielectric));
+    defines["GK_FQ"] = cu.doubleToString(3*(1-solventDielectric)/(2+3*solventDielectric));
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/solventDielectric);
+    stringstream forceSource;
+    forceSource << CudaKernelSources::vectorOps;
+    forceSource << CudaAmoebaKernelSources::amoebaGk;
+    forceSource << "#define F1\n";
+    forceSource << CudaAmoebaKernelSources::gkPairForce;
+    forceSource << CudaAmoebaKernelSources::gkEDiffPairForce;
+    forceSource << "#undef F1\n";
+    forceSource << "#define F2\n";
+    forceSource << CudaAmoebaKernelSources::gkPairForce;
+    forceSource << "#undef F2\n";
+    forceSource << "#define T1\n";
+    forceSource << CudaAmoebaKernelSources::gkPairForce;
+    forceSource << CudaAmoebaKernelSources::gkEDiffPairForce;
+    forceSource << "#undef T1\n";
+    forceSource << "#define T2\n";
+    forceSource << CudaAmoebaKernelSources::gkPairForce;
+    forceSource << "#undef T2\n";
+    forceSource << "#define T3\n";
+    forceSource << CudaAmoebaKernelSources::gkEDiffPairForce;
+    forceSource << "#undef T3\n";
+    forceSource << "#define B1\n";
+    forceSource << "#define B2\n";
+    forceSource << CudaAmoebaKernelSources::gkPairForce;
+    CUmodule module = cu.createModule(forceSource.str(), defines);
+    computeBornSumKernel = cu.getKernel(module, "computeBornSum");
+    reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
+    gkForceKernel = cu.getKernel(module, "computeGKForces");
+    chainRuleKernel = cu.getKernel(module, "computeChainRuleForce");
+    ediffKernel = cu.getKernel(module, "computeEDiffForce");
+    cu.addForce(new ForceInfo(force));
+}
+
+double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    // Since GK is so tightly entwined with the electrostatics, this method does nothing, and the force calculation
+    // is driven by AmoebaMultipoleForce.
+    return 0.0;
+}
+
+void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    int numTiles = nb.getNumTiles();
+    int numForceThreadBlocks = nb.getNumForceThreadBlocks();
+    int forceThreadBlockSize = nb.getForceThreadBlockSize();
+    void* computeBornSumArgs[] = {&bornSum->getDevicePointer(), &cu.getPosq().getDevicePointer(),
+        &params->getDevicePointer(), &numTiles};
+    cu.executeKernel(computeBornSumKernel, computeBornSumArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    void* reduceBornSumArgs[] = {&bornSum->getDevicePointer(), &params->getDevicePointer(), &bornRadii->getDevicePointer()};
+    cu.executeKernel(reduceBornSumKernel, reduceBornSumArgs, cu.getNumAtoms());
+    vector<float> r;
+    bornRadii->download(r);
+    printf("radii\n");
+    for (int i = 0; i < cu.getNumAtoms(); i++)
+        printf("%d %g\n", i, r[i]);
+}
+
+void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& torque, CudaArray& labFrameDipoles, CudaArray& labFrameQuadrupoles,
+            CudaArray& inducedDipole, CudaArray& inducedDipolePolar, CudaArray& dampingAndThole, CudaArray& covalentFlags, CudaArray& polarizationGroupFlags) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
+    int startTileIndex = nb.getStartTileIndex();
+    int numTileIndices = nb.getNumTiles();
+    int numForceThreadBlocks = nb.getNumForceThreadBlocks();
+    int forceThreadBlockSize = nb.getForceThreadBlockSize();
+    void* gkForceArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &labFrameDipoles.getDevicePointer(),
+        &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+        &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
+    cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+
+    // Compute cavity term...
+    
+    void* chainRuleArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices,
+        &params->getDevicePointer(), &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
+    cu.executeKernel(chainRuleKernel, chainRuleArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);    
+    void* ediffArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &nb.getExclusionIndices().getDevicePointer(), &nb.getExclusionRowIndices().getDevicePointer(),
+        &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(), &startTileIndex, &numTileIndices,
+        &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(),
+        &inducedDipolePolar.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
+        &dampingAndThole.getDevicePointer()};
+    cu.executeKernel(ediffKernel, ediffArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+}
 
 /* -------------------------------------------------------------------------- *
  *                           AmoebaVdw                                        *

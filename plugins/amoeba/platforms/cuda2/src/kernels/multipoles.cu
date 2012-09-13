@@ -207,6 +207,9 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
 }
 
 extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fieldBuffers, const long long* __restrict__ fieldPolarBuffers,
+#ifdef USE_GK
+        const long long* __restrict__ gkFieldBuffers, real* __restrict__ inducedDipoleS, real* __restrict__ inducedDipolePolarS, 
+#endif
         real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability) {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
         real scale = polarizability[atom]/(real) 0xFFFFFFFF;
@@ -216,14 +219,15 @@ extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fi
         inducedDipolePolar[3*atom] = scale*fieldPolarBuffers[atom];
         inducedDipolePolar[3*atom+1] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS];
         inducedDipolePolar[3*atom+2] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2];
+#ifdef USE_GK
+        inducedDipoleS[3*atom] = scale*(fieldBuffers[atom]+gkFieldBuffers[atom]);
+        inducedDipoleS[3*atom+1] = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
+        inducedDipoleS[3*atom+2] = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
+        inducedDipolePolarS[3*atom] = scale*(fieldPolarBuffers[atom]+gkFieldBuffers[atom]);
+        inducedDipolePolarS[3*atom+1] = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
+        inducedDipolePolarS[3*atom+2] = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
+#endif
     }
-}
-
-/**
- * Convert a real4 to a real3 by removing its last element.
- */
-inline __device__ real3 trim(real4 v) {
-    return make_real3(v.x, v.y, v.z);
 }
 
 /**
@@ -274,11 +278,11 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
         // NoAxisType
     
         if (axisType < 5 && particles.z >= 0) {
-            real3 atomPos = trim(posq[atom]);
-            vector[U] = atomPos - trim(posq[axisAtom]);
+            real3 atomPos = trimTo3(posq[atom]);
+            vector[U] = atomPos - trimTo3(posq[axisAtom]);
             norms[U] = normVector(vector[U]);
             if (axisType != 4 && particles.x >= 0)
-                vector[V] = atomPos - trim(posq[particles.x]);
+                vector[V] = atomPos - trimTo3(posq[particles.x]);
             else
                 vector[V] = make_real3(0.1f);
             norms[V] = normVector(vector[V]);
@@ -288,7 +292,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
             if (axisType < 2 || axisType > 3)
                 vector[W] = cross(vector[U], vector[V]);
             else
-                vector[W] = atomPos - trim(posq[particles.y]);
+                vector[W] = atomPos - trimTo3(posq[particles.y]);
             norms[W] = normVector(vector[W]);
         
             vector[UV] = cross(vector[V], vector[U]);
