@@ -1342,22 +1342,11 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
                 &gkKernel->getBornRadii()->getDevicePointer(), &gkKernel->getField()->getDevicePointer(),
                 &labFrameDipoles->getDevicePointer(), &labFrameQuadrupoles->getDevicePointer(), &dampingAndThole->getDevicePointer()};
             cu.executeKernel(computeFixedFieldKernel, computeFixedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-            vector<long long> f;
-            gkKernel->getField()->download(f);
-            printf("field\n");
-            for (int i = 0; i < 3*cu.getNumAtoms(); i++)
-                printf("%d %g\n", i, f[i]/(double) 0xFFFFFFFF);
             void* recordInducedDipolesArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
                 &gkKernel->getField()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(),
                 &gkKernel->getInducedDipolesPolar()->getDevicePointer(), &inducedDipole->getDevicePointer(),
                 &inducedDipolePolar->getDevicePointer(), &polarizability->getDevicePointer()};
             cu.executeKernel(recordInducedDipolesKernel, recordInducedDipolesArgs, cu.getNumAtoms());
-            vector<float> d, dp;
-            gkKernel->getInducedDipoles()->download(d);
-            gkKernel->getInducedDipolesPolar()->download(dp);
-            printf("dipoles\n");
-            for (int i = 0; i < cu.getNumAtoms(); i++)
-                printf("%d %g %g %g, %g %g %g\n", i, d[3*i], d[3*i+1], d[3*i+2], dp[3*i], dp[3*i+1], dp[3*i+2]);
         }
         
         // Iterate until the dipoles converge.
@@ -1837,11 +1826,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
     cu.executeKernel(computeBornSumKernel, computeBornSumArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     void* reduceBornSumArgs[] = {&bornSum->getDevicePointer(), &params->getDevicePointer(), &bornRadii->getDevicePointer()};
     cu.executeKernel(reduceBornSumKernel, reduceBornSumArgs, cu.getNumAtoms());
-    vector<float> r;
-    bornRadii->download(r);
-    printf("radii\n");
-    for (int i = 0; i < cu.getNumAtoms(); i++)
-        printf("%d %g\n", i, r[i]);
 }
 
 void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& torque, CudaArray& labFrameDipoles, CudaArray& labFrameQuadrupoles,
@@ -1856,6 +1840,11 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
         &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
         &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
     cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    printf("bornForce\n");
+    vector<long long> f;
+    bornForce->download(f);
+    for (int i = 0; i < cu.getNumAtoms(); i++)
+        printf("%d %g\n", i, f[i]/(double) 0xFFFFFFFF);
 
     // Compute cavity term...
     

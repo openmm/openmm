@@ -432,6 +432,9 @@ extern "C" __global__ void computeFixedField(
         AtomData data;
         data.field = make_real3(0);
         data.fieldPolar = make_real3(0);
+#ifdef USE_GK
+        data.gkField = make_real3(0);
+#endif
         if (pos < end) {
 #ifdef USE_CUTOFF
             if (numTiles <= maxTiles) {
@@ -501,11 +504,14 @@ extern "C" __global__ void computeFixedField(
                         computeOneInteraction(data, localData[tbx+j], delta, d, p, fields);
                         data.field += fields[0];
                         data.fieldPolar += fields[1];
+                    }
 #ifdef USE_GK
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real3 fields[2];
                         computeOneGkInteraction(data, localData[tbx+j], delta, fields);
                         data.gkField += fields[0];
-#endif
                     }
+#endif
                     covalent.x >>= 1;
                     covalent.y >>= 1;
                     polarizationGroup >>= 1;

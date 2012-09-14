@@ -275,12 +275,12 @@ extern "C" __global__ void computeGKForces(
                 atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
                 atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
                 
-                // Chain rule terms?
+                // Compute chain rule terms.
                 
                 zeroAtomData(data);
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
-                    if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
                         computeOneInteractionB1B2(data, localData[tbx+j]);
                 }
                 atomicAdd(&bornForce[atom1], static_cast<unsigned long long>((long long) (data.bornForce*0xFFFFFFFF)));
@@ -346,7 +346,7 @@ extern "C" __global__ void computeGKForces(
                     atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
                 }
 
-                // Chain rule terms?
+                // Compute chain rule terms.
 
                 zeroAtomData(data);
                 zeroAtomData(localData[threadIdx.x]);
