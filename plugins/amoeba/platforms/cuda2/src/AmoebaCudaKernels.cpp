@@ -1777,7 +1777,10 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     defines["GK_FC"] = cu.doubleToString(1*(1-solventDielectric)/(0+1*solventDielectric));
     defines["GK_FD"] = cu.doubleToString(2*(1-solventDielectric)/(1+2*solventDielectric));
     defines["GK_FQ"] = cu.doubleToString(3*(1-solventDielectric)/(2+3*solventDielectric));
+    defines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
     defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/solventDielectric);
+    if (multipoles->getPolarizationType() == AmoebaMultipoleForce::Direct)
+        defines["DIRECT_POLARIZATION"] = "";
     stringstream forceSource;
     forceSource << CudaKernelSources::vectorOps;
     forceSource << CudaAmoebaKernelSources::amoebaGk;
@@ -1837,7 +1840,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     int forceThreadBlockSize = nb.getForceThreadBlockSize();
     void* gkForceArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
         &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &labFrameDipoles.getDevicePointer(),
-        &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(), &inducedDipolePolar.getDevicePointer(),
+        &labFrameQuadrupoles.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
         &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
     cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     printf("bornForce\n");

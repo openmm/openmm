@@ -14,6 +14,10 @@ __device__ void computeOneInteractionT2(AtomData2& atom1, volatile AtomData2& at
 __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& atom2) {
 #endif
 
+    const real fc = EPSILON_FACTOR*GK_FC;
+    const real fd = EPSILON_FACTOR*GK_FD;
+    const real fq = EPSILON_FACTOR*GK_FQ;
+
 #if defined F2 || defined B2
     real sxi = atom1.inducedDipole.x + atom1.inducedDipolePolar.x;
     real syi = atom1.inducedDipole.y + atom1.inducedDipolePolar.y;
@@ -116,32 +120,32 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 
     // multiply the auxillary terms by their dieletric functions;
 
-    a00 *= GK_FC;
-    a01 *= GK_FC;
-    a02 *= GK_FC;
-    a03 *= GK_FC;
+    a00 *= fc;
+    a01 *= fc;
+    a02 *= fc;
+    a03 *= fc;
 
-    b00 *= GK_FC;
-    b01 *= GK_FC;
-    b02 *= GK_FC;
+    b00 *= fc;
+    b01 *= fc;
+    b02 *= fc;
 
-    a10 *= GK_FD;
-    a11 *= GK_FD;
-    a12 *= GK_FD;
-    a13 *= GK_FD;
+    a10 *= fd;
+    a11 *= fd;
+    a12 *= fd;
+    a13 *= fd;
 
-    b10 *= GK_FD;
-    b11 *= GK_FD;
-    b12 *= GK_FD;
+    b10 *= fd;
+    b11 *= fd;
+    b12 *= fd;
 
-    a20 *= GK_FQ;
-    a21 *= GK_FQ;
-    a22 *= GK_FQ;
-    a23 *= GK_FQ;
+    a20 *= fq;
+    a21 *= fq;
+    a22 *= fq;
+    a23 *= fq;
 
-    b20 *= GK_FQ;
-    b21 *= GK_FQ;
-    b22 *= GK_FQ;
+    b20 *= fq;
+    b21 *= fq;
+    b22 *= fq;
 
     // unweighted reaction potential tensor
 
@@ -162,7 +166,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 
 #if defined B1
     real dsumdrB1 = 2*(atom1.q*atom2.q*b00);
-    dsumdrB1 = b10*atom2.q*(atom1.dipole.x*xr + atom1.dipole.y*yr + atom1.dipole.z*zr);
+    dsumdrB1 -= b10*atom2.q*(atom1.dipole.x*xr + atom1.dipole.y*yr + atom1.dipole.z*zr);
     dsumdrB1 += b10*atom1.q*(atom2.dipole.x*xr + atom2.dipole.y*yr + atom2.dipole.z*zr);
 #endif
 #if defined B2
@@ -184,7 +188,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 
 #if defined F1
     energy += a01*atom1.q*(atom2.dipole.x*xr + atom2.dipole.y*yr + atom2.dipole.z*zr);
-    energy = a01*atom2.q*(atom1.dipole.x*xr + atom1.dipole.y*yr + atom1.dipole.z*zr);
+    energy -= a01*atom2.q*(atom1.dipole.x*xr + atom1.dipole.y*yr + atom1.dipole.z*zr);
     real factor = a01*2*atom1.q*atom2.q;
     real dedx = factor*xr;
     real dedy = factor*yr;
@@ -192,7 +196,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 #endif
 #if defined F2 
     energy += a01*atom1.q*(atom2.inducedDipole.x*xr + atom2.inducedDipole.y*yr + atom2.inducedDipole.z*zr);
-    energy = a01*atom2.q*(atom1.inducedDipole.x*xr + atom1.inducedDipole.y*yr + atom1.inducedDipole.z*zr);
+    energy -= a01*atom2.q*(atom1.inducedDipole.x*xr + atom1.inducedDipole.y*yr + atom1.inducedDipole.z*zr);
 #endif
 
 #if defined F1 || defined F2 || defined T1 || defined T2
@@ -219,21 +223,21 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 #endif
 
 #if defined F1
-    energy = 2*(atom1.dipole.x*(atom2.dipole.x*gux2 + atom2.dipole.y*gux3 + atom2.dipole.z*gux4) +
+    energy -= 2*(atom1.dipole.x*(atom2.dipole.x*gux2 + atom2.dipole.y*gux3 + atom2.dipole.z*gux4) +
                              atom1.dipole.y*(atom2.dipole.x*gux3 + atom2.dipole.y*guy3 + atom2.dipole.z*guy4) +
                              atom1.dipole.z*(atom2.dipole.x*gux4 + atom2.dipole.y*guy4 + atom2.dipole.z*guz4));
 
-    dedx = atom2.q*(atom1.dipole.x*gux2 + atom1.dipole.y*gux3 + atom1.dipole.z*gux4);
+    dedx -= atom2.q*(atom1.dipole.x*gux2 + atom1.dipole.y*gux3 + atom1.dipole.z*gux4);
     dedx += atom1.q*(atom2.dipole.x*gux2 + atom2.dipole.y*gux3 + atom2.dipole.z*gux4);
 
-    dedy = atom2.q*(atom1.dipole.x*gux3 + atom1.dipole.y*guy3 + atom1.dipole.z*guy4);
+    dedy -= atom2.q*(atom1.dipole.x*gux3 + atom1.dipole.y*guy3 + atom1.dipole.z*guy4);
     dedy += atom1.q*(atom2.dipole.x*gux3 + atom2.dipole.y*guy3 + atom2.dipole.z*guy4);
 
-    dedz = atom2.q*(atom1.dipole.x*gux4 + atom1.dipole.y*guy4 + atom1.dipole.z*guz4);
+    dedz -= atom2.q*(atom1.dipole.x*gux4 + atom1.dipole.y*guy4 + atom1.dipole.z*guz4);
     dedz += atom1.q*(atom2.dipole.x*gux4 + atom2.dipole.y*guy4 + atom2.dipole.z*guz4);
 #endif
 #if defined F2
-    energy = 2*(
+    energy -= 2*(
                        atom1.dipole.x*(atom2.inducedDipole.x*gux2 + atom2.inducedDipole.y*gux3 + atom2.inducedDipole.z*gux4) + 
                        atom1.dipole.y*(atom2.inducedDipole.x*gux3 + atom2.inducedDipole.y*guy3 + atom2.inducedDipole.z*guy4) + 
                        atom1.dipole.z*(atom2.inducedDipole.x*gux4 + atom2.inducedDipole.y*guy4 + atom2.inducedDipole.z*guz4) + 
@@ -242,13 +246,13 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                        atom2.dipole.z*(atom1.inducedDipole.x*gux4 + atom1.inducedDipole.y*guy4 + atom1.inducedDipole.z*guz4));
 
     real dpdx = atom1.q*(sxk*gux2 + syk*gux3 + szk*gux4);
-    dpdx = atom2.q*(sxi*gux2 + syi*gux3 + szi*gux4);
+    dpdx -= atom2.q*(sxi*gux2 + syi*gux3 + szi*gux4);
 
     real dpdy = atom1.q*(sxk*gux3 + syk*guy3 + szk*guy4);
-    dpdy = atom2.q*(sxi*gux3 + syi*guy3 + szi*guy4);
+    dpdy -= atom2.q*(sxi*gux3 + syi*guy3 + szi*guy4);
 
     real dpdz = atom1.q*(sxk*gux4 + syk*guy4 + szk*guz4);
-    dpdz = atom2.q*(sxi*gux4 + syi*guy4 + szi*guz4);
+    dpdz -= atom2.q*(sxi*gux4 + syi*guy4 + szi*guz4);
 
 #endif
     real gqxx2 = xr*(2*a20 + xr*xr*a21);
@@ -276,7 +280,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     energy += atom2.dipole.x*(atom1.quadrupoleXX*gqxx2 + atom1.quadrupoleYY*gqyy2 + atom1.quadrupoleZZ*gqzz2 + 2*(atom1.quadrupoleXY*gqxy2 + atom1.quadrupoleXZ*gqxz2 + atom1.quadrupoleYZ*gqxy4)) +
                        atom2.dipole.y*(atom1.quadrupoleXX*gqxx3 + atom1.quadrupoleYY*gqyy3 + atom1.quadrupoleZZ*gqzz3 + 2*(atom1.quadrupoleXY*gqxy3 + atom1.quadrupoleXZ*gqxy4 + atom1.quadrupoleYZ*gqyz3)) +
                        atom2.dipole.z*(atom1.quadrupoleXX*gqxx4 + atom1.quadrupoleYY*gqyy4 + atom1.quadrupoleZZ*gqzz4 + 2*(atom1.quadrupoleXY*gqxy4 + atom1.quadrupoleXZ*gqxz4 + atom1.quadrupoleYZ*gqyz4));
-    energy = atom1.dipole.x*(atom2.quadrupoleXX*gqxx2 + atom2.quadrupoleYY*gqyy2 + atom2.quadrupoleZZ*gqzz2 + 2*(atom2.quadrupoleXY*gqxy2 + atom2.quadrupoleXZ*gqxz2 + atom2.quadrupoleYZ*gqxy4)) +
+    energy -= atom1.dipole.x*(atom2.quadrupoleXX*gqxx2 + atom2.quadrupoleYY*gqyy2 + atom2.quadrupoleZZ*gqzz2 + 2*(atom2.quadrupoleXY*gqxy2 + atom2.quadrupoleXZ*gqxz2 + atom2.quadrupoleYZ*gqxy4)) +
                        atom1.dipole.y*(atom2.quadrupoleXX*gqxx3 + atom2.quadrupoleYY*gqyy3 + atom2.quadrupoleZZ*gqzz3 + 2*(atom2.quadrupoleXY*gqxy3 + atom2.quadrupoleXZ*gqxy4 + atom2.quadrupoleYZ*gqyz3)) +
                        atom1.dipole.z*(atom2.quadrupoleXX*gqxx4 + atom2.quadrupoleYY*gqyy4 + atom2.quadrupoleZZ*gqzz4 + 2*(atom2.quadrupoleXY*gqxy4 + atom2.quadrupoleXZ*gqxz4 + atom2.quadrupoleYZ*gqyz4));
 
@@ -295,7 +299,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
               atom2.inducedDipole.y*(atom1.quadrupoleXX*gqxx3 + atom1.quadrupoleYY*gqyy3 + atom1.quadrupoleZZ*gqzz3 + 2*(atom1.quadrupoleXY*gqxy3 + atom1.quadrupoleXZ*gqxy4 + atom1.quadrupoleYZ*gqyz3)) +
               atom2.inducedDipole.z*(atom1.quadrupoleXX*gqxx4 + atom1.quadrupoleYY*gqyy4 + atom1.quadrupoleZZ*gqzz4 + 2*(atom1.quadrupoleXY*gqxy4 + atom1.quadrupoleXZ*gqxz4 + atom1.quadrupoleYZ*gqyz4));
 
-    energy = atom1.inducedDipole.x*(atom2.quadrupoleXX*gqxx2 + atom2.quadrupoleYY*gqyy2 + atom2.quadrupoleZZ*gqzz2 + 2*(atom2.quadrupoleXY*gqxy2 + atom2.quadrupoleXZ*gqxz2 + atom2.quadrupoleYZ*gqxy4)) +
+    energy -= atom1.inducedDipole.x*(atom2.quadrupoleXX*gqxx2 + atom2.quadrupoleYY*gqyy2 + atom2.quadrupoleZZ*gqzz2 + 2*(atom2.quadrupoleXY*gqxy2 + atom2.quadrupoleXZ*gqxz2 + atom2.quadrupoleYZ*gqxy4)) +
               atom1.inducedDipole.y*(atom2.quadrupoleXX*gqxx3 + atom2.quadrupoleYY*gqyy3 + atom2.quadrupoleZZ*gqzz3 + 2*(atom2.quadrupoleXY*gqxy3 + atom2.quadrupoleXZ*gqxy4 + atom2.quadrupoleYZ*gqyz3)) +
               atom1.inducedDipole.z*(atom2.quadrupoleXX*gqxx4 + atom2.quadrupoleYY*gqyy4 + atom2.quadrupoleZZ*gqzz4 + 2*(atom2.quadrupoleXY*gqxy4 + atom2.quadrupoleXZ*gqxz4 + atom2.quadrupoleYZ*gqyz4));
 
@@ -306,11 +310,11 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 
 #if defined B1
     dsumdrB1 += b01*atom1.q*(atom2.dipole.x*xr + atom2.dipole.y*yr + atom2.dipole.z*zr);
-    dsumdrB1 = b01*atom2.q*(atom1.dipole.x*xr + atom1.dipole.y*yr + atom1.dipole.z*zr);
+    dsumdrB1 -= b01*atom2.q*(atom1.dipole.x*xr + atom1.dipole.y*yr + atom1.dipole.z*zr);
 #endif
 #if defined B2
     dsumdrB2 += b01*atom1.q*(sxk*xr+ syk*yr + szk*zr);
-    dsumdrB2 = b01*atom2.q*(sxi*xr+ syi*yr + szi*zr);
+    dsumdrB2 -= b01*atom2.q*(sxi*xr+ syi*yr + szi*zr);
 #endif
 
 #if defined B1 || defined B2
@@ -324,12 +328,12 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     real guz23 = guy24;
     real guz24 = b10 + zr2*b11;
 #if defined B1
-    dsumdrB1 = 2*(atom1.dipole.x*(atom2.dipole.x*gux22 + atom2.dipole.y*guy22 + atom2.dipole.z*guz22) +
+    dsumdrB1 -= 2*(atom1.dipole.x*(atom2.dipole.x*gux22 + atom2.dipole.y*guy22 + atom2.dipole.z*guz22) +
                               atom1.dipole.y*(atom2.dipole.x*gux23 + atom2.dipole.y*guy23 + atom2.dipole.z*guz23) +
                               atom1.dipole.z*(atom2.dipole.x*gux24 + atom2.dipole.y*guy24 + atom2.dipole.z*guz24));
 #endif
 #if defined B2
-    dsumdrB2 = 2*(atom1.dipole.x*(sxk*gux22 + syk*guy22 + szk*guz22) +
+    dsumdrB2 -= 2*(atom1.dipole.x*(sxk*gux22 + syk*guy22 + szk*guz22) +
                             atom1.dipole.y*(sxk*gux23 + syk*guy23 + szk*guz23) +
                             atom1.dipole.z*(sxk*gux24 + syk*guy24 + szk*guz24) +
                             atom2.dipole.x*(sxi*gux22 + syi*guy22 + szi*guz22) +
@@ -337,7 +341,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                             atom2.dipole.z*(sxi*gux24 + syi*guy24 + szi*guz24));
 
 #ifndef DIRECT_POLARIZATION
-    dsumdrB2 = 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux22 + atom2.inducedDipolePolar.y*gux23 + atom2.inducedDipolePolar.z*gux24)
+    dsumdrB2 -= 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux22 + atom2.inducedDipolePolar.y*gux23 + atom2.inducedDipolePolar.z*gux24)
                             + atom1.inducedDipole.y*(atom2.inducedDipolePolar.x*guy22 + atom2.inducedDipolePolar.y*guy23 + atom2.inducedDipolePolar.z*guy24)
                             + atom1.inducedDipole.z*(atom2.inducedDipolePolar.x*guz22 + atom2.inducedDipolePolar.y*guz23 + atom2.inducedDipolePolar.z*guz24)
                             + atom2.inducedDipole.x*(atom1.inducedDipolePolar.x*gux22 + atom1.inducedDipolePolar.y*gux23 + atom1.inducedDipolePolar.z*gux24)
@@ -367,7 +371,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     dsumdrB1 += atom2.dipole.x*(atom1.quadrupoleXX*gqxx22 + atom1.quadrupoleYY*gqyy22 + atom1.quadrupoleZZ*gqzz22 + 2*(atom1.quadrupoleXY*gqxy22 + atom1.quadrupoleXZ*gqxz22 + atom1.quadrupoleYZ*gqyz22)) +
                 atom2.dipole.y*(atom1.quadrupoleXX*gqxx23 + atom1.quadrupoleYY*gqyy23 + atom1.quadrupoleZZ*gqzz23 + 2*(atom1.quadrupoleXY*gqxy23 + atom1.quadrupoleXZ*gqxz23 + atom1.quadrupoleYZ*gqyz23)) +
                 atom2.dipole.z*(atom1.quadrupoleXX*gqxx24 + atom1.quadrupoleYY*gqyy24 + atom1.quadrupoleZZ*gqzz24 + 2*(atom1.quadrupoleXY*gqxy24 + atom1.quadrupoleXZ*gqxz24 + atom1.quadrupoleYZ*gqyz24));
-    dsumdrB1 = atom1.dipole.x*(atom2.quadrupoleXX*gqxx22 + atom2.quadrupoleYY*gqyy22 + atom2.quadrupoleZZ*gqzz22 + 2*(atom2.quadrupoleXY*gqxy22 + atom2.quadrupoleXZ*gqxz22 + atom2.quadrupoleYZ*gqyz22)) +
+    dsumdrB1 -= atom1.dipole.x*(atom2.quadrupoleXX*gqxx22 + atom2.quadrupoleYY*gqyy22 + atom2.quadrupoleZZ*gqzz22 + 2*(atom2.quadrupoleXY*gqxy22 + atom2.quadrupoleXZ*gqxz22 + atom2.quadrupoleYZ*gqyz22)) +
                 atom1.dipole.y*(atom2.quadrupoleXX*gqxx23 + atom2.quadrupoleYY*gqyy23 + atom2.quadrupoleZZ*gqzz23 + 2*(atom2.quadrupoleXY*gqxy23 + atom2.quadrupoleXZ*gqxz23 + atom2.quadrupoleYZ*gqyz23)) +
                 atom1.dipole.z*(atom2.quadrupoleXX*gqxx24 + atom2.quadrupoleYY*gqyy24 + atom2.quadrupoleZZ*gqzz24 + 2*(atom2.quadrupoleXY*gqxy24 + atom2.quadrupoleXZ*gqxz24 + atom2.quadrupoleYZ*gqyz24));
 #endif
@@ -376,8 +380,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     dsumdrB2 += sxk*(atom1.quadrupoleXX*gqxx22 + atom1.quadrupoleYY*gqyy22 + atom1.quadrupoleZZ*gqzz22 + 2*(atom1.quadrupoleXY*gqxy22 + atom1.quadrupoleXZ*gqxz22 + atom1.quadrupoleYZ*gqyz22)) +
                 syk*(atom1.quadrupoleXX*gqxx23 + atom1.quadrupoleYY*gqyy23 + atom1.quadrupoleZZ*gqzz23 + 2*(atom1.quadrupoleXY*gqxy23 + atom1.quadrupoleXZ*gqxz23 + atom1.quadrupoleYZ*gqyz23)) +
                 szk*(atom1.quadrupoleXX*gqxx24 + atom1.quadrupoleYY*gqyy24 + atom1.quadrupoleZZ*gqzz24 + 2*(atom1.quadrupoleXY*gqxy24 + atom1.quadrupoleXZ*gqxz24 + atom1.quadrupoleYZ*gqyz24));
-
-    dsumdrB2 = sxi*(atom2.quadrupoleXX*gqxx22 + atom2.quadrupoleYY*gqyy22 + atom2.quadrupoleZZ*gqzz22 + 2*(atom2.quadrupoleXY*gqxy22 + atom2.quadrupoleXZ*gqxz22 + atom2.quadrupoleYZ*gqyz22)) +
+    dsumdrB2 -= sxi*(atom2.quadrupoleXX*gqxx22 + atom2.quadrupoleYY*gqyy22 + atom2.quadrupoleZZ*gqzz22 + 2*(atom2.quadrupoleXY*gqxy22 + atom2.quadrupoleXZ*gqxz22 + atom2.quadrupoleYZ*gqyz22)) +
                 syi*(atom2.quadrupoleXX*gqxx23 + atom2.quadrupoleYY*gqyy23 + atom2.quadrupoleZZ*gqzz23 + 2*(atom2.quadrupoleXY*gqxy23 + atom2.quadrupoleXZ*gqxz23 + atom2.quadrupoleYZ*gqyz23)) +
                 szi*(atom2.quadrupoleXX*gqxx24 + atom2.quadrupoleYY*gqyy24 + atom2.quadrupoleZZ*gqzz24 + 2*(atom2.quadrupoleXY*gqxy24 + atom2.quadrupoleXZ*gqxz24 + atom2.quadrupoleYZ*gqyz24));
 
@@ -398,22 +401,22 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     energy += atom2.q*(atom1.quadrupoleXX*gc5 + atom1.quadrupoleYY*gc8 + atom1.quadrupoleZZ*gc10 + 2*(atom1.quadrupoleXY*gc6 + atom1.quadrupoleXZ*gc7 + atom1.quadrupoleYZ*gc9));
 
     dedx += atom1.q*(atom2.dipole.x*gc5 + atom2.dipole.y*gc6 + atom2.dipole.z*gc7);
-    dedx = atom2.q*(atom1.dipole.x*gc5 + atom1.dipole.y*gc6 + atom1.dipole.z*gc7);
+    dedx -= atom2.q*(atom1.dipole.x*gc5 + atom1.dipole.y*gc6 + atom1.dipole.z*gc7);
 
     dedy += atom1.q*(atom2.dipole.x*gc6 + atom2.dipole.y*gc8 + atom2.dipole.z*gc9);
-    dedy = atom2.q*(atom1.dipole.x*gc6 + atom1.dipole.y*gc8 + atom1.dipole.z*gc9);
+    dedy -= atom2.q*(atom1.dipole.x*gc6 + atom1.dipole.y*gc8 + atom1.dipole.z*gc9);
 
     dedz += atom1.q*(atom2.dipole.x*gc7 + atom2.dipole.y*gc9 + atom2.dipole.z*gc10);
-    dedz = atom2.q*(atom1.dipole.x*gc7 + atom1.dipole.y*gc9 + atom1.dipole.z*gc10);
+    dedz -= atom2.q*(atom1.dipole.x*gc7 + atom1.dipole.y*gc9 + atom1.dipole.z*gc10);
 #endif
 
 #if defined F2
     dpdx += atom1.q*(sxk*gc5 + syk*gc6 + szk*gc7);
-    dpdx = atom2.q*(sxi*gc5 + syi*gc6 + szi*gc7);
+    dpdx -= atom2.q*(sxi*gc5 + syi*gc6 + szi*gc7);
     dpdy += atom1.q*(sxk*gc6 + syk*gc8 + szk*gc9);
-    dpdy = atom2.q*(sxi*gc6 + syi*gc8 + szi*gc9);
+    dpdy -= atom2.q*(sxi*gc6 + syi*gc8 + szi*gc9);
     dpdz += atom1.q*(sxk*gc7 + syk*gc9 + szk*gc10);
-    dpdz = atom2.q*(sxi*gc7 + syi*gc9 + szi*gc10);
+    dpdz -= atom2.q*(sxi*gc7 + syi*gc9 + szi*gc10);
 #endif
 
 #endif
@@ -438,7 +441,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     real guz9 = yr*(a11 + zr2*a12);
     real guz10 = zr*(3*a11 + zr2*a12);
 #if defined F1
-    energy = atom1.dipole.x*(atom2.quadrupoleXX*gux5 + atom2.quadrupoleYY*gux8 + atom2.quadrupoleZZ*gux10 + 2*(atom2.quadrupoleXY*gux6 + atom2.quadrupoleXZ*gux7 + atom2.quadrupoleYZ*gux9)) +
+    energy -= atom1.dipole.x*(atom2.quadrupoleXX*gux5 + atom2.quadrupoleYY*gux8 + atom2.quadrupoleZZ*gux10 + 2*(atom2.quadrupoleXY*gux6 + atom2.quadrupoleXZ*gux7 + atom2.quadrupoleYZ*gux9)) +
                        atom1.dipole.y*(atom2.quadrupoleXX*guy5 + atom2.quadrupoleYY*guy8 + atom2.quadrupoleZZ*guy10 + 2*(atom2.quadrupoleXY*guy6 + atom2.quadrupoleXZ*guy7 + atom2.quadrupoleYZ*guy9)) +
                        atom1.dipole.z*(atom2.quadrupoleXX*guz5 + atom2.quadrupoleYY*guz8 + atom2.quadrupoleZZ*guz10 + 2*(atom2.quadrupoleXY*guz6 + atom2.quadrupoleXZ*guz7 + atom2.quadrupoleYZ*guz9));
 
@@ -446,22 +449,22 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                        atom2.dipole.y*(atom1.quadrupoleXX*guy5 + atom1.quadrupoleYY*guy8 + atom1.quadrupoleZZ*guy10 + 2*(atom1.quadrupoleXY*guy6 + atom1.quadrupoleXZ*guy7 + atom1.quadrupoleYZ*guy9)) +
                        atom2.dipole.z*(atom1.quadrupoleXX*guz5 + atom1.quadrupoleYY*guz8 + atom1.quadrupoleZZ*guz10 + 2*(atom1.quadrupoleXY*guz6 + atom1.quadrupoleXZ*guz7 + atom1.quadrupoleYZ*guz9));
 
-    dedx = 2*(atom1.dipole.x*(atom2.dipole.x*gux5 + atom2.dipole.y*guy5 + atom2.dipole.z*guz5) +
+    dedx -= 2*(atom1.dipole.x*(atom2.dipole.x*gux5 + atom2.dipole.y*guy5 + atom2.dipole.z*guz5) +
                               atom1.dipole.y*(atom2.dipole.x*gux6 + atom2.dipole.y*guy6 + atom2.dipole.z*guz6) +
                               atom1.dipole.z*(atom2.dipole.x*gux7 + atom2.dipole.y*guy7 + atom2.dipole.z*guz7));
 
-    dedy = 2*(atom1.dipole.x*(atom2.dipole.x*gux6 + atom2.dipole.y*guy6 + atom2.dipole.z*guz6) +
+    dedy -= 2*(atom1.dipole.x*(atom2.dipole.x*gux6 + atom2.dipole.y*guy6 + atom2.dipole.z*guz6) +
                               atom1.dipole.y*(atom2.dipole.x*gux8 + atom2.dipole.y*guy8 + atom2.dipole.z*guz8) +
                               atom1.dipole.z*(atom2.dipole.x*gux9 + atom2.dipole.y*guy9 + atom2.dipole.z*guz9));
 
-    dedz = 2*(atom1.dipole.x*(atom2.dipole.x*gux7 + atom2.dipole.y*guy7 + atom2.dipole.z*guz7) +
+    dedz -= 2*(atom1.dipole.x*(atom2.dipole.x*gux7 + atom2.dipole.y*guy7 + atom2.dipole.z*guz7) +
                               atom1.dipole.y*(atom2.dipole.x*gux9 + atom2.dipole.y*guy9 + atom2.dipole.z*guz9) +
                               atom1.dipole.z*(atom2.dipole.x*gux10 + atom2.dipole.y*guy10 + atom2.dipole.z*guz10));
 
 #endif
 
 #if defined F2
-    energy = atom1.inducedDipole.x*(atom2.quadrupoleXX*gux5 + atom2.quadrupoleYY*gux8 + atom2.quadrupoleZZ*gux10 + 2*(atom2.quadrupoleXY*gux6 + atom2.quadrupoleXZ*gux7 + atom2.quadrupoleYZ*gux9)) +
+    energy -= atom1.inducedDipole.x*(atom2.quadrupoleXX*gux5 + atom2.quadrupoleYY*gux8 + atom2.quadrupoleZZ*gux10 + 2*(atom2.quadrupoleXY*gux6 + atom2.quadrupoleXZ*gux7 + atom2.quadrupoleYZ*gux9)) +
               atom1.inducedDipole.y*(atom2.quadrupoleXX*guy5 + atom2.quadrupoleYY*guy8 + atom2.quadrupoleZZ*guy10 + 2*(atom2.quadrupoleXY*guy6 + atom2.quadrupoleXZ*guy7 + atom2.quadrupoleYZ*guy9)) +
               atom1.inducedDipole.z*(atom2.quadrupoleXX*guz5 + atom2.quadrupoleYY*guz8 + atom2.quadrupoleZZ*guz10 + 2*(atom2.quadrupoleXY*guz6 + atom2.quadrupoleXZ*guz7 + atom2.quadrupoleYZ*guz9));
 
@@ -469,31 +472,31 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
               atom2.inducedDipole.y*(atom1.quadrupoleXX*guy5 + atom1.quadrupoleYY*guy8 + atom1.quadrupoleZZ*guy10 + 2*(atom1.quadrupoleXY*guy6 + atom1.quadrupoleXZ*guy7 + atom1.quadrupoleYZ*guy9)) +
               atom2.inducedDipole.z*(atom1.quadrupoleXX*guz5 + atom1.quadrupoleYY*guz8 + atom1.quadrupoleZZ*guz10 + 2*(atom1.quadrupoleXY*guz6 + atom1.quadrupoleXZ*guz7 + atom1.quadrupoleYZ*guz9));
 
-    dpdx = 2*(atom1.dipole.x*(sxk*gux5 + syk*guy5 + szk*guz5) + atom1.dipole.y*(sxk*gux6 + syk*guy6 + szk*guz6) + atom1.dipole.z*(sxk*gux7 + syk*guy7 + szk*guz7) +
+    dpdx -= 2*(atom1.dipole.x*(sxk*gux5 + syk*guy5 + szk*guz5) + atom1.dipole.y*(sxk*gux6 + syk*guy6 + szk*guz6) + atom1.dipole.z*(sxk*gux7 + syk*guy7 + szk*guz7) +
                     atom2.dipole.x*(sxi*gux5 + syi*guy5 + szi*guz5) + atom2.dipole.y*(sxi*gux6 + syi*guy6 + szi*guz6) + atom2.dipole.z*(sxi*gux7 + syi*guy7 + szi*guz7));
 
-    dpdy = 2*(atom1.dipole.x*(sxk*gux6 + syk*guy6 + szk*guz6) + atom1.dipole.y*(sxk*gux8 + syk*guy8 + szk*guz8) + atom1.dipole.z*(sxk*gux9 + syk*guy9 + szk*guz9) +
+    dpdy -= 2*(atom1.dipole.x*(sxk*gux6 + syk*guy6 + szk*guz6) + atom1.dipole.y*(sxk*gux8 + syk*guy8 + szk*guz8) + atom1.dipole.z*(sxk*gux9 + syk*guy9 + szk*guz9) +
                     atom2.dipole.x*(sxi*gux6 + syi*guy6 + szi*guz6) + atom2.dipole.y*(sxi*gux8 + syi*guy8 + szi*guz8) + atom2.dipole.z*(sxi*gux9 + syi*guy9 + szi*guz9));
 
-    dpdz = 2*(atom1.dipole.x*(sxk*gux7 + syk*guy7 + szk*guz7) + atom1.dipole.y*(sxk*gux9 + syk*guy9 + szk*guz9) + atom1.dipole.z*(sxk*gux10 + syk*guy10 + szk*guz10) +
+    dpdz -= 2*(atom1.dipole.x*(sxk*gux7 + syk*guy7 + szk*guz7) + atom1.dipole.y*(sxk*gux9 + syk*guy9 + szk*guz9) + atom1.dipole.z*(sxk*gux10 + syk*guy10 + szk*guz10) +
                     atom2.dipole.x*(sxi*gux7 + syi*guy7 + szi*guz7) + atom2.dipole.y*(sxi*gux9 + syi*guy9 + szi*guz9) + atom2.dipole.z*(sxi*gux10 + syi*guy10 + szi*guz10));
 
 #ifndef DIRECT_POLARIZATION
-        dpdx = 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux5 + atom2.inducedDipolePolar.y*gux6 + atom2.inducedDipolePolar.z*gux7)
+        dpdx -= 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux5 + atom2.inducedDipolePolar.y*gux6 + atom2.inducedDipolePolar.z*gux7)
                             + atom1.inducedDipole.y*(atom2.inducedDipolePolar.x*guy5 + atom2.inducedDipolePolar.y*guy6 + atom2.inducedDipolePolar.z*guy7)
                             + atom1.inducedDipole.z*(atom2.inducedDipolePolar.x*guz5 + atom2.inducedDipolePolar.y*guz6 + atom2.inducedDipolePolar.z*guz7)
                             + atom2.inducedDipole.x*(atom1.inducedDipolePolar.x*gux5 + atom1.inducedDipolePolar.y*gux6 + atom1.inducedDipolePolar.z*gux7)
                             + atom2.inducedDipole.y*(atom1.inducedDipolePolar.x*guy5 + atom1.inducedDipolePolar.y*guy6 + atom1.inducedDipolePolar.z*guy7)
                             + atom2.inducedDipole.z*(atom1.inducedDipolePolar.x*guz5 + atom1.inducedDipolePolar.y*guz6 + atom1.inducedDipolePolar.z*guz7));
 
-        dpdy = 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux6 + atom2.inducedDipolePolar.y*gux8 + atom2.inducedDipolePolar.z*gux9)
+        dpdy -= 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux6 + atom2.inducedDipolePolar.y*gux8 + atom2.inducedDipolePolar.z*gux9)
                             + atom1.inducedDipole.y*(atom2.inducedDipolePolar.x*guy6 + atom2.inducedDipolePolar.y*guy8 + atom2.inducedDipolePolar.z*guy9)
                             + atom1.inducedDipole.z*(atom2.inducedDipolePolar.x*guz6 + atom2.inducedDipolePolar.y*guz8 + atom2.inducedDipolePolar.z*guz9)
                             + atom2.inducedDipole.x*(atom1.inducedDipolePolar.x*gux6 + atom1.inducedDipolePolar.y*gux8 + atom1.inducedDipolePolar.z*gux9)
                             + atom2.inducedDipole.y*(atom1.inducedDipolePolar.x*guy6 + atom1.inducedDipolePolar.y*guy8 + atom1.inducedDipolePolar.z*guy9)
                             + atom2.inducedDipole.z*(atom1.inducedDipolePolar.x*guz6 + atom1.inducedDipolePolar.y*guz8 + atom1.inducedDipolePolar.z*guz9));
 
-        dpdz = 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux7 + atom2.inducedDipolePolar.y*gux9 + atom2.inducedDipolePolar.z*gux10)
+        dpdz -= 2*(atom1.inducedDipole.x*(atom2.inducedDipolePolar.x*gux7 + atom2.inducedDipolePolar.y*gux9 + atom2.inducedDipolePolar.z*gux10)
                             + atom1.inducedDipole.y*(atom2.inducedDipolePolar.x*guy7 + atom2.inducedDipolePolar.y*guy9 + atom2.inducedDipolePolar.z*guy10)
                             + atom1.inducedDipole.z*(atom2.inducedDipolePolar.x*guz7 + atom2.inducedDipolePolar.y*guz9 + atom2.inducedDipolePolar.z*guz10)
                             + atom2.inducedDipole.x*(atom1.inducedDipolePolar.x*gux7 + atom1.inducedDipolePolar.y*gux9 + atom1.inducedDipolePolar.z*gux10)
@@ -567,7 +570,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
               atom2.dipole.y*(atom1.quadrupoleXX*gqxx6 + atom1.quadrupoleYY*gqyy6 + atom1.quadrupoleZZ*gqzz6 + 2*(atom1.quadrupoleXY*gqxy6 + atom1.quadrupoleXZ*gqxz6 + atom1.quadrupoleYZ*gqyz6)) +
               atom2.dipole.z*(atom1.quadrupoleXX*gqxx7 + atom1.quadrupoleYY*gqyy7 + atom1.quadrupoleZZ*gqzz7 + 2*(atom1.quadrupoleXY*gqxy7 + atom1.quadrupoleXZ*gqxz7 + atom1.quadrupoleYZ*gqyz7));
 
-    dedx = atom1.dipole.x*(atom2.quadrupoleXX*gqxx5 + atom2.quadrupoleYY*gqyy5 + atom2.quadrupoleZZ*gqzz5 + 2*(atom2.quadrupoleXY*gqxy5 + atom2.quadrupoleXZ*gqxz5 + atom2.quadrupoleYZ*gqyz5)) +
+    dedx -= atom1.dipole.x*(atom2.quadrupoleXX*gqxx5 + atom2.quadrupoleYY*gqyy5 + atom2.quadrupoleZZ*gqzz5 + 2*(atom2.quadrupoleXY*gqxy5 + atom2.quadrupoleXZ*gqxz5 + atom2.quadrupoleYZ*gqyz5)) +
               atom1.dipole.y*(atom2.quadrupoleXX*gqxx6 + atom2.quadrupoleYY*gqyy6 + atom2.quadrupoleZZ*gqzz6 + 2*(atom2.quadrupoleXY*gqxy6 + atom2.quadrupoleXZ*gqxz6 + atom2.quadrupoleYZ*gqyz6)) +
               atom1.dipole.z*(atom2.quadrupoleXX*gqxx7 + atom2.quadrupoleYY*gqyy7 + atom2.quadrupoleZZ*gqzz7 + 2*(atom2.quadrupoleXY*gqxy7 + atom2.quadrupoleXZ*gqxz7 + atom2.quadrupoleYZ*gqyz7));
 
@@ -575,7 +578,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
               atom2.dipole.y*(atom1.quadrupoleXX*gqxx8 + atom1.quadrupoleYY*gqyy8 + atom1.quadrupoleZZ*gqzz8 + 2*(atom1.quadrupoleXY*gqxy8 + atom1.quadrupoleXZ*gqxz8 + atom1.quadrupoleYZ*gqyz8)) +
               atom2.dipole.z*(atom1.quadrupoleXX*gqxx9 + atom1.quadrupoleYY*gqyy9 + atom1.quadrupoleZZ*gqzz9 + 2*(atom1.quadrupoleXY*gqxy9 + atom1.quadrupoleXZ*gqxz9 + atom1.quadrupoleYZ*gqyz9));
 
-    dedy = atom1.dipole.x*(atom2.quadrupoleXX*gqxx6 + atom2.quadrupoleYY*gqyy6 + atom2.quadrupoleZZ*gqzz6 + 2*(atom2.quadrupoleXY*gqxy6 + atom2.quadrupoleXZ*gqxz6 + atom2.quadrupoleYZ*gqyz6)) +
+    dedy -= atom1.dipole.x*(atom2.quadrupoleXX*gqxx6 + atom2.quadrupoleYY*gqyy6 + atom2.quadrupoleZZ*gqzz6 + 2*(atom2.quadrupoleXY*gqxy6 + atom2.quadrupoleXZ*gqxz6 + atom2.quadrupoleYZ*gqyz6)) +
               atom1.dipole.y*(atom2.quadrupoleXX*gqxx8 + atom2.quadrupoleYY*gqyy8 + atom2.quadrupoleZZ*gqzz8 + 2*(atom2.quadrupoleXY*gqxy8 + atom2.quadrupoleXZ*gqxz8 + atom2.quadrupoleYZ*gqyz8)) +
               atom1.dipole.z*(atom2.quadrupoleXX*gqxx9 + atom2.quadrupoleYY*gqyy9 + atom2.quadrupoleZZ*gqzz9 + 2*(atom2.quadrupoleXY*gqxy9 + atom2.quadrupoleXZ*gqxz9 + atom2.quadrupoleYZ*gqyz9));
 
@@ -583,7 +586,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
               atom2.dipole.y*(atom1.quadrupoleXX*gqxx9 + atom1.quadrupoleYY*gqyy9 + atom1.quadrupoleZZ*gqzz9 + 2*(atom1.quadrupoleXY*gqxy9 + atom1.quadrupoleXZ*gqxz9 + atom1.quadrupoleYZ*gqyz9)) +
               atom2.dipole.z*(atom1.quadrupoleXX*gqxx10 + atom1.quadrupoleYY*gqyy10 + atom1.quadrupoleZZ*gqzz10 + 2*(atom1.quadrupoleXY*gqxy10 + atom1.quadrupoleXZ*gqxz10 + atom1.quadrupoleYZ*gqyz10));
 
-    dedz = atom1.dipole.x*(atom2.quadrupoleXX*gqxx7 + atom2.quadrupoleYY*gqyy7 + atom2.quadrupoleZZ*gqzz7 + 2*(atom2.quadrupoleXY*gqxy7 + atom2.quadrupoleXZ*gqxz7 + atom2.quadrupoleYZ*gqyz7)) +
+    dedz -= atom1.dipole.x*(atom2.quadrupoleXX*gqxx7 + atom2.quadrupoleYY*gqyy7 + atom2.quadrupoleZZ*gqzz7 + 2*(atom2.quadrupoleXY*gqxy7 + atom2.quadrupoleXZ*gqxz7 + atom2.quadrupoleYZ*gqyz7)) +
               atom1.dipole.y*(atom2.quadrupoleXX*gqxx9 + atom2.quadrupoleYY*gqyy9 + atom2.quadrupoleZZ*gqzz9 + 2*(atom2.quadrupoleXY*gqxy9 + atom2.quadrupoleXZ*gqxz9 + atom2.quadrupoleYZ*gqyz9)) +
               atom1.dipole.z*(atom2.quadrupoleXX*gqxx10 + atom2.quadrupoleYY*gqyy10 + atom2.quadrupoleZZ*gqzz10 + 2*(atom2.quadrupoleXY*gqxy10 + atom2.quadrupoleXZ*gqxz10 + atom2.quadrupoleYZ*gqyz10));
 #endif
@@ -592,7 +595,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
             syk*(atom1.quadrupoleXX*gqxx6 + atom1.quadrupoleYY*gqyy6 + atom1.quadrupoleZZ*gqzz6 + 2*(atom1.quadrupoleXY*gqxy6 + atom1.quadrupoleXZ*gqxz6 + atom1.quadrupoleYZ*gqyz6)) +
             szk*(atom1.quadrupoleXX*gqxx7 + atom1.quadrupoleYY*gqyy7 + atom1.quadrupoleZZ*gqzz7 + 2*(atom1.quadrupoleXY*gqxy7 + atom1.quadrupoleXZ*gqxz7 + atom1.quadrupoleYZ*gqyz7));
 
-    dpdx = sxi*(atom2.quadrupoleXX*gqxx5 + atom2.quadrupoleYY*gqyy5 + atom2.quadrupoleZZ*gqzz5 + 2*(atom2.quadrupoleXY*gqxy5 + atom2.quadrupoleXZ*gqxz5 + atom2.quadrupoleYZ*gqyz5)) +
+    dpdx -= sxi*(atom2.quadrupoleXX*gqxx5 + atom2.quadrupoleYY*gqyy5 + atom2.quadrupoleZZ*gqzz5 + 2*(atom2.quadrupoleXY*gqxy5 + atom2.quadrupoleXZ*gqxz5 + atom2.quadrupoleYZ*gqyz5)) +
             syi*(atom2.quadrupoleXX*gqxx6 + atom2.quadrupoleYY*gqyy6 + atom2.quadrupoleZZ*gqzz6 + 2*(atom2.quadrupoleXY*gqxy6 + atom2.quadrupoleXZ*gqxz6 + atom2.quadrupoleYZ*gqyz6)) +
             szi*(atom2.quadrupoleXX*gqxx7 + atom2.quadrupoleYY*gqyy7 + atom2.quadrupoleZZ*gqzz7 + 2*(atom2.quadrupoleXY*gqxy7 + atom2.quadrupoleXZ*gqxz7 + atom2.quadrupoleYZ*gqyz7));
 
@@ -600,11 +603,11 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
             syk*(atom1.quadrupoleXX*gqxx8 + atom1.quadrupoleYY*gqyy8 + atom1.quadrupoleZZ*gqzz8 + 2*(atom1.quadrupoleXY*gqxy8 + atom1.quadrupoleXZ*gqxz8 + atom1.quadrupoleYZ*gqyz8)) +
             szk*(atom1.quadrupoleXX*gqxx9 + atom1.quadrupoleYY*gqyy9 + atom1.quadrupoleZZ*gqzz9 + 2*(atom1.quadrupoleXY*gqxy9 + atom1.quadrupoleXZ*gqxz9 + atom1.quadrupoleYZ*gqyz9));
 
-    dpdy = sxi*(atom2.quadrupoleXX*gqxx6 + atom2.quadrupoleYY*gqyy6 + atom2.quadrupoleZZ*gqzz6 + 2*(atom2.quadrupoleXY*gqxy6 + atom2.quadrupoleXZ*gqxz6 + atom2.quadrupoleYZ*gqyz6)) +
+    dpdy -= sxi*(atom2.quadrupoleXX*gqxx6 + atom2.quadrupoleYY*gqyy6 + atom2.quadrupoleZZ*gqzz6 + 2*(atom2.quadrupoleXY*gqxy6 + atom2.quadrupoleXZ*gqxz6 + atom2.quadrupoleYZ*gqyz6)) +
             syi*(atom2.quadrupoleXX*gqxx8 + atom2.quadrupoleYY*gqyy8 + atom2.quadrupoleZZ*gqzz8 + 2*(atom2.quadrupoleXY*gqxy8 + atom2.quadrupoleXZ*gqxz8 + atom2.quadrupoleYZ*gqyz8)) +
             szi*(atom2.quadrupoleXX*gqxx9 + atom2.quadrupoleYY*gqyy9 + atom2.quadrupoleZZ*gqzz9 + 2*(atom2.quadrupoleXY*gqxy9 + atom2.quadrupoleXZ*gqxz9 + atom2.quadrupoleYZ*gqyz9));
 
-    dpdz = sxi*(atom2.quadrupoleXX*gqxx7 + atom2.quadrupoleYY*gqyy7 + atom2.quadrupoleZZ*gqzz7 + 2*(atom2.quadrupoleXY*gqxy7 + atom2.quadrupoleXZ*gqxz7 + atom2.quadrupoleYZ*gqyz7)) +
+    dpdz -= sxi*(atom2.quadrupoleXX*gqxx7 + atom2.quadrupoleYY*gqyy7 + atom2.quadrupoleZZ*gqzz7 + 2*(atom2.quadrupoleXY*gqxy7 + atom2.quadrupoleXZ*gqxz7 + atom2.quadrupoleYZ*gqyz7)) +
             syi*(atom2.quadrupoleXX*gqxx9 + atom2.quadrupoleYY*gqyy9 + atom2.quadrupoleZZ*gqzz9 + 2*(atom2.quadrupoleXY*gqxy9 + atom2.quadrupoleXZ*gqxz9 + atom2.quadrupoleYZ*gqyz9)) +
             szi*(atom2.quadrupoleXX*gqxx10 + atom2.quadrupoleYY*gqyy10 + atom2.quadrupoleZZ*gqzz10 + 2*(atom2.quadrupoleXY*gqxy10 + atom2.quadrupoleXZ*gqxz10 + atom2.quadrupoleYZ*gqyz10));
 
@@ -648,7 +651,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     real guz30 = zr*(3*b11 + zr2*b12);
 #endif
 #if defined B2
-    dsumdrB2 = sxi*(atom2.quadrupoleXX*gux25 + atom2.quadrupoleYY*gux28 + atom2.quadrupoleZZ*gux30 + 2*(atom2.quadrupoleXY*gux26 + atom2.quadrupoleXZ*gux27 + atom2.quadrupoleYZ*gux29)) +
+    dsumdrB2 -= sxi*(atom2.quadrupoleXX*gux25 + atom2.quadrupoleYY*gux28 + atom2.quadrupoleZZ*gux30 + 2*(atom2.quadrupoleXY*gux26 + atom2.quadrupoleXZ*gux27 + atom2.quadrupoleYZ*gux29)) +
                 syi*(atom2.quadrupoleXX*guy25 + atom2.quadrupoleYY*guy28 + atom2.quadrupoleZZ*guy30 + 2*(atom2.quadrupoleXY*guy26 + atom2.quadrupoleXZ*guy27 + atom2.quadrupoleYZ*guy29)) +
                 szi*(atom2.quadrupoleXX*guz25 + atom2.quadrupoleYY*guz28 + atom2.quadrupoleZZ*guz30 + 2*(atom2.quadrupoleXY*guz26 + atom2.quadrupoleXZ*guz27 + atom2.quadrupoleYZ*guz29));
     dsumdrB2 += sxk*(atom1.quadrupoleXX*gux25 + atom1.quadrupoleYY*gux28 + atom1.quadrupoleZZ*gux30 + 2*(atom1.quadrupoleXY*gux26 + atom1.quadrupoleXZ*gux27 + atom1.quadrupoleYZ*gux29)) +
@@ -656,7 +659,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                 szk*(atom1.quadrupoleXX*guz25 + atom1.quadrupoleYY*guz28 + atom1.quadrupoleZZ*guz30 + 2*(atom1.quadrupoleXY*guz26 + atom1.quadrupoleXZ*guz27 + atom1.quadrupoleYZ*guz29));
 #endif
 #if defined B1
-    dsumdrB1 = atom1.dipole.x*(atom2.quadrupoleXX*gux25 + atom2.quadrupoleYY*gux28 + atom2.quadrupoleZZ*gux30 + 2*(atom2.quadrupoleXY*gux26 + atom2.quadrupoleXZ*gux27 + atom2.quadrupoleYZ*gux29)) +
+    dsumdrB1 -= atom1.dipole.x*(atom2.quadrupoleXX*gux25 + atom2.quadrupoleYY*gux28 + atom2.quadrupoleZZ*gux30 + 2*(atom2.quadrupoleXY*gux26 + atom2.quadrupoleXZ*gux27 + atom2.quadrupoleYZ*gux29)) +
                 atom1.dipole.y*(atom2.quadrupoleXX*guy25 + atom2.quadrupoleYY*guy28 + atom2.quadrupoleZZ*guy30 + 2*(atom2.quadrupoleXY*guy26 + atom2.quadrupoleXZ*guy27 + atom2.quadrupoleYZ*guy29)) +
                 atom1.dipole.z*(atom2.quadrupoleXX*guz25 + atom2.quadrupoleYY*guz28 + atom2.quadrupoleZZ*guz30 + 2*(atom2.quadrupoleXY*guz26 + atom2.quadrupoleXZ*guz27 + atom2.quadrupoleYZ*guz29));
     dsumdrB1 += atom2.dipole.x*(atom1.quadrupoleXX*gux25 + atom1.quadrupoleYY*gux28 + atom1.quadrupoleZZ*gux30 + 2*(atom1.quadrupoleXY*gux26 + atom1.quadrupoleXZ*gux27 + atom1.quadrupoleYZ*gux29)) +
@@ -777,7 +780,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     real guz19 = guy20;
     real guz20 = 3*a11 + zr2*(6*a12 + zr2*a13);
 #if defined F1
-    dedx = atom1.dipole.x*(atom2.quadrupoleXX*gux11 + atom2.quadrupoleYY*gux14 + atom2.quadrupoleZZ*gux16 + 2*(atom2.quadrupoleXY*gux12 + atom2.quadrupoleXZ*gux13 + atom2.quadrupoleYZ*gux15)) +
+    dedx -= atom1.dipole.x*(atom2.quadrupoleXX*gux11 + atom2.quadrupoleYY*gux14 + atom2.quadrupoleZZ*gux16 + 2*(atom2.quadrupoleXY*gux12 + atom2.quadrupoleXZ*gux13 + atom2.quadrupoleYZ*gux15)) +
                        atom1.dipole.y*(atom2.quadrupoleXX*guy11 + atom2.quadrupoleYY*guy14 + atom2.quadrupoleZZ*guy16 + 2*(atom2.quadrupoleXY*guy12 + atom2.quadrupoleXZ*guy13 + atom2.quadrupoleYZ*guy15)) +
                        atom1.dipole.z*(atom2.quadrupoleXX*guz11 + atom2.quadrupoleYY*guz14 + atom2.quadrupoleZZ*guz16 + 2*(atom2.quadrupoleXY*guz12 + atom2.quadrupoleXZ*guz13 + atom2.quadrupoleYZ*guz15));
 
@@ -785,7 +788,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                        atom2.dipole.y*(atom1.quadrupoleXX*guy11 + atom1.quadrupoleYY*guy14 + atom1.quadrupoleZZ*guy16 + 2*(atom1.quadrupoleXY*guy12 + atom1.quadrupoleXZ*guy13 + atom1.quadrupoleYZ*guy15)) +
                        atom2.dipole.z*(atom1.quadrupoleXX*guz11 + atom1.quadrupoleYY*guz14 + atom1.quadrupoleZZ*guz16 + 2*(atom1.quadrupoleXY*guz12 + atom1.quadrupoleXZ*guz13 + atom1.quadrupoleYZ*guz15));
 
-    dedy = atom1.dipole.x*(atom2.quadrupoleXX*gux12 + atom2.quadrupoleYY*gux17 + atom2.quadrupoleZZ*gux19 + 2*(atom2.quadrupoleXY*gux14 + atom2.quadrupoleXZ*gux15 + atom2.quadrupoleYZ*gux18)) +
+    dedy -= atom1.dipole.x*(atom2.quadrupoleXX*gux12 + atom2.quadrupoleYY*gux17 + atom2.quadrupoleZZ*gux19 + 2*(atom2.quadrupoleXY*gux14 + atom2.quadrupoleXZ*gux15 + atom2.quadrupoleYZ*gux18)) +
                        atom1.dipole.y*(atom2.quadrupoleXX*guy12 + atom2.quadrupoleYY*guy17 + atom2.quadrupoleZZ*guy19 + 2*(atom2.quadrupoleXY*guy14 + atom2.quadrupoleXZ*guy15 + atom2.quadrupoleYZ*guy18)) +
                        atom1.dipole.z*(atom2.quadrupoleXX*guz12 + atom2.quadrupoleYY*guz17 + atom2.quadrupoleZZ*guz19 + 2*(atom2.quadrupoleXY*guz14 + atom2.quadrupoleXZ*guz15 + atom2.quadrupoleYZ*guz18));
 
@@ -793,7 +796,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                        atom2.dipole.y*(atom1.quadrupoleXX*guy12 + atom1.quadrupoleYY*guy17 + atom1.quadrupoleZZ*guy19 + 2*(atom1.quadrupoleXY*guy14 + atom1.quadrupoleXZ*guy15 + atom1.quadrupoleYZ*guy18)) +
                        atom2.dipole.z*(atom1.quadrupoleXX*guz12 + atom1.quadrupoleYY*guz17 + atom1.quadrupoleZZ*guz19 + 2*(atom1.quadrupoleXY*guz14 + atom1.quadrupoleXZ*guz15 + atom1.quadrupoleYZ*guz18));
 
-    dedz = atom1.dipole.x*(atom2.quadrupoleXX*gux13 + atom2.quadrupoleYY*gux18 + atom2.quadrupoleZZ*gux20 + 2*(atom2.quadrupoleXY*gux15 + atom2.quadrupoleXZ*gux16 + atom2.quadrupoleYZ*gux19)) +
+    dedz -= atom1.dipole.x*(atom2.quadrupoleXX*gux13 + atom2.quadrupoleYY*gux18 + atom2.quadrupoleZZ*gux20 + 2*(atom2.quadrupoleXY*gux15 + atom2.quadrupoleXZ*gux16 + atom2.quadrupoleYZ*gux19)) +
                        atom1.dipole.y*(atom2.quadrupoleXX*guy13 + atom2.quadrupoleYY*guy18 + atom2.quadrupoleZZ*guy20 + 2*(atom2.quadrupoleXY*guy15 + atom2.quadrupoleXZ*guy16 + atom2.quadrupoleYZ*guy19)) +
                        atom1.dipole.z*(atom2.quadrupoleXX*guz13 + atom2.quadrupoleYY*guz18 + atom2.quadrupoleZZ*guz20 + 2*(atom2.quadrupoleXY*guz15 + atom2.quadrupoleXZ*guz16 + atom2.quadrupoleYZ*guz19));
 
@@ -802,7 +805,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                        atom2.dipole.z*(atom1.quadrupoleXX*guz13 + atom1.quadrupoleYY*guz18 + atom1.quadrupoleZZ*guz20 + 2*(atom1.quadrupoleXY*guz15 + atom1.quadrupoleXZ*guz16 + atom1.quadrupoleYZ*guz19));
 #endif
 #if defined F2
-    dpdx = sxi*(atom2.quadrupoleXX*gux11 + atom2.quadrupoleYY*gux14 + atom2.quadrupoleZZ*gux16 + 2*(atom2.quadrupoleXY*gux12 + atom2.quadrupoleXZ*gux13 + atom2.quadrupoleYZ*gux15)) +
+    dpdx -= sxi*(atom2.quadrupoleXX*gux11 + atom2.quadrupoleYY*gux14 + atom2.quadrupoleZZ*gux16 + 2*(atom2.quadrupoleXY*gux12 + atom2.quadrupoleXZ*gux13 + atom2.quadrupoleYZ*gux15)) +
             syi*(atom2.quadrupoleXX*guy11 + atom2.quadrupoleYY*guy14 + atom2.quadrupoleZZ*guy16 + 2*(atom2.quadrupoleXY*guy12 + atom2.quadrupoleXZ*guy13 + atom2.quadrupoleYZ*guy15)) +
             szi*(atom2.quadrupoleXX*guz11 + atom2.quadrupoleYY*guz14 + atom2.quadrupoleZZ*guz16 + 2*(atom2.quadrupoleXY*guz12 + atom2.quadrupoleXZ*guz13 + atom2.quadrupoleYZ*guz15));
 
@@ -810,7 +813,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
             syk*(atom1.quadrupoleXX*guy11 + atom1.quadrupoleYY*guy14 + atom1.quadrupoleZZ*guy16 + 2*(atom1.quadrupoleXY*guy12 + atom1.quadrupoleXZ*guy13 + atom1.quadrupoleYZ*guy15)) +
             szk*(atom1.quadrupoleXX*guz11 + atom1.quadrupoleYY*guz14 + atom1.quadrupoleZZ*guz16 + 2*(atom1.quadrupoleXY*guz12 + atom1.quadrupoleXZ*guz13 + atom1.quadrupoleYZ*guz15));
 
-    dpdy = sxi*(atom2.quadrupoleXX*gux12 + atom2.quadrupoleYY*gux17 + atom2.quadrupoleZZ*gux19 + 2*(atom2.quadrupoleXY*gux14 + atom2.quadrupoleXZ*gux15 + atom2.quadrupoleYZ*gux18)) +
+    dpdy -= sxi*(atom2.quadrupoleXX*gux12 + atom2.quadrupoleYY*gux17 + atom2.quadrupoleZZ*gux19 + 2*(atom2.quadrupoleXY*gux14 + atom2.quadrupoleXZ*gux15 + atom2.quadrupoleYZ*gux18)) +
             syi*(atom2.quadrupoleXX*guy12 + atom2.quadrupoleYY*guy17 + atom2.quadrupoleZZ*guy19 + 2*(atom2.quadrupoleXY*guy14 + atom2.quadrupoleXZ*guy15 + atom2.quadrupoleYZ*guy18)) +
             szi*(atom2.quadrupoleXX*guz12 + atom2.quadrupoleYY*guz17 + atom2.quadrupoleZZ*guz19 + 2*(atom2.quadrupoleXY*guz14 + atom2.quadrupoleXZ*guz15 + atom2.quadrupoleYZ*guz18));
 
@@ -818,7 +821,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
             syk*(atom1.quadrupoleXX*guy12 + atom1.quadrupoleYY*guy17 + atom1.quadrupoleZZ*guy19 + 2*(atom1.quadrupoleXY*guy14 + atom1.quadrupoleXZ*guy15 + atom1.quadrupoleYZ*guy18)) +
             szk*(atom1.quadrupoleXX*guz12 + atom1.quadrupoleYY*guz17 + atom1.quadrupoleZZ*guz19 + 2*(atom1.quadrupoleXY*guz14 + atom1.quadrupoleXZ*guz15 + atom1.quadrupoleYZ*guz18));
 
-    dpdz = sxi*(atom2.quadrupoleXX*gux13 + atom2.quadrupoleYY*gux18 + atom2.quadrupoleZZ*gux20 + 2*(atom2.quadrupoleXY*gux15 + atom2.quadrupoleXZ*gux16 + atom2.quadrupoleYZ*gux19)) +
+    dpdz -= sxi*(atom2.quadrupoleXX*gux13 + atom2.quadrupoleYY*gux18 + atom2.quadrupoleZZ*gux20 + 2*(atom2.quadrupoleXY*gux15 + atom2.quadrupoleXZ*gux16 + atom2.quadrupoleYZ*gux19)) +
             syi*(atom2.quadrupoleXX*guy13 + atom2.quadrupoleYY*guy18 + atom2.quadrupoleZZ*guy20 + 2*(atom2.quadrupoleXY*guy15 + atom2.quadrupoleXZ*guy16 + atom2.quadrupoleYZ*guy19)) +
             szi*(atom2.quadrupoleXX*guz13 + atom2.quadrupoleYY*guz18 + atom2.quadrupoleZZ*guz20 + 2*(atom2.quadrupoleXY*guz15 + atom2.quadrupoleXZ*guz16 + atom2.quadrupoleYZ*guz19));
 
@@ -1030,9 +1033,9 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
                        + atom2.quadrupoleXX*gqxx10 + atom2.quadrupoleYY*gqyy10 + atom2.quadrupoleZZ*gqzz10
                     + 2*(atom2.quadrupoleXY*gqxy10 + atom2.quadrupoleXZ*gqxz10 + atom2.quadrupoleYZ*gqyz10));
 
-        trq1 = (atom1.quadrupoleXY*fidg13 + atom1.quadrupoleYY*fidg23 + atom1.quadrupoleYZ*fidg33 -atom1.quadrupoleXZ*fidg12-atom1.quadrupoleYZ*fidg22-atom1.quadrupoleZZ*fidg23);
-        trq2 = (atom1.quadrupoleXZ*fidg11 + atom1.quadrupoleYZ*fidg12 + atom1.quadrupoleZZ*fidg13 -atom1.quadrupoleXX*fidg13-atom1.quadrupoleXY*fidg23-atom1.quadrupoleXZ*fidg33);
-        trq3 = (atom1.quadrupoleXX*fidg12 + atom1.quadrupoleXY*fidg22 + atom1.quadrupoleXZ*fidg23 -atom1.quadrupoleXY*fidg11-atom1.quadrupoleYY*fidg12-atom1.quadrupoleYZ*fidg13);
+        trq1 -= (atom1.quadrupoleXY*fidg13 + atom1.quadrupoleYY*fidg23 + atom1.quadrupoleYZ*fidg33 -atom1.quadrupoleXZ*fidg12-atom1.quadrupoleYZ*fidg22-atom1.quadrupoleZZ*fidg23);
+        trq2 -= (atom1.quadrupoleXZ*fidg11 + atom1.quadrupoleYZ*fidg12 + atom1.quadrupoleZZ*fidg13 -atom1.quadrupoleXX*fidg13-atom1.quadrupoleXY*fidg23-atom1.quadrupoleXZ*fidg33);
+        trq3 -= (atom1.quadrupoleXX*fidg12 + atom1.quadrupoleXY*fidg22 + atom1.quadrupoleXZ*fidg23 -atom1.quadrupoleXY*fidg11-atom1.quadrupoleYY*fidg12-atom1.quadrupoleYZ*fidg13);
 
         torque.x = trq1;
         torque.y = trq2;
@@ -1061,13 +1064,13 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
     real fidg23 = sxk*gqyz2 + syk*gqyz3 + szk*gqyz4 + sxk*gux9 + syk*guy9 + szk*guz9;
     real fidg33 = sxk*gqzz2 + syk*gqzz3 + szk*gqzz4 + sxk*gux10 + syk*guy10 + szk*guz10;
 
-    trqi1 = atom1.quadrupoleXY*fidg13 + atom1.quadrupoleYY*fidg23 + atom1.quadrupoleYZ*fidg33
+    trqi1 -= atom1.quadrupoleXY*fidg13 + atom1.quadrupoleYY*fidg23 + atom1.quadrupoleYZ*fidg33
                                 -atom1.quadrupoleXZ*fidg12 - atom1.quadrupoleYZ*fidg22 - atom1.quadrupoleZZ*fidg23;
 
-    trqi2 = atom1.quadrupoleXZ*fidg11 + atom1.quadrupoleYZ*fidg12 + atom1.quadrupoleZZ*fidg13
+    trqi2 -= atom1.quadrupoleXZ*fidg11 + atom1.quadrupoleYZ*fidg12 + atom1.quadrupoleZZ*fidg13
                                 -atom1.quadrupoleXX*fidg13 - atom1.quadrupoleXY*fidg23 - atom1.quadrupoleXZ*fidg33;
 
-    trqi3 = atom1.quadrupoleXX*fidg12 + atom1.quadrupoleXY*fidg22 + atom1.quadrupoleXZ*fidg23
+    trqi3 -= atom1.quadrupoleXX*fidg12 + atom1.quadrupoleXY*fidg22 + atom1.quadrupoleXZ*fidg23
                                 -atom1.quadrupoleXY*fidg11 - atom1.quadrupoleYY*fidg12 - atom1.quadrupoleYZ*fidg13;
 
     torque.x += 0.5f*trqi1;
