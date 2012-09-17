@@ -1778,7 +1778,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     defines["GK_FD"] = cu.doubleToString(2*(1-solventDielectric)/(1+2*solventDielectric));
     defines["GK_FQ"] = cu.doubleToString(3*(1-solventDielectric)/(2+3*solventDielectric));
     defines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
-    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/solventDielectric);
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/force.getSoluteDielectric());
     if (multipoles->getPolarizationType() == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
     stringstream forceSource;
@@ -1843,11 +1843,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
         &labFrameQuadrupoles.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
         &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
     cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-    printf("bornForce\n");
-    vector<long long> f;
-    bornForce->download(f);
-    for (int i = 0; i < cu.getNumAtoms(); i++)
-        printf("%d %g\n", i, f[i]/(double) 0xFFFFFFFF);
 
     // Compute cavity term...
     

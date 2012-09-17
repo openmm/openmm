@@ -1079,8 +1079,8 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 #endif
 
 #if defined F1
-    
-    outputEnergy += energy;
+
+    outputEnergy = energy;
 
     if ((xr != 0 || yr != 0 || zr != 0)) {
         force.x = dedx;

@@ -191,6 +191,7 @@ inline __device__ void zeroAtomData(AtomData2& data) {
     data.force = make_real3(0);
     data.bornForce = 0;
 }
+
 /**
  * Compute electrostatic interactions.
  */
@@ -245,7 +246,7 @@ extern "C" __global__ void computeGKForces(
                 
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
-                    if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
                         real tempEnergy;
                         computeOneInteractionF1(data, localData[tbx+j], tempEnergy, tempForce);
@@ -264,7 +265,7 @@ extern "C" __global__ void computeGKForces(
                 zeroAtomData(data);
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
-                    if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempTorque;
                         computeOneInteractionT1(data, localData[tbx+j], tempTorque);
                         computeOneInteractionT2(data, localData[tbx+j], tempTorque);
@@ -434,7 +435,7 @@ __device__ void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& ato
 }
 
 /**
- * Compute electrostatic interactions.
+ * Compute chain rule terms.
  */
 extern "C" __global__ void computeChainRuleForce(
         unsigned long long* __restrict__ forceBuffers, const real4* __restrict__ posq, unsigned int startTileIndex, unsigned int numTileIndices,
@@ -472,10 +473,11 @@ extern "C" __global__ void computeChainRuleForce(
                 localData[threadIdx.x].scaledRadius = data.scaledRadius;
                 localData[threadIdx.x].bornRadius = data.bornRadius;
                 localData[threadIdx.x].bornForce = data.bornForce;
+                localData[threadIdx.x].force = make_real3(0);
                 
                 // Compute forces.
                 
-                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                for (unsigned int j = (tgx+1)&(TILE_SIZE-1); j != tgx; j = (j+1)&(TILE_SIZE-1)) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
@@ -484,9 +486,9 @@ extern "C" __global__ void computeChainRuleForce(
                         localData[tbx+j].force += tempForce;
                     }
                 }
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) ((data.force.x+localData[threadIdx.x].force.x)*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.y+localData[threadIdx.x].force.y)*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.z+localData[threadIdx.x].force.z)*0xFFFFFFFF)));
             }
             else {
                 // This is an off-diagonal tile.

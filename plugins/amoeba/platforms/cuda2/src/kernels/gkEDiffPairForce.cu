@@ -1,3 +1,5 @@
+#define APPLY_SCALE
+
 #if defined F1
 __device__ void computeOneEDiffInteractionF1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real& outputEnergy, real3& outputForce) {
 #elif defined T1
