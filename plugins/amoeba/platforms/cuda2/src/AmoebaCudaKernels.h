@@ -470,6 +470,15 @@ public:
     CudaArray* getField() {
         return field;
     }
+    CudaArray* getFieldPolar() {
+        return fieldPolar;
+    }
+    CudaArray* getInducedField() {
+        return inducedField;
+    }
+    CudaArray* getInducedFieldPolar() {
+        return inducedFieldPolar;
+    }
     CudaArray* getInducedDipoles() {
         return inducedDipoleS;
     }
@@ -485,6 +494,9 @@ private:
     CudaArray* bornRadii;
     CudaArray* bornForce;
     CudaArray* field;
+    CudaArray* fieldPolar;
+    CudaArray* inducedField;
+    CudaArray* inducedFieldPolar;
     CudaArray* inducedDipoleS;
     CudaArray* inducedDipolePolarS;
     CUfunction computeBornSumKernel, reduceBornSumKernel, gkForceKernel, chainRuleKernel, ediffKernel;

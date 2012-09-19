@@ -1,5 +1,3 @@
-#define APPLY_SCALE
-
 #if defined F1
 __device__ void computeOneEDiffInteractionF1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real& outputEnergy, real3& outputForce) {
 #elif defined T1
@@ -77,7 +75,6 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
     real scale3i = 3*scale3*uscale*rr3*rr2;
     real scale5i = 3*scale5*uscale*rr3*rr2;
 
-#ifdef APPLY_SCALE
     real dsc3 = scale3*dScale*rr3;
     real dsc5 = 3*scale5*dScale*rr3*rr2;
     real dsc7 = 15*scale7*dScale*rr3*rr3*rr1;
@@ -85,11 +82,6 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
     real psc3 = scale3*pScale*rr3;
     real psc5 = 3*scale5*pScale*rr3*rr2;
     real psc7 = 15*scale7*pScale*rr3*rr3*rr1;
-#else
-    real psc3 = scale3*rr3;
-    real psc5 = 3*scale5*rr3*rr2;
-    real psc7 = 15*scale7*rr3*rr3*rr1;
-#endif
  
 #ifdef T1
     real dixr1 = atom1.dipole.y*zr - atom1.dipole.z*yr;
@@ -167,15 +159,9 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
     qiukp2 -= atom1.quadrupoleXY*atom2.inducedDipolePolar.x + atom1.quadrupoleYY*atom2.inducedDipolePolar.y + atom1.quadrupoleYZ*atom2.inducedDipolePolar.z;
     qiukp3 -= atom1.quadrupoleXZ*atom2.inducedDipolePolar.x + atom1.quadrupoleYZ*atom2.inducedDipolePolar.y + atom1.quadrupoleZZ*atom2.inducedDipolePolar.z;
 
-#ifdef APPLY_SCALE
     ftm2i1 -= psc5*qiuk1 + dsc5*qiukp1;
     ftm2i2 -= psc5*qiuk2 + dsc5*qiukp2;
     ftm2i3 -= psc5*qiuk3 + dsc5*qiukp3;
-#else
-    ftm2i1 -= psc5*(qiuk1 + qiukp1);
-    ftm2i2 -= psc5*(qiuk2 + qiukp2);
-    ftm2i3 -= psc5*(qiuk3 + qiukp3);
-#endif
 #endif
 #endif
 
@@ -197,15 +183,9 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
     qkuip2 -= atom2.quadrupoleXY*atom1.inducedDipolePolar.x + atom2.quadrupoleYY*atom1.inducedDipolePolar.y + atom2.quadrupoleYZ*atom1.inducedDipolePolar.z;
     qkuip3 -= atom2.quadrupoleXZ*atom1.inducedDipolePolar.x + atom2.quadrupoleYZ*atom1.inducedDipolePolar.y + atom2.quadrupoleZZ*atom1.inducedDipolePolar.z;
 
-#ifdef APPLY_SCALE
     ftm2i1 += psc5*qkui1 + dsc5*qkuip1;
     ftm2i2 += psc5*qkui2 + dsc5*qkuip2;
     ftm2i3 += psc5*qkui3 + dsc5*qkuip3;
-#else
-    ftm2i1 += psc5*(qkui1 + qkuip1);
-    ftm2i2 += psc5*(qkui2 + qkuip2);
-    ftm2i3 += psc5*(qkui3 + qkuip3);
-#endif
 #endif
 
 #endif
@@ -326,44 +306,24 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
     real glip3 = scip3Y*sc6 - scip4Y*sc5;
 
 #ifdef F1
-#ifdef APPLY_SCALE
     ftm2i1 -= 0.5f*((gli1*pScale + glip1*dScale)*ddsc3_1 + (gli2*pScale + glip2*dScale)*ddsc5_1 + (gli3*pScale+glip3*dScale)*ddsc7_1);
     ftm2i2 -= 0.5f*((gli1*pScale + glip1*dScale)*ddsc3_2 + (gli2*pScale + glip2*dScale)*ddsc5_2 + (gli3*pScale+glip3*dScale)*ddsc7_2);
     ftm2i3 -= 0.5f*((gli1*pScale + glip1*dScale)*ddsc3_3 + (gli2*pScale + glip2*dScale)*ddsc5_3 + (gli3*pScale+glip3*dScale)*ddsc7_3);
-#else
-    ftm2i1 -= 0.5f*((gli1 + glip1)*ddsc3_1 + (gli2 + glip2)*ddsc5_1 + (gli3 + glip3)*ddsc7_1);
-    ftm2i2 -= 0.5f*((gli1 + glip1)*ddsc3_2 + (gli2 + glip2)*ddsc5_2 + (gli3 + glip3)*ddsc7_2);
-    ftm2i3 -= 0.5f*((gli1 + glip1)*ddsc3_3 + (gli2 + glip2)*ddsc5_3 + (gli3 + glip3)*ddsc7_3);
-#endif
     outputEnergy = gli1*psc3 + gli2*psc5 + gli3*psc7;
 #endif
 
-#ifdef APPLY_SCALE
     gfi1 += 1.5f*(gli1*psc3 + glip1*dsc3);
     gfi1 += 2.5f*(gli2*psc5 + glip2*dsc5);
     gfi1 += 3.5f*(gli3*psc7 + glip3*dsc7);
-#else
-    gfi1 += 1.5f*psc3*(gli1 + glip1);
-    gfi1 += 2.5f*psc5*(gli2 + glip2);
-    gfi1 += 3.5f*psc7*(gli3 + glip3);
-#endif
     gfi1 *= rr2;
     gfi1 += 0.5f*scip2*scale3i;
 
 #if defined F1 || defined T1
-#ifdef APPLY_SCALE
     real gfi5 =  (sci4Y*psc7+scip4Y*dsc7);
-#else
-    real gfi5 =  psc7*(sci4Y + scip4Y);
-#endif
 #endif
 
 #if defined F1 || defined T3
-#ifdef APPLY_SCALE
     real gfi6 = -(sci3Y*psc7+scip3Y*dsc7);
-#else
-    real gfi6 = -psc7*(sci3Y + scip3Y);
-#endif
 #endif
 
 #ifdef F1
@@ -371,66 +331,35 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
 
     real diff0 = atom1.inducedDipoleS.x - atom1.inducedDipole.x;               
     real diff1 = atom1.inducedDipolePolarS.x - atom1.inducedDipolePolar.x;               
-#ifdef APPLY_SCALE
     ftm2i1 += 0.5f*(-atom2.q*(diff0*psc3 + diff1*dsc3) + sc4*(diff0*psc5 + diff1*dsc5) - sc6*(diff0*psc7 + diff1*dsc7));
-#else
-    ftm2i1 += 0.5f*(-atom2.q*psc3*(diff0 + diff1) + sc4*psc5*(diff0 + diff1) - sc6*psc7*(diff0 + diff1));
-#endif
     
     diff0 = atom2.inducedDipoleS.x - atom2.inducedDipole.x;               
     diff1 = atom2.inducedDipolePolarS.x - atom2.inducedDipolePolar.x;               
-#ifdef APPLY_SCALE
     ftm2i1 += 0.5f*(atom1.q*(diff0*psc3 + diff1*dsc3) + sc3*(diff0*psc5 + diff1*dsc5) + sc5*(diff0*psc7 + diff1*dsc7));
     ftm2i1 += 0.5f*(sci4Y*psc5+scip4Y*dsc5)*atom1.dipole.x + 0.5f*(sci3Y*psc5+scip3Y*dsc5)*atom2.dipole.x + gfi5*qir1 + gfi6*qkr1;
-#else
-    ftm2i1 += 0.5f*(atom1.q*psc3*(diff0 + diff1) + sc3*psc5*(diff0 + diff1) + sc5*psc7*(diff0 + diff1));
-    ftm2i1 += 0.5f*psc5*(sci4Y + scip4Y)*atom1.dipole.x + 0.5f*psc5*(sci3Y + scip3Y)*atom2.dipole.x + gfi5*qir1 + gfi6*qkr1;
-#endif
-
 
     ftm2i2 += gfi1*yr;
 
     diff0 = atom1.inducedDipoleS.y - atom1.inducedDipole.y;               
     diff1 = atom1.inducedDipolePolarS.y - atom1.inducedDipolePolar.y;               
-#ifdef APPLY_SCALE
     ftm2i2 += 0.5f*(-atom2.q*(diff0*psc3 + diff1*dsc3) + sc4*(diff0*psc5 + diff1*dsc5) - sc6*(diff0*psc7 + diff1*dsc7));
-#else
-    ftm2i2 += 0.5f*(-atom2.q*psc3*(diff0 + diff1) + sc4*psc5*(diff0 + diff1) - sc6*psc7*(diff0 + diff1));
-#endif
 
     diff0 = atom2.inducedDipoleS.y - atom2.inducedDipole.y;               
     diff1 = atom2.inducedDipolePolarS.y - atom2.inducedDipolePolar.y;               
 
-#ifdef APPLY_SCALE
     ftm2i2 += 0.5f*(atom1.q*(diff0*psc3 + diff1*dsc3) + sc3*(diff0*psc5 + diff1*dsc5) + sc5*(diff0*psc7 + diff1*dsc7));
     ftm2i2 += 0.5f*(sci4Y*psc5+scip4Y*dsc5)*atom1.dipole.y + 0.5f*(sci3Y*psc5+scip3Y*dsc5)*atom2.dipole.y + gfi5*qir2 + gfi6*qkr2;
-#else
-    ftm2i2 += 0.5f*(atom1.q*psc3*(diff0 + diff1) + sc3*psc5*(diff0 + diff1) + sc5*psc7*(diff0 + diff1));
-    ftm2i2 += 0.5f*psc5*(sci4Y +scip4Y)*atom1.dipole.y + 0.5f*psc5*(sci3Y +scip3Y)*atom2.dipole.y + gfi5*qir2 + gfi6*qkr2;
-#endif
-
 
     ftm2i3 += gfi1*zr;
 
     diff0 = atom1.inducedDipoleS.z - atom1.inducedDipole.z;               
     diff1 = atom1.inducedDipolePolarS.z - atom1.inducedDipolePolar.z;               
-#ifdef APPLY_SCALE
     ftm2i3 += 0.5f*(-atom2.q*(diff0*psc3 + diff1*dsc3) + sc4*(diff0*psc5 + diff1*dsc5) - sc6*(diff0*psc7 + diff1*dsc7));
-#else
-    ftm2i3 += 0.5f*(-atom2.q*psc3*(diff0 + diff1) + sc4*psc5*(diff0 + diff1) - sc6*psc7*(diff0 + diff1));
-#endif
-
     diff0 = atom2.inducedDipoleS.z - atom2.inducedDipole.z;               
     diff1 = atom2.inducedDipolePolarS.z - atom2.inducedDipolePolar.z;               
 
-#ifdef APPLY_SCALE
     ftm2i3 += 0.5f*(atom1.q*(diff0*psc3 + diff1*dsc3) + sc3*(diff0*psc5 + diff1*dsc5) + sc5*(diff0*psc7 + diff1*dsc7));
     ftm2i3 += 0.5f*(sci4Y*psc5+scip4Y*dsc5)*atom1.dipole.z + 0.5f*(sci3Y*psc5+scip3Y*dsc5)*atom2.dipole.z + gfi5*qir3 + gfi6*qkr3;
-#else
-    ftm2i3 += 0.5f*(atom1.q*psc3*(diff0 + diff1) + sc3*psc5*(diff0 + diff1) + sc5*psc7*(diff0 + diff1));
-    ftm2i3 += 0.5f*psc5*(sci4Y + scip4Y)*atom1.dipole.z + 0.5f*psc5*(sci3Y+scip3Y)*atom2.dipole.z + gfi5*qir3 + gfi6*qkr3;
-#endif
-
  
     // intermediate values needed for partially excluded interactions
 
@@ -475,31 +404,17 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
 #endif
 
 #ifdef T1
-#ifdef APPLY_SCALE
     real gti2 = 0.5f*(sci4Y*psc5 + scip4Y*dsc5);
     real ttm2i1 = -(dixuk1*psc3+dixukp1*dsc3)*0.5f + gti2*dixr1 + ((ukxqir1+rxqiuk1)*psc5 +(ukxqirp1+rxqiukp1)*dsc5) - gfi5*rxqir1;
     real ttm2i2 = -(dixuk2*psc3+dixukp2*dsc3)*0.5f + gti2*dixr2 + ((ukxqir2+rxqiuk2)*psc5 +(ukxqirp2+rxqiukp2)*dsc5) - gfi5*rxqir2;
     real ttm2i3 = -(dixuk3*psc3+dixukp3*dsc3)*0.5f + gti2*dixr3 + ((ukxqir3+rxqiuk3)*psc5 +(ukxqirp3+rxqiukp3)*dsc5) - gfi5*rxqir3;
-#else
-    real gti2 = 0.5f*psc5*(sci4Y + scip4Y);
-    real ttm2i1 = -psc3*(dixuk1 + dixukp1)*0.5f + gti2*dixr1 + psc5*((ukxqir1+rxqiuk1) + (ukxqirp1+rxqiukp1)) - gfi5*rxqir1;
-    real ttm2i2 = -psc3*(dixuk2 + dixukp2)*0.5f + gti2*dixr2 + psc5*((ukxqir2+rxqiuk2) + (ukxqirp2+rxqiukp2)) - gfi5*rxqir2;
-    real ttm2i3 = -psc3*(dixuk3 + dixukp3)*0.5f + gti2*dixr3 + psc5*((ukxqir3+rxqiuk3) + (ukxqirp3+rxqiukp3)) - gfi5*rxqir3;
-#endif
 #endif
 
 #ifdef T3
-#ifdef APPLY_SCALE
     real gti3 = 0.5f*(sci3Y*psc5 + scip3Y*dsc5);
     real ttm3i1 = -(dkxui1*psc3+dkxuip1*dsc3)*0.5f + gti3*dkxr1 - ((uixqkr1+rxqkui1)*psc5 +(uixqkrp1+rxqkuip1)*dsc5) - gfi6*rxqkr1;
     real ttm3i2 = -(dkxui2*psc3+dkxuip2*dsc3)*0.5f + gti3*dkxr2 - ((uixqkr2+rxqkui2)*psc5 +(uixqkrp2+rxqkuip2)*dsc5) - gfi6*rxqkr2;
     real ttm3i3 = -(dkxui3*psc3+dkxuip3*dsc3)*0.5f + gti3*dkxr3 - ((uixqkr3+rxqkui3)*psc5 +(uixqkrp3+rxqkuip3)*dsc5) - gfi6*rxqkr3;
-#else
-    real gti3 = 0.5f*psc5*(sci3Y + scip3Y);
-    real ttm3i1 = -psc3*(dkxui1 + dkxuip1)*0.5f + gti3*dkxr1 - psc5*((uixqkr1+rxqkui1) + (uixqkrp1+rxqkuip1)) - gfi6*rxqkr1;
-    real ttm3i2 = -psc3*(dkxui2 + dkxuip2)*0.5f + gti3*dkxr2 - psc5*((uixqkr2+rxqkui2) + (uixqkrp2+rxqkuip2)) - gfi6*rxqkr2;
-    real ttm3i3 = -psc3*(dkxui3 + dkxuip3)*0.5f + gti3*dkxr3 - psc5*((uixqkr3+rxqkui3) + (uixqkrp3+rxqkuip3)) - gfi6*rxqkr3;
-#endif
 #endif
  
     // update force and torque on site k
@@ -603,27 +518,15 @@ __device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData
 #endif
 
 #ifdef T1
-#ifdef APPLY_SCALE
      ttm2i1 = -(dixuk1*psc3+dixukp1*dsc3)*0.5f + ((ukxqir1+rxqiuk1)*psc5 +(ukxqirp1+rxqiukp1)*dsc5);
      ttm2i2 = -(dixuk2*psc3+dixukp2*dsc3)*0.5f + ((ukxqir2+rxqiuk2)*psc5 +(ukxqirp2+rxqiukp2)*dsc5);
      ttm2i3 = -(dixuk3*psc3+dixukp3*dsc3)*0.5f + ((ukxqir3+rxqiuk3)*psc5 +(ukxqirp3+rxqiukp3)*dsc5);
-#else
-     ttm2i1 = -psc3*(dixuk1+dixukp1)*0.5f + psc5*((ukxqir1+rxqiuk1) + (ukxqirp1+rxqiukp1));
-     ttm2i2 = -psc3*(dixuk2+dixukp2)*0.5f + psc5*((ukxqir2+rxqiuk2) + (ukxqirp2+rxqiukp2));
-     ttm2i3 = -psc3*(dixuk3+dixukp3)*0.5f + psc5*((ukxqir3+rxqiuk3) + (ukxqirp3+rxqiukp3));
-#endif
 #endif
  
 #ifdef T3
-#ifdef APPLY_SCALE
      ttm3i1 = -(dkxui1*psc3+dkxuip1*dsc3)*0.5f - ((uixqkr1+rxqkui1)*psc5 +(uixqkrp1+rxqkuip1)*dsc5);
      ttm3i2 = -(dkxui2*psc3+dkxuip2*dsc3)*0.5f - ((uixqkr2+rxqkui2)*psc5 +(uixqkrp2+rxqkuip2)*dsc5);
      ttm3i3 = -(dkxui3*psc3+dkxuip3*dsc3)*0.5f - ((uixqkr3+rxqkui3)*psc5 +(uixqkrp3+rxqkuip3)*dsc5);
-#else
-     ttm3i1 = -psc3*(dkxui1 + dkxuip1)*0.5f - psc5*((uixqkr1+rxqkui1) + (uixqkrp1+rxqkuip1));
-     ttm3i2 = -psc3*(dkxui2 + dkxuip2)*0.5f - psc5*((uixqkr2+rxqkui2) + (uixqkrp2+rxqkuip2));
-     ttm3i3 = -psc3*(dkxui3 + dkxuip3)*0.5f - psc5*((uixqkr3+rxqkui3) + (uixqkrp3+rxqkuip3));
-#endif
 #endif
 
     // update force and torque on site k;
