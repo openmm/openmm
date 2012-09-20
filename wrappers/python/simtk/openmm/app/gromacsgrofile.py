@@ -176,7 +176,7 @@ class GromacsGroFile(object):
             if self._numpyPositions is None:
                 self._numpyPositions = [None]*len(self._positions)
             if self._numpyPositions[frame] is None:
-                self._numpyPositions[frame] = numpy.array(self._positions[frame].value_in_unit(nanometers))*nanometers
+                self._numpyPositions[frame] = Quantity(numpy.array(self._positions[frame].value_in_unit(nanometers)), nanometers)
             return self._numpyPositions[frame]
         return self._positions[frame]
     

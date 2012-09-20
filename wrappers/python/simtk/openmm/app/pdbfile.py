@@ -65,13 +65,12 @@ class PDBFile(object):
          - file (string) the name of the file to load
         """
         top = Topology()
-        coords = [];
         ## The Topology read from the PDB file
         self.topology = top
         
         # Load the PDB file
         
-        pdb = PdbStructure(open(file))
+        pdb = PdbStructure(open(file), load_all_models=True)
         PDBFile._loadNameReplacementTables()
 
         # Build the topology
@@ -119,10 +118,15 @@ class PDBFile(object):
                             pass
                     newAtom = top.addAtom(atomName, element, r)
                     atomByNumber[atom.serial_number] = newAtom
-                    pos = atom.get_position().value_in_unit(nanometers)
-                    coords.append(Vec3(pos[0], pos[1], pos[2]))
-        ## The atom positions read from the PDB file
-        self.positions = coords*nanometers
+        self._positions = []
+        for model in pdb.iter_models(True):
+            coords = []
+            for atom in model.iter_atoms():
+                pos = atom.get_position().value_in_unit(nanometers)
+                coords.append(Vec3(pos[0], pos[1], pos[2]))
+            self._positions.append(coords*nanometers)
+        ## The atom positions read from the PDB file.  If the file contains multiple frames, these are the positions in the first frame.
+        self.positions = self._positions[0]
         self.topology.setUnitCellDimensions(pdb.get_unit_cell_dimensions())
         self.topology.createStandardBonds()
         self.topology.createDisulfideBonds(self.positions)
@@ -147,17 +151,24 @@ class PDBFile(object):
         """Get the Topology of the model."""
         return self.topology
         
-    def getPositions(self, asNumpy=False):
+    def getNumFrames(self):
+        """Get the number of frames stored in the file."""
+        return len(self._positions)
+    
+    def getPositions(self, asNumpy=False, frame=0):
         """Get the atomic positions.
         
         Parameters:
          - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
+         - frame (int=0) the index of the frame for which to get positions
          """
         if asNumpy:
             if self._numpyPositions is None:
-                self._numpyPositions = numpy.array(self.positions.value_in_unit(nanometers))*nanometers
-            return self._numpyPositions
-        return self.positions
+                self._numpyPositions = [None]*len(self._positions)
+            if self._numpyPositions[frame] is None:
+                self._numpyPositions[frame] = Quantity(numpy.array(self._positions[frame].value_in_unit(nanometers)), nanometers)
+            return self._numpyPositions[frame]
+        return self._positions[frame]
 
     @staticmethod
     def _loadNameReplacementTables():
