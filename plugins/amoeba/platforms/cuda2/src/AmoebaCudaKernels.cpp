@@ -1807,6 +1807,12 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/force.getSoluteDielectric());
     if (multipoles->getPolarizationType() == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
+    includeSurfaceArea = force.getIncludeCavityTerm();
+    if (includeSurfaceArea) {
+        defines["SURFACE_AREA_FACTOR"] = cu.doubleToString(force.getSurfaceAreaFactor());
+        defines["PROBE_RADIUS"] = cu.doubleToString(force.getProbeRadius());
+        defines["DIELECTRIC_OFFSET"] = cu.doubleToString(0.009);
+    }
     stringstream forceSource;
     forceSource << CudaKernelSources::vectorOps;
     forceSource << CudaAmoebaKernelSources::amoebaGk;
@@ -1836,6 +1842,8 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     gkForceKernel = cu.getKernel(module, "computeGKForces");
     chainRuleKernel = cu.getKernel(module, "computeChainRuleForce");
     ediffKernel = cu.getKernel(module, "computeEDiffForce");
+    if (includeSurfaceArea)
+        surfaceAreaKernel = cu.getKernel(module, "computeSurfaceAreaForce");
     cu.addForce(new ForceInfo(force));
 }
 
@@ -1864,13 +1872,23 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     int numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     int forceThreadBlockSize = nb.getForceThreadBlockSize();
+    
+    // Compute the GK force.
+    
     void* gkForceArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
         &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &labFrameDipoles.getDevicePointer(),
         &labFrameQuadrupoles.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
         &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
     cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
 
-    // Compute cavity term...
+    // Compute the surface area force.
+    
+    if (includeSurfaceArea) {
+        void* surfaceAreaArgs[] = {&bornForce->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params->getDevicePointer(), &bornRadii->getDevicePointer()};
+        cu.executeKernel(surfaceAreaKernel, surfaceAreaArgs, cu.getNumAtoms());
+    }
+    
+    // Apply the remaining terms.
     
     void* chainRuleArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices,
         &params->getDevicePointer(), &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};

@@ -358,9 +358,6 @@ static void compareForcesEnergy( std::string& testName, double expectedEnergy, d
     }
 #endif
 
-    for( unsigned int ii = 0; ii < forces.size(); ii++ )
-        std::cout << forces[ii]<<" "<<expectedForces[ii]<< std::endl;
-    std::cout << energy<<" "<<expectedEnergy<< std::endl;
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         ASSERT_EQUAL_VEC_MOD( expectedForces[ii], forces[ii], tolerance, testName );
     }

@@ -20,6 +20,27 @@ extern "C" __global__ void reduceBornSum(const long long* __restrict__ bornSum, 
     }
 }
 
+#ifdef SURFACE_AREA_FACTOR
+/**
+ * Apply the surface area term to the force and energy.
+ */
+extern "C" __global__ void computeSurfaceAreaForce(long long* __restrict__ bornForce, real* __restrict__ energyBuffer, const float2* __restrict__ params, const real* __restrict__ bornRadii) {
+    real energy = 0;
+    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+        real bornRadius = bornRadii[index];
+        float radius = params[index].x;
+        real r = radius + DIELECTRIC_OFFSET + PROBE_RADIUS;
+        real ratio6 = (radius+DIELECTRIC_OFFSET)/bornRadius;
+        ratio6 = ratio6*ratio6*ratio6;
+        ratio6 = ratio6*ratio6;
+        real saTerm = SURFACE_AREA_FACTOR * r * r * ratio6;
+        bornForce[index] += (long long) (saTerm*0xFFFFFFFF/bornRadius);
+        energy += saTerm;
+    }
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] -= energy/6;
+}
+#endif
+
 /**
  * Data structure used by computeBornSum().
  */

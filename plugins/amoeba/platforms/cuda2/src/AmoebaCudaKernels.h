@@ -486,6 +486,7 @@ private:
     class ForceInfo;
     CudaContext& cu;
     System& system;
+    bool includeSurfaceArea;
     CudaArray* params;
     CudaArray* bornSum;
     CudaArray* bornRadii;
@@ -495,7 +496,7 @@ private:
     CudaArray* inducedFieldPolar;
     CudaArray* inducedDipoleS;
     CudaArray* inducedDipolePolarS;
-    CUfunction computeBornSumKernel, reduceBornSumKernel, gkForceKernel, chainRuleKernel, ediffKernel;
+    CUfunction computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
 };
 
 /**
