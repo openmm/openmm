@@ -470,9 +470,6 @@ public:
     CudaArray* getField() {
         return field;
     }
-    CudaArray* getFieldPolar() {
-        return fieldPolar;
-    }
     CudaArray* getInducedField() {
         return inducedField;
     }
@@ -494,7 +491,6 @@ private:
     CudaArray* bornRadii;
     CudaArray* bornForce;
     CudaArray* field;
-    CudaArray* fieldPolar;
     CudaArray* inducedField;
     CudaArray* inducedFieldPolar;
     CudaArray* inducedDipoleS;

@@ -1365,31 +1365,19 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             else {
                 cu.clearBuffer(*gkKernel->getInducedField());
                 cu.clearBuffer(*gkKernel->getInducedFieldPolar());
-                vector<float> d, dp;
-                gkKernel->getInducedDipoles()->download(d);
-                gkKernel->getInducedDipolesPolar()->download(dp);
-                printf("dipole\n");
-                for (int i = 0; i < cu.getNumAtoms(); i++)
-                    printf("%d %g %g %g, %g %g %g\n", i, d[3*i], d[3*i+1], d[3*i+2], dp[3*i], dp[3*i+1], dp[3*i+2]);
                 void* computeInducedFieldArgs[] = {&inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), &cu.getPosq().getDevicePointer(),
                     &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &startTileIndex, &numTileIndices,
                     &gkKernel->getInducedField()->getDevicePointer(), &gkKernel->getInducedFieldPolar()->getDevicePointer(),
                     &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(),
                     &gkKernel->getBornRadii()->getDevicePointer(), &dampingAndThole->getDevicePointer()};
                 cu.executeKernel(computeInducedFieldKernel, computeInducedFieldArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-                vector<long long> f, fp;
-                gkKernel->getInducedField()->download(f);
-                gkKernel->getInducedFieldPolar()->download(fp);
-                printf("field\n");
-                for (int i = 0; i < cu.getNumAtoms(); i++)
-                    printf("%d %g %g %g, %g %g %g\n", i, f[i]/(double) 0xFFFFFFFF, f[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, f[i+2*cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, fp[i]/(double) 0xFFFFFFFF, fp[i+cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF, fp[i+2*cu.getPaddedNumAtoms()]/(double) 0xFFFFFFFF);
                 void* updateInducedGkFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(),
-                    &gkKernel->getField()->getDevicePointer(), &gkKernel->getFieldPolar()->getDevicePointer(), &gkKernel->getInducedField()->getDevicePointer(),
-                    &gkKernel->getInducedFieldPolar()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(), &gkKernel->getInducedDipolesPolar()->getDevicePointer(),
-                    &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
+                    &gkKernel->getField()->getDevicePointer(), &gkKernel->getInducedField()->getDevicePointer(),
+                    &gkKernel->getInducedFieldPolar()->getDevicePointer(), &gkKernel->getInducedDipoles()->getDevicePointer(),
+                    &gkKernel->getInducedDipolesPolar()->getDevicePointer(), &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
                 cu.executeKernel(updateInducedFieldKernel, updateInducedGkFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
             }
-            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &npt, &npt, &inducedField->getDevicePointer(),
+            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &npt, &inducedField->getDevicePointer(),
                 &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
                 &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
             cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
@@ -1517,7 +1505,7 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             void* pmeRecordInducedFieldDipolesArgs[] = {&pmePhid->getDevicePointer(), &pmePhip->getDevicePointer(),
                 &inducedField->getDevicePointer(), &inducedFieldPolar->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
             cu.executeKernel(pmeRecordInducedFieldDipolesKernel, pmeRecordInducedFieldDipolesArgs, cu.getNumAtoms());
-            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &npt, &npt, &inducedField->getDevicePointer(),
+            void* updateInducedFieldArgs[] = {&field->getDevicePointer(), &fieldPolar->getDevicePointer(), &npt, &inducedField->getDevicePointer(),
                 &inducedFieldPolar->getDevicePointer(), &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(),
                 &polarizability->getDevicePointer(), &inducedDipoleErrors->getDevicePointer()};
             cu.executeKernel(updateInducedFieldKernel, updateInducedFieldArgs, cu.getNumThreadBlocks()*cu.ThreadBlockSize, cu.ThreadBlockSize, cu.ThreadBlockSize*elementSize*2);
@@ -1734,7 +1722,7 @@ private:
 };
 
 CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
-           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), params(NULL), bornRadii(NULL), field(NULL), fieldPolar(NULL),
+           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), params(NULL), bornRadii(NULL), field(NULL),
            inducedField(NULL), inducedFieldPolar(NULL), inducedDipoleS(NULL), inducedDipolePolarS(NULL), bornSum(NULL), bornForce(NULL) {
 }
 
@@ -1746,8 +1734,6 @@ CudaCalcAmoebaGeneralizedKirkwoodForceKernel::~CudaCalcAmoebaGeneralizedKirkwood
         delete bornRadii;
     if (field != NULL)
         delete field;
-    if (fieldPolar != NULL)
-        delete fieldPolar;
     if (inducedField != NULL)
         delete inducedField;
     if (inducedFieldPolar != NULL)
@@ -1777,7 +1763,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     params = CudaArray::create<float2>(cu, paddedNumAtoms, "amoebaGkParams");
     bornRadii = new CudaArray(cu, paddedNumAtoms, elementSize, "bornRadii");
     field = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkField");
-    fieldPolar = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkFieldPolar");
     bornSum = CudaArray::create<long long>(cu, paddedNumAtoms, "bornSum");
     bornForce = CudaArray::create<long long>(cu, paddedNumAtoms, "bornForce");
     inducedDipoleS = new CudaArray(cu, 3*paddedNumAtoms, elementSize, "inducedDipoleS");
@@ -1787,7 +1772,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
         inducedFieldPolar = new CudaArray(cu, 3*paddedNumAtoms, sizeof(long long), "gkInducedFieldPolar");
     }
     cu.addAutoclearBuffer(*field);
-    cu.addAutoclearBuffer(*fieldPolar);
     cu.addAutoclearBuffer(*bornSum);
     cu.addAutoclearBuffer(*bornForce);
     vector<float2> paramsVector(paddedNumAtoms);

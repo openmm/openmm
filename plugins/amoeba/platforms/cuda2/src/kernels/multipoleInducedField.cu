@@ -149,32 +149,16 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
         atom2.fieldPolarS += rr3*atom1.inducedDipolePolarS + dDotDelta*deltaR;
     }
 
-
-
-
-
-
     real rb2 = atom1.bornRadius*atom2.bornRadius;
-
     real expterm = EXP(-r2/(GK_C*rb2));
     real expc = expterm/GK_C; 
-
     real gf2 = RECIP(r2+rb2*expterm);
     real gf = SQRT(gf2);
     real gf3 = gf2*gf;
     real gf5 = gf3*gf2;
-
-    // reaction potential auxiliary terms
- 
     real a10 = -gf3;
-
-    // reaction potential gradient auxiliary terms
-
     real expc1 = 1 - expc;
     real a11 = expc1 * 3 * gf5;
- 
-    // unweighted dipole reaction potential gradient tensor
-
     real3 gux = GK_FD*make_real3(a10+deltaR.x*deltaR.x*a11, deltaR.x*deltaR.y*a11, deltaR.x*deltaR.z*a11);
     real3 guy = make_real3(gux.y, GK_FD*(a10+deltaR.y*deltaR.y*a11), GK_FD*deltaR.y*deltaR.z*a11);
     real3 guz = make_real3(gux.z, guy.z, GK_FD*(a10+deltaR.z*deltaR.z*a11));
@@ -280,6 +264,11 @@ extern "C" __global__ void computeInducedField(
                 localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
                 localData[threadIdx.x].thole = data.thole;
                 localData[threadIdx.x].damp = data.damp;
+#ifdef USE_GK
+                localData[threadIdx.x].inducedDipoleS = data.inducedDipoleS;
+                localData[threadIdx.x].inducedDipolePolarS = data.inducedDipolePolarS;
+                localData[threadIdx.x].bornRadius = data.bornRadius;
+#endif
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     real3 delta = localData[tbx+j].pos-data.pos;
 #ifdef USE_PERIODIC
@@ -435,9 +424,8 @@ extern "C" __global__ void computeInducedField(
 }
 
 extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,
-        const long long* __restrict__ fixedFieldS, const long long* __restrict__ fixedFieldPolarS,
-        const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar, real* __restrict__ inducedDipole,
-        real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors) {
+        const long long* __restrict__ fixedFieldS, const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar,
+        real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors) {
     extern __shared__ real2 buffer[];
     const float polarSOR = 0.55f;
 #ifdef USE_EWALD
@@ -455,10 +443,9 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
             int fieldIndex = atom+component*PADDED_NUM_ATOMS;
             real previousDipole = inducedDipole[dipoleIndex];
             real previousDipolePolar = inducedDipolePolar[dipoleIndex];
-            long long fixed = fixedField[fieldIndex] + (fixedFieldS == NULL ? (long long) 0 : fixedFieldS[fieldIndex]);
-            long long fixedPolar = fixedFieldPolar[fieldIndex] + (fixedFieldPolarS == NULL ? (long long) 0 : fixedFieldPolarS[fieldIndex]);
-            real newDipole = scale*((fixed+inducedField[fieldIndex])*fieldScale+ewaldScale*previousDipole);
-            real newDipolePolar = scale*((fixedPolar+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*previousDipolePolar);
+            long long fixedS = (fixedFieldS == NULL ? (long long) 0 : fixedFieldS[fieldIndex]);
+            real newDipole = scale*((fixedField[fieldIndex]+fixedS+inducedField[fieldIndex])*fieldScale+ewaldScale*previousDipole);
+            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+fixedS+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*previousDipolePolar);
             newDipole = previousDipole + polarSOR*(newDipole-previousDipole);
             newDipolePolar = previousDipolePolar + polarSOR*(newDipolePolar-previousDipolePolar);
             inducedDipole[dipoleIndex] = newDipole;
