@@ -97,7 +97,9 @@ CudaPlatform::CudaPlatform() {
     setPropertyDefaultValue(CudaCompiler(), nvcc);
     setPropertyDefaultValue(CudaTempDirectory(), string(getenv("TEMP")));
 #else
-    setPropertyDefaultValue(CudaCompiler(), "/usr/local/cuda/bin/nvcc");
+    char* compiler = getenv("OPENMM_CUDA_COMPILER");
+	string nvcc = (compiler == NULL ? "/usr/local/cuda/bin/nvcc" : string(compiler));
+    setPropertyDefaultValue(CudaCompiler(), nvcc);
     char* tmpdir = getenv("TMPDIR");
     if (tmpdir == NULL)
         tmpdir = P_tmpdir;
