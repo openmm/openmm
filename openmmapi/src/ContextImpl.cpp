@@ -48,7 +48,7 @@ using namespace OpenMM;
 using namespace std;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
-         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), lastForceGroups(-1), platform(platform), platformData(NULL) {
+         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), lastForceGroups(-1), platform(platform), platformData(NULL) {
     if (system.getNumParticles() == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");
     
@@ -143,6 +143,7 @@ void ContextImpl::getPositions(std::vector<Vec3>& positions) {
 }
 
 void ContextImpl::setPositions(const std::vector<Vec3>& positions) {
+    hasSetPositions = true;
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setPositions(*this, positions);
     integrator.stateChanged(State::Positions);
 }
@@ -200,6 +201,8 @@ void ContextImpl::computeVirtualSites() {
 }
 
 double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+    if (!hasSetPositions)
+        throw OpenMMException("Particle positions have not been set");
     lastForceGroups = groups;
     CalcForcesAndEnergyKernel& kernel = initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>();
     double energy = 0.0;
