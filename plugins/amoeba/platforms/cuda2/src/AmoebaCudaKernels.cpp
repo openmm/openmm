@@ -1079,7 +1079,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         electrostaticsSource << "#define T1\n";
         electrostaticsSource << CudaAmoebaKernelSources::electrostaticPairForce;
         electrostaticsSource << "#undef T1\n";
-        electrostaticsSource << "#define T2\n";
+        electrostaticsSource << "#define T3\n";
         electrostaticsSource << CudaAmoebaKernelSources::electrostaticPairForce;
     }
     module = cu.createModule(electrostaticsSource.str(), defines);
@@ -1401,12 +1401,6 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         cu.executeKernel(electrostaticsKernel, electrostaticsArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
         if (gkKernel != NULL)
             gkKernel->finishComputation(*torque, *labFrameDipoles, *labFrameQuadrupoles, *inducedDipole, *inducedDipolePolar, *dampingAndThole, *covalentFlags, *polarizationGroupFlags);
-        
-        // Map torques to force.
-        
-        void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
-            &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
-        cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
     }
     else {
         // Reciprocal space calculation.
@@ -1534,13 +1528,13 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             &inducedDipole->getDevicePointer(), &inducedDipolePolar->getDevicePointer(), &pmePhi->getDevicePointer(), &pmePhid->getDevicePointer(),
             &pmePhip->getDevicePointer(), &pmePhidp->getDevicePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeInducedForceKernel, pmeInducedForceArgs, cu.getNumAtoms());
-        
-        // Map torques to force.
-        
-        void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
-            &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
-        cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
     }
+
+    // Map torques to force.
+
+    void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
+        &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
+    cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
     return 0.0;
 }
 

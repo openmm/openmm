@@ -50,7 +50,7 @@ typedef struct {
     float radius, scaledRadius, padding;
 } AtomData1;
 
-__device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2, float& bornSum) {
+__device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2) {
     if (atom1.radius <= 0)
         return; // Ignore this interaction
     real3 delta = atom2.pos - atom1.pos;
@@ -61,7 +61,7 @@ __device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2,
     if (atom1.radius+r < sk) {
         real lik = atom1.radius;
         real uik = sk - r; 
-        bornSum -= RECIP(uik*uik*uik) - RECIP(lik*lik*lik);
+        atom1.bornSum -= RECIP(uik*uik*uik) - RECIP(lik*lik*lik);
     }
     real uik = r+sk;
     real lik;
@@ -80,7 +80,7 @@ __device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2,
     real ur = uik*r; 
     real u4r = u4*r;
     real term = (3*(r2-sk2)+6*u2-8*ur)/u4r - (3*(r2-sk2)+6*l2-8*lr)/l4r;
-    bornSum += term/16;
+    atom1.bornSum += term/16;
 }
 
 /**
@@ -124,7 +124,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2)
-                        computeBornSumOneInteraction(data, localData[tbx+j], data.bornSum);
+                        computeBornSumOneInteraction(data, localData[tbx+j]);
                 }
             }
             else {
@@ -146,8 +146,8 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        computeBornSumOneInteraction(data, localData[tbx+j], data.bornSum);
-                        computeBornSumOneInteraction(localData[tbx+j], data, localData[tbx+j].bornSum);
+                        computeBornSumOneInteraction(data, localData[tbx+tj]);
+                        computeBornSumOneInteraction(localData[tbx+tj], data);
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
