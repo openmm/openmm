@@ -5007,6 +5007,7 @@ void CudaApplyAndersenThermostatKernel::initialize(const System& system, const A
 }
 
 void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
+    cu.setAsCurrent();
     float frequency = (float) context.getParameter(AndersenThermostat::CollisionFrequency());
     float kT = (float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature()));
     int randomIndex = cu.getIntegrationUtilities().prepareRandomNumbers(cu.getPaddedNumAtoms());
@@ -5033,6 +5034,7 @@ void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const M
 }
 
 void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+    cu.setAsCurrent();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -5073,6 +5075,7 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
 }
 
 void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
+    cu.setAsCurrent();
     int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
     CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
     if (result != CUDA_SUCCESS) {
@@ -5137,6 +5140,7 @@ void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRe
 }
 
 void CudaRemoveCMMotionKernel::execute(ContextImpl& context) {
+    cu.setAsCurrent();
     int numAtoms = cu.getNumAtoms();
     void* args[] = {&numAtoms, &cu.getVelm().getDevicePointer(), &cmMomentum->getDevicePointer()};
     cu.executeKernel(kernel1, args, cu.getNumAtoms(), cu.ThreadBlockSize, cu.ThreadBlockSize*sizeof(float4));
