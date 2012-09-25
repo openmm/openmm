@@ -410,15 +410,15 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
                 // z-only
         
                 forces[Z] = vector[UV]*dphi[V]/(norms[U]*angles[UV][1]);
-                forces[X] = make_float3(0);
-                forces[Y] = make_float3(0);
+                forces[X] = make_real3(0);
+                forces[Y] = make_real3(0);
                 forces[I] = -forces[Z];
             }
             else {
-                forces[Z] = make_float3(0);
-                forces[X] = make_float3(0);
-                forces[Y] = make_float3(0);
-                forces[I] = make_float3(0);
+                forces[Z] = make_real3(0);
+                forces[X] = make_real3(0);
+                forces[Y] = make_real3(0);
+                forces[I] = make_real3(0);
             }
         
             // Store results
@@ -450,10 +450,11 @@ extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ po
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real4* __restrict__ points,
         real* __restrict__ potential, int numPoints, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     extern __shared__ real4 localPosq[];
-    real3* localDipole = (real3*) &localPosq[NUM_ATOMS];
-    real3* localInducedDipole = (real3*) &localDipole[NUM_ATOMS];
-    real* localQuadrupole = (real*) &localInducedDipole[NUM_ATOMS];
-    for (int point = blockIdx.x*blockDim.x+threadIdx.x; point < numPoints; point += gridDim.x*blockDim.x) {
+    real3* localDipole = (real3*) &localPosq[blockDim.x];
+    real3* localInducedDipole = (real3*) &localDipole[blockDim.x];
+    real* localQuadrupole = (real*) &localInducedDipole[blockDim.x];
+    for (int basePoint = blockIdx.x*blockDim.x; basePoint < numPoints; basePoint += gridDim.x*blockDim.x) {
+        int point = basePoint+threadIdx.x;
         real4 pointPos = points[point];
         real p = 0;
         for (int baseAtom = 0; baseAtom < NUM_ATOMS; baseAtom += blockDim.x) {
@@ -475,28 +476,31 @@ extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ po
             
             // Loop over atoms and compute the potential at this point.
 
-            int end = min(blockDim.x, NUM_ATOMS-baseAtom);
-            for (int i = 0; i < end; i++) {
-                real3 delta = trimTo3(localPosq[i]-pointPos);
+            if (point < numPoints) {
+                int end = min(blockDim.x, NUM_ATOMS-baseAtom);
+                for (int i = 0; i < end; i++) {
+                    real3 delta = trimTo3(localPosq[i]-pointPos);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                real r2 = dot(delta, delta);
-                real rInv = RSQRT(r2);
-                p += localPosq[i].w*rInv;
-                real rr2 = rInv*rInv;
-                real rr3 = rInv*rr2;
-                real scd = dot(localDipole[i], delta);
-                real scu = dot(localInducedDipole[i], delta);
-                p -= (scd+scu)*rr3;
-                real rr5 = 3*rr3*rr2;
-                real scq = delta.x*dot(delta, make_real3(localQuadrupole[5*i+0], localQuadrupole[5*i+1], localQuadrupole[5*i+2])) +
-                           delta.y*dot(delta, make_real3(localQuadrupole[5*i+1], localQuadrupole[5*i+3], localQuadrupole[5*i+4])) +
-                           delta.z*dot(delta, make_real3(localQuadrupole[5*i+2], localQuadrupole[5*i+4], -localQuadrupole[5*i]-localQuadrupole[5*i+3]));
-                p += scq*rr5;
+                    real r2 = dot(delta, delta);
+                    real rInv = RSQRT(r2);
+                    p += localPosq[i].w*rInv;
+                    real rr2 = rInv*rInv;
+                    real rr3 = rInv*rr2;
+                    real scd = dot(localDipole[i], delta);
+                    real scu = dot(localInducedDipole[i], delta);
+                    p -= (scd+scu)*rr3;
+                    real rr5 = 3*rr3*rr2;
+                    real scq = delta.x*dot(delta, make_real3(localQuadrupole[5*i+0], localQuadrupole[5*i+1], localQuadrupole[5*i+2])) +
+                            delta.y*dot(delta, make_real3(localQuadrupole[5*i+1], localQuadrupole[5*i+3], localQuadrupole[5*i+4])) +
+                            delta.z*dot(delta, make_real3(localQuadrupole[5*i+2], localQuadrupole[5*i+4], -localQuadrupole[5*i]-localQuadrupole[5*i+3]));
+                    p += scq*rr5;
+                }
             }
+            __syncthreads();
         }
         potential[point] = p*ENERGY_SCALE_FACTOR;
     }

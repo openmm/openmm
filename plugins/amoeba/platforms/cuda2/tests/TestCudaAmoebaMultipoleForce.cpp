@@ -47,7 +47,7 @@
 
 #define ASSERT_EQUAL_TOL_MOD(expected, found, tol, testname) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << testname << " Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
 
-#define ASSERT_EQUAL_VEC_MOD(expected, found, tol,testname) {ASSERT_EQUAL_TOL_MOD((expected)[0], (found)[0], (tol),(testname)); ASSERT_EQUAL_TOL_MOD((expected)[1], (found)[1], (tol),(testname)); ASSERT_EQUAL_TOL_MOD((expected)[2], (found)[2], (tol),(testname));};
+#define ASSERT_EQUAL_VEC_MOD(expected, found, tol, testname) {double _norm_ = std::sqrt(expected.dot(expected)); double _scale_ = _norm_ > 1.0 ? _norm_ : 1.0; if ((std::abs((expected[0])-(found[0]))/_scale_ > (tol)) || (std::abs((expected[1])-(found[1]))/_scale_ > (tol)) || (std::abs((expected[2])-(found[2]))/_scale_ > (tol))) {std::stringstream details; details << testname << " Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
 
 
 using namespace OpenMM;
@@ -683,7 +683,7 @@ static void testMultipoleWaterPMEDirectPolarization( FILE* log ) {
     expectedForces[10]        = Vec3(   9.2036949e-01,  -1.4717629e+00,  -3.3362339e+00 );
     expectedForces[11]        = Vec3(   1.2523841e+00,  -1.9794292e+00,  -3.4670129e+00 );
 
-    double tolerance          = 3.0e-03;
+    double tolerance          = 1.0e-03;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
@@ -718,7 +718,7 @@ static void testMultipoleWaterPMEMutualPolarization( FILE* log ) {
     expectedForces[10]        = Vec3(   9.1775539e-01,  -1.4651882e+00,  -3.3322516e+00 );
     expectedForces[11]        = Vec3(   1.2467701e+00,  -1.9832979e+00,  -3.4684052e+00 );
 
-    double tolerance          = 3.0e-03;
+    double tolerance          = 1.0e-03;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
@@ -2677,7 +2677,7 @@ static void testPMEMutualPolarizationLargeWater( FILE* log ) {
     expectedForces[646]       = Vec3(  -6.4620310e+02,   2.5885783e+02,  -2.0567224e+02 );
     expectedForces[647]       = Vec3(  -4.7388806e+02,  -5.5561844e+02,  -8.5019295e+02 );
 
-    double tolerance          = 1.0e-03;
+    double tolerance          = 1.0e-04;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 
 }

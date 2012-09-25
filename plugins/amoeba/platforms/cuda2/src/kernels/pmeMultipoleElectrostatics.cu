@@ -60,7 +60,7 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
 
 __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
                                       real& energy, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    float4 delta;
+    real4 delta;
     delta.x = atom2.pos.x - atom1.pos.x;
     delta.y = atom2.pos.y - atom1.pos.y;
     delta.z = atom2.pos.z - atom1.pos.z;
@@ -91,7 +91,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, bool has
     real rr2 = rr1*rr1;
     alsq2n *= alsq2;
 
-    float4 bn;
+    real4 bn;
     bn.x = (bn0+alsq2n*exp2a)*rr2;
 
     alsq2n *= alsq2;
