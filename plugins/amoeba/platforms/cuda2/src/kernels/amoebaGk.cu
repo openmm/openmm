@@ -590,14 +590,15 @@ inline __device__ void loadAtomData4(AtomData4& data, int atom, const real4* __r
     data.thole = temp.y;
 }
 
-__device__ real computeDScaleFactor(unsigned int polarizationGroup) {
-    return (polarizationGroup & 1 ? 0 : 1);
+__device__ real computeDScaleFactor(unsigned int polarizationGroup, int index) {
+    return (polarizationGroup & 1<<index ? 0 : 1);
 }
 
-__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup) {
-    bool x = (covalent.x & 1);
-    bool y = (covalent.y & 1);
-    bool p = (polarizationGroup & 1);
+__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup, int index) {
+    int mask = 1<<index;
+    bool x = (covalent.x & mask);
+    bool y = (covalent.y & mask);
+    bool p = (polarizationGroup & mask);
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
@@ -679,15 +680,12 @@ extern "C" __global__ void computeEDiffForce(
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
                         real tempEnergy;
-                        float d = computeDScaleFactor(polarizationGroup);
-                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        float d = computeDScaleFactor(polarizationGroup, j);
+                        float p = computePScaleFactor(covalent, polarizationGroup, j);
                         computeOneEDiffInteractionF1(data, localData[tbx+j], d, p, tempEnergy, tempForce);
                         energy += 0.25f*tempEnergy;
                         data.force += tempForce;
                     }
-                    covalent.x >>= 1;
-                    covalent.y >>= 1;
-                    polarizationGroup >>= 1;
                 }
                 data.force *= ENERGY_SCALE_FACTOR;
                 atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
@@ -698,20 +696,15 @@ extern "C" __global__ void computeEDiffForce(
                 // Compute torques.
                 
                 data.force = make_real3(0);
-                covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
-                polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempTorque;
-                        float d = computeDScaleFactor(polarizationGroup);
-                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        float d = computeDScaleFactor(polarizationGroup, j);
+                        float p = computePScaleFactor(covalent, polarizationGroup, j);
                         computeOneEDiffInteractionT1(data, localData[tbx+j], d, p, tempTorque);
                         data.force += tempTorque;
                     }
-                    covalent.x >>= 1;
-                    covalent.y >>= 1;
-                    polarizationGroup >>= 1;
                 }
                 data.force *= ENERGY_SCALE_FACTOR;
                 atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
@@ -726,9 +719,6 @@ extern "C" __global__ void computeEDiffForce(
                 localData[threadIdx.x].force = make_real3(0);
                 uint2 covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
                 unsigned int polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
-                covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));
-                covalent.y = (covalent.y >> tgx) | (covalent.y << (TILE_SIZE - tgx));
-                polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
 
                 // Compute forces.
 
@@ -738,16 +728,13 @@ extern "C" __global__ void computeEDiffForce(
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
                         real tempEnergy;
-                        float d = computeDScaleFactor(polarizationGroup);
-                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        float d = computeDScaleFactor(polarizationGroup, tj);
+                        float p = computePScaleFactor(covalent, polarizationGroup, tj);
                         computeOneEDiffInteractionF1(data, localData[tbx+tj], d, p, tempEnergy, tempForce);
                         energy += 0.5f*tempEnergy;
                         data.force += tempForce;
                         localData[tbx+tj].force -= tempForce;
                     }
-                    covalent.x >>= 1;
-                    covalent.y >>= 1;
-                    polarizationGroup >>= 1;
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
                 data.force *= ENERGY_SCALE_FACTOR;
@@ -762,44 +749,36 @@ extern "C" __global__ void computeEDiffForce(
                     atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
                     atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
                 }
-                    
-                    // Compute torques.
-                    
-                    data.force = make_real3(0);
-                    localData[threadIdx.x].force = make_real3(0);
-                    covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
-                    polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
-                    covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));
-                    covalent.y = (covalent.y >> tgx) | (covalent.y << (TILE_SIZE - tgx));
-                    polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
-                    for (j = 0; j < TILE_SIZE; j++) {
-                        int atom2 = y*TILE_SIZE+tj;
-                        if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                            real3 tempTorque;
-                            float d = computeDScaleFactor(polarizationGroup);
-                            float p = computePScaleFactor(covalent, polarizationGroup);
-                            computeOneEDiffInteractionT1(data, localData[tbx+tj], d, p, tempTorque);
-                            data.force += tempTorque;
-                            computeOneEDiffInteractionT3(data, localData[tbx+tj], d, p, tempTorque);
-                            localData[tbx+tj].force += tempTorque;
-                        }
-                        covalent.x >>= 1;
-                        covalent.y >>= 1;
-                        polarizationGroup >>= 1;
-                        tj = (tj + 1) & (TILE_SIZE - 1);
+
+                // Compute torques.
+
+                data.force = make_real3(0);
+                localData[threadIdx.x].force = make_real3(0);
+                for (j = 0; j < TILE_SIZE; j++) {
+                    int atom2 = y*TILE_SIZE+tj;
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real3 tempTorque;
+                        float d = computeDScaleFactor(polarizationGroup, tj);
+                        float p = computePScaleFactor(covalent, polarizationGroup, tj);
+                        computeOneEDiffInteractionT1(data, localData[tbx+tj], d, p, tempTorque);
+                        data.force += tempTorque;
+                        computeOneEDiffInteractionT3(data, localData[tbx+tj], d, p, tempTorque);
+                        localData[tbx+tj].force += tempTorque;
                     }
-                    data.force *= ENERGY_SCALE_FACTOR;
-                    localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
-                    if (pos < end) {
-                        unsigned int offset = x*TILE_SIZE + tgx;
-                        atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                        atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                        atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
-                        offset = y*TILE_SIZE + tgx;
-                        atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-                        atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-                        atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
-                    }
+                    tj = (tj + 1) & (TILE_SIZE - 1);
+                }
+                data.force *= ENERGY_SCALE_FACTOR;
+                localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+                if (pos < end) {
+                    unsigned int offset = x*TILE_SIZE + tgx;
+                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                    offset = y*TILE_SIZE + tgx;
+                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                }
             }
         }
         pos++;

@@ -381,14 +381,15 @@ __device__ void computeOneGkInteraction(AtomData& atom1, AtomData& atom2, real3 
 }
 #endif
 
-__device__ real computeDScaleFactor(unsigned int polarizationGroup) {
-    return (polarizationGroup & 1 ? 0 : 1);
+__device__ real computeDScaleFactor(unsigned int polarizationGroup, int index) {
+    return (polarizationGroup & 1<<index ? 0 : 1);
 }
 
-__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup) {
-    bool x = (covalent.x & 1);
-    bool y = (covalent.y & 1);
-    bool p = (polarizationGroup & 1);
+__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup, int index) {
+    int mask = 1<<index;
+    bool x = (covalent.x & mask);
+    bool y = (covalent.y & mask);
+    bool p = (polarizationGroup & mask);
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
@@ -499,8 +500,8 @@ extern "C" __global__ void computeFixedField(
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 fields[4];
-                        float d = computeDScaleFactor(polarizationGroup);
-                        float p = computePScaleFactor(covalent, polarizationGroup);
+                        float d = computeDScaleFactor(polarizationGroup, j);
+                        float p = computePScaleFactor(covalent, polarizationGroup, j);
                         computeOneInteraction(data, localData[tbx+j], delta, d, p, fields);
                         data.field += fields[0];
                         data.fieldPolar += fields[1];
@@ -512,9 +513,6 @@ extern "C" __global__ void computeFixedField(
                         data.gkField += fields[0];
                     }
 #endif
-                    covalent.x >>= 1;
-                    covalent.y >>= 1;
-                    polarizationGroup >>= 1;
                 }
             }
             else {
@@ -604,9 +602,6 @@ extern "C" __global__ void computeFixedField(
 
                     uint2 covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
                     unsigned int polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
-                    covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));
-                    covalent.y = (covalent.y >> tgx) | (covalent.y << (TILE_SIZE - tgx));
-                    polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
                     unsigned int tj = tgx;
                     for (j = 0; j < TILE_SIZE; j++) {
                         real3 delta = trimTo3(localData[tbx+tj].posq-data.posq);
@@ -618,8 +613,8 @@ extern "C" __global__ void computeFixedField(
                         int atom2 = y*TILE_SIZE+tj;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             real3 fields[4];
-                            float d = computeDScaleFactor(polarizationGroup);
-                            float p = computePScaleFactor(covalent, polarizationGroup);
+                            float d = computeDScaleFactor(polarizationGroup, tj);
+                            float p = computePScaleFactor(covalent, polarizationGroup, tj);
                             computeOneInteraction(data, localData[tbx+tj], delta, d, p, fields);
                             data.field += fields[0];
                             data.fieldPolar += fields[1];
@@ -631,9 +626,6 @@ extern "C" __global__ void computeFixedField(
                             localData[tbx+tj].gkField += fields[1];
 #endif
                         }
-                        covalent.x >>= 1;
-                        covalent.y >>= 1;
-                        polarizationGroup >>= 1;
                         tj = (tj + 1) & (TILE_SIZE - 1);
                     }
                 }

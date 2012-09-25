@@ -41,20 +41,22 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.thole = temp.y;
 }
 
-__device__ real computeDScaleFactor(unsigned int polarizationGroup) {
-    return (polarizationGroup & 1 ? 0 : 1);
+__device__ real computeDScaleFactor(unsigned int polarizationGroup, int index) {
+    return (polarizationGroup & 1<<index ? 0 : 1);
 }
 
-__device__ float computeMScaleFactor(uint2 covalent) {
-    bool x = (covalent.x & 1);
-    bool y = (covalent.y & 1);
+__device__ float computeMScaleFactor(uint2 covalent, int index) {
+    int mask = 1<<index;
+    bool x = (covalent.x & mask);
+    bool y = (covalent.y & mask);
     return (x ? (y ? 0.0f : 0.4f) : (y ? 0.8f : 1.0f));
 }
 
-__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup) {
-    bool x = (covalent.x & 1);
-    bool y = (covalent.y & 1);
-    bool p = (polarizationGroup & 1);
+__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup, int index) {
+    int mask = 1<<index;
+    bool x = (covalent.x & mask);
+    bool y = (covalent.y & mask);
+    bool p = (polarizationGroup & mask);
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
@@ -270,14 +272,11 @@ extern "C" __global__ void computeElectrostatics(
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        float d = computeDScaleFactor(polarizationGroup);
-                        float p = computePScaleFactor(covalent, polarizationGroup);
-                        float m = computeMScaleFactor(covalent);
+                        float d = computeDScaleFactor(polarizationGroup, j);
+                        float p = computePScaleFactor(covalent, polarizationGroup, j);
+                        float m = computeMScaleFactor(covalent, j);
                         computeOneInteraction(data, localData[tbx+j], hasExclusions, d, p, m, 0.5f, energy, periodicBoxSize, invPeriodicBoxSize);
                     }
-                    covalent.x >>= 1;
-                    covalent.y >>= 1;
-                    polarizationGroup >>= 1;
                 }
                 if (atom1 < NUM_ATOMS)
                     computeSelfEnergyAndTorque(data, energy);
@@ -391,9 +390,6 @@ extern "C" __global__ void computeElectrostatics(
 
                     uint2 covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
                     unsigned int polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
-                    covalent.x = (covalent.x >> tgx) | (covalent.x << (TILE_SIZE - tgx));
-                    covalent.y = (covalent.y >> tgx) | (covalent.y << (TILE_SIZE - tgx));
-                    polarizationGroup = (polarizationGroup >> tgx) | (polarizationGroup << (TILE_SIZE - tgx));
                     
                     // Compute forces.
                     
@@ -401,14 +397,11 @@ extern "C" __global__ void computeElectrostatics(
                     for (j = 0; j < TILE_SIZE; j++) {
                         int atom2 = y*TILE_SIZE+tj;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                            float d = computeDScaleFactor(polarizationGroup);
-                            float p = computePScaleFactor(covalent, polarizationGroup);
-                            float m = computeMScaleFactor(covalent);
+                            float d = computeDScaleFactor(polarizationGroup, tj);
+                            float p = computePScaleFactor(covalent, polarizationGroup, tj);
+                            float m = computeMScaleFactor(covalent, tj);
                             computeOneInteraction(data, localData[tbx+tj], hasExclusions, d, p, m, 1, energy, periodicBoxSize, invPeriodicBoxSize);
                         }
-                        covalent.x >>= 1;
-                        covalent.y >>= 1;
-                        polarizationGroup >>= 1;
                         tj = (tj + 1) & (TILE_SIZE - 1);
                     }
                     data.force *= -ENERGY_SCALE_FACTOR;
