@@ -55,8 +55,8 @@ const double TOL = 1e-4;
 
 // setup for 2 ammonia molecules
 
-static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
-                                                     AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
+                                                     AmoebaMultipoleForce::PolarizationType polarizationType,
                                                      double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces, double& energy, FILE* log ){
 
     // beginning of Multipole setup
@@ -498,8 +498,8 @@ static void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
 
 // setup for box of 4 water molecules -- used to test PME
 
-static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
-                                                   AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
+                                                   AmoebaMultipoleForce::PolarizationType polarizationType,
                                                    double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces,
                                                    double& energy, FILE* log ){
 
@@ -938,8 +938,8 @@ static void testQuadrupoleValidation( FILE* log ){
 // this method does too much; I tried passing the context ptr back to 
 // the tests methods, but the tests would seg fault w/ a bad_alloc error
 
-static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
-                                                          AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
+                                                          AmoebaMultipoleForce::PolarizationType polarizationType,
                                                           double cutoff, int inputPmeGridDimension, std::string testName,
                                                           std::vector<Vec3>& forces, double& energy, FILE* log ){
 
@@ -1204,8 +1204,8 @@ static void testMultipoleIonsAndWaterPMEMutualPolarization( FILE* log ) {
 
 // setup for box of 216 water molecules -- used to test PME
 
-static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::AmoebaNonbondedMethod nonbondedMethod,
-                                                        AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
+                                                        AmoebaMultipoleForce::PolarizationType polarizationType,
                                                         double cutoff, int inputPmeGridDimension, std::string& testName, 
                                                         std::vector<Vec3>& forces, double& energy,
                                                         std::vector< double >& outputMultipoleMoments,
@@ -1993,8 +1993,7 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::Am
     context.setPositions(positions);
 
     if( testName == "testSystemMultipoleMoments" ){
-        Vec3 origin( 0.0, 0.0, 0.0 );
-        amoebaMultipoleForce->getSystemMultipoleMoments( origin, context, outputMultipoleMoments );
+        amoebaMultipoleForce->getSystemMultipoleMoments(context, outputMultipoleMoments );
     } else if( testName == "testMultipoleGridPotential" ){
         amoebaMultipoleForce->getElectrostaticPotential( inputGrid, context, outputGridPotential );
     } else {

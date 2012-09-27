@@ -176,7 +176,6 @@ public:
        @param numParticles            number of particles
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
-       @param indexClasses            class index for combining sigmas/epsilons (not currently used)
        @param sigmas                  particle sigmas 
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
@@ -189,7 +188,6 @@ public:
     
     RealOpenMM calculateForceAndEnergy( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions,
                                         const std::vector<int>& indexIVs, 
-                                        const std::vector<int>& indexClasses, 
                                         const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                         const std::vector<RealOpenMM>& reductions,
                                         const std::vector< std::vector<int> >& vdwExclusions,
@@ -255,7 +253,6 @@ private:
        @param numParticles            number of particles
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
-       @param indexClasses            class index for combining sigmas/epsilons (not currently used)
        @param sigmas                  particle sigmas 
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
@@ -268,7 +265,6 @@ private:
     
     RealOpenMM calculateForceAndEnergyNoCutoff( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
                                                 const std::vector<int>& indexIVs, 
-                                                const std::vector<int>& indexClasses, 
                                                 const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                                 const std::vector<RealOpenMM>& reductions,
                                                 const std::vector< std::vector<int> >& vdwExclusions,
@@ -281,7 +277,6 @@ private:
        @param numParticles            number of particles
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
-       @param indexClasses            class index for combining sigmas/epsilons (not currently used)
        @param sigmas                  particle sigmas 
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
@@ -294,7 +289,6 @@ private:
     
     RealOpenMM calculateForceAndEnergyApplyCutoff( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
                                                    const std::vector<int>& indexIVs, 
-                                                   const std::vector<int>& indexClasses, 
                                                    const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                                    const std::vector<RealOpenMM>& reductions,
                                                    const std::vector< std::vector<int> >& vdwExclusions,

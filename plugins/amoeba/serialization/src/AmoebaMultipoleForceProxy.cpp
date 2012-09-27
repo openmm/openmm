@@ -132,9 +132,9 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
 
     try {
 
-        force->setNonbondedMethod( static_cast<AmoebaMultipoleForce::AmoebaNonbondedMethod>(node.getIntProperty( "nonbondedMethod" )) );
+        force->setNonbondedMethod( static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty( "nonbondedMethod" )) );
         if( node.getIntProperty("version") == 2 ){
-            force->setPolarizationType( static_cast<AmoebaMultipoleForce::AmoebaPolarizationType>(node.getIntProperty( "polarizationType" )) );
+            force->setPolarizationType( static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty( "polarizationType" )) );
         }
         //force->setPmeBSplineOrder( node.getIntProperty( "pmeBSplineOrder" ) );
         //force->setMutualInducedIterationMethod( static_cast<AmoebaMultipoleForce::MutualInducedIterationMethod>(node.getIntProperty( "mutualInducedIterationMethod" ) ) );

@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,9 +39,10 @@
 namespace OpenMM {
 
 /**
- * This class implements the Amoeba Out-of-plane bend interaction
- * To use it, create a OutOfPlaneBendForce object then call addOutOfPlaneBend() once for each outOfPlaneBend.  After
- * a outOfPlaneBend has been added, you can modify its force field parameters by calling setOutOfPlaneBendParameters().
+ * This class implements the Amoeba out-of-plane bend interaction.
+ * 
+ * To use it, create an OutOfPlaneBendForce object then call addOutOfPlaneBend() once for each outOfPlaneBend.  After
+ * an out-of-plane bend has been added, you can modify its force field parameters by calling setOutOfPlaneBendParameters().
  */
 
 class OPENMM_EXPORT AmoebaOutOfPlaneBendForce : public Force {
@@ -49,12 +50,12 @@ class OPENMM_EXPORT AmoebaOutOfPlaneBendForce : public Force {
 public:
 
     /**
-     * Create a Amoeba OutOfPlaneBendForce.
+     * Create an AmoebaOutOfPlaneBendForce.
      */
     AmoebaOutOfPlaneBendForce();
 
     /**
-     * Get the number of outOfPlaneBend terms in the potential function
+     * Get the number of out-of-plane bend terms in the potential function
      */
     int getNumOutOfPlaneBends() const {
         return outOfPlaneBends.size();
@@ -63,114 +64,101 @@ public:
     /** 
      * Set the global cubic term
      * 
-     * @param cubicK        the cubic harmonic force constant for the angle
+     * @param cubicK        the cubic force constant for the angle
      */
-    void setAmoebaGlobalOutOfPlaneBendCubic( double cubicK );
+    void setAmoebaGlobalOutOfPlaneBendCubic(double cubicK);
 
     /** 
      * Get the global cubic term
      * 
      * @return global cubicK term
      */
-    double getAmoebaGlobalOutOfPlaneBendCubic( void ) const;
+    double getAmoebaGlobalOutOfPlaneBendCubic(void) const;
 
     /** 
      * Set the global cubic term
      * 
-     * @param quarticK       the quartic harmonic force constant for the angle
+     * @param quarticK       the quartic force constant for the angle
      */
-    void setAmoebaGlobalOutOfPlaneBendQuartic( double quarticK );
+    void setAmoebaGlobalOutOfPlaneBendQuartic(double quarticK);
 
     /** 
      * Get the global quartic term
      * 
      * @return global  quartic term
      */
-    double getAmoebaGlobalOutOfPlaneBendQuartic( void ) const;
+    double getAmoebaGlobalOutOfPlaneBendQuartic(void) const;
 
     /** 
      * Set the global pentic term
      * 
-     * @param penticK the pentic harmonic force constant for the angle
+     * @param penticK the pentic force constant for the angle
      */
-    void setAmoebaGlobalOutOfPlaneBendPentic( double penticK );
+    void setAmoebaGlobalOutOfPlaneBendPentic(double penticK);
 
     /** 
      * Get the global pentic term
      * 
      * @return global penticK term
      */
-    double getAmoebaGlobalOutOfPlaneBendPentic( void ) const;
+    double getAmoebaGlobalOutOfPlaneBendPentic(void) const;
 
     /** 
      * Set the global sextic term
      * 
-     * @param sexticK       the sextic harmonic force constant for the angle
+     * @param sexticK       the sextic force constant for the angle
      */
-    void setAmoebaGlobalOutOfPlaneBendSextic( double sexticK );
+    void setAmoebaGlobalOutOfPlaneBendSextic(double sexticK);
 
     /** 
      * Get the global sextic term
      * 
      * @return global sexticK term
      */
-    double getAmoebaGlobalOutOfPlaneBendSextic( void ) const;
+    double getAmoebaGlobalOutOfPlaneBendSextic(void) const;
 
     /**
-     * Add a outOfPlaneBend term to the force field.
+     * Add an out-of-plane bend term to the force field.
      *
      * @param particle1     the index of the first particle connected by the outOfPlaneBend
      * @param particle2     the index of the second particle connected by the outOfPlaneBend
      * @param particle3     the index of the third particle connected by the outOfPlaneBend
      * @param particle4     the index of the fourth particle connected by the outOfPlaneBend
-     * @param k             the force constant for the outOfPlaneBend
-     * @return the index of the outOfPlaneBend that was added
+     * @param k             the force constant for the out-of-plane bend
+     * @return the index of the out-of-plane bend that was added
      */
-    int addOutOfPlaneBend(int particle1, int particle2, int particle3, int particle4, double k );
+    int addOutOfPlaneBend(int particle1, int particle2, int particle3, int particle4, double k);
 
     /**
-     * Get the force field parameters for a outOfPlaneBend term.
+     * Get the force field parameters for an out-of-plane bend term.
      * 
      * @param index         the index of the outOfPlaneBend for which to get parameters
      * @param particle1     the index of the first particle connected by the outOfPlaneBend
      * @param particle2     the index of the second particle connected by the outOfPlaneBend
      * @param particle3     the index of the third particle connected by the outOfPlaneBend
      * @param particle4     the index of the fourth particle connected by the outOfPlaneBend
-     * @param k             the force constant for the outOfPlaneBend
+     * @param k             the force constant for the out-of-plane bend
      */
-    void getOutOfPlaneBendParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& k ) const;
+    void getOutOfPlaneBendParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& k) const;
 
     /**
-     * Set the force field parameters for a outOfPlaneBend term.
+     * Set the force field parameters for an out-of-plane bend term.
      * 
      * @param index         the index of the outOfPlaneBend for which to set parameters
      * @param particle1     the index of the first particle connected by the outOfPlaneBend
      * @param particle2     the index of the second particle connected by the outOfPlaneBend
      * @param particle3     the index of the third particle connected by the outOfPlaneBend
      * @param particle4     the index of the fourth particle connected by the outOfPlaneBend
-     * @param k             the force constant for the outOfPlaneBend
+     * @param k             the force constant for the out-of-plane bend
      */
-    void setOutOfPlaneBendParameters(int index, int particle1, int particle2, int particle3, int particle4, double k );
+    void setOutOfPlaneBendParameters(int index, int particle1, int particle2, int particle3, int particle4, double k);
 
 protected:
     ForceImpl* createImpl();
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;
 private:
-
     class OutOfPlaneBendInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<OutOfPlaneBendInfo> outOfPlaneBends;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaOutOfPlaneBendForce::OutOfPlaneBendInfo {
@@ -182,7 +170,7 @@ public:
         k   = 0.0;
     }
     OutOfPlaneBendInfo(int particle1, int particle2, int particle3, int particle4,
-                           double k ) :
+                           double k) :
                     particle1(particle1), particle2(particle2), particle3(particle3), particle4(particle4), k(k) {
      
     }

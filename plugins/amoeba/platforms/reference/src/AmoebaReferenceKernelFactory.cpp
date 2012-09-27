@@ -53,10 +53,8 @@ extern "C" void initAmoebaReferenceKernels() {
              AmoebaReferenceKernelFactory* factory = new AmoebaReferenceKernelFactory();
 
              platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(),          factory);
-             platform.registerKernelFactory(CalcAmoebaUreyBradleyForceKernel::Name(),           factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(),         factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(),  factory);
-             platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(),               factory);
              platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(),             factory);
              platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(),           factory);
              platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(),        factory);
@@ -79,17 +77,11 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
     if (name == CalcAmoebaHarmonicBondForceKernel::Name())
         return new ReferenceCalcAmoebaHarmonicBondForceKernel(name, platform, context.getSystem());
 
-    if (name == CalcAmoebaUreyBradleyForceKernel::Name())
-        return new ReferenceCalcAmoebaUreyBradleyForceKernel(name, platform, context.getSystem());
-
     if (name == CalcAmoebaHarmonicAngleForceKernel::Name())
         return new ReferenceCalcAmoebaHarmonicAngleForceKernel(name, platform, context.getSystem());
 
     if (name == CalcAmoebaHarmonicInPlaneAngleForceKernel::Name())
         return new ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform, context.getSystem());
-
-    if (name == CalcAmoebaTorsionForceKernel::Name())
-        return new ReferenceCalcAmoebaTorsionForceKernel(name, platform, context.getSystem());
 
     if (name == CalcAmoebaPiTorsionForceKernel::Name())
         return new ReferenceCalcAmoebaPiTorsionForceKernel(name, platform, context.getSystem());

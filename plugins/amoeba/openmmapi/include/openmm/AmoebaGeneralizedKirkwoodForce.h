@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,10 +39,10 @@
 namespace OpenMM {
 
 /**
- * This class implements an implicit solvation force using the generalized Kirkwood/OBC model.
+ * This class implements an implicit solvation force using the generalized Kirkwood/Grycuk model.
  * <p>
- * To use this class, create a AmoebaGeneralizedKirkwoodForce object, then call addParticle() once for each particle in the
- * System to define its parameters.  The number of particles for which you define GBSA parameters must
+ * To use this class, create an AmoebaGeneralizedKirkwoodForce object, then call addParticle() once for each particle in the
+ * System to define its parameters.  The number of particles for which you define parameters must
  * be equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().
@@ -53,7 +53,7 @@ class OPENMM_EXPORT AmoebaGeneralizedKirkwoodForce : public Force {
 public:
 
     /*
-     * Create a AmoebaGeneralizedKirkwoodForce.
+     * Create an AmoebaGeneralizedKirkwoodForce.
      */
     AmoebaGeneralizedKirkwoodForce();
 
@@ -69,8 +69,8 @@ public:
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      *
      * @param charge         the charge of the particle, measured in units of the proton charge
-     * @param radius         the GBSA radius of the particle, measured in nm
-     * @param scalingFactor  the OBC scaling factor for the particle
+     * @param radius         the atomic radius of the particle, measured in nm
+     * @param scalingFactor  the scaling factor for the particle
      * @return the index of the particle that was added
      */
     int addParticle(double charge, double radius, double scalingFactor);
@@ -80,8 +80,8 @@ public:
      * 
      * @param index          the index of the particle for which to get parameters
      * @param charge         the charge of the particle, measured in units of the proton charge
-     * @param radius         the GBSA radius of the particle, measured in nm
-     * @param scalingFactor  the OBC scaling factor for the particle
+     * @param radius         the atomic radius of the particle, measured in nm
+     * @param scalingFactor  the scaling factor for the particle
      */
     void getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const;
 
@@ -90,8 +90,8 @@ public:
      * 
      * @param index          the index of the particle for which to set parameters
      * @param charge         the charge of the particle, measured in units of the proton charge
-     * @param radius         the GBSA radius of the particle, measured in nm
-     * @param scalingFactor  the OBC scaling factor for the particle
+     * @param radius         the atomic radius of the particle, measured in nm
+     * @param scalingFactor  the scaling factor for the particle
      */
     void setParticleParameters(int index, double charge, double radius, double scalingFactor);
 
@@ -124,22 +124,12 @@ public:
     }
 
     /**
-     * Get the dielectric offset (nm) used in OBC
-     */
-    //double getDielectricOffset() const;
-
-    /**
-     * Set the dielectric offset (nm) used in OBC
-     */
-    //void setDielectricOffset(double dielectricOffset);
-
-    /**
-     * Get the flag signalling whether the cavity term should be included
+     * Get the flag signaling whether the cavity term should be included
      */
     int getIncludeCavityTerm( ) const;
 
     /**
-     * Set the flag signalling whether the cavity term should be included
+     * Set the flag signaling whether the cavity term should be included
      */
     void setIncludeCavityTerm(int includeCavityTerm);
 

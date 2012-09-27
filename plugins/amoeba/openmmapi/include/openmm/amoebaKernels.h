@@ -77,37 +77,6 @@ public:
 
 };
 
-class CalcAmoebaUreyBradleyForceKernel : public KernelImpl {
-
-public:
-
-    static std::string Name() {
-        return "CalcAmoebaUreyBradleyForce";
-    }
-
-    CalcAmoebaUreyBradleyForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaUreyBradleyForce this kernel will be used for
-     */
-    virtual void initialize(const System& system, const AmoebaUreyBradleyForce& force) = 0;
-
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
-
-};
-
 /**
  * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
@@ -162,39 +131,6 @@ public:
      * @param force      the HarmonicInPlaneAngleForce this kernel will be used for
      */
     virtual void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) = 0;
-
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
-};
-
-/**
- * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
- */
-class CalcAmoebaTorsionForceKernel : public KernelImpl {
-
-public:
-
-    static std::string Name() {
-        return "CalcAmoebaTorsionForce";
-    }
-
-    CalcAmoebaTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the TorsionForce this kernel will be used for
-     */
-    virtual void initialize(const System& system, const AmoebaTorsionForce& force) = 0;
 
     /**
      * Execute the kernel to calculate the forces and/or energy.
@@ -374,7 +310,7 @@ public:
     virtual void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                             std::vector< double >& outputElectrostaticPotential ) = 0;
 
-    virtual void getSystemMultipoleMoments( ContextImpl& context, const Vec3& origin, std::vector< double >& outputMultipoleMonents ) = 0;
+    virtual void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMonents ) = 0;
 
 };
 

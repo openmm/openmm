@@ -59,7 +59,7 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
 
     // check that cutoff < 0.5*boxSize
 
-    if (owner.getPBC()) {
+    if (owner.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoff();
@@ -81,7 +81,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
 
     // Amoeba VdW dispersion correction implemented by LPW
     // There is no dispersion correction if PBC is off or the cutoff is set to the default value of ten billion (AmoebaVdwForce.cpp)
-    if (force.getPBC() == 0 || force.getUseNeighborList() == 0)
+    if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff)
         return 0.0;
 
     // Identify all particle classes (defined by sigma and epsilon and reduction), and count the number of
@@ -90,10 +90,10 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     map<pair<double, double>, int> classCounts;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double sigma, epsilon, reduction;
-        // The variables reduction, ivindex, classindex are not used.
-        int ivindex, classindex;
+        // The variables reduction, ivindex are not used.
+        int ivindex;
         // Get the sigma and epsilon parameters, ignoring everything else.
-        force.getParticleParameters(i, ivindex, classindex, sigma, epsilon, reduction);
+        force.getParticleParameters(i, ivindex, sigma, epsilon, reduction);
         pair<double, double> key = make_pair(sigma, epsilon);
         map<pair<double, double>, int>::iterator entry = classCounts.find(key);
         if (entry == classCounts.end())

@@ -35,7 +35,6 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "CudaPlatform.h"
-#include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
@@ -44,6 +43,8 @@
 #include <vector>
 
 using namespace OpenMM;
+
+extern "C" void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-5;
 static void computeAmoebaHarmonicBondForce(int bondIndex,  std::vector<Vec3>& positions, AmoebaHarmonicBondForce& amoebaHarmonicBondForce,

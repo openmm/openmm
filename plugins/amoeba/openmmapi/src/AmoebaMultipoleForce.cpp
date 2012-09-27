@@ -39,25 +39,25 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polarizationType(Mutual), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(1e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
+AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polarizationType(Mutual), pmeBSplineOrder(5), cutoffDistance(1.0), ewaldErrorTol(1e-4), mutualInducedMaxIterations(60),
                                                mutualInducedTargetEpsilon(1.0e-02), scalingDistanceCutoff(100.0), electricConstant(138.9354558456), aewald(0.0) {
     pmeGridDimension.resize(3);
     pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
 }
 
-AmoebaMultipoleForce::AmoebaNonbondedMethod AmoebaMultipoleForce::getNonbondedMethod( void ) const {
+AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod( void ) const {
     return nonbondedMethod;
 }
 
-void AmoebaMultipoleForce::setNonbondedMethod( AmoebaMultipoleForce::AmoebaNonbondedMethod method) {
+void AmoebaMultipoleForce::setNonbondedMethod( AmoebaMultipoleForce::NonbondedMethod method) {
     nonbondedMethod = method;
 }
 
-AmoebaMultipoleForce::AmoebaPolarizationType AmoebaMultipoleForce::getPolarizationType( void ) const {
+AmoebaMultipoleForce::PolarizationType AmoebaMultipoleForce::getPolarizationType( void ) const {
     return polarizationType;
 }
 
-void AmoebaMultipoleForce::setPolarizationType( AmoebaMultipoleForce::AmoebaPolarizationType type ) {
+void AmoebaMultipoleForce::setPolarizationType( AmoebaMultipoleForce::PolarizationType type ) {
     polarizationType = type;
 }
 
@@ -230,8 +230,8 @@ void AmoebaMultipoleForce::getElectrostaticPotential( const std::vector< Vec3 >&
     dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);
 }
 
-void AmoebaMultipoleForce::getSystemMultipoleMoments( const Vec3& origin, Context& context, std::vector< double >& outputMultipoleMonents ){
-    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getSystemMultipoleMoments(getContextImpl(context), origin, outputMultipoleMonents);
+void AmoebaMultipoleForce::getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMonents ){
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).getSystemMultipoleMoments(getContextImpl(context), outputMultipoleMonents);
 }
 
 ForceImpl* AmoebaMultipoleForce::createImpl() {

@@ -36,7 +36,6 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
-#include "AmoebaTinkerParameterFile.h"
 #include "openmm/System.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/LangevinIntegrator.h"
@@ -53,9 +52,11 @@
 using namespace OpenMM;
 const double TOL = 1e-4;
 
+extern "C" void registerAmoebaCudaKernelFactories();
+
 // setup for 2 ammonia molecules
 
-static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::PolarizationType polarizationType,
                                                      int includeCavityTerm, std::vector<Vec3>& forces, double& energy, FILE* log ){
 
     // beginning of Multipole setup
@@ -316,7 +317,7 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Amoeb
 
 // setup for villin
 
-static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::AmoebaPolarizationType polarizationType,
+static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::PolarizationType polarizationType,
                                                     int includeCavityTerm, std::vector<Vec3>& forces, double& energy, FILE* log ){
 
     // beginning of Multipole setup

@@ -2716,15 +2716,12 @@ class AmoebaVdwGenerator:
 
                 values = [float(atom.attrib['sigma']), float(atom.attrib['epsilon']), float(atom.attrib['reduction'])]
 
-                classType = atom.attrib['class']
 
                 if (generator.radiustype == 'SIGMA'):
                     values[0] *= two_six
       
                 if (generator.radiussize == 'DIAMETER'):
                     values[0] *= 0.5
-
-                values.append(classType)
 
                 for t in types[0]:
                     generator.typeMap[t] = values
@@ -2804,8 +2801,7 @@ class AmoebaVdwGenerator:
                 force.setUseDispersionCorrection(int(args['useDispersionCorrection']))
 
             if (nonbondedMethod == PME):
-                force.setPBC(1)
-                force.setUseNeighborList(1)
+                force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
            
         else:
             force = existing[0]
@@ -2818,7 +2814,6 @@ class AmoebaVdwGenerator:
             if t in self.typeMap:
 
                 values = self.typeMap[t]
-                classIndex = int(values[3])
    
                 # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
 
@@ -2831,7 +2826,7 @@ class AmoebaVdwGenerator:
                     else:
                         ivIndex = data.bonds[bondIndex].atom1
 
-                force.addParticle(ivIndex, classIndex, values[0], values[1], values[2])
+                force.addParticle(ivIndex, values[0], values[1], values[2])
             else:
                 raise ValueError('No vdw type for atom %s' % (atom.name))
 

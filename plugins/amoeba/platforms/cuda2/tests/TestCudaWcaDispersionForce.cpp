@@ -36,7 +36,6 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
-#include "AmoebaTinkerParameterFile.h"
 #include "openmm/System.h"
 #include "openmm/AmoebaWcaDispersionForce.h"
 #include "openmm/LangevinIntegrator.h"
@@ -52,6 +51,8 @@
 
 using namespace OpenMM;
 const double TOL = 1e-4;
+
+extern "C" void registerAmoebaCudaKernelFactories();
 
 void setupAndGetForcesEnergyWcaDispersionAmmonia( std::vector<Vec3>& forces, double& energy, FILE* log ){
 

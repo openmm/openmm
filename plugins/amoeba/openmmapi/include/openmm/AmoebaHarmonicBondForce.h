@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -41,8 +41,12 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between pairs of particles that varies harmonically with the distance
- * between them.  To use it, create a AmoebaHarmonicBondForce object then call addBond() once for each bond.  After
+ * This class implements an interaction between pairs of particles that varies with the distance
+ * between them.  The interaction is defined by a 4th order polynomial.  Only the quadratic term
+ * is set per-bond.  The coefficients of the higher order terms each have a single value that
+ * is set globally.
+ * 
+ * To use it, create an AmoebaHarmonicBondForce object then call addBond() once for each bond.  After
  * a bond has been added, you can modify its force field parameters by calling setBondParameters().
  */
 
@@ -51,11 +55,11 @@ class OPENMM_EXPORT AmoebaHarmonicBondForce : public Force {
 public:
 
     /**
-     * Create a Amoeba HarmonicBondForce.
+     * Create an AmoebaHarmonicBondForce.
      */
     AmoebaHarmonicBondForce();
     /**
-     * Get the number of harmonic bond stretch terms in the potential function
+     * Get the number of bond stretch terms in the potential function
      */
     int getNumBonds() const {
         return bonds.size();
@@ -64,7 +68,7 @@ public:
     /**
      * Set the global cubic term
      * 
-     * @param cubicK        the cubic harmonic force constant for the bond
+     * @param cubicK        the cubic force constant for the bond
      */
     void setAmoebaGlobalHarmonicBondCubic( double cubicK );
 
@@ -76,9 +80,9 @@ public:
     double getAmoebaGlobalHarmonicBondCubic( void ) const;
 
     /**
-     * Set the global cubic term
+     * Set the global quartic term
      * 
-     * @param quarticK       the quartic harmonic force constant for the bond
+     * @param quarticK       the quartic force constant for the bond
      */
     void setAmoebaGlobalHarmonicBondQuartic( double quarticK );
 
@@ -95,7 +99,7 @@ public:
      * @param particle1     the index of the first particle connected by the bond
      * @param particle2     the index of the second particle connected by the bond
      * @param length        the equilibrium length of the bond, measured in nm
-     * @param k             the quadratic harmonic force constant for the bond
+     * @param k             the quadratic force constant for the bond
      * @return the index of the bond that was added
      */
 
@@ -108,7 +112,7 @@ public:
      * @param particle1     the index of the first particle connected by the bond
      * @param particle2     the index of the second particle connected by the bond
      * @param length        the equilibrium length of the bond, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the bond
+     * @param quadratic k   the quadratic force constant for the bond
      */
 
     void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK ) const;
@@ -120,7 +124,7 @@ public:
      * @param particle1 the index of the first particle connected by the bond
      * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the quadratic harmonic force constant for the bond
+     * @param k         the quadratic force constant for the bond
      */
     void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK );
 
@@ -128,21 +132,8 @@ protected:
     double _globalQuarticK, _globalCubicK;
     ForceImpl* createImpl();
 private:
-
     class BondInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<BondInfo> bonds;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaHarmonicBondForce::BondInfo {

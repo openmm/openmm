@@ -34,7 +34,6 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
@@ -43,6 +42,8 @@
 #include <vector>
 
 using namespace OpenMM;
+
+extern "C" void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-3;
 #define PI_M               3.141592653589

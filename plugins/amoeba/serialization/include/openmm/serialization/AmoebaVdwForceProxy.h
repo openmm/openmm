@@ -38,7 +38,7 @@
 namespace OpenMM {
 
 /**
- * This is a proxy for serializing AmoebaUreyBradleyForce objects.
+ * This is a proxy for serializing AmoebaVdwForce objects.
  */
 
 class OPENMM_EXPORT AmoebaVdwForceProxy : public SerializationProxy {

@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,9 +39,10 @@
 namespace OpenMM {
 
 /**
- * This class implements the Amoeba stretch bend interaction
- * To use it, create a StretchBendForce object then call addStretchBend() once for each stretchBend.  After
- * a stretchBend has been added, you can modify its force field parameters by calling setStretchBendParameters().
+ * This class implements the Amoeba stretch-bend interaction.
+ * 
+ * To use it, create a StretchBendForce object then call addStretchBend() once for each stretch-bend.  After
+ * a stretch-bend has been added, you can modify its force field parameters by calling setStretchBendParameters().
  */
 
 class OPENMM_EXPORT AmoebaStretchBendForce : public Force {
@@ -49,58 +50,58 @@ class OPENMM_EXPORT AmoebaStretchBendForce : public Force {
 public:
 
     /**
-     * Create a Amoeba StretchBendForce.
+     * Create an AmoebaStretchBendForce.
      */
     AmoebaStretchBendForce();
 
     /**
-     * Get the number of stretchBend terms in the potential function
+     * Get the number of stretch-bend terms in the potential function
      */
     int getNumStretchBends() const {
         return stretchBends.size();
     }
 
     /**
-     * Add a stretchBend term to the force field.
+     * Add a stretch-bend term to the force field.
      *
-     * @param particle1     the index of the first particle connected by the stretchBend
-     * @param particle2     the index of the second particle connected by the stretchBend
-     * @param particle3     the index of the third particle connected by the stretchBend
-     * @param lengthAB      the equilibrium length of the stretchBend in bond ab [particle1, particle2], measured in nm
-     * @param lengthCB      the equilibrium length of the stretchBend in bond cb [particle3, particle2], measured in nm
+     * @param particle1     the index of the first particle connected by the stretch-bend
+     * @param particle2     the index of the second particle connected by the stretch-bend
+     * @param particle3     the index of the third particle connected by the stretch-bend
+     * @param lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
+     * @param lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
      * @param angle         the equilibrium angle in radians
-     * @param k             the force constant for the stretchBend
-     * @return the index of the stretchBend that was added
+     * @param k             the force constant for the stretch-bend
+     * @return the index of the stretch-bend that was added
      */
     int addStretchBend(int particle1, int particle2, int particle3, double lengthAB,  double lengthCB, double angle,
                        double k );
 
     /**
-     * Get the force field parameters for a stretchBend term.
+     * Get the force field parameters for a stretch-bend term.
      * 
-     * @param index         the index of the stretchBend for which to get parameters
-     * @param particle1     the index of the first particle connected by the stretchBend
-     * @param particle2     the index of the second particle connected by the stretchBend
-     * @param particle3     the index of the third particle connected by the stretchBend
-     * @param lengthAB      the equilibrium length of the stretchBend in bond ab [particle1, particle2], measured in nm
-     * @param lengthCB      the equilibrium length of the stretchBend in bond cb [particle3, particle2], measured in nm
+     * @param index         the index of the stretch-bend for which to get parameters
+     * @param particle1     the index of the first particle connected by the stretch-bend
+     * @param particle2     the index of the second particle connected by the stretch-bend
+     * @param particle3     the index of the third particle connected by the stretch-bend
+     * @param lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
+     * @param lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
      * @param angle         the equilibrium angle in radians
-     * @param k             the force constant for the stretchBend
+     * @param k             the force constant for the stretch-bend
      */
     void getStretchBendParameters(int index, int& particle1, int& particle2, int& particle3,
                                   double& lengthAB, double& lengthCB, double& angle, double& k ) const;
 
     /**
-     * Set the force field parameters for a stretchBend term.
+     * Set the force field parameters for a stretch-bend term.
      * 
-     * @param index         the index of the stretchBend for which to set parameters
-     * @param particle1     the index of the first particle connected by the stretchBend
-     * @param particle2     the index of the second particle connected by the stretchBend
-     * @param particle3     the index of the third particle connected by the stretchBend
-     * @param lengthAB      the equilibrium length of the stretchBend in bond ab [particle1, particle2], measured in nm
-     * @param lengthCB      the equilibrium length of the stretchBend in bond cb [particle3, particle2], measured in nm
+     * @param index         the index of the stretch-bend for which to set parameters
+     * @param particle1     the index of the first particle connected by the stretch-bend
+     * @param particle2     the index of the second particle connected by the stretch-bend
+     * @param particle3     the index of the third particle connected by the stretch-bend
+     * @param lengthAB      the equilibrium length of the stretch-bend in bond ab [particle1, particle2], measured in nm
+     * @param lengthCB      the equilibrium length of the stretch-bend in bond cb [particle3, particle2], measured in nm
      * @param angle         the equilibrium angle in radians
-     * @param k             the force constant for the stretchBend
+     * @param k             the force constant for the stretch-bend
      */
     void setStretchBendParameters(int index, int particle1, int particle2, int particle3, 
                                   double lengthAB,  double lengthCB, double angle, double k );
@@ -108,21 +109,8 @@ public:
 protected:
     ForceImpl* createImpl();
 private:
-
     class StretchBendInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<StretchBendInfo> stretchBends;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaStretchBendForce::StretchBendInfo {

@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,17 +39,38 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between pairs of particles that varies harmonically with the distance
- * between them.  To use it, create a VdwForce object then call addAngle() once for each angle.  After
- * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
+ * This class implements a buffered 14-7 potential used to model van der Waals forces.
+ * 
+ * To use it, create an AmoebaVdwForce object then call addParticle() once for each particle.  After
+ * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
+ * 
+ * A unique feature of this class is that the interaction site for a particle does not need to be
+ * exactly at the particle's location.  Instead, it can be placed a fraction of the distance from that
+ * particle to another one.  This is typically done for hydrogens to place the interaction site slightly
+ * closer to the parent atom.  The fraction is known as the "reduction factor", since it reduces the distance
+ * from the parent atom to the interaction site.
  */
 
 class OPENMM_EXPORT AmoebaVdwForce : public Force {
-
 public:
+    /**
+     * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
+     */
+    enum NonbondedMethod {
+        /**
+         * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
+         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
+         */
+        NoCutoff = 0,
+        /**
+         * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
+         * each other particle.  Interactions beyond the cutoff distance are ignored.
+         */
+        CutoffPeriodic = 1,
+    };
 
     /**
-     * Create a Amoeba VdwForce.
+     * Create an Amoeba VdwForce.
      */
     AmoebaVdwForce();
 
@@ -64,73 +85,69 @@ public:
      * Set the force field parameters for a vdw particle.
      * 
      * @param particleIndex   the particle index
-     * @param ivIndex         the iv index
-     * @param classIndex      the class index into the sig-eps table
+     * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
-     * @param reductionFactor the reduction factor 
+     * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     *                        at which the interaction site should be placed
      */
-    void setParticleParameters(int particleIndex, int ivIndex, int classIndex,
-                               double sigma, double epsilon, double reductionFactor );
+    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, double reductionFactor);
 
     /**
      * Get the force field parameters for a vdw particle.
      * 
      * @param particleIndex   the particle index
-     * @param ivIndex         the iv index
-     * @param classIndex      the class index into the sig-eps table
+     * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
-     * @param reductionFactor the reduction factor 
+     * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     *                        at which the interaction site should be placed
      */
-    void getParticleParameters(int particleIndex, int& ivIndex, int& classIndex,
-                               double& sigma, double& epsilon, double& reductionFactor ) const;
+    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, double& reductionFactor) const;
 
 
     /**
-     * Set the force field parameters for a vdw particle.
+     * Add the force field parameters for a vdw particle.
      * 
-     * @param particleIndex   the particle index
-     * @param ivIndex         the iv index
-     * @param classIndex      the class index into the sig-eps table
+     * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
      * @param epsilon         vdw epsilon
-     * @param reductionFactor the reduction factor
+     * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     *                        at which the interaction site should be placed
      * @return index of added particle
      */
-    int addParticle(int ivIndex, int classIndex, 
-                    double sigma, double epsilon, double reductionFactor );
+    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor);
 
     /**
      * Set sigma combining rule
      * 
      * @param sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
-    void setSigmaCombiningRule( const std::string& sigmaCombiningRule );
+    void setSigmaCombiningRule(const std::string& sigmaCombiningRule);
 
     /**
      * Get sigma combining rule
      * 
      * @return sigmaCombiningRule   sigma combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'CUBIC-MEAN'
      */
-    const std::string& getSigmaCombiningRule( void ) const;
+    const std::string& getSigmaCombiningRule(void) const;
 
     /**
      * Set epsilon combining rule
      * 
      * @param epsilonCombiningRule   epsilon combining rule:   'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
-    void setEpsilonCombiningRule( const std::string& epsilonCombiningRule );
+    void setEpsilonCombiningRule(const std::string& epsilonCombiningRule);
 
     /**
      * Get epsilon combining rule
      * 
      * @return epsilonCombiningRule   epsilon combining rule:  'ARITHMETIC', 'GEOMETRIC'. 'HARMONIC', 'HHG'
      */
-    const std::string& getEpsilonCombiningRule( void ) const;
+    const std::string& getEpsilonCombiningRule(void) const;
 
     /**
-     * LPW: Get whether to add a contribution to the energy that approximately represents the effect of VdW
+     * Get whether to add a contribution to the energy that approximately represents the effect of VdW
      * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
      * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
      * this contribution can improve the quality of results.
@@ -153,67 +170,44 @@ public:
      * Set exclusions for specified particle
      * 
      * @param particleIndex particle index
-     * @param exclusions output vector of exclusions
+     * @param exclusions vector of exclusions
      */
-    void setParticleExclusions( int particleIndex, const std::vector< int >& exclusions );
+    void setParticleExclusions(int particleIndex, const std::vector<int>& exclusions);
 
     /**
      * Get exclusions for specified particle
      * 
      * @param particleIndex particle index
-     * @param exclusions output vector of exclusions
+     * @param exclusions vector of exclusions
      */
-    void getParticleExclusions( int particleIndex, std::vector< int >& exclusions ) const;
+    void getParticleExclusions(int particleIndex, std::vector<int>& exclusions) const;
 
     /**
-     * Set cutoff
-     * 
-     * @param cutoff cutoff
+     * Set the cutoff distance.
      */
-    void setCutoff( double cutoff );
+    void setCutoff(double cutoff);
 
     /**
-     * Get cutoff
-     * 
-     * @return cutoff
+     * Get the cutoff distance.
      */
-    double getCutoff( void ) const;
+    double getCutoff(void) const;
 
     /**
-     * Set flag for using neighbor list for vdw ixn
-     * 
-     * @param neighboristFlag neighbor list flag
+     * Get the method used for handling long range nonbonded interactions.
      */
-    void setUseNeighborList( int neighborListFlag );
+    NonbondedMethod getNonbondedMethod() const;
 
     /**
-     * Get neighbor list flag for vdw ixn
-     * 
-     * @return neighbor list flag
+     * Set the method used for handling long range nonbonded interactions.
      */
-    int getUseNeighborList( void ) const;
-
-    /**
-     * Set flag for employing periodic boundary conditions
-     * 
-     * @param pbcFlag if nonozero, use periodic boundary conditions
-     */
-    void setPBC( int pbcFlag );
-
-    /**
-     * Get periodic boundary conditions flag
-     * 
-     * @return periodic boundary conditions flag (nonzero -> use PBC)
-     */
-    int getPBC( void ) const;
+    void setNonbondedMethod(NonbondedMethod method);
 
 protected:
     ForceImpl* createImpl();
 private:
 
     class VdwInfo;
-    int usePBC;
-    int useNeighborList;
+    NonbondedMethod nonbondedMethod;
     double cutoff;
     bool useDispersionCorrection;
 
@@ -221,34 +215,22 @@ private:
     std::string epsilonCombiningRule;
 
     std::vector< std::vector<int> > exclusions;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<VdwInfo> parameters;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
     std::vector< std::vector< std::vector<double> > > sigEpsTable;
 };
 
 class AmoebaVdwForce::VdwInfo {
 public:
-    int ivIndex, classIndex;
+    int parentIndex;
     double reductionFactor, sigma, epsilon, cutoff;
     VdwInfo() {
-        ivIndex = classIndex = -1;
+        parentIndex = -1;
         reductionFactor      = 0.0;
         sigma                = 1.0;
         epsilon              = 0.0;
     }
-    VdwInfo(int ivIndex, int classIndex, double sigma, double epsilon, double  reductionFactor ) :
-        ivIndex(ivIndex), classIndex(classIndex), sigma(sigma), epsilon(epsilon), reductionFactor(reductionFactor)  {
+    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor) :
+        parentIndex(parentIndex), sigma(sigma), epsilon(epsilon), reductionFactor(reductionFactor)  {
     }
 };
 

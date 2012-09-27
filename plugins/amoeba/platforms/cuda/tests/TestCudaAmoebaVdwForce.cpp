@@ -63,7 +63,6 @@ void testVdw( FILE* log ) {
 
     std::string epsilonCombiningRule = std::string("HHG");
     amoebaVdwForce->setEpsilonCombiningRule( epsilonCombiningRule );
-    int classIndex = 0;
     for( int ii = 0; ii < numberOfParticles; ii++ ){
         int indexIV;
         double mass, sigma, epsilon, reduction;
@@ -94,7 +93,7 @@ void testVdw( FILE* log ) {
             exclusions.push_back ( 5 );
         }
         system.addParticle(mass);
-        amoebaVdwForce->addParticle( indexIV, classIndex, sigma, epsilon, reduction );
+        amoebaVdwForce->addParticle( indexIV, sigma, epsilon, reduction );
         amoebaVdwForce->setParticleExclusions( ii, exclusions );
     }
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
@@ -136,12 +135,11 @@ void testVdw( FILE* log ) {
     }
     for( int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++ ){
         int indexIV;
-        int classIndex;
         double sigma, epsilon, reduction;
-        amoebaVdwForce->getParticleParameters( ii, indexIV, classIndex, sigma, epsilon, reduction );
+        amoebaVdwForce->getParticleParameters( ii, indexIV, sigma, epsilon, reduction );
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters( ii, indexIV, classIndex, sigma, epsilon, reduction );
+        amoebaVdwForce->setParticleParameters( ii, indexIV, sigma, epsilon, reduction );
     }
     platformName = "Cuda";
     Context context(system, integrator, Platform::getPlatformByName( platformName ) );
@@ -186,46 +184,44 @@ void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, c
     int numberOfParticles                 = 8;
     amoebaVdwForce->setSigmaCombiningRule( sigmaCombiningRule );
     amoebaVdwForce->setEpsilonCombiningRule( epsilonCombiningRule );
-    amoebaVdwForce->setUseNeighborList( 1 );
     amoebaVdwForce->setCutoff( cutoff );
     if( boxDimension > 0.0 ){
         Vec3 a( boxDimension, 0.0, 0.0 );
         Vec3 b( 0.0, boxDimension, 0.0 );
         Vec3 c( 0.0, 0.0, boxDimension );
         system.setDefaultPeriodicBoxVectors( a, b, c );
-        amoebaVdwForce->setPBC( 1 );
+        amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
         amoebaVdwForce->setUseDispersionCorrection( 1 );
     } else {
-        amoebaVdwForce->setPBC( 0 );
+        amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::NoCutoff);
         amoebaVdwForce->setUseDispersionCorrection( 0 );
     }
 
     // addParticle: ivIndex, radius, epsilon, reductionFactor
 
-    int classIndex = 0;
     system.addParticle(   1.4007000e+01 );
-    amoebaVdwForce->addParticle( 0, classIndex,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00 );
+    amoebaVdwForce->addParticle( 0,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00 );
 
     system.addParticle(   1.0080000e+00 );
-    amoebaVdwForce->addParticle( 0, classIndex,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
+    amoebaVdwForce->addParticle( 0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
 
     system.addParticle(   1.0080000e+00 );
-    amoebaVdwForce->addParticle( 0, classIndex,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
+    amoebaVdwForce->addParticle( 0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
 
     system.addParticle(   1.0080000e+00 );
-    amoebaVdwForce->addParticle( 0, classIndex,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
+    amoebaVdwForce->addParticle( 0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
 
     system.addParticle(   1.4007000e+01 );
-    amoebaVdwForce->addParticle( 4, classIndex,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00 );
+    amoebaVdwForce->addParticle( 4,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00 );
 
     system.addParticle(   1.0080000e+00 );
-    amoebaVdwForce->addParticle( 4, classIndex,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
+    amoebaVdwForce->addParticle( 4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
 
     system.addParticle(   1.0080000e+00 );
-    amoebaVdwForce->addParticle( 4, classIndex,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
+    amoebaVdwForce->addParticle( 4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
 
     system.addParticle(   1.0080000e+00 );
-    amoebaVdwForce->addParticle( 4, classIndex,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
+    amoebaVdwForce->addParticle( 4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01 );
 
     // ParticleExclusions
 
@@ -463,7 +459,7 @@ void testVdwTaper( FILE* log ) {
     std::string testName      = "testVdwTaper";
 
     int numberOfParticles     = 8;
-    double boxDimension       = -1.0;
+    double boxDimension       = 50.0;
     double cutoff             = 0.25;
 
     std::vector<Vec3> forces;
@@ -532,33 +528,32 @@ void setupAndGetForcesEnergyVdwWater( const std::string& sigmaCombiningRule, con
     int numberOfParticles                 = 648;
     amoebaVdwForce->setSigmaCombiningRule( sigmaCombiningRule );
     amoebaVdwForce->setEpsilonCombiningRule( epsilonCombiningRule );
-    amoebaVdwForce->setUseNeighborList( 1 );
     amoebaVdwForce->setCutoff( cutoff );
     if( boxDimension > 0.0 ){
         Vec3 a( boxDimension, 0.0, 0.0 );
         Vec3 b( 0.0, boxDimension, 0.0 );
         Vec3 c( 0.0, 0.0, boxDimension );
         system.setDefaultPeriodicBoxVectors( a, b, c );
-        amoebaVdwForce->setPBC( 1 );
+        amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
         amoebaVdwForce->setUseDispersionCorrection( includeVdwDispersionCorrection );
     } else {
-        amoebaVdwForce->setPBC( 0 );
+        amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::NoCutoff);
         amoebaVdwForce->setUseDispersionCorrection( 0 );
     }
 
-    // addParticle: ivIndex, classIndex, radius, epsilon, reductionFactor
+    // addParticle: ivIndex, radius, epsilon, reductionFactor
 
     int classIndex = 0;
     for( unsigned int ii = 0; ii < numberOfParticles; ii += 3 ){
 
        system.addParticle(   1.5995000e+01 );
-       amoebaVdwForce->addParticle( ii,  0, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00 );
+       amoebaVdwForce->addParticle( ii, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00 );
 
        system.addParticle(   1.0080000e+00 );
-       amoebaVdwForce->addParticle( ii, 0,   1.3275000e-01,   5.6484000e-02,   9.1000000e-01 );
+       amoebaVdwForce->addParticle( ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01 );
 
        system.addParticle(   1.0080000e+00 );
-       amoebaVdwForce->addParticle( ii, 0,   1.3275000e-01,   5.6484000e-02,   9.1000000e-01 );
+       amoebaVdwForce->addParticle( ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01 );
    }
 
     // exclusions

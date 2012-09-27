@@ -45,12 +45,11 @@ void testSerialization() {
     force1.setSigmaCombiningRule(   "GEOMETRIC" );
     force1.setEpsilonCombiningRule( "GEOMETRIC" );
     force1.setCutoff( 0.9 );
-    force1.setUseNeighborList( 1 );
-    force1.setPBC( 1 );
+    force1.setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
 
-    force1.addParticle(0, 1, 1.0, 2.0, 0.9);
-    force1.addParticle(1, 0, 1.1, 2.1, 0.9);
-    force1.addParticle(2, 3, 1.3, 4.1, 0.9);
+    force1.addParticle(0, 1.0, 2.0, 0.9);
+    force1.addParticle(1, 1.1, 2.1, 0.9);
+    force1.addParticle(2, 1.3, 4.1, 0.9);
     for( unsigned int ii = 0; ii < 3; ii++ ){
         std::vector< int > exclusions;
         exclusions.push_back( ii );
@@ -79,24 +78,22 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getSigmaCombiningRule(),    force2.getSigmaCombiningRule());
     ASSERT_EQUAL(force1.getEpsilonCombiningRule(),  force2.getEpsilonCombiningRule());
     ASSERT_EQUAL(force1.getCutoff(),                force2.getCutoff());
-    ASSERT_EQUAL(force1.getUseNeighborList(),       force2.getUseNeighborList());
-    ASSERT_EQUAL(force1.getPBC(),                   force2.getPBC());
+    ASSERT_EQUAL(force1.getNonbondedMethod(),       force2.getNonbondedMethod());
 
     ASSERT_EQUAL(force1.getNumParticles(),          force2.getNumParticles());
 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
-        int ivIndex1, classIndex1;
-        int ivIndex2, classIndex2;
+        int ivIndex1;
+        int ivIndex2;
 
         double sigma1, epsilon1, reductionFactor1;
         double sigma2, epsilon2, reductionFactor2;
 
-        force1.getParticleParameters( ii, ivIndex1, classIndex1, sigma1, epsilon1, reductionFactor1 );
-        force2.getParticleParameters( ii, ivIndex2, classIndex2, sigma2, epsilon2, reductionFactor2 );
+        force1.getParticleParameters( ii, ivIndex1, sigma1, epsilon1, reductionFactor1 );
+        force2.getParticleParameters( ii, ivIndex2, sigma2, epsilon2, reductionFactor2 );
 
         ASSERT_EQUAL(ivIndex1,          ivIndex2 );
-        ASSERT_EQUAL(classIndex1,       classIndex2 );
         ASSERT_EQUAL(sigma1,            sigma2);
         ASSERT_EQUAL(epsilon1,          epsilon2);
         ASSERT_EQUAL(reductionFactor1,  reductionFactor2);

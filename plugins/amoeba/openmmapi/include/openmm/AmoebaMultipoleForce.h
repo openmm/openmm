@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -43,18 +43,19 @@
 namespace OpenMM {
 
 /**
- * This class implements the Amoeba multipole interaction
- * To use it, create a MultipoleForce object then call addMultipole() once for each atom.  After
- * a entry has been added, you can modify its force field parameters by calling setMultipoleParameters().
+ * This class implements the Amoeba multipole interaction.
+ *
+ * To use it, create an AmoebaMultipoleForce object then call addMultipole() once for each atom.  After
+ * an entry has been added, you can modify its force field parameters by calling setMultipoleParameters().
  */
 
 class OPENMM_EXPORT AmoebaMultipoleForce : public Force {
 
 public:
- 
-    enum AmoebaNonbondedMethod {
 
-        /** 
+    enum NonbondedMethod {
+
+        /**
          * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
          * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
          */
@@ -64,36 +65,30 @@ public:
          * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
          * with all periodic copies of every other particle.
          */
-        PME = 1 
-    };  
+        PME = 1
+    };
 
-    enum AmoebaPolarizationType {
+    enum PolarizationType {
 
-        /** 
+        /**
          * Mutual polarization
          */
         Mutual = 0,
 
         /**
-         * Direct polarization 
+         * Direct polarization
          */
-        Direct = 1 
-    };  
+        Direct = 1
+    };
 
     enum MultipoleAxisTypes { ZThenX = 0, Bisector = 1, ZBisect = 2, ThreeFold = 3, ZOnly = 4, NoAxisType = 5, LastAxisTypeIndex = 6 };
 
-    // Algorithm used to converge mutual induced dipoles:
-    //     SOR: successive-over-relaxation
-
-    //enum MutualInducedIterationMethod { SOR, ConjugateGradient };
-    enum MutualInducedIterationMethod { SOR = 0 };
-
-    enum CovalentType { 
-                          Covalent12 = 0, Covalent13 = 1, Covalent14 = 2, Covalent15 = 3, 
+    enum CovalentType {
+                          Covalent12 = 0, Covalent13 = 1, Covalent14 = 2, Covalent15 = 3,
                           PolarizationCovalent11 = 4, PolarizationCovalent12 = 5, PolarizationCovalent13 = 6, PolarizationCovalent14 = 7, CovalentEnd = 8 };
 
     /**
-     * Create a Amoeba MultipoleForce.
+     * Create an AmoebaMultipoleForce.
      */
     AmoebaMultipoleForce();
 
@@ -107,22 +102,22 @@ public:
     /**
      * Get the method used for handling long-range nonbonded interactions.
      */
-    AmoebaNonbondedMethod getNonbondedMethod( void ) const;
+    NonbondedMethod getNonbondedMethod() const;
 
     /**
      * Set the method used for handling long-range nonbonded interactions.
      */
-    void setNonbondedMethod(AmoebaNonbondedMethod method);
+    void setNonbondedMethod(NonbondedMethod method);
 
     /**
      * Get polarization type
      */
-    AmoebaPolarizationType getPolarizationType( void ) const;
+    PolarizationType getPolarizationType() const;
 
     /**
      * Set the polarization type
      */
-    void setPolarizationType(AmoebaPolarizationType type );
+    void setPolarizationType(PolarizationType type);
 
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
@@ -130,7 +125,7 @@ public:
      *
      * @return the cutoff distance, measured in nm
      */
-    double getCutoffDistance( void ) const;
+    double getCutoffDistance(void) const;
 
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
@@ -140,55 +135,52 @@ public:
      */
     void setCutoffDistance(double distance);
 
-   /**		   
-     * Get the aEwald parameter		 
-     *		 
-     * @return the Ewald parameter		 
-     */		 
-    double getAEwald() const;			 
-		 
-    /**		 
-     * Set the aEwald parameter		 
-     *		 
-     * @param Ewald parameter			 
-     */		 
-    void setAEwald(double aewald);		 
-		 
-   /**		   
-     * Get the B-spline order parameter		 
-     *		 
-     * @return the B-spline order parameter
-     */		 
-    int getPmeBSplineOrder( ) const;
-        
-   /**		   
-     * Set the B-spline order parameter		 
-     *		 
-     * @param the B-spline order parameter
-     */		 
-    //void setPmeBSplineOrder(int inputBSplineOrder);
-     
-   /**		   
-     * Get the PME grid dimensions		 
-     *		 
-     * @return the PME grid dimensions
-     */		 
-    void getPmeGridDimensions( std::vector<int>& gridDimension ) const;
-         
-   /**		   
-     * Set the PME grid dimensions		 
-     *		 
-     * @param the PME grid dimensions
-     */		 
-    void setPmeGridDimensions( const std::vector<int>& gridDimension );
-    
     /**
-     * Add multipole-related info for a particle 
+     * Get the Ewald alpha parameter.  If this is 0 (the default), a value is chosen automatically
+     * based on the Ewald error tolerance.
+     *
+     * @return the Ewald alpha parameter
+     */
+    double getAEwald() const;
+
+    /**
+     * Set the Ewald alpha parameter.  If this is 0 (the default), a value is chosen automatically
+     * based on the Ewald error tolerance.
+     *
+     * @param Ewald alpha parameter
+     */
+    void setAEwald(double aewald);
+
+    /**
+     * Get the B-spline order to use for PME charge spreading
+     *
+     * @return the B-spline order
+     */
+    int getPmeBSplineOrder() const;
+
+    /**
+     * Get the PME grid dimensions.  If Ewald alpha is 0 (the default), this is ignored and grid dimensions
+     * are chosen automatically based on the Ewald error tolerance.
+     *
+     * @return the PME grid dimensions
+     */
+    void getPmeGridDimensions(std::vector<int>& gridDimension) const;
+
+   /**
+     * Set the PME grid dimensions.  If Ewald alpha is 0 (the default), this is ignored and grid dimensions
+     * are chosen automatically based on the Ewald error tolerance.
+     *
+     * @param the PME grid dimensions
+     */
+    void setPmeGridDimensions(const std::vector<int>& gridDimension);
+
+    /**
+     * Add multipole-related info for a particle
      *
      * @param charge               the particle's charge
      * @param molecularDipole      the particle's molecular dipole (vector of size 3)
      * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
-     * @param axisType             the particle's axis type ( ZThenX, Bisector )
+     * @param axisType             the particle's axis type
      * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
      * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
      * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
@@ -198,17 +190,17 @@ public:
      *
      * @return the index of the particle that was added
      */
-    int addParticle( double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, int axisType,
-                     int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity );
- 
+    int addParticle(double charge, const std::vector<double>& molecularDipole, const std::vector<double>& molecularQuadrupole, int axisType,
+                     int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity);
+
     /**
      * Get the multipole parameters for a particle.
-     * 
+     *
      * @param index                the index of the atom for which to get parameters
      * @param charge               the particle's charge
      * @param molecularDipole      the particle's molecular dipole (vector of size 3)
      * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
-     * @param axisType             the particle's axis type ( ZThenX, Bisector )
+     * @param axisType             the particle's axis type
      * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
      * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
      * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
@@ -217,16 +209,16 @@ public:
      * @param polarity             polarity parameter
      */
     void getMultipoleParameters(int index, double& charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole,
-                                int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity ) const;
+                                int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, double& thole, double& dampingFactor, double& polarity) const;
 
     /**
      * Set the multipole parameters for a particle.
-     * 
+     *
      * @param index                the index of the atom for which to set parameters
      * @param charge               the particle's charge
      * @param molecularDipole      the particle's molecular dipole (vector of size 3)
      * @param molecularQuadrupole  the particle's molecular quadrupole (vector of size 9)
-     * @param axisType             the particle's axis type ( ZThenX, Bisector )
+     * @param axisType             the particle's axis type
      * @param multipoleAtomZ       index of first atom used in constructing lab<->molecular frames
      * @param multipoleAtomX       index of second atom used in constructing lab<->molecular frames
      * @param multipoleAtomY       index of second atom used in constructing lab<->molecular frames
@@ -237,84 +229,74 @@ public:
 
     /**
      * Set the CovalentMap for an atom
-     * 
+     *
      * @param index                the index of the atom for which to set parameters
      * @param typeId               CovalentTypes type
      * @param covalentAtoms        vector of covalent atoms associated w/ the specfied CovalentType
      */
-    void setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms );
+    void setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms);
 
     /**
      * Get the CovalentMap for an atom
-     * 
+     *
      * @param index                the index of the atom for which to set parameters
      * @param typeId               CovalentTypes type
      * @param covalentAtoms        output vector of covalent atoms associated w/ the specfied CovalentType
      */
-    void getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms ) const;
+    void getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms) const;
 
     /**
      * Get the CovalentMap for an atom
-     * 
+     *
      * @param index                the index of the atom for which to set parameters
      * @param covalentLists        output vector of covalent lists of atoms
      */
-    void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists ) const;
+    void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists) const;
 
     /**
-     * Get the iteration method to be used for calculating the mutual induced dipoles
-     * 
-     * @return iteration method to be used for calculating the mutual induced dipole
-     */
-    //MutualInducedIterationMethod getMutualInducedIterationMethod( void ) const;
-    
-    /**
-     * Set the iteration method to be used for calculating the mutual induced dipoles
-     * 
-     * @param iteration method to be used for calculating the mutual induced dipole
-     */
-    //void setMutualInducedIterationMethod( MutualInducedIterationMethod inputMutualInducedIterationMethod ); 
-    
-    /**
      * Get the max number of iterations to be used in calculating the mutual induced dipoles
-     * 
+     *
      * @return max number of iterations
      */
-    int getMutualInducedMaxIterations( void ) const;
-    
+    int getMutualInducedMaxIterations(void) const;
+
     /**
      * Set the max number of iterations to be used in calculating the mutual induced dipoles
-     * 
+     *
      * @param max number of iterations
      */
-    void setMutualInducedMaxIterations( int inputMutualInducedMaxIterations ); 
-    
+    void setMutualInducedMaxIterations(int inputMutualInducedMaxIterations);
+
     /**
      * Get the target epsilon to be used to test for convergence of iterative method used in calculating the mutual induced dipoles
-     * 
+     *
      * @return target epsilon
      */
-    double getMutualInducedTargetEpsilon( void ) const;
-    
+    double getMutualInducedTargetEpsilon(void) const;
+
     /**
      * Set the target epsilon to be used to test for convergence of iterative method used in calculating the mutual induced dipoles
-     * 
+     *
      * @param target epsilon
      */
-    void setMutualInducedTargetEpsilon( double inputMutualInducedTargetEpsilon ); 
-    
+    void setMutualInducedTargetEpsilon(double inputMutualInducedTargetEpsilon);
+
     /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
-     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
+     * which is acceptable.  This value is used to select the grid dimensions and separation (alpha)
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     * 
+     * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     double getEwaldErrorTolerance() const;
     /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
-     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
+     * which is acceptable.  This value is used to select the grid dimensions and separation (alpha)
      * parameter so that the average error level will be less than the tolerance.  There is not a
      * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     * 
+     * This can be overridden by explicitly setting an alpha parameter and grid dimensions to use.
      */
     void setEwaldErrorTolerance(double tol);
 
@@ -323,44 +305,46 @@ public:
      *
      * @param inputGrid    input grid points over which the potential is to be evaluated
      * @param context      context
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
 
-    void getElectrostaticPotential( const std::vector< Vec3 >& inputGrid,
-                                    Context& context, std::vector< double >& outputElectrostaticPotential );
+    void getElectrostaticPotential(const std::vector< Vec3 >& inputGrid,
+                                    Context& context, std::vector< double >& outputElectrostaticPotential);
 
 
     /**
-     * Get the system multipole moments
+     * Get the system multipole moments.
+     * 
+     * This method is most useful for non-periodic systems.  When called for a periodic system, only the
+     * <i>lowest nonvanishing moment</i> has a well defined value.  This means that if the system has a net
+     * nonzero charge, the dipole and quadrupole moments are not well defined and should be ignored.  If the
+     * net charge is zero, the dipole moment is well defined (and really represents a dipole density), but
+     * the quadrupole moment is still undefined and should be ignored.
      *
-     * @param origin       origin
      * @param context      context
      * @param outputMultipoleMonents (charge,
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
-                                      quadrupole_zx, quadrupole_zy, quadrupole_zz )
+                                      quadrupole_zx, quadrupole_zy, quadrupole_zz)
      */
 
-    void getSystemMultipoleMoments( const Vec3& origin, Context& context, std::vector< double >& outputMultipoleMonents );
+    void getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMonents);
 
 protected:
     ForceImpl* createImpl();
 private:
-
-    AmoebaNonbondedMethod nonbondedMethod;
-    AmoebaPolarizationType polarizationType;
+    NonbondedMethod nonbondedMethod;
+    PolarizationType polarizationType;
     double cutoffDistance;
     double aewald;
     int pmeBSplineOrder;
     std::vector<int> pmeGridDimension;
-    MutualInducedIterationMethod mutualInducedIterationMethod;
     int mutualInducedMaxIterations;
     double mutualInducedTargetEpsilon;
     double scalingDistanceCutoff;
     double electricConstant;
     double ewaldErrorTol;
-
     class MultipoleInfo;
     std::vector<MultipoleInfo> multipoles;
 };
@@ -379,24 +363,24 @@ public:
         axisType = multipoleAtomZ = multipoleAtomX = multipoleAtomY = -1;
         charge   = thole          = dampingFactor  = 0.0;
 
-        molecularDipole.resize( 3 );
-        molecularQuadrupole.resize( 9 );
+        molecularDipole.resize(3);
+        molecularQuadrupole.resize(9);
 
     }
 
-    MultipoleInfo( double charge, const std::vector<double>& inputMolecularDipole, const std::vector<double>& inputMolecularQuadrupole,
+    MultipoleInfo(double charge, const std::vector<double>& inputMolecularDipole, const std::vector<double>& inputMolecularQuadrupole,
                    int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, double thole, double dampingFactor, double polarity) :
         charge(charge), axisType(axisType), multipoleAtomZ(multipoleAtomZ), multipoleAtomX(multipoleAtomX), multipoleAtomY(multipoleAtomY),
         thole(thole), dampingFactor(dampingFactor), polarity(polarity) {
 
-       covalentInfo.resize( CovalentEnd );
+       covalentInfo.resize(CovalentEnd);
 
-       molecularDipole.resize( 3 );
-       molecularDipole[0]          = inputMolecularDipole[0]; 
-       molecularDipole[1]          = inputMolecularDipole[1]; 
-       molecularDipole[2]          = inputMolecularDipole[2]; 
+       molecularDipole.resize(3);
+       molecularDipole[0]          = inputMolecularDipole[0];
+       molecularDipole[1]          = inputMolecularDipole[1];
+       molecularDipole[2]          = inputMolecularDipole[2];
 
-       molecularQuadrupole.resize( 9 );
+       molecularQuadrupole.resize(9);
        molecularQuadrupole[0]      = inputMolecularQuadrupole[0];
        molecularQuadrupole[1]      = inputMolecularQuadrupole[1];
        molecularQuadrupole[2]      = inputMolecularQuadrupole[2];

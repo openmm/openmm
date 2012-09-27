@@ -210,7 +210,6 @@ RealOpenMM AmoebaReferenceVdwForce::calculatePairIxn( RealOpenMM combindedSigma,
 RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergyNoCutoff( int numParticles,
                                                                      const vector<RealVec>& particlePositions,
                                                                      const std::vector<int>& indexIVs, 
-                                                                     const std::vector<int>& indexClasses, 
                                                                      const std::vector<RealOpenMM>& sigmas,
                                                                      const std::vector<RealOpenMM>& epsilons,
                                                                      const std::vector<RealOpenMM>& reductions,
@@ -293,7 +292,6 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergyNoCutoff( int numPart
 RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergyApplyCutoff( int numParticles,
                                                                         const vector<RealVec>& particlePositions,
                                                                         const std::vector<int>& indexIVs, 
-                                                                        const std::vector<int>& indexClasses, 
                                                                         const std::vector<RealOpenMM>& sigmas,
                                                                         const std::vector<RealOpenMM>& epsilons,
                                                                         const std::vector<RealOpenMM>& reductions,
@@ -376,7 +374,6 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergyApplyCutoff( int numP
 RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy( int numParticles,
                                                              const vector<RealVec>& particlePositions,
                                                              const std::vector<int>& indexIVs, 
-                                                             const std::vector<int>& indexClasses, 
                                                              const std::vector<RealOpenMM>& sigmas,
                                                              const std::vector<RealOpenMM>& epsilons,
                                                              const std::vector<RealOpenMM>& reductions,
@@ -386,11 +383,11 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy( int numParticles,
     
     if( getNonbondedMethod() == NoCutoff ){
         return calculateForceAndEnergyNoCutoff( numParticles, particlePositions, 
-                                                indexIVs, indexClasses, sigmas, epsilons,
+                                                indexIVs, sigmas, epsilons,
                                                 reductions, allExclusions, forces );
     } else {
         return calculateForceAndEnergyApplyCutoff( numParticles, particlePositions, 
-                                                   indexIVs, indexClasses, sigmas, epsilons,
+                                                   indexIVs, sigmas, epsilons,
                                                    reductions, allExclusions, forces );
     }
 

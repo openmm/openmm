@@ -33,10 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AmoebaHarmonicBondForce.h"
-#include "openmm/AmoebaUreyBradleyForce.h"
 #include "openmm/AmoebaHarmonicAngleForce.h"
 #include "openmm/AmoebaHarmonicInPlaneAngleForce.h"
-#include "openmm/AmoebaTorsionForce.h"
 #include "openmm/AmoebaPiTorsionForce.h"
 #include "openmm/AmoebaStretchBendForce.h"
 #include "openmm/AmoebaOutOfPlaneBendForce.h"

@@ -44,10 +44,8 @@ extern "C" OPENMMCUDA_EXPORT void registerKernelFactories() {
              AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
 
              platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaUreyBradleyForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
@@ -124,9 +122,6 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     if (name == CalcAmoebaHarmonicInPlaneAngleForceKernel::Name())
         return new CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform, *amoebaCudaData, context.getSystem());
 
-    if (name == CalcAmoebaTorsionForceKernel::Name())
-        return new CudaCalcAmoebaTorsionForceKernel(name, platform, *amoebaCudaData, context.getSystem());
-
     if (name == CalcAmoebaPiTorsionForceKernel::Name())
         return new CudaCalcAmoebaPiTorsionForceKernel(name, platform, *amoebaCudaData, context.getSystem());
 
@@ -150,9 +145,6 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new CudaCalcAmoebaWcaDispersionForceKernel(name, platform, *amoebaCudaData, context.getSystem());
-
-    if (name == CalcAmoebaUreyBradleyForceKernel::Name())
-        return new CudaCalcAmoebaUreyBradleyForceKernel(name, platform, *amoebaCudaData, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

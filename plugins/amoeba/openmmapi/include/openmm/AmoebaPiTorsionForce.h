@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,8 +39,9 @@
 namespace OpenMM {
 
 /**
- * This class implements the Amoeba pi-torsion interaction
- * To use it, create a PiTorsionForce object then call addPiTorsion() once for each torsion.  After
+ * This class implements the Amoeba pi-torsion interaction.
+ * 
+ * To use it, create an AmoebaPiTorsionForce object then call addPiTorsion() once for each torsion.  After
  * a torsion has been added, you can modify its force field parameters by calling setPiTorsionParameters().
  */
 
@@ -49,7 +50,7 @@ class OPENMM_EXPORT AmoebaPiTorsionForce : public Force {
 public:
 
     /**
-     * Create a Amoeba PiTorsionForce.
+     * Create an AmoebaPiTorsionForce.
      */
     AmoebaPiTorsionForce();
 
@@ -72,7 +73,7 @@ public:
      * @param k             the force constant for the torsion
      * @return the index of the torsion that was added
      */
-    int addPiTorsion(int particle1, int particle2, int particle3, int particle4, int particle5, int particle6, double k );
+    int addPiTorsion(int particle1, int particle2, int particle3, int particle4, int particle5, int particle6, double k);
 
     /**
      * Get the force field parameters for a torsion term.
@@ -86,7 +87,7 @@ public:
      * @param particle6     the index of the sixth particle connected by the torsion
      * @param k             the force constant for the torsion
      */
-    void getPiTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& particle6, double& k ) const;
+    void getPiTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& particle5, int& particle6, double& k) const;
 
     /**
      * Set the force field parameters for a pi torsion term.
@@ -100,26 +101,13 @@ public:
      * @param particle6     the index of the sixth particle connected by the torsion
      * @param k             the force constant for the torsion
      */
-    void setPiTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int particle5, int particle6, double k );
+    void setPiTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int particle5, int particle6, double k);
 
 protected:
     ForceImpl* createImpl();
 private:
-
     class PiTorsionInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<PiTorsionInfo> piTorsions;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaPiTorsionForce::PiTorsionInfo {
@@ -130,7 +118,7 @@ public:
         particle1 = particle2  = particle3 = particle4 = particle5 = particle6 = -1;
         k = 0.0;
     }
-    PiTorsionInfo(int particle1, int particle2, int particle3, int particle4, int particle5, int particle6, double k ) :
+    PiTorsionInfo(int particle1, int particle2, int particle3, int particle4, int particle5, int particle6, double k) :
         particle1(particle1), particle2(particle2), particle3(particle3), particle4(particle4), particle5(particle5), particle6(particle6), k(k) {
     }
 };

@@ -48,9 +48,7 @@
 #include "openmm/AmoebaOutOfPlaneBendForce.h"
 #include "openmm/AmoebaPiTorsionForce.h"
 #include "openmm/AmoebaStretchBendForce.h"
-#include "openmm/AmoebaTorsionForce.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
-#include "openmm/AmoebaUreyBradleyForce.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "openmm/AmoebaWcaDispersionForce.h"
 
@@ -64,9 +62,7 @@
 #include "openmm/serialization/AmoebaOutOfPlaneBendForceProxy.h"
 #include "openmm/serialization/AmoebaPiTorsionForceProxy.h"
 #include "openmm/serialization/AmoebaStretchBendForceProxy.h"
-#include "openmm/serialization/AmoebaTorsionForceProxy.h"
 #include "openmm/serialization/AmoebaTorsionTorsionForceProxy.h"
-#include "openmm/serialization/AmoebaUreyBradleyForceProxy.h"
 #include "openmm/serialization/AmoebaVdwForceProxy.h"
 #include "openmm/serialization/AmoebaWcaDispersionForceProxy.h"
 
@@ -93,9 +89,7 @@ extern "C" void registerAmoebaSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AmoebaOutOfPlaneBendForce),              new AmoebaOutOfPlaneBendForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaPiTorsionForce),                   new AmoebaPiTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaStretchBendForce),                 new AmoebaStretchBendForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaTorsionForce),                     new AmoebaTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaTorsionTorsionForce),              new AmoebaTorsionTorsionForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaUreyBradleyForce),                 new AmoebaUreyBradleyForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaVdwForce),                         new AmoebaVdwForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaWcaDispersionForce),               new AmoebaWcaDispersionForceProxy());
 }

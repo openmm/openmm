@@ -37,13 +37,15 @@
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
-#include "AmoebaTinkerParameterFile.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
 #include <vector>
 
 using namespace OpenMM;
+
+extern "C" void registerAmoebaCudaKernelFactories();
+
 const double TOL = 1e-4;
 
 TorsionTorsionGrid& getTorsionGrid( int gridIndex ) {

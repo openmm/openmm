@@ -38,27 +38,25 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), usePBC(0), cutoff(1.0e+10), useNeighborList(0), useDispersionCorrection(true) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true) {
 }
 
-int AmoebaVdwForce::addParticle(int ivIndex, int classIndex, double sigma, double epsilon, double reductionFactor ) {
-    parameters.push_back(VdwInfo(ivIndex, classIndex, sigma, epsilon, reductionFactor));
+int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor ) {
+    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, reductionFactor));
     return parameters.size()-1;
 }
 
-void AmoebaVdwForce::getParticleParameters(int particleIndex, int& ivIndex, int& classIndex,
+void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
                                            double& sigma, double& epsilon, double& reductionFactor ) const {
-    ivIndex         = parameters[particleIndex].ivIndex;
-    classIndex      = parameters[particleIndex].classIndex;
+    parentIndex     = parameters[particleIndex].parentIndex;
     sigma           = parameters[particleIndex].sigma;
     epsilon         = parameters[particleIndex].epsilon;
     reductionFactor = parameters[particleIndex].reductionFactor;
 }
 
-void AmoebaVdwForce::setParticleParameters(int particleIndex, int ivIndex, int classIndex,
+void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,
                                            double sigma, double epsilon, double reductionFactor ) {
-    parameters[particleIndex].ivIndex         = ivIndex;
-    parameters[particleIndex].classIndex      = classIndex;
+    parameters[particleIndex].parentIndex     = parentIndex;
     parameters[particleIndex].sigma           = sigma;
     parameters[particleIndex].epsilon         = epsilon;
     parameters[particleIndex].reductionFactor = reductionFactor;
@@ -112,20 +110,12 @@ double AmoebaVdwForce::getCutoff( void ) const {
     return cutoff;
 }
 
-void AmoebaVdwForce::setUseNeighborList( int useNeighborListFlag ){
-    useNeighborList = useNeighborListFlag;
+AmoebaVdwForce::NonbondedMethod AmoebaVdwForce::getNonbondedMethod() const {
+    return nonbondedMethod;
 }
 
-int AmoebaVdwForce::getUseNeighborList( void ) const {
-    return useNeighborList;
-}
-
-void AmoebaVdwForce::setPBC( int pbcFlag ){
-    usePBC = pbcFlag;
-}
-
-int AmoebaVdwForce::getPBC( void ) const {
-    return usePBC;
+void AmoebaVdwForce::setNonbondedMethod(NonbondedMethod method) {
+    nonbondedMethod = method;
 }
 
 ForceImpl* AmoebaVdwForce::createImpl() {

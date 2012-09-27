@@ -2834,7 +2834,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, int version, MapStringInt& fo
                         methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
                         vdwForce->getSigmaCombiningRule().c_str(), vdwForce->getEpsilonCombiningRule().c_str() );
   
-        (void) fprintf( log, "use periodic boundary conditions=%d cutoff=%15.7e\n", vdwForce->getPBC(), vdwForce->getCutoff() );
+        (void) fprintf( log, "use periodic boundary conditions=%d cutoff=%15.7e\n", vdwForce->getNonbondedMethod(), vdwForce->getCutoff() );
   
         for( int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
             int indexIV, indexClass;

@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,9 +39,11 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between pairs of particles that varies harmonically with the distance
- * between them.  To use it, create a WcaDispersionForce object then call addAngle() once for each angle.  After
- * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
+ * This class implements a nonbonded interaction between pairs of particles typically used along with
+ * AmoebaGeneralizedKirkwoodForce as part of an implicit solvent model.
+ * 
+ * To use it, create an AmoebaWcaDispersionForce object then call addParticle() once for each particle.  After
+ * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
  */
 
 class OPENMM_EXPORT AmoebaWcaDispersionForce : public Force {
@@ -49,7 +51,7 @@ class OPENMM_EXPORT AmoebaWcaDispersionForce : public Force {
 public:
 
     /**
-     * Create a Amoeba WcaDispersionForce.
+     * Create an AmoebaWcaDispersionForce.
      */
     AmoebaWcaDispersionForce();
 
@@ -61,16 +63,16 @@ public:
     }
 
     /**
-     * Set the force field parameters for a wca dispersion particle.
+     * Set the force field parameters for a WCA dispersion particle.
      * 
      * @param particleIndex   the particle index
      * @param radius          radius
      * @param epsilon         epsilon 
      */
-    void setParticleParameters(int particleIndex, double radius, double epsilon );
+    void setParticleParameters(int particleIndex, double radius, double epsilon);
 
     /**
-     * Get the force field parameters for a wca dispersion particle.
+     * Get the force field parameters for a WCA dispersion particle.
      * 
      * @param particleIndex   the particle index
      * @param radius          radius
@@ -79,42 +81,40 @@ public:
     void getParticleParameters(int particleIndex, double& radius, double& epsilon) const;
 
     /**
-     * Set the force field parameters for a wca dispersion particle.
+     * Set the force field parameters for a WCA dispersion particle.
      * 
      * @param radius          radius
      * @param epsilon         epsilon 
      * @return index of added particle
      */
-    int addParticle( double radius, double epsilon );
+    int addParticle(double radius, double epsilon);
 
     /* 
      * Constants
      */
 
-    double getEpso(     void ) const;
-    double getEpsh(     void ) const;
-    double getRmino(    void ) const;
-    double getRminh(    void ) const;
-    double getAwater(   void ) const;
-    double getShctd(    void ) const;
-    double getDispoff(  void ) const;
-    double getSlevy(    void ) const;
+    double getEpso() const;
+    double getEpsh() const;
+    double getRmino() const;
+    double getRminh() const;
+    double getAwater() const;
+    double getShctd() const;
+    double getDispoff() const;
+    double getSlevy() const;
 
-    void setEpso(     double inputValue );
-    void setEpsh(     double inputValue );
-    void setRmino(    double inputValue );
-    void setRminh(    double inputValue );
-    void setAwater(   double inputValue );
-    void setShctd(    double inputValue );
-    void setDispoff(  double inputValue );
-    void setSlevy(    double inputValue );
+    void setEpso(double inputValue);
+    void setEpsh(double inputValue);
+    void setRmino(double inputValue);
+    void setRminh(double inputValue);
+    void setAwater(double inputValue);
+    void setShctd(double inputValue);
+    void setDispoff(double inputValue);
+    void setSlevy(double inputValue);
 
 protected:
     ForceImpl* createImpl();
 private:
-
     class WcaDispersionInfo;
-
     double epso;
     double epsh;
     double rmino;
@@ -123,19 +123,7 @@ private:
     double slevy;
     double shctd;
     double dispoff;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<WcaDispersionInfo> parameters;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaWcaDispersionForce::WcaDispersionInfo {
@@ -145,7 +133,7 @@ public:
         radius              = 1.0;
         epsilon             = 0.0;
     }
-    WcaDispersionInfo( double radius, double epsilon ) : radius(radius), epsilon(epsilon) {
+    WcaDispersionInfo(double radius, double epsilon) : radius(radius), epsilon(epsilon) {
     }
 };
 

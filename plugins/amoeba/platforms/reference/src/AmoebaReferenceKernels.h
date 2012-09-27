@@ -71,42 +71,6 @@ private:
 };
 
 /**
- * This kernel is invoked by AmoebaUreyBradleyForce to calculate the forces acting on the system and the energy of the system.
- */
-class ReferenceCalcAmoebaUreyBradleyForceKernel : public CalcAmoebaUreyBradleyForceKernel {
-public:
-    ReferenceCalcAmoebaUreyBradleyForceKernel(std::string name, 
-                                               const Platform& platform,
-                                               System& system);
-    ~ReferenceCalcAmoebaUreyBradleyForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaUreyBradleyForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaUreyBradleyForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    int numIxns;
-    std::vector<int>   particle1;
-    std::vector<int>   particle2;
-    std::vector<RealOpenMM> length;
-    std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalUreyBradleyCubic;
-    RealOpenMM globalUreyBradleyQuartic;
-    System& system;
-};
-
-/**
  * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcAmoebaHarmonicAngleForceKernel : public CalcAmoebaHarmonicAngleForceKernel {
@@ -178,41 +142,6 @@ private:
     RealOpenMM globalHarmonicInPlaneAngleQuartic;
     RealOpenMM globalHarmonicInPlaneAnglePentic;
     RealOpenMM globalHarmonicInPlaneAngleSextic;
-    System& system;
-};
-
-/**
- * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
- */
-class ReferenceCalcAmoebaTorsionForceKernel : public CalcAmoebaTorsionForceKernel {
-public:
-    ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system);
-    ~ReferenceCalcAmoebaTorsionForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaTorsionForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaTorsionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    int numTorsions;
-    std::vector<int>   particle1;
-    std::vector<int>   particle2;
-    std::vector<int>   particle3;
-    std::vector<int>   particle4;
-    std::vector< std::vector<RealOpenMM> > torsionParameters1;
-    std::vector< std::vector<RealOpenMM> > torsionParameters2;
-    std::vector< std::vector<RealOpenMM> > torsionParameters3;
     System& system;
 };
 
@@ -398,7 +327,6 @@ public:
     /**
      * Get the system multipole moments
      *
-     * @param origin       origin
      * @param context      context
      * @param outputMultipoleMonents (charge,
                                       dipole_x, dipole_y, dipole_z,
@@ -406,7 +334,7 @@ public:
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
                                       quadrupole_zx, quadrupole_zy, quadrupole_zz )
      */
-    void getSystemMultipoleMoments(ContextImpl& context, const Vec3& origin, std::vector< double >& outputMultipoleMonents);
+    void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMonents);
 
 private:
     int numMultipoles;
@@ -456,11 +384,10 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numParticles;
-    int useNeighborList;
+    int useCutoff;
     int usePBC;
     double cutoff;
     std::vector<int> indexIVs;
-    std::vector<int> indexClasses;
     std::vector< std::vector<int> > allExclusions;
     std::vector<RealOpenMM> sigmas;
     std::vector<RealOpenMM> epsilons;

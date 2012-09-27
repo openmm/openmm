@@ -38,7 +38,7 @@
 namespace OpenMM {
 
 /**
- * This is a proxy for serializing AmoebaUreyBradleyForce objects.
+ * This is a proxy for serializing AmoebaStretchBendForce objects.
  */
 
 class OPENMM_EXPORT AmoebaStretchBendForceProxy : public SerializationProxy {

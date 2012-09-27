@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
- * Authors:                                                                   *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -39,9 +39,13 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between triplets of particles that varies harmonically with the angle
- * between them.  To use it, create a AmoebaHarmonicAngleForce object then call addAngle() once for each angle.  After
- * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
+ * This class implements an interaction between triplets of particles that varies with the angle
+ * between them.  The interaction is defined by a 6th order polynomial.  Only the quadratic term
+ * is set per-angle.  The coefficients of the higher order terms each have a single value that
+ * is set globally.
+ * 
+ * To use it, create an AmoebaHarmonicAngleForce object then call addAngle() once for each angle.  After
+ * an angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
 
 class OPENMM_EXPORT AmoebaHarmonicAngleForce : public Force {
@@ -49,7 +53,7 @@ class OPENMM_EXPORT AmoebaHarmonicAngleForce : public Force {
 public:
 
     /**
-     * Create a Amoeba HarmonicAngleForce.
+     * Create an AmoebaHarmonicAngleForce.
      */
     AmoebaHarmonicAngleForce();
 
@@ -63,7 +67,7 @@ public:
     /**
      * Set the global cubic term
      * 
-     * @param cubicK        the cubic harmonic force constant for the angle
+     * @param cubicK        the cubic force constant for the angle
      */
     void setAmoebaGlobalHarmonicAngleCubic( double cubicK );
 
@@ -75,9 +79,9 @@ public:
     double getAmoebaGlobalHarmonicAngleCubic( void ) const;
 
     /**
-     * Set the global cubic term
+     * Set the global quartic term
      * 
-     * @param quarticK       the quartic harmonic force constant for the angle
+     * @param quarticK       the quartic force constant for the angle
      */
     void setAmoebaGlobalHarmonicAngleQuartic( double quarticK );
 
@@ -91,7 +95,7 @@ public:
     /**
      * Set the global pentic term
      * 
-     * @param penticK the pentic harmonic force constant for the angle
+     * @param penticK the pentic force constant for the angle
      */
     void setAmoebaGlobalHarmonicAnglePentic( double penticK );
 
@@ -105,50 +109,50 @@ public:
     /**
      * Set the global sextic term
      * 
-     * @param sexticK       the sextic harmonic force constant for the angle
+     * @param sexticK       the sextic force constant for the angle
      */
     void setAmoebaGlobalHarmonicAngleSextic( double sexticK );
 
     /**
      * Get the global sextic term
      * 
-     * @return global  sextic term
+     * @return global sextic term
      */
     double getAmoebaGlobalHarmonicAngleSextic( void ) const;
 
     /**
-     * Add a angle term to the force field.
+     * Add an angle term to the force field.
      *
      * @param particle1     the index of the first particle connected by the angle
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param length        the angle measured in degrees
-     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
+     * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      * @return the index of the angle that was added
      */
     int addAngle(int particle1, int particle2, int particle3, double length, double quadraticK );
 
     /**
-     * Get the force field parameters for a angle term.
+     * Get the force field parameters for an angle term.
      * 
      * @param index         the index of the angle for which to get parameters
      * @param particle1     the index of the first particle connected by the angle
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param length        the equilibrium angle, measured in degress
-     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
+     * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length, double& quadraticK ) const;
 
     /**
-     * Set the force field parameters for a angle term.
+     * Set the force field parameters for an angle term.
      * 
      * @param index         the index of the angle for which to set parameters
      * @param particle1     the index of the first particle connected by the angle
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param length        the equilibrium angle, measured in degrees
-     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
+     * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, double length, double quadraticK );
 
@@ -156,21 +160,8 @@ protected:
     ForceImpl* createImpl();
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;
 private:
-
     class AngleInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<AngleInfo> angles;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaHarmonicAngleForce::AngleInfo {
