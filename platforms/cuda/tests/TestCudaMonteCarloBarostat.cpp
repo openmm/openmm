@@ -61,6 +61,9 @@ void testChangingBoxSize() {
     system.addForce(nb);
     LangevinIntegrator integrator(300.0, 1.0, 0.01);
     Context context(system, integrator, platform);
+    vector<Vec3> positions;
+    positions.push_back(Vec3());
+    context.setPositions(positions);
     Vec3 x, y, z;
     context.getState(State::Forces).getPeriodicBoxVectors(x, y, z);
     ASSERT_EQUAL_VEC(Vec3(4, 0, 0), x, 0);
