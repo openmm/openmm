@@ -38,6 +38,7 @@
     real gTau = epsilon*tau7*r6*1.12f*tmp*tmp;
     real termEnergy = epsilon*sigma7*tau7*((sigma7*1.12f*invRho)-2.0f);
     real deltaE = -7.0f*(dTau*termEnergy+gTau);
+#ifdef USE_CUTOFF
     if (r > TAPER_CUTOFF) {
         real x = r-TAPER_CUTOFF;
         real taper = 1+x*x*x*(TAPER_C3+x*(TAPER_C4+x*TAPER_C5));
@@ -45,6 +46,7 @@
         deltaE = termEnergy*dtaper + deltaE*taper;
         termEnergy *= taper;
     }
+#endif
     tempEnergy += (includeInteraction ? termEnergy : 0);
     dEdR -= (includeInteraction ? deltaE*invR : 0);
 }
