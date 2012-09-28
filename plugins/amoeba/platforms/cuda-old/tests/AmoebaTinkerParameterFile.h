@@ -35,9 +35,9 @@
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 
-#include "openmm/AmoebaHarmonicBondForce.h"
-#include "openmm/AmoebaHarmonicAngleForce.h"
-#include "openmm/AmoebaHarmonicInPlaneAngleForce.h"
+#include "openmm/AmoebaBondForce.h"
+#include "openmm/AmoebaAngleForce.h"
+#include "openmm/AmoebaInPlaneAngleForce.h"
 #include "openmm/AmoebaTorsionForce.h"
 #include "openmm/AmoebaPiTorsionForce.h"
 #include "openmm/AmoebaStretchBendForce.h"

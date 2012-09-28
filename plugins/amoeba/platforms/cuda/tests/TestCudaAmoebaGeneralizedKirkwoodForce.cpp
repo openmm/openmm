@@ -278,20 +278,20 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Polar
 
     // 1-2 bonds needed 
 /*
-    AmoebaHarmonicBondForce* amoebaHarmonicBondForce  = new AmoebaHarmonicBondForce();
+    AmoebaBondForce* AmoebaBondForce  = new AmoebaBondForce();
 
     // addBond: particle1, particle2, length, quadraticK
 
-    amoebaHarmonicBondForce->addBond( 0, 1,   0.0000000e+00,   0.0000000e+00 );
-    amoebaHarmonicBondForce->addBond( 0, 2,   0.0000000e+00,   0.0000000e+00 );
-    amoebaHarmonicBondForce->addBond( 0, 3,   0.0000000e+00,   0.0000000e+00 );
+    AmoebaBondForce->addBond( 0, 1,   0.0000000e+00,   0.0000000e+00 );
+    AmoebaBondForce->addBond( 0, 2,   0.0000000e+00,   0.0000000e+00 );
+    AmoebaBondForce->addBond( 0, 3,   0.0000000e+00,   0.0000000e+00 );
 
-    amoebaHarmonicBondForce->addBond( 4, 5,   0.0000000e+00,   0.0000000e+00 );
-    amoebaHarmonicBondForce->addBond( 4, 6,   0.0000000e+00,   0.0000000e+00 );
-    amoebaHarmonicBondForce->addBond( 4, 7,   0.0000000e+00,   0.0000000e+00 );
-    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( -2.5500000e+01 ); 
-    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( 3.7931250e+02 ); 
-    system.addForce(amoebaHarmonicBondForce);
+    AmoebaBondForce->addBond( 4, 5,   0.0000000e+00,   0.0000000e+00 );
+    AmoebaBondForce->addBond( 4, 6,   0.0000000e+00,   0.0000000e+00 );
+    AmoebaBondForce->addBond( 4, 7,   0.0000000e+00,   0.0000000e+00 );
+    AmoebaBondForce->setAmoebaGlobalBondCubic( -2.5500000e+01 ); 
+    AmoebaBondForce->setAmoebaGlobalBondQuartic( 3.7931250e+02 ); 
+    system.addForce(AmoebaBondForce);
 */
     std::vector<Vec3> positions(numberOfParticles);
 

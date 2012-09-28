@@ -64,12 +64,12 @@ static void computeAmoebaLocalForces( AmoebaCudaData& data ) {
 }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicBond                               *
+ *                            AmoebaBondForce                                 *
  * -------------------------------------------------------------------------- */
 
-class CudaCalcAmoebaHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
+class CudaCalcAmoebaBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaHarmonicBondForce& force) : force(force) {
+    ForceInfo(const AmoebaBondForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -90,19 +90,19 @@ public:
         return (length1 == length2 && k1 == k2);
     }
 private:
-    const AmoebaHarmonicBondForce& force;
+    const AmoebaBondForce& force;
 };
 
-CudaCalcAmoebaHarmonicBondForceKernel::CudaCalcAmoebaHarmonicBondForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
-                CalcAmoebaHarmonicBondForceKernel(name, platform), data(data), system(system) {
+CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
+                CalcAmoebaBondForceKernel(name, platform), data(data), system(system) {
     data.incrementKernelCount();
 }
 
-CudaCalcAmoebaHarmonicBondForceKernel::~CudaCalcAmoebaHarmonicBondForceKernel() {
+CudaCalcAmoebaBondForceKernel::~CudaCalcAmoebaBondForceKernel() {
     data.decrementKernelCount();
 }
 
-void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, const AmoebaHarmonicBondForce& force) {
+void CudaCalcAmoebaBondForceKernel::initialize(const System& system, const AmoebaBondForce& force) {
 
     data.setAmoebaLocalForcesKernel( this );
 
@@ -124,12 +124,12 @@ void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, con
         quadratic[i]     = static_cast<float>( kValue );
     } 
     gpuSetAmoebaBondParameters( data.getAmoebaGpu(), particle1, particle2, length, quadratic, 
-                                static_cast<float>(force.getAmoebaGlobalHarmonicBondCubic()),
-                                static_cast<float>(force.getAmoebaGlobalHarmonicBondQuartic()) );
+                                static_cast<float>(force.getAmoebaGlobalBondCubic()),
+                                static_cast<float>(force.getAmoebaGlobalBondQuartic()) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
-double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -137,12 +137,12 @@ double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool
 }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicAngle                              *
+ *                            AmoebaInPlaneAngleForce                         *
  * -------------------------------------------------------------------------- */
 
-class CudaCalcAmoebaHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
+class CudaCalcAmoebaAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaHarmonicAngleForce& force) : force(force) {
+    ForceInfo(const AmoebaAngleForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -164,19 +164,19 @@ public:
         return (angle1 == angle2 && k1 == k2);
     }
 private:
-    const AmoebaHarmonicAngleForce& force;
+    const AmoebaAngleForce& force;
 };
 
-CudaCalcAmoebaHarmonicAngleForceKernel::CudaCalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
-            CalcAmoebaHarmonicAngleForceKernel(name, platform), data(data), system(system) {
+CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
+            CalcAmoebaAngleForceKernel(name, platform), data(data), system(system) {
     data.incrementKernelCount();
 }
 
-CudaCalcAmoebaHarmonicAngleForceKernel::~CudaCalcAmoebaHarmonicAngleForceKernel() {
+CudaCalcAmoebaAngleForceKernel::~CudaCalcAmoebaAngleForceKernel() {
     data.decrementKernelCount();
 }
 
-void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, const AmoebaHarmonicAngleForce& force) {
+void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const AmoebaAngleForce& force) {
 
     data.setAmoebaLocalForcesKernel( this );
 
@@ -194,14 +194,14 @@ void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, co
         k[i]                = static_cast<float>( kQuadratic );
     }
     gpuSetAmoebaAngleParameters(data.getAmoebaGpu(), particle1, particle2, particle3, angle, k,
-                                static_cast<float>(force.getAmoebaGlobalHarmonicAngleCubic()),
-                                static_cast<float>(force.getAmoebaGlobalHarmonicAngleQuartic()),
-                                static_cast<float>(force.getAmoebaGlobalHarmonicAnglePentic()),
-                                static_cast<float>(force.getAmoebaGlobalHarmonicAngleSextic()) );
+                                static_cast<float>(force.getAmoebaGlobalAngleCubic()),
+                                static_cast<float>(force.getAmoebaGlobalAngleQuartic()),
+                                static_cast<float>(force.getAmoebaGlobalAnglePentic()),
+                                static_cast<float>(force.getAmoebaGlobalAngleSextic()) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
-double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -209,12 +209,12 @@ double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, boo
 }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicInPlaneAngle                       *
+ *                            AmoebaInPlaneAngleForce                         *
  * -------------------------------------------------------------------------- */
 
-class CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::ForceInfo : public CudaForceInfo {
+class CudaCalcAmoebaInPlaneAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaHarmonicInPlaneAngleForce& force) : force(force) {
+    ForceInfo(const AmoebaInPlaneAngleForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -237,19 +237,19 @@ public:
         return (angle1 == angle2 && k1 == k2);
     }
 private:
-    const AmoebaHarmonicInPlaneAngleForce& force;
+    const AmoebaInPlaneAngleForce& force;
 };
 
-CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
-          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), data(data), system(system) {
+CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) : 
+          CalcAmoebaInPlaneAngleForceKernel(name, platform), data(data), system(system) {
     data.incrementKernelCount();
 }
 
-CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::~CudaCalcAmoebaHarmonicInPlaneAngleForceKernel() {
+CudaCalcAmoebaInPlaneAngleForceKernel::~CudaCalcAmoebaInPlaneAngleForceKernel() {
     data.decrementKernelCount();
 }
 
-void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) {
+void CudaCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system, const AmoebaInPlaneAngleForce& force) {
 
     data.setAmoebaLocalForcesKernel( this );
 
@@ -270,14 +270,14 @@ void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& sys
         k[i]                = static_cast<float>( kQuadratic );
     }
     gpuSetAmoebaInPlaneAngleParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, angle, k,
-                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleCubic()),
-                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleQuartic()),
-                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAnglePentic()),
-                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleSextic() ) );
+                                       static_cast<float>( force.getAmoebaGlobalInPlaneAngleCubic()),
+                                       static_cast<float>( force.getAmoebaGlobalInPlaneAngleQuartic()),
+                                       static_cast<float>( force.getAmoebaGlobalInPlaneAnglePentic()),
+                                       static_cast<float>( force.getAmoebaGlobalInPlaneAngleSextic() ) );
     data.getAmoebaGpu()->gpuContext->forces.push_back(new ForceInfo(force));
 }
 
-double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -285,7 +285,7 @@ double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& conte
 }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicPiTorsion                          *
+ *                            AmoebaPiTorsionForce                            *
  * -------------------------------------------------------------------------- */
 
 class CudaCalcAmoebaPiTorsionForceKernel::ForceInfo : public CudaForceInfo {

@@ -44,26 +44,26 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class CalcAmoebaHarmonicBondForceKernel : public KernelImpl {
+class CalcAmoebaBondForceKernel : public KernelImpl {
 
 public:
 
     static std::string Name() {
-        return "CalcAmoebaHarmonicBondForce";
+        return "CalcAmoebaBondForce";
     }
 
-    CalcAmoebaHarmonicBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    CalcAmoebaBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
 
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicBondForce this kernel will be used for
+     * @param force      the AmoebaBondForce this kernel will be used for
      */
-    virtual void initialize(const System& system, const AmoebaHarmonicBondForce& force) = 0;
+    virtual void initialize(const System& system, const AmoebaBondForce& force) = 0;
 
     /**
      * Execute the kernel to calculate the forces and/or energy.
@@ -78,26 +78,26 @@ public:
 };
 
 /**
- * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class CalcAmoebaHarmonicAngleForceKernel : public KernelImpl {
+class CalcAmoebaAngleForceKernel : public KernelImpl {
 
 public:
 
     static std::string Name() {
-        return "CalcAmoebaHarmonicAngleForce";
+        return "CalcAmoebaAngleForce";
     }
 
-    CalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    CalcAmoebaAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
 
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the HarmonicAngleForce this kernel will be used for
+     * @param force      the AmoebaAngleForce this kernel will be used for
      */
-    virtual void initialize(const System& system, const AmoebaHarmonicAngleForce& force) = 0;
+    virtual void initialize(const System& system, const AmoebaAngleForce& force) = 0;
 
     /**
      * Execute the kernel to calculate the forces and/or energy.
@@ -111,26 +111,26 @@ public:
 };
 
 /**
- * This kernel is invoked by AmoebaHarmonicInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class CalcAmoebaHarmonicInPlaneAngleForceKernel : public KernelImpl {
+class CalcAmoebaInPlaneAngleForceKernel : public KernelImpl {
 
 public:
 
     static std::string Name() {
-        return "CalcAmoebaHarmonicInPlaneAngleForce";
+        return "CalcAmoebaInPlaneAngleForce";
     }
 
-    CalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    CalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
 
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the HarmonicInPlaneAngleForce this kernel will be used for
+     * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
-    virtual void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) = 0;
+    virtual void initialize(const System& system, const AmoebaInPlaneAngleForce& force) = 0;
 
     /**
      * Execute the kernel to calculate the forces and/or energy.

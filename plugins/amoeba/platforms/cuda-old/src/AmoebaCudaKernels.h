@@ -36,22 +36,22 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcAmoebaHarmonicBondForceKernel : public CalcAmoebaHarmonicBondForceKernel {
+class CudaCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
-    CudaCalcAmoebaHarmonicBondForceKernel(std::string name, 
+    CudaCalcAmoebaBondForceKernel(std::string name, 
                                           const Platform& platform,
                                           AmoebaCudaData& data,
                                           System& system);
-    ~CudaCalcAmoebaHarmonicBondForceKernel();
+    ~CudaCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicBondForce this kernel will be used for
+     * @param force      the AmoebaBondForce this kernel will be used for
      */
-    void initialize(const System& system, const AmoebaHarmonicBondForce& force);
+    void initialize(const System& system, const AmoebaBondForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -69,19 +69,19 @@ private:
 };
 
 /**
- * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcAmoebaHarmonicAngleForceKernel : public CalcAmoebaHarmonicAngleForceKernel {
+class CudaCalcAmoebaAngleForceKernel : public CalcAmoebaAngleForceKernel {
 public:
-    CudaCalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system);
-    ~CudaCalcAmoebaHarmonicAngleForceKernel();
+    CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system);
+    ~CudaCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicAngleForce this kernel will be used for
+     * @param force      the AmoebaAngleForce this kernel will be used for
      */
-    void initialize(const System& system, const AmoebaHarmonicAngleForce& force);
+    void initialize(const System& system, const AmoebaAngleForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -99,19 +99,19 @@ private:
 };
 
 /**
- * This kernel is invoked by AmoebaHarmonicInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcAmoebaHarmonicInPlaneAngleForceKernel : public CalcAmoebaHarmonicInPlaneAngleForceKernel {
+class CudaCalcAmoebaInPlaneAngleForceKernel : public CalcAmoebaInPlaneAngleForceKernel {
 public:
-    CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system);
-    ~CudaCalcAmoebaHarmonicInPlaneAngleForceKernel();
+    CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system);
+    ~CudaCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicInPlaneAngleForce this kernel will be used for
+     * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
-    void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force);
+    void initialize(const System& system, const AmoebaInPlaneAngleForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *

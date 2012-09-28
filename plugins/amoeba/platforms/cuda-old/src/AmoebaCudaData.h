@@ -35,7 +35,7 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class AmoebaCudaData {
 public:

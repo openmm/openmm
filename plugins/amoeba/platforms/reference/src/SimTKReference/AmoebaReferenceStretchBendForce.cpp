@@ -57,7 +57,7 @@ RealOpenMM AmoebaReferenceStretchBendForce::calculateStretchBendIxn( const RealV
 
    // ---------------------------------------------------------------------------------------
 
-    //static const std::string methodName = "AmoebaReferenceStretchBendForce::calculateHarmonicForce";
+    //static const std::string methodName = "AmoebaReferenceStretchBendForce::calculateStretchBendIxn";
  
     static const RealOpenMM zero          = 0.0;
     static const RealOpenMM one           = 1.0;

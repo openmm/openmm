@@ -54,12 +54,12 @@ using namespace std;
     }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicBond                               *
+ *                            AmoebaBondForce                                 *
  * -------------------------------------------------------------------------- */
 
-class CudaCalcAmoebaHarmonicBondForceKernel::ForceInfo : public CudaForceInfo {
+class CudaCalcAmoebaBondForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaHarmonicBondForce& force) : force(force) {
+    ForceInfo(const AmoebaBondForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -80,20 +80,20 @@ public:
         return (length1 == length2 && k1 == k2);
     }
 private:
-    const AmoebaHarmonicBondForce& force;
+    const AmoebaBondForce& force;
 };
 
-CudaCalcAmoebaHarmonicBondForceKernel::CudaCalcAmoebaHarmonicBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
-                CalcAmoebaHarmonicBondForceKernel(name, platform), cu(cu), system(system), params(NULL) {
+CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+                CalcAmoebaBondForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
-CudaCalcAmoebaHarmonicBondForceKernel::~CudaCalcAmoebaHarmonicBondForceKernel() {
+CudaCalcAmoebaBondForceKernel::~CudaCalcAmoebaBondForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
 }
 
-void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, const AmoebaHarmonicBondForce& force) {
+void CudaCalcAmoebaBondForceKernel::initialize(const System& system, const AmoebaBondForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
@@ -113,23 +113,23 @@ void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, con
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaBondForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
-    replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicBondCubic());
-    replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicBondQuartic());
+    replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalBondCubic());
+    replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalBondQuartic());
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::bondForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));
 }
 
-double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicAngle                              *
+ *                            AmoebaAngleForce                                *
  * -------------------------------------------------------------------------- */
 
-class CudaCalcAmoebaHarmonicAngleForceKernel::ForceInfo : public CudaForceInfo {
+class CudaCalcAmoebaAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaHarmonicAngleForce& force) : force(force) {
+    ForceInfo(const AmoebaAngleForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -151,20 +151,20 @@ public:
         return (angle1 == angle2 && k1 == k2);
     }
 private:
-    const AmoebaHarmonicAngleForce& force;
+    const AmoebaAngleForce& force;
 };
 
-CudaCalcAmoebaHarmonicAngleForceKernel::CudaCalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
-            CalcAmoebaHarmonicAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
+CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+            CalcAmoebaAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
-CudaCalcAmoebaHarmonicAngleForceKernel::~CudaCalcAmoebaHarmonicAngleForceKernel() {
+CudaCalcAmoebaAngleForceKernel::~CudaCalcAmoebaAngleForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
 }
 
-void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, const AmoebaHarmonicAngleForce& force) {
+void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const AmoebaAngleForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
@@ -184,26 +184,26 @@ void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, co
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = CudaAmoebaKernelSources::amoebaAngleForce;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
-    replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicAngleCubic());
-    replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicAngleQuartic());
-    replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicAnglePentic());
-    replacements["SEXTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicAngleSextic());
+    replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleCubic());
+    replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleQuartic());
+    replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalAnglePentic());
+    replacements["SEXTIC_K"] = cu.doubleToString(force.getAmoebaGlobalAngleSextic());
     replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::angleForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));
 }
 
-double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
 /* -------------------------------------------------------------------------- *
- *                           AmoebaHarmonicInPlaneAngle                       *
+ *                            AmoebaInPlaneAngleForce                         *
  * -------------------------------------------------------------------------- */
 
-class CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::ForceInfo : public CudaForceInfo {
+class CudaCalcAmoebaInPlaneAngleForceKernel::ForceInfo : public CudaForceInfo {
 public:
-    ForceInfo(const AmoebaHarmonicInPlaneAngleForce& force) : force(force) {
+    ForceInfo(const AmoebaInPlaneAngleForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -226,20 +226,20 @@ public:
         return (angle1 == angle2 && k1 == k2);
     }
 private:
-    const AmoebaHarmonicInPlaneAngleForce& force;
+    const AmoebaInPlaneAngleForce& force;
 };
 
-CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::CudaCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
-          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
+CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+          CalcAmoebaInPlaneAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
-CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::~CudaCalcAmoebaHarmonicInPlaneAngleForceKernel() {
+CudaCalcAmoebaInPlaneAngleForceKernel::~CudaCalcAmoebaInPlaneAngleForceKernel() {
     cu.setAsCurrent();
     if (params != NULL)
         delete params;
 }
 
-void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) {
+void CudaCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system, const AmoebaInPlaneAngleForce& force) {
     cu.setAsCurrent();
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
@@ -258,16 +258,16 @@ void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& sys
     params->upload(paramVector);
     map<string, string> replacements;
     replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params->getDevicePointer(), "float2");
-    replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicInPlaneAngleCubic());
-    replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
-    replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicInPlaneAnglePentic());
-    replacements["SEXTIC_K"] = cu.doubleToString(force.getAmoebaGlobalHarmonicInPlaneAngleSextic());
+    replacements["CUBIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleCubic());
+    replacements["QUARTIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleQuartic());
+    replacements["PENTIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAnglePentic());
+    replacements["SEXTIC_K"] = cu.doubleToString(force.getAmoebaGlobalInPlaneAngleSextic());
     replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
     cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaInPlaneForce, replacements), force.getForceGroup());
     cu.addForce(new ForceInfo(force));
 }
 
-double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CudaCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 

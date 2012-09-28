@@ -1419,11 +1419,11 @@ def countConstraint(data):
     print "Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount))
 
 ## @private
-class AmoebaHarmonicBondGenerator:
+class AmoebaBondGenerator:
 
     #=============================================================================================
 
-    """An AmoebaHarmonicBondGenerator constructs a AmoebaHarmonicBondForce."""
+    """An AmoebaBondGenerator constructs a AmoebaBondForce."""
 
     #=============================================================================================
     
@@ -1442,10 +1442,10 @@ class AmoebaHarmonicBondGenerator:
     @staticmethod
     def parseElement(element, forceField):
 
-        # <AmoebaHarmonicBondForce bond-cubic="-25.5" bond-quartic="379.3125">
+        # <AmoebaBondForce bond-cubic="-25.5" bond-quartic="379.3125">
         # <Bond class1="1" class2="2" length="0.1437" k="156900.0"/>
     
-        generator = AmoebaHarmonicBondGenerator(float(element.attrib['bond-cubic']), float(element.attrib['bond-quartic']))
+        generator = AmoebaBondGenerator(float(element.attrib['bond-cubic']), float(element.attrib['bond-quartic']))
         forceField._forces.append(generator)
         for bond in element.findall('Bond'):
             types = forceField._findAtomTypes(bond, 2)
@@ -1455,7 +1455,7 @@ class AmoebaHarmonicBondGenerator:
                 generator.length.append(float(bond.attrib['length']))
                 generator.k.append(float(bond.attrib['k']))
             else:
-                outputString = "AmoebaHarmonicBondGenerator: error getting types: %s %s" % (
+                outputString = "AmoebaBondGenerator: error getting types: %s %s" % (
                                     bond.attrib['class1'],
                                     bond.attrib['class2'])
                 raise ValueError(outputString) 
@@ -1472,15 +1472,15 @@ class AmoebaHarmonicBondGenerator:
         #countConstraint(data)
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaHarmonicBondForce]
+        existing = [f for f in existing if type(f) == mm.AmoebaBondForce]
         if len(existing) == 0:
-            force = mm.AmoebaHarmonicBondForce()
+            force = mm.AmoebaBondForce()
             sys.addForce(force)
         else:
             force = existing[0]
 
-        force.setAmoebaGlobalHarmonicBondCubic(self.cubic)
-        force.setAmoebaGlobalHarmonicBondQuartic(self.quartic)
+        force.setAmoebaGlobalBondCubic(self.cubic)
+        force.setAmoebaGlobalBondQuartic(self.quartic)
 
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
@@ -1499,10 +1499,10 @@ class AmoebaHarmonicBondGenerator:
                     break
 
             if (hit == 0): 
-                outputString = "AmoebaHarmonicBondGenerator missing: types=[%5s %5s] atoms=[%6d %6d] " % (type1, type2, bond.atom1, bond.atom2)
+                outputString = "AmoebaBondGenerator missing: types=[%5s %5s] atoms=[%6d %6d] " % (type1, type2, bond.atom1, bond.atom2)
                 raise ValueError(outputString) 
 
-parsers["AmoebaHarmonicBondForce"] = AmoebaHarmonicBondGenerator.parseElement
+parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
 
 #=============================================================================================
 # Add angle constraint
@@ -1534,10 +1534,10 @@ def addAngleConstraint(angle, idealAngle, data, sys):
 
 #=============================================================================================
 ## @private
-class AmoebaHarmonicAngleGenerator:
+class AmoebaAngleGenerator:
 
     #=============================================================================================
-    """An AmoebaHarmonicAngleGenerator constructs a AmoebaHarmonicAngleForce."""
+    """An AmoebaAngleGenerator constructs a AmoebaAngleForce."""
     #=============================================================================================
     
     def __init__(self, forceField, cubic, quartic, pentic, sextic):
@@ -1562,10 +1562,10 @@ class AmoebaHarmonicAngleGenerator:
     @staticmethod
     def parseElement(element, forceField):
 
-        # <AmoebaHarmonicAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
+        # <AmoebaAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
         #   <Angle class1="2" class2="1" class3="3" k="0.0637259642196" angle1="122.00"  />
 
-        generator = AmoebaHarmonicAngleGenerator(forceField, float(element.attrib['angle-cubic']), float(element.attrib['angle-quartic']),  float(element.attrib['angle-pentic']), float(element.attrib['angle-sextic']))
+        generator = AmoebaAngleGenerator(forceField, float(element.attrib['angle-cubic']), float(element.attrib['angle-quartic']),  float(element.attrib['angle-pentic']), float(element.attrib['angle-sextic']))
         forceField._forces.append(generator)
         for angle in element.findall('Angle'):
             types = forceField._findAtomTypes(angle, 3)
@@ -1589,7 +1589,7 @@ class AmoebaHarmonicAngleGenerator:
                 generator.angle.append(angleList)
                 generator.k.append(float(angle.attrib['k']))
             else:
-                outputString = "AmoebaHarmonicAngleGenerator: error getting types: %s %s %s" % (
+                outputString = "AmoebaAngleGenerator: error getting types: %s %s %s" % (
                                     angle.attrib['class1'],
                                     angle.attrib['class2'],
                                     angle.attrib['class3'])
@@ -1617,20 +1617,20 @@ class AmoebaHarmonicAngleGenerator:
         # get force
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaHarmonicAngleForce]
+        existing = [f for f in existing if type(f) == mm.AmoebaAngleForce]
 
         if len(existing) == 0:
-            force = mm.AmoebaHarmonicAngleForce()
+            force = mm.AmoebaAngleForce()
             sys.addForce(force)
         else:
             force = existing[0]
 
         # set scalars
 
-        force.setAmoebaGlobalHarmonicAngleCubic(self.cubic)
-        force.setAmoebaGlobalHarmonicAngleQuartic(self.quartic)
-        force.setAmoebaGlobalHarmonicAnglePentic(self.pentic)
-        force.setAmoebaGlobalHarmonicAngleSextic(self.sextic)
+        force.setAmoebaGlobalAngleCubic(self.cubic)
+        force.setAmoebaGlobalAngleQuartic(self.quartic)
+        force.setAmoebaGlobalAnglePentic(self.pentic)
+        force.setAmoebaGlobalAngleSextic(self.sextic)
 
         for angleDict in angleList:
             angle = angleDict['angle']
@@ -1665,7 +1665,7 @@ class AmoebaHarmonicAngleGenerator:
                             if (numberOfHydrogens < lenAngle):
                                 angleValue =  self.angle[i][numberOfHydrogens]
                             else:
-                                outputString = "AmoebaHarmonicAngleGenerator angle index=%d is out of range: [0, %5d] " % (numberOfHydrogens, lenAngle)
+                                outputString = "AmoebaAngleGenerator angle index=%d is out of range: [0, %5d] " % (numberOfHydrogens, lenAngle)
                                 raise ValueError(outputString) 
                         else:
                             angleValue =  self.angle[i][0]
@@ -1674,7 +1674,7 @@ class AmoebaHarmonicAngleGenerator:
                         force.addAngle(angle[0], angle[1], angle[2], angleValue, self.k[i])
                     break
             if (hit == 0): 
-                outputString = "AmoebaHarmonicAngleGenerator missing types: [%s %s %s] for atoms: " % (type1, type2, type3)
+                outputString = "AmoebaAngleGenerator missing types: [%s %s %s] for atoms: " % (type1, type2, type3)
                 outputString += getAtomPrint( data, angle[0] ) + ' '
                 outputString += getAtomPrint( data, angle[1] ) + ' '
                 outputString += getAtomPrint( data, angle[2] )
@@ -1693,20 +1693,20 @@ class AmoebaHarmonicAngleGenerator:
         # get force
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
-        existing = [f for f in existing if type(f) == mm.AmoebaHarmonicInPlaneAngleForce]
+        existing = [f for f in existing if type(f) == mm.AmoebaInPlaneAngleForce]
 
         if len(existing) == 0:
-            force = mm.AmoebaHarmonicInPlaneAngleForce()
+            force = mm.AmoebaInPlaneAngleForce()
             sys.addForce(force)
         else:
             force = existing[0]
 
         # scalars
 
-        force.setAmoebaGlobalHarmonicInPlaneAngleCubic(self.cubic)
-        force.setAmoebaGlobalHarmonicInPlaneAngleQuartic(self.quartic)
-        force.setAmoebaGlobalHarmonicInPlaneAnglePentic(self.pentic)
-        force.setAmoebaGlobalHarmonicInPlaneAngleSextic(self.sextic)
+        force.setAmoebaGlobalInPlaneAngleCubic(self.cubic)
+        force.setAmoebaGlobalInPlaneAngleQuartic(self.quartic)
+        force.setAmoebaGlobalInPlaneAnglePentic(self.pentic)
+        force.setAmoebaGlobalInPlaneAngleSextic(self.sextic)
 
         for angleDict in angleList:
  
@@ -1734,19 +1734,19 @@ class AmoebaHarmonicAngleGenerator:
                     break
 
             if (hit == 0): 
-                outputString = "AmoebaHarmonicInPlaneAngleGenerator missing types: [%s %s %s] atoms: " % (type1, type2, type3)
+                outputString = "AmoebaInPlaneAngleGenerator missing types: [%s %s %s] atoms: " % (type1, type2, type3)
                 outputString += getAtomPrint( data, angle[0] ) + ' '
                 outputString += getAtomPrint( data, angle[1] ) + ' '
                 outputString += getAtomPrint( data, angle[2] )
                 outputString += " indices: [%6d %6d %6d]" % (angle[0], angle[1], angle[2])
                 raise ValueError(outputString) 
 
-parsers["AmoebaHarmonicAngleForce"] = AmoebaHarmonicAngleGenerator.parseElement
+parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 
 #=============================================================================================
 # Generator for the AmoebaOutOfPlaneBend covalent force; also calls methods in the
-# AmoebaHarmonicAngleGenerator to generate the AmoebaHarmonicAngleForce and
-# AmoebaHarmonicInPlaneAngleForce
+# AmoebaAngleGenerator to generate the AmoebaAngleForce and
+# AmoebaInPlaneAngleForce
 #=============================================================================================
 
 ## @private
@@ -2011,20 +2011,20 @@ class AmoebaOutOfPlaneBendGenerator:
                     angleDict['isConstrained'] = isConstrained
                     nonInPlaneAngles.append(angleDict)
 
-        # get AmoebaHarmonicAngleGenerator and add AmoebaHarmonicAngle and AmoebaHarmonicInPlaneAngle forces
+        # get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
 
         for force in self.forceField._forces:
-            if (force.__class__.__name__ == 'AmoebaHarmonicAngleGenerator'): 
+            if (force.__class__.__name__ == 'AmoebaAngleGenerator'): 
                 force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
                 force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, inPlaneAngles, args)
-            if (force.__class__.__name__ == 'AmoebaHarmonicBondGenerator'): 
+            if (force.__class__.__name__ == 'AmoebaBondGenerator'): 
                 force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'): 
                 for angleDict in inPlaneAngles:
                     nonInPlaneAngles.append(angleDict)
-                force.createForcePostAmoebaHarmonicBondForce(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
+                force.createForcePostAmoebaBondForce(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
 
@@ -2569,12 +2569,12 @@ class AmoebaStretchBendGenerator:
     
     #=============================================================================================
 
-    # The setup of this force is dependent on AmoebaHarmonicBondForce and AmoebaHarmonicAngleForce 
+    # The setup of this force is dependent on AmoebaBondForce and AmoebaAngleForce 
     # having been called since the ideal bond lengths and angle are needed here.
     # As a conseqeunce, createForce() is not implemented since it is not guaranteed that the generator for
-    # AmoebaHarmonicBondForce and AmoebaHarmonicAngleForce have been called prior to AmoebaStretchBendGenerator(). 
-    # Instead, createForcePostAmoebaHarmonicBondForce() is called 
-    # after the generators for AmoebaHarmonicBondForce and AmoebaHarmonicAngleForce have been called
+    # AmoebaBondForce and AmoebaAngleForce have been called prior to AmoebaStretchBendGenerator(). 
+    # Instead, createForcePostAmoebaBondForce() is called 
+    # after the generators for AmoebaBondForce and AmoebaAngleForce have been called
 
     #=============================================================================================
 
@@ -2587,7 +2587,7 @@ class AmoebaStretchBendGenerator:
 
     #=============================================================================================
 
-    def createForcePostAmoebaHarmonicBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
+    def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
 
         if (self.hasBeenCalled):
              return

@@ -52,9 +52,9 @@ extern "C" void initAmoebaReferenceKernels() {
 
              AmoebaReferenceKernelFactory* factory = new AmoebaReferenceKernelFactory();
 
-             platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(),          factory);
-             platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(),         factory);
-             platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(),  factory);
+             platform.registerKernelFactory(CalcAmoebaBondForceKernel::Name(),          factory);
+             platform.registerKernelFactory(CalcAmoebaAngleForceKernel::Name(),         factory);
+             platform.registerKernelFactory(CalcAmoebaInPlaneAngleForceKernel::Name(),  factory);
              platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(),             factory);
              platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(),           factory);
              platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(),        factory);
@@ -74,14 +74,14 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     // create AmoebaReferenceData object if contextToAmoebaDataMap does not contain
     // key equal to current context
-    if (name == CalcAmoebaHarmonicBondForceKernel::Name())
-        return new ReferenceCalcAmoebaHarmonicBondForceKernel(name, platform, context.getSystem());
+    if (name == CalcAmoebaBondForceKernel::Name())
+        return new ReferenceCalcAmoebaBondForceKernel(name, platform, context.getSystem());
 
-    if (name == CalcAmoebaHarmonicAngleForceKernel::Name())
-        return new ReferenceCalcAmoebaHarmonicAngleForceKernel(name, platform, context.getSystem());
+    if (name == CalcAmoebaAngleForceKernel::Name())
+        return new ReferenceCalcAmoebaAngleForceKernel(name, platform, context.getSystem());
 
-    if (name == CalcAmoebaHarmonicInPlaneAngleForceKernel::Name())
-        return new ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform, context.getSystem());
+    if (name == CalcAmoebaInPlaneAngleForceKernel::Name())
+        return new ReferenceCalcAmoebaInPlaneAngleForceKernel(name, platform, context.getSystem());
 
     if (name == CalcAmoebaPiTorsionForceKernel::Name())
         return new ReferenceCalcAmoebaPiTorsionForceKernel(name, platform, context.getSystem());

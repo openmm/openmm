@@ -1,6 +1,3 @@
-#ifndef AMOEBA_OPENMM_H_
-#define AMOEBA_OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                               OpenMMAmoeba                                 *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,16 +29,36 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AmoebaBondForce.h"
-#include "openmm/AmoebaAngleForce.h"
-#include "openmm/AmoebaInPlaneAngleForce.h"
-#include "openmm/AmoebaPiTorsionForce.h"
-#include "openmm/AmoebaStretchBendForce.h"
-#include "openmm/AmoebaOutOfPlaneBendForce.h"
-#include "openmm/AmoebaTorsionTorsionForce.h"
-#include "openmm/AmoebaMultipoleForce.h"
-#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
-#include "openmm/AmoebaVdwForce.h"
-#include "openmm/AmoebaWcaDispersionForce.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/AmoebaAngleForceImpl.h"
+#include "openmm/amoebaKernels.h"
 
-#endif /*AMOEBA_OPENMM_H_*/
+using namespace OpenMM;
+
+using std::pair;
+using std::vector;
+using std::set;
+
+AmoebaAngleForceImpl::AmoebaAngleForceImpl(AmoebaAngleForce& owner) : owner(owner) {
+}
+
+AmoebaAngleForceImpl::~AmoebaAngleForceImpl() {
+}
+
+void AmoebaAngleForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcAmoebaAngleForceKernel::Name(), context);
+    kernel.getAs<CalcAmoebaAngleForceKernel>().initialize(context.getSystem(), owner);
+}
+
+double AmoebaAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<owner.getForceGroup())) != 0)
+        return kernel.getAs<CalcAmoebaAngleForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
+}
+
+std::vector<std::string> AmoebaAngleForceImpl::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(CalcAmoebaAngleForceKernel::Name());
+    return names;
+}
+

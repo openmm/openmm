@@ -35,21 +35,21 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by AmoebaHarmonicBondForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcAmoebaHarmonicBondForceKernel : public CalcAmoebaHarmonicBondForceKernel {
+class ReferenceCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
-    ReferenceCalcAmoebaHarmonicBondForceKernel(std::string name, 
+    ReferenceCalcAmoebaBondForceKernel(std::string name, 
                                                const Platform& platform,
                                                System& system);
-    ~ReferenceCalcAmoebaHarmonicBondForceKernel();
+    ~ReferenceCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicBondForce this kernel will be used for
+     * @param force      the AmoebaBondForce this kernel will be used for
      */
-    void initialize(const System& system, const AmoebaHarmonicBondForce& force);
+    void initialize(const System& system, const AmoebaBondForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -65,25 +65,25 @@ private:
     std::vector<int>   particle2;
     std::vector<RealOpenMM> length;
     std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalHarmonicBondCubic;
-    RealOpenMM globalHarmonicBondQuartic;
+    RealOpenMM globalBondCubic;
+    RealOpenMM globalBondQuartic;
     System& system;
 };
 
 /**
- * This kernel is invoked by AmoebaHarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcAmoebaHarmonicAngleForceKernel : public CalcAmoebaHarmonicAngleForceKernel {
+class ReferenceCalcAmoebaAngleForceKernel : public CalcAmoebaAngleForceKernel {
 public:
-    ReferenceCalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform, System& system);
-    ~ReferenceCalcAmoebaHarmonicAngleForceKernel();
+    ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicAngleForce this kernel will be used for
+     * @param force      the AmoebaAngleForce this kernel will be used for
      */
-    void initialize(const System& system, const AmoebaHarmonicAngleForce& force);
+    void initialize(const System& system, const AmoebaAngleForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -100,27 +100,27 @@ private:
     std::vector<int>   particle3;
     std::vector<RealOpenMM> angle;
     std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalHarmonicAngleCubic;
-    RealOpenMM globalHarmonicAngleQuartic;
-    RealOpenMM globalHarmonicAnglePentic;
-    RealOpenMM globalHarmonicAngleSextic;
+    RealOpenMM globalAngleCubic;
+    RealOpenMM globalAngleQuartic;
+    RealOpenMM globalAnglePentic;
+    RealOpenMM globalAngleSextic;
     System& system;
 };
 
 /**
- * This kernel is invoked by AmoebaHarmonicInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel : public CalcAmoebaHarmonicInPlaneAngleForceKernel {
+class ReferenceCalcAmoebaInPlaneAngleForceKernel : public CalcAmoebaInPlaneAngleForceKernel {
 public:
-    ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system);
-    ~ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel();
+    ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaHarmonicInPlaneAngleForce this kernel will be used for
+     * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
-    void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force);
+    void initialize(const System& system, const AmoebaInPlaneAngleForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -138,10 +138,10 @@ private:
     std::vector<int>   particle4;
     std::vector<RealOpenMM> angle;
     std::vector<RealOpenMM> kQuadratic;
-    RealOpenMM globalHarmonicInPlaneAngleCubic;
-    RealOpenMM globalHarmonicInPlaneAngleQuartic;
-    RealOpenMM globalHarmonicInPlaneAnglePentic;
-    RealOpenMM globalHarmonicInPlaneAngleSextic;
+    RealOpenMM globalInPlaneAngleCubic;
+    RealOpenMM globalInPlaneAngleQuartic;
+    RealOpenMM globalInPlaneAnglePentic;
+    RealOpenMM globalInPlaneAngleSextic;
     System& system;
 };
 

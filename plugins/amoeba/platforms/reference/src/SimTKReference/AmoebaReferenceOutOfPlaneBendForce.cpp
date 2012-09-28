@@ -57,7 +57,7 @@ RealOpenMM AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn( const
 
    // ---------------------------------------------------------------------------------------
 
-    //static const std::string methodName = "AmoebaReferenceOutOfPlaneBendForce::calculateHarmonicForce";
+    //static const std::string methodName = "AmoebaReferenceOutOfPlaneBendForce::calculateOutOfPlaneBendIxn";
  
     static const RealOpenMM zero          = 0.0;
     static const RealOpenMM one           = 1.0;

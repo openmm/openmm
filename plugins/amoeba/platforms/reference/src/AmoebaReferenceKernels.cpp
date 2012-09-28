@@ -25,9 +25,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "AmoebaReferenceKernels.h"
-#include "AmoebaReferenceHarmonicBondForce.h"
-#include "AmoebaReferenceHarmonicAngleForce.h"
-#include "AmoebaReferenceHarmonicInPlaneAngleForce.h"
+#include "AmoebaReferenceBondForce.h"
+#include "AmoebaReferenceAngleForce.h"
+#include "AmoebaReferenceInPlaneAngleForce.h"
 #include "AmoebaReferencePiTorsionForce.h"
 #include "AmoebaReferenceStretchBendForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
@@ -72,14 +72,14 @@ static RealVec& extractBoxSize(ContextImpl& context) {
 
 // ***************************************************************************
 
-ReferenceCalcAmoebaHarmonicBondForceKernel::ReferenceCalcAmoebaHarmonicBondForceKernel(std::string name, const Platform& platform, System& system) : 
-                CalcAmoebaHarmonicBondForceKernel(name, platform), system(system) {
+ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(std::string name, const Platform& platform, System& system) : 
+                CalcAmoebaBondForceKernel(name, platform), system(system) {
 }
 
-ReferenceCalcAmoebaHarmonicBondForceKernel::~ReferenceCalcAmoebaHarmonicBondForceKernel() {
+ReferenceCalcAmoebaBondForceKernel::~ReferenceCalcAmoebaBondForceKernel() {
 }
 
-void ReferenceCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, const AmoebaHarmonicBondForce& force) {
+void ReferenceCalcAmoebaBondForceKernel::initialize(const System& system, const AmoebaBondForce& force) {
 
     numBonds = force.getNumBonds();
     for( int ii = 0; ii < numBonds; ii++) {
@@ -93,30 +93,30 @@ void ReferenceCalcAmoebaHarmonicBondForceKernel::initialize(const System& system
         length.push_back(    static_cast<RealOpenMM>( lengthValue ) );
         kQuadratic.push_back( static_cast<RealOpenMM>( kValue ) );
     } 
-    globalHarmonicBondCubic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicBondCubic());
-    globalHarmonicBondQuartic = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicBondQuartic());
+    globalBondCubic   = static_cast<RealOpenMM>(force.getAmoebaGlobalBondCubic());
+    globalBondQuartic = static_cast<RealOpenMM>(force.getAmoebaGlobalBondQuartic());
 }
 
-double ReferenceCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double ReferenceCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    AmoebaReferenceHarmonicBondForce amoebaReferenceHarmonicBondForce;
-    RealOpenMM energy      = amoebaReferenceHarmonicBondForce.calculateForceAndEnergy( numBonds, posData, particle1, particle2, length, kQuadratic,
-                                                                                       globalHarmonicBondCubic, globalHarmonicBondQuartic,
+    AmoebaReferenceBondForce amoebaReferenceBondForce;
+    RealOpenMM energy      = amoebaReferenceBondForce.calculateForceAndEnergy( numBonds, posData, particle1, particle2, length, kQuadratic,
+                                                                                       globalBondCubic, globalBondQuartic,
                                                                                        forceData );
     return static_cast<double>(energy);
 }
 
 // ***************************************************************************
 
-ReferenceCalcAmoebaHarmonicAngleForceKernel::ReferenceCalcAmoebaHarmonicAngleForceKernel(std::string name, const Platform& platform, System& system) :
-            CalcAmoebaHarmonicAngleForceKernel(name, platform), system(system) {
+ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, System& system) :
+            CalcAmoebaAngleForceKernel(name, platform), system(system) {
 }
 
-ReferenceCalcAmoebaHarmonicAngleForceKernel::~ReferenceCalcAmoebaHarmonicAngleForceKernel() {
+ReferenceCalcAmoebaAngleForceKernel::~ReferenceCalcAmoebaAngleForceKernel() {
 }
 
-void ReferenceCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, const AmoebaHarmonicAngleForce& force) {
+void ReferenceCalcAmoebaAngleForceKernel::initialize(const System& system, const AmoebaAngleForce& force) {
 
     numAngles = force.getNumAngles();
 
@@ -130,29 +130,29 @@ void ReferenceCalcAmoebaHarmonicAngleForceKernel::initialize(const System& syste
         angle.push_back(  static_cast<RealOpenMM>( angleValue ) );
         kQuadratic.push_back( static_cast<RealOpenMM>( k) );
     }
-    globalHarmonicAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicAngleCubic());
-    globalHarmonicAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicAngleQuartic());
-    globalHarmonicAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicAnglePentic());
-    globalHarmonicAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicAngleSextic());
+    globalAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleCubic());
+    globalAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleQuartic());
+    globalAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalAnglePentic());
+    globalAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalAngleSextic());
 }
 
-double ReferenceCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double ReferenceCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    AmoebaReferenceHarmonicAngleForce amoebaReferenceHarmonicAngleForce;
-    RealOpenMM energy      = amoebaReferenceHarmonicAngleForce.calculateForceAndEnergy( numAngles, 
-                                       posData, particle1, particle2, particle3, angle, kQuadratic, globalHarmonicAngleCubic, globalHarmonicAngleQuartic, globalHarmonicAnglePentic, globalHarmonicAngleSextic, forceData );
+    AmoebaReferenceAngleForce amoebaReferenceAngleForce;
+    RealOpenMM energy      = amoebaReferenceAngleForce.calculateForceAndEnergy( numAngles, 
+                                       posData, particle1, particle2, particle3, angle, kQuadratic, globalAngleCubic, globalAngleQuartic, globalAnglePentic, globalAngleSextic, forceData );
     return static_cast<double>(energy);
 }
 
-ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system) : 
-          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), system(system) {
+ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system) : 
+          CalcAmoebaInPlaneAngleForceKernel(name, platform), system(system) {
 }
 
-ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::~ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel() {
+ReferenceCalcAmoebaInPlaneAngleForceKernel::~ReferenceCalcAmoebaInPlaneAngleForceKernel() {
 }
 
-void ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) {
+void ReferenceCalcAmoebaInPlaneAngleForceKernel::initialize(const System& system, const AmoebaInPlaneAngleForce& force) {
 
     numAngles = force.getNumAngles();
     for (int ii = 0; ii < numAngles; ii++) {
@@ -166,20 +166,20 @@ void ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System
         angle.push_back(       static_cast<RealOpenMM>( angleValue ) );
         kQuadratic.push_back(  static_cast<RealOpenMM>( k ) );
     }
-    globalHarmonicInPlaneAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAngleCubic());
-    globalHarmonicInPlaneAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
-    globalHarmonicInPlaneAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAnglePentic());
-    globalHarmonicInPlaneAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAngleSextic());
+    globalInPlaneAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleCubic());
+    globalInPlaneAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleQuartic());
+    globalInPlaneAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAnglePentic());
+    globalInPlaneAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalInPlaneAngleSextic());
 }
 
-double ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double ReferenceCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
-    AmoebaReferenceHarmonicInPlaneAngleForce amoebaReferenceHarmonicInPlaneAngleForce;
-    RealOpenMM energy      = amoebaReferenceHarmonicInPlaneAngleForce.calculateForceAndEnergy( numAngles, posData, particle1, particle2, particle3, particle4, 
-                                                                                               angle, kQuadratic, globalHarmonicInPlaneAngleCubic, globalHarmonicInPlaneAngleQuartic,
-                                                                                               globalHarmonicInPlaneAnglePentic, globalHarmonicInPlaneAngleSextic, forceData );
+    AmoebaReferenceInPlaneAngleForce amoebaReferenceInPlaneAngleForce;
+    RealOpenMM energy      = amoebaReferenceInPlaneAngleForce.calculateForceAndEnergy( numAngles, posData, particle1, particle2, particle3, particle4, 
+                                                                                               angle, kQuadratic, globalInPlaneAngleCubic, globalInPlaneAngleQuartic,
+                                                                                               globalInPlaneAnglePentic, globalInPlaneAngleSextic, forceData );
     return static_cast<double>(energy);
 }
 

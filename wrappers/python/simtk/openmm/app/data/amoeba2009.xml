@@ -3543,7 +3543,7 @@
   <Atom name="LI" type="382"/>
  </Residue>
  </Residues>
-  <AmoebaHarmonicBondForce bond-cubic="-25.5" bond-quartic="379.3125">
+  <AmoebaBondForce bond-cubic="-25.5" bond-quartic="379.3125">
    <Bond class1="1" class2="2" length="0.1437" k="156900.0"/>
    <Bond class1="1" class2="3" length="0.1345" k="201668.8"/>
    <Bond class1="1" class2="4" length="0.1028" k="203760.8"/>
@@ -3664,8 +3664,8 @@
    <Bond class1="69" class2="69" length="0.1513" k="133929.84"/>
    <Bond class1="70" class2="71" length="0.148" k="325054.96"/>
    <Bond class1="73" class2="74" length="0.09572" k="221584.64"/>
- </AmoebaHarmonicBondForce>
-  <AmoebaHarmonicAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
+ </AmoebaBondForce>
+  <AmoebaAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
    <Angle class1="2" class2="1" class3="3" k="0.0637259642196" angle1="122.00"  /> 
    <Angle class1="2" class2="1" class3="4" k="0.0407846171005" angle1="117.00"  /> 
    <Angle class1="3" class2="1" class3="4" k="0.0458826942381" angle1="121.00"  /> 
@@ -3962,7 +3962,7 @@
    <Angle class1="62" class2="70" class3="71" k="0.0966850329139" angle1="110.00"  /> 
    <Angle class1="71" class2="70" class3="71" k="0.114553793281" angle1="121.20"  /> 
    <Angle class1="74" class2="73" class3="74" k="0.0433973816335" angle1="108.50"  /> 
- </AmoebaHarmonicAngleForce>
+ </AmoebaAngleForce>
   <AmoebaOutOfPlaneBendForce type="ALLINGER" opbend-cubic="-0.014" opbend-quartic="5.6e-05" opbend-pentic="-7e-07" opbend-sextic="2.2e-08">
    <Angle class1="2" class2="1" class3="0" class4="0" k="0.0531474541591"/>
    <Angle class1="3" class2="1" class3="0" class4="0" k="0.0898536095496"/>

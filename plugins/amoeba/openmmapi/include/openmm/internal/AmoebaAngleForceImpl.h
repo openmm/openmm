@@ -1,15 +1,15 @@
-#ifndef AMOEBA_OPENMM_H_
-#define AMOEBA_OPENMM_H_
+#ifndef OPENMM_AMOEBA_ANGLE_FORCE_IMPL_H_
+#define OPENMM_AMOEBA_ANGLE_FORCE_IMPL_H_
 
 /* -------------------------------------------------------------------------- *
- *                               OpenMMAmoeba                                 *
+ *                                OpenMMAmoeba                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,16 +32,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AmoebaBondForce.h"
+#include "openmm/internal/ForceImpl.h"
 #include "openmm/AmoebaAngleForce.h"
-#include "openmm/AmoebaInPlaneAngleForce.h"
-#include "openmm/AmoebaPiTorsionForce.h"
-#include "openmm/AmoebaStretchBendForce.h"
-#include "openmm/AmoebaOutOfPlaneBendForce.h"
-#include "openmm/AmoebaTorsionTorsionForce.h"
-#include "openmm/AmoebaMultipoleForce.h"
-#include "openmm/AmoebaGeneralizedKirkwoodForce.h"
-#include "openmm/AmoebaVdwForce.h"
-#include "openmm/AmoebaWcaDispersionForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <set>
+#include <string>
 
-#endif /*AMOEBA_OPENMM_H_*/
+namespace OpenMM {
+
+/**
+ * This is the internal implementation of AmoebaAngleForce.
+ */
+
+class AmoebaAngleForceImpl : public ForceImpl {
+public:
+    AmoebaAngleForceImpl(AmoebaAngleForce& owner);
+    ~AmoebaAngleForceImpl();
+    void initialize(ContextImpl& context);
+    AmoebaAngleForce& getOwner() {
+        return owner;
+    }
+    void updateContextState(ContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    AmoebaAngleForce& owner;
+    Kernel kernel;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_AMOEBA_ANGLE_FORCE_IMPL_H_*/

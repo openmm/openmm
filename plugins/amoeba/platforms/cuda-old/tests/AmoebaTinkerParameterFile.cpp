@@ -735,7 +735,7 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
        throwException(__FILE__, __LINE__, buffer );
     }
 
-    AmoebaHarmonicBondForce* bondForce = new AmoebaHarmonicBondForce();
+    AmoebaBondForce* bondForce = new AmoebaBondForce();
     MapStringIntI forceActive          = forceMap.find( AMOEBA_HARMONIC_BOND_FORCE );
     if( forceActive != forceMap.end() && (*forceActive).second ){
         system.addForce( bondForce );
@@ -763,7 +763,7 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
           bondForce->addBond( particle1, particle2, length, k );
        } else {
           char buffer[1024];
-          (void) sprintf( buffer, "%s AmoebaHarmonicBondForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) sprintf( buffer, "%s AmoebaBondForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
           (void) fprintf( log, "%s", buffer );
           throwException(__FILE__, __LINE__, buffer );
        }
@@ -788,11 +788,11 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
   
            } else if( field == "AmoebaHarmonicBondCubic" ){
                double cubicParameter = atof( tokens[1].c_str() );
-               bondForce->setAmoebaGlobalHarmonicBondCubic( cubicParameter );
+               bondForce->setAmoebaGlobalBondCubic( cubicParameter );
                hits++;
            } else if( field == "AmoebaHarmonicBondQuartic" ){
                double quarticParameter = atof( tokens[1].c_str() );
-               bondForce->setAmoebaGlobalHarmonicBondQuartic( quarticParameter );
+               bondForce->setAmoebaGlobalBondQuartic( quarticParameter );
                hits++;
            }
         }
@@ -817,8 +817,8 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
         double cubic         = 0.0;
         double quartic       = 0.0;
 
-        bondForce->setAmoebaGlobalHarmonicBondCubic( cubic );
-        bondForce->setAmoebaGlobalHarmonicBondQuartic( quartic );
+        bondForce->setAmoebaGlobalBondCubic( cubic );
+        bondForce->setAmoebaGlobalBondQuartic( quartic );
 
         for( int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
             int particle1, particle2;
@@ -831,11 +831,11 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
 
     if( useOpenMMUnits ){
 
-        double cubic         = bondForce->getAmoebaGlobalHarmonicBondCubic()/AngstromToNm;
-        double quartic       = bondForce->getAmoebaGlobalHarmonicBondQuartic()/(AngstromToNm*AngstromToNm);
+        double cubic         = bondForce->getAmoebaGlobalBondCubic()/AngstromToNm;
+        double quartic       = bondForce->getAmoebaGlobalBondQuartic()/(AngstromToNm*AngstromToNm);
 
-        bondForce->setAmoebaGlobalHarmonicBondCubic( cubic );
-        bondForce->setAmoebaGlobalHarmonicBondQuartic( quartic );
+        bondForce->setAmoebaGlobalBondCubic( cubic );
+        bondForce->setAmoebaGlobalBondQuartic( quartic );
 
         // scale equilibrium bond lengths/force prefactor k
 
@@ -854,9 +854,9 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
     if( log ){
         static const unsigned int maxPrint   = MAX_PRINT;
         unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumBonds());
-        (void) fprintf( log, "%s: %u sample of AmoebaHarmonicBondForce parameters in %s units; cubic=%15.7e quartic=%15.7e\n",
+        (void) fprintf( log, "%s: %u sample of AmoebaBondForce parameters in %s units; cubic=%15.7e quartic=%15.7e\n",
                         methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
-                        bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
+                        bondForce->getAmoebaGlobalBondCubic(), bondForce->getAmoebaGlobalBondQuartic() );
         for( unsigned int ii = 0; ii < arraySize; ii++ ){
             int particle1, particle2;
             double length, k;
@@ -906,7 +906,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
        throwException(__FILE__, __LINE__, buffer );
     }
 
-    AmoebaHarmonicAngleForce* angleForce = new AmoebaHarmonicAngleForce();
+    AmoebaAngleForce* angleForce = new AmoebaAngleForce();
     MapStringIntI forceActive            = forceMap.find( AMOEBA_HARMONIC_ANGLE_FORCE );
     if( forceActive != forceMap.end() && (*forceActive).second ){
         system.addForce( angleForce );
@@ -936,7 +936,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
           angleForce->addAngle( particle1, particle2, particle3, angle, k );
        } else {
           char buffer[1024];
-          (void) sprintf( buffer, "%s AmoebaHarmonicAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          (void) sprintf( buffer, "%s AmoebaAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
           (void) fprintf( log, "%s", buffer );
           throwException(__FILE__, __LINE__, buffer );
        }
@@ -960,16 +960,16 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
              }
 
           } else if( field == "AmoebaHarmonicAngleCubic" ){
-             angleForce->setAmoebaGlobalHarmonicAngleCubic( atof( tokens[1].c_str() ) );
+             angleForce->setAmoebaGlobalAngleCubic( atof( tokens[1].c_str() ) );
              hits++;
           } else if( field == "AmoebaHarmonicAngleQuartic" ){
-             angleForce->setAmoebaGlobalHarmonicAngleQuartic( atof( tokens[1].c_str() ) );
+             angleForce->setAmoebaGlobalAngleQuartic( atof( tokens[1].c_str() ) );
              hits++;
           } else if( field == "AmoebaHarmonicAnglePentic" ){
-             angleForce->setAmoebaGlobalHarmonicAnglePentic( atof( tokens[1].c_str() ) );
+             angleForce->setAmoebaGlobalAnglePentic( atof( tokens[1].c_str() ) );
              hits++;
           } else if( field == "AmoebaHarmonicAngleSextic" ){
-             angleForce->setAmoebaGlobalHarmonicAngleSextic( atof( tokens[1].c_str() ) );
+             angleForce->setAmoebaGlobalAngleSextic( atof( tokens[1].c_str() ) );
              hits++;
           }
        }
@@ -992,11 +992,11 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
     if( log ){
        static const unsigned int maxPrint   = MAX_PRINT;
        unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
-       (void) fprintf( log, "%s: %u sample of AmoebaHarmonicAngleForce parameters in %s units; cubic=%15.7e quartic=%15.7e pentic=%15.7e sextic=%15.7e\n",
+       (void) fprintf( log, "%s: %u sample of AmoebaAngleForce parameters in %s units; cubic=%15.7e quartic=%15.7e pentic=%15.7e sextic=%15.7e\n",
                        methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"), 
-                       angleForce->getAmoebaGlobalHarmonicAngleCubic(), 
-                       angleForce->getAmoebaGlobalHarmonicAngleQuartic(), angleForce->getAmoebaGlobalHarmonicAnglePentic(),
-                       angleForce->getAmoebaGlobalHarmonicAngleSextic() );
+                       angleForce->getAmoebaGlobalAngleCubic(), 
+                       angleForce->getAmoebaGlobalAngleQuartic(), angleForce->getAmoebaGlobalAnglePentic(),
+                       angleForce->getAmoebaGlobalAngleSextic() );
 
        for( unsigned int ii = 0; ii < arraySize; ii++ ){
           int particle1, particle2, particle3;
@@ -1048,7 +1048,7 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
        throwException(__FILE__, __LINE__, buffer );
     }
 
-    AmoebaHarmonicInPlaneAngleForce* angleForce = new AmoebaHarmonicInPlaneAngleForce();
+    AmoebaInPlaneAngleForce* angleForce = new AmoebaInPlaneAngleForce();
     MapStringIntI forceActive                   = forceMap.find( AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE );
     if( forceActive != forceMap.end() && (*forceActive).second ){
         system.addForce( angleForce );
@@ -1078,7 +1078,7 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
             angleForce->addAngle( particle1, particle2, particle3, particle4, angle, k );
         } else {
             char buffer[1024];
-            (void) sprintf( buffer, "%s AmoebaHarmonicInPlaneAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) sprintf( buffer, "%s AmoebaInPlaneAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
             (void) fprintf( log, "%s", buffer );
             throwException(__FILE__, __LINE__, buffer );
         }
@@ -1101,16 +1101,16 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
                }
   
             } else if( field == "AmoebaHarmonicInPlaneAngleCubic" ){
-                angleForce->setAmoebaGlobalHarmonicInPlaneAngleCubic( atof( tokens[1].c_str() ) );
+                angleForce->setAmoebaGlobalInPlaneAngleCubic( atof( tokens[1].c_str() ) );
                 hits++;
             } else if( field == "AmoebaHarmonicInPlaneAngleQuartic" ){
-                angleForce->setAmoebaGlobalHarmonicInPlaneAngleQuartic( atof( tokens[1].c_str() ) );
+                angleForce->setAmoebaGlobalInPlaneAngleQuartic( atof( tokens[1].c_str() ) );
                 hits++;
             } else if( field == "AmoebaHarmonicInPlaneAnglePentic" ){
-                angleForce->setAmoebaGlobalHarmonicInPlaneAnglePentic( atof( tokens[1].c_str() ) );
+                angleForce->setAmoebaGlobalInPlaneAnglePentic( atof( tokens[1].c_str() ) );
                 hits++;
             } else if( field == "AmoebaHarmonicInPlaneAngleSextic" ){
-                angleForce->setAmoebaGlobalHarmonicInPlaneAngleSextic( atof( tokens[1].c_str() ) );
+                angleForce->setAmoebaGlobalInPlaneAngleSextic( atof( tokens[1].c_str() ) );
                 hits++;
             }
         }
@@ -1133,12 +1133,12 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
     if( log ){
         static const unsigned int maxPrint   = MAX_PRINT;
         unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
-        (void) fprintf( log, "%s: %u sample of AmoebaHarmonicInPlaneAngleForce parameters in %s units; cubic=%15.7e quartic=%15.7e pentic=%15.7e sextic=%15.7e\n",
+        (void) fprintf( log, "%s: %u sample of AmoebaInPlaneAngleForce parameters in %s units; cubic=%15.7e quartic=%15.7e pentic=%15.7e sextic=%15.7e\n",
                         methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
-                        angleForce->getAmoebaGlobalHarmonicInPlaneAngleCubic(), 
-                        angleForce->getAmoebaGlobalHarmonicInPlaneAngleQuartic(),
-                        angleForce->getAmoebaGlobalHarmonicInPlaneAnglePentic(),
-                        angleForce->getAmoebaGlobalHarmonicInPlaneAngleSextic() );
+                        angleForce->getAmoebaGlobalInPlaneAngleCubic(), 
+                        angleForce->getAmoebaGlobalInPlaneAngleQuartic(),
+                        angleForce->getAmoebaGlobalInPlaneAnglePentic(),
+                        angleForce->getAmoebaGlobalInPlaneAngleSextic() );
  
         for( unsigned int ii = 0; ii < arraySize; ii++ ){
             int particle1, particle2, particle3, particle4;
@@ -3452,7 +3452,7 @@ static void getStringForceMap( System& system, MapStringForce& forceMap, FILE* l
         if( !hit ){
 
             try {
-               AmoebaHarmonicBondForce& harmonicBondForce = dynamic_cast<AmoebaHarmonicBondForce&>(force);
+               AmoebaBondForce& harmonicBondForce = dynamic_cast<AmoebaBondForce&>(force);
                forceMap[AMOEBA_HARMONIC_BOND_FORCE]       = &force;
                hit++;
             } catch( std::bad_cast ){
@@ -3570,7 +3570,7 @@ static void getStringForceMap( System& system, MapStringForce& forceMap, FILE* l
         if( !hit ){
     
             try {
-               AmoebaHarmonicAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicAngleForce&>(force);
+               AmoebaAngleForce & harmonicAngleForce = dynamic_cast<AmoebaAngleForce&>(force);
                forceMap[AMOEBA_HARMONIC_ANGLE_FORCE]         = &force;
                hit++;
             } catch( std::bad_cast ){
@@ -3582,7 +3582,7 @@ static void getStringForceMap( System& system, MapStringForce& forceMap, FILE* l
         if( !hit ){
     
             try {
-               AmoebaHarmonicInPlaneAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicInPlaneAngleForce&>(force);
+               AmoebaInPlaneAngleForce & harmonicAngleForce = dynamic_cast<AmoebaInPlaneAngleForce&>(force);
                forceMap[AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE]       = &force;
                hit++;
             } catch( std::bad_cast ){
@@ -3737,7 +3737,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
   
             } else if( field == "AmoebaHarmonicBondParameters" ){
                 readAmoebaHarmonicBondParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap,&lineCount, log );
-            } else if( field == "AmoebaHarmonicBondForce" ){
+            } else if( field == "AmoebaBondForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_HARMONIC_BOND_FORCE], &lineCount, field, log );
             } else if( field == "AmoebaHarmonicBondEnergy" ){
                 if( tokens.size() > 1 ){
@@ -3759,7 +3759,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
   
             } else if( field == "AmoebaHarmonicAngleParameters" ){
                 readAmoebaHarmonicAngleParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
-            } else if( field == "AmoebaHarmonicAngleForce" ){
+            } else if( field == "AmoebaAngleForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_HARMONIC_ANGLE_FORCE], &lineCount, field, log );
             } else if( field == "AmoebaHarmonicAngleEnergy" ){
                 if( tokens.size() > 1 ){
@@ -3770,7 +3770,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
   
             } else if( field == "AmoebaHarmonicInPlaneAngleParameters" ){
                 readAmoebaHarmonicInPlaneAngleParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
-            } else if( field == "AmoebaHarmonicInPlaneAngleForce" ){
+            } else if( field == "AmoebaInPlaneAngleForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE], &lineCount, field, log );
             } else if( field == "AmoebaHarmonicInPlaneAngleEnergy" ){
                 if( tokens.size() > 1 ){
