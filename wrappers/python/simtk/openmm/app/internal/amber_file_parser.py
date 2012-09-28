@@ -875,7 +875,10 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
     mm = simtk.openmm
     natoms_read = 0
     while (natoms_read < natoms):
-        line = infile.readline().strip()
+        line = infile.readline()
+        if len(line) == 0:
+            raise ValueError("Unexpected end of file while reading coordinates")
+        line = line.strip()
         elements = line.split()
         while (len(elements) > 0):
             coordinates.append(mm.Vec3(float(elements.pop(0)), float(elements.pop(0)), float(elements.pop(0))))
@@ -896,11 +899,14 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
         velocities = []
         natoms_read = 0
         while (natoms_read < natoms):
-            line = infile.readline().strip()
+            line = infile.readline()
+            if len(line) == 0:
+                raise ValueError("Unexpected end of file while reading velocities")
+            line = line.strip()
             elements = line.split()
             while (len(elements) > 0):
                 velocities.append(20.455*mm.Vec3(float(elements.pop(0)), float(elements.pop(0)), float(elements.pop(0))))
-            natoms_read += 1
+                natoms_read += 1
         if asNumpy:
             newvel = numpy.zeros([natoms,3], numpy.float32)
             for i in range(len(velocities)):
@@ -913,7 +919,10 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
     # Read box size if present
     box_vectors = None
     if (read_box):
-        line = infile.readline().strip()
+        line = infile.readline()
+        if len(line) == 0:
+            raise ValueError("Unexpected end of file while reading box vectors")
+        line = line.strip()
         elements = line.split()
         nelements = len(elements)
         box_dimensions = [0.0]*nelements
