@@ -370,7 +370,7 @@ public:
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     * @param force      the AmoebaVdwForce this kernel will be used for
      */
     void initialize(const System& system, const AmoebaVdwForce& force);
     /**
@@ -387,8 +387,9 @@ private:
     int useCutoff;
     int usePBC;
     double cutoff;
+    double dispersionCoefficient;
     std::vector<int> indexIVs;
-    std::vector< std::vector<int> > allExclusions;
+    std::vector< std::set<int> > allExclusions;
     std::vector<RealOpenMM> sigmas;
     std::vector<RealOpenMM> epsilons;
     std::vector<RealOpenMM> reductions;

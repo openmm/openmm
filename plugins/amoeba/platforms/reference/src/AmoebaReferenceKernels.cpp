@@ -41,6 +41,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
+#include "openmm/internal/AmoebaVdwForceImpl.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -534,10 +535,14 @@ ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string
     useCutoff = 0;
     usePBC = 0;
     cutoff = 1.0e+10;
+    neighborList = NULL;
 
 }
 
 ReferenceCalcAmoebaVdwForceKernel::~ReferenceCalcAmoebaVdwForceKernel() {
+    if( neighborList ){
+        delete neighborList;
+    } 
 }
 
 void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
@@ -561,7 +566,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         force.getParticleParameters( ii, indexIV, sigma, epsilon, reduction );
         force.getParticleExclusions( ii, exclusions );
         for( unsigned int jj = 0; jj < exclusions.size(); jj++ ){
-           allExclusions[ii].push_back( exclusions[jj] );
+           allExclusions[ii].insert( exclusions[jj] );
         }
 
         indexIVs[ii]      = indexIV;
@@ -569,11 +574,14 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         epsilons[ii]      = static_cast<RealOpenMM>( epsilon );
         reductions[ii]    = static_cast<RealOpenMM>( reduction );
     }   
-    sigmaCombiningRule   = force.getSigmaCombiningRule();
-    epsilonCombiningRule = force.getEpsilonCombiningRule();
-    useCutoff            = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
-    usePBC               = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
-    cutoff               = force.getCutoff();
+    sigmaCombiningRule     = force.getSigmaCombiningRule();
+    epsilonCombiningRule   = force.getEpsilonCombiningRule();
+    useCutoff              = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
+    usePBC                 = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
+    cutoff                 = force.getCutoff();
+    neighborList           = useCutoff ? new NeighborList() : NULL;
+    dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
+
 }
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -581,17 +589,27 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
     AmoebaReferenceVdwForce vdwForce( sigmaCombiningRule, epsilonCombiningRule );
+    RealOpenMM energy;
     if( useCutoff ){
         vdwForce.setCutoff( cutoff );
+        computeNeighborListVoxelHash( *neighborList, numParticles, posData, allExclusions, extractBoxSize(context), usePBC, cutoff, 0.0);
         if( usePBC ){
             vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffPeriodic);
+            RealVec& box = extractBoxSize(context);
+            double minAllowedSize = 1.999999*cutoff;
+            if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize){
+                throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
+            }
+            vdwForce.setPeriodicBox(box);
+            energy  = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, sigmas, epsilons, reductions, *neighborList, forceData);
+            energy += dispersionCoefficient/(box[0]*box[1]*box[2]);
         } else {
             vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
     } else {
         vdwForce.setNonbondedMethod( AmoebaReferenceVdwForce::NoCutoff );
+        energy = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, sigmas, epsilons, reductions, allExclusions, forceData);
     }
-    RealOpenMM energy = vdwForce.calculateForceAndEnergy( numParticles, posData, indexIVs, sigmas, epsilons, reductions, allExclusions, forceData);
     return static_cast<double>(energy);
 }
 

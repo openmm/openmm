@@ -27,6 +27,7 @@
 
 #include "SimTKUtilities/RealVec.h"
 #include "openmm/Vec3.h"
+#include "SimTKReference/ReferenceNeighborList.h"
 #include <string>
 #include <vector>
 
@@ -171,6 +172,26 @@ public:
 
     /**---------------------------------------------------------------------------------------
     
+       Set box dimensions
+    
+       @param box box dimensions
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void setPeriodicBox( const RealVec& box );
+
+    /**---------------------------------------------------------------------------------------
+    
+       Get box dimensions
+    
+       @return box dimensions
+    
+       --------------------------------------------------------------------------------------- */
+    
+    RealVec getPeriodicBox( void ) const;
+
+    /**---------------------------------------------------------------------------------------
+    
        Calculate Amoeba Hal vdw ixns
     
        @param numParticles            number of particles
@@ -190,16 +211,49 @@ public:
                                         const std::vector<int>& indexIVs, 
                                         const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
                                         const std::vector<RealOpenMM>& reductions,
-                                        const std::vector< std::vector<int> >& vdwExclusions,
+                                        const std::vector< std::set<int> >& vdwExclusions,
+                                        std::vector<OpenMM::RealVec>& forces ) const;
+         
+    /**---------------------------------------------------------------------------------------
+    
+       Calculate Vdw ixn using neighbor list
+    
+       @param numParticles            number of particles
+       @param particlePositions       Cartesian coordinates of particles
+       @param indexIVs                position index for associated reducing particle
+       @param sigmas                  particle sigmas 
+       @param epsilons                particle epsilons
+       @param reductions              particle reduction factors
+       @param neighborList            neighbor list
+       @param forces                  add forces to this vector
+    
+       @return energy
+    
+       --------------------------------------------------------------------------------------- */
+    
+    RealOpenMM calculateForceAndEnergy( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
+                                        const std::vector<int>& indexIVs, 
+                                        const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
+                                        const std::vector<RealOpenMM>& reductions,
+                                        const NeighborList& neighborList,
                                         std::vector<OpenMM::RealVec>& forces ) const;
          
 private:
+
+    // taper coefficient indices
+
+    static const int C3=0;
+    static const int C4=1;
+    static const int C5=2;
 
     std::string _sigmaCombiningRule;
     std::string _epsilonCombiningRule;
     NonbondedMethod _nonbondedMethod;
     double _cutoff;
-
+    double _taperCutoffFactor;
+    double _taperCutoff;
+    RealOpenMM _taperCoefficients[3];
+    RealVec _periodicBoxDimensions;
     CombiningFunction _combineSigmas;
     RealOpenMM arithmeticSigmaCombiningRule( RealOpenMM sigmaI, RealOpenMM sigmaJ ) const;
     RealOpenMM  geometricSigmaCombiningRule( RealOpenMM sigmaI, RealOpenMM sigmaJ ) const;
@@ -210,6 +264,27 @@ private:
     RealOpenMM  geometricEpsilonCombiningRule( RealOpenMM epsilonI, RealOpenMM epsilonJ ) const;
     RealOpenMM  harmonicEpsilonCombiningRule(  RealOpenMM epsilonI, RealOpenMM epsilonJ ) const;
     RealOpenMM  hhgEpsilonCombiningRule(       RealOpenMM epsilonI, RealOpenMM epsilonJ ) const;
+
+    /**---------------------------------------------------------------------------------------
+    
+       Set reduced positions: position used to calculate vdw interaction is moved towards 
+       covalent partner
+       
+    
+       @param  numParticles         number of particles
+       @param  particlePositions    current particle positions
+       @param  indexIVs             particle index of covalent partner
+       @param  reductions           fraction of bond length to move particle interacting site;
+                                    reductions[i] = zero, 
+                                    if interacting position == particle position
+       @param  reducedPositions     output: modfied or original position depending on whether
+                                    reduction factor is nonzero
+    
+       --------------------------------------------------------------------------------------- */
+    
+    void setReducedPositions( int numParticles, const std::vector<RealVec>& particlePositions,
+                              const std::vector<int>& indexIVs, const std::vector<RealOpenMM>& reductions,
+                              std::vector<Vec3>& reducedPositions ) const;
 
     /**---------------------------------------------------------------------------------------
     
@@ -230,6 +305,16 @@ private:
     
     /**---------------------------------------------------------------------------------------
     
+       Set taper coefficients
+    
+       @param  cutoff cutoff
+
+       --------------------------------------------------------------------------------------- */
+    
+    void setTaperCoefficients( double cutoff );
+
+    /**---------------------------------------------------------------------------------------
+    
        Calculate pair ixn
     
        @param  combindedSigma       combined sigmas
@@ -246,54 +331,6 @@ private:
                                  const Vec3& particleIPosition, const Vec3& particleJPosition,
                                  Vec3& force ) const;
 
-    /**---------------------------------------------------------------------------------------
-    
-       Calculate Vdw ixns w/ no cutoff
-    
-       @param numParticles            number of particles
-       @param particlePositions       Cartesian coordinates of particles
-       @param indexIVs                position index for associated reducing particle
-       @param sigmas                  particle sigmas 
-       @param epsilons                particle epsilons
-       @param reductions              particle reduction factors
-       @param vdwExclusions           particle exclusions
-       @param forces                  add forces to this vector
-    
-       @return energy
-    
-       --------------------------------------------------------------------------------------- */
-    
-    RealOpenMM calculateForceAndEnergyNoCutoff( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
-                                                const std::vector<int>& indexIVs, 
-                                                const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
-                                                const std::vector<RealOpenMM>& reductions,
-                                                const std::vector< std::vector<int> >& vdwExclusions,
-                                                std::vector<OpenMM::RealVec>& forces ) const;
-         
-    /**---------------------------------------------------------------------------------------
-    
-       Calculate Vdw ixns w/ cutoff
-    
-       @param numParticles            number of particles
-       @param particlePositions       Cartesian coordinates of particles
-       @param indexIVs                position index for associated reducing particle
-       @param sigmas                  particle sigmas 
-       @param epsilons                particle epsilons
-       @param reductions              particle reduction factors
-       @param vdwExclusions           particle exclusions
-       @param forces                  add forces to this vector
-    
-       @return energy
-    
-       --------------------------------------------------------------------------------------- */
-    
-    RealOpenMM calculateForceAndEnergyApplyCutoff( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
-                                                   const std::vector<int>& indexIVs, 
-                                                   const std::vector<RealOpenMM>& sigmas, const std::vector<RealOpenMM>& epsilons,
-                                                   const std::vector<RealOpenMM>& reductions,
-                                                   const std::vector< std::vector<int> >& vdwExclusions,
-                                                   std::vector<OpenMM::RealVec>& forces ) const;
-         
 };
 
 // ---------------------------------------------------------------------------------------
