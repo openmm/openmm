@@ -1410,11 +1410,12 @@ void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& 
     }
 }
 
-template <class T, class T4>
+template <class T, class T4, class M4>
 void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     // Compute the local coordinates relative to the center of mass.
     int numAtoms = cu.getNumAtoms();
-    vector<T4> posq, velm;
+    vector<T4> posq;
+    vector<M4> velm;
     cu.getPosq().download(posq);
     cu.getVelm().download(velm);
     double totalMass = 0.0;
@@ -1524,9 +1525,11 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     context.calcForcesAndEnergy(false, false, -1);
     if (cu.getUseDoublePrecision())
-        computeSystemMultipoleMoments<double, double4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<double, double4, double4>(context, outputMultipoleMoments);
+    else if (cu.getUseMixedPrecision())
+        computeSystemMultipoleMoments<float, float4, double4>(context, outputMultipoleMoments);
     else
-        computeSystemMultipoleMoments<float, float4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<float, float4, float4>(context, outputMultipoleMoments);
 }
 
 /* -------------------------------------------------------------------------- *

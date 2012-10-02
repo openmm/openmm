@@ -136,6 +136,12 @@ public:
         return *posq;
     }
     /**
+     * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
+     */
+    CudaArray& getPosqCorrection() {
+        return *posqCorrection;
+    }
+    /**
      * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
      */
     CudaArray& getVelm() {
@@ -314,10 +320,10 @@ public:
         return useDoublePrecision;
     }
     /**
-     * Get whether accumulation is being done in double precision.
+     * Get whether mixed precision is being used.
      */
-    bool getAccumulateInDouble() {
-        return accumulateInDouble;
+    bool getUseMixedPrecision() {
+        return useMixedPrecision;
     }
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
@@ -455,7 +461,7 @@ private:
     /**
      * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
      */
-    template <class Real, class Real4>
+    template <class Real, class Real4, class Mixed, class Mixed4>
     void reorderAtomsImpl(bool enforcePeriodic);
     static bool hasInitializedCuda;
     const System& system;
@@ -469,7 +475,7 @@ private:
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, accumulateInDouble, contextIsValid, atomsWereReordered, moleculesInvalid;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, moleculesInvalid;
     std::string compiler, tempDir, gpuArchitecture;
     float4 periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxSize, invPeriodicBoxSize;
@@ -489,6 +495,7 @@ private:
     std::vector<int4> posCellOffsets;
     void* pinnedBuffer;
     CudaArray* posq;
+    CudaArray* posqCorrection;
     CudaArray* velm;
     CudaArray* force;
     CudaArray* energyBuffer;

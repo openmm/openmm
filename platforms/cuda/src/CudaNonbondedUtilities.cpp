@@ -446,12 +446,12 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
-    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision() && !context.getAccumulateInDouble())
+    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision() && !context.getUseMixedPrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
         defines["ENABLE_SHUFFLE"] = "1";
     stringstream defineAccum;
-    if (context.getAccumulateInDouble()) {
+    if (context.getUseMixedPrecision()) {
         defineAccum << "typedef double accum;\n";
         defineAccum << "typedef double3 accum3;\n";
         defines["make_accum3"] = "make_double3";

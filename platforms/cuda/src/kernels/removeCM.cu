@@ -2,13 +2,13 @@
  * Calculate the center of mass momentum.
  */
 
-extern "C" __global__ void calcCenterOfMassMomentum(int numAtoms, const real4* __restrict__ velm, float4* __restrict__ cmMomentum) {
+extern "C" __global__ void calcCenterOfMassMomentum(int numAtoms, const mixed4* __restrict__ velm, float4* __restrict__ cmMomentum) {
     extern __shared__ volatile float3 temp[];
     float3 cm = make_float3(0, 0, 0);
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
-        real4 velocity = velm[index];
-        if (velocity.w != 0.0) {
-            real mass = RECIP(velocity.w);
+        mixed4 velocity = velm[index];
+        if (velocity.w != 0) {
+            mixed mass = RECIP(velocity.w);
             cm.x += (float) velocity.x*mass;
             cm.y += (float) velocity.y*mass;
             cm.z += (float) velocity.z*mass;
@@ -57,7 +57,7 @@ extern "C" __global__ void calcCenterOfMassMomentum(int numAtoms, const real4* _
  * Remove center of mass motion.
  */
 
-extern "C" __global__ void removeCenterOfMassMomentum(unsigned int numAtoms, real4* __restrict__ velm, const float4* __restrict__ cmMomentum) {
+extern "C" __global__ void removeCenterOfMassMomentum(unsigned int numAtoms, mixed4* __restrict__ velm, const float4* __restrict__ cmMomentum) {
     // First sum all of the momenta that were calculated by individual groups.
 
     extern volatile float3 temp[];
@@ -104,7 +104,7 @@ extern "C" __global__ void removeCenterOfMassMomentum(unsigned int numAtoms, rea
     // Now remove the center of mass velocity from each atom.
 
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < numAtoms; index += blockDim.x*gridDim.x) {
-        real4 velocity = velm[index];
+        mixed4 velocity = velm[index];
         velocity.x -= cm.x;
         velocity.y -= cm.y;
         velocity.z -= cm.z;

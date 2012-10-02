@@ -67,22 +67,22 @@ bool CudaContext::hasInitializedCuda = false;
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, CudaPlatform::PlatformData& platformData) : system(system), compiler(compiler),
         time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), contextIsValid(false), atomsWereReordered(false), pinnedBuffer(NULL), posq(NULL),
-        velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
+        posqCorrection(NULL), velm(NULL), force(NULL), energyBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (!hasInitializedCuda) {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;
     }
     if (precision == "single") {
         useDoublePrecision = false;
-        accumulateInDouble = false;
+        useMixedPrecision = false;
     }
     else if (precision == "mixed") {
         useDoublePrecision = false;
-        accumulateInDouble = true;
+        useMixedPrecision = true;
     }
     else if (precision == "double") {
         useDoublePrecision = true;
-        accumulateInDouble = true;
+        useMixedPrecision = false;
     }
     else
         throw OpenMMException("Illegal value for CudaPrecision: "+precision);
@@ -150,7 +150,25 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_real2"] = "make_double2";
         compilationDefines["make_real3"] = "make_double3";
         compilationDefines["make_real4"] = "make_double4";
+        compilationDefines["make_mixed2"] = "make_double2";
+        compilationDefines["make_mixed3"] = "make_double3";
+        compilationDefines["make_mixed4"] = "make_double4";
         energyBuffer = CudaArray::create<double>(*this, numEnergyBuffers, "energyBuffer");
+        int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
+        CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
+    }
+    else if (useMixedPrecision) {
+        posq = CudaArray::create<float4>(*this, paddedNumAtoms, "posq");
+        posqCorrection = CudaArray::create<float4>(*this, paddedNumAtoms, "posqCorrection");
+        velm = CudaArray::create<double4>(*this, paddedNumAtoms, "velm");
+        compilationDefines["USE_MIXED_PRECISION"] = "1";
+        compilationDefines["make_real2"] = "make_float2";
+        compilationDefines["make_real3"] = "make_float3";
+        compilationDefines["make_real4"] = "make_float4";
+        compilationDefines["make_mixed2"] = "make_double2";
+        compilationDefines["make_mixed3"] = "make_double3";
+        compilationDefines["make_mixed4"] = "make_double4";
+        energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
@@ -160,6 +178,9 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_real2"] = "make_float2";
         compilationDefines["make_real3"] = "make_float3";
         compilationDefines["make_real4"] = "make_float4";
+        compilationDefines["make_mixed2"] = "make_float2";
+        compilationDefines["make_mixed3"] = "make_float3";
+        compilationDefines["make_mixed4"] = "make_float4";
         energyBuffer = CudaArray::create<float>(*this, numEnergyBuffers, "energyBuffer");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
@@ -211,6 +232,8 @@ CudaContext::~CudaContext() {
         cuMemFreeHost(pinnedBuffer);
     if (posq != NULL)
         delete posq;
+    if (posqCorrection != NULL)
+        delete posqCorrection;
     if (velm != NULL)
         delete velm;
     if (force != NULL)
@@ -237,7 +260,7 @@ void CudaContext::initialize() {
     string errorMessage = "Error initializing Context";
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
-        if (useDoublePrecision)
+        if (useDoublePrecision || useMixedPrecision)
             ((double4*) pinnedBuffer)[i] = make_double4(0.0, 0.0, 0.0, mass == 0.0 ? 0.0 : 1.0/mass);
         else
             ((float4*) pinnedBuffer)[i] = make_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (float) (1.0/mass));
@@ -307,6 +330,18 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         src << "typedef float2 real2;\n";
         src << "typedef float3 real3;\n";
         src << "typedef float4 real4;\n";
+    }
+    if (useDoublePrecision || useMixedPrecision) {
+        src << "typedef double mixed;\n";
+        src << "typedef double2 mixed2;\n";
+        src << "typedef double3 mixed3;\n";
+        src << "typedef double4 mixed4;\n";
+    }
+    else {
+        src << "typedef float mixed;\n";
+        src << "typedef float2 mixed2;\n";
+        src << "typedef float3 mixed3;\n";
+        src << "typedef float4 mixed4;\n";
     }
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
         src << "#define " << iter->first;
@@ -789,6 +824,22 @@ void CudaContext::validateMolecules() {
         posq->upload(newPosq);
         velm->upload(newVelm);
     }
+    else if (useMixedPrecision) {
+        vector<float4> oldPosq(paddedNumAtoms);
+        vector<float4> newPosq(paddedNumAtoms);
+        vector<double4> oldVelm(paddedNumAtoms);
+        vector<double4> newVelm(paddedNumAtoms);
+        posq->download(oldPosq);
+        velm->download(oldVelm);
+        for (int i = 0; i < numAtoms; i++) {
+            int index = atomIndex[i];
+            newPosq[index] = oldPosq[i];
+            newVelm[index] = oldVelm[i];
+            newCellOffsets[index] = posCellOffsets[i];
+        }
+        posq->upload(newPosq);
+        velm->upload(newVelm);
+    }
     else {
         vector<float4> oldPosq(paddedNumAtoms);
         vector<float4> newPosq(paddedNumAtoms);
@@ -822,19 +873,24 @@ void CudaContext::reorderAtoms(bool enforcePeriodic) {
         validateMolecules();
     atomsWereReordered = true;
     if (useDoublePrecision)
-        reorderAtomsImpl<double, double4>(enforcePeriodic);
+        reorderAtomsImpl<double, double4, double, double4>(enforcePeriodic);
+    else if (useMixedPrecision)
+        reorderAtomsImpl<float, float4, double, double4>(enforcePeriodic);
     else
-        reorderAtomsImpl<float, float4>(enforcePeriodic);
+        reorderAtomsImpl<float, float4, float, float4>(enforcePeriodic);
 }
 
-template <class Real, class Real4>
+template <class Real, class Real4, class Mixed, class Mixed4>
 void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
     // Find the range of positions and the number of bins along each axis.
 
     vector<Real4> oldPosq(paddedNumAtoms);
-    vector<Real4> oldVelm(paddedNumAtoms);
+    vector<Real4> oldPosqCorrection(paddedNumAtoms);
+    vector<Mixed4> oldVelm(paddedNumAtoms);
     posq->download(oldPosq);
     velm->download(oldVelm);
+    if (useMixedPrecision)
+        posqCorrection->download(oldPosqCorrection);
     Real minx = oldPosq[0].x, maxx = oldPosq[0].x;
     Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
@@ -860,7 +916,8 @@ void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
 
     vector<int> originalIndex(numAtoms);
     vector<Real4> newPosq(paddedNumAtoms);
-    vector<Real4> newVelm(paddedNumAtoms);
+    vector<Real4> newPosqCorrection(paddedNumAtoms);
+    vector<Mixed4> newVelm(paddedNumAtoms);
     vector<int4> newCellOffsets(numAtoms);
     for (int group = 0; group < (int) moleculeGroups.size(); group++) {
         // Find the center of each molecule.
@@ -959,6 +1016,8 @@ void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
                 int newIndex = mol.offsets[i]+atoms[j];
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
+                if (useMixedPrecision)
+                    newPosqCorrection[newIndex] = oldPosqCorrection[oldIndex];
                 newVelm[newIndex] = oldVelm[oldIndex];
                 newCellOffsets[newIndex] = posCellOffsets[oldIndex];
             }
@@ -972,6 +1031,8 @@ void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
         posCellOffsets[i] = newCellOffsets[i];
     }
     posq->upload(newPosq);
+    if (useMixedPrecision)
+        posqCorrection->upload(newPosqCorrection);
     velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
     for (int i = 0; i < (int) reorderListeners.size(); i++)

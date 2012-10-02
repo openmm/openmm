@@ -148,6 +148,18 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
             positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
         }
     }
+    else if (cu.getUseMixedPrecision()) {
+        float4* posq = (float4*) cu.getPinnedBuffer();
+        vector<float4> posCorrection;
+        cu.getPosq().download(posq);
+        cu.getPosqCorrection().download(posCorrection);
+        for (int i = 0; i < numParticles; ++i) {
+            float4 pos1 = posq[i];
+            float4 pos2 = posCorrection[i];
+            int4 offset = cu.getPosCellOffsets()[i];
+            positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x-offset.x*periodicBoxSize.x, (double)pos1.y+(double)pos2.y-offset.y*periodicBoxSize.y, (double)pos1.z+(double)pos2.z-offset.z*periodicBoxSize.z);
+        }
+    }
     else {
         float4* posq = (float4*) cu.getPinnedBuffer();
         cu.getPosq().download(posq);
@@ -183,13 +195,27 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
         for (int i = 0; i < numParticles; ++i) {
             float4& pos = posq[i];
             const Vec3& p = positions[order[i]];
-            pos.x = p[0];
-            pos.y = p[1];
-            pos.z = p[2];
+            pos.x = (float) p[0];
+            pos.y = (float) p[1];
+            pos.z = (float) p[2];
         }
         for (int i = numParticles; i < cu.getPaddedNumAtoms(); i++)
             posq[i] = make_float4(0.0, 0.0, 0.0, 0.0);
         cu.getPosq().upload(posq);
+    }
+    if (cu.getUseMixedPrecision()) {
+        float4* posCorrection = (float4*) cu.getPinnedBuffer();
+        for (int i = 0; i < numParticles; ++i) {
+            float4& c = posCorrection[i];
+            const Vec3& p = positions[order[i]];
+            c.x = (float) (p[0]-(float)p[0]);
+            c.y = (float) (p[1]-(float)p[1]);
+            c.z = (float) (p[2]-(float)p[2]);
+            c.w = 0;
+        }
+        for (int i = numParticles; i < cu.getPaddedNumAtoms(); i++)
+            posCorrection[i] = make_float4(0.0, 0.0, 0.0, 0.0);
+        cu.getPosqCorrection().upload(posCorrection);
     }
     for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
         cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
@@ -200,7 +226,7 @@ void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
-    if (cu.getUseDoublePrecision()) {
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         double4* velm = (double4*) cu.getPinnedBuffer();
         cu.getVelm().download(velm);
         for (int i = 0; i < numParticles; ++i) {
@@ -224,7 +250,7 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector
     cu.setAsCurrent();
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
-    if (cu.getUseDoublePrecision()) {
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         double4* velm = (double4*) cu.getPinnedBuffer();
         cu.getVelm().download(velm);
         for (int i = 0; i < numParticles; ++i) {
@@ -290,12 +316,11 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
     stream.write((char*) &stepCount, sizeof(int));
     int computeForceCount = cu.getComputeForceCount();
     stream.write((char*) &computeForceCount, sizeof(int));
-    int bufferSize = cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
     char* buffer = (char*) cu.getPinnedBuffer();
     cu.getPosq().download(buffer);
-    stream.write(buffer, bufferSize);
+    stream.write(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
     cu.getVelm().download(buffer);
-    stream.write(buffer, bufferSize);
+    stream.write(buffer, cu.getVelm().getSize()*cu.getVelm().getElementSize());
     stream.write((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
     stream.write((char*) &cu.getPosCellOffsets()[0], sizeof(int4)*cu.getPosCellOffsets().size());
     double4 box = cu.getPeriodicBoxSize();
@@ -321,11 +346,10 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
         contexts[i]->setStepCount(stepCount);
         contexts[i]->setComputeForceCount(computeForceCount);
     }
-    int bufferSize = cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
     char* buffer = (char*) cu.getPinnedBuffer();
-    stream.read(buffer, bufferSize);
+    stream.read(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
     cu.getPosq().upload(buffer);
-    stream.read(buffer, bufferSize);
+    stream.read(buffer, cu.getVelm().getSize()*cu.getVelm().getElementSize());
     cu.getVelm().upload(buffer);
     stream.read((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
     cu.getAtomIndexArray().upload(cu.getAtomIndex());
@@ -2016,7 +2040,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         defines["FORCE_WORK_GROUP_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
         map<string, string> replacements;
         stringstream defineAccum;
-        if (cu.getAccumulateInDouble()) {
+        if (cu.getUseMixedPrecision()) {
             defineAccum << "typedef double accum;\n";
             defineAccum << "typedef double4 accum4;\n";
             defines["make_accum4"] = "make_double4";
@@ -2531,7 +2555,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
         map<string, string> defines;
         stringstream defineAccum;
-        if (cu.getAccumulateInDouble()) {
+        if (cu.getUseMixedPrecision()) {
             defineAccum << "typedef double accum;\n";
             defineAccum << "typedef double3 accum3;\n";
             defines["make_accum3"] = "make_double3";
@@ -3971,7 +3995,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
     int numAtoms = cu.getNumAtoms();
     double dt = integrator.getStepSize();
     if (dt != prevStepSize) {
-        if (cu.getUseDoublePrecision()) {
+        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
             vector<double2> stepSizeVec(1);
             stepSizeVec[0] = make_double2(dt, dt);
             cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
@@ -3986,7 +4010,8 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 
     // Call the first integration kernel.
 
-    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
     cu.executeKernel(kernel1, args1, numAtoms);
 
@@ -3996,7 +4021,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 
     // Call the second integration kernel.
 
-    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
+    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numAtoms);
     integration.computeVirtualSites();
@@ -4023,7 +4048,7 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
     CUmodule module = cu.createModule(CudaKernelSources::langevin, defines, "");
     kernel1 = cu.getKernel(module, "integrateLangevinPart1");
     kernel2 = cu.getKernel(module, "integrateLangevinPart2");
-    params = new CudaArray(cu, 3, cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "langevinParams");
+    params = new CudaArray(cu, 3, cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     prevStepSize = -1.0;
 }
 
@@ -4042,7 +4067,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
         double vscale = exp(-stepSize/tau);
         double fscale = (1-vscale)*tau;
         double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
-        if (cu.getUseDoublePrecision()) {
+        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
             vector<double> p(params->getSize());
             p[0] = vscale;
             p[1] = fscale;
@@ -4078,7 +4103,8 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
 
     // Call the second integration kernel.
 
-    void* args2[] = {&cu.getPosq().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args2[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &integration.getPosDelta().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numAtoms);
     integration.computeVirtualSites();
@@ -4172,16 +4198,18 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
     float maxStepSizeFloat = (float) maxStepSize;
     double tol = integrator.getErrorTolerance();
     float tolFloat = (float) tol;
-    void* argsSelect[] = {cu.getUseDoublePrecision() ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
-            cu.getUseDoublePrecision() ? (void*) &tol : (void*) &tolFloat,
+    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+    void* argsSelect[] = {useDouble ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
+            useDouble ? (void*) &tol : (void*) &tolFloat,
             &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer()};
-    int sharedSize = blockSize*(cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    int sharedSize = blockSize*(useDouble ? sizeof(double) : sizeof(float));
     cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
 
     // Call the first integration kernel.
 
-    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
     cu.executeKernel(kernel1, args1, numAtoms);
 
@@ -4191,7 +4219,7 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
 
     // Call the second integration kernel.
 
-    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
+    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
             &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numAtoms);
     integration.computeVirtualSites();
@@ -4199,7 +4227,7 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
     // Update the time and step count.
 
     double dt, time;
-    if (cu.getUseDoublePrecision()) {
+    if (useDouble) {
         double2 stepSize;
         cu.getIntegrationUtilities().getStepSize().download(&stepSize);
         dt = stepSize.y;
@@ -4237,7 +4265,7 @@ void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, c
     kernel1 = cu.getKernel(module, "integrateLangevinPart1");
     kernel2 = cu.getKernel(module, "integrateLangevinPart2");
     selectSizeKernel = cu.getKernel(module, "selectLangevinStepSize");
-    params = CudaArray::create<float>(cu, 3, "langevinParams");
+    params = new CudaArray(cu, 3, cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
     blockSize = max(blockSize, params->getSize());
 }
@@ -4257,13 +4285,14 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     float tauFloat = (float) tau;
     double kT = BOLTZ*integrator.getTemperature();
     float kTFloat = (float) kT;
-    void* argsSelect[] = {cu.getUseDoublePrecision() ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
-            cu.getUseDoublePrecision() ? (void*) &tol : (void*) &tolFloat,
-            cu.getUseDoublePrecision() ? (void*) &tau : (void*) &tauFloat,
-            cu.getUseDoublePrecision() ? (void*) &kT : (void*) &kTFloat,
+    bool useDouble = cu.getUseDoublePrecision() || cu.getUseMixedPrecision();
+    void* argsSelect[] = {useDouble ? (void*) &maxStepSize : (void*) &maxStepSizeFloat,
+            useDouble ? (void*) &tol : (void*) &tolFloat,
+            useDouble ? (void*) &tau : (void*) &tauFloat,
+            useDouble ? (void*) &kT : (void*) &kTFloat,
             &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &params->getDevicePointer()};
-    int sharedSize = blockSize*(cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    int sharedSize = blockSize*(useDouble ? sizeof(double) : sizeof(float));
     cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
 
     // Call the first integration kernel.
@@ -4279,7 +4308,8 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     // Call the second integration kernel.
 
-    void* args2[] = {&cu.getPosq().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args2[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &integration.getPosDelta().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
     cu.executeKernel(kernel2, args2, numAtoms);
     integration.computeVirtualSites();
@@ -4287,7 +4317,7 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     // Update the time and step count.
 
     double dt, time;
-    if (cu.getUseDoublePrecision()) {
+    if (useDouble) {
         double2 stepSize;
         cu.getIntegrationUtilities().getStepSize().download(&stepSize);
         dt = stepSize.y;
@@ -5099,7 +5129,7 @@ double CudaCalcKineticEnergyKernel::execute(ContextImpl& context) {
 
     const vector<int>& order = cu.getAtomIndex();
     double energy = 0.0;
-    if (cu.getUseDoublePrecision()) {
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
         double4* velm = (double4*) cu.getPinnedBuffer();
         cu.getVelm().download(velm);
         for (size_t i = 0; i < masses.size(); ++i) {

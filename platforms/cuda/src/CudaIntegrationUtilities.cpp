@@ -104,7 +104,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL) {
     // Create workspace arrays.
 
-    if (context.getUseDoublePrecision()) {
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         posDelta = CudaArray::create<double4>(context, context.getPaddedNumAtoms(), "posDelta");
         vector<double4> deltas(posDelta->getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
@@ -473,7 +473,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         vector<int> atomConstraintsVec(ccmaAtomConstraints->getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
         vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn->getSize());
-        if (context.getUseDoublePrecision()) {
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
             ccmaDistance = CudaArray::create<double4>(context, numCCMA, "CcmaDistance");
             ccmaDelta1 = CudaArray::create<double>(context, numCCMA, "CcmaDelta1");
             ccmaDelta2 = CudaArray::create<double>(context, numCCMA, "CcmaDelta2");
@@ -717,23 +717,24 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
         ccmaForceKernel = ccmaPosForceKernel;
     }
     float floatTol = (float) tol;
-    void* tolPointer = (context.getUseDoublePrecision() ? (void*) &tol : (void*) &floatTol);
+    void* tolPointer = (context.getUseDoublePrecision() || context.getUseMixedPrecision() ? (void*) &tol : (void*) &floatTol);
+    CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
     if (settleAtoms != NULL) {
         int numClusters = settleAtoms->getSize();
-        void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(),
+        void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(), &posCorrection,
                 &posDelta->getDevicePointer(), &context.getVelm().getDevicePointer(),
                 &settleAtoms->getDevicePointer(), &settleParams->getDevicePointer()};
         context.executeKernel(settleKernel, args, settleAtoms->getSize());
     }
     if (shakeAtoms != NULL) {
         int numClusters = shakeAtoms->getSize();
-        void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(),
+        void* args[] = {&numClusters, tolPointer, &context.getPosq().getDevicePointer(), &posCorrection,
                 constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
                 &shakeAtoms->getDevicePointer(), &shakeParams->getDevicePointer()};
         context.executeKernel(shakeKernel, args, shakeAtoms->getSize());
     }
     if (ccmaAtoms != NULL) {
-        void* directionsArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(), &context.getPosq().getDevicePointer()};
+        void* directionsArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(), &context.getPosq().getDevicePointer(), &posCorrection};
         context.executeKernel(ccmaDirectionsKernel, directionsArgs, ccmaAtoms->getSize());
         int i;
         void* forceArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(),
@@ -768,7 +769,8 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
 
 void CudaIntegrationUtilities::computeVirtualSites() {
     if (numVsites > 0) {
-        void* args[] = {&context.getPosq().getDevicePointer(), &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
+        CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
+        void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
                 &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
                 &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer()};
         context.executeKernel(vsitePositionKernel, args, numVsites);
@@ -777,7 +779,8 @@ void CudaIntegrationUtilities::computeVirtualSites() {
 
 void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
     if (numVsites > 0) {
-        void* args[] = {&context.getPosq().getDevicePointer(), &context.getForce().getDevicePointer(),
+        CUdeviceptr posCorrection = (context.getUseMixedPrecision() ? context.getPosqCorrection().getDevicePointer() : 0);
+        void* args[] = {&context.getPosq().getDevicePointer(), &posCorrection, &context.getForce().getDevicePointer(),
                 &vsite2AvgAtoms->getDevicePointer(), &vsite2AvgWeights->getDevicePointer(),
                 &vsite3AvgAtoms->getDevicePointer(), &vsite3AvgWeights->getDevicePointer(),
                 &vsiteOutOfPlaneAtoms->getDevicePointer(), &vsiteOutOfPlaneWeights->getDevicePointer()};
