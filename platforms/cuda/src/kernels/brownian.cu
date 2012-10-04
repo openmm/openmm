@@ -2,12 +2,12 @@
  * Perform the first step of Brownian integration.
  */
 
-extern "C" __global__ void integrateBrownianPart1(real tauDeltaT, real noiseAmplitude, const long long* __restrict__ force,
-        real4* __restrict__ posDelta, const real4* __restrict__ velm, const float4* __restrict__ random, unsigned int randomIndex) {
+extern "C" __global__ void integrateBrownianPart1(mixed tauDeltaT, mixed noiseAmplitude, const long long* __restrict__ force,
+        mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const float4* __restrict__ random, unsigned int randomIndex) {
     randomIndex += blockIdx.x*blockDim.x+threadIdx.x;
-    const real fscale = tauDeltaT/(real) 0xFFFFFFFF;
+    const mixed fscale = tauDeltaT/(mixed) 0xFFFFFFFF;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
-        real invMass = velm[index].w;
+        mixed invMass = velm[index].w;
         if (invMass != 0) {
             posDelta[index].x = fscale*invMass*force[index] + noiseAmplitude*SQRT(invMass)*random[randomIndex].x;
             posDelta[index].y = fscale*invMass*force[index+PADDED_NUM_ATOMS] + noiseAmplitude*SQRT(invMass)*random[randomIndex].y;
@@ -21,17 +21,30 @@ extern "C" __global__ void integrateBrownianPart1(real tauDeltaT, real noiseAmpl
  * Perform the second step of Brownian integration.
  */
 
-extern "C" __global__ void integrateBrownianPart2(real deltaT, real4* posq, real4* velm, const real4* __restrict__ posDelta) {
-    const real oneOverDeltaT = RECIP(deltaT);
+extern "C" __global__ void integrateBrownianPart2(mixed deltaT, real4* posq, real4* __restrict__ posqCorrection, mixed4* velm, const mixed4* __restrict__ posDelta) {
+    const mixed oneOverDeltaT = RECIP(deltaT);
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         if (velm[index].w != 0) {
-            real4 delta = posDelta[index];
+            mixed4 delta = posDelta[index];
             velm[index].x = oneOverDeltaT*delta.x;
             velm[index].y = oneOverDeltaT*delta.y;
             velm[index].z = oneOverDeltaT*delta.z;
-            posq[index].x = posq[index].x + delta.x;
-            posq[index].y = posq[index].y + delta.y;
-            posq[index].z = posq[index].z + delta.z;
+#ifdef USE_MIXED_PRECISION
+            real4 pos1 = posq[index];
+            real4 pos2 = posqCorrection[index];
+            mixed4 pos = make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+#else
+            real4 pos = posq[index];
+#endif
+            pos.x += delta.x;
+            pos.y += delta.y;
+            pos.z += delta.z;
+#ifdef USE_MIXED_PRECISION
+            posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
+            posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);
+#else
+            posq[index] = pos;
+#endif
         }
     }
 }

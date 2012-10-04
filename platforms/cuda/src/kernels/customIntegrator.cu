@@ -1,7 +1,7 @@
-extern "C" __global__ void computeSum(const real* __restrict__ sumBuffer, real* result) {
-    __shared__ real tempBuffer[WORK_GROUP_SIZE];
+extern "C" __global__ void computeFloatSum(const float* __restrict__ sumBuffer, float* result) {
+    __shared__ float tempBuffer[WORK_GROUP_SIZE];
     const unsigned int thread = threadIdx.x;
-    real sum = 0;
+    float sum = 0;
     for (unsigned int index = thread; index < SUM_BUFFER_SIZE; index += blockDim.x)
         sum += sumBuffer[index];
     tempBuffer[thread] = sum;
@@ -14,14 +14,41 @@ extern "C" __global__ void computeSum(const real* __restrict__ sumBuffer, real* 
         result[SUM_OUTPUT_INDEX] = tempBuffer[0];
 }
 
-extern "C" __global__ void applyPositionDeltas(real4* __restrict__ posq, real4* __restrict__ posDelta) {
+extern "C" __global__ void computeDoubleSum(const double* __restrict__ sumBuffer, double* result) {
+    __shared__ double tempBuffer[WORK_GROUP_SIZE];
+    const unsigned int thread = threadIdx.x;
+    double sum = 0;
+    for (unsigned int index = thread; index < SUM_BUFFER_SIZE; index += blockDim.x)
+        sum += sumBuffer[index];
+    tempBuffer[thread] = sum;
+    for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
+        __syncthreads();
+        if (thread%(i*2) == 0 && thread+i < WORK_GROUP_SIZE)
+            tempBuffer[thread] += tempBuffer[thread+i];
+    }
+    if (thread == 0)
+        result[SUM_OUTPUT_INDEX] = tempBuffer[0];
+}
+
+extern "C" __global__ void applyPositionDeltas(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta) {
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
-        real4 position = posq[index];
-        position.x += posDelta[index].x;
-        position.y += posDelta[index].y;
-        position.z += posDelta[index].z;
-        posq[index] = position;
-        posDelta[index] = make_real4(0, 0, 0, 0);
+#ifdef USE_MIXED_PRECISION
+        real4 pos1 = posq[index];
+        real4 pos2 = posqCorrection[index];
+        mixed4 pos = make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+#else
+        real4 pos = posq[index];
+#endif
+        pos.x += posDelta[index].x;
+        pos.y += posDelta[index].y;
+        pos.z += posDelta[index].z;
+#ifdef USE_MIXED_PRECISION
+        posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
+        posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);
+#else
+        posq[index] = pos;
+#endif
+        posDelta[index] = make_mixed4(0, 0, 0, 0);
     }
 }
 

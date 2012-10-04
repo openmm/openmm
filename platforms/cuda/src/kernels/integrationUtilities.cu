@@ -779,10 +779,11 @@ inline __device__ real3 loadForce(int index, long long* __restrict__ force) {
     return make_real3(scale*force[index], scale*force[index+PADDED_NUM_ATOMS], scale*force[index+PADDED_NUM_ATOMS*2]);
 }
 
-inline __device__ void storeForce(int index, long long* __restrict__ force, real3 value) {
-    force[index] = (long long) (value.x*0xFFFFFFFF);
-    force[index+PADDED_NUM_ATOMS] = (long long) (value.y*0xFFFFFFFF);
-    force[index+2*PADDED_NUM_ATOMS] = (long long) (value.z*0xFFFFFFFF);
+inline __device__ void addForce(int index, long long* __restrict__ force, real3 value) {
+    unsigned long long* f = (unsigned long long*) force;
+    atomicAdd(&f[index], static_cast<unsigned long long>((long long) (value.x*0xFFFFFFFF)));
+    atomicAdd(&f[index+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (value.y*0xFFFFFFFF)));
+    atomicAdd(&f[index+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>((long long) (value.z*0xFFFFFFFF)));
 }
 
 /**
@@ -799,12 +800,8 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
         int4 atoms = avg2Atoms[index];
         real2 weights = avg2Weights[index];
         real3 f = loadForce(atoms.x, force);
-        real3 f1 = loadForce(atoms.y, force);
-        real3 f2 = loadForce(atoms.z, force);
-        f1 += f*weights.x;
-        f2 += f*weights.y;
-        storeForce(atoms.y, force, f1);
-        storeForce(atoms.z, force, f2);
+        addForce(atoms.y, force, f*weights.x);
+        addForce(atoms.z, force, f*weights.y);
     }
     
     // Three particle average sites.
@@ -813,15 +810,9 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
         int4 atoms = avg3Atoms[index];
         real4 weights = avg3Weights[index];
         real3 f = loadForce(atoms.x, force);
-        real3 f1 = loadForce(atoms.y, force);
-        real3 f2 = loadForce(atoms.z, force);
-        real3 f3 = loadForce(atoms.w, force);
-        f1 += f*weights.x;
-        f2 += f*weights.y;
-        f3 += f*weights.z;
-        storeForce(atoms.y, force, f1);
-        storeForce(atoms.z, force, f2);
-        storeForce(atoms.w, force, f3);
+        addForce(atoms.y, force, f*weights.x);
+        addForce(atoms.z, force, f*weights.y);
+        addForce(atoms.w, force, f*weights.z);
     }
     
     // Out of plane sites.
@@ -835,20 +826,14 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
         mixed4 v12 = pos2-pos1;
         mixed4 v13 = pos3-pos1;
         real3 f = loadForce(atoms.x, force);
-        real3 f1 = loadForce(atoms.y, force);
-        real3 f2 = loadForce(atoms.z, force);
-        real3 f3 = loadForce(atoms.w, force);
         real3 fp2 = make_real3((real) (weights.x*f.x - weights.z*v13.z*f.y + weights.z*v13.y*f.z),
                    (real) (weights.z*v13.z*f.x + weights.x*f.y - weights.z*v13.x*f.z),
                    (real) (-weights.z*v13.y*f.x + weights.z*v13.x*f.y + weights.x*f.z));
         real3 fp3 = make_real3((real) (weights.y*f.x + weights.z*v12.z*f.y - weights.z*v12.y*f.z),
                    (real) (-weights.z*v12.z*f.x + weights.y*f.y + weights.z*v12.x*f.z),
                    (real) (weights.z*v12.y*f.x - weights.z*v12.x*f.y + weights.y*f.z));
-        f1 += f-fp2-fp3;
-        f2 += fp2;
-        f3 += fp3;
-        storeForce(atoms.y, force, f1);
-        storeForce(atoms.z, force, f2);
-        storeForce(atoms.w, force, f3);
+        addForce(atoms.y, force, f-fp2-fp3);
+        addForce(atoms.z, force, fp2);
+        addForce(atoms.w, force, fp3);
     }
 }

@@ -1,25 +1,50 @@
-inline __device__ double4 convertToDouble4(real4 a) {
+/**
+ * Load the position of a particle.
+ */
+inline __device__ mixed4 loadPos(const real4* __restrict__ posq, const real4* __restrict__ posqCorrection, int index) {
+#ifdef USE_MIXED_PRECISION
+    real4 pos1 = posq[index];
+    real4 pos2 = posqCorrection[index];
+    return make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+#else
+    return posq[index];
+#endif
+}
+
+/**
+ * Store the position of a particle.
+ */
+inline __device__ void storePos(real4* __restrict__ posq, real4* __restrict__ posqCorrection, int index, mixed4 pos) {
+#ifdef USE_MIXED_PRECISION
+    posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
+    posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);
+#else
+    posq[index] = pos;
+#endif
+}
+
+inline __device__ double4 convertToDouble4(mixed4 a) {
     return make_double4(a.x, a.y, a.z, a.w);
 }
 
-inline __device__ real4 convertFromDouble4(double4 a) {
-    return make_real4(a.x, a.y, a.z, a.w);
+inline __device__ mixed4 convertFromDouble4(double4 a) {
+    return make_mixed4(a.x, a.y, a.z, a.w);
 }
 
-extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __restrict__ posDelta, real4* __restrict__ velm,
-        const long long* __restrict__ force, const real2* __restrict__ dt, const real* __restrict__ globals,
-        const real* __restrict__ params, real* __restrict__ sum, const float4* __restrict__ gaussianValues,
+extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta,
+        mixed4* __restrict__ velm, const long long* __restrict__ force, const mixed2* __restrict__ dt, const mixed* __restrict__ globals,
+        const mixed* __restrict__ params, mixed* __restrict__ sum, const float4* __restrict__ gaussianValues,
         unsigned int randomIndex, const float4* __restrict__ uniformValues, const real* __restrict__ energy
         PARAMETER_ARGUMENTS) {
-    real stepSize = dt[0].y;
+    mixed stepSize = dt[0].y;
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     randomIndex += index;
     const double forceScale = 1.0/0xFFFFFFFF;
     while (index < NUM_ATOMS) {
 #ifdef LOAD_POS_AS_DELTA
-        double4 position = convertToDouble4(posq[index]+posDelta[index]);
+        double4 position = convertToDouble4(loadPos(posq, posqCorrection, index)+posDelta[index]);
 #else
-        double4 position = convertToDouble4(posq[index]);
+        double4 position = convertToDouble4(loadPos(posq, posqCorrection, index));
 #endif
         double4 velocity = convertToDouble4(velm[index]);
         double4 f = make_double4(forceScale*force[index], forceScale*force[index+PADDED_NUM_ATOMS], forceScale*force[index+PADDED_NUM_ATOMS*2], 0.0);
