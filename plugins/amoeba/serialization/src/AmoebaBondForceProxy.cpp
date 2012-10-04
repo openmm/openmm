@@ -62,7 +62,7 @@ void* AmoebaBondForceProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     AmoebaBondForce* force = new AmoebaBondForce();
     try {
-        force->setAmoebaGlobalBondCubic(node.getDoubleProperty("condCubic"));
+        force->setAmoebaGlobalBondCubic(node.getDoubleProperty("cubic"));
         force->setAmoebaGlobalBondQuartic(node.getDoubleProperty("quartic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");
         for ( unsigned int ii = 0; ii < (int) bonds.getChildren().size(); ii++) {
