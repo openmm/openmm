@@ -1,12 +1,10 @@
 #define TILE_SIZE 32
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
-DEFINE_ACCUM
-
 typedef struct {
     real x, y, z;
     real q;
-    accum fx, fy, fz;
+    real fx, fy, fz;
     ATOM_PARAMETER_DATA
 #ifndef PARAMETER_SIZE_IS_EVEN
     real padding;
@@ -49,7 +47,7 @@ extern "C" __global__ void computeNonbonded(
         const unsigned int tbx = threadIdx.x - tgx;
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
         unsigned int x, y;
-        accum3 force = make_accum3(0);
+        real3 force = make_real3(0);
         if (pos < end) {
 #ifdef USE_CUTOFF
             if (numTiles <= maxTiles) {

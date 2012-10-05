@@ -2040,18 +2040,6 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
         defines["FORCE_WORK_GROUP_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
         map<string, string> replacements;
-        stringstream defineAccum;
-        if (cu.getUseMixedPrecision()) {
-            defineAccum << "typedef double accum;\n";
-            defineAccum << "typedef double4 accum4;\n";
-            defines["make_accum4"] = "make_double4";
-        }
-        else {
-            defineAccum << "typedef real accum;\n";
-            defineAccum << "typedef real4 accum4;\n";
-            defines["make_accum4"] = "make_real4";
-        }
-        replacements["DEFINE_ACCUM"] = defineAccum.str();
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::gbsaObc1, replacements), defines);
         computeBornSumKernel = cu.getKernel(module, "computeBornSum");
         computeSumArgs.push_back(&bornSum->getDevicePointer());
@@ -2534,9 +2522,9 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         extraArgs << ", unsigned long long* __restrict__ derivBuffers";
         for (int i = 0; i < force.getNumComputedValues(); i++) {
             string index = cu.intToString(i+1);
-            atomParams << "accum deriv" << index << ";\n";
+            atomParams << "real deriv" << index << ";\n";
             clearLocal << "localData[localAtomIndex].deriv" << index << " = 0;\n";
-            declare1 << "accum deriv" << index << "_1 = 0;\n";
+            declare1 << "real deriv" << index << "_1 = 0;\n";
             load2 << "real deriv" << index << "_2 = 0;\n";
             recordDeriv << "localData[atom2].deriv" << index << " += deriv" << index << "_2;\n";
             storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")\n";
@@ -2555,18 +2543,6 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["STORE_DERIVATIVES_1"] = storeDerivs1.str();
         replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
         map<string, string> defines;
-        stringstream defineAccum;
-        if (cu.getUseMixedPrecision()) {
-            defineAccum << "typedef double accum;\n";
-            defineAccum << "typedef double3 accum3;\n";
-            defines["make_accum3"] = "make_double3";
-        }
-        else {
-            defineAccum << "typedef real accum;\n";
-            defineAccum << "typedef real3 accum3;\n";
-            defines["make_accum3"] = "make_real3";
-        }
-        replacements["DEFINE_ACCUM"] = defineAccum.str();
         if (useCutoff)
             defines["USE_CUTOFF"] = "1";
         if (usePeriodic)

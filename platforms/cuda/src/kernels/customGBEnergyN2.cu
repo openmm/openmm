@@ -2,11 +2,9 @@
 #define STORE_DERIVATIVE_2(INDEX) atomicAdd(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].deriv##INDEX*0xFFFFFFFF)));
 #define TILE_SIZE 32
 
-DEFINE_ACCUM
-
 typedef struct {
     real4 posq;
-    accum3 force;
+    real3 force;
     ATOM_PARAMETER_DATA
 #ifdef NEED_PADDING
     float padding;
@@ -47,7 +45,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
         const unsigned int tbx = threadIdx.x - tgx;
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
         unsigned int x, y;
-        accum3 force = make_accum3(0);
+        real3 force = make_real3(0);
         DECLARE_ATOM1_DERIVATIVES
         if (pos < end) {
 #ifdef USE_CUTOFF
@@ -143,7 +141,7 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
                     localData[localAtomIndex].posq = posq[j];
                     LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
                 }
-                localData[localAtomIndex].force = make_accum3(0);
+                localData[localAtomIndex].force = make_real3(0);
                 CLEAR_LOCAL_DERIVATIVES
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);

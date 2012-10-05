@@ -4,8 +4,6 @@
 #define TILE_SIZE 32
 #define WARPS_PER_GROUP (FORCE_WORK_GROUP_SIZE/TILE_SIZE)
 
-DEFINE_ACCUM
-
 /**
  * Reduce the Born sums to compute the Born radii.
  */
@@ -333,7 +331,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
 typedef struct {
     real x, y, z;
     real q;
-    accum fx, fy, fz, fw;
+    real fx, fy, fz, fw;
     real bornRadius;
 } AtomData2;
 
@@ -374,7 +372,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
         const unsigned int tbx = threadIdx.x - tgx;
         const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
         unsigned int x, y;
-        accum4 force = make_accum4(0);
+        real4 force = make_real4(0);
         if (pos < end) {
 #ifdef USE_CUTOFF
             if (numTiles <= maxTiles) {
