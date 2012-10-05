@@ -446,7 +446,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
-    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision() && !context.getUseMixedPrecision())
+    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
         defines["ENABLE_SHUFFLE"] = "1";
