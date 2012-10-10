@@ -81,7 +81,7 @@ private:
     std::vector<Kernel> kernels;
     std::vector<long long> completionTimes;
     std::vector<int> contextTiles;
-    OpenCLArray<mm_float4>* contextForces;
+    OpenCLArray* contextForces;
     cl::Buffer* pinnedPositionBuffer;
     cl::Buffer* pinnedForceBuffer;
     mm_float4* pinnedPositionMemory;

@@ -67,7 +67,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
-        velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL),
+        velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL), thread(NULL) {
     try {
         contextIndex = platformData.contexts.size();
@@ -217,8 +217,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         bonded = new OpenCLBondedUtilities(*this);
         nonbonded = new OpenCLNonbondedUtilities(*this);
-        posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
-        velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
+        posq = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
+        velm = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "velm");
         posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
     }
     catch (cl::Error err) {
@@ -242,19 +242,20 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
     cl::Kernel accuracyKernel(utilities, "determineNativeAccuracy");
-    OpenCLArray<mm_float8> values(*this, 20, "values", true);
+    OpenCLArray valuesArray(*this, 20, sizeof(mm_float8), "values");
+    vector<mm_float8> values(valuesArray.getSize());
     float nextValue = 1e-4f;
-    for (int i = 0; i < values.getSize(); ++i) {
+    for (int i = 0; i < (int) values.size(); ++i) {
         values[i].s0 = nextValue;
         nextValue *= (float) M_PI;
     }
-    values.upload();
-    accuracyKernel.setArg<cl::Buffer>(0, values.getDeviceBuffer());
-    accuracyKernel.setArg<cl_int>(1, values.getSize());
-    executeKernel(accuracyKernel, values.getSize());
-    values.download();
+    valuesArray.upload(values);
+    accuracyKernel.setArg<cl::Buffer>(0, valuesArray.getDeviceBuffer());
+    accuracyKernel.setArg<cl_int>(1, values.size());
+    executeKernel(accuracyKernel, values.size());
+    valuesArray.download(values);
     double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0, maxExpError = 0.0, maxLogError = 0.0;
-    for (int i = 0; i < values.getSize(); ++i) {
+    for (int i = 0; i < (int) values.size(); ++i) {
         double v = values[i].s0;
         double correctSqrt = sqrt(v);
         maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].s1)/correctSqrt);
@@ -283,6 +284,8 @@ OpenCLContext::~OpenCLContext() {
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         delete reorderListeners[i];
+    if (pinnedBuffer != NULL)
+        delete pinnedBuffer;
     if (posq != NULL)
         delete posq;
     if (velm != NULL)
@@ -295,8 +298,8 @@ OpenCLContext::~OpenCLContext() {
         delete longForceBuffer;
     if (energyBuffer != NULL)
         delete energyBuffer;
-    if (atomIndex != NULL)
-        delete atomIndex;
+    if (atomIndexDevice != NULL)
+        delete atomIndexDevice;
     if (integration != NULL)
         delete integration;
     if (bonded != NULL)
@@ -308,19 +311,20 @@ OpenCLContext::~OpenCLContext() {
 }
 
 void OpenCLContext::initialize() {
+    vector<mm_float4> v(paddedNumAtoms, mm_float4(0, 0, 0, 0));
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
-        (*velm)[i].w = (float) (mass == 0.0 ? 0.0 : 1.0/mass);
+        v[i].w = (float) (mass == 0.0 ? 0.0 : 1.0/mass);
     }
-    velm->upload();
+    velm->upload(v);
     bonded->initialize(system);
     numForceBuffers = platformData.contexts.size();
     numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
-    forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
+    forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
     if (supports64BitGlobalAtomics) {
-        longForceBuffer = new OpenCLArray<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer", false);
+        longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
         reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer->getDeviceBuffer());
         reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers->getDeviceBuffer());
         reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
@@ -328,13 +332,17 @@ void OpenCLContext::initialize() {
         addAutoclearBuffer(longForceBuffer->getDeviceBuffer(), longForceBuffer->getSize()*2);
     }
     addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
-    force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
-    energyBuffer = new OpenCLArray<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer", true);
+    force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
+    energyBuffer = OpenCLArray::create<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
     addAutoclearBuffer(energyBuffer->getDeviceBuffer(), energyBuffer->getSize());
-    atomIndex = new OpenCLArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
+    int bufferBytes = max(posq->getSize()*sizeof(mm_float4), energyBuffer->getSize()*sizeof(cl_float));
+    pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
+    pinnedMemory = queue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
+    atomIndexDevice = OpenCLArray::create<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
+    atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
-        (*atomIndex)[i] = i;
-    atomIndex->upload();
+        atomIndex[i] = i;
+    atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
     moleculesInvalid = false;
     nonbonded->initialize(system);
@@ -410,12 +418,8 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
     }
 }
 
-void OpenCLContext::clearBuffer(OpenCLArray<float>& array) {
-    clearBuffer(array.getDeviceBuffer(), array.getSize());
-}
-
-void OpenCLContext::clearBuffer(OpenCLArray<mm_float4>& array) {
-    clearBuffer(array.getDeviceBuffer(), array.getSize()*4);
+void OpenCLContext::clearBuffer(OpenCLArray& array) {
+    clearBuffer(array.getDeviceBuffer(), array.getSize()*array.getElementSize()/sizeof(cl_float));
 }
 
 void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
@@ -500,7 +504,7 @@ void OpenCLContext::reduceForces() {
         reduceBuffer(*forceBuffers, numForceBuffers);
 }
 
-void OpenCLContext::reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers) {
+void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
     int bufferSize = array.getSize()/numBuffers;
     reduceFloat4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
     reduceFloat4Kernel.setArg<cl_int>(1, bufferSize);
@@ -760,26 +764,28 @@ void OpenCLContext::validateMolecules() {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
     
-    vector<mm_float4> newPosq(numAtoms);
-    vector<mm_float4> newVelm(numAtoms);
+    vector<mm_float4> oldPosq(paddedNumAtoms);
+    vector<mm_float4> newPosq(paddedNumAtoms);
+    vector<mm_float4> oldVelm(paddedNumAtoms);
+    vector<mm_float4> newVelm(paddedNumAtoms);
     vector<mm_int4> newCellOffsets(numAtoms);
-    posq->download();
-    velm->download();
+    posq->download(oldPosq);
+    velm->download(oldVelm);
     for (int i = 0; i < numAtoms; i++) {
-        int index = atomIndex->get(i);
-        newPosq[index] = posq->get(i);
-        newVelm[index] = velm->get(i);
+        int index = atomIndex[i];
+        newPosq[index] = oldPosq[i];
+        newVelm[index] = oldVelm[i];
         newCellOffsets[index] = posCellOffsets[i];
     }
+    posq->upload(newPosq);
+    velm->upload(newVelm);
     for (int i = 0; i < numAtoms; i++) {
-        posq->set(i, newPosq[i]);
-        velm->set(i, newVelm[i]);
-        atomIndex->set(i, i);
+        atomIndex[i] = i;
         posCellOffsets[i] = newCellOffsets[i];
     }
-    posq->upload();
-    velm->upload();
-    atomIndex->upload();
+    posq->upload(newPosq);
+    velm->upload(newVelm);
+    atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         reorderListeners[i]->execute();
@@ -794,11 +800,13 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
 
     // Find the range of positions and the number of bins along each axis.
 
-    posq->download();
-    velm->download();
-    float minx = posq->get(0).x, maxx = posq->get(0).x;
-    float miny = posq->get(0).y, maxy = posq->get(0).y;
-    float minz = posq->get(0).z, maxz = posq->get(0).z;
+    vector<mm_float4> oldPosq(paddedNumAtoms);
+    vector<mm_float4> oldVelm(paddedNumAtoms);
+    posq->download(oldPosq);
+    velm->download(oldVelm);
+    float minx = oldPosq[0].x, maxx = oldPosq[0].x;
+    float miny = oldPosq[0].y, maxy = oldPosq[0].y;
+    float minz = oldPosq[0].z, maxz = oldPosq[0].z;
     if (nonbonded->getUsePeriodic()) {
         minx = miny = minz = 0.0;
         maxx = periodicBoxSize.x;
@@ -807,7 +815,7 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     }
     else {
         for (int i = 1; i < numAtoms; i++) {
-            const mm_float4& pos = posq->get(i);
+            const mm_float4& pos = oldPosq[i];
             minx = min(minx, pos.x);
             maxx = max(maxx, pos.x);
             miny = min(miny, pos.y);
@@ -820,8 +828,8 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     // Loop over each group of identical molecules and reorder them.
 
     vector<int> originalIndex(numAtoms);
-    vector<mm_float4> newPosq(numAtoms);
-    vector<mm_float4> newVelm(numAtoms);
+    vector<mm_float4> newPosq(paddedNumAtoms);
+    vector<mm_float4> newVelm(paddedNumAtoms);
     vector<mm_int4> newCellOffsets(numAtoms);
     for (int group = 0; group < (int) moleculeGroups.size(); group++) {
         // Find the center of each molecule.
@@ -837,7 +845,7 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
             molPos[i].z = 0.0f;
             for (int j = 0; j < (int)atoms.size(); j++) {
                 int atom = atoms[j]+mol.offsets[i];
-                const mm_float4& pos = posq->get(atom);
+                const mm_float4& pos = oldPosq[atom];
                 molPos[i].x += pos.x;
                 molPos[i].y += pos.y;
                 molPos[i].z += pos.z;
@@ -863,11 +871,11 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
                     if (enforcePeriodic) {
                         for (int j = 0; j < (int) atoms.size(); j++) {
                             int atom = atoms[j]+mol.offsets[i];
-                            mm_float4 p = posq->get(atom);
+                            mm_float4 p = oldPosq[atom];
                             p.x -= dx;
                             p.y -= dy;
                             p.z -= dz;
-                            posq->set(atom, p);
+                            oldPosq[atom] = p;
                             posCellOffsets[atom].x -= xcell;
                             posCellOffsets[atom].y -= ycell;
                             posCellOffsets[atom].z -= zcell;
@@ -918,9 +926,9 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
             for (int j = 0; j < (int)atoms.size(); j++) {
                 int oldIndex = mol.offsets[molBins[i].second]+atoms[j];
                 int newIndex = mol.offsets[i]+atoms[j];
-                originalIndex[newIndex] = atomIndex->get(oldIndex);
-                newPosq[newIndex] = posq->get(oldIndex);
-                newVelm[newIndex] = velm->get(oldIndex);
+                originalIndex[newIndex] = atomIndex[oldIndex];
+                newPosq[newIndex] = oldPosq[oldIndex];
+                newVelm[newIndex] = oldVelm[oldIndex];
                 newCellOffsets[newIndex] = posCellOffsets[oldIndex];
             }
         }
@@ -929,14 +937,12 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     // Update the streams.
 
     for (int i = 0; i < numAtoms; i++) {
-        posq->set(i, newPosq[i]);
-        velm->set(i, newVelm[i]);
-        atomIndex->set(i, originalIndex[i]);
+        atomIndex[i] = originalIndex[i];
         posCellOffsets[i] = newCellOffsets[i];
     }
-    posq->upload();
-    velm->upload();
-    atomIndex->upload();
+    posq->upload(newPosq);
+    velm->upload(newVelm);
+    atomIndexDevice->upload(atomIndex);
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         reorderListeners[i]->execute();
 }

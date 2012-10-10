@@ -87,7 +87,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
             for (int atom = 0; atom < numAtoms; atom++)
                 indexVec[bond*width+atom] = forceAtoms[i][bond][atom];
         }
-        OpenCLArray<cl_uint>* indices = new OpenCLArray<cl_uint>(context, indexVec.size(), "bondedIndices");
+        OpenCLArray* indices = OpenCLArray::create<cl_uint>(context, indexVec.size(), "bondedIndices");
         indices->upload(indexVec);
         atomIndices.push_back(indices);
         bufferVec[i].resize(width*numBonds, 0);
@@ -151,7 +151,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
                 for (int bond = 0; bond < numBonds; bond++)
                     for (int atom = 0; atom < numAtoms; atom++)
                         bufferVec[force][bond*width+atom] += bufferCounter[forceSets[i][k]][forceAtoms[force][bond][atom]];
-            OpenCLArray<cl_uint>* buffers = new OpenCLArray<cl_uint>(context, bufferVec[force].size(), "bondedBufferIndices");
+            OpenCLArray* buffers = OpenCLArray::create<cl_uint>(context, bufferVec[force].size(), "bondedBufferIndices");
             buffers->upload(bufferVec[force]);
             bufferIndices[force] = buffers;
         }

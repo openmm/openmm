@@ -123,11 +123,11 @@ public:
 
         // Create workspace arrays.
 
-        dataRange = new OpenCLArray<typename TRAIT::KeyType>(context, 2, "sortDataRange");
-        bucketOffset = new OpenCLArray<cl_uint>(context, numBuckets, "bucketOffset");
-        bucketOfElement = new OpenCLArray<cl_uint>(context, length, "bucketOfElement");
-        offsetInBucket = new OpenCLArray<cl_uint>(context, length, "offsetInBucket");
-        buckets = new OpenCLArray<typename TRAIT::DataType>(context, length, "buckets");
+        dataRange = OpenCLArray::create<typename TRAIT::KeyType>(context, 2, "sortDataRange");
+        bucketOffset = OpenCLArray::create<cl_uint>(context, numBuckets, "bucketOffset");
+        bucketOfElement = OpenCLArray::create<cl_uint>(context, length, "bucketOfElement");
+        offsetInBucket = OpenCLArray::create<cl_uint>(context, length, "offsetInBucket");
+        buckets = OpenCLArray::create<typename TRAIT::DataType>(context, length, "buckets");
     }
     ~OpenCLSort() {
         if (dataRange != NULL)
@@ -144,7 +144,7 @@ public:
     /**
      * Sort an array.
      */
-    void sort(OpenCLArray<typename TRAIT::DataType>& data) {
+    void sort(OpenCLArray& data) {
 
         if (data.getSize() != bucketOfElement->getSize())
             throw OpenMMException("OpenCLSort called with different data size");
@@ -200,11 +200,11 @@ public:
     }
 private:
     OpenCLContext& context;
-    OpenCLArray<typename TRAIT::KeyType>* dataRange;
-    OpenCLArray<cl_uint>* bucketOfElement;
-    OpenCLArray<cl_uint>* offsetInBucket;
-    OpenCLArray<cl_uint>* bucketOffset;
-    OpenCLArray<typename TRAIT::DataType>* buckets;
+    OpenCLArray* dataRange;
+    OpenCLArray* bucketOfElement;
+    OpenCLArray* offsetInBucket;
+    OpenCLArray* bucketOffset;
+    OpenCLArray* buckets;
     cl::Kernel computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int rangeKernelSize, positionsKernelSize, sortKernelSize;
 };

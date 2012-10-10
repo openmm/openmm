@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,61 +37,69 @@ namespace OpenMM {
 
 /**
  * This class encapsulates an OpenCL Buffer.  It provides a simplified API for working with it,
- * an optionally includes a buffer in host memory for copying data to and from the OpenCL Buffer.
+ * and for copying data to and from the OpenCL Buffer.
  */
 
-template <class T>
 class OpenCLArray {
 public:
     /**
-     * Create an OpenCLArray object.
+     * Create an OpenCLArray object.  The object is allocated on the heap with the "new" operator.
+     * The template argument is the data type of each array element.
      *
      * @param context           the context for which to create the array
      * @param size              the number of elements in the array
      * @param name              the name of the array
-     * @param createHostBuffer  specifies whether to create a buffer in host memory for copying data to and from
-     *                          the OpenCL Buffer
      * @param flags             the set of flags to specify when creating the OpenCL Buffer
      */
-    OpenCLArray(OpenCLContext& context, int size, const std::string& name, bool createHostBuffer = false, cl_int flags = CL_MEM_READ_WRITE) :
-            context(context), size(size), name(name), local(createHostBuffer ? size : 0), ownsBuffer(true) {
-        try {
-            buffer = new cl::Buffer(context.getContext(), flags, size*sizeof(T));
-        }
-        catch (cl::Error err) {
-            std::stringstream str;
-            str<<"Error creating array "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
-            throw OpenMMException(str.str());
-        }
+    template <class T>
+    static OpenCLArray* create(OpenCLContext& context, int size, const std::string& name, cl_int flags = CL_MEM_READ_WRITE) {
+        return new OpenCLArray(context, size, sizeof(T), name, flags);
     }
     /**
-     * Create an OpenCLArray object the uses a preexisting Buffer.
+     * Create an OpenCLArray object that uses a preexisting Buffer.  The object is allocated on the heap with the "new" operator.
+     * The template argument is the data type of each array element.
      *
      * @param context           the context for which to create the array
      * @param buffer            the OpenCL Buffer this object encapsulates
      * @param size              the number of elements in the array
      * @param name              the name of the array
-     * @param createHostBuffer  specifies whether to create a buffer in host memory for copying data to and from
-     *                          the OpenCL Buffer
      */
-    OpenCLArray(OpenCLContext& context, cl::Buffer* buffer, int size, const std::string& name, bool createHostBuffer = false) :
-            context(context), buffer(buffer), size(size), name(name), local(createHostBuffer ? size : 0), ownsBuffer(false) {
+    template <class T>
+    static OpenCLArray* create(OpenCLContext& context, cl::Buffer* buffer, int size, const std::string& name) {
+        return new OpenCLArray(context, buffer, size, sizeof(T), name);
     }
-    ~OpenCLArray() {
-        if (ownsBuffer)
-            delete buffer;
-    }
-    const T& operator[](int index) const {
-        return local[index];
-    }
-    T& operator[](int index) {
-        return local[index];
-    }
+    /**
+     * Create an OpenCLArray object.
+     *
+     * @param context           the context for which to create the array
+     * @param size              the number of elements in the array
+     * @param elementSize       the size of each element in bytes
+     * @param name              the name of the array
+     * @param flags             the set of flags to specify when creating the OpenCL Buffer
+     */
+    OpenCLArray(OpenCLContext& context, int size, int elementSize, const std::string& name, cl_int flags = CL_MEM_READ_WRITE);
+    /**
+     * Create an OpenCLArray object that uses a preexisting Buffer.
+     *
+     * @param context           the context for which to create the array
+     * @param buffer            the OpenCL Buffer this object encapsulates
+     * @param size              the number of elements in the array
+     * @param elementSize       the size of each element in bytes
+     * @param name              the name of the array
+     */
+    OpenCLArray(OpenCLContext& context, cl::Buffer* buffer, int size, int elementSize, const std::string& name);
+    ~OpenCLArray();
     /**
      * Get the size of the array.
      */
     int getSize() const {
         return size;
+    }
+    /**
+     * Get the size of each element in bytes.
+     */
+    int getElementSize() const {
+        return elementSize;
     }
     /**
      * Get the name of the array.
@@ -106,84 +114,49 @@ public:
         return *buffer;
     }
     /**
-     * Get a pointer to the host buffer.
-     */
-    T* getHostBuffer() {
-        return &local[0];
-    }
-    /**
-     * Get an element of the host buffer.
-     */
-    const T& get(int index) const {
-        return local[index];
-    }
-    /**
-     * Set an element of the host buffer.
-     */
-    void set(int index, const T& value) {
-        local[index] = value;
-    }
-    /**
      * Copy the values in a vector to the Buffer.
      */
-    void upload(std::vector<T>& data, bool blocking = true) {
+    template <class T>
+    void upload(const std::vector<T>& data, bool blocking = true) {
+        if (sizeof(T) != elementSize || data.size() != size)
+            throw OpenMMException("Error uploading array "+name+": The specified vector does not match the size of the array");
         upload(&data[0], blocking);
     }
     /**
      * Copy the values in the Buffer to a vector.
      */
-    void download(std::vector<T>& data) const {
+    template <class T>
+    void download(std::vector<T>& data, bool blocking = true) const {
+        if (sizeof(T) != elementSize)
+            throw OpenMMException("Error downloading array "+name+": The specified vector has the wrong element size");
         if (data.size() != size)
             data.resize(size);
-        download(&data[0]);
+        download(&data[0], blocking);
     }
     /**
      * Copy the values in an array to the Buffer.
+     * 
+     * @param data     the data to copy
+     * @param blocking if true, this call will block until the transfer is complete.
      */
-    void upload(T* data, bool blocking = true) {
-        try {
-            context.getQueue().enqueueWriteBuffer(*buffer, blocking ? CL_TRUE : CL_FALSE, 0, size*sizeof(T), data);
-        }
-        catch (cl::Error err) {
-            std::stringstream str;
-            str<<"Error uploading array "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
-            throw OpenMMException(str.str());
-        }
-    }
+    void upload(const void* data, bool blocking = true);
     /**
      * Copy the values in the Buffer to an array.
+     * 
+     * @param data     the array to copy the memory to
+     * @param blocking if true, this call will block until the transfer is complete.
      */
-    void download(T* data) const {
-        try {
-            context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), data);
-        }
-        catch (cl::Error err) {
-            std::stringstream str;
-            str<<"Error downloading array "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
-            throw OpenMMException(str.str());
-        }
-    }
+    void download(void* data, bool blocking = true) const;
     /**
-     * Copy the values in the host buffer to the OpenCL Buffer.
+     * Copy the values in the Buffer to a second OpenCLArray.
+     * 
+     * @param dest     the destination array to copy to
      */
-    void upload(bool blocking = true) {
-        if (local.size() == 0)
-            throw OpenMMException(name+": Called upload() on an OpenCLArray with no host buffer");
-        upload(local, blocking);
-    }
-    /**
-     * Copy the values in the Buffer to the host buffer.
-     */
-    void download() {
-        if (local.size() == 0)
-            throw OpenMMException(name+": Called download() on an OpenCLArray with no host buffer");
-        download(local);
-    }
+    void copyTo(OpenCLArray& dest) const;
 private:
     OpenCLContext& context;
     cl::Buffer* buffer;
-    std::vector<T> local;
-    int size;
+    int size, elementSize;
     bool ownsBuffer;
     std::string name;
 };

@@ -82,9 +82,9 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernel;
     int numCopies, numParticles, workgroupSize;
-    OpenCLArray<mm_float4>* forces;
-    OpenCLArray<mm_float4>* positions;
-    OpenCLArray<mm_float4>* velocities;
+    OpenCLArray* forces;
+    OpenCLArray* positions;
+    OpenCLArray* velocities;
     cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
 };
 

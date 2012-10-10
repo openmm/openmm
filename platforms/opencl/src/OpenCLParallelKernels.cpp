@@ -130,8 +130,8 @@ void OpenCLParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
 void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     OpenCLContext& cl0 = *data.contexts[0];
     if (contextForces == NULL) {
-        contextForces = new OpenCLArray<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
-                data.contexts.size()*cl0.getPaddedNumAtoms(), "contextForces", true);
+        contextForces = OpenCLArray::create<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
+                data.contexts.size()*cl0.getPaddedNumAtoms(), "contextForces");
         int bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*sizeof(mm_float4);
         pinnedPositionBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
         pinnedPositionMemory = (mm_float4*) cl0.getQueue().enqueueMapBuffer(*pinnedPositionBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);

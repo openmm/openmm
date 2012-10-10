@@ -96,12 +96,12 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
     // Create workspace arrays.
 
-    posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
+    posDelta = OpenCLArray::create<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
     vector<mm_float4> deltas(posDelta->getSize(), mm_float4(0.0, 0.0, 0.0, 0.0));
     posDelta->upload(deltas);
-    stepSize = new OpenCLArray<mm_float2>(context, 1, "stepSize", true);
-    stepSize->set(0, mm_float2(0.0f, 0.0f));
-    stepSize->upload();
+    stepSize = OpenCLArray::create<mm_float2>(context, 1, "stepSize");
+    vector<mm_float2> step(1, mm_float2(0.0f, 0.0f));
+    stepSize->upload(step);
 
     // Create kernels for enforcing constraints.
 
@@ -192,8 +192,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
             isShakeAtom[atom2] = true;
             isShakeAtom[atom3] = true;
         }
-        settleAtoms = new OpenCLArray<mm_int4>(context, atoms.size(), "settleAtoms");
-        settleParams = new OpenCLArray<mm_float2>(context, params.size(), "settleParams");
+        settleAtoms = OpenCLArray::create<mm_int4>(context, atoms.size(), "settleAtoms");
+        settleParams = OpenCLArray::create<mm_float2>(context, params.size(), "settleParams");
         settleAtoms->upload(atoms);
         settleParams->upload(params);
     }
@@ -274,8 +274,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                 isShakeAtom[cluster.peripheralID[2]] = true;
             ++index;
         }
-        shakeAtoms = new OpenCLArray<mm_int4>(context, atoms.size(), "shakeAtoms");
-        shakeParams = new OpenCLArray<mm_float4>(context, params.size(), "shakeParams");
+        shakeAtoms = OpenCLArray::create<mm_int4>(context, atoms.size(), "shakeAtoms");
+        shakeParams = OpenCLArray::create<mm_float4>(context, params.size(), "shakeParams");
         shakeAtoms->upload(atoms);
         shakeParams->upload(params);
     }
@@ -457,18 +457,18 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
         // Record the CCMA data structures.
 
-        ccmaAtoms = new OpenCLArray<mm_int2>(context, numCCMA, "CcmaAtoms");
-        ccmaDistance = new OpenCLArray<mm_float4>(context, numCCMA, "CcmaDistance");
-        ccmaAtomConstraints = new OpenCLArray<cl_int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
-        ccmaNumAtomConstraints = new OpenCLArray<cl_int>(context, numAtoms, "CcmaAtomConstraintsIndex");
-        ccmaDelta1 = new OpenCLArray<cl_float>(context, numCCMA, "CcmaDelta1");
-        ccmaDelta2 = new OpenCLArray<cl_float>(context, numCCMA, "CcmaDelta2");
-        ccmaConverged = new OpenCLArray<cl_int>(context, 2, "CcmaConverged");
+        ccmaAtoms = OpenCLArray::create<mm_int2>(context, numCCMA, "CcmaAtoms");
+        ccmaDistance = OpenCLArray::create<mm_float4>(context, numCCMA, "CcmaDistance");
+        ccmaAtomConstraints = OpenCLArray::create<cl_int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
+        ccmaNumAtomConstraints = OpenCLArray::create<cl_int>(context, numAtoms, "CcmaAtomConstraintsIndex");
+        ccmaDelta1 = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaDelta1");
+        ccmaDelta2 = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaDelta2");
+        ccmaConverged = OpenCLArray::create<cl_int>(context, 2, "CcmaConverged");
         ccmaConvergedBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, 2*sizeof(cl_int));
         ccmaConvergedMemory = (cl_int*) context.getQueue().enqueueMapBuffer(*ccmaConvergedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, 2*sizeof(cl_int));
-        ccmaReducedMass = new OpenCLArray<cl_float>(context, numCCMA, "CcmaReducedMass");
-        ccmaConstraintMatrixColumn = new OpenCLArray<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
-        ccmaConstraintMatrixValue = new OpenCLArray<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+        ccmaReducedMass = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaReducedMass");
+        ccmaConstraintMatrixColumn = OpenCLArray::create<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
+        ccmaConstraintMatrixValue = OpenCLArray::create<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
         vector<mm_int2> atomsVec(ccmaAtoms->getSize());
         vector<mm_float4> distanceVec(ccmaDistance->getSize());
         vector<cl_int> atomConstraintsVec(ccmaAtomConstraints->getSize());
@@ -556,12 +556,12 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     int num2Avg = vsite2AvgAtomVec.size();
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
-    vsite2AvgAtoms = new OpenCLArray<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
-    vsite2AvgWeights = new OpenCLArray<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
-    vsite3AvgAtoms = new OpenCLArray<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
-    vsite3AvgWeights = new OpenCLArray<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
-    vsiteOutOfPlaneAtoms = new OpenCLArray<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
-    vsiteOutOfPlaneWeights = new OpenCLArray<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+    vsite2AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
+    vsite2AvgWeights = OpenCLArray::create<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
+    vsite3AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
+    vsite3AvgWeights = OpenCLArray::create<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
+    vsiteOutOfPlaneAtoms = OpenCLArray::create<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
+    vsiteOutOfPlaneWeights = OpenCLArray::create<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
     if (num2Avg > 0) {
         vsite2AvgAtoms->upload(vsite2AvgAtomVec);
         vsite2AvgWeights->upload(vsite2AvgWeightVec);
@@ -779,8 +779,8 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random = new OpenCLArray<mm_float4>(context, 32*context.getPaddedNumAtoms(), "random");
-    randomSeed = new OpenCLArray<mm_int4>(context, context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
+    random = OpenCLArray::create<mm_float4>(context, 32*context.getPaddedNumAtoms(), "random");
+    randomSeed = OpenCLArray::create<mm_int4>(context, context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
     randomPos = random->getSize();
 
     // Use a quick and dirty RNG to pick seeds for the real random number generator.
@@ -809,7 +809,7 @@ int OpenCLIntegrationUtilities::prepareRandomNumbers(int numValues) {
     }
     if (numValues > random->getSize()) {
         delete random;
-        random = new OpenCLArray<mm_float4>(context, numValues, "random");
+        random = OpenCLArray::create<mm_float4>(context, numValues, "random");
     }
     randomKernel.setArg<cl_int>(0, random->getSize());
     randomKernel.setArg<cl::Buffer>(1, random->getDeviceBuffer());

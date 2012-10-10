@@ -255,7 +255,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float2>* params;
+    OpenCLArray* params;
 };
 
 /**
@@ -296,7 +296,7 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_float>* globals;
+    OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
 };
@@ -338,7 +338,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float2>* params;
+    OpenCLArray* params;
 };
 
 /**
@@ -379,7 +379,7 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_float>* globals;
+    OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
 };
@@ -421,7 +421,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float4>* params;
+    OpenCLArray* params;
 };
 
 /**
@@ -461,7 +461,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float8>* params;
+    OpenCLArray* params;
 };
 
 /**
@@ -494,9 +494,9 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float4>* coefficients;
-    OpenCLArray<mm_int2>* mapPositions;
-    OpenCLArray<cl_int>* torsionMaps;
+    OpenCLArray* coefficients;
+    OpenCLArray* mapPositions;
+    OpenCLArray* torsionMaps;
 };
 
 /**
@@ -537,7 +537,7 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_float>* globals;
+    OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
 };
@@ -591,18 +591,18 @@ private:
     };
     OpenCLContext& cl;
     bool hasInitializedKernel;
-    OpenCLArray<mm_float2>* sigmaEpsilon;
-    OpenCLArray<mm_float4>* exceptionParams;
-    OpenCLArray<mm_float2>* cosSinSums;
-    OpenCLArray<mm_float2>* pmeGrid;
-    OpenCLArray<mm_float2>* pmeGrid2;
-    OpenCLArray<cl_float>* pmeBsplineModuliX;
-    OpenCLArray<cl_float>* pmeBsplineModuliY;
-    OpenCLArray<cl_float>* pmeBsplineModuliZ;
-    OpenCLArray<mm_float4>* pmeBsplineTheta;
-    OpenCLArray<mm_float4>* pmeBsplineDTheta;
-    OpenCLArray<cl_int>* pmeAtomRange;
-    OpenCLArray<mm_int2>* pmeAtomGridIndex;
+    OpenCLArray* sigmaEpsilon;
+    OpenCLArray* exceptionParams;
+    OpenCLArray* cosSinSums;
+    OpenCLArray* pmeGrid;
+    OpenCLArray* pmeGrid2;
+    OpenCLArray* pmeBsplineModuliX;
+    OpenCLArray* pmeBsplineModuliY;
+    OpenCLArray* pmeBsplineModuliZ;
+    OpenCLArray* pmeBsplineTheta;
+    OpenCLArray* pmeBsplineDTheta;
+    OpenCLArray* pmeAtomRange;
+    OpenCLArray* pmeAtomGridIndex;
     OpenCLSort<SortTrait>* sort;
     OpenCLFFT3D* fft;
     cl::Kernel ewaldSumsKernel;
@@ -658,11 +658,11 @@ public:
 private:
     OpenCLContext& cl;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_float>* globals;
-    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    OpenCLArray* globals;
+    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    std::vector<OpenCLArray*> tabulatedFunctions;
     System& system;
 };
 
@@ -704,13 +704,13 @@ private:
     bool hasCreatedKernels;
     int maxTiles;
     OpenCLContext& cl;
-    OpenCLArray<mm_float2>* params;
-    OpenCLArray<cl_float>* bornSum;
-    OpenCLArray<cl_long>* longBornSum;
-    OpenCLArray<cl_float>* bornRadii;
-    OpenCLArray<cl_float>* bornForce;
-    OpenCLArray<cl_long>* longBornForce;
-    OpenCLArray<cl_float>* obcChain;
+    OpenCLArray* params;
+    OpenCLArray* bornSum;
+    OpenCLArray* longBornSum;
+    OpenCLArray* bornRadii;
+    OpenCLArray* bornForce;
+    OpenCLArray* longBornForce;
+    OpenCLArray* obcChain;
     cl::Kernel computeBornSumKernel;
     cl::Kernel reduceBornSumKernel;
     cl::Kernel force1Kernel;
@@ -757,14 +757,14 @@ private:
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
     OpenCLParameterSet* energyDerivs;
-    OpenCLArray<cl_long>* longEnergyDerivs;
-    OpenCLArray<cl_float>* globals;
-    OpenCLArray<cl_float>* valueBuffers;
-    OpenCLArray<cl_long>* longValueBuffers;
-    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    OpenCLArray* longEnergyDerivs;
+    OpenCLArray* globals;
+    OpenCLArray* valueBuffers;
+    OpenCLArray* longValueBuffers;
+    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    std::vector<OpenCLArray*> tabulatedFunctions;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     System& system;
     cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
@@ -808,7 +808,7 @@ private:
     OpenCLContext& cl;
     System& system;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_float>* globals;
+    OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
 };
@@ -853,17 +853,17 @@ private:
     OpenCLContext& cl;
     OpenCLParameterSet* donorParams;
     OpenCLParameterSet* acceptorParams;
-    OpenCLArray<cl_float>* globals;
-    OpenCLArray<mm_int4>* donors;
-    OpenCLArray<mm_int4>* acceptors;
-    OpenCLArray<mm_int4>* donorBufferIndices;
-    OpenCLArray<mm_int4>* acceptorBufferIndices;
-    OpenCLArray<mm_int4>* donorExclusions;
-    OpenCLArray<mm_int4>* acceptorExclusions;
-    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    OpenCLArray* globals;
+    OpenCLArray* donors;
+    OpenCLArray* acceptors;
+    OpenCLArray* donorBufferIndices;
+    OpenCLArray* acceptorBufferIndices;
+    OpenCLArray* donorExclusions;
+    OpenCLArray* acceptorExclusions;
+    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    std::vector<OpenCLArray*> tabulatedFunctions;
     System& system;
     cl::Kernel donorKernel, acceptorKernel;
 };
@@ -905,11 +905,11 @@ private:
     int numBonds;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
-    OpenCLArray<cl_float>* globals;
-    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    OpenCLArray* globals;
+    OpenCLArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    std::vector<OpenCLArray*> tabulatedFunctions;
     System& system;
 };
 
@@ -970,7 +970,7 @@ private:
     OpenCLContext& cl;
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
-    OpenCLArray<cl_float>* params;
+    OpenCLArray* params;
     cl::Kernel kernel1, kernel2;
 };
 
@@ -1065,7 +1065,7 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
     int blockSize;
-    OpenCLArray<cl_float>* params;
+    OpenCLArray* params;
     cl::Kernel kernel1, kernel2, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
@@ -1138,14 +1138,15 @@ private:
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters;
     mutable bool localValuesAreCurrent;
-    OpenCLArray<cl_float>* globalValues;
-    OpenCLArray<cl_float>* contextParameterValues;
-    OpenCLArray<cl_float>* sumBuffer;
-    OpenCLArray<cl_float>* energy;
-    OpenCLArray<mm_float4>* uniformRandoms;
-    OpenCLArray<mm_int4>* randomSeed;
+    OpenCLArray* globalValues;
+    OpenCLArray* contextParameterValues;
+    OpenCLArray* sumBuffer;
+    OpenCLArray* energy;
+    OpenCLArray* uniformRandoms;
+    OpenCLArray* randomSeed;
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValues;
+    std::vector<float> contextValues;
     std::vector<std::vector<cl::Kernel> > kernels;
     cl::Kernel sumEnergyKernel, randomKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
@@ -1185,7 +1186,7 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
     int randomSeed;
-    OpenCLArray<cl_int>* atomGroups;
+    OpenCLArray* atomGroups;
     cl::Kernel kernel;
 };
 
@@ -1226,9 +1227,9 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
     int numMolecules;
-    OpenCLArray<mm_float4>* savedPositions;
-    OpenCLArray<cl_int>* moleculeAtoms;
-    OpenCLArray<cl_int>* moleculeStartIndex;
+    OpenCLArray* savedPositions;
+    OpenCLArray* moleculeAtoms;
+    OpenCLArray* moleculeStartIndex;
     cl::Kernel kernel;
 };
 
@@ -1280,7 +1281,7 @@ public:
 private:
     OpenCLContext& cl;
     int frequency;
-    OpenCLArray<mm_float4>* cmMomentum;
+    OpenCLArray* cmMomentum;
     cl::Kernel kernel1, kernel2;
 };
 

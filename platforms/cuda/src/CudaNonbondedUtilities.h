@@ -259,7 +259,6 @@ private:
     CudaArray* interactionCount;
     CudaArray* blockCenter;
     CudaArray* blockBoundingBox;
-    unsigned int* pinnedInteractionCount;
     std::vector<void*> forceArgs, findBlockBoundsArgs, findInteractingBlocksArgs, findInteractionsWithinBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;

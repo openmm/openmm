@@ -45,7 +45,7 @@ using namespace std;
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false),
         exclusionIndices(NULL), exclusionRowIndices(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
-        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), pinnedInteractionCount(NULL), nonbondedForceGroup(0) {
+        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), nonbondedForceGroup(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -72,8 +72,6 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
         delete blockCenter;
     if (blockBoundingBox != NULL)
         delete blockBoundingBox;
-    if (pinnedInteractionCount != NULL)
-        cuMemFreeHost(pinnedInteractionCount);
 }
 
 void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
@@ -240,9 +238,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             blockCenter = CudaArray::create<float4>(context, numAtomBlocks, "blockCenter");
             blockBoundingBox = CudaArray::create<float4>(context, numAtomBlocks, "blockBoundingBox");
         }
-        CHECK_RESULT(cuMemHostAlloc((void**) &pinnedInteractionCount, sizeof(unsigned int), 0));
-        pinnedInteractionCount[0] = 0;
-        interactionCount->upload(pinnedInteractionCount);
+        vector<unsigned int> count(1, 0);
+        interactionCount->upload(count);
     }
 
     // Create kernels.
@@ -325,6 +322,7 @@ void CudaNonbondedUtilities::computeInteractions() {
 void CudaNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return;
+    unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
     interactionCount->download(pinnedInteractionCount);
     if (pinnedInteractionCount[0] <= (unsigned int) maxTiles)
         return;

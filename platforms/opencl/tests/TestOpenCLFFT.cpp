@@ -64,8 +64,8 @@ void testTransform() {
         original[i] = value;
         reference[i] = t_complex(value.x, value.y);
     }
-    OpenCLArray<mm_float2> grid1(context, original.size(), "grid1");
-    OpenCLArray<mm_float2> grid2(context, original.size(), "grid2");
+    OpenCLArray grid1(context, original.size(), sizeof(mm_float2), "grid1");
+    OpenCLArray grid2(context, original.size(), sizeof(mm_float2), "grid2");
     grid1.upload(original);
     OpenCLFFT3D fft(context, xsize, ysize, zsize);
 

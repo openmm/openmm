@@ -52,7 +52,7 @@ void testGaussian() {
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
-    OpenCLArray<mm_float4>& random = context.getIntegrationUtilities().getRandom();
+    OpenCLArray& random = context.getIntegrationUtilities().getRandom();
     context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());
     const int numValues = random.getSize()*4;
     vector<mm_float4> values(numValues);

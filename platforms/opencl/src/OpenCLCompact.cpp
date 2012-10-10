@@ -30,7 +30,7 @@
 using namespace OpenMM;
 
 OpenCLCompact::OpenCLCompact(OpenCLContext& context) : context(context), dgBlockCounts(NULL) {
-    dgBlockCounts = new OpenCLArray<cl_uint>(context, context.getNumThreadBlocks(), "dgBlockCounts");
+    dgBlockCounts = OpenCLArray::create<cl_uint>(context, context.getNumThreadBlocks(), "dgBlockCounts");
     cl::Program program = context.createProgram(OpenCLKernelSources::compact);
     countKernel = cl::Kernel(program, "countElts");
     moveValidKernel = cl::Kernel(program, "moveValidElementsStaged");
@@ -41,7 +41,7 @@ OpenCLCompact::~OpenCLCompact() {
         delete dgBlockCounts;
 }
 
-void OpenCLCompact::compactStream(OpenCLArray<cl_uint>& dOut, OpenCLArray<cl_uint>& dIn, OpenCLArray<cl_uint>& dValid, OpenCLArray<cl_uint>& numValid) {
+void OpenCLCompact::compactStream(OpenCLArray& dOut, OpenCLArray& dIn, OpenCLArray& dValid, OpenCLArray& numValid) {
     // Figure out # elements per block
     unsigned int len = dIn.getSize();
     unsigned int numBlocks = context.getNumThreadBlocks();

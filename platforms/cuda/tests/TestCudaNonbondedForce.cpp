@@ -432,6 +432,9 @@ void testLargeSystem() {
     cuState = cuContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
+        double dx = cuState.getPositions()[i][0]-referenceState.getPositions()[i][0];
+        double dy = cuState.getPositions()[i][1]-referenceState.getPositions()[i][1];
+        double dz = cuState.getPositions()[i][2]-referenceState.getPositions()[i][2];
         ASSERT_EQUAL_TOL(fmod(cuState.getPositions()[i][0]-referenceState.getPositions()[i][0], boxSize), 0, tol);
         ASSERT_EQUAL_TOL(fmod(cuState.getPositions()[i][1]-referenceState.getPositions()[i][1], boxSize), 0, tol);
         ASSERT_EQUAL_TOL(fmod(cuState.getPositions()[i][2]-referenceState.getPositions()[i][2], boxSize), 0, tol);

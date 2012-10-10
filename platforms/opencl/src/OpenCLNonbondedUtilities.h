@@ -170,49 +170,49 @@ public:
     /**
      * Get the array containing the center of each atom block.
      */
-    OpenCLArray<mm_float4>& getBlockCenters() {
+    OpenCLArray& getBlockCenters() {
         return *blockCenter;
     }
     /**
      * Get the array containing the dimensions of each atom block.
      */
-    OpenCLArray<mm_float4>& getBlockBoundingBoxes() {
+    OpenCLArray& getBlockBoundingBoxes() {
         return *blockBoundingBox;
     }
     /**
      * Get the array whose first element contains the number of tiles with interactions.
      */
-    OpenCLArray<cl_uint>& getInteractionCount() {
+    OpenCLArray& getInteractionCount() {
         return *interactionCount;
     }
     /**
      * Get the array containing tiles with interactions.
      */
-    OpenCLArray<mm_ushort2>& getInteractingTiles() {
+    OpenCLArray& getInteractingTiles() {
         return *interactingTiles;
     }
     /**
      * Get the array containing flags for tiles with interactions.
      */
-    OpenCLArray<cl_uint>& getInteractionFlags() {
+    OpenCLArray& getInteractionFlags() {
         return *interactionFlags;
     }
     /**
      * Get the array containing exclusion flags.
      */
-    OpenCLArray<cl_uint>& getExclusions() {
+    OpenCLArray& getExclusions() {
         return *exclusions;
     }
     /**
      * Get the array containing the index into the exclusion array for each tile.
      */
-    OpenCLArray<cl_uint>& getExclusionIndices() {
+    OpenCLArray& getExclusionIndices() {
         return *exclusionIndices;
     }
     /**
      * Get the array listing where the exclusion data starts for each row.
      */
-    OpenCLArray<cl_uint>& getExclusionRowIndices() {
+    OpenCLArray& getExclusionRowIndices() {
         return *exclusionRowIndices;
     }
     /**
@@ -250,14 +250,14 @@ private:
     cl::Kernel findBlockBoundsKernel;
     cl::Kernel findInteractingBlocksKernel;
     cl::Kernel findInteractionsWithinBlocksKernel;
-    OpenCLArray<cl_uint>* exclusions;
-    OpenCLArray<cl_uint>* exclusionIndices;
-    OpenCLArray<cl_uint>* exclusionRowIndices;
-    OpenCLArray<mm_ushort2>* interactingTiles;
-    OpenCLArray<cl_uint>* interactionFlags;
-    OpenCLArray<cl_uint>* interactionCount;
-    OpenCLArray<mm_float4>* blockCenter;
-    OpenCLArray<mm_float4>* blockBoundingBox;
+    OpenCLArray* exclusions;
+    OpenCLArray* exclusionIndices;
+    OpenCLArray* exclusionRowIndices;
+    OpenCLArray* interactingTiles;
+    OpenCLArray* interactionFlags;
+    OpenCLArray* interactionCount;
+    OpenCLArray* blockCenter;
+    OpenCLArray* blockBoundingBox;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;

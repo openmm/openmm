@@ -42,7 +42,6 @@
 
 namespace OpenMM {
 
-template <class T>
 class OpenCLArray;
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
@@ -196,44 +195,57 @@ public:
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
-    OpenCLArray<mm_float4>& getPosq() {
+    OpenCLArray& getPosq() {
         return *posq;
     }
     /**
      * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
      */
-    OpenCLArray<mm_float4>& getVelm() {
+    OpenCLArray& getVelm() {
         return *velm;
     }
     /**
      * Get the array which contains the force on each atom.
      */
-    OpenCLArray<mm_float4>& getForce() {
+    OpenCLArray& getForce() {
         return *force;
     }
     /**
      * Get the array which contains the buffers in which forces are computed.
      */
-    OpenCLArray<mm_float4>& getForceBuffers() {
+    OpenCLArray& getForceBuffers() {
         return *forceBuffers;
     }
     /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      */
-    OpenCLArray<cl_long>& getLongForceBuffer() {
+    OpenCLArray& getLongForceBuffer() {
         return *longForceBuffer;
     }
     /**
      * Get the array which contains the buffer in which energy is computed.
      */
-    OpenCLArray<cl_float>& getEnergyBuffer() {
+    OpenCLArray& getEnergyBuffer() {
         return *energyBuffer;
+    }
+    /**
+     * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
+     * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
+     */
+    void* getPinnedBuffer() {
+        return pinnedMemory;
+    }
+    /**
+     * Get the host-side vector which contains the index of each atom.
+     */
+    const std::vector<int>& getAtomIndex() const {
+        return atomIndex;
     }
     /**
      * Get the array which contains the index of each atom.
      */
-    OpenCLArray<cl_int>& getAtomIndex() {
-        return *atomIndex;
+    OpenCLArray& getAtomIndexArray() {
+        return *atomIndexDevice;
     }
     /**
      * Get the number of cells by which the positions are offset.
@@ -277,11 +289,7 @@ public:
     /**
      * Set all elements of an array to 0.
      */
-    void clearBuffer(OpenCLArray<float>& array);
-    /**
-     * Set all elements of an array to 0.
-     */
-    void clearBuffer(OpenCLArray<mm_float4>& array);
+    void clearBuffer(OpenCLArray& array);
     /**
      * Set all elements of an array to 0.
      *
@@ -307,7 +315,7 @@ public:
      * @param array       the array containing the buffers to reduce
      * @param numBuffers  the number of buffers packed into the array
      */
-    void reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers);
+    void reduceBuffer(OpenCLArray& array, int numBuffers);
     /**
      * Sum the buffesr containing forces.
      */
@@ -527,13 +535,16 @@ private:
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
     std::vector<mm_int4> posCellOffsets;
-    OpenCLArray<mm_float4>* posq;
-    OpenCLArray<mm_float4>* velm;
-    OpenCLArray<mm_float4>* force;
-    OpenCLArray<mm_float4>* forceBuffers;
-    OpenCLArray<cl_long>* longForceBuffer;
-    OpenCLArray<cl_float>* energyBuffer;
-    OpenCLArray<cl_int>* atomIndex;
+    cl::Buffer* pinnedBuffer;
+    void* pinnedMemory;
+    OpenCLArray* posq;
+    OpenCLArray* velm;
+    OpenCLArray* force;
+    OpenCLArray* forceBuffers;
+    OpenCLArray* longForceBuffer;
+    OpenCLArray* energyBuffer;
+    OpenCLArray* atomIndexDevice;
+    std::vector<int> atomIndex;
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
     std::vector<ReorderListener*> reorderListeners;

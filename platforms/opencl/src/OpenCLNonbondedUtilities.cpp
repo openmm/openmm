@@ -191,14 +191,14 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         exclusionIndicesVec.push_back(iter->second);
     }
     exclusionRowIndicesVec[++currentRow] = exclusionIndicesVec.size();
-    exclusionIndices = new OpenCLArray<cl_uint>(context, exclusionIndicesVec.size(), "exclusionIndices");
-    exclusionRowIndices = new OpenCLArray<cl_uint>(context, exclusionRowIndicesVec.size(), "exclusionRowIndices");
+    exclusionIndices = OpenCLArray::create<cl_uint>(context, exclusionIndicesVec.size(), "exclusionIndices");
+    exclusionRowIndices = OpenCLArray::create<cl_uint>(context, exclusionRowIndicesVec.size(), "exclusionRowIndices");
     exclusionIndices->upload(exclusionIndicesVec);
     exclusionRowIndices->upload(exclusionRowIndicesVec);
 
     // Record the exclusion data.
 
-    exclusions = new OpenCLArray<cl_uint>(context, tilesWithExclusions.size()*OpenCLContext::TileSize, "exclusions");
+    exclusions = OpenCLArray::create<cl_uint>(context, tilesWithExclusions.size()*OpenCLContext::TileSize, "exclusions");
     vector<cl_uint> exclusionVec(exclusions->getSize());
     for (int i = 0; i < exclusions->getSize(); ++i)
         exclusionVec[i] = 0xFFFFFFFF;
@@ -253,13 +253,13 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             maxInteractingTiles = numTiles;
         if (maxInteractingTiles < 1)
             maxInteractingTiles = 1;
-        interactingTiles = new OpenCLArray<mm_ushort2>(context, maxInteractingTiles, "interactingTiles");
-        interactionFlags = new OpenCLArray<cl_uint>(context, context.getSIMDWidth() == 32 ? maxInteractingTiles : (deviceIsCpu ? 2*maxInteractingTiles : 1), "interactionFlags");
-        interactionCount = new OpenCLArray<cl_uint>(context, 1, "interactionCount", true);
-        blockCenter = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockCenter");
-        blockBoundingBox = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockBoundingBox");
-        interactionCount->set(0, 0);
-        interactionCount->upload();
+        interactingTiles = OpenCLArray::create<mm_ushort2>(context, maxInteractingTiles, "interactingTiles");
+        interactionFlags = OpenCLArray::create<cl_uint>(context, context.getSIMDWidth() == 32 ? maxInteractingTiles : (deviceIsCpu ? 2*maxInteractingTiles : 1), "interactionFlags");
+        interactionCount = OpenCLArray::create<cl_uint>(context, 1, "interactionCount");
+        blockCenter = OpenCLArray::create<mm_float4>(context, numAtomBlocks, "blockCenter");
+        blockBoundingBox = OpenCLArray::create<mm_float4>(context, numAtomBlocks, "blockBoundingBox");
+        vector<cl_uint> count(1, 0);
+        interactionCount->upload(count);
     }
 
     // Create kernels.
@@ -353,26 +353,27 @@ void OpenCLNonbondedUtilities::computeInteractions() {
 void OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return;
-    interactionCount->download();
-    if (interactionCount->get(0) <= (unsigned int) interactingTiles->getSize())
+    unsigned int* pinnedInteractionCount = (unsigned int*) context.getPinnedBuffer();
+    interactionCount->download(pinnedInteractionCount);
+    if (pinnedInteractionCount[0] <= (unsigned int) interactingTiles->getSize())
         return;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    int newSize = (int) (1.2*interactionCount->get(0));
+    int newSize = (int) (1.2*pinnedInteractionCount[0]);
     int numTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
     if (newSize > numTiles)
         newSize = numTiles;
     delete interactingTiles;
-    interactingTiles = new OpenCLArray<mm_ushort2>(context, newSize, "interactingTiles");
+    interactingTiles = OpenCLArray::create<mm_ushort2>(context, newSize, "interactingTiles");
     forceKernel.setArg<cl::Buffer>(8, interactingTiles->getDeviceBuffer());
     forceKernel.setArg<cl_uint>(12, newSize);
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(9, newSize);
     if (context.getSIMDWidth() == 32 || deviceIsCpu) {
         delete interactionFlags;
-        interactionFlags = new OpenCLArray<cl_uint>(context, deviceIsCpu ? 2*newSize : newSize, "interactionFlags");
+        interactionFlags = OpenCLArray::create<cl_uint>(context, deviceIsCpu ? 2*newSize : newSize, "interactionFlags");
         forceKernel.setArg<cl::Buffer>(13, interactionFlags->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
 		if (!deviceIsCpu) {

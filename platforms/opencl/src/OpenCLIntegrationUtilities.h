@@ -46,20 +46,20 @@ public:
     /**
      * Get the array which contains position deltas.
      */
-    OpenCLArray<mm_float4>& getPosDelta() {
+    OpenCLArray& getPosDelta() {
         return *posDelta;
     }
     /**
      * Get the array which contains random values.  Each element is a float4, whose components
      * are independent, normally distributed random numbers with mean 0 and variance 1.
      */
-    OpenCLArray<mm_float4>& getRandom() {
+    OpenCLArray& getRandom() {
         return *random;
     }
     /**
      * Get the array which contains the current step size.
      */
-    OpenCLArray<mm_float2>& getStepSize() {
+    OpenCLArray& getStepSize() {
         return *stepSize;
     }
     /**
@@ -116,32 +116,32 @@ private:
     cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
     cl::Kernel vsitePositionKernel, vsiteForceKernel;
     cl::Kernel randomKernel;
-    OpenCLArray<mm_float4>* posDelta;
-    OpenCLArray<mm_int4>* settleAtoms;
-    OpenCLArray<mm_float2>* settleParams;
-    OpenCLArray<mm_int4>* shakeAtoms;
-    OpenCLArray<mm_float4>* shakeParams;
-    OpenCLArray<mm_float4>* random;
-    OpenCLArray<mm_int4>* randomSeed;
-    OpenCLArray<mm_float2>* stepSize;
-    OpenCLArray<mm_int2>* ccmaAtoms;
-    OpenCLArray<mm_float4>* ccmaDistance;
-    OpenCLArray<cl_float>* ccmaReducedMass;
-    OpenCLArray<cl_int>* ccmaAtomConstraints;
-    OpenCLArray<cl_int>* ccmaNumAtomConstraints;
-    OpenCLArray<cl_int>* ccmaConstraintMatrixColumn;
-    OpenCLArray<cl_float>* ccmaConstraintMatrixValue;
-    OpenCLArray<cl_float>* ccmaDelta1;
-    OpenCLArray<cl_float>* ccmaDelta2;
-    OpenCLArray<cl_int>* ccmaConverged;
+    OpenCLArray* posDelta;
+    OpenCLArray* settleAtoms;
+    OpenCLArray* settleParams;
+    OpenCLArray* shakeAtoms;
+    OpenCLArray* shakeParams;
+    OpenCLArray* random;
+    OpenCLArray* randomSeed;
+    OpenCLArray* stepSize;
+    OpenCLArray* ccmaAtoms;
+    OpenCLArray* ccmaDistance;
+    OpenCLArray* ccmaReducedMass;
+    OpenCLArray* ccmaAtomConstraints;
+    OpenCLArray* ccmaNumAtomConstraints;
+    OpenCLArray* ccmaConstraintMatrixColumn;
+    OpenCLArray* ccmaConstraintMatrixValue;
+    OpenCLArray* ccmaDelta1;
+    OpenCLArray* ccmaDelta2;
+    OpenCLArray* ccmaConverged;
     cl::Buffer* ccmaConvergedBuffer;
     cl_int* ccmaConvergedMemory;
-    OpenCLArray<mm_int4>* vsite2AvgAtoms;
-    OpenCLArray<mm_float2>* vsite2AvgWeights;
-    OpenCLArray<mm_int4>* vsite3AvgAtoms;
-    OpenCLArray<mm_float4>* vsite3AvgWeights;
-    OpenCLArray<mm_int4>* vsiteOutOfPlaneAtoms;
-    OpenCLArray<mm_float4>* vsiteOutOfPlaneWeights;
+    OpenCLArray* vsite2AvgAtoms;
+    OpenCLArray* vsite2AvgWeights;
+    OpenCLArray* vsite3AvgAtoms;
+    OpenCLArray* vsite3AvgWeights;
+    OpenCLArray* vsiteOutOfPlaneAtoms;
+    OpenCLArray* vsiteOutOfPlaneWeights;
     int randomPos;
     int lastSeed, numVsites;
     bool hasInitializedPosConstraintKernels, hasInitializedVelConstraintKernels;

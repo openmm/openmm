@@ -432,9 +432,12 @@ void testLargeSystem() {
     clState = clContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_TOL(fmod(clState.getPositions()[i][0]-referenceState.getPositions()[i][0], boxSize), 0, tol);
-        ASSERT_EQUAL_TOL(fmod(clState.getPositions()[i][1]-referenceState.getPositions()[i][1], boxSize), 0, tol);
-        ASSERT_EQUAL_TOL(fmod(clState.getPositions()[i][2]-referenceState.getPositions()[i][2], boxSize), 0, tol);
+        double dx = clState.getPositions()[i][0]-referenceState.getPositions()[i][0];
+        double dy = clState.getPositions()[i][1]-referenceState.getPositions()[i][1];
+        double dz = clState.getPositions()[i][2]-referenceState.getPositions()[i][2];
+        ASSERT_EQUAL_TOL(dx-floor(dx/boxSize+0.5)*boxSize, 0, tol);
+        ASSERT_EQUAL_TOL(dy-floor(dy/boxSize+0.5)*boxSize, 0, tol);
+        ASSERT_EQUAL_TOL(dz-floor(dz/boxSize+0.5)*boxSize, 0, tol);
         ASSERT_EQUAL_VEC(clState.getVelocities()[i], referenceState.getVelocities()[i], tol);
         ASSERT_EQUAL_VEC(clState.getForces()[i], referenceState.getForces()[i], tol);
     }
@@ -476,7 +479,8 @@ void testBlockInteractions(bool periodic) {
 
     // Verify that the bounds of each block were calculated correctly.
 
-    clcontext.getPosq().download();
+    vector<mm_float4> posq;
+    clcontext.getPosq().download(posq);
     vector<mm_float4> blockCenters(numBlocks);
     vector<mm_float4> blockBoundingBoxes(numBlocks);
     nb.getBlockCenters().download(blockCenters);
@@ -491,7 +495,7 @@ void testBlockInteractions(bool periodic) {
         }
         float minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
         for (int j = 0; j < blockSize; j++) {
-            mm_float4 pos = clcontext.getPosq()[i*blockSize+j];
+            mm_float4 pos = posq[i*blockSize+j];
             float dx = pos.x-center.x;
             float dy = pos.y-center.y;
             float dz = pos.z-center.z;
@@ -563,9 +567,9 @@ void testBlockInteractions(bool periodic) {
             unsigned int flags = interactionFlags[i];
             for (int atom2 = 0; atom2 < 32; atom2++) {
                 if ((flags & 1) == 0) {
-                    mm_float4 pos2 = clcontext.getPosq()[y*blockSize+atom2];
+                    mm_float4 pos2 = posq[y*blockSize+atom2];
                     for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                        mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
+                        mm_float4 pos1 = posq[x*blockSize+atom1];
                         float dx = pos2.x-pos1.x;
                         float dy = pos2.y-pos1.y;
                         float dz = pos2.z-pos1.z;
@@ -589,9 +593,9 @@ void testBlockInteractions(bool periodic) {
             unsigned int y = (unsigned int) std::floor(numBlocks+0.5-std::sqrt((numBlocks+0.5)*(numBlocks+0.5)-2*i));
             unsigned int x = (i-y*numBlocks+y*(y+1)/2);
             for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
+                mm_float4 pos1 = posq[x*blockSize+atom1];
                 for (int atom2 = 0; atom2 < blockSize; ++atom2) {
-                    mm_float4 pos2 = clcontext.getPosq()[y*blockSize+atom2];
+                    mm_float4 pos2 = posq[y*blockSize+atom2];
                     float dx = pos1.x-pos2.x;
                     float dy = pos1.y-pos2.y;
                     float dz = pos1.z-pos2.z;

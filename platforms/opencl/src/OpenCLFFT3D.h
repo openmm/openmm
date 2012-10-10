@@ -72,7 +72,7 @@ public:
      * @param out      on exit, this contains the transformed data
      * @param forward  true to perform a forward transform, false to perform an inverse transform
      */
-    void execFFT(OpenCLArray<mm_float2>& in, OpenCLArray<mm_float2>& out, bool forward = true);
+    void execFFT(OpenCLArray& in, OpenCLArray& out, bool forward = true);
     /**
      * Get the smallest legal size for a dimension of the grid (that is, a size with no prime
      * factors other than 2, 3, and 5).

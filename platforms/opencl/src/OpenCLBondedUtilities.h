@@ -134,8 +134,8 @@ private:
     std::vector<std::vector<int> > forceSets;
     std::vector<cl::Memory*> arguments;
     std::vector<std::string> argTypes;
-    std::vector<OpenCLArray<cl_uint>*> atomIndices;
-    std::vector<OpenCLArray<cl_uint>*> bufferIndices;
+    std::vector<OpenCLArray*> atomIndices;
+    std::vector<OpenCLArray*> bufferIndices;
     std::vector<std::string> prefixCode;
     int numForceBuffers, maxBonds;
     bool hasInitializedKernels;
