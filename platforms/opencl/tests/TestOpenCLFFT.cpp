@@ -60,7 +60,7 @@ void testTransform() {
     vector<mm_float2> original(xsize*ysize*zsize);
     vector<t_complex> reference(original.size());
     for (int i = 0; i < (int) original.size(); i++) {
-        mm_float2 value = mm_float2(genrand_real2(sfmt), genrand_real2(sfmt));
+        mm_float2 value = mm_float2((cl_float) genrand_real2(sfmt), (cl_float) genrand_real2(sfmt));
         original[i] = value;
         reference[i] = t_complex(value.x, value.y);
     }

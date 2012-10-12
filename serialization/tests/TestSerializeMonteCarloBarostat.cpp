@@ -41,7 +41,7 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    MonteCarloBarostat force(25.5, 250.0, 0.2);
+    MonteCarloBarostat force(25.5, 250.0, 14);
     force.setRandomNumberSeed(3);
 
     // Serialize and then deserialize it.

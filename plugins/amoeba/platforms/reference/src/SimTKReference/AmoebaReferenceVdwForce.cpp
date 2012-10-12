@@ -308,7 +308,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy( int numParticles,
  
         RealOpenMM sigmaI      = sigmas[ii];
         RealOpenMM epsilonI    = epsilons[ii];
-        for( std::set<int>::iterator jj = allExclusions[ii].begin(); jj != allExclusions[ii].end(); jj++ ){
+        for( std::set<int>::const_iterator jj = allExclusions[ii].begin(); jj != allExclusions[ii].end(); jj++ ){
             exclusions[*jj] = 1;
         }
 
@@ -341,7 +341,7 @@ RealOpenMM AmoebaReferenceVdwForce::calculateForceAndEnergy( int numParticles,
             }
         }
 
-        for( std::set<int>::iterator jj = allExclusions[ii].begin(); jj != allExclusions[ii].end(); jj++ ){
+        for( std::set<int>::const_iterator jj = allExclusions[ii].begin(); jj != allExclusions[ii].end(); jj++ ){
             exclusions[*jj] = 0;
         }
     }

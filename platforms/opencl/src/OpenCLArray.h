@@ -29,6 +29,7 @@
 
 #include "OpenCLContext.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/windowsExport.h"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -40,7 +41,7 @@ namespace OpenMM {
  * and for copying data to and from the OpenCL Buffer.
  */
 
-class OpenCLArray {
+class OPENMM_EXPORT OpenCLArray {
 public:
     /**
      * Create an OpenCLArray object.  The object is allocated on the heap with the "new" operator.

@@ -49,7 +49,7 @@ void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, co
         forceSource.push_back(source);
         forceGroup.push_back(group);
         int width = 1;
-        while (width < atoms[0].size())
+        while (width < (int) atoms[0].size())
             width *= 2;
         indexWidth.push_back(width);
     }
@@ -124,7 +124,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     while (unmerged.size() > 0) {
         int sum = numBuffers[unmerged.back()];
         int i;
-        for (i = 0; i < unmerged.size()-1; i++) {
+        for (i = 0; i < (int) unmerged.size()-1; i++) {
             if (sum+numBuffers[unmerged[i]] > bufferLimit)
                 break;
             sum += numBuffers[unmerged[i]];
@@ -142,7 +142,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     
     bufferIndices.resize(numForces);
     for (int i = 0; i < (int) forceSets.size(); i++)
-        for (int j = 0; j < forceSets[i].size(); j++) {
+        for (int j = 0; j < (int) forceSets[i].size(); j++) {
             int force = forceSets[i][j];
             int numBonds = forceAtoms[force].size();
             int numAtoms = forceAtoms[force][0].size();

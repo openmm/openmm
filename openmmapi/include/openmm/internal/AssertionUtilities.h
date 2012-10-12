@@ -57,6 +57,6 @@ void OPENMM_EXPORT throwException(const char* file, int line, const std::string&
 
 #define ASSERT_USUALLY_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found)<<" (This test is stochastic and may occasionally fail)"; throwException(__FILE__, __LINE__, details.str());}};
 
-#define ASSERT_VALID_INDEX(index, vector) {if (index < 0 || index >= vector.size()) throwException(__FILE__, __LINE__, "Index out of range");};
+#define ASSERT_VALID_INDEX(index, vector) {if (index < 0 || index >= (int) vector.size()) throwException(__FILE__, __LINE__, "Index out of range");};
 
 #endif /*OPENMM_ASSERTIONUTILITIES_H_*/

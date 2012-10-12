@@ -73,7 +73,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
-        if (platformIndex < 0 || platformIndex >= platforms.size())
+        if (platformIndex < 0 || platformIndex >= (int) platforms.size())
             throw OpenMMException("Illegal value for OpenCL platform index");
         string platformVendor = platforms[platformIndex].getInfo<CL_PLATFORM_VENDOR>();
         vector<cl::Device> devices;

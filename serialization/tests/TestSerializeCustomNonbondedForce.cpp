@@ -87,7 +87,7 @@ void testSerialization() {
         force.getParticleParameters(i, params1);
         force2.getParticleParameters(i, params2);
         ASSERT_EQUAL(params1.size(), params2.size());
-        for (int j = 0; j < params1.size(); j++)
+        for (int j = 0; j < (int) params1.size(); j++)
             ASSERT_EQUAL(params1[j], params2[j]);
     }
     ASSERT_EQUAL(force.getNumExclusions(), force2.getNumExclusions());
@@ -109,7 +109,7 @@ void testSerialization() {
         ASSERT_EQUAL(min1, min2);
         ASSERT_EQUAL(max1, max2);
         ASSERT_EQUAL(val1.size(), val2.size());
-        for (int j = 0; j < val1.size(); j++)
+        for (int j = 0; j < (int) val1.size(); j++)
             ASSERT_EQUAL(val1[j], val2[j]);
     }
 }

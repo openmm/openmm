@@ -124,7 +124,7 @@ public:
      * @param index  the index of the particle to check
      */
     bool isVirtualSite(int index) const {
-        return (index < virtualSites.size() && virtualSites[index] != NULL);
+        return (index < (int) virtualSites.size() && virtualSites[index] != NULL);
     }
     /**
      * Get VirtualSite object for a particle.  If the particle is not a virtual

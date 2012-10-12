@@ -138,15 +138,15 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     const double dt = integrator.getStepSize();
     pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
     pileKernel.setArg<cl::Buffer>(4, integration.getRandom().getDeviceBuffer()); // Do this *after* prepareRandomNumbers(), which might rebuild the array.
-    pileKernel.setArg<cl_float>(6, dt);
-    pileKernel.setArg<cl_float>(7, integrator.getTemperature()*BOLTZ);
-    pileKernel.setArg<cl_float>(8, integrator.getFriction());
+    pileKernel.setArg<cl_float>(6, (cl_float) dt);
+    pileKernel.setArg<cl_float>(7, (cl_float) (integrator.getTemperature()*BOLTZ));
+    pileKernel.setArg<cl_float>(8, (cl_float) integrator.getFriction());
     cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
-    stepKernel.setArg<cl_float>(7, dt);
-    stepKernel.setArg<cl_float>(8, integrator.getTemperature()*BOLTZ);
+    stepKernel.setArg<cl_float>(7, (cl_float) dt);
+    stepKernel.setArg<cl_float>(8, (cl_float) (integrator.getTemperature()*BOLTZ));
     cl.executeKernel(stepKernel, numParticles*numCopies, workgroupSize);
 
     // Calculate forces based on the updated positions.
@@ -154,7 +154,7 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     computeForces(context);
     
     // Update velocities.
-    velocitiesKernel.setArg<cl_float>(2, dt);
+    velocitiesKernel.setArg<cl_float>(2, (cl_float) dt);
     cl.executeKernel(velocitiesKernel, numParticles*numCopies, workgroupSize);
 
     // Apply the PILE-L thermostat again.
@@ -193,7 +193,7 @@ void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
     vector<mm_float4> posq(cl.getPaddedNumAtoms());
     cl.getPosq().download(posq);
     for (int i = 0; i < numParticles; i++)
-        posq[i] = mm_float4(pos[i][0], pos[i][1], pos[i][2], posq[i].w);
+        posq[i] = mm_float4((cl_float) pos[i][0], (cl_float) pos[i][1], (cl_float) pos[i][2], posq[i].w);
     cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &posq[0]);
 }
 
@@ -205,7 +205,7 @@ void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
     vector<mm_float4> velm(cl.getPaddedNumAtoms());
     cl.getVelm().download(velm);
     for (int i = 0; i < numParticles; i++)
-        velm[i] = mm_float4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
+        velm[i] = mm_float4((cl_float) vel[i][0], (cl_float) vel[i][1], (cl_float) vel[i][2], velm[i].w);
     cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &velm[0]);
 }
 

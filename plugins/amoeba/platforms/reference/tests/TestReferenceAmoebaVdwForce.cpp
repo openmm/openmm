@@ -544,7 +544,7 @@ void setupAndGetForcesEnergyVdwWater( const std::string& sigmaCombiningRule, con
     // addParticle: ivIndex, radius, epsilon, reductionFactor
 
     int classIndex = 0;
-    for( unsigned int ii = 0; ii < numberOfParticles; ii += 3 ){
+    for( int ii = 0; ii < numberOfParticles; ii += 3 ){
 
        system.addParticle(   1.5995000e+01 );
        amoebaVdwForce->addParticle( ii, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00 );
@@ -559,7 +559,7 @@ void setupAndGetForcesEnergyVdwWater( const std::string& sigmaCombiningRule, con
     // exclusions
 
     std::vector< int > exclusions(3);
-    for( unsigned int ii = 0; ii < numberOfParticles; ii += 3 ){
+    for( int ii = 0; ii < numberOfParticles; ii += 3 ){
         exclusions[0] = ii;
         exclusions[1] = ii+1;
         exclusions[2] = ii+2;

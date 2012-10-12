@@ -118,7 +118,7 @@ void testManyParameters() {
     forceField->addPerBondParameter("h");
     forceField->addPerBondParameter("i");
     vector<double> parameters(forceField->getNumPerBondParameters());
-    for (int i = 0; i < parameters.size(); i++)
+    for (int i = 0; i < (int) parameters.size(); i++)
         parameters[i] = i;
     forceField->addBond(0, 1, parameters);
     system.addForce(forceField);
@@ -178,5 +178,4 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-
 

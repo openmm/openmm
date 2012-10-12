@@ -62,13 +62,13 @@ void System::setParticleMass(int index, double mass) {
 
 
 void System::setVirtualSite(int index, VirtualSite* virtualSite) {
-    if (index >= virtualSites.size())
+    if (index >= (int) virtualSites.size())
         virtualSites.resize(getNumParticles(), NULL);
     virtualSites[index] = virtualSite;
 }
 
 const VirtualSite& System::getVirtualSite(int index) const {
-    if (index >= virtualSites.size() || virtualSites[index] == NULL)
+    if (index >= (int) virtualSites.size() || virtualSites[index] == NULL)
         throw OpenMMException("This particle is not a virtual site");
     return *virtualSites[index];
 }

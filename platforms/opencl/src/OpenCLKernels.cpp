@@ -277,7 +277,7 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
         contexts[i]->setPeriodicBoxSize(box.x, box.y, box.z);
     cl.getIntegrationUtilities().loadCheckpoint(stream);
     SimTKOpenMMUtilities::loadCheckpoint(stream);
-    for (int i = 0; i < cl.getReorderListeners().size(); i++)
+    for (int i = 0; i < (int) cl.getReorderListeners().size(); i++)
         cl.getReorderListeners()[i]->execute();
 }
 
@@ -4832,8 +4832,8 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             cl.executeKernel(kernels[i][0], numAtoms);
         }
         else if (stepType[i] == CustomIntegrator::ComputeGlobal && !merged[i]) {
-            kernels[i][0].setArg<cl_float>(3, SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
-            kernels[i][0].setArg<cl_float>(4, SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            kernels[i][0].setArg<cl_float>(3, (cl_float) SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber());
+            kernels[i][0].setArg<cl_float>(4, (cl_float) SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
             cl.executeKernel(kernels[i][0], 1, 1);
         }
         else if (stepType[i] == CustomIntegrator::ComputeSum) {

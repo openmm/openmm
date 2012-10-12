@@ -79,7 +79,7 @@ void testSerialization() {
         force2.getParticleParameters(i, particle2, params2);
         ASSERT_EQUAL(particle1, particle2);
         ASSERT_EQUAL(params1.size(), params2.size());
-        for (int j = 0; j < params1.size(); j++)
+        for (int j = 0; j < (int) params1.size(); j++)
             ASSERT_EQUAL(params1[j], params2[j]);
     }
 }
