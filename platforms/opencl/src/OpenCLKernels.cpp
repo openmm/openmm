@@ -4033,6 +4033,12 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
 
     cl.setTime(cl.getTime()+dt);
     cl.setStepCount(cl.getStepCount()+1);
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
 }
 
 OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
@@ -4110,6 +4116,12 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
 }
 
 OpenCLIntegrateBrownianStepKernel::~OpenCLIntegrateBrownianStepKernel() {
@@ -4170,6 +4182,12 @@ void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
 }
 
 OpenCLIntegrateVariableVerletStepKernel::~OpenCLIntegrateVariableVerletStepKernel() {
@@ -4226,6 +4244,12 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
 
     cl.executeKernel(kernel2, numAtoms);
     integration.computeVirtualSites();
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
 
     // Update the time and step count.
 
@@ -4306,6 +4330,12 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
     cl.executeKernel(kernel2, numAtoms);
     integration.computeVirtualSites();
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
 
     // Update the time and step count.
 
@@ -4834,6 +4864,12 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
 }
 
 void OpenCLIntegrateCustomStepKernel::recordChangedParameters(ContextImpl& context) {
