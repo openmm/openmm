@@ -35,6 +35,7 @@
 #include "AmoebaReferenceMultipoleForce.h"
 #include "AmoebaReferenceVdwForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
+#include "AmoebaReferenceGeneralizedKirkwoodForce.h"
 #include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
 #include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
 #include "ReferencePlatform.h"
@@ -42,6 +43,7 @@
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
 #include "openmm/internal/AmoebaVdwForceImpl.h"
+#include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -453,27 +455,76 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
          throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
     }
-
-    polarizationType = static_cast<int>(force.getPolarizationType());
-    if( polarizationType != 0 && polarizationType != 1 ){ 
-         throw OpenMMException("AmoebaMultipoleForce polarization type not recognized.\n");
-    }    
+    polarizationType = force.getPolarizationType();
 
 }
 
 double ReferenceCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+
     vector<RealVec>& posData   = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
 
-    AmoebaReferenceMultipoleForce amoebaReferenceMultipoleForce( AmoebaReferenceMultipoleForce::NoCutoff );
-    amoebaReferenceMultipoleForce.setMutualInducedDipoleTargetEpsilon( mutualInducedTargetEpsilon );
-    amoebaReferenceMultipoleForce.setMaximumMutualInducedDipoleIterations( mutualInducedMaxIterations );
+    ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel = NULL;
+    for (unsigned int ii = 0; ii < context.getForceImpls().size() && gkKernel == NULL; ii++) {
+        AmoebaGeneralizedKirkwoodForceImpl* gkImpl = dynamic_cast<AmoebaGeneralizedKirkwoodForceImpl*>(context.getForceImpls()[ii]);
+        if (gkImpl != NULL) {
+            gkKernel = dynamic_cast<ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel*>(&gkImpl->getKernel().getImpl());
+        }
+    }    
 
-    RealOpenMM energy      = amoebaReferenceMultipoleForce.calculateForceAndEnergy( posData, 
-                                                                                    charges, dipoles, quadrupoles, tholes,
-                                                                                    dampingFactors, polarity, axisTypes, 
-                                                                                    multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-                                                                                    multipoleAtomCovalentInfo, polarizationType, forceData);
+    AmoebaReferenceMultipoleForce* amoebaReferenceMultipoleForce = NULL;
+    if( gkKernel ){
+
+        // amoebaReferenceGeneralizedKirkwoodForce is deleted in AmoebaReferenceGeneralizedKirkwoodMultipoleForce
+        // destructor
+
+        AmoebaReferenceGeneralizedKirkwoodForce* amoebaReferenceGeneralizedKirkwoodForce = new AmoebaReferenceGeneralizedKirkwoodForce();
+        amoebaReferenceGeneralizedKirkwoodForce->setNumParticles( gkKernel->getNumParticles() );
+        amoebaReferenceGeneralizedKirkwoodForce->setSoluteDielectric( gkKernel->getSoluteDielectric() );
+        amoebaReferenceGeneralizedKirkwoodForce->setSolventDielectric( gkKernel->getSolventDielectric() );
+        amoebaReferenceGeneralizedKirkwoodForce->setDielectricOffset( gkKernel->getDielectricOffset() );
+        amoebaReferenceGeneralizedKirkwoodForce->setProbeRadius( gkKernel->getProbeRadius() );
+        amoebaReferenceGeneralizedKirkwoodForce->setSurfaceAreaFactor( gkKernel->getSurfaceAreaFactor() );
+        amoebaReferenceGeneralizedKirkwoodForce->setIncludeCavityTerm( gkKernel->getIncludeCavityTerm() );
+        amoebaReferenceGeneralizedKirkwoodForce->setDirectPolarization( gkKernel->getDirectPolarization() );
+
+        vector<RealOpenMM> parameters; 
+        gkKernel->getAtomicRadii( parameters );
+        amoebaReferenceGeneralizedKirkwoodForce->setAtomicRadii( parameters );
+
+        gkKernel->getScaleFactors( parameters );
+        amoebaReferenceGeneralizedKirkwoodForce->setScaleFactors( parameters );
+
+        gkKernel->getCharges( parameters );
+        amoebaReferenceGeneralizedKirkwoodForce->setCharges( parameters );
+
+        // calculate Grycuk Born radii
+
+        amoebaReferenceGeneralizedKirkwoodForce->calculateGrycukBornRadii( posData );
+
+        amoebaReferenceMultipoleForce = new AmoebaReferenceGeneralizedKirkwoodMultipoleForce( amoebaReferenceGeneralizedKirkwoodForce );
+
+    } else {
+         amoebaReferenceMultipoleForce = new AmoebaReferenceMultipoleForce( AmoebaReferenceMultipoleForce::NoCutoff );
+    }
+
+    amoebaReferenceMultipoleForce->setMutualInducedDipoleTargetEpsilon( mutualInducedTargetEpsilon );
+    amoebaReferenceMultipoleForce->setMaximumMutualInducedDipoleIterations( mutualInducedMaxIterations );
+    AmoebaReferenceMultipoleForce::PolarizationType refPolarizationType;
+    if( polarizationType == AmoebaMultipoleForce::Mutual ){
+        refPolarizationType = AmoebaReferenceMultipoleForce::Mutual;
+    } else if( polarizationType == AmoebaMultipoleForce::Direct ){
+        refPolarizationType = AmoebaReferenceMultipoleForce::Direct;
+    } else {
+        throw OpenMMException("Polarization type not recognzied." );
+    }
+
+    RealOpenMM energy = amoebaReferenceMultipoleForce->calculateForceAndEnergy( posData, charges, dipoles, quadrupoles, tholes,
+                                                                                dampingFactors, polarity, axisTypes, 
+                                                                                multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
+                                                                                multipoleAtomCovalentInfo, refPolarizationType, forceData);
+
+    delete amoebaReferenceMultipoleForce;
 
     return static_cast<double>(energy);
 }
@@ -487,48 +538,115 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextI
     return;
 }
 
-///* -------------------------------------------------------------------------- *
-// *                       AmoebaGeneralizedKirkwood                            *
-// * -------------------------------------------------------------------------- */
-//
-//ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, System& system) : 
-//           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
-//
-//    data.setHasAmoebaGeneralizedKirkwood( true );
-//
-//    int numParticles = system.getNumParticles();
-//
-//    std::vector<RealOpenMM> radius(numParticles);
-//    std::vector<RealOpenMM> scale(numParticles);
-//    std::vector<RealOpenMM> charge(numParticles);
-//
-//    for( int ii = 0; ii < numParticles; ii++ ){
-//        double particleCharge, particleRadius, scalingFactor;
-//        force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor);
-//        radius[ii]  = static_cast<RealOpenMM>( particleRadius );
-//        scale[ii]   = static_cast<RealOpenMM>( scalingFactor );
-//        charge[ii]  = static_cast<RealOpenMM>( particleCharge );
-//    }   
-//    gpuSetAmoebaObcParameters( data.getAmoebaGpu(), static_cast<RealOpenMM>(force.getSoluteDielectric() ), 
-//                               static_cast<RealOpenMM>( force.getSolventDielectric() ), 
-//                               static_cast<RealOpenMM>( force.getDielectricOffset() ), radius, scale, charge,
-//                               force.getIncludeCavityTerm(),
-//                               static_cast<RealOpenMM>( force.getProbeRadius() ), 
-//                               static_cast<RealOpenMM>( force.getSurfaceAreaFactor() ) ); 
-//}
-//
-//double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    // handled in computeAmoebaMultipoleForce()
-//    return 0.0;
-//}
+/* -------------------------------------------------------------------------- *
+ *                       AmoebaGeneralizedKirkwood                            *
+ * -------------------------------------------------------------------------- */
+
+ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, System& system) : 
+           CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel() {
+}
+
+int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getNumParticles( void ) const {
+    return numParticles;
+}
+
+int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getIncludeCavityTerm( void ) const {
+    return includeCavityTerm;
+}
+
+int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDirectPolarization( void ) const {
+    return directPolarization;
+}
+
+RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSoluteDielectric( void ) const {
+    return soluteDielectric;
+}
+
+RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSolventDielectric( void ) const {
+    return solventDielectric;
+}
+
+RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDielectricOffset( void ) const {
+    return dielectricOffset;
+}
+
+RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getProbeRadius( void ) const {
+    return probeRadius;
+}
+
+RealOpenMM ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSurfaceAreaFactor( void ) const {
+    return surfaceAreaFactor;
+}
+
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii( vector<RealOpenMM>& outputAtomicRadii ) const {
+    outputAtomicRadii.resize( atomicRadii.size() );
+    copy( atomicRadii.begin(), atomicRadii.end(), outputAtomicRadii.begin() );
+}
+
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors( vector<RealOpenMM>& outputScaleFactors ) const {
+    outputScaleFactors.resize( scaleFactors.size() );
+    copy( scaleFactors.begin(), scaleFactors.end(), outputScaleFactors.begin() );
+}
+
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges( vector<RealOpenMM>& outputCharges ) const {
+    outputCharges.resize( charges.size() );
+    copy( charges.begin(), charges.end(), outputCharges.begin() );
+}
+
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
+
+    // check that AmoebaMultipoleForce is present
+
+    const AmoebaMultipoleForce* amoebaMultipoleForce = NULL;
+    for (int ii = 0; ii < system.getNumForces() && amoebaMultipoleForce == NULL; ii++) {
+        amoebaMultipoleForce = dynamic_cast<const AmoebaMultipoleForce*>(&system.getForce(ii));
+    }
+
+    if (amoebaMultipoleForce == NULL) {
+        throw OpenMMException("AmoebaGeneralizedKirkwoodForce requires the System to also contain an AmoebaMultipoleForce.");
+    }
+
+    if (amoebaMultipoleForce->getNonbondedMethod() != AmoebaMultipoleForce::NoCutoff ) {
+        throw OpenMMException("AmoebaGeneralizedKirkwoodForce requires the AmoebaMultipoleForce use the NoCutoff nonbonded method.");
+    }
+
+    numParticles = system.getNumParticles();
+
+    for( int ii = 0; ii < numParticles; ii++ ){
+
+        double particleCharge, particleRadius, scalingFactor;
+        force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor);
+        atomicRadii.push_back( static_cast<RealOpenMM>( particleRadius ) );
+        scaleFactors.push_back( static_cast<RealOpenMM>( scalingFactor ) );
+        charges.push_back( static_cast<RealOpenMM>( particleCharge ) );
+
+        // Make sure the charge matches the one specified by the AmoebaMultipoleForce.
+
+        double charge2, thole, damping, polarity;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        amoebaMultipoleForce->getMultipoleParameters( ii, charge2, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        if ( particleCharge != charge2 ){
+            throw OpenMMException("AmoebaGeneralizedKirkwoodForce and AmoebaMultipoleForce must specify the same charge for every atom.");
+        }
+
+    }   
+    includeCavityTerm  = force.getIncludeCavityTerm();
+    soluteDielectric   = static_cast<RealOpenMM>( force.getSoluteDielectric() );
+    solventDielectric  = static_cast<RealOpenMM>( force.getSolventDielectric() );
+    dielectricOffset   = static_cast<RealOpenMM>( 0.009 );
+    probeRadius        = static_cast<RealOpenMM>( force.getProbeRadius() ), 
+    surfaceAreaFactor  = static_cast<RealOpenMM>( force.getSurfaceAreaFactor() ); 
+    directPolarization = amoebaMultipoleForce->getPolarizationType() == AmoebaMultipoleForce::Direct ? 1 : 0;
+}
+
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    // handled in AmoebaReferenceGeneralizedKirkwoodMultipoleForce, a derived class of the class AmoebaReferenceMultipoleForce
+    return 0.0;
+}
 
 ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system) :
        CalcAmoebaVdwForceKernel(name, platform), system(system) {

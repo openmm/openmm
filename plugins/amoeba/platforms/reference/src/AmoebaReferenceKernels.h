@@ -29,6 +29,7 @@
 
 #include "openmm/System.h"
 #include "openmm/amoebaKernels.h"
+//#include "openmm/AmoebaMultipoleForce.h"
 #include "SimTKReference/ReferenceNeighborList.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
@@ -338,7 +339,7 @@ public:
 
 private:
     int numMultipoles;
-    int polarizationType;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
     std::vector<RealOpenMM> charges;
     std::vector<RealOpenMM> dipoles;
     std::vector<RealOpenMM> quadrupoles;
@@ -436,6 +437,132 @@ private:
     RealOpenMM dispoff;
     RealOpenMM slevy;
     RealOpenMM totalMaximumDispersionEnergy;
+    System& system;
+};
+
+/**
+ * This kernel is invoked to calculate the Gerneralized Kirkwood forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
+public:
+    ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+ 
+    /**
+     *  Get include-cavity term flag 
+     *
+     *  @return includeCavityTerm
+     */
+    int getIncludeCavityTerm( void ) const;
+
+    /**
+     *  Get number of particles
+     *
+     *  @return number of particles
+     */
+    int getNumParticles( void ) const;
+
+    /**
+     *  Get directPolarization flag 
+     *
+     *  @return directPolarization
+     *
+     */
+    int getDirectPolarization( void ) const;
+
+    /**
+     *  Get solute dielectric
+     *
+     *  @return soluteDielectric
+     *
+     */
+    RealOpenMM getSoluteDielectric( void ) const;
+
+    /**
+     *  Get solvent dielectric
+     *
+     *  @return solventDielectric
+     *
+     */
+    RealOpenMM getSolventDielectric( void ) const;
+
+    /**
+     *  Get dielectric offset
+     *
+     *  @return dielectricOffset
+     *
+     */
+    RealOpenMM getDielectricOffset( void ) const;
+
+    /**
+     *  Get probeRadius
+     *
+     *  @return probeRadius
+     *
+     */
+    RealOpenMM getProbeRadius( void ) const;
+
+    /**
+     *  Get surfaceAreaFactor
+     *
+     *  @return surfaceAreaFactor
+     *
+     */
+    RealOpenMM getSurfaceAreaFactor( void ) const;
+
+    /**
+     *  Get atomic radii
+     *
+     *  @param atomicRadii vector of atomic radii
+     *
+     */
+    void getAtomicRadii( std::vector<RealOpenMM>& atomicRadii ) const;
+
+    /**
+     *  Get scale factors
+     *
+     *  @param scaleFactors vector of scale factors
+     *
+     */
+    void getScaleFactors( std::vector<RealOpenMM>& scaleFactors ) const;
+
+    /**
+     *  Get charges
+     *
+     *  @param charges vector of charges
+     *
+     */
+    void getCharges( std::vector<RealOpenMM>& charges ) const;
+
+private:
+
+    int numParticles;
+    std::vector<RealOpenMM> atomicRadii;
+    std::vector<RealOpenMM> scaleFactors;
+    std::vector<RealOpenMM> charges;
+    RealOpenMM soluteDielectric;
+    RealOpenMM solventDielectric;
+    RealOpenMM dielectricOffset;
+    RealOpenMM probeRadius;
+    RealOpenMM surfaceAreaFactor;
+    int includeCavityTerm;
+    int directPolarization;
     System& system;
 };
 
