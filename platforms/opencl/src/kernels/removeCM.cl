@@ -2,13 +2,16 @@
  * Calculate the center of mass momentum.
  */
 
-__kernel void calcCenterOfMassMomentum(int numAtoms, __global const float4* restrict velm, __global float4* restrict cmMomentum, __local volatile float4* restrict temp) {
+__kernel void calcCenterOfMassMomentum(int numAtoms, __global const mixed4* restrict velm, __global float4* restrict cmMomentum, __local volatile float4* restrict temp) {
     int index = get_global_id(0);
     float4 cm = 0.0f;
     while (index < numAtoms) {
-        float4 velocity = velm[index];
-        if (velocity.w != 0.0)
-            cm.xyz += velocity.xyz/velocity.w;
+        mixed4 velocity = velm[index];
+        if (velocity.w != 0) {
+            cm.x += velocity.x/velocity.w;
+            cm.y += velocity.y/velocity.w;
+            cm.z += velocity.z/velocity.w;
+        }
         index += get_global_size(0);
     }
 
@@ -54,7 +57,7 @@ __kernel void calcCenterOfMassMomentum(int numAtoms, __global const float4* rest
  * Remove center of mass motion.
  */
 
-__kernel void removeCenterOfMassMomentum(unsigned int numAtoms, __global float4* restrict velm, __global const float4* restrict cmMomentum, __local volatile float4* restrict temp) {
+__kernel void removeCenterOfMassMomentum(unsigned int numAtoms, __global mixed4* restrict velm, __global const float4* restrict cmMomentum, __local volatile float4* restrict temp) {
     // First sum all of the momenta that were calculated by individual groups.
 
     unsigned int index = get_local_id(0);
@@ -101,7 +104,9 @@ __kernel void removeCenterOfMassMomentum(unsigned int numAtoms, __global float4*
 
     index = get_global_id(0);
     while (index < numAtoms) {
-        velm[index].xyz -= cm.xyz;
+        velm[index].x -= cm.x;
+        velm[index].y -= cm.y;
+        velm[index].z -= cm.z;
         index += get_global_size(0);
     }
 }

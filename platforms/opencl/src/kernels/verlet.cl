@@ -1,21 +1,25 @@
-#ifdef SUPPORTS_DOUBLE_PRECISION
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#endif
-
 /**
  * Perform the first step of verlet integration.
  */
 
-__kernel void integrateVerletPart1(int numAtoms, __global const float2* restrict dt, __global const float4* restrict posq, __global float4* restrict velm, __global const float4* restrict force, __global float4* restrict posDelta) {
-    float2 stepSize = dt[0];
-    float dtPos = stepSize.y;
-    float dtVel = 0.5f*(stepSize.x+stepSize.y);
+__kernel void integrateVerletPart1(int numAtoms, __global const mixed2* restrict dt, __global const real4* restrict posq, __global const real4* restrict posqCorrection, __global mixed4* restrict velm, __global const real4* restrict force, __global mixed4* restrict posDelta) {
+    mixed2 stepSize = dt[0];
+    mixed dtPos = stepSize.y;
+    mixed dtVel = 0.5f*(stepSize.x+stepSize.y);
     int index = get_global_id(0);
     while (index < numAtoms) {
-        float4 velocity = velm[index];
+        mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
-            float4 pos = posq[index];
-            velocity.xyz += force[index].xyz*dtVel*velocity.w;
+#ifdef USE_MIXED_PRECISION
+            real4 pos1 = posq[index];
+            real4 pos2 = posqCorrection[index];
+            mixed4 pos = (mixed4) (pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+#else
+            real4 pos = posq[index];
+#endif
+            velocity.x += force[index].x*dtVel*velocity.w;
+            velocity.y += force[index].y*dtVel*velocity.w;
+            velocity.z += force[index].z*dtVel*velocity.w;
             pos.xyz = velocity.xyz*dtPos;
             posDelta[index] = pos;
             velm[index] = velocity;
@@ -28,8 +32,8 @@ __kernel void integrateVerletPart1(int numAtoms, __global const float2* restrict
  * Perform the second step of verlet integration.
  */
 
-__kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, __global float4* restrict posq, __global float4* restrict velm, __global const float4* restrict posDelta) {
-    float2 stepSize = dt[0];
+__kernel void integrateVerletPart2(int numAtoms, __global mixed2* restrict dt, __global real4* restrict posq, __global real4* restrict posqCorrection, __global mixed4* restrict velm, __global const mixed4* restrict posDelta) {
+    mixed2 stepSize = dt[0];
 #ifdef SUPPORTS_DOUBLE_PRECISION
     double oneOverDt = 1.0/stepSize.y;
 #else
@@ -40,17 +44,28 @@ __kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, _
     barrier(CLK_LOCAL_MEM_FENCE);
     int index = get_global_id(0);
     while (index < numAtoms) {
-        float4 velocity = velm[index];
+        mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
-            float4 pos = posq[index];
-            float4 delta = posDelta[index];
+#ifdef USE_MIXED_PRECISION
+            real4 pos1 = posq[index];
+            real4 pos2 = posqCorrection[index];
+            mixed4 pos = (mixed4) (pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+#else
+            real4 pos = posq[index];
+#endif
+            mixed4 delta = posDelta[index];
             pos.xyz += delta.xyz;
 #ifdef SUPPORTS_DOUBLE_PRECISION
-            velocity.xyz = convert_float4(convert_double4(delta)*oneOverDt).xyz;
+            velocity.xyz = convert_mixed4(convert_double4(delta)*oneOverDt).xyz;
 #else
             velocity.xyz = delta.xyz*oneOverDt;
 #endif
+#ifdef USE_MIXED_PRECISION
+            posq[index] = convert_real4(pos);
+            posqCorrection[index] = (real4) (pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);
+#else
             posq[index] = pos;
+#endif
             velm[index] = velocity;
         }
         index += get_global_size(0);
@@ -61,14 +76,14 @@ __kernel void integrateVerletPart2(int numAtoms, __global float2* restrict dt, _
  * Select the step size to use for the next step.
  */
 
-__kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorTol, __global float2* restrict dt, __global const float4* restrict velm, __global const float4* restrict force, __local float* restrict error) {
+__kernel void selectVerletStepSize(int numAtoms, mixed maxStepSize, mixed errorTol, __global mixed2* restrict dt, __global const mixed4* restrict velm, __global const real4* restrict force, __local mixed* restrict error) {
     // Calculate the error.
 
-    float err = 0.0f;
+    mixed err = 0;
     int index = get_local_id(0);
     while (index < numAtoms) {
-        float4 f = force[index];
-        float invMass = velm[index].w;
+        real4 f = force[index];
+        mixed invMass = velm[index].w;
         err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
         index += get_global_size(0);
     }
@@ -83,9 +98,9 @@ __kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorT
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     if (get_local_id(0) == 0) {
-        float totalError = sqrt(error[0]/(numAtoms*3));
-        float newStepSize = sqrt(errorTol/totalError);
-        float oldStepSize = dt[0].y;
+        mixed totalError = sqrt(error[0]/(numAtoms*3));
+        mixed newStepSize = sqrt(errorTol/totalError);
+        mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)
             newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
         if (newStepSize > oldStepSize && newStepSize < 1.1f*oldStepSize)

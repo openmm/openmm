@@ -66,6 +66,13 @@ static string intToString(int value) {
     return s.str();
 }
 
+static void setPosqCorrectionArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+    if (cl.getUseMixedPrecision())
+        kernel.setArg<cl::Buffer>(index, cl.getPosqCorrection().getDeviceBuffer());
+    else
+        kernel.setArg<void*>(index, NULL);
+}
+
 static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
     const Lepton::Operation& op = expression.getRootNode().getOperation();
     if (op.getId() != Lepton::Operation::CONSTANT)
@@ -139,81 +146,172 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
 }
 
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-    cl.getPosq().download(posq);
     const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
-    mm_float4 periodicBoxSize = cl.getPeriodicBoxSize();
-    for (int i = 0; i < numParticles; ++i) {
-        mm_float4 pos = posq[i];
-        mm_int4 offset = cl.getPosCellOffsets()[i];
-        positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
+    mm_double4 periodicBoxSize = cl.getPeriodicBoxSizeDouble();
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_double4 pos = posq[i];
+            mm_int4 offset = cl.getPosCellOffsets()[i];
+            positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
+        }
+    }
+    else if (cl.getUseMixedPrecision()) {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        vector<mm_float4> posCorrection;
+        cl.getPosq().download(posq);
+        cl.getPosqCorrection().download(posCorrection);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4 pos1 = posq[i];
+            mm_float4 pos2 = posCorrection[i];
+            mm_int4 offset = cl.getPosCellOffsets()[i];
+            positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x-offset.x*periodicBoxSize.x, (double)pos1.y+(double)pos2.y-offset.y*periodicBoxSize.y, (double)pos1.z+(double)pos2.z-offset.z*periodicBoxSize.z);
+        }
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4 pos = posq[i];
+            mm_int4 offset = cl.getPosCellOffsets()[i];
+            positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
+        }
     }
 }
 
 void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
-    mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
-    cl.getPosq().download(posq);
     const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
-    for (int i = 0; i < numParticles; ++i) {
-        mm_float4& pos = posq[i];
-        const Vec3& p = positions[order[i]];
-        pos.x = (cl_float) p[0];
-        pos.y = (cl_float) p[1];
-        pos.z = (cl_float) p[2];
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_double4& pos = posq[i];
+            const Vec3& p = positions[order[i]];
+            pos.x = p[0];
+            pos.y = p[1];
+            pos.z = p[2];
+        }
+        for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+            posq[i] = mm_double4(0.0, 0.0, 0.0, 0.0);
+        cl.getPosq().upload(posq);
     }
-    for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
-        posq[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    cl.getPosq().upload(posq);
+    else {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        cl.getPosq().download(posq);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4& pos = posq[i];
+            const Vec3& p = positions[order[i]];
+            pos.x = (cl_float) p[0];
+            pos.y = (cl_float) p[1];
+            pos.z = (cl_float) p[2];
+        }
+        for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+            posq[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        cl.getPosq().upload(posq);
+    }
+    if (cl.getUseMixedPrecision()) {
+        mm_float4* posCorrection = (mm_float4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4& c = posCorrection[i];
+            const Vec3& p = positions[order[i]];
+            c.x = (cl_float) (p[0]-(cl_float)p[0]);
+            c.y = (cl_float) (p[1]-(cl_float)p[1]);
+            c.z = (cl_float) (p[2]-(cl_float)p[2]);
+            c.w = 0;
+        }
+        for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+            posCorrection[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        cl.getPosqCorrection().upload(posCorrection);
+    }
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
 }
 
 void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
-    mm_float4* velm = (mm_float4*) cl.getPinnedBuffer();
-    cl.getVelm().download(velm);
     const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i) {
-        mm_float4 vel = velm[i];
-        velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        mm_double4* velm = (mm_double4*) cl.getPinnedBuffer();
+        cl.getVelm().download(velm);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_double4 vel = velm[i];
+            mm_int4 offset = cl.getPosCellOffsets()[i];
+            velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
+        }
+    }
+    else {
+        mm_float4* velm = (mm_float4*) cl.getPinnedBuffer();
+        cl.getVelm().download(velm);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4 vel = velm[i];
+            mm_int4 offset = cl.getPosCellOffsets()[i];
+            velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
+        }
     }
 }
 
 void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector<Vec3>& velocities) {
-    mm_float4* velm = (mm_float4*) cl.getPinnedBuffer();
-    cl.getVelm().download(velm);
     const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
-    for (int i = 0; i < numParticles; ++i) {
-        mm_float4& vel = velm[i];
-        const Vec3& p = velocities[order[i]];
-        vel.x = (cl_float) p[0];
-        vel.y = (cl_float) p[1];
-        vel.z = (cl_float) p[2];
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        mm_double4* velm = (mm_double4*) cl.getPinnedBuffer();
+        cl.getVelm().download(velm);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_double4& vel = velm[i];
+            const Vec3& p = velocities[order[i]];
+            vel.x = p[0];
+            vel.y = p[1];
+            vel.z = p[2];
+        }
+        for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+            velm[i] = mm_double4(0.0, 0.0, 0.0, 0.0);
+        cl.getVelm().upload(velm);
     }
-    for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
-        velm[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    cl.getVelm().upload(velm);
+    else {
+        mm_float4* velm = (mm_float4*) cl.getPinnedBuffer();
+        cl.getVelm().download(velm);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4& vel = velm[i];
+            const Vec3& p = velocities[order[i]];
+            vel.x = p[0];
+            vel.y = p[1];
+            vel.z = p[2];
+        }
+        for (int i = numParticles; i < cl.getPaddedNumAtoms(); i++)
+            velm[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        cl.getVelm().upload(velm);
+    }
 }
 
 void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
-    mm_float4* force = (mm_float4*) cl.getPinnedBuffer();
-    cl.getForce().download(force);
     const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     forces.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i) {
-        mm_float4 f = force[i];
-        forces[order[i]] = Vec3(f.x, f.y, f.z);
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* force = (mm_double4*) cl.getPinnedBuffer();
+        cl.getForce().download(force);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_double4 f = force[i];
+            forces[order[i]] = Vec3(f.x, f.y, f.z);
+        }
+    }
+    else {
+        mm_float4* force = (mm_float4*) cl.getPinnedBuffer();
+        cl.getForce().download(force);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4 f = force[i];
+            forces[order[i]] = Vec3(f.x, f.y, f.z);
+        }
     }
 }
 
 void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
-    mm_float4 box = cl.getPeriodicBoxSize();
+    mm_double4 box = cl.getPeriodicBoxSizeDouble();
     a = Vec3(box.x, 0, 0);
     b = Vec3(0, box.y, 0);
     c = Vec3(0, 0, box.z);
@@ -228,6 +326,8 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
 void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
     int version = 1;
     stream.write((char*) &version, sizeof(int));
+    int precision = (cl.getUseDoublePrecision() ? 2 : cl.getUseMixedPrecision() ? 1 : 0);
+    stream.write((char*) &precision, sizeof(int));
     double time = cl.getTime();
     stream.write((char*) &time, sizeof(double));
     int stepCount = cl.getStepCount();
@@ -235,10 +335,14 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     int computeForceCount = cl.getComputeForceCount();
     stream.write((char*) &computeForceCount, sizeof(int));
     char* buffer = (char*) cl.getPinnedBuffer();
-    cl.getPosq().download((mm_float4*) buffer);
-    stream.write(buffer, sizeof(mm_float4)*cl.getPosq().getSize());
-    cl.getVelm().download((mm_float4*) buffer);
-    stream.write(buffer, sizeof(mm_float4)*cl.getVelm().getSize());
+    cl.getPosq().download(buffer);
+    stream.write(buffer, cl.getPosq().getSize()*cl.getPosq().getElementSize());
+    if (cl.getUseMixedPrecision()) {
+        cl.getPosqCorrection().download(buffer);
+        stream.write(buffer, cl.getPosqCorrection().getSize()*cl.getPosqCorrection().getElementSize());
+    }
+    cl.getVelm().download(buffer);
+    stream.write(buffer, cl.getVelm().getSize()*cl.getVelm().getElementSize());
     stream.write((char*) &cl.getAtomIndex()[0], sizeof(cl_int)*cl.getAtomIndex().size());
     stream.write((char*) &cl.getPosCellOffsets()[0], sizeof(mm_int4)*cl.getPosCellOffsets().size());
     mm_float4 box = cl.getPeriodicBoxSize();
@@ -252,6 +356,11 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     stream.read((char*) &version, sizeof(int));
     if (version != 1)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
+    int precision;
+    stream.read((char*) &precision, sizeof(int));
+    int expectedPrecision = (cl.getUseDoublePrecision() ? 2 : cl.getUseMixedPrecision() ? 1 : 0);
+    if (precision != expectedPrecision)
+        throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
     int stepCount, computeForceCount;
@@ -264,9 +373,13 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
         contexts[i]->setComputeForceCount(computeForceCount);
     }
     char* buffer = (char*) cl.getPinnedBuffer();
-    stream.read(buffer, sizeof(mm_float4)*cl.getPosq().getSize());
+    stream.read(buffer, cl.getPosq().getSize()*cl.getPosq().getElementSize());
     cl.getPosq().upload(buffer);
-    stream.read(buffer, sizeof(mm_float4)*cl.getVelm().getSize());
+    if (cl.getUseMixedPrecision()) {
+        stream.read(buffer, cl.getPosqCorrection().getSize()*cl.getPosqCorrection().getElementSize());
+        cl.getPosqCorrection().upload(buffer);
+    }
+    stream.read(buffer, cl.getVelm().getSize()*cl.getVelm().getElementSize());
     cl.getVelm().upload(buffer);
     stream.read((char*) &cl.getAtomIndex()[0], sizeof(cl_int)*cl.getAtomIndex().size());
     cl.getAtomIndexArray().upload(cl.getAtomIndex());
@@ -292,7 +405,8 @@ void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
         cl::Program program = cl.createProgram(OpenCLKernelSources::constraints, defines);
         applyDeltasKernel = cl::Kernel(program, "applyPositionDeltas");
         applyDeltasKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        applyDeltasKernel.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getPosDelta().getDeviceBuffer());
+        setPosqCorrectionArg(cl, applyDeltasKernel, 1);
+        applyDeltasKernel.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getPosDelta().getDeviceBuffer());
     }
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     cl.clearBuffer(integration.getPosDelta());
@@ -4000,19 +4114,28 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
         kernel1.setArg<cl_int>(0, numAtoms);
         kernel1.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(4, cl.getForce().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel1, 3);
+        kernel1.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(6, integration.getPosDelta().getDeviceBuffer());
         kernel2.setArg<cl_int>(0, numAtoms);
         kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 3);
+        kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
     }
     if (dt != prevStepSize) {
-        vector<mm_float2> stepSizeVec(1);
-        stepSizeVec[0] = mm_float2((cl_float) dt, (cl_float) dt);
-        cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+            vector<mm_double2> stepSizeVec(1);
+            stepSizeVec[0] = mm_double2(dt, dt);
+            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        }
+        else {
+            vector<mm_float2> stepSizeVec(1);
+            stepSizeVec[0] = mm_float2((cl_float) dt, (cl_float) dt);
+            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        }
         prevStepSize = dt;
     }
 
@@ -4055,7 +4178,7 @@ void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const L
     cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines, "");
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
-    params = OpenCLArray::create<cl_float>(cl, 3, "langevinParams");
+    params = new OpenCLArray(cl, 3, cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(cl_double) : sizeof(cl_float), "langevinParams");
     prevStepSize = -1.0;
 }
 
@@ -4071,9 +4194,10 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         kernel1.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, integration.getStepSize().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 1);
+        kernel2.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -4086,13 +4210,24 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         double vscale = exp(-stepSize/tau);
         double fscale = (1-vscale)*tau;
         double noisescale = sqrt(2*kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
-        vector<cl_float> p(params->getSize());
-        p[0] = (cl_float) vscale;
-        p[1] = (cl_float) fscale;
-        p[2] = (cl_float) noisescale;
-        params->upload(p);
-        mm_float2 ss = mm_float2(0, (float) stepSize);
-        integration.getStepSize().upload(&ss);
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+            vector<cl_double> p(params->getSize());
+            p[0] = vscale;
+            p[1] = fscale;
+            p[2] = noisescale;
+            params->upload(p);
+            mm_double2 ss = mm_double2(0, stepSize);
+            integration.getStepSize().upload(&ss);
+        }
+        else {
+            vector<cl_float> p(params->getSize());
+            p[0] = (cl_float) vscale;
+            p[1] = (cl_float) fscale;
+            p[2] = (cl_float) noisescale;
+            params->upload(p);
+            mm_float2 ss = mm_float2(0, (float) stepSize);
+            integration.getStepSize().upload(&ss);
+        }
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -4148,17 +4283,25 @@ void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
         kernel1.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 2);
+        kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        kernel1.setArg<cl_float>(0, (cl_float) (tau*stepSize));
-        kernel1.setArg<cl_float>(1, (cl_float) (sqrt(2.0f*BOLTZ*temperature*stepSize*tau)));
-        kernel2.setArg<cl_float>(0, (cl_float) (1.0/stepSize));
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+            kernel1.setArg<cl_double>(0, tau*stepSize);
+            kernel1.setArg<cl_double>(1, sqrt(2.0f*BOLTZ*temperature*stepSize*tau));
+            kernel2.setArg<cl_double>(0, 1.0/stepSize);
+        }
+        else {
+            kernel1.setArg<cl_float>(0, (cl_float) (tau*stepSize));
+            kernel1.setArg<cl_float>(1, (cl_float) (sqrt(2.0f*BOLTZ*temperature*stepSize*tau)));
+            kernel2.setArg<cl_float>(0, (cl_float) (1.0/stepSize));
+        }
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -4205,19 +4348,22 @@ void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, c
 double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernel1.setArg<cl_int>(0, numAtoms);
         kernel1.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(4, cl.getForce().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel1, 3);
+        kernel1.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(6, integration.getPosDelta().getDeviceBuffer());
         kernel2.setArg<cl_int>(0, numAtoms);
         kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 3);
+        kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
         selectSizeKernel.setArg<cl_int>(0, numAtoms);
         selectSizeKernel.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
@@ -4227,9 +4373,16 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
 
     // Select the step size to use.
 
-    float maxStepSize = (float)(maxTime-cl.getTime());
-    selectSizeKernel.setArg<cl_float>(1, maxStepSize);
-    selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getErrorTolerance());
+    double maxStepSize = maxTime-cl.getTime();
+    float maxStepSizeFloat = (float) maxStepSize;
+    if (useDouble) {
+        selectSizeKernel.setArg<cl_double>(1, maxStepSize);
+        selectSizeKernel.setArg<cl_double>(2, integrator.getErrorTolerance());
+    }
+    else {
+        selectSizeKernel.setArg<cl_float>(1, maxStepSizeFloat);
+        selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getErrorTolerance());
+    }
     cl.executeKernel(selectSizeKernel, blockSize, blockSize);
 
     // Call the first integration kernel.
@@ -4253,12 +4406,23 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
 
     // Update the time and step count.
 
-    mm_float2 stepSize;
-    cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-    double dt = stepSize.y;
-    double time = cl.getTime()+dt;
-    if (dt == maxStepSize)
-        time = maxTime; // Avoid round-off error
+    double dt, time;
+    if (useDouble) {
+        mm_double2 stepSize;
+        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cl.getTime()+dt;
+        if (dt == maxStepSize)
+            time = maxTime; // Avoid round-off error
+    }
+    else {
+        mm_float2 stepSize;
+        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cl.getTime()+dt;
+        if (dt == maxStepSizeFloat)
+            time = maxTime; // Avoid round-off error
+    }
     cl.setTime(time);
     cl.setStepCount(cl.getStepCount()+1);
     return dt;
@@ -4279,7 +4443,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     selectSizeKernel = cl::Kernel(program, "selectLangevinStepSize");
-    params = OpenCLArray::create<cl_float>(cl, 3, "langevinParams");
+    params = new OpenCLArray(cl, 3, cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(cl_double) : sizeof(cl_float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
     blockSize = max(blockSize, params->getSize());
     blockSize = min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
@@ -4288,6 +4452,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
 double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernel1.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
@@ -4297,9 +4462,10 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         kernel1.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, integration.getStepSize().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 1);
+        kernel2.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());
@@ -4310,11 +4476,20 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
     // Select the step size to use.
 
-    float maxStepSize = (float)(maxTime-cl.getTime());
-    selectSizeKernel.setArg<cl_float>(0, maxStepSize);
-    selectSizeKernel.setArg<cl_float>(1, (cl_float) integrator.getErrorTolerance());
-    selectSizeKernel.setArg<cl_float>(2, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
-    selectSizeKernel.setArg<cl_float>(3, (cl_float) (BOLTZ*integrator.getTemperature()));
+    double maxStepSize = maxTime-cl.getTime();
+    float maxStepSizeFloat = (float) maxStepSize;
+    if (useDouble) {
+        selectSizeKernel.setArg<cl_double>(0, maxStepSize);
+        selectSizeKernel.setArg<cl_double>(1, integrator.getErrorTolerance());
+        selectSizeKernel.setArg<cl_double>(2, integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction());
+        selectSizeKernel.setArg<cl_double>(3, BOLTZ*integrator.getTemperature());
+    }
+    else {
+        selectSizeKernel.setArg<cl_float>(0, maxStepSizeFloat);
+        selectSizeKernel.setArg<cl_float>(1, (cl_float) integrator.getErrorTolerance());
+        selectSizeKernel.setArg<cl_float>(2, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
+        selectSizeKernel.setArg<cl_float>(3, (cl_float) (BOLTZ*integrator.getTemperature()));
+    }
     cl.executeKernel(selectSizeKernel, blockSize, blockSize);
 
     // Call the first integration kernel.
@@ -4339,12 +4514,23 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
     // Update the time and step count.
 
-    mm_float2 stepSize;
-    cl.getIntegrationUtilities().getStepSize().download(&stepSize);
-    double dt = stepSize.y;
-    double time = cl.getTime()+dt;
-    if (dt == maxStepSize)
-        time = maxTime; // Avoid round-off error
+    double dt, time;
+    if (useDouble) {
+        mm_double2 stepSize;
+        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cl.getTime()+dt;
+        if (dt == maxStepSize)
+            time = maxTime; // Avoid round-off error
+    }
+    else {
+        mm_float2 stepSize;
+        cl.getIntegrationUtilities().getStepSize().download(&stepSize);
+        dt = stepSize.y;
+        time = cl.getTime()+dt;
+        if (dt == maxStepSizeFloat)
+            time = maxTime; // Avoid round-off error
+    }
     cl.setTime(time);
     cl.setStepCount(cl.getStepCount()+1);
     return dt;
@@ -4352,8 +4538,8 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
 class OpenCLIntegrateCustomStepKernel::ReorderListener : public OpenCLContext::ReorderListener {
 public:
-    ReorderListener(OpenCLContext& cl, OpenCLParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValues, bool& deviceValuesAreCurrent) :
-            cl(cl), perDofValues(perDofValues), localPerDofValues(localPerDofValues), deviceValuesAreCurrent(deviceValuesAreCurrent) {
+    ReorderListener(OpenCLContext& cl, OpenCLParameterSet& perDofValues, vector<vector<cl_float> >& localPerDofValuesFloat, vector<vector<cl_double> >& localPerDofValuesDouble, bool& deviceValuesAreCurrent) :
+            cl(cl), perDofValues(perDofValues), localPerDofValuesFloat(localPerDofValuesFloat), localPerDofValuesDouble(localPerDofValuesDouble), deviceValuesAreCurrent(deviceValuesAreCurrent) {
         int numAtoms = cl.getNumAtoms();
         lastAtomOrder.resize(numAtoms);
         for (int i = 0; i < numAtoms; i++)
@@ -4365,21 +4551,39 @@ public:
         if (perDofValues.getNumParameters() == 0)
             return;
         int numAtoms = cl.getNumAtoms();
-        if (deviceValuesAreCurrent)
-            perDofValues.getParameterValues(localPerDofValues);
-        vector<vector<cl_float> > swap(3*numAtoms);
-        for (int i = 0; i < numAtoms; i++) {
-            swap[3*lastAtomOrder[i]] = localPerDofValues[3*i];
-            swap[3*lastAtomOrder[i]+1] = localPerDofValues[3*i+1];
-            swap[3*lastAtomOrder[i]+2] = localPerDofValues[3*i+2];
+        const vector<int>& order = cl.getAtomIndex();
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+            if (deviceValuesAreCurrent)
+                perDofValues.getParameterValues(localPerDofValuesDouble);
+            vector<vector<cl_double> > swap(3*numAtoms);
+            for (int i = 0; i < numAtoms; i++) {
+                swap[3*lastAtomOrder[i]] = localPerDofValuesDouble[3*i];
+                swap[3*lastAtomOrder[i]+1] = localPerDofValuesDouble[3*i+1];
+                swap[3*lastAtomOrder[i]+2] = localPerDofValuesDouble[3*i+2];
+            }
+            for (int i = 0; i < numAtoms; i++) {
+                localPerDofValuesDouble[3*i] = swap[3*order[i]];
+                localPerDofValuesDouble[3*i+1] = swap[3*order[i]+1];
+                localPerDofValuesDouble[3*i+2] = swap[3*order[i]+2];
+            }
+            perDofValues.setParameterValues(localPerDofValuesDouble);
         }
-        const vector<cl_int>& order = cl.getAtomIndex();
-        for (int i = 0; i < numAtoms; i++) {
-            localPerDofValues[3*i] = swap[3*order[i]];
-            localPerDofValues[3*i+1] = swap[3*order[i]+1];
-            localPerDofValues[3*i+2] = swap[3*order[i]+2];
+        else {
+            if (deviceValuesAreCurrent)
+                perDofValues.getParameterValues(localPerDofValuesFloat);
+            vector<vector<cl_float> > swap(3*numAtoms);
+            for (int i = 0; i < numAtoms; i++) {
+                swap[3*lastAtomOrder[i]] = localPerDofValuesFloat[3*i];
+                swap[3*lastAtomOrder[i]+1] = localPerDofValuesFloat[3*i+1];
+                swap[3*lastAtomOrder[i]+2] = localPerDofValuesFloat[3*i+2];
+            }
+            for (int i = 0; i < numAtoms; i++) {
+                localPerDofValuesFloat[3*i] = swap[3*order[i]];
+                localPerDofValuesFloat[3*i+1] = swap[3*order[i]+1];
+                localPerDofValuesFloat[3*i+2] = swap[3*order[i]+2];
+            }
+            perDofValues.setParameterValues(localPerDofValuesFloat);
         }
-        perDofValues.setParameterValues(localPerDofValues);
         for (int i = 0; i < numAtoms; i++)
             lastAtomOrder[i] = order[i];
         deviceValuesAreCurrent = true;
@@ -4387,7 +4591,8 @@ public:
 private:
     OpenCLContext& cl;
     OpenCLParameterSet& perDofValues;
-    vector<vector<cl_float> >& localPerDofValues;
+    vector<vector<cl_float> >& localPerDofValuesFloat;
+    vector<vector<cl_double> >& localPerDofValuesDouble;
     bool& deviceValuesAreCurrent;
     vector<int> lastAtomOrder;
 };
@@ -4413,11 +4618,12 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     cl.getPlatformData().initializeContexts(system);
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
-    globalValues = OpenCLArray::create<cl_float>(cl, max(1, numGlobalVariables), "globalVariables");
-    sumBuffer = OpenCLArray::create<cl_float>(cl, 3*system.getNumParticles(), "sumBuffer");
-    energy = OpenCLArray::create<cl_float>(cl, 1, "energy");
-    perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables");
-    cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValues, deviceValuesAreCurrent));
+    int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
+    globalValues = new OpenCLArray(cl, max(1, numGlobalVariables), elementSize, "globalVariables");
+    sumBuffer = new OpenCLArray(cl, 3*system.getNumParticles(), elementSize, "sumBuffer");
+    energy = new OpenCLArray(cl, 1, elementSize, "energy");
+    perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
+    cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
     prevStepSize = -1.0;
     SimTKOpenMMUtilities::setRandomNumberSeed(integrator.getRandomNumberSeed());
 }
@@ -4492,19 +4698,31 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     int numSteps = integrator.getNumComputations();
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         
         // Initialize various data structures.
         
         const map<string, double>& params = context.getParameters();
-        contextParameterValues = OpenCLArray::create<cl_float>(cl, max(1, (int) params.size()), "contextParameters");
-        contextValues.resize(contextParameterValues->getSize());
-        for (map<string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter) {
-            contextValues[parameterNames.size()] = (float) iter->second;
-            parameterNames.push_back(iter->first);
+        if (useDouble) {
+            contextParameterValues = OpenCLArray::create<cl_double>(cl, max(1, (int) params.size()), "contextParameters");
+            contextValuesDouble.resize(contextParameterValues->getSize());
+            for (map<string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter) {
+                contextValuesDouble[parameterNames.size()] = iter->second;
+                parameterNames.push_back(iter->first);
+            }
+            contextParameterValues->upload(contextValuesDouble);
         }
-        contextParameterValues->upload(contextValues);
+        else {
+            contextParameterValues = OpenCLArray::create<cl_float>(cl, max(1, (int) params.size()), "contextParameters");
+            contextValuesFloat.resize(contextParameterValues->getSize());
+            for (map<string, double>::const_iterator iter = params.begin(); iter != params.end(); ++iter) {
+                contextValuesFloat[parameterNames.size()] = (float) iter->second;
+                parameterNames.push_back(iter->first);
+            }
+            contextParameterValues->upload(contextValuesFloat);
+        }
         kernels.resize(integrator.getNumComputations());
         requiredGaussian.resize(integrator.getNumComputations(), 0);
         requiredUniform.resize(integrator.getNumComputations(), 0);
@@ -4644,7 +4862,6 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     compute << buffer.getType()<<" perDofy"<<intToString(i+1)<<" = perDofValues"<<intToString(i+1)<<"[3*index+1];\n";
                     compute << buffer.getType()<<" perDofz"<<intToString(i+1)<<" = perDofValues"<<intToString(i+1)<<"[3*index+2];\n";
                 }
-                string convert = (cl.getSupportsDoublePrecision() ? "convert_float4(" : "(");
                 int numGaussian = 0, numUniform = 0;
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
                     compute << "{\n";
@@ -4653,15 +4870,15 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     if (variable[j] == "x") {
                         if (storePosAsDelta[j]) {
                             if (cl.getSupportsDoublePrecision())
-                                compute << "posDelta[index] = convert_float4(position-convert_double4(posq[index]));\n";
+                                compute << "posDelta[index] = convert_mixed4(convert_double4(position)-convert_double4(loadPos(posq, posqCorrection, index)));\n";
                             else
                                 compute << "posDelta[index] = position-posq[index];\n";
                         }
                         else
-                            compute << "posq[index] = " << convert << "position);\n";
+                            compute << "storePos(posq, posqCorrection, index, position);\n";
                     }
                     else if (variable[j] == "v")
-                        compute << "velm[index] = " << convert << "velocity);\n";
+                        compute << "velm[index] = convert_mixed4(velocity);\n";
                     else {
                         for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
                             const OpenCLNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
@@ -4694,6 +4911,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 requiredUniform[step] = numUniform;
                 int index = 0;
                 kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+                setPosqCorrectionArg(cl, kernel, index++);
                 kernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, cl.getVelm().getDeviceBuffer());
                 kernel.setArg<cl::Buffer>(index++, cl.getForce().getDeviceBuffer());
@@ -4711,7 +4929,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                     // Create a second kernel for this step that sums the values.
 
                     program = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
-                    kernel = cl::Kernel(program, "computeSum");
+                    kernel = cl::Kernel(program, useDouble ? "computeDoubleSum" : "computeFloatSum");
                     kernels[step].push_back(kernel);
                     index = 0;
                     kernel.setArg<cl::Buffer>(index++, sumBuffer->getDeviceBuffer());
@@ -4760,6 +4978,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 kernels[step].push_back(kernel);
                 int index = 0;
                 kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+                setPosqCorrectionArg(cl, kernel, index++);
                 kernel.setArg<cl::Buffer>(index++, integration.getPosDelta().getDeviceBuffer());
             }
         }
@@ -4767,7 +4986,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
         // Create the kernel for summing energy.
 
         cl::Program program = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
-        sumEnergyKernel = cl::Kernel(program, "computeSum");
+        sumEnergyKernel = cl::Kernel(program, cl.getUseDoublePrecision() ? "computeDoubleSum" : "computeFloatSum");
         int index = 0;
         sumEnergyKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         sumEnergyKernel.setArg<cl::Buffer>(index++, energy->getDeviceBuffer());
@@ -4778,26 +4997,48 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     // Make sure all values (variables, parameters, etc.) stored on the device are up to date.
     
     if (!deviceValuesAreCurrent) {
-        perDofValues->setParameterValues(localPerDofValues);
+        if (useDouble)
+            perDofValues->setParameterValues(localPerDofValuesDouble);
+        else
+            perDofValues->setParameterValues(localPerDofValuesFloat);
         deviceValuesAreCurrent = true;
     }
     localValuesAreCurrent = false;
     double stepSize = integrator.getStepSize();
     if (stepSize != prevStepSize) {
-        mm_float2 ss = mm_float2(0, (float) stepSize);
-        integration.getStepSize().upload(&ss);
+        if (useDouble) {
+            mm_double2 ss = mm_double2(0, stepSize);
+            integration.getStepSize().upload(&ss);
+        }
+        else {
+            mm_float2 ss = mm_float2(0, (float) stepSize);
+            integration.getStepSize().upload(&ss);
+        }
         prevStepSize = stepSize;
     }
     bool paramsChanged = false;
-    for (int i = 0; i < (int) parameterNames.size(); i++) {
-        float value = (float) context.getParameter(parameterNames[i]);
-        if (value != contextValues[i]) {
-            contextValues[i] = value;
-            paramsChanged = true;
+    if (useDouble) {
+        for (int i = 0; i < (int) parameterNames.size(); i++) {
+            double value = context.getParameter(parameterNames[i]);
+            if (value != contextValuesDouble[i]) {
+                contextValuesDouble[i] = value;
+                paramsChanged = true;
+            }
         }
+        if (paramsChanged)
+            contextParameterValues->upload(contextValuesDouble);
     }
-    if (paramsChanged)
-        contextParameterValues->upload(contextValues);
+    else {
+        for (int i = 0; i < (int) parameterNames.size(); i++) {
+            float value = (float) context.getParameter(parameterNames[i]);
+            if (value != contextValuesFloat[i]) {
+                contextValuesFloat[i] = value;
+                paramsChanged = true;
+            }
+        }
+        if (paramsChanged)
+            contextParameterValues->upload(contextValuesFloat);
+    }
 
     // Loop over computation steps in the integrator and execute them.
 
@@ -4826,7 +5067,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             forcesAreValid = true;
         }
         if (stepType[i] == CustomIntegrator::ComputePerDof && !merged[i]) {
-            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[i]));
+            kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.executeKernel(kernels[i][0], numAtoms);
@@ -4837,7 +5078,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             cl.executeKernel(kernels[i][0], 1, 1);
         }
         else if (stepType[i] == CustomIntegrator::ComputeSum) {
-            kernels[i][0].setArg<cl_uint>(9, integration.prepareRandomNumbers(requiredGaussian[i]));
+            kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
             cl.executeKernel(kernels[i][0], numAtoms);
@@ -4875,11 +5116,21 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
 void OpenCLIntegrateCustomStepKernel::recordChangedParameters(ContextImpl& context) {
     if (!modifiesParameters)
         return;
-    contextParameterValues->download(contextValues);
-    for (int i = 0; i < (int) parameterNames.size(); i++) {
-        float value = (float) context.getParameter(parameterNames[i]);
-        if (value != contextValues[i])
-            context.setParameter(parameterNames[i], contextValues[i]);
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        contextParameterValues->download(contextValuesDouble);
+        for (int i = 0; i < (int) parameterNames.size(); i++) {
+            double value = context.getParameter(parameterNames[i]);
+            if (value != contextValuesDouble[i])
+                context.setParameter(parameterNames[i], contextValuesDouble[i]);
+        }
+    }
+    else {
+        contextParameterValues->download(contextValuesFloat);
+        for (int i = 0; i < (int) parameterNames.size(); i++) {
+            float value = (float) context.getParameter(parameterNames[i]);
+            if (value != contextValuesFloat[i])
+                context.setParameter(parameterNames[i], contextValuesFloat[i]);
+        }
     }
 }
 
@@ -4888,43 +5139,72 @@ void OpenCLIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, v
         values.resize(0);
         return;
     }
-    vector<cl_float> buffer;
-    globalValues->download(buffer);
-    values.resize(numGlobalVariables);
-    for (int i = 0; i < numGlobalVariables; i++)
-        values[i] = buffer[i];
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
+        globalValues->download(values);
+    else {
+        vector<cl_float> buffer;
+        globalValues->download(buffer);
+        for (int i = 0; i < numGlobalVariables; i++)
+            values[i] = buffer[i];
+    }
 }
 
 void OpenCLIntegrateCustomStepKernel::setGlobalVariables(ContextImpl& context, const vector<double>& values) {
     if (numGlobalVariables == 0)
         return;
-    vector<cl_float> valuesVec(numGlobalVariables);
-    for (int i = 0; i < numGlobalVariables; i++)
-        valuesVec[i] = (float) values[i];
-    globalValues->upload(valuesVec);
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision())
+        globalValues->upload(values);
+    else {
+        vector<cl_float> buffer(numGlobalVariables);
+        for (int i = 0; i < numGlobalVariables; i++)
+            buffer[i] = (cl_float) values[i];
+        globalValues->upload(buffer);
+    }
 }
 
 void OpenCLIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, int variable, vector<Vec3>& values) const {
-    if (!localValuesAreCurrent) {
-        perDofValues->getParameterValues(localPerDofValues);
-        localValuesAreCurrent = true;
-    }
     values.resize(perDofValues->getNumObjects()/3);
-    const vector<cl_int>& order = cl.getAtomIndex();
-    for (int i = 0; i < (int) values.size(); i++)
-        for (int j = 0; j < 3; j++)
-            values[order[i]][j] = localPerDofValues[3*i+j][variable];
+    const vector<int>& order = cl.getAtomIndex();
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        if (!localValuesAreCurrent) {
+            perDofValues->getParameterValues(localPerDofValuesDouble);
+            localValuesAreCurrent = true;
+        }
+        for (int i = 0; i < (int) values.size(); i++)
+            for (int j = 0; j < 3; j++)
+                values[order[i]][j] = localPerDofValuesDouble[3*i+j][variable];
+    }
+    else {
+        if (!localValuesAreCurrent) {
+            perDofValues->getParameterValues(localPerDofValuesFloat);
+            localValuesAreCurrent = true;
+        }
+        for (int i = 0; i < (int) values.size(); i++)
+            for (int j = 0; j < 3; j++)
+                values[order[i]][j] = localPerDofValuesFloat[3*i+j][variable];
+    }
 }
 
 void OpenCLIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, int variable, const vector<Vec3>& values) {
-    if (!localValuesAreCurrent) {
-        perDofValues->getParameterValues(localPerDofValues);
-        localValuesAreCurrent = true;
+    const vector<int>& order = cl.getAtomIndex();
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        if (!localValuesAreCurrent) {
+            perDofValues->getParameterValues(localPerDofValuesDouble);
+            localValuesAreCurrent = true;
+        }
+        for (int i = 0; i < (int) values.size(); i++)
+            for (int j = 0; j < 3; j++)
+                localPerDofValuesDouble[3*i+j][variable] = values[order[i]][j];
     }
-    const vector<cl_int>& order = cl.getAtomIndex();
-    for (int i = 0; i < (int) values.size(); i++)
-        for (int j = 0; j < 3; j++)
-            localPerDofValues[3*i+j][variable] = (float) values[order[i]][j];
+    else {
+        if (!localValuesAreCurrent) {
+            perDofValues->getParameterValues(localPerDofValuesFloat);
+            localValuesAreCurrent = true;
+        }
+        for (int i = 0; i < (int) values.size(); i++)
+            for (int j = 0; j < 3; j++)
+                localPerDofValuesFloat[3*i+j][variable] = (float) values[order[i]][j];
+    }
     deviceValuesAreCurrent = false;
 }
 
@@ -5035,13 +5315,23 @@ double OpenCLCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
 
-    mm_float4* velm = (mm_float4*) cl.getPinnedBuffer();
-    cl.getVelm().download(velm);
-    double energy = 0.0;
     const vector<cl_int>& order = cl.getAtomIndex();
-    for (size_t i = 0; i < masses.size(); ++i) {
-        mm_float4 v = velm[i];
-        energy += masses[order[i]]*(v.x*v.x+v.y*v.y+v.z*v.z);
+    double energy = 0.0;
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        mm_double4* velm = (mm_double4*) cl.getPinnedBuffer();
+        cl.getVelm().download(velm);
+        for (size_t i = 0; i < masses.size(); ++i) {
+            mm_double4 v = velm[i];
+            energy += masses[order[i]]*(v.x*v.x+v.y*v.y+v.z*v.z);
+        }
+    }
+    else {
+        mm_float4* velm = (mm_float4*) cl.getPinnedBuffer();
+        cl.getVelm().download(velm);
+        for (size_t i = 0; i < masses.size(); ++i) {
+            mm_float4 v = velm[i];
+            energy += masses[order[i]]*(v.x*v.x+v.y*v.y+v.z*v.z);
+        }
     }
     return 0.5*energy;
 }

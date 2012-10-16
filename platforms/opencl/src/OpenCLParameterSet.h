@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -51,8 +51,9 @@ public:
      * @param name             the name of the parameter set
      * @param bufferPerParameter  if true, a separate cl::Buffer is created for each parameter.  If false,
      *                            multiple parameters may be combined into a single buffer.
+     * @param useDoublePrecision  whether values should be stored as single or double precision
      */
-    OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const std::string& name, bool bufferPerParameter=false);
+    OpenCLParameterSet(OpenCLContext& context, int numParameters, int numObjects, const std::string& name, bool bufferPerParameter=false, bool useDoublePrecision=false);
     ~OpenCLParameterSet();
     /**
      * Get the number of parameters.
@@ -71,13 +72,15 @@ public:
      *
      * @param values on exit, values[i][j] contains the value of parameter j for object i
      */
-    void getParameterValues(std::vector<std::vector<cl_float> >& values) const;
+    template <class T>
+    void getParameterValues(std::vector<std::vector<T> >& values) const;
     /**
      * Set the values of all parameters.
      *
      * @param values values[i][j] contains the value of parameter j for object i
      */
-    void setParameterValues(const std::vector<std::vector<cl_float> >& values);
+    template <class T>
+    void setParameterValues(const std::vector<std::vector<T> >& values);
     /**
      * Get a set of OpenCLNonbondedUtilities::ParameterInfo objects which describe the Buffers
      * containing the data.
@@ -95,8 +98,7 @@ public:
     std::string getParameterSuffix(int index, const std::string& extraSuffix = "") const;
 private:
     OpenCLContext& context;
-    int numParameters;
-    int numObjects;
+    int numParameters, numObjects, elementSize;
     std::string name;
     std::vector<OpenCLNonbondedUtilities::ParameterInfo> buffers;
 };

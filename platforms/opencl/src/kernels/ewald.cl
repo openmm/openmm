@@ -1,4 +1,3 @@
-
 float2 multofFloat2(float2 a, float2 b) {
     return (float2) (a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
 }

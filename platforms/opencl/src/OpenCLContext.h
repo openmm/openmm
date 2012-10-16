@@ -62,7 +62,7 @@ struct mm_float2 {
     mm_float2(cl_float x, cl_float y) : x(x), y(y) {
     }
 };
- struct mm_float4 {
+struct mm_float4 {
     cl_float x, y, z, w;
     mm_float4() {
     }
@@ -85,6 +85,20 @@ struct mm_float16 {
             cl_float s8, cl_float s9, cl_float s10, cl_float s11, cl_float s12, cl_float s13, cl_float s14, cl_float s15) :
         s0(s0), s1(s1), s2(s2), s3(s3), s4(s4), s5(s5), s6(s6), s7(s7),
         s8(s8), s9(s9), s10(s10), s11(s11), s12(s12), s13(s13), s14(s14), s15(15) {
+    }
+};
+struct mm_double2 {
+    cl_double x, y;
+    mm_double2() {
+    }
+    mm_double2(cl_double x, cl_double y) : x(x), y(y) {
+    }
+};
+struct mm_double4 {
+    cl_double x, y, z, w;
+    mm_double4() {
+    }
+    mm_double4(cl_double x, cl_double y, cl_double z, cl_double w) : x(x), y(y), z(z), w(w) {
     }
 };
 struct mm_ushort2 {
@@ -145,7 +159,7 @@ public:
     class ReorderListener;
     static const int ThreadBlockSize;
     static const int TileSize;
-    OpenCLContext(const System& system, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData);
+    OpenCLContext(const System& system, int platformIndex, int deviceIndex, const std::string& precision, OpenCLPlatform::PlatformData& platformData);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -197,6 +211,12 @@ public:
      */
     OpenCLArray& getPosq() {
         return *posq;
+    }
+    /**
+     * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
+     */
+    OpenCLArray& getPosqCorrection() {
+        return *posqCorrection;
     }
     /**
      * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
@@ -406,10 +426,28 @@ public:
         return supportsDoublePrecision;
     }
     /**
+     * Get whether double precision is being used.
+     */
+    bool getUseDoublePrecision() {
+        return useDoublePrecision;
+    }
+    /**
+     * Get whether mixed precision is being used.
+     */
+    bool getUseMixedPrecision() {
+        return useMixedPrecision;
+    }
+    /**
      * Get the size of the periodic box.
      */
     mm_float4 getPeriodicBoxSize() const {
         return periodicBoxSize;
+    }
+    /**
+     * Get the size of the periodic box.
+     */
+    mm_double4 getPeriodicBoxSizeDouble() const {
+        return periodicBoxSizeDouble;
     }
     /**
      * Set the size of the periodic box.
@@ -417,12 +455,20 @@ public:
     void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
         periodicBoxSize = mm_float4((float) xsize, (float) ysize, (float) zsize, 0);
         invPeriodicBoxSize = mm_float4((float) (1.0/xsize), (float) (1.0/ysize), (float) (1.0/zsize), 0);
+        periodicBoxSizeDouble = mm_double4(xsize, ysize, zsize, 0);
+        invPeriodicBoxSizeDouble = mm_double4(1.0/xsize, 1.0/ysize, 1.0/zsize, 0);
     }
     /**
      * Get the inverse of the size of the periodic box.
      */
     mm_float4 getInvPeriodicBoxSize() const {
         return invPeriodicBoxSize;
+    }
+    /**
+     * Get the inverse of the size of the periodic box.
+     */
+    mm_double4 getInvPeriodicBoxSizeDouble() const {
+        return invPeriodicBoxSizeDouble;
     }
     /**
      * Get the OpenCLIntegrationUtilities for this context.
@@ -502,6 +548,11 @@ private:
      * of molecules and resort the atoms.
      */
     void validateMolecules();
+    /**
+     * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
+     */
+    template <class Real, class Real4, class Mixed, class Mixed4>
+    void reorderAtomsImpl(bool enforcePeriodic);
     const System& system;
     double time;
     OpenCLPlatform::PlatformData& platformData;
@@ -515,9 +566,9 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, atomsWereReordered, moleculesInvalid;
-    mm_float4 periodicBoxSize;
-    mm_float4 invPeriodicBoxSize;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, moleculesInvalid;
+    mm_float4 periodicBoxSize, invPeriodicBoxSize;
+    mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble;
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     cl::Context context;
@@ -538,6 +589,7 @@ private:
     cl::Buffer* pinnedBuffer;
     void* pinnedMemory;
     OpenCLArray* posq;
+    OpenCLArray* posqCorrection;
     OpenCLArray* velm;
     OpenCLArray* force;
     OpenCLArray* forceBuffers;

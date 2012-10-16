@@ -65,10 +65,24 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
-OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, OpenCLPlatform::PlatformData& platformData) :
+OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
         velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
         bonded(NULL), nonbonded(NULL), thread(NULL) {
+    if (precision == "single") {
+        useDoublePrecision = false;
+        useMixedPrecision = false;
+    }
+    else if (precision == "mixed") {
+        useDoublePrecision = false;
+        useMixedPrecision = true;
+    }
+    else if (precision == "double") {
+        useDoublePrecision = true;
+        useMixedPrecision = false;
+    }
+    else
+        throw OpenMMException("Illegal value for OpenCLPrecision: "+precision);
     try {
         contextIndex = platformData.contexts.size();
         std::vector<cl::Platform> platforms;
@@ -217,8 +231,27 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         bonded = new OpenCLBondedUtilities(*this);
         nonbonded = new OpenCLNonbondedUtilities(*this);
-        posq = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
-        velm = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "velm");
+        if (useDoublePrecision) {
+            posq = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "posq");
+            velm = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "velm");
+            compilationDefines["USE_DOUBLE_PRECISION"] = "1";
+            compilationDefines["convert_real4"] = "convert_double4";
+            compilationDefines["convert_mixed4"] = "convert_double4";
+        }
+        else if (useMixedPrecision) {
+            posq = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
+            posqCorrection = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
+            velm = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms, "velm");
+            compilationDefines["USE_MIXED_PRECISION"] = "1";
+            compilationDefines["convert_real4"] = "convert_float4";
+            compilationDefines["convert_mixed4"] = "convert_double4";
+        }
+        else {
+            posq = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "posq");
+            velm = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms, "velm");
+            compilationDefines["convert_real4"] = "convert_float4";
+            compilationDefines["convert_mixed4"] = "convert_float4";
+        }
         posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
     }
     catch (cl::Error err) {
@@ -241,34 +274,43 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
-    cl::Kernel accuracyKernel(utilities, "determineNativeAccuracy");
-    OpenCLArray valuesArray(*this, 20, sizeof(mm_float8), "values");
-    vector<mm_float8> values(valuesArray.getSize());
-    float nextValue = 1e-4f;
-    for (int i = 0; i < (int) values.size(); ++i) {
-        values[i].s0 = nextValue;
-        nextValue *= (float) M_PI;
+    if (!useDoublePrecision) {
+        cl::Kernel accuracyKernel(utilities, "determineNativeAccuracy");
+        OpenCLArray valuesArray(*this, 20, sizeof(mm_float8), "values");
+        vector<mm_float8> values(valuesArray.getSize());
+        float nextValue = 1e-4f;
+        for (int i = 0; i < (int) values.size(); ++i) {
+            values[i].s0 = nextValue;
+            nextValue *= (float) M_PI;
+        }
+        valuesArray.upload(values);
+        accuracyKernel.setArg<cl::Buffer>(0, valuesArray.getDeviceBuffer());
+        accuracyKernel.setArg<cl_int>(1, values.size());
+        executeKernel(accuracyKernel, values.size());
+        valuesArray.download(values);
+        double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0, maxExpError = 0.0, maxLogError = 0.0;
+        for (int i = 0; i < (int) values.size(); ++i) {
+            double v = values[i].s0;
+            double correctSqrt = sqrt(v);
+            maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].s1)/correctSqrt);
+            maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-values[i].s2)*correctSqrt);
+            maxRecipError = max(maxRecipError, fabs(1.0/v-values[i].s3)/values[i].s3);
+            maxExpError = max(maxExpError, fabs(exp(v)-values[i].s4)/values[i].s4);
+            maxLogError = max(maxLogError, fabs(log(v)-values[i].s5)/values[i].s5);
+        }
+        compilationDefines["SQRT"] = (maxSqrtError < 1e-6) ? "native_sqrt" : "sqrt";
+        compilationDefines["RSQRT"] = (maxRsqrtError < 1e-6) ? "native_rsqrt" : "rsqrt";
+        compilationDefines["RECIP"] = (maxRecipError < 1e-6) ? "native_recip" : "1.0f/";
+        compilationDefines["EXP"] = (maxExpError < 1e-6) ? "native_exp" : "exp";
+        compilationDefines["LOG"] = (maxLogError < 1e-6) ? "native_log" : "log";
     }
-    valuesArray.upload(values);
-    accuracyKernel.setArg<cl::Buffer>(0, valuesArray.getDeviceBuffer());
-    accuracyKernel.setArg<cl_int>(1, values.size());
-    executeKernel(accuracyKernel, values.size());
-    valuesArray.download(values);
-    double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0, maxExpError = 0.0, maxLogError = 0.0;
-    for (int i = 0; i < (int) values.size(); ++i) {
-        double v = values[i].s0;
-        double correctSqrt = sqrt(v);
-        maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].s1)/correctSqrt);
-        maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-values[i].s2)*correctSqrt);
-        maxRecipError = max(maxRecipError, fabs(1.0/v-values[i].s3)/values[i].s3);
-        maxExpError = max(maxExpError, fabs(exp(v)-values[i].s4)/values[i].s4);
-        maxLogError = max(maxLogError, fabs(log(v)-values[i].s5)/values[i].s5);
+    else {
+        compilationDefines["SQRT"] = "sqrt";
+        compilationDefines["RSQRT"] = "rsqrt";
+        compilationDefines["RECIP"] = "1.0/";
+        compilationDefines["EXP"] = "exp";
+        compilationDefines["LOG"] = "log";
     }
-    compilationDefines["SQRT"] = (maxSqrtError < 1e-6) ? "native_sqrt" : "sqrt";
-    compilationDefines["RSQRT"] = (maxRsqrtError < 1e-6) ? "native_rsqrt" : "rsqrt";
-    compilationDefines["RECIP"] = (maxRecipError < 1e-6) ? "native_recip" : "1.0f/";
-    compilationDefines["EXP"] = (maxExpError < 1e-6) ? "native_exp" : "exp";
-    compilationDefines["LOG"] = (maxLogError < 1e-6) ? "native_log" : "log";
     
     // Create the work thread used for parallelization when running on multiple devices.
     
@@ -311,18 +353,21 @@ OpenCLContext::~OpenCLContext() {
 }
 
 void OpenCLContext::initialize() {
-    vector<mm_float4> v(paddedNumAtoms, mm_float4(0, 0, 0, 0));
-    for (int i = 0; i < numAtoms; i++) {
-        double mass = system.getParticleMass(i);
-        v[i].w = (float) (mass == 0.0 ? 0.0 : 1.0/mass);
-    }
-    velm->upload(v);
     bonded->initialize(system);
     numForceBuffers = platformData.contexts.size();
     numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
-    forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+    if (useDoublePrecision) {
+        forceBuffers = OpenCLArray::create<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+        force = OpenCLArray::create<mm_double4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
+        energyBuffer = OpenCLArray::create<cl_double>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+    }
+    else {
+        forceBuffers = OpenCLArray::create<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
+        force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
+        energyBuffer = OpenCLArray::create<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
+    }
     if (supports64BitGlobalAtomics) {
         longForceBuffer = OpenCLArray::create<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
         reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer->getDeviceBuffer());
@@ -332,12 +377,18 @@ void OpenCLContext::initialize() {
         addAutoclearBuffer(longForceBuffer->getDeviceBuffer(), longForceBuffer->getSize()*2);
     }
     addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
-    force = OpenCLArray::create<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force");
-    energyBuffer = OpenCLArray::create<cl_float>(*this, max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers()), "energyBuffer");
     addAutoclearBuffer(energyBuffer->getDeviceBuffer(), energyBuffer->getSize());
-    int bufferBytes = max(posq->getSize()*sizeof(mm_float4), energyBuffer->getSize()*sizeof(cl_float));
+    int bufferBytes = max(posq->getSize()*posq->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = queue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
+    for (int i = 0; i < numAtoms; i++) {
+        double mass = system.getParticleMass(i);
+        if (useDoublePrecision || useMixedPrecision)
+            ((mm_double4*) pinnedMemory)[i] = mm_double4(0.0, 0.0, 0.0, mass == 0.0 ? 0.0 : 1.0/mass);
+        else
+            ((mm_float4*) pinnedMemory)[i] = mm_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (cl_float) (1.0/mass));
+    }
+    velm->upload(pinnedMemory);
     atomIndexDevice = OpenCLArray::create<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
     atomIndex.resize(paddedNumAtoms);
     for (int i = 0; i < paddedNumAtoms; ++i)
@@ -382,6 +433,28 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     }
     if (!compilationDefines.empty())
         src << endl;
+    if (supportsDoublePrecision)
+        src << "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
+    if (useDoublePrecision) {
+        src << "typedef double real;\n";
+        src << "typedef double2 real2;\n";
+        src << "typedef double4 real4;\n";
+    }
+    else {
+        src << "typedef float real;\n";
+        src << "typedef float2 real2;\n";
+        src << "typedef float4 real4;\n";
+    }
+    if (useDoublePrecision || useMixedPrecision) {
+        src << "typedef double mixed;\n";
+        src << "typedef double2 mixed2;\n";
+        src << "typedef double4 mixed4;\n";
+    }
+    else {
+        src << "typedef float mixed;\n";
+        src << "typedef float2 mixed2;\n";
+        src << "typedef float4 mixed4;\n";
+    }
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
         src << "#define " << iter->first;
         if (!iter->second.empty())
@@ -764,27 +837,62 @@ void OpenCLContext::validateMolecules() {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
     
-    vector<mm_float4> oldPosq(paddedNumAtoms);
-    vector<mm_float4> newPosq(paddedNumAtoms);
-    vector<mm_float4> oldVelm(paddedNumAtoms);
-    vector<mm_float4> newVelm(paddedNumAtoms);
     vector<mm_int4> newCellOffsets(numAtoms);
-    posq->download(oldPosq);
-    velm->download(oldVelm);
-    for (int i = 0; i < numAtoms; i++) {
-        int index = atomIndex[i];
-        newPosq[index] = oldPosq[i];
-        newVelm[index] = oldVelm[i];
-        newCellOffsets[index] = posCellOffsets[i];
+    if (useDoublePrecision) {
+        vector<mm_double4> oldPosq(paddedNumAtoms);
+        vector<mm_double4> newPosq(paddedNumAtoms);
+        vector<mm_double4> oldVelm(paddedNumAtoms);
+        vector<mm_double4> newVelm(paddedNumAtoms);
+        posq->download(oldPosq);
+        velm->download(oldVelm);
+        for (int i = 0; i < numAtoms; i++) {
+            int index = atomIndex[i];
+            newPosq[index] = oldPosq[i];
+            newVelm[index] = oldVelm[i];
+            newCellOffsets[index] = posCellOffsets[i];
+        }
+        posq->upload(newPosq);
+        velm->upload(newVelm);
     }
-    posq->upload(newPosq);
-    velm->upload(newVelm);
+    else if (useMixedPrecision) {
+        vector<mm_float4> oldPosq(paddedNumAtoms);
+        vector<mm_float4> newPosq(paddedNumAtoms);
+        vector<mm_float4> oldPosqCorrection(paddedNumAtoms);
+        vector<mm_float4> newPosqCorrection(paddedNumAtoms);
+        vector<mm_double4> oldVelm(paddedNumAtoms);
+        vector<mm_double4> newVelm(paddedNumAtoms);
+        posq->download(oldPosq);
+        velm->download(oldVelm);
+        for (int i = 0; i < numAtoms; i++) {
+            int index = atomIndex[i];
+            newPosq[index] = oldPosq[i];
+            newPosqCorrection[index] = oldPosqCorrection[i];
+            newVelm[index] = oldVelm[i];
+            newCellOffsets[index] = posCellOffsets[i];
+        }
+        posq->upload(newPosq);
+        velm->upload(newVelm);
+    }
+    else {
+        vector<mm_float4> oldPosq(paddedNumAtoms);
+        vector<mm_float4> newPosq(paddedNumAtoms);
+        vector<mm_float4> oldVelm(paddedNumAtoms);
+        vector<mm_float4> newVelm(paddedNumAtoms);
+        posq->download(oldPosq);
+        velm->download(oldVelm);
+        for (int i = 0; i < numAtoms; i++) {
+            int index = atomIndex[i];
+            newPosq[index] = oldPosq[i];
+            newVelm[index] = oldVelm[i];
+            newCellOffsets[index] = posCellOffsets[i];
+        }
+        posq->upload(newPosq);
+        velm->upload(newVelm);
+    }
     for (int i = 0; i < numAtoms; i++) {
         atomIndex[i] = i;
         posCellOffsets[i] = newCellOffsets[i];
     }
-    posq->upload(newPosq);
-    velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
     for (int i = 0; i < (int) reorderListeners.size(); i++)
@@ -797,16 +905,29 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     if (moleculesInvalid)
         validateMolecules();
     atomsWereReordered = true;
+    if (useDoublePrecision)
+        reorderAtomsImpl<cl_double, mm_double4, cl_double, mm_double4>(enforcePeriodic);
+    else if (useMixedPrecision)
+        reorderAtomsImpl<cl_float, mm_float4, cl_double, mm_double4>(enforcePeriodic);
+    else
+        reorderAtomsImpl<cl_float, mm_float4, cl_float, mm_float4>(enforcePeriodic);
+}
+
+template <class Real, class Real4, class Mixed, class Mixed4>
+void OpenCLContext::reorderAtomsImpl(bool enforcePeriodic) {
 
     // Find the range of positions and the number of bins along each axis.
 
-    vector<mm_float4> oldPosq(paddedNumAtoms);
-    vector<mm_float4> oldVelm(paddedNumAtoms);
+    vector<Real4> oldPosq(paddedNumAtoms);
+    vector<Real4> oldPosqCorrection(paddedNumAtoms);
+    vector<Mixed4> oldVelm(paddedNumAtoms);
     posq->download(oldPosq);
     velm->download(oldVelm);
-    float minx = oldPosq[0].x, maxx = oldPosq[0].x;
-    float miny = oldPosq[0].y, maxy = oldPosq[0].y;
-    float minz = oldPosq[0].z, maxz = oldPosq[0].z;
+    if (useMixedPrecision)
+        posqCorrection->download(oldPosqCorrection);
+    Real minx = oldPosq[0].x, maxx = oldPosq[0].x;
+    Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
+    Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
     if (nonbonded->getUsePeriodic()) {
         minx = miny = minz = 0.0;
         maxx = periodicBoxSize.x;
@@ -815,7 +936,7 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     }
     else {
         for (int i = 1; i < numAtoms; i++) {
-            const mm_float4& pos = oldPosq[i];
+            const Real4& pos = oldPosq[i];
             minx = min(minx, pos.x);
             maxx = max(maxx, pos.x);
             miny = min(miny, pos.y);
@@ -828,8 +949,9 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
     // Loop over each group of identical molecules and reorder them.
 
     vector<int> originalIndex(numAtoms);
-    vector<mm_float4> newPosq(paddedNumAtoms);
-    vector<mm_float4> newVelm(paddedNumAtoms);
+    vector<Real4> newPosq(paddedNumAtoms);
+    vector<Real4> newPosqCorrection(paddedNumAtoms);
+    vector<Mixed4> newVelm(paddedNumAtoms);
     vector<mm_int4> newCellOffsets(numAtoms);
     for (int group = 0; group < (int) moleculeGroups.size(); group++) {
         // Find the center of each molecule.
@@ -837,15 +959,15 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
         MoleculeGroup& mol = moleculeGroups[group];
         int numMolecules = mol.offsets.size();
         vector<int>& atoms = mol.atoms;
-        vector<mm_float4> molPos(numMolecules);
-        float invNumAtoms = 1.0f/atoms.size();
+        vector<Real4> molPos(numMolecules);
+        Real invNumAtoms = (Real) (1.0/atoms.size());
         for (int i = 0; i < numMolecules; i++) {
             molPos[i].x = 0.0f;
             molPos[i].y = 0.0f;
             molPos[i].z = 0.0f;
             for (int j = 0; j < (int)atoms.size(); j++) {
                 int atom = atoms[j]+mol.offsets[i];
-                const mm_float4& pos = oldPosq[atom];
+                const Real4& pos = oldPosq[atom];
                 molPos[i].x += pos.x;
                 molPos[i].y += pos.y;
                 molPos[i].z += pos.z;
@@ -861,9 +983,9 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
                 int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
                 int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
                 int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
-                float dx = xcell*periodicBoxSize.x;
-                float dy = ycell*periodicBoxSize.y;
-                float dz = zcell*periodicBoxSize.z;
+                Real dx = xcell*periodicBoxSize.x;
+                Real dy = ycell*periodicBoxSize.y;
+                Real dz = zcell*periodicBoxSize.z;
                 if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
                     molPos[i].x -= dx;
                     molPos[i].y -= dy;
@@ -871,7 +993,7 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
                     if (enforcePeriodic) {
                         for (int j = 0; j < (int) atoms.size(); j++) {
                             int atom = atoms[j]+mol.offsets[i];
-                            mm_float4 p = oldPosq[atom];
+                            Real4 p = oldPosq[atom];
                             p.x -= dx;
                             p.y -= dy;
                             p.z -= dz;
@@ -888,12 +1010,12 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
         // Select a bin for each molecule, then sort them by bin.
 
         bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
-        float binWidth;
+        Real binWidth;
         if (useHilbert)
-            binWidth = (float)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
+            binWidth = (Real) (max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
-            binWidth = (float)(0.2*nonbonded->getCutoffDistance());
-        float invBinWidth = 1.0f/binWidth;
+            binWidth = (Real) (0.2*nonbonded->getCutoffDistance());
+        Real invBinWidth = (Real) (1.0/binWidth);
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
         vector<pair<int, int> > molBins(numMolecules);
@@ -928,6 +1050,8 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
                 int newIndex = mol.offsets[i]+atoms[j];
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
+                if (useMixedPrecision)
+                    newPosqCorrection[newIndex] = oldPosqCorrection[oldIndex];
                 newVelm[newIndex] = oldVelm[oldIndex];
                 newCellOffsets[newIndex] = posCellOffsets[oldIndex];
             }
@@ -941,6 +1065,8 @@ void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
         posCellOffsets[i] = newCellOffsets[i];
     }
     posq->upload(newPosq);
+    if (useMixedPrecision)
+        posqCorrection->upload(newPosqCorrection);
     velm->upload(newVelm);
     atomIndexDevice->upload(atomIndex);
     for (int i = 0; i < (int) reorderListeners.size(); i++)

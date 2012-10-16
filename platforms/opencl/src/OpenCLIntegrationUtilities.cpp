@@ -87,6 +87,13 @@ struct OpenCLIntegrationUtilities::ConstraintOrderer : public binary_function<in
     }
 };
 
+static void setPosqCorrectionArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+    if (cl.getUseMixedPrecision())
+        kernel.setArg<cl::Buffer>(index, cl.getPosqCorrection().getDeviceBuffer());
+    else
+        kernel.setArg<void*>(index, NULL);
+}
+
 OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, const System& system) : context(context),
         posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
@@ -96,12 +103,22 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
     // Create workspace arrays.
 
-    posDelta = OpenCLArray::create<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
-    vector<mm_float4> deltas(posDelta->getSize(), mm_float4(0.0, 0.0, 0.0, 0.0));
-    posDelta->upload(deltas);
-    stepSize = OpenCLArray::create<mm_float2>(context, 1, "stepSize");
-    vector<mm_float2> step(1, mm_float2(0.0f, 0.0f));
-    stepSize->upload(step);
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+        posDelta = OpenCLArray::create<mm_double4>(context, context.getPaddedNumAtoms(), "posDelta");
+        vector<mm_double4> deltas(posDelta->getSize(), mm_double4(0.0, 0.0, 0.0, 0.0));
+        posDelta->upload(deltas);
+        stepSize = OpenCLArray::create<mm_double2>(context, 1, "stepSize");
+        vector<mm_double2> step(1, mm_double2(0.0, 0.0));
+        stepSize->upload(step);
+    }
+    else {
+        posDelta = OpenCLArray::create<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
+        vector<mm_float4> deltas(posDelta->getSize(), mm_float4(0.0f, 0.0f, 0.0f, 0.0f));
+        posDelta->upload(deltas);
+        stepSize = OpenCLArray::create<mm_float2>(context, 1, "stepSize");
+        vector<mm_float2> step(1, mm_float2(0.0f, 0.0f));
+        stepSize->upload(step);
+    }
 
     // Create kernels for enforcing constraints.
 
@@ -458,51 +475,86 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         // Record the CCMA data structures.
 
         ccmaAtoms = OpenCLArray::create<mm_int2>(context, numCCMA, "CcmaAtoms");
-        ccmaDistance = OpenCLArray::create<mm_float4>(context, numCCMA, "CcmaDistance");
         ccmaAtomConstraints = OpenCLArray::create<cl_int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
         ccmaNumAtomConstraints = OpenCLArray::create<cl_int>(context, numAtoms, "CcmaAtomConstraintsIndex");
-        ccmaDelta1 = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaDelta1");
-        ccmaDelta2 = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaDelta2");
+        ccmaConstraintMatrixColumn = OpenCLArray::create<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConverged = OpenCLArray::create<cl_int>(context, 2, "CcmaConverged");
         ccmaConvergedBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, 2*sizeof(cl_int));
         ccmaConvergedMemory = (cl_int*) context.getQueue().enqueueMapBuffer(*ccmaConvergedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, 2*sizeof(cl_int));
-        ccmaReducedMass = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaReducedMass");
-        ccmaConstraintMatrixColumn = OpenCLArray::create<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
-        ccmaConstraintMatrixValue = OpenCLArray::create<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
         vector<mm_int2> atomsVec(ccmaAtoms->getSize());
-        vector<mm_float4> distanceVec(ccmaDistance->getSize());
         vector<cl_int> atomConstraintsVec(ccmaAtomConstraints->getSize());
         vector<cl_int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
-        vector<cl_float> reducedMassVec(ccmaReducedMass->getSize());
         vector<cl_int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn->getSize());
-        vector<cl_float> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
-        for (int i = 0; i < numCCMA; i++) {
-            int index = constraintOrder[i];
-            int c = ccmaConstraints[index];
-            atomsVec[i].x = atom1[c];
-            atomsVec[i].y = atom2[c];
-            distanceVec[i].w = (float) distance[c];
-            reducedMassVec[i] = (float) (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
-            for (unsigned int j = 0; j < matrix[index].size(); j++) {
-                constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
-                constraintMatrixValueVec[i+j*numCCMA] = (float) matrix[index][j].second;
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+            ccmaDistance = OpenCLArray::create<mm_double4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1 = OpenCLArray::create<cl_double>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2 = OpenCLArray::create<cl_double>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass = OpenCLArray::create<cl_double>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue = OpenCLArray::create<cl_double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+            vector<mm_double4> distanceVec(ccmaDistance->getSize());
+            vector<cl_double> reducedMassVec(ccmaReducedMass->getSize());
+            vector<cl_double> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
+            for (int i = 0; i < numCCMA; i++) {
+                int index = constraintOrder[i];
+                int c = ccmaConstraints[index];
+                atomsVec[i].x = atom1[c];
+                atomsVec[i].y = atom2[c];
+                distanceVec[i].w = distance[c];
+                reducedMassVec[i] = (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
+                for (unsigned int j = 0; j < matrix[index].size(); j++) {
+                    constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
+                    constraintMatrixValueVec[i+j*numCCMA] = matrix[index][j].second;
+                }
+                constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
             }
-            constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
+            for (unsigned int i = 0; i < atomConstraints.size(); i++) {
+                numAtomConstraintsVec[i] = atomConstraints[i].size();
+                for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
+                    bool forward = (atom1[ccmaConstraints[atomConstraints[i][j]]] == i);
+                    atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
+                }
+            }
+            ccmaDistance->upload(distanceVec);
+            ccmaReducedMass->upload(reducedMassVec);
+            ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
         }
-        for (unsigned int i = 0; i < atomConstraints.size(); i++) {
-            numAtomConstraintsVec[i] = atomConstraints[i].size();
-            for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
-                bool forward = (atom1[ccmaConstraints[atomConstraints[i][j]]] == i);
-                atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
+        else {
+            ccmaDistance = OpenCLArray::create<mm_float4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1 = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2 = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass = OpenCLArray::create<cl_float>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue = OpenCLArray::create<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+            vector<mm_float4> distanceVec(ccmaDistance->getSize());
+            vector<cl_float> reducedMassVec(ccmaReducedMass->getSize());
+            vector<cl_float> constraintMatrixValueVec(ccmaConstraintMatrixValue->getSize());
+            for (int i = 0; i < numCCMA; i++) {
+                int index = constraintOrder[i];
+                int c = ccmaConstraints[index];
+                atomsVec[i].x = atom1[c];
+                atomsVec[i].y = atom2[c];
+                distanceVec[i].w = (float) distance[c];
+                reducedMassVec[i] = (float) (0.5/(1.0/system.getParticleMass(atom1[c])+1.0/system.getParticleMass(atom2[c])));
+                for (unsigned int j = 0; j < matrix[index].size(); j++) {
+                    constraintMatrixColumnVec[i+j*numCCMA] = matrix[index][j].first;
+                    constraintMatrixValueVec[i+j*numCCMA] = (float) matrix[index][j].second;
+                }
+                constraintMatrixColumnVec[i+matrix[index].size()*numCCMA] = numCCMA;
             }
+            for (unsigned int i = 0; i < atomConstraints.size(); i++) {
+                numAtomConstraintsVec[i] = atomConstraints[i].size();
+                for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
+                    bool forward = (atom1[ccmaConstraints[atomConstraints[i][j]]] == i);
+                    atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
+                }
+            }
+            ccmaDistance->upload(distanceVec);
+            ccmaReducedMass->upload(reducedMassVec);
+            ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
         }
         ccmaAtoms->upload(atomsVec);
-        ccmaDistance->upload(distanceVec);
         ccmaAtomConstraints->upload(atomConstraintsVec);
         ccmaNumAtomConstraints->upload(numAtomConstraintsVec);
-        ccmaReducedMass->upload(reducedMassVec);
         ccmaConstraintMatrixColumn->upload(constraintMatrixColumnVec);
-        ccmaConstraintMatrixValue->upload(constraintMatrixValueVec);
 
         // Create the CCMA kernels.
 
@@ -584,21 +636,23 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     cl::Program vsiteProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
     vsitePositionKernel = cl::Kernel(vsiteProgram, "computeVirtualSites");
     vsitePositionKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(1, vsite2AvgAtoms->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(2, vsite2AvgWeights->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(3, vsite3AvgAtoms->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(4, vsite3AvgWeights->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(5, vsiteOutOfPlaneAtoms->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    setPosqCorrectionArg(context, vsitePositionKernel, 1);
+    vsitePositionKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(3, vsite2AvgWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(4, vsite3AvgAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(5, vsite3AvgWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneWeights->getDeviceBuffer());
     vsiteForceKernel = cl::Kernel(vsiteProgram, "distributeForces");
     vsiteForceKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-    // Skip argument 1: the force array hasn't been created yet.
-    vsiteForceKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(3, vsite2AvgWeights->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(4, vsite3AvgAtoms->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(5, vsite3AvgWeights->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneAtoms->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    setPosqCorrectionArg(context, vsiteForceKernel, 1);
+    // Skip argument 2: the force array hasn't been created yet.
+    vsiteForceKernel.setArg<cl::Buffer>(3, vsite2AvgAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(4, vsite2AvgWeights->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(5, vsite3AvgAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(6, vsite3AvgWeights->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(8, vsiteOutOfPlaneWeights->getDeviceBuffer());
     numVsites = num2Avg+num3Avg+numOutOfPlane;
 }
 
@@ -686,23 +740,37 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
         if (!hasInitialized) {
             settleKernel.setArg<cl_int>(0, settleAtoms->getSize());
             settleKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(4, context.getVelm().getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(5, settleAtoms->getDeviceBuffer());
-            settleKernel.setArg<cl::Buffer>(6, settleParams->getDeviceBuffer());
+            if (context.getUseMixedPrecision())
+                settleKernel.setArg<cl::Buffer>(3, context.getPosqCorrection().getDeviceBuffer());
+            else
+                settleKernel.setArg<void*>(3, NULL);
+            settleKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());
+            settleKernel.setArg<cl::Buffer>(5, context.getVelm().getDeviceBuffer());
+            settleKernel.setArg<cl::Buffer>(6, settleAtoms->getDeviceBuffer());
+            settleKernel.setArg<cl::Buffer>(7, settleParams->getDeviceBuffer());
         }
-        settleKernel.setArg<cl_float>(1, (cl_float) tol);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            settleKernel.setArg<cl_double>(1, (cl_double) tol);
+        else
+            settleKernel.setArg<cl_float>(1, (cl_float) tol);
         context.executeKernel(settleKernel, settleAtoms->getSize());
     }
     if (shakeAtoms != NULL) {
         if (!hasInitialized) {
             shakeKernel.setArg<cl_int>(0, shakeAtoms->getSize());
             shakeKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(3, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(4, shakeAtoms->getDeviceBuffer());
-            shakeKernel.setArg<cl::Buffer>(5, shakeParams->getDeviceBuffer());
+            if (context.getUseMixedPrecision())
+                shakeKernel.setArg<cl::Buffer>(3, context.getPosqCorrection().getDeviceBuffer());
+            else
+                shakeKernel.setArg<void*>(3, NULL);
+            shakeKernel.setArg<cl::Buffer>(4, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
+            shakeKernel.setArg<cl::Buffer>(5, shakeAtoms->getDeviceBuffer());
+            shakeKernel.setArg<cl::Buffer>(6, shakeParams->getDeviceBuffer());
         }
-        shakeKernel.setArg<cl_float>(1, (cl_float) tol);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            shakeKernel.setArg<cl_double>(1, (cl_double) tol);
+        else
+            shakeKernel.setArg<cl_float>(1, (cl_float) tol);
         context.executeKernel(shakeKernel, shakeAtoms->getSize());
     }
     if (ccmaAtoms != NULL) {
@@ -710,6 +778,10 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
             ccmaDirectionsKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaDirectionsKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
             ccmaDirectionsKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
+            if (context.getUseMixedPrecision())
+                ccmaDirectionsKernel.setArg<cl::Buffer>(3, context.getPosqCorrection().getDeviceBuffer());
+            else
+                ccmaDirectionsKernel.setArg<void*>(3, NULL);
             ccmaForceKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(2, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
@@ -730,7 +802,10 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
             ccmaUpdateKernel.setArg<cl::Buffer>(6, ccmaDelta2->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(7, ccmaConverged->getDeviceBuffer());
         }
-        ccmaForceKernel.setArg<cl_float>(6, (cl_float) tol);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            ccmaForceKernel.setArg<cl_double>(6, (cl_double) tol);
+        else
+            ccmaForceKernel.setArg<cl_float>(6, (cl_float) tol);
         context.executeKernel(ccmaDirectionsKernel, ccmaAtoms->getSize());
         const int checkInterval = 4;
         cl::Event event;
@@ -764,7 +839,7 @@ void OpenCLIntegrationUtilities::computeVirtualSites() {
 
 void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
     if (numVsites > 0) {
-        vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+        vsiteForceKernel.setArg<cl::Buffer>(2, context.getForce().getDeviceBuffer());
         context.executeKernel(vsiteForceKernel, numVsites);
     }
 }

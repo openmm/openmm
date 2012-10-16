@@ -51,7 +51,7 @@ using namespace std;
 void testTransform() {
     System system;
     system.addParticle(0.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "");
+    OpenCLPlatform::PlatformData platformData(system, "", "", "single");
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;

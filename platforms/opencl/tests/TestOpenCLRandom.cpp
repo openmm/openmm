@@ -48,7 +48,7 @@ void testGaussian() {
     System system;
     for (int i = 0; i < numAtoms; i++)
         system.addParticle(1.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "");
+    OpenCLPlatform::PlatformData platformData(system, "", "", "single");
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);

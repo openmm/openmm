@@ -1145,7 +1145,10 @@ private:
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
     OpenCLParameterSet* perDofValues;
-    mutable std::vector<std::vector<cl_float> > localPerDofValues;
+    mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
+    mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
+    std::vector<float> contextValuesFloat;
+    std::vector<double> contextValuesDouble;
     std::vector<float> contextValues;
     std::vector<std::vector<cl::Kernel> > kernels;
     cl::Kernel sumEnergyKernel, randomKernel;

@@ -76,8 +76,10 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(OpenCLDeviceIndex());
     platformProperties.push_back(OpenCLPlatformIndex());
+    platformProperties.push_back(OpenCLPrecision());
     setPropertyDefaultValue(OpenCLDeviceIndex(), "");
     setPropertyDefaultValue(OpenCLPlatformIndex(), "");
+    setPropertyDefaultValue(OpenCLPrecision(), "single");
 }
 
 bool OpenCLPlatform::supportsDoublePrecision() const {
@@ -101,7 +103,9 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
             getPropertyDefaultValue(OpenCLPlatformIndex()) : properties.find(OpenCLPlatformIndex())->second);
     const string& devicePropValue = (properties.find(OpenCLDeviceIndex()) == properties.end() ?
             getPropertyDefaultValue(OpenCLDeviceIndex()) : properties.find(OpenCLDeviceIndex())->second);
-    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue));
+    string precisionPropValue = (properties.find(OpenCLPrecision()) == properties.end() ?
+            getPropertyDefaultValue(OpenCLPrecision()) : properties.find(OpenCLPrecision())->second);
+    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -109,7 +113,8 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
+        const string& precisionProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
     int platformIndex = 0;
     if (platformPropValue.length() > 0)
         stringstream(platformPropValue) >> platformIndex;
@@ -124,11 +129,11 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         if (devices[i].length() > 0) {
             unsigned int deviceIndex;
             stringstream(devices[i]) >> deviceIndex;
-            contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, *this));
+            contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this));
         }
     }
     if (contexts.size() == 0)
-        contexts.push_back(new OpenCLContext(system, platformIndex, -1, *this));
+        contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this));
     stringstream device;
     for (int i = 0; i < (int) contexts.size(); i++) {
         if (i > 0)
@@ -137,6 +142,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     }
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
     propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = OpenCLExpressionUtilities::intToString(platformIndex);
+    propertyValues[OpenCLPlatform::OpenCLPrecision()] = precisionProperty;
     contextEnergy.resize(contexts.size());
 }
 

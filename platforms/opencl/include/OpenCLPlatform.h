@@ -68,11 +68,18 @@ public:
         static const std::string key = "OpenCLPlatformIndex";
         return key;
     }
+    /**
+     * This is the name of the parameter for selecting what numerical precision to use.
+     */
+    static const std::string& OpenCLPrecision() {
+        static const std::string key = "OpenCLPrecision";
+        return key;
+    }
 };
 
 class OPENMM_EXPORT OpenCLPlatform::PlatformData {
 public:
-    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty);
+    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
