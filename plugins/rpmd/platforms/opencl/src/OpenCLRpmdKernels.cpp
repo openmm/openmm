@@ -77,12 +77,12 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     // Create kernels.
     
     map<string, string> defines;
-    defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtoms());
-    defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(cl.getPaddedNumAtoms());
-    defines["NUM_COPIES"] = OpenCLExpressionUtilities::intToString(numCopies);
-    defines["HBAR"] = OpenCLExpressionUtilities::doubleToString(1.054571628e-34*AVOGADRO/(1000*1e-12));
-    defines["SCALE"] = OpenCLExpressionUtilities::doubleToString(1.0/sqrt((double) numCopies));
-    defines["M_PI"] = OpenCLExpressionUtilities::doubleToString(M_PI);
+    defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
+    defines["NUM_COPIES"] = cl.intToString(numCopies);
+    defines["HBAR"] = cl.doubleToString(1.054571628e-34*AVOGADRO/(1000*1e-12));
+    defines["SCALE"] = cl.doubleToString(1.0/sqrt((double) numCopies));
+    defines["M_PI"] = cl.doubleToString(M_PI);
     map<string, string> replacements;
     replacements["FFT_Q_FORWARD"] = createFFT(numCopies, "q", true);
     replacements["FFT_Q_BACKWARD"] = createFFT(numCopies, "q", false);
@@ -262,21 +262,21 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"float4 d0i = c1i+c4i;\n";
             source<<"float4 d1r = c2r+c3r;\n";
             source<<"float4 d1i = c2i+c3i;\n";
-            source<<"float4 d2r = "<<OpenCLExpressionUtilities::doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
-            source<<"float4 d2i = "<<OpenCLExpressionUtilities::doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
-            source<<"float4 d3r = "<<OpenCLExpressionUtilities::doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
-            source<<"float4 d3i = "<<OpenCLExpressionUtilities::doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
+            source<<"float4 d2r = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
+            source<<"float4 d2i = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
+            source<<"float4 d3r = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
+            source<<"float4 d3i = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
             source<<"float4 d4r = d0r+d1r;\n";
             source<<"float4 d4i = d0i+d1i;\n";
-            source<<"float4 d5r = "<<OpenCLExpressionUtilities::doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
-            source<<"float4 d5i = "<<OpenCLExpressionUtilities::doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
+            source<<"float4 d5r = "<<cl.doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
+            source<<"float4 d5i = "<<cl.doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
             source<<"float4 d6r = c0r-0.25f*d4r;\n";
             source<<"float4 d6i = c0i-0.25f*d4i;\n";
             source<<"float4 d7r = d6r+d5r;\n";
             source<<"float4 d7i = d6i+d5i;\n";
             source<<"float4 d8r = d6r-d5r;\n";
             source<<"float4 d8i = d6i-d5i;\n";
-            string coeff = OpenCLExpressionUtilities::doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
+            string coeff = cl.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
             source<<"float4 d9r = "<<sign<<"*(d2i+"<<coeff<<"*d3i);\n";
             source<<"float4 d9i = "<<sign<<"*(-d2r-"<<coeff<<"*d3r);\n";
             source<<"float4 d10r = "<<sign<<"*("<<coeff<<"*d2i-d3i);\n";
@@ -345,8 +345,8 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"float4 d0i = c1i+c2i;\n";
             source<<"float4 d1r = c0r-0.5f*d0r;\n";
             source<<"float4 d1i = c0i-0.5f*d0i;\n";
-            source<<"float4 d2r = "<<sign<<"*"<<OpenCLExpressionUtilities::doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
-            source<<"float4 d2i = "<<sign<<"*"<<OpenCLExpressionUtilities::doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
+            source<<"float4 d2r = "<<sign<<"*"<<cl.doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
+            source<<"float4 d2i = "<<sign<<"*"<<cl.doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
             source<<"real"<<output<<"[i+2*j*"<<m<<"] = c0r+d0r;\n";
             source<<"imag"<<output<<"[i+2*j*"<<m<<"] = c0i+d0i;\n";
             source<<"real"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
@@ -376,7 +376,7 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             unfactored /= 2;
         }
         else
-            throw OpenMMException("Illegal size for FFT: "+OpenCLExpressionUtilities::intToString(size));
+            throw OpenMMException("Illegal size for FFT: "+cl.intToString(size));
         source<<"barrier(CLK_LOCAL_MEM_FENCE);\n";
         source<<"}\n";
         ++stage;
