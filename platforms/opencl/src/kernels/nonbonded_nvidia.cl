@@ -6,12 +6,12 @@
 #define WARPS_PER_GROUP (FORCE_WORK_GROUP_SIZE/TILE_SIZE)
 
 typedef struct {
-    float x, y, z;
-    float q;
-    float fx, fy, fz;
+    real x, y, z;
+    real q;
+    real fx, fy, fz;
     ATOM_PARAMETER_DATA
 #ifndef PARAMETER_SIZE_IS_EVEN
-    float padding;
+    real padding;
 #endif
 } AtomData;
 
@@ -22,13 +22,13 @@ __kernel void computeNonbonded(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers,
 #else
-        __global float4* restrict forceBuffers,
+        __global real4* restrict forceBuffers,
 #endif
-        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
+        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
 #else
         unsigned int numTiles
 #endif
@@ -43,9 +43,9 @@ __kernel void computeNonbonded(
     unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
 #endif
-    float energy = 0.0f;
+    real energy = 0;
     __local AtomData localData[FORCE_WORK_GROUP_SIZE];
-    __local float tempBuffer[3*FORCE_WORK_GROUP_SIZE];
+    __local real tempBuffer[3*FORCE_WORK_GROUP_SIZE];
     __local unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __local int exclusionIndex[WARPS_PER_GROUP];
     __local int2* reservedBlocks = (__local int2*) exclusionRange;
@@ -56,7 +56,7 @@ __kernel void computeNonbonded(
         const unsigned int tbx = get_local_id(0) - tgx;
         const unsigned int localGroupIndex = get_local_id(0)/TILE_SIZE;
         unsigned int x, y;
-        float4 force = 0.0f;
+        real4 force = 0;
         if (pos < end) {
 #ifdef USE_CUTOFF
             if (numTiles <= maxTiles) {
@@ -75,7 +75,7 @@ __kernel void computeNonbonded(
                 }
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
-            float4 posq1 = posq[atom1];
+            real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
 
             // Locate the exclusion data for this tile.
@@ -111,25 +111,25 @@ __kernel void computeNonbonded(
                     bool isExcluded = !(excl & 0x1);
 #endif
                     int atom2 = tbx+j;
-                    float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                    real4 posq2 = (real4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
+                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                     delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                     delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                    float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
+                    real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                    real invR = RSQRT(r2);
+                    real r = RECIP(invR);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
 #ifdef USE_SYMMETRIC
-                    float dEdR = 0.0f;
+                    real dEdR = 0;
 #else
-                    float4 dEdR1 = (float4) 0.0f;
-                    float4 dEdR2 = (float4) 0.0f;
+                    real4 dEdR1 = (real4) 0;
+                    real4 dEdR2 = (real4) 0;
 #endif
-                    float tempEnergy = 0.0f;
+                    real tempEnergy = 0;
                     COMPUTE_INTERACTION
                     energy += 0.5f*tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -147,15 +147,15 @@ __kernel void computeNonbonded(
 
                 const unsigned int localAtomIndex = get_local_id(0);
                 unsigned int j = y*TILE_SIZE + tgx;
-                float4 tempPosq = posq[j];
+                real4 tempPosq = posq[j];
                 localData[localAtomIndex].x = tempPosq.x;
                 localData[localAtomIndex].y = tempPosq.y;
                 localData[localAtomIndex].z = tempPosq.z;
                 localData[localAtomIndex].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-                localData[localAtomIndex].fx = 0.0f;
-                localData[localAtomIndex].fy = 0.0f;
-                localData[localAtomIndex].fz = 0.0f;
+                localData[localAtomIndex].fx = 0;
+                localData[localAtomIndex].fy = 0;
+                localData[localAtomIndex].fz = 0;
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
                 if (!hasExclusions && flags != 0xFFFFFFFF) {
@@ -171,25 +171,25 @@ __kernel void computeNonbonded(
                                 int atom2 = tbx+j;
                                 int bufferIndex = 3*get_local_id(0);
 #ifdef USE_SYMMETRIC
-                                float dEdR = 0.0f;
+                                real dEdR = 0;
 #else
-                                float4 dEdR1 = (float4) 0.0f;
-                                float4 dEdR2 = (float4) 0.0f;
+                                real4 dEdR1 = (real4) 0;
+                                real4 dEdR2 = (real4) 0;
 #endif
-                                float tempEnergy = 0.0f;
-                                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-                                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                                real tempEnergy = 0;
+                                real4 posq2 = (real4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
+                                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                                    float invR = RSQRT(r2);
-                                    float r = RECIP(invR);
+                                    real invR = RSQRT(r2);
+                                    real r = RECIP(invR);
                                     LOAD_ATOM2_PARAMETERS
                                     atom2 = y*TILE_SIZE+j;
                                     COMPUTE_INTERACTION
@@ -241,28 +241,28 @@ __kernel void computeNonbonded(
                         bool isExcluded = !(excl & 0x1);
 #endif
                         int atom2 = tbx+tj;
-                        float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-                        float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                        real4 posq2 = (real4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
+                        real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                         delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                         delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                        float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                         if (r2 < CUTOFF_SQUARED) {
 #endif
-                            float invR = RSQRT(r2);
-                            float r = RECIP(invR);
+                            real invR = RSQRT(r2);
+                            real r = RECIP(invR);
                             LOAD_ATOM2_PARAMETERS
                             atom2 = y*TILE_SIZE+tj;
 #ifdef USE_SYMMETRIC
-                            float dEdR = 0.0f;
+                            real dEdR = 0;
 #else
-                            float4 dEdR1 = (float4) 0.0f;
-                            float4 dEdR2 = (float4) 0.0f;
+                            real4 dEdR1 = (real4) 0;
+                            real4 dEdR2 = (real4) 0;
 #endif
-                            float tempEnergy = 0.0f;
+                            real tempEnergy = 0;
                             COMPUTE_INTERACTION
                             energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -347,7 +347,7 @@ __kernel void computeNonbonded(
                     }
                     if (writeY > -1) {
                         const unsigned int offset = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                        forceBuffers[offset] += (float4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0.0f);
+                        forceBuffers[offset] += (real4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0);
                     }
                     done = true;
                     if (tgx == 0)

@@ -33,19 +33,6 @@ using namespace OpenMM;
 using namespace Lepton;
 using namespace std;
 
-string OpenCLExpressionUtilities::doubleToString(double value) {
-    stringstream s;
-    s.precision(8);
-    s << scientific << value << "f";
-    return s.str();
-}
-
-string OpenCLExpressionUtilities::intToString(int value) {
-    stringstream s;
-    s << value;
-    return s.str();
-}
-
 string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
         const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams, const string& tempType) {
     vector<pair<ExpressionTreeNode, string> > variableNodes;
@@ -75,13 +62,13 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             return;
     for (int i = 0; i < (int) node.getChildren().size(); i++)
         processExpression(out, node.getChildren()[i], temps, functions, prefix, functionParams, allExpressions, tempType);
-    string name = prefix+intToString(temps.size());
+    string name = prefix+context.intToString(temps.size());
     bool hasRecordedNode = false;
     
     out << tempType << " " << name << " = ";
     switch (node.getOperation().getId()) {
         case Operation::CONSTANT:
-            out << doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
+            out << context.doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
             break;
         case Operation::VARIABLE:
             throw OpenMMException("Unknown variable in expression: "+node.getOperation().getName());
@@ -107,7 +94,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             string valueName = name;
             string derivName = name;
             if (valueNode != NULL && derivNode != NULL) {
-                string name2 = prefix+intToString(temps.size());
+                string name2 = prefix+context.intToString(temps.size());
                 out << tempType << " " << name2 << " = 0.0f;\n";
                 if (isDeriv) {
                     valueName = name2;
@@ -236,10 +223,10 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << "RECIP(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ADD_CONSTANT:
-            out << doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
+            out << context.doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::MULTIPLY_CONSTANT:
-            out << doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
+            out << context.doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::POWER_CONSTANT:
         {
@@ -266,7 +253,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 for (map<int, const ExpressionTreeNode*>::const_iterator iter = powers.begin(); iter != powers.end(); ++iter) {
                     if (iter->first != exponent) {
                         exponents.push_back(iter->first >= 0 ? iter->first : -iter->first);
-                        string name2 = prefix+intToString(temps.size());
+                        string name2 = prefix+context.intToString(temps.size());
                         names.push_back(name2);
                         temps.push_back(make_pair(*iter->second, name2));
                         out << tempType << " " << name2 << " = 0.0f;\n";
@@ -295,7 +282,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 out << "}";
             }
             else
-                out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << doubleToString(exponent) << ")";
+                out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << context.doubleToString(exponent) << ")";
             break;
         }
         case Operation::MIN:

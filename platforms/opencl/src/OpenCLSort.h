@@ -162,7 +162,7 @@ public:
         // Assign array elements to buckets.
 
         unsigned int numBuckets = bucketOffset->getSize();
-        context.clearBuffer(bucketOffset->getDeviceBuffer(), numBuckets);
+        context.clearBuffer(*bucketOffset);
         assignElementsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
         assignElementsKernel.setArg<cl_int>(1, data.getSize());
         assignElementsKernel.setArg<cl_int>(2, numBuckets);

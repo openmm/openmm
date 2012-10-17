@@ -45,6 +45,8 @@ namespace OpenMM {
 
 class OPENMM_EXPORT OpenCLExpressionUtilities {
 public:
+    OpenCLExpressionUtilities(OpenCLContext& context) : context(context) {
+    }
     /**
      * Generate the source code for calculating a set of expressions.
      *
@@ -54,10 +56,10 @@ public:
      * @param functions      defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param functionParams the variable name containing the parameters for each tabulated function
-     * @param tempType       the type of value to use for temporary variables (defaults to "float")
+     * @param tempType       the type of value to use for temporary variables (defaults to "real")
      */
-    static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="float");
+    std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
+            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="real");
     /**
      * Generate the source code for calculating a set of expressions.
      *
@@ -69,7 +71,7 @@ public:
      * @param functionParams the variable name containing the parameters for each tabulated function
      * @param tempType       the type of value to use for temporary variables (defaults to "float")
      */
-    static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
+    std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
             const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams, const std::string& tempType="float");
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
@@ -79,26 +81,19 @@ public:
      * @param max            the value of the independent variable corresponding to the last element of values
      * @return the spline coefficients
      */
-    static std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, double min, double max);
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     */
-    static std::string doubleToString(double value);
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     */
-    static std::string intToString(int value);
+    std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, double min, double max);
     class FunctionPlaceholder;
 private:
-    static void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
+    void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
             const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams,
             const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
-    static std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
-    static void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
+    std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
+    void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);
-    static void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
+    void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
+    OpenCLContext& context;
 };
 
 /**

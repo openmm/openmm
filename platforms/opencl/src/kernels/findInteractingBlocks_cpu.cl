@@ -8,19 +8,19 @@
 /**
  * Find a bounding box for the atoms in each block.
  */
-__kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict posq, __global float4* restrict blockCenter, __global float4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount) {
+__kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global const real4* restrict posq, __global real4* restrict blockCenter, __global real4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount) {
     int index = get_global_id(0);
     int base = index*TILE_SIZE;
     while (base < numAtoms) {
-        float4 pos = posq[base];
+        real4 pos = posq[base];
 #ifdef USE_PERIODIC
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
         pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        float4 firstPoint = pos;
+        real4 firstPoint = pos;
 #endif
-        float4 minPos = pos;
-        float4 maxPos = pos;
+        real4 minPos = pos;
+        real4 maxPos = pos;
         int last = min(base+TILE_SIZE, numAtoms);
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
@@ -46,14 +46,14 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPe
  * to global memory.
  */
 void storeInteractionData(ushort2* buffer, int numValid, __global unsigned int* interactionCount, __global ushort2* interactingTiles,
-            __global unsigned int* interactionFlags, float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize,
-            __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox, unsigned int maxTiles) {
+            __global unsigned int* interactionFlags, real cutoffSquared, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+            __global real4* posq, __global real4* blockCenter, __global real4* blockBoundingBox, unsigned int maxTiles) {
     // Filter the list of tiles by comparing the distance from each atom to the other bounding box.
 
     unsigned int flagsBuffer[2*BUFFER_SIZE];
-    float4 atomPositions[TILE_SIZE];
+    real4 atomPositions[TILE_SIZE];
     int lasty = -1;
-    float4 centery, boxSizey;
+    real4 centery, boxSizey;
     for (int tile = 0; tile < numValid; ) {
         int x = buffer[tile].x;
         int y = buffer[tile].y;
@@ -64,8 +64,8 @@ void storeInteractionData(ushort2* buffer, int numValid, __global unsigned int* 
 
         // Load the atom positions and bounding boxes.
 
-        float4 centerx = blockCenter[x];
-        float4 boxSizex = blockBoundingBox[x];
+        real4 centerx = blockCenter[x];
+        real4 boxSizex = blockBoundingBox[x];
         if (y != lasty) {
             for (int atom = 0; atom < TILE_SIZE; atom++)
                 atomPositions[atom] = posq[y*TILE_SIZE+atom];
@@ -78,18 +78,18 @@ void storeInteractionData(ushort2* buffer, int numValid, __global unsigned int* 
 
         unsigned int flags1 = 0, flags2 = 0;
         for (int atom = 0; atom < TILE_SIZE; atom++) {
-            float4 delta = atomPositions[atom]-centerx;
+            real4 delta = atomPositions[atom]-centerx;
 #ifdef USE_PERIODIC
             delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-            delta = max((float4) 0.0f, fabs(delta)-boxSizex);
+            delta = max((real4) 0, fabs(delta)-boxSizex);
             if (dot(delta.xyz, delta.xyz) < cutoffSquared)
                 flags1 += 1 << atom;
             delta = posq[x*TILE_SIZE+atom]-centery;
 #ifdef USE_PERIODIC
             delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-            delta = max((float4) 0.0f, fabs(delta)-boxSizey);
+            delta = max((real4) 0, fabs(delta)-boxSizey);
             if (dot(delta.xyz, delta.xyz) < cutoffSquared)
                 flags2 += 1 << atom;
         }
@@ -121,9 +121,9 @@ void storeInteractionData(ushort2* buffer, int numValid, __global unsigned int* 
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */
-__kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict blockCenter,
-        __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount, __global ushort2* restrict interactingTiles,
-        __global unsigned int* restrict interactionFlags, __global const float4* restrict posq, unsigned int maxTiles, unsigned int startTileIndex,
+__kernel void findBlocksWithInteractions(real cutoffSquared, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global const real4* restrict blockCenter,
+        __global const real4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount, __global ushort2* restrict interactingTiles,
+        __global unsigned int* restrict interactionFlags, __global const real4* restrict posq, unsigned int maxTiles, unsigned int startTileIndex,
         unsigned int endTileIndex) {
     ushort2 buffer[BUFFER_SIZE];
     int valuesInBuffer = 0;
@@ -142,17 +142,17 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
 
         // Find the distance between the bounding boxes of the two cells.
 
-        float4 delta = blockCenter[x]-blockCenter[y];
+        real4 delta = blockCenter[x]-blockCenter[y];
 #ifdef USE_PERIODIC
         delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
         delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-        float4 boxSizea = blockBoundingBox[x];
-        float4 boxSizeb = blockBoundingBox[y];
-        delta.x = max(0.0f, fabs(delta.x)-boxSizea.x-boxSizeb.x);
-        delta.y = max(0.0f, fabs(delta.y)-boxSizea.y-boxSizeb.y);
-        delta.z = max(0.0f, fabs(delta.z)-boxSizea.z-boxSizeb.z);
+        real4 boxSizea = blockBoundingBox[x];
+        real4 boxSizeb = blockBoundingBox[y];
+        delta.x = max((real) 0, fabs(delta.x)-boxSizea.x-boxSizeb.x);
+        delta.y = max((real) 0, fabs(delta.y)-boxSizea.y-boxSizeb.y);
+        delta.z = max((real) 0, fabs(delta.z)-boxSizea.z-boxSizeb.z);
         if (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < cutoffSquared) {
             // Add this tile to the buffer.
 

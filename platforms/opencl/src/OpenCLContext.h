@@ -45,6 +45,7 @@ namespace OpenMM {
 class OpenCLArray;
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
+class OpenCLExpressionUtilities;
 class OpenCLBondedUtilities;
 class OpenCLNonbondedUtilities;
 class System;
@@ -314,14 +315,18 @@ public:
      * Set all elements of an array to 0.
      *
      * @param memory     the Memory to clear
-     * @param size       the number of float elements in the buffer
+     * @param size       the size of the buffer in bytes
      */
     void clearBuffer(cl::Memory& memory, int size);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
+     */
+    void addAutoclearBuffer(OpenCLArray& array);
+    /**
+     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      *
      * @param memory     the Memory to clear
-     * @param size       the number of float elements in the buffer
+     * @param size       the size of the buffer in bytes
      */
     void addAutoclearBuffer(cl::Memory& memory, int size);
     /**
@@ -329,7 +334,7 @@ public:
      */
     void clearAutoclearBuffers();
     /**
-     * Given a collection of buffers packed into an array, sum them and store
+     * Given a collection of floating point buffers packed into an array, sum them and store
      * the sum in the first buffer.
      *
      * @param array       the array containing the buffers to reduce
@@ -438,6 +443,15 @@ public:
         return useMixedPrecision;
     }
     /**
+     * Convert a number to a string in a format suitable for including in a kernel.
+     * This takes into account whether the context uses single or double precision.
+     */
+    std::string doubleToString(double value);
+    /**
+     * Convert a number to a string in a format suitable for including in a kernel.
+     */
+    std::string intToString(int value);
+    /**
      * Get the size of the periodic box.
      */
     mm_float4 getPeriodicBoxSize() const {
@@ -475,6 +489,12 @@ public:
      */
     OpenCLIntegrationUtilities& getIntegrationUtilities() {
         return *integration;
+    }
+    /**
+     * Get the OpenCLExpressionUtilities for this context.
+     */
+    OpenCLExpressionUtilities& getExpressionUtilities() {
+        return *expression;
     }
     /**
      * Get the OpenCLBondedUtilities for this context.
@@ -580,7 +600,7 @@ private:
     cl::Kernel clearFourBuffersKernel;
     cl::Kernel clearFiveBuffersKernel;
     cl::Kernel clearSixBuffersKernel;
-    cl::Kernel reduceFloat4Kernel;
+    cl::Kernel reduceReal4Kernel;
     cl::Kernel reduceForcesKernel;
     std::vector<OpenCLForceInfo*> forces;
     std::vector<Molecule> molecules;
@@ -601,6 +621,7 @@ private:
     std::vector<int> autoclearBufferSizes;
     std::vector<ReorderListener*> reorderListeners;
     OpenCLIntegrationUtilities* integration;
+    OpenCLExpressionUtilities* expression;
     OpenCLBondedUtilities* bonded;
     OpenCLNonbondedUtilities* nonbonded;
     WorkThread* thread;

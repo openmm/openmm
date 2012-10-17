@@ -68,7 +68,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
         system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
         posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
-        bonded(NULL), nonbonded(NULL), thread(NULL) {
+        expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -145,7 +145,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         this->deviceIndex = deviceIndex;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-        compilationDefines["WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(ThreadBlockSize);
+        compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
 			defaultOptimizationOptions = "";
 		else
@@ -269,7 +269,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     clearFourBuffersKernel = cl::Kernel(utilities, "clearFourBuffers");
     clearFiveBuffersKernel = cl::Kernel(utilities, "clearFiveBuffers");
     clearSixBuffersKernel = cl::Kernel(utilities, "clearSixBuffers");
-    reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
+    reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
     reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
@@ -316,9 +316,10 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     
     thread = new WorkThread();
     
-    // Create the integration utilities object.
+    // Create utilities objects.
     
     integration = new OpenCLIntegrationUtilities(*this, system);
+    expression = new OpenCLExpressionUtilities(*this);
 }
 
 OpenCLContext::~OpenCLContext() {
@@ -346,6 +347,8 @@ OpenCLContext::~OpenCLContext() {
         delete atomIndexDevice;
     if (integration != NULL)
         delete integration;
+    if (expression != NULL)
+        delete expression;
     if (bonded != NULL)
         delete bonded;
     if (nonbonded != NULL)
@@ -376,10 +379,10 @@ void OpenCLContext::initialize() {
         reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers->getDeviceBuffer());
         reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
         reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
-        addAutoclearBuffer(longForceBuffer->getDeviceBuffer(), longForceBuffer->getSize()*2);
+        addAutoclearBuffer(*longForceBuffer);
     }
-    addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
-    addAutoclearBuffer(energyBuffer->getDeviceBuffer(), energyBuffer->getSize());
+    addAutoclearBuffer(*forceBuffers);
+    addAutoclearBuffer(*energyBuffer);
     int bufferBytes = max(posq->getSize()*posq->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = queue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
@@ -479,6 +482,21 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     return program;
 }
 
+string OpenCLContext::doubleToString(double value) {
+    stringstream s;
+    s.precision(useDoublePrecision ? 16 : 8);
+    s << scientific << value;
+    if (!useDoublePrecision)
+        s << "f";
+    return s.str();
+}
+
+string OpenCLContext::intToString(int value) {
+    stringstream s;
+    s << value;
+    return s.str();
+}
+
 void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSize) {
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
@@ -494,18 +512,23 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
 }
 
 void OpenCLContext::clearBuffer(OpenCLArray& array) {
-    clearBuffer(array.getDeviceBuffer(), array.getSize()*array.getElementSize()/sizeof(cl_float));
+    clearBuffer(array.getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
 
 void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
+    int words = size/4;
     clearBufferKernel.setArg<cl::Memory>(0, memory);
-    clearBufferKernel.setArg<cl_int>(1, size);
-    executeKernel(clearBufferKernel, size, 128);
+    clearBufferKernel.setArg<cl_int>(1, words);
+    executeKernel(clearBufferKernel, words, 128);
+}
+
+void OpenCLContext::addAutoclearBuffer(OpenCLArray& array) {
+    addAutoclearBuffer(array.getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
 
 void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {
     autoclearBuffers.push_back(&memory);
-    autoclearBufferSizes.push_back(size);
+    autoclearBufferSizes.push_back(size/4);
 }
 
 void OpenCLContext::clearAutoclearBuffers() {
@@ -581,10 +604,10 @@ void OpenCLContext::reduceForces() {
 
 void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
     int bufferSize = array.getSize()/numBuffers;
-    reduceFloat4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
-    reduceFloat4Kernel.setArg<cl_int>(1, bufferSize);
-    reduceFloat4Kernel.setArg<cl_int>(2, numBuffers);
-    executeKernel(reduceFloat4Kernel, bufferSize, 128);
+    reduceReal4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
+    reduceReal4Kernel.setArg<cl_int>(1, bufferSize);
+    reduceReal4Kernel.setArg<cl_int>(2, numBuffers);
+    executeKernel(reduceReal4Kernel, bufferSize, 128);
 }
 
 void OpenCLContext::tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds) {

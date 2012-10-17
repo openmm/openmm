@@ -141,7 +141,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         device << contexts[i]->getDeviceIndex();
     }
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
-    propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = OpenCLExpressionUtilities::intToString(platformIndex);
+    propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = contexts[0]->intToString(platformIndex);
     propertyValues[OpenCLPlatform::OpenCLPrecision()] = precisionProperty;
     contextEnergy.resize(contexts.size());
 }

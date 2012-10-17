@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2011 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -267,7 +267,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
     if (useCutoff) {
         map<string, string> defines;
-        defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+        defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
         if (forceBufferPerAtomBlock)
             defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
         if (usePeriodic)
@@ -281,7 +281,10 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
         findBlockBoundsKernel.setArg<cl::Buffer>(6, interactionCount->getDeviceBuffer());
         findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
-        findInteractingBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
+        if (context.getUseDoublePrecision())
+            findInteractingBlocksKernel.setArg<cl_double>(0, cutoff*cutoff);
+        else
+            findInteractingBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
         findInteractingBlocksKernel.setArg<cl::Buffer>(3, blockCenter->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(4, blockBoundingBox->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactionCount->getDeviceBuffer());
@@ -293,7 +296,10 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksKernel.setArg<cl_uint>(11, startTileIndex+numTiles);
         if (context.getSIMDWidth() == 32 && !deviceIsCpu) {
             findInteractionsWithinBlocksKernel = cl::Kernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
-            findInteractionsWithinBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
+            if (context.getUseDoublePrecision())
+                findInteractionsWithinBlocksKernel.setArg<cl_double>(0, cutoff*cutoff);
+            else
+                findInteractionsWithinBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
             findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());
             findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, interactingTiles->getDeviceBuffer());
             findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(5, blockCenter->getDeviceBuffer());
@@ -315,6 +321,20 @@ int OpenCLNonbondedUtilities::findExclusionIndex(int x, int y, const vector<cl_u
     throw OpenMMException("Internal error: exclusion in unexpected tile");
 }
 
+static void setPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+    if (cl.getUseDoublePrecision())
+        kernel.setArg<mm_double4>(index, cl.getPeriodicBoxSizeDouble());
+    else
+        kernel.setArg<mm_float4>(index, cl.getPeriodicBoxSize());
+}
+
+static void setInvPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+    if (cl.getUseDoublePrecision())
+        kernel.setArg<mm_double4>(index, cl.getInvPeriodicBoxSizeDouble());
+    else
+        kernel.setArg<mm_float4>(index, cl.getInvPeriodicBoxSize());
+}
+
 void OpenCLNonbondedUtilities::prepareInteractions() {
     if (!useCutoff)
         return;
@@ -327,15 +347,15 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 
     // Compute the neighbor list.
 
-    findBlockBoundsKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
-    findBlockBoundsKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
+    setPeriodicBoxSizeArg(context, findBlockBoundsKernel, 1);
+    setInvPeriodicBoxSizeArg(context, findBlockBoundsKernel, 2);
     context.executeKernel(findBlockBoundsKernel, context.getNumAtoms());
-    findInteractingBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
-    findInteractingBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
+    setPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 1);
+    setInvPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 2);
     context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), deviceIsCpu ? 1 : -1);
     if (context.getSIMDWidth() == 32 && !deviceIsCpu) {
-        findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
-        findInteractionsWithinBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
+        setPeriodicBoxSizeArg(context, findInteractionsWithinBlocksKernel, 1);
+        setInvPeriodicBoxSizeArg(context, findInteractionsWithinBlocksKernel, 2);
         context.executeKernel(findInteractionsWithinBlocksKernel, context.getNumAtoms(), 128);
     }
 }
@@ -343,8 +363,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 void OpenCLNonbondedUtilities::computeInteractions() {
     if (cutoff != -1.0) {
         if (useCutoff) {
-            forceKernel.setArg<mm_float4>(10, context.getPeriodicBoxSize());
-            forceKernel.setArg<mm_float4>(11, context.getInvPeriodicBoxSize());
+            setPeriodicBoxSizeArg(context, forceKernel, 10);
+            setInvPeriodicBoxSizeArg(context, forceKernel, 11);
         }
         context.executeKernel(forceKernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
@@ -498,11 +518,11 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
-    defines["FORCE_WORK_GROUP_SIZE"] = OpenCLExpressionUtilities::intToString(forceThreadBlockSize);
-    defines["CUTOFF_SQUARED"] = OpenCLExpressionUtilities::doubleToString(cutoff*cutoff);
-    defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
-    defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
-    defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+    defines["FORCE_WORK_GROUP_SIZE"] = context.intToString(forceThreadBlockSize);
+    defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
+    defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
+    defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
     if ((localDataSize/4)%2 == 0)
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     string file;

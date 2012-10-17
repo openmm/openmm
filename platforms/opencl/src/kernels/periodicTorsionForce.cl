@@ -1,5 +1,5 @@
 float4 torsionParams = PARAMS[index];
-float deltaAngle = torsionParams.z*theta-torsionParams.y;
+real deltaAngle = torsionParams.z*theta-torsionParams.y;
 energy += torsionParams.x*(1.0f+cos(deltaAngle));
-float sinDeltaAngle = sin(deltaAngle);
-float dEdAngle = -torsionParams.x*torsionParams.z*sinDeltaAngle;
+real sinDeltaAngle = sin(deltaAngle);
+real dEdAngle = -torsionParams.x*torsionParams.z*sinDeltaAngle;

@@ -30,6 +30,7 @@
 #include "OpenCLContext.h"
 #include "openmm/System.h"
 #include "OpenCLExpressionUtilities.h"
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -287,8 +288,11 @@ public:
             name(name), componentType(componentType), numComponents(numComponents), size(size), memory(&memory) {
         if (numComponents == 1)
             type = componentType;
-        else
-            type = componentType+OpenCLExpressionUtilities::intToString(numComponents);
+        else {
+            std::stringstream s;
+            s << componentType << numComponents;
+            type = s.str();
+        }
     }
     const std::string& getName() const {
         return name;

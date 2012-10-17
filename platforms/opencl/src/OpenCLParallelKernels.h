@@ -84,8 +84,8 @@ private:
     OpenCLArray* contextForces;
     cl::Buffer* pinnedPositionBuffer;
     cl::Buffer* pinnedForceBuffer;
-    mm_float4* pinnedPositionMemory;
-    mm_float4* pinnedForceMemory;
+    void* pinnedPositionMemory;
+    void* pinnedForceMemory;
 };
 
 /**

@@ -8,19 +8,19 @@
 /**
  * Find a bounding box for the atoms in each block.
  */
-__kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict posq, __global float4* restrict blockCenter, __global float4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount) {
+__kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global const real4* restrict posq, __global real4* restrict blockCenter, __global real4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount) {
     int index = get_global_id(0);
     int base = index*TILE_SIZE;
     while (base < numAtoms) {
-        float4 pos = posq[base];
+        real4 pos = posq[base];
 #ifdef USE_PERIODIC
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
         pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        float4 firstPoint = pos;
+        real4 firstPoint = pos;
 #endif
-        float4 minPos = pos;
-        float4 maxPos = pos;
+        real4 minPos = pos;
+        real4 maxPos = pos;
         int last = min(base+TILE_SIZE, numAtoms);
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
@@ -46,8 +46,8 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPe
  * to global memory.
  */
 void storeInteractionData(__local ushort2* buffer, __local int* valid, __local short* sum, __local ushort2* temp, __local int* baseIndex,
-            __global unsigned int* interactionCount, __global ushort2* interactingTiles, float cutoffSquared, float4 periodicBoxSize,
-            float4 invPeriodicBoxSize, __global const float4* posq, __global const float4* blockCenter, __global const float4* blockBoundingBox, unsigned int maxTiles) {
+            __global unsigned int* interactionCount, __global ushort2* interactingTiles, real cutoffSquared, real4 periodicBoxSize,
+            real4 invPeriodicBoxSize, __global const real4* posq, __global const real4* blockCenter, __global const real4* blockBoundingBox, unsigned int maxTiles) {
     // The buffer is full, so we need to compact it and write out results.  Start by doing a parallel prefix sum.
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
@@ -91,7 +91,7 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
 
     int index = get_local_id(0)&(TILE_SIZE-1);
     int group = get_local_id(0)/TILE_SIZE;
-    float4 center, boxSize, pos;
+    real4 center, boxSize, pos;
     for (int tile = 0; tile < numValid; tile++) {
         int x = temp[tile].x;
         int y = temp[tile].y;
@@ -103,12 +103,12 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
 #ifdef MAC_AMD_WORKAROUND
         int box = (group == 0 ? x : y);
         int atom = (group == 0 ? y : x)*TILE_SIZE+index;
-        __global float* bc = (__global float*) blockCenter;
-        __global float* bb = (__global float*) blockBoundingBox;
-        __global float* ps = (__global float*) posq;
-        center = (float4) (bc[4*box], bc[4*box+1], bc[4*box+2], 0.0f);
-        boxSize = (float4) (bb[4*box], bb[4*box+1], bb[4*box+2], 0.0f);
-        pos = (float4) (ps[4*atom], ps[4*atom+1], ps[4*atom+2], 0.0f);
+        __global real* bc = (__global real*) blockCenter;
+        __global real* bb = (__global real*) blockBoundingBox;
+        __global real* ps = (__global real*) posq;
+        center = (real4) (bc[4*box], bc[4*box+1], bc[4*box+2], 0);
+        boxSize = (real4) (bb[4*box], bb[4*box+1], bb[4*box+2], 0);
+        pos = (real4) (ps[4*atom], ps[4*atom+1], ps[4*atom+2], 0);
 #else
         center = blockCenter[(group == 0 ? x : y)];
         boxSize = blockBoundingBox[(group == 0 ? x : y)];
@@ -117,13 +117,13 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
 
         // Find the distance of the atom from the bounding box.
 
-        float4 delta = pos-center;
+        real4 delta = pos-center;
 #ifdef USE_PERIODIC
         delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
         delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-        delta = max((float4) 0.0f, fabs(delta)-boxSize);
+        delta = max((real4) 0, fabs(delta)-boxSize);
         __local ushort* flag = (__local ushort*) &buffer[tile];
         if (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < cutoffSquared)
             flag[group] = false;
@@ -155,9 +155,9 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */
-__kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict blockCenter,
-        __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount, __global ushort2* restrict interactingTiles,
-        __global unsigned int* restrict interactionFlags, __global const float4* restrict posq, unsigned int maxTiles, unsigned int startTileIndex,
+__kernel void findBlocksWithInteractions(real cutoffSquared, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global const real4* restrict blockCenter,
+        __global const real4* restrict blockBoundingBox, __global unsigned int* restrict interactionCount, __global ushort2* restrict interactingTiles,
+        __global unsigned int* restrict interactionFlags, __global const real4* restrict posq, unsigned int maxTiles, unsigned int startTileIndex,
         unsigned int endTileIndex) {
     __local ushort2 buffer[BUFFER_SIZE];
     __local int valid[BUFFER_SIZE];
@@ -194,26 +194,26 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
             // Find the distance between the bounding boxes of the two cells.
 
 #ifdef MAC_AMD_WORKAROUND
-            __global float* bc = (__global float*) blockCenter;
-            __global float* bb = (__global float*) blockBoundingBox;
-            float4 bcx = (float4) (bc[4*x], bc[4*x+1], bc[4*x+2], 0.0f);
-            float4 bcy = (float4) (bc[4*y], bc[4*y+1], bc[4*y+2], 0.0f);
-            float4 delta = bcx-bcy;
-            float4 boxSizea = (float4) (bb[4*x], bb[4*x+1], bb[4*x+2], 0.0f);
-            float4 boxSizeb = (float4) (bb[4*y], bb[4*y+1], bb[4*y+2], 0.0f);
+            __global real* bc = (__global real*) blockCenter;
+            __global real* bb = (__global real*) blockBoundingBox;
+            real4 bcx = (real4) (bc[4*x], bc[4*x+1], bc[4*x+2], 0);
+            real4 bcy = (real4) (bc[4*y], bc[4*y+1], bc[4*y+2], 0);
+            real4 delta = bcx-bcy;
+            real4 boxSizea = (real4) (bb[4*x], bb[4*x+1], bb[4*x+2], 0);
+            real4 boxSizeb = (real4) (bb[4*y], bb[4*y+1], bb[4*y+2], 0);
 #else
-            float4 delta = blockCenter[x]-blockCenter[y];
-            float4 boxSizea = blockBoundingBox[x];
-            float4 boxSizeb = blockBoundingBox[y];
+            real4 delta = blockCenter[x]-blockCenter[y];
+            real4 boxSizea = blockBoundingBox[x];
+            real4 boxSizeb = blockBoundingBox[y];
 #endif
 #ifdef USE_PERIODIC
             delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
             delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
             delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-            delta.x = max(0.0f, fabs(delta.x)-boxSizea.x-boxSizeb.x);
-            delta.y = max(0.0f, fabs(delta.y)-boxSizea.y-boxSizeb.y);
-            delta.z = max(0.0f, fabs(delta.z)-boxSizea.z-boxSizeb.z);
+            delta.x = max((real) 0, fabs(delta.x)-boxSizea.x-boxSizeb.x);
+            delta.y = max((real) 0, fabs(delta.y)-boxSizea.y-boxSizeb.y);
+            delta.z = max((real) 0, fabs(delta.z)-boxSizea.z-boxSizeb.z);
             if (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < cutoffSquared) {
                 // Add this tile to the buffer.
 
@@ -241,8 +241,8 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
  * Compare each atom in one block to the bounding box of another block, and set
  * flags for which ones are interacting.
  */
-__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global const float4* restrict posq, __global const ushort2* restrict tiles, __global const float4* restrict blockCenter,
-            __global const float4* restrict blockBoundingBox, __global unsigned int* restrict interactionFlags, __global const unsigned int* restrict interactionCount, __local volatile unsigned int* restrict flags, unsigned int maxTiles) {
+__kernel void findInteractionsWithinBlocks(real cutoffSquared, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global const real4* restrict posq, __global const ushort2* restrict tiles, __global const real4* restrict blockCenter,
+            __global const real4* restrict blockBoundingBox, __global unsigned int* restrict interactionFlags, __global const unsigned int* restrict interactionCount, __local volatile unsigned int* restrict flags, unsigned int maxTiles) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int numTiles = interactionCount[0];
@@ -253,7 +253,7 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
     if (numTiles > maxTiles)
         return;
     unsigned int lasty = 0xFFFFFFFF;
-    float4 apos;
+    real4 apos;
     while (pos < end) {
         // Extract the coordinates of this tile
         ushort2 tileIndices = tiles[pos];
@@ -266,20 +266,20 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
         else {
             // Load the bounding box for x and the atom positions for y.
 
-            float4 center = blockCenter[x];
-            float4 boxSize = blockBoundingBox[x];
+            real4 center = blockCenter[x];
+            real4 boxSize = blockBoundingBox[x];
             if (y != lasty)
                 apos = posq[y*TILE_SIZE+index];
 
             // Find the distance of the atom from the bounding box.
 
-            float4 delta = apos-center;
+            real4 delta = apos-center;
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-            delta = max((float4) 0.0f, fabs(delta)-boxSize);
+            delta = max((real4) 0, fabs(delta)-boxSize);
             int thread = get_local_id(0);
             flags[thread] = (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z > cutoffSquared ? 0 : 1 << index);
 

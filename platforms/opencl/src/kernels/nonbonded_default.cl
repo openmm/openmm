@@ -10,16 +10,16 @@
 // aligned which wastes space and causes LDS bank conflicts as stride is no
 // longer odd DWORDS.
 typedef struct {
-    float x, y, z;
-} UnalignedFloat3;
+    real x, y, z;
+} UnalignedReal3;
 
 typedef struct {
-    float x, y, z;
-    float q;
-    float fx, fy, fz;
+    real x, y, z;
+    real q;
+    real fx, fy, fz;
     ATOM_PARAMETER_DATA
 #ifndef PARAMETER_SIZE_IS_EVEN
-    float padding;
+    real padding;
 #endif
 } AtomData;
 
@@ -32,13 +32,13 @@ void computeNonbonded(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers,
 #else
-        __global float4* restrict forceBuffers,
+        __global real4* restrict forceBuffers,
 #endif
-        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const unsigned int* restrict exclusions,
+        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
         unsigned int startTileIndex, unsigned int endTileIndex,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
 #else
         unsigned int numTiles
 #endif
@@ -51,10 +51,10 @@ void computeNonbonded(
     unsigned int pos = startTileIndex+get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = startTileIndex+(get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
-    float energy = 0.0f;
+    real energy = 0;
     unsigned int lasty = 0xFFFFFFFF;
     __local AtomData localData[TILE_SIZE];
-    __local UnalignedFloat3 localForce[FORCE_WORK_GROUP_SIZE];
+    __local UnalignedReal3 localForce[FORCE_WORK_GROUP_SIZE];
 #ifdef USE_EXCLUSIONS
     __local unsigned int exclusionRange[2];
     __local int exclusionIndex[1];
@@ -83,8 +83,8 @@ void computeNonbonded(
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int localForceOffset = get_local_id(0) & ~(TILE_SIZE-1);
         unsigned int atom1 = x*TILE_SIZE + tgx;
-        float4 force = 0.0f;
-        float4 posq1 = posq[atom1];
+        real4 force = 0;
+        real4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
 
         // Locate the exclusion data for this tile.
@@ -121,25 +121,25 @@ void computeNonbonded(
                 bool isExcluded = !(excl & 0x1);
 #endif
                 unsigned int atom2 = baseLocalAtom+j;
-                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                real4 posq2 = (real4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+j;
 #ifdef USE_SYMMETRIC
-                float dEdR = 0.0f;
+                real dEdR = 0;
 #else
-                float4 dEdR1 = (float4) 0.0f;
-                float4 dEdR2 = (float4) 0.0f;
+                real4 dEdR1 = (real4) 0;
+                real4 dEdR2 = (real4) 0;
 #endif
-                float tempEnergy = 0.0f;
+                real tempEnergy = 0;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -173,8 +173,8 @@ void computeNonbonded(
 #else
                 unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                // Cheaper to load/store float4 than float3.
-                float4 sum = forceBuffers[offset];
+                // Cheaper to load/store real4 than real3.
+                real4 sum = forceBuffers[offset];
                 sum.xyz += force.xyz;
                 forceBuffers[offset] = sum;
 #endif
@@ -187,16 +187,16 @@ void computeNonbonded(
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
                 const unsigned int localAtomIndex = tgx;
                 unsigned int j = y*TILE_SIZE + tgx;
-                float4 tempPosq = posq[j];
+                real4 tempPosq = posq[j];
                 localData[localAtomIndex].x = tempPosq.x;
                 localData[localAtomIndex].y = tempPosq.y;
                 localData[localAtomIndex].z = tempPosq.z;
                 localData[localAtomIndex].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            localForce[get_local_id(0)].x = 0.0f;
-            localForce[get_local_id(0)].y = 0.0f;
-            localForce[get_local_id(0)].z = 0.0f;
+            localForce[get_local_id(0)].x = 0;
+            localForce[get_local_id(0)].y = 0;
+            localForce[get_local_id(0)].z = 0;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
@@ -210,26 +210,26 @@ void computeNonbonded(
 #ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
 #endif
-                float4 posq2 = (float4) (localData[tj].x, localData[tj].y, localData[tj].z, localData[tj].q);
-                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                real4 posq2 = (real4) (localData[tj].x, localData[tj].y, localData[tj].z, localData[tj].q);
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
                 int atom2 = tj;
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+tj;
 #ifdef USE_SYMMETRIC
-                float dEdR = 0.0f;
+                real dEdR = 0;
 #else
-                float4 dEdR1 = (float4) 0.0f;
-                float4 dEdR2 = (float4) 0.0f;
+                real4 dEdR1 = (real4) 0;
+                real4 dEdR2 = (real4) 0;
 #endif
-                float tempEnergy = 0.0f;
+                real tempEnergy = 0;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
 #ifdef USE_SYMMETRIC
@@ -277,9 +277,9 @@ void computeNonbonded(
                 const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
-                float4 sum1 = forceBuffers[offset1];
-                float4 sum2 = forceBuffers[offset2];
+                // Cheaper to load/store real4 than real3. Do all loads before all stores to minimize store-load waits.
+                real4 sum1 = forceBuffers[offset1];
+                real4 sum2 = forceBuffers[offset2];
                 sum1.x += localData[tgx].fx + force.x;
                 sum1.y += localData[tgx].fy + force.y;
                 sum1.z += localData[tgx].fz + force.z;

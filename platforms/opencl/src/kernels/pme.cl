@@ -1,16 +1,16 @@
-__kernel void updateBsplines(__global const float4* restrict posq, __global float4* restrict pmeBsplineTheta, __local float4* restrict bsplinesCache,
-        __global int2* restrict pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
-    const float4 scale = 1.0f/(PME_ORDER-1);
+__kernel void updateBsplines(__global const real4* restrict posq, __global real4* restrict pmeBsplineTheta, __local real4* restrict bsplinesCache,
+        __global int2* restrict pmeAtomGridIndex, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+    const real4 scale = 1/(real) (PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
-        __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
-        float4 pos = posq[i];
+        __local real4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
+        real4 pos = posq[i];
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
         pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+        real4 t = (real4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
                              (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
                              (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
-        float4 dr = (float4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+        real4 dr = (real4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -19,15 +19,15 @@ __kernel void updateBsplines(__global const float4* restrict posq, __global floa
         data[1] = dr;
         data[0] = 1.0f-dr;
         for (int j = 3; j < PME_ORDER; j++) {
-            float div = 1.0f/(j-1.0f);
+            real div = RECIP(j-1.0f);
             data[j-1] = div*dr*data[j-2];
             for (int k = 1; k < (j-1); k++)
-                data[j-k-1] = div*((dr+(float4) k) *data[j-k-2] + (-dr+(float4) (j-k))*data[j-k-1]);
+                data[j-k-1] = div*((dr+(real4) k) *data[j-k-2] + (-dr+(real4) (j-k))*data[j-k-1]);
             data[0] = div*(- dr+1.0f)*data[0];
         }
         data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
         for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = scale*((dr+(float4) j)*data[PME_ORDER-j-2] + (-dr+(float4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
+            data[PME_ORDER-j-1] = scale*((dr+(real4) j)*data[PME_ORDER-j-2] + (-dr+(real4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
         data[0] = scale*(-dr+1.0f)*data[0];
         for (int j = 0; j < PME_ORDER; j++) {
             data[j].w = pos.w; // Storing the charge here improves cache coherency in the charge spreading kernel
@@ -39,7 +39,7 @@ __kernel void updateBsplines(__global const float4* restrict posq, __global floa
 /**
  * For each grid point, find the range of sorted atoms associated with that point.
  */
-__kernel void findAtomRangeForGrid(__global int2* restrict pmeAtomGridIndex, __global int* restrict pmeAtomRange, __global const float4* restrict posq, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void findAtomRangeForGrid(__global int2* restrict pmeAtomGridIndex, __global int* restrict pmeAtomRange, __global const real4* restrict posq, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
     int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
@@ -66,11 +66,11 @@ __kernel void findAtomRangeForGrid(__global int2* restrict pmeAtomGridIndex, __g
  * The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
  * some work in the charge spreading kernel.
  */
-__kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global const float4* restrict posq, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global const real4* restrict posq, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
     for (int i = start; i < end; ++i) {
-        float posz = posq[pmeAtomGridIndex[i].x].z;
+        real posz = posq[pmeAtomGridIndex[i].x].z;
         posz -= floor(posz*invPeriodicBoxSize.z)*periodicBoxSize.z;
         int z = ((int) ((posz*invPeriodicBoxSize.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
         pmeAtomGridIndex[i].y = z;
@@ -83,14 +83,14 @@ __kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global co
 #define BUFFER_SIZE (PME_ORDER*PME_ORDER*PME_ORDER)
 
 __kernel __attribute__((reqd_work_group_size(BUFFER_SIZE, 1, 1)))
-void gridSpreadCharge(__global const float4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
-        __global long* restrict pmeGrid, __global const float4* restrict pmeBsplineTheta, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
+        __global long* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     int ix = get_local_id(0)/(PME_ORDER*PME_ORDER);
     int remainder = get_local_id(0)-ix*PME_ORDER*PME_ORDER;
     int iy = remainder/PME_ORDER;
     int iz = remainder-iy*PME_ORDER;
-    __local float4 theta[PME_ORDER];
-    __local float charge[BUFFER_SIZE];
+    __local real4 theta[PME_ORDER];
+    __local real charge[BUFFER_SIZE];
     __local int basex[BUFFER_SIZE];
     __local int basey[BUFFER_SIZE];
     __local int basez[BUFFER_SIZE];
@@ -101,7 +101,7 @@ void gridSpreadCharge(__global const float4* restrict posq, __global const int2*
             if (get_local_id(0) < BUFFER_SIZE) {
                 int atomIndex = baseIndex+get_local_id(0);
                 if (atomIndex < NUM_ATOMS) {
-                    float4 pos = posq[atomIndex];
+                    real4 pos = posq[atomIndex];
                     charge[get_local_id(0)] = pos.w;
                     pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
                     pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
@@ -118,32 +118,40 @@ void gridSpreadCharge(__global const float4* restrict posq, __global const int2*
                 if (get_local_id(0) < PME_ORDER)
                     theta[get_local_id(0)] = pmeBsplineTheta[atomIndex+get_local_id(0)*NUM_ATOMS];
                 barrier(CLK_LOCAL_MEM_FENCE);
-                float add = charge[index]*theta[ix].x*theta[iy].y*theta[iz].z;
+                real add = charge[index]*theta[ix].x*theta[iy].y*theta[iz].z;
                 int x = basex[index]+ix;
                 int y = basey[index]+iy;
                 int z = basez[index]+iz;
                 x -= (x >= GRID_SIZE_X ? GRID_SIZE_X : 0);
                 y -= (y >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 z -= (z >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+#ifdef USE_DOUBLE_PRECISION
+                atom_add(&pmeGrid[2*(x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z)], (long) (add*0xFFFFFFFF));
+#else
                 atom_add(&pmeGrid[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z], (long) (add*0xFFFFFFFF));
+#endif
             }
         }
     }
 }
 
 __kernel void finishSpreadCharge(__global long* restrict pmeGrid) {
-    __global float2* floatGrid = (__global float2*) pmeGrid;
+    __global real2* realGrid = (__global real2*) pmeGrid;
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    float scale = EPSILON_FACTOR/(float) 0xFFFFFFFF;
+    real scale = EPSILON_FACTOR/(real) 0xFFFFFFFF;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
+#ifdef USE_DOUBLE_PRECISION
+        long value = pmeGrid[2*index];
+#else
         long value = pmeGrid[index];
-        float2 floatValue = (float2) ((float) (value*scale), 0.0f);
-        floatGrid[index] = floatValue;
+#endif
+        real2 realValue = (real2) ((real) (value*scale), 0);
+        realGrid[index] = realValue;
     }
 }
 #else
-__kernel void gridSpreadCharge(__global const float4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
-        __global float2* restrict pmeGrid, __global const float4* restrict pmeBsplineTheta) {
+__kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
+        __global real2* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     for (int gridIndex = get_global_id(0); gridIndex < numGridPoints; gridIndex += get_global_size(0)) {
         // Compute the charge on a grid point.
@@ -153,7 +161,7 @@ __kernel void gridSpreadCharge(__global const float4* restrict posq, __global co
         int remainder = gridIndex-gridPoint.x*GRID_SIZE_Y*GRID_SIZE_Z;
         gridPoint.y = remainder/GRID_SIZE_Z;
         gridPoint.z = remainder-gridPoint.y*GRID_SIZE_Z;
-        float result = 0.0f;
+        real result = 0.0f;
 
         // Loop over all atoms that affect this grid point.
 
@@ -174,7 +182,7 @@ __kernel void gridSpreadCharge(__global const float4* restrict posq, __global co
                     int atomIndex = atomData.x;
                     int z = atomData.y;
                     int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                    float atomCharge = pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].w;
+                    real atomCharge = pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].w;
                     result += atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
                 }
                 if (z1 > gridPoint.z)
@@ -189,21 +197,21 @@ __kernel void gridSpreadCharge(__global const float4* restrict posq, __global co
                         int atomIndex = atomData.x;
                         int z = atomData.y;
                         int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                        float atomCharge = pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].w;
+                        real atomCharge = pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].w;
                         result += atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
                     }
                 }
             }
         }
-        pmeGrid[gridIndex] = (float2) (result*EPSILON_FACTOR, 0.0f);
+        pmeGrid[gridIndex] = (real2) (result*EPSILON_FACTOR, 0);
     }
 }
 #endif
 
-__kernel void reciprocalConvolution(__global float2* restrict pmeGrid, __global float* restrict energyBuffer, __global const float* restrict pmeBsplineModuliX,
-        __global const float* restrict pmeBsplineModuliY, __global const float* restrict pmeBsplineModuliZ, float4 invPeriodicBoxSize, float recipScaleFactor) {
+__kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global real* restrict energyBuffer, __global const real* restrict pmeBsplineModuliX,
+        __global const real* restrict pmeBsplineModuliY, __global const real* restrict pmeBsplineModuliZ, real4 invPeriodicBoxSize, real recipScaleFactor) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    float energy = 0.0f;
+    real energy = 0.0f;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
         int kx = index/(GRID_SIZE_Y*GRID_SIZE_Z);
         int remainder = index-kx*GRID_SIZE_Y*GRID_SIZE_Z;
@@ -214,36 +222,36 @@ __kernel void reciprocalConvolution(__global float2* restrict pmeGrid, __global 
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
-        float mhx = mx*invPeriodicBoxSize.x;
-        float mhy = my*invPeriodicBoxSize.y;
-        float mhz = mz*invPeriodicBoxSize.z;
-        float bx = pmeBsplineModuliX[kx];
-        float by = pmeBsplineModuliY[ky];
-        float bz = pmeBsplineModuliZ[kz];
-        float2 grid = pmeGrid[index];
-        float m2 = mhx*mhx+mhy*mhy+mhz*mhz;
-        float denom = m2*bx*by*bz;
-        float eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
-        pmeGrid[index] = (float2) (grid.x*eterm, grid.y*eterm);
+        real mhx = mx*invPeriodicBoxSize.x;
+        real mhy = my*invPeriodicBoxSize.y;
+        real mhz = mz*invPeriodicBoxSize.z;
+        real bx = pmeBsplineModuliX[kx];
+        real by = pmeBsplineModuliY[ky];
+        real bz = pmeBsplineModuliZ[kz];
+        real2 grid = pmeGrid[index];
+        real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        real denom = m2*bx*by*bz;
+        real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+        pmeGrid[index] = (real2) (grid.x*eterm, grid.y*eterm);
         energy += eterm*(grid.x*grid.x + grid.y*grid.y);
     }
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel void gridInterpolateForce(__global const float4* restrict posq, __global float4* restrict forceBuffers, __global const float2* restrict pmeGrid,
-        float4 periodicBoxSize, float4 invPeriodicBoxSize, __local float4* restrict bsplinesCache) {
-    const float4 scale = 1.0f/(PME_ORDER-1);
-    __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
-    __local float4* ddata = &bsplinesCache[get_local_id(0)*PME_ORDER + get_local_size(0)*PME_ORDER];
+__kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real2* restrict pmeGrid,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, __local real4* restrict bsplinesCache) {
+    const real4 scale = 1/(real) (PME_ORDER-1);
+    __local real4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
+    __local real4* ddata = &bsplinesCache[get_local_id(0)*PME_ORDER + get_local_size(0)*PME_ORDER];
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
-        float4 force = 0.0f;
-        float4 pos = posq[atom];
+        real4 force = 0.0f;
+        real4 pos = posq[atom];
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
         pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
-                             (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
-                             (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
+        real4 t = (real4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+                           (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
+                           (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -251,15 +259,15 @@ __kernel void gridInterpolateForce(__global const float4* restrict posq, __globa
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
 
-        float4 dr = (float4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+        real4 dr = (real4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
         data[0] = 1.0f-dr;
         for (int j = 3; j < PME_ORDER; j++) {
-            float div = 1.0f/(j-1.0f);
+            real div = RECIP(j-1.0f);
             data[j-1] = div*dr*data[j-2];
             for (int k = 1; k < (j-1); k++)
-                data[j-k-1] = div*((dr+(float4) k) *data[j-k-2] + (-dr+(float4) (j-k))*data[j-k-1]);
+                data[j-k-1] = div*((dr+(real4) k) *data[j-k-2] + (-dr+(real4) (j-k))*data[j-k-1]);
             data[0] = div*(- dr+1.0f)*data[0];
         }
         ddata[0] = -data[0];
@@ -267,7 +275,7 @@ __kernel void gridInterpolateForce(__global const float4* restrict posq, __globa
             ddata[j] = data[j-1]-data[j];
         data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
         for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = scale*((dr+(float4) j)*data[PME_ORDER-j-2] + (-dr+(float4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
+            data[PME_ORDER-j-1] = scale*((dr+(real4) j)*data[PME_ORDER-j-2] + (-dr+(real4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
         data[0] = scale*(-dr+1.0f)*data[0];
 
         // Compute the force on this atom.
@@ -282,7 +290,7 @@ __kernel void gridInterpolateForce(__global const float4* restrict posq, __globa
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    float gridvalue = pmeGrid[index].x;
+                    real gridvalue = pmeGrid[index].x;
                     force.x += ddata[ix].x*data[iy].y*data[iz].z*gridvalue;
                     force.y += data[ix].x*ddata[iy].y*data[iz].z*gridvalue;
 #ifndef MAC_AMD_WORKAROUND
@@ -302,14 +310,14 @@ __kernel void gridInterpolateForce(__global const float4* restrict posq, __globa
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    float gridvalue = pmeGrid[index].x;
+                    real gridvalue = pmeGrid[index].x;
                     force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
                 }
             }
         }
 #endif
-        float4 totalForce = forceBuffers[atom];
-        float q = pos.w*EPSILON_FACTOR;
+        real4 totalForce = forceBuffers[atom];
+        real q = pos.w*EPSILON_FACTOR;
         totalForce.x -= q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x;
         totalForce.y -= q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y;
         totalForce.z -= q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z;

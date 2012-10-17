@@ -58,7 +58,7 @@ void OpenCLBondedUtilities::addInteraction(const vector<vector<int> >& atoms, co
 std::string OpenCLBondedUtilities::addArgument(cl::Memory& data, const string& type) {
     arguments.push_back(&data);
     argTypes.push_back(type);
-    return "customArg"+OpenCLExpressionUtilities::intToString(arguments.size());
+    return "customArg"+context.intToString(arguments.size());
 }
 
 void OpenCLBondedUtilities::addPrefixCode(const string& source) {
@@ -164,17 +164,17 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         stringstream s;
         for (int i = 0; i < (int) prefixCode.size(); i++)
             s<<prefixCode[i];
-        s<<"__kernel void computeBondedForces(__global float4* restrict forceBuffers, __global float* restrict energyBuffer, __global const float4* restrict posq, int groups";
+        s<<"__kernel void computeBondedForces(__global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, int groups";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
-            string indexType = "uint"+(indexWidth[force] == 1 ? "" : OpenCLExpressionUtilities::intToString(indexWidth[force]));
+            string indexType = "uint"+(indexWidth[force] == 1 ? "" : context.intToString(indexWidth[force]));
             s<<", __global const "<<indexType<<"* restrict atomIndices"<<i;
             s<<", __global const "<<indexType<<"* restrict bufferIndices"<<i;
         }
         for (int i = 0; i < (int) arguments.size(); i++)
             s<<", __global "<<argTypes[i]<<"* customArg"<<(i+1);
         s<<") {\n";
-        s<<"float energy = 0.0f;\n";
+        s<<"real energy = 0.0f;\n";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             s<<createForceSource(i, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);
@@ -182,7 +182,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         s<<"energyBuffer[get_global_id(0)] += energy;\n";
         s<<"}\n";
         map<string, string> defines;
-        defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
+        defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
         cl::Program program = context.createProgram(s.str(), defines);
         kernels.push_back(cl::Kernel(program, "computeBondedForces"));
     }
@@ -206,7 +206,7 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
         suffix = suffix4;
     else
         suffix = suffix16;
-    string indexType = "uint"+(width == 1 ? "" : OpenCLExpressionUtilities::intToString(width));
+    string indexType = "uint"+(width == 1 ? "" : context.intToString(width));
     stringstream s;
     s<<"if ((groups&"<<(1<<group)<<") != 0)\n";
     s<<"for (unsigned int index = get_global_id(0); index < "<<numBonds<<"; index += get_global_size(0)) {\n";
@@ -214,13 +214,13 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
     s<<"    "<<indexType<<" buffers = bufferIndices"<<forceIndex<<"[index];\n";
     for (int i = 0; i < numAtoms; i++) {
         s<<"    unsigned int atom"<<(i+1)<<" = atoms"<<suffix[i]<<";\n";
-        s<<"    float4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
+        s<<"    real4 pos"<<(i+1)<<" = posq[atom"<<(i+1)<<"];\n";
     }
     s<<computeForce<<"\n";
     for (int i = 0; i < numAtoms; i++) {
         s<<"    {\n";
         s<<"    unsigned int offset = atom"<<(i+1)<<"+buffers"<<suffix[i]<<"*PADDED_NUM_ATOMS;\n";
-        s<<"    float4 force = forceBuffers[offset];\n";
+        s<<"    real4 force = forceBuffers[offset];\n";
         s<<"    force.xyz += force"<<(i+1)<<".xyz;\n";
         s<<"    forceBuffers[offset] = force;\n";
         s<<"    }\n";

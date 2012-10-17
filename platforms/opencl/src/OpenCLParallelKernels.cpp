@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -54,14 +54,14 @@ using namespace std;
 class OpenCLParallelCalcForcesAndEnergyKernel::BeginComputationTask : public OpenCLContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, mm_float4* pinnedMemory) : context(context), cl(cl), kernel(kernel),
+            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory) : context(context), cl(cl), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory) {
     }
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
 
         if (cl.getContextIndex() > 0)
-            cl.getQueue().enqueueWriteBuffer(cl.getPosq().getDeviceBuffer(), CL_FALSE, 0, cl.getPaddedNumAtoms()*sizeof(mm_float4), pinnedMemory);
+            cl.getQueue().enqueueWriteBuffer(cl.getPosq().getDeviceBuffer(), CL_FALSE, 0, cl.getPaddedNumAtoms()*cl.getPosq().getElementSize(), pinnedMemory);
         kernel.beginComputation(context, includeForce, includeEnergy, groups);
     }
 private:
@@ -70,13 +70,13 @@ private:
     OpenCLCalcForcesAndEnergyKernel& kernel;
     bool includeForce, includeEnergy;
     int groups;
-    mm_float4* pinnedMemory;
+    void* pinnedMemory;
 };
 
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, mm_float4* pinnedMemory) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, void* pinnedMemory) :
             context(context), cl(cl), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory) {
     }
@@ -87,8 +87,9 @@ public:
         if (includeForce) {
             if (cl.getContextIndex() > 0) {
                 int numAtoms = cl.getPaddedNumAtoms();
+                void* dest = (cl.getUseDoublePrecision() ? (void*) &((mm_double4*) pinnedMemory)[(cl.getContextIndex()-1)*numAtoms] : (void*) &((mm_float4*) pinnedMemory)[(cl.getContextIndex()-1)*numAtoms]);
                 cl.getQueue().enqueueReadBuffer(cl.getForce().getDeviceBuffer(), CL_TRUE, 0,
-                        numAtoms*sizeof(mm_float4), &pinnedMemory[(cl.getContextIndex()-1)*numAtoms]);
+                        numAtoms*cl.getForce().getElementSize(), dest);
             }
             else
                 cl.getQueue().finish();
@@ -103,7 +104,7 @@ private:
     int groups;
     double& energy;
     long long& completionTime;
-    mm_float4* pinnedMemory;
+    void* pinnedMemory;
 };
 
 OpenCLParallelCalcForcesAndEnergyKernel::OpenCLParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, OpenCLPlatform::PlatformData& data) :
@@ -129,19 +130,20 @@ void OpenCLParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     OpenCLContext& cl0 = *data.contexts[0];
+    int elementSize = (cl0.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
     if (contextForces == NULL) {
         contextForces = OpenCLArray::create<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
                 data.contexts.size()*cl0.getPaddedNumAtoms(), "contextForces");
-        int bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*sizeof(mm_float4);
+        int bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*elementSize;
         pinnedPositionBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
-        pinnedPositionMemory = (mm_float4*) cl0.getQueue().enqueueMapBuffer(*pinnedPositionBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
+        pinnedPositionMemory = cl0.getQueue().enqueueMapBuffer(*pinnedPositionBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
         pinnedForceBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
-        pinnedForceMemory = (mm_float4*) cl0.getQueue().enqueueMapBuffer(*pinnedForceBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
+        pinnedForceMemory = cl0.getQueue().enqueueMapBuffer(*pinnedForceBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     }
 
     // Copy coordinates over to each device and execute the kernel.
     
-    cl0.getQueue().enqueueReadBuffer(cl0.getPosq().getDeviceBuffer(), CL_TRUE, 0, cl0.getPaddedNumAtoms()*sizeof(mm_float4), pinnedPositionMemory);
+    cl0.getQueue().enqueueReadBuffer(cl0.getPosq().getDeviceBuffer(), CL_TRUE, 0, cl0.getPaddedNumAtoms()*elementSize, pinnedPositionMemory);
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
         OpenCLContext& cl = *data.contexts[i];
@@ -165,8 +167,9 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         
         OpenCLContext& cl = *data.contexts[0];
         int numAtoms = cl.getPaddedNumAtoms();
-        cl.getQueue().enqueueWriteBuffer(contextForces->getDeviceBuffer(), CL_FALSE, numAtoms*sizeof(mm_float4),
-                numAtoms*(data.contexts.size()-1)*sizeof(mm_float4), pinnedForceMemory);
+        int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+        cl.getQueue().enqueueWriteBuffer(contextForces->getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
+                numAtoms*(data.contexts.size()-1)*elementSize, pinnedForceMemory);
         cl.reduceBuffer(*contextForces, data.contexts.size());
         
         // Balance work between the contexts by transferring a few nonbonded tiles from the context that

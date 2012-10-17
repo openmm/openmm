@@ -559,8 +559,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         // Create the CCMA kernels.
 
         map<string, string> defines;
-        defines["NUM_CONSTRAINTS"] = OpenCLExpressionUtilities::intToString(numCCMA);
-        defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(numAtoms);
+        defines["NUM_CONSTRAINTS"] = context.intToString(numCCMA);
+        defines["NUM_ATOMS"] = context.intToString(numAtoms);
         cl::Program ccmaProgram = context.createProgram(OpenCLKernelSources::ccma, defines);
         ccmaDirectionsKernel = cl::Kernel(ccmaProgram, "computeConstraintDirections");
         ccmaPosForceKernel = cl::Kernel(ccmaProgram, "computeConstraintForce");
@@ -630,9 +630,9 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     // Create the kernels for virtual sites.
 
     map<string, string> defines;
-    defines["NUM_2_AVERAGE"] = OpenCLExpressionUtilities::intToString(num2Avg);
-    defines["NUM_3_AVERAGE"] = OpenCLExpressionUtilities::intToString(num3Avg);
-    defines["NUM_OUT_OF_PLANE"] = OpenCLExpressionUtilities::intToString(numOutOfPlane);
+    defines["NUM_2_AVERAGE"] = context.intToString(num2Avg);
+    defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
+    defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
     cl::Program vsiteProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
     vsitePositionKernel = cl::Kernel(vsiteProgram, "computeVirtualSites");
     vsitePositionKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());

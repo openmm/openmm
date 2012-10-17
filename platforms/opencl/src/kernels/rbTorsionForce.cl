@@ -4,9 +4,9 @@ if (theta < 0.0f)
 else
     theta -= PI;
 cosangle = -cosangle;
-float cosFactor = cosangle;
-float dEdAngle = -torsionParams.s1;
-float rbEnergy = torsionParams.s0;
+real cosFactor = cosangle;
+real dEdAngle = -torsionParams.s1;
+real rbEnergy = torsionParams.s0;
 rbEnergy += torsionParams.s1*cosFactor;
 dEdAngle -= 2.0f*torsionParams.s2*cosFactor;
 cosFactor *= cosangle;

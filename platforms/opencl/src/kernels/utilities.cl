@@ -69,11 +69,11 @@ __kernel void clearSixBuffers(__global int* restrict buffer1, int size1, __globa
  * Sum a collection of buffers into the first one.
  */
 
-__kernel void reduceFloat4Buffer(__global float4* restrict buffer, int bufferSize, int numBuffers) {
+__kernel void reduceReal4Buffer(__global real4* restrict buffer, int bufferSize, int numBuffers) {
     int index = get_global_id(0);
     int totalSize = bufferSize*numBuffers;
     while (index < bufferSize) {
-        float4 sum = buffer[index];
+        real4 sum = buffer[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             sum += buffer[i];
         buffer[index] = sum;
@@ -84,11 +84,11 @@ __kernel void reduceFloat4Buffer(__global float4* restrict buffer, int bufferSiz
 /**
  * Sum the various buffers containing forces.
  */
-__kernel void reduceForces(__global const long* restrict longBuffer, __global float4* restrict buffer, int bufferSize, int numBuffers) {
+__kernel void reduceForces(__global const long* restrict longBuffer, __global real4* restrict buffer, int bufferSize, int numBuffers) {
     int totalSize = bufferSize*numBuffers;
-    float scale = 1.0f/(float) 0xFFFFFFFF;
+    real scale = 1/(real) 0xFFFFFFFF;
     for (int index = get_global_id(0); index < bufferSize; index += get_global_size(0)) {
-        float4 sum = (float4) (scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0.0f);
+        real4 sum = (real4) (scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0);
         for (int i = index; i < totalSize; i += bufferSize)
             sum += buffer[i];
         buffer[index] = sum;
