@@ -4,11 +4,11 @@
  * Compute a value based on pair interactions.
  */
 
-__kernel void computeN2Value(__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions,
-        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global float* restrict global_value, __local float* restrict local_value,
-        __local float* restrict tempBuffer,
+__kernel void computeN2Value(__global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
+        __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real* restrict global_value, __local real* restrict local_value,
+        __local real* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
 #else
         unsigned int numTiles
 #endif
@@ -76,29 +76,29 @@ __kernel void computeN2Value(__global const float4* restrict posq, __local float
                 unsigned int excl = exclusions[exclusionIndex+tgx];
 #endif
                 unsigned int atom1 = x*TILE_SIZE+tgx;
-                float value = 0.0f;
-                float4 posq1 = posq[atom1];
+                real value = 0;
+                real4 posq1 = posq[atom1];
                 LOAD_ATOM1_PARAMETERS
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
-                    float4 posq2 = local_posq[j];
-                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                    real4 posq2 = local_posq[j];
+                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                     delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-                    float r2 = dot(delta.xyz, delta.xyz);
+                    real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
+                    real invR = RSQRT(r2);
+                    real r = RECIP(invR);
                     unsigned int atom2 = j;
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
-                    float tempValue1 = 0.0f;
-                    float tempValue2 = 0.0f;
+                    real tempValue1 = 0;
+                    real tempValue2 = 0;
 #ifdef USE_EXCLUSIONS
                     if (!isExcluded && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
 #else
@@ -125,7 +125,7 @@ __kernel void computeN2Value(__global const float4* restrict posq, __local float
             // This is an off-diagonal tile.
 
             for (int tgx = 0; tgx < TILE_SIZE; tgx++)
-                local_value[tgx] = 0.0f;
+                local_value[tgx] = 0;
 #if defined(USE_CUTOFF) && defined(USE_EXCLUSIONS)
             unsigned int flags1 = (numTiles <= maxTiles ? interactionFlags[2*pos] : 0xFFFFFFFF);
             unsigned int flags2 = (numTiles <= maxTiles ? interactionFlags[2*pos+1] : 0xFFFFFFFF);
@@ -135,22 +135,22 @@ __kernel void computeN2Value(__global const float4* restrict posq, __local float
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     if ((flags2&(1<<tgx)) != 0) {
                         unsigned int atom1 = x*TILE_SIZE+tgx;
-                        float value = 0.0f;
-                        float4 posq1 = posq[atom1];
+                        real value = 0;
+                        real4 posq1 = posq[atom1];
                         LOAD_ATOM1_PARAMETERS
                         for (unsigned int j = 0; j < TILE_SIZE; j++) {
                             if ((flags&(1<<j)) != 0) {
-                                float4 posq2 = local_posq[j];
-                                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                                real4 posq2 = local_posq[j];
+                                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                                 delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-                                float r2 = dot(delta.xyz, delta.xyz);
-                                float tempValue1 = 0.0f;
-                                float tempValue2 = 0.0f;
+                                real r2 = dot(delta.xyz, delta.xyz);
+                                real tempValue1 = 0;
+                                real tempValue2 = 0;
                                 if (r2 < CUTOFF_SQUARED) {
-                                    float invR = RSQRT(r2);
-                                    float r = RECIP(invR);
+                                    real invR = RSQRT(r2);
+                                    real r = RECIP(invR);
                                     unsigned int atom2 = j;
                                     LOAD_ATOM2_PARAMETERS
                                     atom2 = y*TILE_SIZE+j;
@@ -177,8 +177,8 @@ __kernel void computeN2Value(__global const float4* restrict posq, __local float
 
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     unsigned int atom1 = x*TILE_SIZE+tgx;
-                    float value = 0.0f;
-                    float4 posq1 = posq[atom1];
+                    real value = 0;
+                    real4 posq1 = posq[atom1];
                     LOAD_ATOM1_PARAMETERS
 #ifdef USE_EXCLUSIONS
                     unsigned int excl = (hasExclusions ? exclusions[exclusionIndex+tgx] : 0xFFFFFFFF);
@@ -187,22 +187,22 @@ __kernel void computeN2Value(__global const float4* restrict posq, __local float
 #ifdef USE_EXCLUSIONS
                         bool isExcluded = !(excl & 0x1);
 #endif
-                        float4 posq2 = local_posq[j];
-                        float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                        real4 posq2 = local_posq[j];
+                        real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                         delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
-                        float r2 = dot(delta.xyz, delta.xyz);
+                        real r2 = dot(delta.xyz, delta.xyz);
 #ifdef USE_CUTOFF
                         if (r2 < CUTOFF_SQUARED) {
 #endif
-                        float invR = RSQRT(r2);
-                        float r = RECIP(invR);
+                        real invR = RSQRT(r2);
+                        real r = RECIP(invR);
                         unsigned int atom2 = j;
                         LOAD_ATOM2_PARAMETERS
                         atom2 = y*TILE_SIZE+j;
-                        float tempValue1 = 0.0f;
-                        float tempValue2 = 0.0f;
+                        real tempValue1 = 0;
+                        real tempValue2 = 0;
 #ifdef USE_EXCLUSIONS
                         if (!isExcluded && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #else

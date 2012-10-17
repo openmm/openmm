@@ -256,8 +256,9 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         interactingTiles = OpenCLArray::create<mm_ushort2>(context, maxInteractingTiles, "interactingTiles");
         interactionFlags = OpenCLArray::create<cl_uint>(context, context.getSIMDWidth() == 32 ? maxInteractingTiles : (deviceIsCpu ? 2*maxInteractingTiles : 1), "interactionFlags");
         interactionCount = OpenCLArray::create<cl_uint>(context, 1, "interactionCount");
-        blockCenter = OpenCLArray::create<mm_float4>(context, numAtomBlocks, "blockCenter");
-        blockBoundingBox = OpenCLArray::create<mm_float4>(context, numAtomBlocks, "blockBoundingBox");
+        int elementSize = (context.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+        blockCenter = new OpenCLArray(context, numAtomBlocks, elementSize, "blockCenter");
+        blockBoundingBox = new OpenCLArray(context, numAtomBlocks, elementSize, "blockBoundingBox");
         vector<cl_uint> count(1, 0);
         interactionCount->upload(count);
     }

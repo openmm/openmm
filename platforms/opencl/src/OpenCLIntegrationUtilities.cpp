@@ -575,11 +575,11 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     // Build the list of virtual sites.
     
     vector<mm_int4> vsite2AvgAtomVec;
-    vector<mm_float2> vsite2AvgWeightVec;
+    vector<mm_double2> vsite2AvgWeightVec;
     vector<mm_int4> vsite3AvgAtomVec;
-    vector<mm_float4> vsite3AvgWeightVec;
+    vector<mm_double4> vsite3AvgWeightVec;
     vector<mm_int4> vsiteOutOfPlaneAtomVec;
-    vector<mm_float4> vsiteOutOfPlaneWeightVec;
+    vector<mm_double4> vsiteOutOfPlaneWeightVec;
     for (int i = 0; i < numAtoms; i++) {
         if (system.isVirtualSite(i)) {
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -587,21 +587,21 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
                 
                 const TwoParticleAverageSite& site = dynamic_cast<const TwoParticleAverageSite&>(system.getVirtualSite(i));
                 vsite2AvgAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), 0));
-                vsite2AvgWeightVec.push_back(mm_float2((float) site.getWeight(0), (float) site.getWeight(1)));
+                vsite2AvgWeightVec.push_back(mm_double2(site.getWeight(0), site.getWeight(1)));
             }
             else if (dynamic_cast<const ThreeParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
                 // A three particle average.
                 
                 const ThreeParticleAverageSite& site = dynamic_cast<const ThreeParticleAverageSite&>(system.getVirtualSite(i));
                 vsite3AvgAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
-                vsite3AvgWeightVec.push_back(mm_float4((float) site.getWeight(0), (float) site.getWeight(1), (float) site.getWeight(2), 0.0f));
+                vsite3AvgWeightVec.push_back(mm_double4(site.getWeight(0), site.getWeight(1), site.getWeight(2), 0.0));
             }
             else if (dynamic_cast<const OutOfPlaneSite*>(&system.getVirtualSite(i)) != NULL) {
                 // An out of plane site.
                 
                 const OutOfPlaneSite& site = dynamic_cast<const OutOfPlaneSite&>(system.getVirtualSite(i));
                 vsiteOutOfPlaneAtomVec.push_back(mm_int4(i, site.getParticle(0), site.getParticle(1), site.getParticle(2)));
-                vsiteOutOfPlaneWeightVec.push_back(mm_float4((float) site.getWeight12(), (float) site.getWeight13(), (float) site.getWeightCross(), 0.0f));
+                vsiteOutOfPlaneWeightVec.push_back(mm_double4(site.getWeight12(), site.getWeight13(), site.getWeightCross(), 0.0));
             }
         }
     }
@@ -609,22 +609,47 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
     vsite2AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
-    vsite2AvgWeights = OpenCLArray::create<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
     vsite3AvgAtoms = OpenCLArray::create<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
-    vsite3AvgWeights = OpenCLArray::create<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
     vsiteOutOfPlaneAtoms = OpenCLArray::create<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
-    vsiteOutOfPlaneWeights = OpenCLArray::create<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
-    if (num2Avg > 0) {
+    if (num2Avg > 0)
         vsite2AvgAtoms->upload(vsite2AvgAtomVec);
-        vsite2AvgWeights->upload(vsite2AvgWeightVec);
-    }
-    if (num3Avg > 0) {
+    if (num3Avg > 0)
         vsite3AvgAtoms->upload(vsite3AvgAtomVec);
-        vsite3AvgWeights->upload(vsite3AvgWeightVec);
-    }
-    if (numOutOfPlane > 0) {
+    if (numOutOfPlane > 0)
         vsiteOutOfPlaneAtoms->upload(vsiteOutOfPlaneAtomVec);
-        vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+    if (context.getUseDoublePrecision()) {
+        vsite2AvgWeights = OpenCLArray::create<mm_double2>(context, max(1, num2Avg), "vsite2AvgWeights");
+        vsite3AvgWeights = OpenCLArray::create<mm_double4>(context, max(1, num3Avg), "vsite3AvgWeights");
+        vsiteOutOfPlaneWeights = OpenCLArray::create<mm_double4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        if (num2Avg > 0)
+            vsite2AvgWeights->upload(vsite2AvgWeightVec);
+        if (num3Avg > 0)
+            vsite3AvgWeights->upload(vsite3AvgWeightVec);
+        if (numOutOfPlane > 0)
+            vsiteOutOfPlaneWeights->upload(vsiteOutOfPlaneWeightVec);
+    }
+    else {
+        vsite2AvgWeights = OpenCLArray::create<mm_float2>(context, max(1, num2Avg), "vsite2AvgWeights");
+        vsite3AvgWeights = OpenCLArray::create<mm_float4>(context, max(1, num3Avg), "vsite3AvgWeights");
+        vsiteOutOfPlaneWeights = OpenCLArray::create<mm_float4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneWeights");
+        if (num2Avg > 0) {
+            vector<mm_float2> floatWeights(num2Avg);
+            for (int i = 0; i < num2Avg; i++)
+                floatWeights[i] = mm_float2((float) vsite2AvgWeightVec[i].x, (float) vsite2AvgWeightVec[i].y);
+            vsite2AvgWeights->upload(floatWeights);
+        }
+        if (num3Avg > 0) {
+            vector<mm_float4> floatWeights(num3Avg);
+            for (int i = 0; i < num3Avg; i++)
+                floatWeights[i] = mm_float4((float) vsite3AvgWeightVec[i].x, (float) vsite3AvgWeightVec[i].y, (float) vsite3AvgWeightVec[i].z, 0.0f);
+            vsite3AvgWeights->upload(floatWeights);
+        }
+        if (numOutOfPlane > 0) {
+            vector<mm_float4> floatWeights(numOutOfPlane);
+            for (int i = 0; i < numOutOfPlane; i++)
+                floatWeights[i] = mm_float4((float) vsiteOutOfPlaneWeightVec[i].x, (float) vsiteOutOfPlaneWeightVec[i].y, (float) vsiteOutOfPlaneWeightVec[i].z, 0.0f);
+            vsiteOutOfPlaneWeights->upload(floatWeights);
+        }
     }
     
     // Create the kernels for virtual sites.

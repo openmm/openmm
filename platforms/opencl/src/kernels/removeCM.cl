@@ -98,7 +98,7 @@ __kernel void removeCenterOfMassMomentum(unsigned int numAtoms, __global mixed4*
         temp[thread] += temp[thread+2];
 #endif
     barrier(CLK_LOCAL_MEM_FENCE);
-    cm = (temp[0]+temp[1])*INVERSE_TOTAL_MASS;
+    cm = (float4) (INVERSE_TOTAL_MASS*(temp[0].x+temp[1].x), INVERSE_TOTAL_MASS*(temp[0].y+temp[1].y), INVERSE_TOTAL_MASS*(temp[0].z+temp[1].z), 0);
 
     // Now remove the center of mass velocity from each atom.
 

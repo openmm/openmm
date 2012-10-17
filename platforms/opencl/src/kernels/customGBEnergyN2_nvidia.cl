@@ -16,13 +16,13 @@ __kernel void computeN2Energy(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers,
 #else
-        __global float4* restrict forceBuffers,
+        __global real4* restrict forceBuffers,
 #endif
-        __global float* restrict energyBuffer, __local float4* restrict local_force,
-	__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions, __global const unsigned int* restrict exclusionIndices,
-        __global const unsigned int* restrict exclusionRowIndices, __local float4* restrict tempBuffer,
+        __global real* restrict energyBuffer, __local real4* restrict local_force,
+	__global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions, __global const unsigned int* restrict exclusionIndices,
+        __global const unsigned int* restrict exclusionRowIndices, __local real4* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, __global const unsigned int* restrict interactionFlags
 #else
         unsigned int numTiles
 #endif
@@ -37,7 +37,7 @@ __kernel void computeN2Energy(
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
 #endif
-    float energy = 0.0f;
+    real energy = 0;
     unsigned int lasty = 0xFFFFFFFF;
     __local unsigned int exclusionRange[2*WARPS_PER_GROUP];
     __local int exclusionIndex[WARPS_PER_GROUP];
@@ -49,7 +49,7 @@ __kernel void computeN2Energy(
         const unsigned int tbx = get_local_id(0) - tgx;
         const unsigned int localGroupIndex = get_local_id(0)/TILE_SIZE;
         unsigned int x, y;
-        float4 force = 0.0f;
+        real4 force = 0;
         DECLARE_ATOM1_DERIVATIVES
         if (pos < end) {
 #ifdef USE_CUTOFF
@@ -69,7 +69,7 @@ __kernel void computeN2Energy(
                 }
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
-            float4 posq1 = posq[atom1];
+            real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
 
             // Locate the exclusion data for this tile.
@@ -102,23 +102,23 @@ __kernel void computeN2Energy(
                     bool isExcluded = !(excl & 0x1);
 #endif
                     int atom2 = tbx+j;
-                    float4 posq2 = local_posq[atom2];
-                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                    real4 posq2 = local_posq[atom2];
+                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                     delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                     delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                    float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                    real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
+                    real invR = RSQRT(r2);
+                    real r = RECIP(invR);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y*TILE_SIZE+j;
-                    float dEdR = 0.0f;
-                    float tempEnergy = 0.0f;
+                    real dEdR = 0;
+                    real tempEnergy = 0;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
                         COMPUTE_INTERACTION
                         dEdR /= -r;
@@ -143,7 +143,7 @@ __kernel void computeN2Energy(
                     local_posq[localAtomIndex] = posq[j];
                     LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
                 }
-                local_force[localAtomIndex] = 0.0f;
+                local_force[localAtomIndex] = 0;
                 CLEAR_LOCAL_DERIVATIVES
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
@@ -165,23 +165,23 @@ __kernel void computeN2Energy(
                         bool isExcluded = !(excl & 0x1);
 #endif
                         int atom2 = tbx+tj;
-                        float4 posq2 = local_posq[atom2];
-                        float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                        real4 posq2 = local_posq[atom2];
+                        real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                         delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                         delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                         delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                        float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                         if (r2 < CUTOFF_SQUARED) {
 #endif
-                        float invR = RSQRT(r2);
-                        float r = RECIP(invR);
+                        real invR = RSQRT(r2);
+                        real r = RECIP(invR);
                         LOAD_ATOM2_PARAMETERS
                         atom2 = y*TILE_SIZE+tj;
-                        float dEdR = 0.0f;
-                        float tempEnergy = 0.0f;
+                        real dEdR = 0;
+                        real tempEnergy = 0;
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                             COMPUTE_INTERACTION
                             dEdR /= -r;

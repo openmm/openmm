@@ -10,18 +10,18 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
 #ifdef SUPPORTS_64_BIT_ATOMICS
             __global const long* restrict bornSum,
 #else
-            __global const float* restrict bornSum,
+            __global const real* restrict bornSum,
 #endif
-            __global const float2* restrict params, __global float* restrict bornRadii, __global float* restrict obcChain) {
+            __global const float2* restrict params, __global real* restrict bornRadii, __global real* restrict obcChain) {
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Get summed Born data
 
         int totalSize = bufferSize*numBuffers;
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        float sum = (1.0f/0xFFFFFFFF)*bornSum[index];
+        real sum = (1/(real) 0xFFFFFFFF)*bornSum[index];
 #else
-        float sum = bornSum[index];
+        real sum = bornSum[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             sum += bornSum[i];
 #endif
@@ -30,13 +30,13 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
 
         float offsetRadius = params[index].x;
         sum *= 0.5f*offsetRadius;
-        float sum2 = sum*sum;
-        float sum3 = sum*sum2;
-        float tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
-        float nonOffsetRadius = offsetRadius + DIELECTRIC_OFFSET;
-        float radius = 1.0f/(1.0f/offsetRadius - tanhSum/nonOffsetRadius);
-        float chain = offsetRadius*(alpha - 2.0f*beta*sum + 3.0f*gamma*sum2);
-        chain = (1.0f-tanhSum*tanhSum)*chain / nonOffsetRadius;
+        real sum2 = sum*sum;
+        real sum3 = sum*sum2;
+        real tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
+        real nonOffsetRadius = offsetRadius + DIELECTRIC_OFFSET;
+        real radius = 1/(1/offsetRadius - tanhSum/nonOffsetRadius);
+        real chain = offsetRadius*(alpha - 2*beta*sum + 3*gamma*sum2);
+        chain = (1-tanhSum*tanhSum)*chain / nonOffsetRadius;
         bornRadii[index] = radius;
         obcChain[index] = chain;
         index += get_global_size(0);
@@ -47,31 +47,31 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
  * Reduce the Born force.
  */
 
-__kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce,
+__kernel void reduceBornForce(int bufferSize, int numBuffers, __global real* bornForce,
 #ifdef SUPPORTS_64_BIT_ATOMICS
             __global const long* restrict bornForceIn,
 #endif
-            __global float* restrict energyBuffer, __global const float2* restrict params, __global const float* restrict bornRadii, __global const float* restrict obcChain) {
-    float energy = 0.0f;
+            __global real* restrict energyBuffer, __global const float2* restrict params, __global const real* restrict bornRadii, __global const real* restrict obcChain) {
+    real energy = 0.0f;
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         // Sum the Born force
 
         int totalSize = bufferSize*numBuffers;
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        float force = (1.0f/0xFFFFFFFF)*bornForceIn[index];
+        real force = (1/(real) 0xFFFFFFFF)*bornForceIn[index];
 #else
-        float force = bornForce[index];
+        real force = bornForce[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             force += bornForce[i];
 #endif
         // Now calculate the actual force
 
         float offsetRadius = params[index].x;
-        float bornRadius = bornRadii[index];
-        float r = offsetRadius+DIELECTRIC_OFFSET+PROBE_RADIUS;
-        float ratio6 = pow((offsetRadius+DIELECTRIC_OFFSET)/bornRadius, 6.0f);
-        float saTerm = SURFACE_AREA_FACTOR*r*r*ratio6;
+        real bornRadius = bornRadii[index];
+        real r = offsetRadius+DIELECTRIC_OFFSET+PROBE_RADIUS;
+        real ratio6 = pow((offsetRadius+DIELECTRIC_OFFSET)/bornRadius, (real) 6);
+        real saTerm = SURFACE_AREA_FACTOR*r*r*ratio6;
         force += saTerm/bornRadius;
         energy += saTerm;
         force *= bornRadius*bornRadius*obcChain[index];

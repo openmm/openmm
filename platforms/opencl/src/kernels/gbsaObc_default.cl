@@ -5,7 +5,7 @@
 #define TILE_SIZE 32
 
 typedef struct {
-    float x, y, z;
+    real x, y, z;
     float radius, scaledRadius;
 } AtomData1;
 
@@ -18,11 +18,11 @@ void computeBornSum(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict global_bornSum,
 #else
-        __global float* restrict global_bornSum,
+        __global real* restrict global_bornSum,
 #endif
-        __global const float4* restrict posq, __global const float2* restrict global_params,
+        __global const real4* restrict posq, __global const float2* restrict global_params,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
         unsigned int numTiles) {
 #endif
@@ -36,8 +36,8 @@ void computeBornSum(
 #endif
     unsigned int lasty = 0xFFFFFFFF;
     __local AtomData1 localData[TILE_SIZE];
-    __local float localBornSum[FORCE_WORK_GROUP_SIZE];
-    __local float localTemp[TILE_SIZE];
+    __local real localBornSum[FORCE_WORK_GROUP_SIZE];
+    __local real localTemp[TILE_SIZE];
 
     while (pos < end) {
         // Extract the coordinates of this tile
@@ -62,8 +62,8 @@ void computeBornSum(
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int localForceOffset = get_local_id(0) & ~(TILE_SIZE-1);
         unsigned int atom1 = x*TILE_SIZE + tgx;
-        float bornSum = 0.0f;
-        float4 posq1 = posq[atom1];
+        real bornSum = 0.0f;
+        real4 posq1 = posq[atom1];
         float2 params1 = global_params[atom1];
         if (x == y) {
             // This tile is on the diagonal.
@@ -77,27 +77,27 @@ void computeBornSum(
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                float4 delta = (float4) (localData[baseLocalAtom+j].x-posq1.x, localData[baseLocalAtom+j].y-posq1.y, localData[baseLocalAtom+j].z-posq1.z, 0.0f);
+                real4 delta = (float4) (localData[baseLocalAtom+j].x-posq1.x, localData[baseLocalAtom+j].y-posq1.y, localData[baseLocalAtom+j].z-posq1.z, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
                 float2 params2 = (float2) (localData[baseLocalAtom+j].radius, localData[baseLocalAtom+j].scaledRadius);
-                float rScaledRadiusJ = r+params2.y;
+                real rScaledRadiusJ = r+params2.y;
 #ifdef USE_CUTOFF
                 unsigned int includeInteraction = (atom1 < NUM_ATOMS && y*TILE_SIZE+baseLocalAtom+j < NUM_ATOMS && r2 < CUTOFF_SQUARED && (j+baseLocalAtom != tgx) && (params1.x < rScaledRadiusJ));
 #else
                 unsigned int includeInteraction = (atom1 < NUM_ATOMS && y*TILE_SIZE+baseLocalAtom+j < NUM_ATOMS && (j+baseLocalAtom != tgx) && (params1.x < rScaledRadiusJ));
 #endif
-                float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
-                float u_ij = RECIP(rScaledRadiusJ);
-                float l_ij2 = l_ij*l_ij;
-                float u_ij2 = u_ij*u_ij;
-                float ratio = LOG(u_ij * RECIP(l_ij));
+                real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
+                real u_ij = RECIP(rScaledRadiusJ);
+                real l_ij2 = l_ij*l_ij;
+                real u_ij2 = u_ij*u_ij;
+                real ratio = LOG(u_ij * RECIP(l_ij));
                 bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                  (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeInteraction);
                 bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeInteraction && params1.x < params2.y-r);
@@ -128,11 +128,11 @@ void computeBornSum(
 
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
                 unsigned int j = y*TILE_SIZE + tgx;
-                float4 tempPosq = posq[j];
+                real4 tempPosq = posq[j];
                 localData[get_local_id(0)].x = tempPosq.x;
                 localData[get_local_id(0)].y = tempPosq.y;
                 localData[get_local_id(0)].z = tempPosq.z;
-                float2 tempParams = global_params[j];
+                real2 tempParams = global_params[j];
                 localData[get_local_id(0)].radius = tempParams.x;
                 localData[get_local_id(0)].scaledRadius = tempParams.y;
             }
@@ -143,41 +143,41 @@ void computeBornSum(
 
             unsigned int tj = (tgx+baseLocalAtom) & (TILE_SIZE-1);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                float4 delta = (float4) (localData[tj].x-posq1.x, localData[tj].y-posq1.y, localData[tj].z-posq1.z, 0.0f);
+                real4 delta = (real4) (localData[tj].x-posq1.x, localData[tj].y-posq1.y, localData[tj].z-posq1.z, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                 unsigned int includeInteraction = (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS && r2 < CUTOFF_SQUARED);
 #else
                 unsigned int includeInteraction = (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS);
 #endif
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
                 float2 params2 = (float2) (localData[tj].radius, localData[tj].scaledRadius);
-                float rScaledRadiusJ = r+params2.y;
+                real rScaledRadiusJ = r+params2.y;
                 {
-                    float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
-                    float u_ij = RECIP(rScaledRadiusJ);
-                    float l_ij2 = l_ij*l_ij;
-                    float u_ij2 = u_ij*u_ij;
-                    float ratio = LOG(u_ij * RECIP(l_ij));
+                    real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
+                    real u_ij = RECIP(rScaledRadiusJ);
+                    real l_ij2 = l_ij*l_ij;
+                    real u_ij2 = u_ij*u_ij;
+                    real ratio = LOG(u_ij * RECIP(l_ij));
                     unsigned int includeTerm = (includeInteraction && params1.x < rScaledRadiusJ);
                     bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                      (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeTerm);
                     bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeTerm && params1.x < params2.y-r);
                 }
-                float rScaledRadiusI = r+params1.y;
+                real rScaledRadiusI = r+params1.y;
                 {
-                    float l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
-                    float u_ij = RECIP(rScaledRadiusI);
-                    float l_ij2 = l_ij*l_ij;
-                    float u_ij2 = u_ij*u_ij;
-                    float ratio = LOG(u_ij * RECIP(l_ij));
-                    float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
+                    real l_ij = RECIP(max((real) params2.x, fabs(r-params1.y)));
+                    real u_ij = RECIP(rScaledRadiusI);
+                    real l_ij2 = l_ij*l_ij;
+                    real u_ij2 = u_ij*u_ij;
+                    real ratio = LOG(u_ij * RECIP(l_ij));
+                    real term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                      (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                     term += select(0.0f, 2.0f*(RECIP(params2.x)-l_ij), params2.x < params1.y-r);
                     localBornSum[tj+localForceOffset] += select(0.0f, term, includeInteraction && params2.x < rScaledRadiusI);
@@ -206,8 +206,8 @@ void computeBornSum(
                 const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 // Do both loads before both stores to minimize store-load waits.
-                float sum1 = global_bornSum[offset1];
-                float sum2 = global_bornSum[offset2];
+                real sum1 = global_bornSum[offset1];
+                real sum2 = global_bornSum[offset2];
                 sum1 += bornSum + localTemp[tgx];
                 sum2 += localBornSum[get_local_id(0)] + localBornSum[get_local_id(0)+TILE_SIZE];
                 global_bornSum[offset1] = sum1;
@@ -222,15 +222,15 @@ void computeBornSum(
 }
 
 typedef struct {
-    float x, y, z, w;
-    float padding;
+    real x, y, z, w;
+    real padding;
 } PaddedUnalignedFloat4;
 
 typedef struct {
-    float x, y, z;
-    float q;
-    float bornRadius;
-    float temp_x, temp_y, temp_z, temp_w;
+    real x, y, z;
+    real q;
+    real bornRadius;
+    real temp_x, temp_y, temp_z, temp_w;
 } AtomData2;
 
 /**
@@ -242,11 +242,11 @@ void computeGBSAForce1(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers, __global long* restrict global_bornForce,
 #else
-        __global float4* restrict forceBuffers, __global float* restrict global_bornForce,
+        __global real4* restrict forceBuffers, __global real* restrict global_bornForce,
 #endif
-        __global float* restrict energyBuffer, __global const float4* restrict posq, __global const float* restrict global_bornRadii,
+        __global real* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict global_bornRadii,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
         unsigned int numTiles) {
 #endif
@@ -258,7 +258,7 @@ void computeGBSAForce1(
     unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
-    float energy = 0.0f;
+    real energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
     __local AtomData2 localData[TILE_SIZE];
     __local PaddedUnalignedFloat4 localForce[FORCE_WORK_GROUP_SIZE];
@@ -286,9 +286,9 @@ void computeGBSAForce1(
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int localForceOffset = get_local_id(0) & ~(TILE_SIZE-1);
         unsigned int atom1 = x*TILE_SIZE + tgx;
-        float4 force = 0.0f;
-        float4 posq1 = posq[atom1];
-        float bornRadius1 = global_bornRadii[atom1];
+        real4 force = 0.0f;
+        real4 posq1 = posq[atom1];
+        real bornRadius1 = global_bornRadii[atom1];
         if (x == y) {
             // This tile is on the diagonal.
 
@@ -302,26 +302,26 @@ void computeGBSAForce1(
             barrier(CLK_LOCAL_MEM_FENCE);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
                 unsigned int includeInteraction = (atom1 < NUM_ATOMS && y*TILE_SIZE+baseLocalAtom+j < NUM_ATOMS);
-                float4 posq2 = (float4) (localData[baseLocalAtom+j].x, localData[baseLocalAtom+j].y, localData[baseLocalAtom+j].z, localData[baseLocalAtom+j].q);
-                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                real4 posq2 = (real4) (localData[baseLocalAtom+j].x, localData[baseLocalAtom+j].y, localData[baseLocalAtom+j].z, localData[baseLocalAtom+j].q);
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
-                float bornRadius2 = localData[baseLocalAtom+j].bornRadius;
-                float alpha2_ij = bornRadius1*bornRadius2;
-                float D_ij = r2*RECIP(4.0f*alpha2_ij);
-                float expTerm = EXP(-D_ij);
-                float denominator2 = r2 + alpha2_ij*expTerm;
-                float denominator = SQRT(denominator2);
-                float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
-                float Gpol = tempEnergy*RECIP(denominator2);
-                float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                float dEdR = Gpol*(1.0f - 0.25f*expTerm);
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
+                real bornRadius2 = localData[baseLocalAtom+j].bornRadius;
+                real alpha2_ij = bornRadius1*bornRadius2;
+                real D_ij = r2*RECIP(4.0f*alpha2_ij);
+                real expTerm = EXP(-D_ij);
+                real denominator2 = r2 + alpha2_ij*expTerm;
+                real denominator = SQRT(denominator2);
+                real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                real Gpol = tempEnergy*RECIP(denominator2);
+                real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
+                real dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                 dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
                 tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
@@ -355,9 +355,9 @@ void computeGBSAForce1(
 #else
                 const unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
-                float4 sum = forceBuffers[offset];
-                float global_sum = global_bornForce[offset];
+                // Cheaper to load/store real4 than real3. Do all loads before all stores to minimize store-load waits.
+                real4 sum = forceBuffers[offset];
+                real global_sum = global_bornForce[offset];
                 sum.x += force.x + localData[tgx].temp_x;
                 sum.y += force.y + localData[tgx].temp_y;
                 sum.z += force.z + localData[tgx].temp_z;
@@ -373,7 +373,7 @@ void computeGBSAForce1(
 
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
                 unsigned int j = y*TILE_SIZE + tgx;
-                float4 tempPosq = posq[j];
+                real4 tempPosq = posq[j];
                 localData[get_local_id(0)].x = tempPosq.x;
                 localData[get_local_id(0)].y = tempPosq.y;
                 localData[get_local_id(0)].z = tempPosq.z;
@@ -391,26 +391,26 @@ void computeGBSAForce1(
             unsigned int tj = (tgx+baseLocalAtom) & (TILE_SIZE-1);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
                 unsigned int includeInteraction = (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS);
-                float4 posq2 = (float4) (localData[tj].x, localData[tj].y, localData[tj].z, localData[tj].q);
-                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                real4 posq2 = (real4) (localData[tj].x, localData[tj].y, localData[tj].z, localData[tj].q);
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
-                float bornRadius2 = localData[tj].bornRadius;
-                float alpha2_ij = bornRadius1*bornRadius2;
-                float D_ij = r2*RECIP(4.0f*alpha2_ij);
-                float expTerm = EXP(-D_ij);
-                float denominator2 = r2 + alpha2_ij*expTerm;
-                float denominator = SQRT(denominator2);
-                float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
-                float Gpol = tempEnergy*RECIP(denominator2);
-                float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                float dEdR = Gpol*(1.0f - 0.25f*expTerm);
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
+                real bornRadius2 = localData[tj].bornRadius;
+                real alpha2_ij = bornRadius1*bornRadius2;
+                real D_ij = r2*RECIP(4.0f*alpha2_ij);
+                real expTerm = EXP(-D_ij);
+                real denominator2 = r2 + alpha2_ij*expTerm;
+                real denominator = SQRT(denominator2);
+                real tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                real Gpol = tempEnergy*RECIP(denominator2);
+                real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
+                real dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
                 dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
                 tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
@@ -458,11 +458,11 @@ void computeGBSAForce1(
                 const unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 const unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
-                // Cheaper to load/store float4 than float3. Do all loads before all stores to minimize store-load waits.
-                float4 sum1 = forceBuffers[offset1];
-                float4 sum2 = forceBuffers[offset2];
-                float global_sum1 = global_bornForce[offset1];
-                float global_sum2 = global_bornForce[offset2];
+                // Cheaper to load/store real4 than real3. Do all loads before all stores to minimize store-load waits.
+                real4 sum1 = forceBuffers[offset1];
+                real4 sum2 = forceBuffers[offset2];
+                real global_sum1 = global_bornForce[offset1];
+                real global_sum2 = global_bornForce[offset2];
                 sum1.x += force.x + localData[tgx].temp_x;
                 sum1.y += force.y + localData[tgx].temp_y;
                 sum1.z += force.z + localData[tgx].temp_z;

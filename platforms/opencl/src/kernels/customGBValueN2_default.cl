@@ -9,17 +9,17 @@
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeN2Value(__global const float4* restrict posq, __local float4* restrict local_posq, __global const unsigned int* restrict exclusions,
+void computeN2Value(__global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices,
 #ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict global_value,
 #else
-        __global float* restrict global_value,
+        __global real* restrict global_value,
 #endif
-        __local float* restrict local_value,
-        __local float* restrict tempBuffer,
+        __local real* restrict local_value,
+        __local real* restrict tempBuffer,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles
 #else
         unsigned int numTiles
 #endif
@@ -32,7 +32,7 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
     unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
 #endif
-    float energy = 0.0f;
+    real energy = 0;
     unsigned int lasty = 0xFFFFFFFF;
     __local unsigned int exclusionRange[2];
     __local int exclusionIndex[1];
@@ -60,8 +60,8 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int valueBufferOffset = (tgx < TILE_SIZE/2 ? 0 : TILE_SIZE);
         unsigned int atom1 = x*TILE_SIZE + tgx;
-        float value = 0.0f;
-        float4 posq1 = posq[atom1];
+        real value = 0;
+        real4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
 
         // Locate the exclusion data for this tile.
@@ -93,23 +93,23 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
                 bool isExcluded = !(excl & 0x1);
 #endif
                 int atom2 = baseLocalAtom+j;
-                float4 posq2 = local_posq[atom2];
-                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                real4 posq2 = local_posq[atom2];
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+j;
-                float tempValue1 = 0.0f;
-                float tempValue2 = 0.0f;
+                real tempValue1 = 0;
+                real tempValue2 = 0;
 #ifdef USE_EXCLUSIONS
                 if (!isExcluded && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
 #else
@@ -154,7 +154,7 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
                 const unsigned int localAtomIndex = get_local_id(0);
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            local_value[get_local_id(0)] = 0.0f;
+            local_value[get_local_id(0)] = 0;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
@@ -171,23 +171,23 @@ void computeN2Value(__global const float4* restrict posq, __local float4* restri
                 bool isExcluded = !(excl & 0x1);
 #endif
                 int atom2 = baseLocalAtom+tj;
-                float4 posq2 = local_posq[atom2];
-                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                real4 posq2 = local_posq[atom2];
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float invR = RSQRT(r2);
-                float r = RECIP(invR);
+                real invR = RSQRT(r2);
+                real r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+baseLocalAtom+tj;
-                float tempValue1 = 0.0f;
-                float tempValue2 = 0.0f;
+                real tempValue1 = 0;
+                real tempValue2 = 0;
 #ifdef USE_EXCLUSIONS
                 if (!isExcluded && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
 #else

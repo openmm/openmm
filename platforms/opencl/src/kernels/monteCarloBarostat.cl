@@ -2,7 +2,7 @@
  * Scale the particle positions.
  */
 
-__kernel void scalePositions(float scale, int numMolecules, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* restrict posq,
+__kernel void scalePositions(float scale, int numMolecules, real4 periodicBoxSize, real4 invPeriodicBoxSize, __global real4* restrict posq,
         __global const int* restrict moleculeAtoms, __global const int* restrict moleculeStartIndex) {
     for (int index = get_global_id(0); index < numMolecules; index += get_global_size(0)) {
         int first = moleculeStartIndex[index];
@@ -11,24 +11,24 @@ __kernel void scalePositions(float scale, int numMolecules, float4 periodicBoxSi
 
         // Find the center of each molecule.
 
-        float4 center = (float4) 0.0f;
+        real4 center = (real4) 0;
         for (int atom = first; atom < last; atom++)
             center += posq[moleculeAtoms[atom]];
-        center /= (float) numAtoms;
+        center /= (real) numAtoms;
 
         // Move it into the first periodic box.
 
         int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
         int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
         int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
-        float4 delta = (float4) (xcell*periodicBoxSize.x, ycell*periodicBoxSize.y, zcell*periodicBoxSize.z, 0);
+        real4 delta = (real4) (xcell*periodicBoxSize.x, ycell*periodicBoxSize.y, zcell*periodicBoxSize.z, 0);
         center -= delta;
 
         // Now scale the position of the molecule center.
 
         delta = center*(scale-1)-delta;
         for (int atom = first; atom < last; atom++) {
-            float4 pos = posq[moleculeAtoms[atom]];
+            real4 pos = posq[moleculeAtoms[atom]];
             pos.xyz += delta.xyz;
             posq[moleculeAtoms[atom]] = pos;
         }
