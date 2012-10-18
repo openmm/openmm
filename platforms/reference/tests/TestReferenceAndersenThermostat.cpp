@@ -84,7 +84,7 @@ void testTemperature() {
     }
     ke /= numSteps;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
 }
 
 void testConstraints() {
@@ -137,7 +137,7 @@ void testConstraints() {
     }
     ke /= numSteps;
     double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
 }
 
 void testRandomSeed() {

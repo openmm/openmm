@@ -896,6 +896,7 @@ void OpenCLContext::validateMolecules() {
             newCellOffsets[index] = posCellOffsets[i];
         }
         posq->upload(newPosq);
+        posqCorrection->upload(newPosqCorrection);
         velm->upload(newVelm);
     }
     else {

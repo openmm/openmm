@@ -500,7 +500,7 @@ void CudaContext::clearBuffer(CudaArray& array) {
 void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
     int words = size/4;
     void* args[] = {&memory, &words};
-    executeKernel(clearBufferKernel, args, size, 128);
+    executeKernel(clearBufferKernel, args, words, 128);
 }
 
 void CudaContext::addAutoclearBuffer(CudaArray& array) {
@@ -827,6 +827,8 @@ void CudaContext::validateMolecules() {
     else if (useMixedPrecision) {
         vector<float4> oldPosq(paddedNumAtoms);
         vector<float4> newPosq(paddedNumAtoms);
+        vector<float4> oldPosqCorrection(paddedNumAtoms);
+        vector<float4> newPosqCorrection(paddedNumAtoms);
         vector<double4> oldVelm(paddedNumAtoms);
         vector<double4> newVelm(paddedNumAtoms);
         posq->download(oldPosq);
@@ -834,10 +836,12 @@ void CudaContext::validateMolecules() {
         for (int i = 0; i < numAtoms; i++) {
             int index = atomIndex[i];
             newPosq[index] = oldPosq[i];
+            newPosqCorrection[index] = oldPosqCorrection[i];
             newVelm[index] = oldVelm[i];
             newCellOffsets[index] = posCellOffsets[i];
         }
         posq->upload(newPosq);
+        posqCorrection->upload(newPosqCorrection);
         velm->upload(newVelm);
     }
     else {
@@ -978,9 +982,9 @@ void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
         bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
         Real binWidth;
         if (useHilbert)
-            binWidth = (Real)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
+            binWidth = (Real) (max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
-            binWidth = (Real)(0.2*nonbonded->getCutoffDistance());
+            binWidth = (Real) (0.2*nonbonded->getCutoffDistance());
         Real invBinWidth = (Real) (1.0/binWidth);
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);

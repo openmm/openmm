@@ -157,8 +157,8 @@ extern "C" __global__ void applyShakeToPositions(int numClusters, mixed tol, con
         mixed4 xpj1 = posDelta[atoms.y];
         mixed4 pos2 = make_mixed4(0);
         mixed4 xpj2 = make_mixed4(0);
-        real invMassCentral = params.x;
-        real avgMass = params.y;
+        float invMassCentral = params.x;
+        float avgMass = params.y;
         float d2 = params.z;
         float invMassPeripheral = params.w;
         if (atoms.z != -1) {
@@ -270,8 +270,8 @@ extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, co
         mixed4 xpj1 = posDelta[atoms.y];
         mixed4 pos2 = make_mixed4(0);
         mixed4 xpj2 = make_mixed4(0);
-        real invMassCentral = params.x;
-        real avgMass = params.y;
+        float invMassCentral = params.x;
+        float avgMass = params.y;
         float d2 = params.z;
         float invMassPeripheral = params.w;
         if (atoms.z != -1) {
@@ -361,7 +361,7 @@ extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, co
 /**
  * Enforce constraints on SETTLE clusters
  */
-extern "C" __global__ void applySettleToPositions(int numClusters, float tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const int4* __restrict__ clusterAtoms, const float2* __restrict__ clusterParams) {
+extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const int4* __restrict__ clusterAtoms, const float2* __restrict__ clusterParams) {
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     while (index < numClusters) {
         // Load the data for this cluster.
@@ -440,7 +440,7 @@ extern "C" __global__ void applySettleToPositions(int numClusters, float tol, co
         //                                        --- Step2  A2' ---
 
         float rc = 0.5f*params.y;
-        float rb = sqrt(params.x*params.x-rc*rc);
+        mixed rb = sqrt(params.x*params.x-rc*rc);
         mixed ra = rb*(m1+m2)*invTotalMass;
         rb -= ra;
         mixed sinphi = za1d/ra;
@@ -513,7 +513,7 @@ extern "C" __global__ void applySettleToPositions(int numClusters, float tol, co
 /**
  * Enforce velocity constraints on SETTLE clusters
  */
-extern "C" __global__ void applySettleToVelocities(int numClusters, float tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, mixed4* __restrict__ velm, const int4* __restrict__ clusterAtoms, const float2* __restrict__ clusterParams) {
+extern "C" __global__ void applySettleToVelocities(int numClusters, mixed tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, mixed4* __restrict__ velm, const int4* __restrict__ clusterAtoms, const float2* __restrict__ clusterParams) {
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numClusters; index += blockDim.x*gridDim.x) {
         // Load the data for this cluster.
 
@@ -603,8 +603,8 @@ extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __rest
     if (threadIdx.x == 0)
         groupConverged = 1;
     __syncthreads();
-    mixed lowerTol = 1.0f-2.0f*tol+tol*tol;
-    mixed upperTol = 1.0f+2.0f*tol+tol*tol;
+    mixed lowerTol = 1-2*tol+tol*tol;
+    mixed upperTol = 1+2*tol+tol*tol;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
         // Compute the force due to this constraint.
 
@@ -634,7 +634,7 @@ extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __rest
  * Compute the force applied by each CCMA velocity constraint.
  */
 extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __restrict__ constraintAtoms, const mixed4* __restrict__ constraintDistance, const mixed4* __restrict__ atomPositions,
-        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, float tol, int iteration) {
+        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, mixed tol, int iteration) {
     __shared__ int groupConverged;
     if (converged[1-iteration%2]) {
         if (blockIdx.x == 0 && threadIdx.x == 0)
@@ -644,8 +644,8 @@ extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __rest
     if (threadIdx.x == 0)
         groupConverged = 1;
     __syncthreads();
-    mixed lowerTol = 1.0f-2.0f*tol+tol*tol;
-    mixed upperTol = 1.0f+2.0f*tol+tol*tol;
+    mixed lowerTol = 1-2*tol+tol*tol;
+    mixed upperTol = 1+2*tol+tol*tol;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
         // Compute the force due to this constraint.
 
@@ -654,7 +654,7 @@ extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __rest
         mixed4 rp_ij = atomPositions[atoms.x]-atomPositions[atoms.y];
         mixed rrpr = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
         mixed d_ij2 = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
-        delta1[index] = -2.0f*reducedMass[index]*rrpr/d_ij2;
+        delta1[index] = -2*reducedMass[index]*rrpr/d_ij2;
 
         // See whether it has converged.
 

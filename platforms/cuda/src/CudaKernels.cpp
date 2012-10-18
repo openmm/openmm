@@ -200,7 +200,7 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
             pos.z = (float) p[2];
         }
         for (int i = numParticles; i < cu.getPaddedNumAtoms(); i++)
-            posq[i] = make_float4(0.0, 0.0, 0.0, 0.0);
+            posq[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cu.getPosq().upload(posq);
     }
     if (cu.getUseMixedPrecision()) {
@@ -214,7 +214,7 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
             c.w = 0;
         }
         for (int i = numParticles; i < cu.getPaddedNumAtoms(); i++)
-            posCorrection[i] = make_float4(0.0, 0.0, 0.0, 0.0);
+            posCorrection[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cu.getPosqCorrection().upload(posCorrection);
     }
     for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
@@ -275,7 +275,7 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector
             vel.z = p[2];
         }
         for (int i = numParticles; i < cu.getPaddedNumAtoms(); i++)
-            velm[i] = make_float4(0.0, 0.0, 0.0, 0.0);
+            velm[i] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cu.getVelm().upload(velm);
     }
 }
@@ -310,6 +310,8 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
     cu.setAsCurrent();
     int version = 1;
     stream.write((char*) &version, sizeof(int));
+    int precision = (cu.getUseDoublePrecision() ? 2 : cu.getUseMixedPrecision() ? 1 : 0);
+    stream.write((char*) &precision, sizeof(int));
     double time = cu.getTime();
     stream.write((char*) &time, sizeof(double));
     int stepCount = cu.getStepCount();
@@ -319,6 +321,10 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
     char* buffer = (char*) cu.getPinnedBuffer();
     cu.getPosq().download(buffer);
     stream.write(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
+    if (cu.getUseMixedPrecision()) {
+        cu.getPosqCorrection().download(buffer);
+        stream.write(buffer, cu.getPosqCorrection().getSize()*cu.getPosqCorrection().getElementSize());
+    }
     cu.getVelm().download(buffer);
     stream.write(buffer, cu.getVelm().getSize()*cu.getVelm().getElementSize());
     stream.write((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());
@@ -335,6 +341,11 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     stream.read((char*) &version, sizeof(int));
     if (version != 1)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
+    int precision;
+    stream.read((char*) &precision, sizeof(int));
+    int expectedPrecision = (cu.getUseDoublePrecision() ? 2 : cu.getUseMixedPrecision() ? 1 : 0);
+    if (precision != expectedPrecision)
+        throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
     int stepCount, computeForceCount;
@@ -349,6 +360,10 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     char* buffer = (char*) cu.getPinnedBuffer();
     stream.read(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
     cu.getPosq().upload(buffer);
+    if (cu.getUseMixedPrecision()) {
+        stream.read(buffer, cu.getPosqCorrection().getSize()*cu.getPosqCorrection().getElementSize());
+        cu.getPosqCorrection().upload(buffer);
+    }
     stream.read(buffer, cu.getVelm().getSize()*cu.getVelm().getElementSize());
     cu.getVelm().upload(buffer);
     stream.read((char*) &cu.getAtomIndex()[0], sizeof(int)*cu.getAtomIndex().size());

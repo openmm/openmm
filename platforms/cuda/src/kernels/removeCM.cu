@@ -9,9 +9,9 @@ extern "C" __global__ void calcCenterOfMassMomentum(int numAtoms, const mixed4* 
         mixed4 velocity = velm[index];
         if (velocity.w != 0) {
             mixed mass = RECIP(velocity.w);
-            cm.x += (float) velocity.x*mass;
-            cm.y += (float) velocity.y*mass;
-            cm.z += (float) velocity.z*mass;
+            cm.x += (float) (velocity.x*mass);
+            cm.y += (float) (velocity.y*mass);
+            cm.z += (float) (velocity.z*mass);
         }
     }
 

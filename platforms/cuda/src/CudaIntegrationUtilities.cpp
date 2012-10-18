@@ -109,12 +109,12 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         vector<double4> deltas(posDelta->getSize(), make_double4(0.0, 0.0, 0.0, 0.0));
         posDelta->upload(deltas);
         stepSize = CudaArray::create<double2>(context, 1, "stepSize");
-        vector<double2> step(1, make_double2(0.0f, 0.0f));
+        vector<double2> step(1, make_double2(0.0, 0.0));
         stepSize->upload(step);
     }
     else {
         posDelta = CudaArray::create<float4>(context, context.getPaddedNumAtoms(), "posDelta");
-        vector<float4> deltas(posDelta->getSize(), make_float4(0.0, 0.0, 0.0, 0.0));
+        vector<float4> deltas(posDelta->getSize(), make_float4(0.0f, 0.0f, 0.0f, 0.0f));
         posDelta->upload(deltas);
         stepSize = CudaArray::create<float2>(context, 1, "stepSize");
         vector<float2> step(1, make_float2(0.0f, 0.0f));
