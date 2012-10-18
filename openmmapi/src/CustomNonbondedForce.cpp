@@ -38,7 +38,6 @@
 #include <map>
 #include <sstream>
 #include <utility>
-// #include <cstdio> // LPW Debug Printout
 
 using namespace OpenMM;
 using std::map;
@@ -131,8 +130,6 @@ void CustomNonbondedForce::setParticleParameters(int index, const vector<double>
 }
 
 int CustomNonbondedForce::addExclusion(int particle1, int particle2) {
-  // LPW Debug Printout
-  // printf("Pushing Exclusion particle1 = %i particle2 = %i\n",particle1,particle2);
     exclusions.push_back(ExclusionInfo(particle1, particle2));
     return exclusions.size()-1;
 }

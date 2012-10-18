@@ -32,7 +32,6 @@
 #include <map>
 #include <set>
 #include <utility>
-// #include <cstdio> // LPW Debug Printout
 
 using namespace OpenMM;
 using namespace std;
@@ -106,36 +105,12 @@ void CudaNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
 void CudaNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclusionList) {
     if (anyExclusions) {
         bool sameExclusions = (exclusionList.size() == atomExclusions.size());
-	// LPW Debug Printout
-	// printf("LPW Debug Printout 1\n");
-	// printf("exclusionList.size() = %i, atomExclusions.size() = %i, sameExclusions = %i\n",(int)exclusionList.size(),(int)atomExclusions.size(),sameExclusions);
-	
-	// LPW Debug Printout
-	//for (int i = 0; i < (int) exclusionList.size(); i++) {
         for (int i = 0; i < (int) exclusionList.size() && sameExclusions; i++) {
-	  if (exclusionList[i].size() != atomExclusions[i].size()) {
-	    // LPW Debug Printout
-	    // printf("exclusionList[%i].size() != atomExclusions[%i].size() [%i != %i]\n",i,i,(int)exclusionList[i].size(),(int)atomExclusions[i].size());
-	    sameExclusions = false;
-	  }
-	  /*
-	  else {
-	    // LPW Debug Printout
-	    printf("exclusionList[%i].size() = atomExclusions[%i].size() [%i = %i]\n",i,i,(int)exclusionList[i].size(),(int)atomExclusions[i].size());
-	  }
-	  */
-            for (int j = 0; j < (int) exclusionList[i].size(); j++)
-	      if (exclusionList[i][j] != atomExclusions[i][j]) {
-		// LPW Debug Printout
-		// printf("exclusionList[%i][%i] != atomExclusions[%i][%i] {%i != %i}\n",i,j,i,j,exclusionList[i][j],atomExclusions[i][j]);
-		sameExclusions = false;
-	      }
-	    /*
-	      else {
-		// LPW Debug Printout
-		printf("exclusionList[%i][%i] = atomExclusions[%i][%i] {%i = %i}\n",i,j,i,j,exclusionList[i][j],atomExclusions[i][j]);
-	      }
-	    */
+	     if (exclusionList[i].size() != atomExclusions[i].size())
+	         sameExclusions = false;
+	     for (int j = 0; j < (int) exclusionList[i].size(); j++)
+	         if (exclusionList[i][j] != atomExclusions[i][j])
+		     sameExclusions = false;
         }
         if (!sameExclusions)
             throw OpenMMException("All Forces must have identical exceptions");
