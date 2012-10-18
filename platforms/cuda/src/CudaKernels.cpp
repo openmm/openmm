@@ -45,6 +45,7 @@
 #include "lepton/ParsedExpression.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/SimTKUtilities/SimTKOpenMMUtilities.h"
+#include <algorithm>
 #include <cmath>
 #include <set>
 
@@ -1827,6 +1828,19 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         force.getExclusionParticles(i, particle1, particle2);
         exclusionList[particle1].push_back(particle2);
         exclusionList[particle2].push_back(particle1);
+    }
+    // LPW Sort the exclusion list.  In JDC's 2012-10 program,
+    // the exclusionList can be out of order while the atomExclusions are in order,
+    // causing OpenMM to throw an exception.
+    for (int i = 0; i < numParticles; i++) {
+      stable_sort(exclusionList[i].begin(), exclusionList[i].end());
+      /*
+      printf("Exclusion list for particle %i is: ",i);
+      for (int j = 0; j < (int) exclusionList[i].size() ; j++) {
+	printf(" %i",exclusionList[i][j]);
+      }
+      printf("\n");
+      */
     }
     params->setParameterValues(paramVector);
 
