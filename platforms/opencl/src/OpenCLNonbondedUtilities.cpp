@@ -133,8 +133,10 @@ void OpenCLNonbondedUtilities::requestExclusions(const vector<vector<int> >& exc
         for (int i = 0; i < (int) exclusionList.size() && sameExclusions; i++) {
             if (exclusionList[i].size() != atomExclusions[i].size())
                 sameExclusions = false;
+            set<int> expectedExclusions;
+            expectedExclusions.insert(atomExclusions[i].begin(), atomExclusions[i].end());
             for (int j = 0; j < (int) exclusionList[i].size(); j++)
-                if (exclusionList[i][j] != atomExclusions[i][j])
+                if (expectedExclusions.find(exclusionList[i][j]) == expectedExclusions.end())
                     sameExclusions = false;
         }
         if (!sameExclusions)

@@ -106,11 +106,13 @@ void CudaNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclu
     if (anyExclusions) {
         bool sameExclusions = (exclusionList.size() == atomExclusions.size());
         for (int i = 0; i < (int) exclusionList.size() && sameExclusions; i++) {
-	     if (exclusionList[i].size() != atomExclusions[i].size())
-	         sameExclusions = false;
-	     for (int j = 0; j < (int) exclusionList[i].size(); j++)
-	         if (exclusionList[i][j] != atomExclusions[i][j])
-		     sameExclusions = false;
+             if (exclusionList[i].size() != atomExclusions[i].size())
+                 sameExclusions = false;
+            set<int> expectedExclusions;
+            expectedExclusions.insert(atomExclusions[i].begin(), atomExclusions[i].end());
+            for (int j = 0; j < (int) exclusionList[i].size(); j++)
+                if (expectedExclusions.find(exclusionList[i][j]) == expectedExclusions.end())
+                     sameExclusions = false;
         }
         if (!sameExclusions)
             throw OpenMMException("All Forces must have identical exceptions");
