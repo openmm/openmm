@@ -493,6 +493,19 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
     }
 }
 
+int CudaContext::computeThreadBlockSize(double memory, bool preferShared) const {
+    int maxShared = 16*1024;
+    if (computeCapability >= 2.0 && preferShared)
+        maxShared = 48*1024;
+    int max = (int) (maxShared/memory);
+    if (max < 64)
+        return 32;
+    int threads = 64;
+    while (threads+64 < max)
+        threads += 64;
+    return threads;
+}
+
 void CudaContext::clearBuffer(CudaArray& array) {
     clearBuffer(array.getDevicePointer(), array.getSize()*array.getElementSize());
 }

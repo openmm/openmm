@@ -323,6 +323,7 @@ private:
     void initializeScaleFactors();
     template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations;
+    int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     double inducedEpsilon;
     bool hasInitializedScaleFactors, hasInitializedFFT;
     CudaContext& cu;

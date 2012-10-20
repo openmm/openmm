@@ -227,6 +227,14 @@ public:
      */
     void executeKernel(CUfunction kernel, void** arguments, int workUnits, int blockSize = -1, unsigned int sharedSize = 0);
     /**
+     * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
+     * shared memory per thread.
+     * 
+     * @param memory        the number of bytes of shared memory per thread
+     * @param preferShared  whether the kernel is set to prefer shared memory over cache
+     */
+    int computeThreadBlockSize(double memory, bool preferShared=true) const;
+    /**
      * Set all elements of an array to 0.
      */
     void clearBuffer(CudaArray& array);
