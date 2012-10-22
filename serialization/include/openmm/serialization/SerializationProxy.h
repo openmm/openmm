@@ -62,6 +62,8 @@ public:
      *                     name, although that is not a requirement.
      */
     SerializationProxy(const std::string& typeName);
+    virtual ~SerializationProxy() {
+    }
     /**
      * Get the name of the object type this proxy manipulates, as passed to the constructor.
      */
