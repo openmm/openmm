@@ -317,7 +317,7 @@ class Modeller(object):
         if nonbonded is None:
             raise ValueError('The ForceField does not specify a NonbondedForce')
         cutoff = [nonbonded.getParticleParameters(i)[1].value_in_unit(nanometer)*vdwRadiusPerSigma+waterRadius for i in range(system.getNumParticles())]
-        waterCutoff = 2*waterRadius
+        waterCutoff = waterRadius
         if len(cutoff) == 0:
             maxCutoff = waterCutoff
         else:
