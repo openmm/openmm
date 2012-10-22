@@ -846,7 +846,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     double fixedThreadMemory = 19*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
     double inducedThreadMemory = 15*elementSize+2*sizeof(float);
     double electrostaticsThreadMemory = 0;
-    if (useShuffle)
+    if (!useShuffle)
         fixedThreadMemory += 3*elementSize;
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(numMultipoles);
@@ -855,6 +855,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/innerDielectric);
     if (force.getPolarizationType() == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
+    if (useShuffle)
+        defines["USE_SHUFFLE"] = "";
     double alpha = force.getAEwald();
     int gridSizeX, gridSizeY, gridSizeZ;
     if (usePME) {
@@ -915,7 +917,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         electrostaticsSource << "#define APPLY_SCALE\n";
         electrostaticsSource << CudaAmoebaKernelSources::pmeElectrostaticPairForce;
         electrostaticsThreadMemory = 24*elementSize+3*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-        if (useShuffle)
+        if (!useShuffle)
             electrostaticsThreadMemory += 3*elementSize;
     }
     else {
@@ -930,7 +932,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         electrostaticsSource << "#define T3\n";
         electrostaticsSource << CudaAmoebaKernelSources::electrostaticPairForce;
         electrostaticsThreadMemory = 21*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
-        if (useShuffle)
+        if (!useShuffle)
             electrostaticsThreadMemory += 3*elementSize;
         if (gk != NULL)
             electrostaticsThreadMemory += 4*elementSize;
