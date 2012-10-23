@@ -187,6 +187,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     // This attribute does not ensure that all queries are supported by the runtime so still have to
                     // check for errors.
                     try {
+#ifdef CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD
                         // AMD has both 32 and 64 width SIMDs. Can determine by using:
                         // simdWidth = device.getInfo<CL_DEVICE_WAVEFRONT_WIDTH_AMD>();
                         // Must catch cl:Error as will fail if runtime does not support queries.
@@ -203,6 +204,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
                         // If the queries are supported then must be newer than SDK 2.4.
                         amdPostSdk2_4 = true;
+#endif
                     }
                     catch (cl::Error err) {
                         // Runtime does not support the query so is unlikely to be the newer scalar GPU.
