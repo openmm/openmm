@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -114,6 +114,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     // This attribute does not ensure that all queries are supported by the runtime (it may be an older runtime,
                     // or the CPU device) so still have to check for errors.
                     try {
+#ifdef CL_DEVICE_SIMD_WIDTH_AMD
                         processingElementsPerComputeUnit =
                             // AMD GPUs either have a single VLIW SIMD or multiple scalar SIMDs.
                             // The SIMD width is the number of threads the SIMD executes per cycle.
@@ -127,6 +128,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // Just in case any of the queries return 0.
                         if (processingElementsPerComputeUnit <= 0)
                             processingElementsPerComputeUnit = 1;
+#endif
                     }
                     catch (cl::Error err) {
                         // Runtime does not support the queries so use default.
