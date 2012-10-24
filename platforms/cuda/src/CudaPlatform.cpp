@@ -101,14 +101,13 @@ CudaPlatform::CudaPlatform() {
 	string nvcc = (compiler == NULL ? "/usr/local/cuda/bin/nvcc" : string(compiler));
     setPropertyDefaultValue(CudaCompiler(), nvcc);
     char* tmpdir = getenv("TMPDIR");
-    if (tmpdir == NULL)
-        tmpdir = P_tmpdir;
-    setPropertyDefaultValue(CudaTempDirectory(), string(tmpdir));
+    string tmp = (tmpdir == NULL ? string(P_tmpdir) : string(tmpdir));
+    setPropertyDefaultValue(CudaTempDirectory(), tmp);
 #endif
 }
 
 bool CudaPlatform::supportsDoublePrecision() const {
-    return false;
+    return true;
 }
 
 const string& CudaPlatform::getPropertyValue(const Context& context, const string& property) const {

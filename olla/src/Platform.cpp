@@ -272,8 +272,9 @@ const string& Platform::getDefaultPluginsDirectory() {
     }
 #else
     if (dir == NULL)
-        dir = "/usr/local/openmm/lib/plugins";
-    directory = string(dir);
+        directory = "/usr/local/openmm/lib/plugins";
+    else
+        directory = string(dir);
 #endif
     return directory;
 }

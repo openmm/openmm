@@ -83,7 +83,7 @@ OpenCLPlatform::OpenCLPlatform() {
 }
 
 bool OpenCLPlatform::supportsDoublePrecision() const {
-    return false;
+    return true;
 }
 
 const string& OpenCLPlatform::getPropertyValue(const Context& context, const string& property) const {

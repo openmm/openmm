@@ -101,6 +101,8 @@ private:
  */
 class CudaSort::SortTrait {
 public:
+    virtual ~SortTrait() {
+    }
     /**
      * Get the size of each data value in bytes.
      */
