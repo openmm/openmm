@@ -124,6 +124,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     CHECK_RESULT(cuDeviceComputeCapability(&major, &minor, device));
     gpuArchitecture = intToString(major)+intToString(minor);
     computeCapability = major+0.1*minor;
+    if ((useDoublePrecision || useMixedPrecision) && computeCapability < 1.3)
+        throw OpenMMException("This device does not support double precision");
     defaultOptimizationOptions = "--use_fast_math";
     unsigned int flags = CU_CTX_MAP_HOST;
     if (useBlockingSync)

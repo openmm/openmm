@@ -154,6 +154,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 	        defaultOptimizationOptions = "-cl-fast-relaxed-math";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
+        if ((useDoublePrecision || useMixedPrecision) && !supportsDoublePrecision)
+            throw OpenMMException("This device does not support double precision");
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         int numThreadBlocksPerComputeUnit = 6;
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
