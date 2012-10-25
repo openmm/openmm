@@ -68,6 +68,10 @@ vector<string> BrownianIntegrator::getKernelNames() {
     return names;
 }
 
+double BrownianIntegrator::computeKineticEnergy() {
+    return kernel.getAs<IntegrateBrownianStepKernel>().computeKineticEnergy(*context, *this);
+}
+
 void BrownianIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();

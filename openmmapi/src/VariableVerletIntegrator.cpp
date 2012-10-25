@@ -64,6 +64,10 @@ vector<string> VariableVerletIntegrator::getKernelNames() {
     return names;
 }
 
+double VariableVerletIntegrator::computeKineticEnergy() {
+    return kernel.getAs<IntegrateVariableVerletStepKernel>().computeKineticEnergy(*context, *this);
+}
+
 void VariableVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();

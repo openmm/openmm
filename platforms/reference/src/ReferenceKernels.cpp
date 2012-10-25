@@ -145,6 +145,23 @@ static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorith
     }
 }
 
+/**
+ * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
+ * for a leapfrog integrator.
+ */
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    double energy = 0.0;
+    for (int i = 0; i < (int) masses.size(); ++i) {
+        if (masses[i] > 0) {
+            RealVec v = velData[i]+forceData[i]*(timeShift/masses[i]);
+            energy += masses[i]*(v.dot(v));
+        }
+    }
+    return 0.5*energy;
+}
+
 void ReferenceCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
@@ -1677,6 +1694,10 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
     data.stepCount++;
 }
 
+double ReferenceIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+}
+
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -1741,6 +1762,10 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
     data.stepCount++;
 }
 
+double ReferenceIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+}
+
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -1802,6 +1827,10 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
     dynamics->update(context.getSystem(), posData, velData, forceData, masses);
     data.time += stepSize;
     data.stepCount++;
+}
+
+double ReferenceIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0);
 }
 
 ReferenceIntegrateVariableLangevinStepKernel::~ReferenceIntegrateVariableLangevinStepKernel() {
@@ -1868,6 +1897,10 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
     return dynamics->getDeltaT();
 }
 
+double ReferenceIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+}
+
 ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -1926,6 +1959,10 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
     return dynamics->getDeltaT();
 }
 
+double ReferenceIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+}
+
 ReferenceIntegrateCustomStepKernel::~ReferenceIntegrateCustomStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -1956,21 +1993,20 @@ void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const 
     perDofValues.resize(integrator.getNumPerDofVariables());
     for (int i = 0; i < (int) perDofValues.size(); i++)
         perDofValues[i].resize(numParticles);
+
+    // Create the computation objects.
+
+    dynamics = new ReferenceCustomDynamics(system.getNumParticles(), integrator);
+    vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+    findAnglesForCCMA(system, angles);
+    constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+    dynamics->setReferenceConstraintAlgorithm(constraints);
 }
 
 void ReferenceIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& velData = extractVelocities(context);
     vector<RealVec>& forceData = extractForces(context);
-    if (dynamics == 0) {
-        // Create the computation objects.
-
-        dynamics = new ReferenceCustomDynamics(context.getSystem().getNumParticles(), integrator);
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(context.getSystem(), angles);
-        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
-        dynamics->setReferenceConstraintAlgorithm(constraints);
-    }
     
     // Record global variables.
     
@@ -1991,6 +2027,23 @@ void ReferenceIntegrateCustomStepKernel::execute(ContextImpl& context, CustomInt
         globalValues[i] = globals[integrator.getGlobalVariableName(i)];
     data.time += dynamics->getDeltaT();
     data.stepCount++;
+}
+
+double ReferenceIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    
+    // Record global variables.
+    
+    map<string, double> globals;
+    globals["dt"] = integrator.getStepSize();
+    for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
+        globals[integrator.getGlobalVariableName(i)] = globalValues[i];
+    
+    // Compute the kinetic energy.
+    
+    return dynamics->computeKineticEnergy(context, context.getSystem().getNumParticles(), posData, velData, forceData, masses, globals, perDofValues, forcesAreValid);
 }
 
 void ReferenceIntegrateCustomStepKernel::getGlobalVariables(ContextImpl& context, vector<double>& values) const {
@@ -2055,21 +2108,6 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     vector<RealVec>& posData = extractPositions(context);
     barostat->restorePositions(posData);
-}
-
-void ReferenceCalcKineticEnergyKernel::initialize(const System& system) {
-    int numParticles = system.getNumParticles();
-    masses.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        masses[i] = system.getParticleMass(i);
-}
-
-double ReferenceCalcKineticEnergyKernel::execute(ContextImpl& context) {
-    vector<RealVec>& velData = extractVelocities(context);
-    double energy = 0.0;
-    for (size_t i = 0; i < masses.size(); ++i)
-        energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
-    return 0.5*energy;
 }
 
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {

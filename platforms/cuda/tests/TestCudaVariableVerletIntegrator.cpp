@@ -50,23 +50,6 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-/**
- * Compute the energy of a state, taking into account the half step offset between
- * positions and velocities.
- */
-
-static double computeEnergy(const State& state, const System& system, double dt) {
-    const vector<Vec3>& v = state.getVelocities();
-    const vector<Vec3>& f = state.getForces();
-    double energy = 0.0;
-    for (int i = 0; i < system.getNumParticles(); i++) {
-        double m = system.getParticleMass(i);
-        Vec3 vel = v[i]+f[i]*(0.5*dt/m);
-        energy += 0.5*m*vel.dot(vel);
-    }
-    return energy+state.getPotentialEnergy();
-}
-
 void testSingleBond() {
     CudaPlatform platform;
     System system;
@@ -148,7 +131,7 @@ void testConstraints() {
                 double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
                 ASSERT_EQUAL_TOL(distance, dist, 1e-4);
             }
-        double energy = computeEnergy(state, system, integrator.getStepSize());
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)
@@ -220,7 +203,7 @@ void testConstrainedClusters() {
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 2e-5);
         }
-        double energy = computeEnergy(state, system, integrator.getStepSize());
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)

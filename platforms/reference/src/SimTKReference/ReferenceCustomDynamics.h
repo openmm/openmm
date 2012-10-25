@@ -48,6 +48,8 @@ private:
     std::vector<bool> invalidatesForces, needsForces, needsEnergy;
     std::vector<int> forceGroup;
     RealOpenMM energy;
+    Lepton::ExpressionProgram kineticEnergyExpression;
+    bool kineticEnergyNeedsForce;
     
     void computePerDof(int numberOfAtoms, std::vector<OpenMM::RealVec>& results, const std::vector<OpenMM::RealVec>& atomCoordinates,
                   const std::vector<OpenMM::RealVec>& velocities, const std::vector<OpenMM::RealVec>& forces, const std::vector<RealOpenMM>& masses,
@@ -97,6 +99,25 @@ public:
                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
                   std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid);
       
+      /**---------------------------------------------------------------------------------------
+      
+         Compute the kinetic energy of the system.
+      
+         @param context             the context this integrator is updating
+         @param numberOfAtoms       number of atoms
+         @param atomCoordinates     atom coordinates
+         @param velocities          velocities
+         @param forces              forces
+         @param masses              atom masses
+         @param globals             a map containing values of global variables
+         @param perDof              the values of per-DOF variables
+         @param forcesAreValid      whether the current forces are valid or need to be recomputed
+
+         --------------------------------------------------------------------------------------- */
+
+       double computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                                   std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
+                                   std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid);
 };
 
 // ---------------------------------------------------------------------------------------

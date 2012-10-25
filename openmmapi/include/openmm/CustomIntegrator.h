@@ -177,6 +177,31 @@ namespace OpenMM {
  * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
  * </pre></tt>
  * 
+ * An Integrator has one other job in addition to evolving the equations of motion:
+ * it defines how to compute the kinetic energy of the system.  Depending on the
+ * integration method used, simply summing mv<sup>2</sup>/2 over all degrees of
+ * freedom may not give the correct answer.  For example, in a leapfrog integrator
+ * the velocities are "delayed" by half a time step, so the above formula would
+ * give the kinetic energy half a time step ago, not at the current time.
+ * 
+ * Call setKineticEnergyExpression() to set an expression for the kinetic energy.
+ * It is computed for every degree of freedom (excluding ones whose mass is 0) and
+ * the result is summed.  The default expression is "m*v*v/2", which is correct
+ * for many integrators.
+ * 
+ * As example, the following line defines the correct way to compute kinetic energy
+ * when using a leapfrog algorithm:
+ * 
+ * <tt><pre>
+ * integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
+ * </pre></tt>
+ * 
+ * The kinetic energy expression may depend on the following pre-defined variables:
+ * x, v, f, m, dt.  It also may depend on user-defined global and per-DOF variables,
+ * and on the values of adjustable parameters defined  in the integrator's Context.
+ * It may <i>not</i> depend on any other variable, such as the potential energy,
+ * the force from a single force group, or a random number.
+ * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  An expression
@@ -379,6 +404,18 @@ public:
      */
     void getComputationStep(int index, ComputationType& type, std::string& variable, std::string& expression) const;
     /**
+     * Get the expression to use for computing the kinetic energy.  The expression is evaluated
+     * for every degree of freedom.  Those values are then added together, and the sum
+     * is reported as the current kinetic energy.
+     */
+    const std::string& getKineticEnergyExpression() const;
+    /**
+     * Set the expression to use for computing the kinetic energy.  The expression is evaluated
+     * for every degree of freedom.  Those values are then added together, and the sum
+     * is reported as the current kinetic energy.
+     */
+    void setKineticEnergyExpression(const std::string& expression);
+    /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
     int getRandomNumberSeed() const {
@@ -421,6 +458,10 @@ protected:
      * Get the names of all Kernels used by this Integrator.
      */
     std::vector<std::string> getKernelNames();
+    /**
+     * Compute the kinetic energy of the system at the current time.
+     */
+    double computeKineticEnergy();
 private:
     class ComputationInfo;
     std::vector<std::string> globalNames;
@@ -428,6 +469,7 @@ private:
     mutable std::vector<double> globalValues;
     std::vector<std::vector<Vec3> > perDofValues;
     std::vector<ComputationInfo> computations;
+    std::string kineticEnergy;
     mutable bool globalsAreCurrent;
     int randomNumberSeed;
     bool forcesAreValid;

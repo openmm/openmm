@@ -79,6 +79,11 @@ public:
     const std::vector<Vec3>& getForces() const;
     /**
      * Get the total kinetic energy of the system.  If this State does not contain energies, this will throw an exception.
+     * 
+     * Note that this may be different from simply mv<sup>2</sup>/2 summed over all particles.  For example, a leapfrog
+     * integrator will store velocities offset by half a step, so they must be adjusted before computing the kinetic energy.
+     * This routine returns the kinetic energy at the current time, computed in a way that is appropriate for whatever
+     * Integrator is being used.
      */
     double getKineticEnergy() const;
     /**

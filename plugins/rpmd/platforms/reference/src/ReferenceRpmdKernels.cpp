@@ -320,6 +320,21 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
 //    }
 //}
 
+double ReferenceIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
+    System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    vector<RealVec>& velData = extractVelocities(context);
+    double energy = 0.0;
+    for (int i = 0; i < numParticles; ++i) {
+        double mass = system.getParticleMass(i);
+        if (mass > 0) {
+            RealVec v = velData[i];
+            energy += mass*(v.dot(v));
+        }
+    }
+    return 0.5*energy;
+}
+
 void ReferenceIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {
     int numParticles = positions[copy].size();
     for (int i = 0; i < numParticles; i++)

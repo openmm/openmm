@@ -105,6 +105,13 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(std::istream& stream);
+    /**
+     * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
+     * for a leapfrog integrator.
+     * 
+     * @param timeShift   the amount by which to shift the velocities in time
+     */
+    double computeKineticEnergy(double timeShift);
 private:
     void applyConstraints(bool constrainVelocities, double tol);
     CudaContext& context;

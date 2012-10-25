@@ -90,6 +90,10 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
     return context->getOwner().getState(types, enforcePeriodicBox, groups);
 }
 
+double RPMDIntegrator::computeKineticEnergy() {
+    kernel.getAs<IntegrateRPMDStepKernel>().computeKineticEnergy(*context, *this);
+}
+
 void RPMDIntegrator::step(int steps) {
     if (!hasSetPosition) {
         // Initialize the positions from the context.

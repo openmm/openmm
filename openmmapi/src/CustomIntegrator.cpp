@@ -46,6 +46,7 @@ CustomIntegrator::CustomIntegrator(double stepSize) : owner(NULL), globalsAreCur
     setStepSize(stepSize);
     setConstraintTolerance(1e-4);
     setRandomNumberSeed((int) time(NULL));
+    kineticEnergy = "m*v*v/2";
 }
 
 void CustomIntegrator::initialize(ContextImpl& contextRef) {
@@ -75,6 +76,10 @@ vector<string> CustomIntegrator::getKernelNames() {
     vector<string> names;
     names.push_back(IntegrateCustomStepKernel::Name());
     return names;
+}
+
+double CustomIntegrator::computeKineticEnergy() {
+    return kernel.getAs<IntegrateCustomStepKernel>().computeKineticEnergy(*context, *this, forcesAreValid);
 }
 
 void CustomIntegrator::step(int steps) {
@@ -213,4 +218,12 @@ void CustomIntegrator::getComputationStep(int index, ComputationType& type, stri
     type = computations[index].type;
     variable = computations[index].variable;
     expression = computations[index].expression;
+}
+
+const string& CustomIntegrator::getKineticEnergyExpression() const {
+    return kineticEnergy;
+}
+
+void CustomIntegrator::setKineticEnergyExpression(const string& expression) {
+    kineticEnergy = expression;
 }

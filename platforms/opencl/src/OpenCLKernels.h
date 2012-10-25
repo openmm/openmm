@@ -936,6 +936,13 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
     double prevStepSize;
@@ -966,6 +973,13 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
     OpenCLContext& cl;
     double prevTemp, prevFriction, prevStepSize;
@@ -997,6 +1011,13 @@ public:
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const BrownianIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
     OpenCLContext& cl;
     double prevTemp, prevFriction, prevStepSize;
@@ -1017,18 +1038,25 @@ public:
      * Initialize the kernel.
      *
      * @param system     the System this kernel will be applied to
-     * @param integrator the VerletIntegrator this kernel will be used for
+     * @param integrator the VariableVerletIntegrator this kernel will be used for
      */
     void initialize(const System& system, const VariableVerletIntegrator& integrator);
     /**
      * Execute the kernel.
      *
      * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
@@ -1061,6 +1089,13 @@ public:
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
 private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
@@ -1076,8 +1111,8 @@ private:
 class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), energy(NULL),
-            uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
+            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
     }
     ~OpenCLIntegrateCustomStepKernel();
     /**
@@ -1098,6 +1133,17 @@ public:
      *                       end of the step.
      */
     void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    double computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     /**
      * Get the values of all global variables.
      *
@@ -1132,16 +1178,18 @@ private:
     class ReorderListener;
     std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     OpenCLContext& cl;
     double prevStepSize;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters;
+    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
     OpenCLArray* globalValues;
     OpenCLArray* contextParameterValues;
     OpenCLArray* sumBuffer;
-    OpenCLArray* energy;
+    OpenCLArray* potentialEnergy;
+    OpenCLArray* kineticEnergy;
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
     OpenCLParameterSet* perDofValues;
@@ -1151,7 +1199,7 @@ private:
     std::vector<double> contextValuesDouble;
     std::vector<float> contextValues;
     std::vector<std::vector<cl::Kernel> > kernels;
-    cl::Kernel sumEnergyKernel, randomKernel;
+    cl::Kernel sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
@@ -1234,30 +1282,6 @@ private:
     OpenCLArray* moleculeAtoms;
     OpenCLArray* moleculeStartIndex;
     cl::Kernel kernel;
-};
-
-/**
- * This kernel is invoked to calculate the kinetic energy of the system.
- */
-class OpenCLCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
-public:
-    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcKineticEnergyKernel(name, platform), cl(cl) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    double execute(ContextImpl& context);
-private:
-    OpenCLContext& cl;
-    std::vector<double> masses;
 };
 
 /**

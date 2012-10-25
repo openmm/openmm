@@ -80,6 +80,10 @@ public:
      * Copy positions and velocities for one copy into the context.
      */
     virtual void copyToContext(int copy, ContextImpl& context) = 0;
+    /**
+     * Compute the kinetic energy.
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) = 0;
 };
 
 } // namespace OpenMM

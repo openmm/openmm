@@ -75,7 +75,6 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     // Find the list of kernels required.
     
     vector<string> kernelNames;
-    kernelNames.push_back(CalcKineticEnergyKernel::Name());
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
     kernelNames.push_back(UpdateStateDataKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
@@ -98,8 +97,6 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     platform->contextCreated(*this, properties);
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
     initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>().initialize(system);
-    kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
-    kineticEnergyKernel.getAs<CalcKineticEnergyKernel>().initialize(system);
     updateStateDataKernel = platform->createKernel(UpdateStateDataKernel::Name(), *this);
     updateStateDataKernel.getAs<UpdateStateDataKernel>().initialize(system);
     applyConstraintsKernel = platform->createKernel(ApplyConstraintsKernel::Name(), *this);
@@ -122,7 +119,6 @@ ContextImpl::~ContextImpl() {
     // Make sure all kernels get properly deleted before contextDestroyed() is called.
     
     initializeForcesKernel = Kernel();
-    kineticEnergyKernel = Kernel();
     updateStateDataKernel = Kernel();
     applyConstraintsKernel = Kernel();
     virtualSitesKernel = Kernel();
@@ -218,7 +214,7 @@ int ContextImpl::getLastForceGroups() const {
 }
 
 double ContextImpl::calcKineticEnergy() {
-    return kineticEnergyKernel.getAs<CalcKineticEnergyKernel>().execute(*this);
+    return integrator.computeKineticEnergy();
 }
 
 void ContextImpl::updateContextState() {

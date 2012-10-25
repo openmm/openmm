@@ -249,7 +249,7 @@ private:
     bool hasInitializedForces, hasSetPositions;
     int lastForceGroups;
     Platform* platform;
-    Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;
+    Kernel initializeForcesKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;
     void* platformData;
 };
 

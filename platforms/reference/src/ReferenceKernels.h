@@ -877,6 +877,13 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVerletDynamics* dynamics;
@@ -911,6 +918,13 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceStochasticDynamics* dynamics;
@@ -945,6 +959,13 @@ public:
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const BrownianIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceBrownianDynamics* dynamics;
@@ -969,18 +990,25 @@ public:
      * Initialize the kernel.
      *
      * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
      */
     void initialize(const System& system, const VariableLangevinIntegrator& integrator);
     /**
      * Execute the kernel.
      *
      * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableStochasticDynamics* dynamics;
@@ -1005,18 +1033,25 @@ public:
      * Initialize the kernel.
      *
      * @param system     the System this kernel will be applied to
-     * @param integrator the VerletIntegrator this kernel will be used for
+     * @param integrator the VariableVerletIntegrator this kernel will be used for
      */
     void initialize(const System& system, const VariableVerletIntegrator& integrator);
     /**
      * Execute the kernel.
      *
      * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableVerletDynamics* dynamics;
@@ -1055,6 +1090,17 @@ public:
      *                       end of the step.
      */
     void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    double computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     /**
      * Get the values of all global variables.
      *
@@ -1157,29 +1203,6 @@ public:
     void restoreCoordinates(ContextImpl& context);
 private:
     ReferenceMonteCarloBarostat* barostat;
-};
-
-/**
- * This kernel is invoked to calculate the kinetic energy of the system.
- */
-class ReferenceCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
-public:
-    ReferenceCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
-    }
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     */
-    double execute(ContextImpl& context);
-private:
-    std::vector<double> masses;
 };
 
 /**

@@ -185,6 +185,10 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     }
 }
 
+double OpenCLIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
+    return cl.getIntegrationUtilities().computeKineticEnergy(0);
+}
+
 void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {
     if (positions == NULL)
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");

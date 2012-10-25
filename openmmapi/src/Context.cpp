@@ -87,7 +87,7 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     bool includeForces = types&State::Forces;
     bool includeEnergy = types&State::Energy;
     if (includeForces || includeEnergy) {
-        double energy = impl->calcForcesAndEnergy(includeForces, includeEnergy, groups);
+        double energy = impl->calcForcesAndEnergy(includeForces || includeEnergy, includeEnergy, groups);
         if (includeEnergy)
             state.setEnergy(impl->calcKineticEnergy(), energy);
         if (includeForces)

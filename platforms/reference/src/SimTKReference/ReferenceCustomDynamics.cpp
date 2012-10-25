@@ -59,7 +59,14 @@ ReferenceCustomDynamics::ReferenceCustomDynamics(int numberOfAtoms, const Custom
         string expression;
         integrator.getComputationStep(i, stepType[i], stepVariable[i], expression);
         if (expression.length() > 0)
-            stepExpression[i] = Lepton::Parser::parse(expression).createProgram();
+            stepExpression[i] = Lepton::Parser::parse(expression).optimize().createProgram();
+    }
+    kineticEnergyExpression = Lepton::Parser::parse(integrator.getKineticEnergyExpression()).optimize().createProgram();
+    kineticEnergyNeedsForce = false;
+    for (int i = 0; i < kineticEnergyExpression.getNumOperations(); i++) {
+        const Lepton::Operation& op = kineticEnergyExpression.getOperation(i);
+        if (op.getId() == Lepton::Operation::VARIABLE && op.getName() == "f")
+            kineticEnergyNeedsForce = true;
     }
 }
 
@@ -303,4 +310,36 @@ void ReferenceCustomDynamics::recordChangedParameters(OpenMM::ContextImpl& conte
         if (value != iter->second)
             context.setParameter(name, globals[name]);
     }
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Compute the kinetic energy of the system.
+
+   @param context             the context this integrator is updating
+   @param numberOfAtoms       number of atoms
+   @param atomCoordinates     atom coordinates
+   @param velocities          velocities
+   @param forces              forces
+   @param masses              atom masses
+   @param globals             a map containing values of global variables
+   @param perDof              the values of per-DOF variables
+   @param forcesAreValid      whether the current forces are valid or need to be recomputed
+
+   --------------------------------------------------------------------------------------- */
+
+double ReferenceCustomDynamics::computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+        std::vector<OpenMM::RealVec>& velocities, std::vector<OpenMM::RealVec>& forces, std::vector<RealOpenMM>& masses,
+        std::map<std::string, RealOpenMM>& globals, std::vector<std::vector<OpenMM::RealVec> >& perDof, bool& forcesAreValid) {
+    globals.insert(context.getParameters().begin(), context.getParameters().end());
+    if (kineticEnergyNeedsForce) {
+        energy = context.calcForcesAndEnergy(true, true, -1);
+        forcesAreValid = true;
+    }
+    computePerDof(numberOfAtoms, sumBuffer, atomCoordinates, velocities, forces, masses, globals, perDof, kineticEnergyExpression, "f");
+    RealOpenMM sum = 0.0;
+    for (int j = 0; j < numberOfAtoms; j++)
+        if (masses[j] != 0.0)
+            sum += sumBuffer[j][0]+sumBuffer[j][1]+sumBuffer[j][2];
+    return sum;
 }

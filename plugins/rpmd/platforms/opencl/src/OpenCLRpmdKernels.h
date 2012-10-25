@@ -65,6 +65,13 @@ public:
      */
     void execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid);
     /**
+     * Compute the kinetic energy.
+     * 
+     * @param context        the context in which to execute this kernel
+     * @param integrator     the RPMDIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator);
+    /**
      * Get the positions of all particles in one copy of the system.
      */
     void setPositions(int copy, const std::vector<Vec3>& positions);

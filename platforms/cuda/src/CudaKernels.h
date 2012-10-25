@@ -935,6 +935,13 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     CudaContext& cu;
     double prevStepSize;
@@ -963,6 +970,13 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
     CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
@@ -992,6 +1006,13 @@ public:
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const BrownianIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
     CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
@@ -1010,18 +1031,25 @@ public:
      * Initialize the kernel.
      *
      * @param system     the System this kernel will be applied to
-     * @param integrator the VerletIntegrator this kernel will be used for
+     * @param integrator the VariableVerletIntegrator this kernel will be used for
      */
     void initialize(const System& system, const VariableVerletIntegrator& integrator);
     /**
      * Execute the kernel.
      *
      * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
     CudaContext& cu;
     int blockSize;
@@ -1053,6 +1081,13 @@ public:
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
 private:
     CudaContext& cu;
     int blockSize;
@@ -1067,8 +1102,8 @@ private:
 class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
-            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), energy(NULL),
-            uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
+            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
     }
     ~CudaIntegrateCustomStepKernel();
     /**
@@ -1089,6 +1124,17 @@ public:
      *                       end of the step.
      */
     void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    double computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     /**
      * Get the values of all global variables.
      *
@@ -1123,16 +1169,18 @@ private:
     class ReorderListener;
     std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
     CudaContext& cu;
     double prevStepSize;
     int numGlobalVariables;
-    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters;
+    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
     CudaArray* globalValues;
     CudaArray* contextParameterValues;
     CudaArray* sumBuffer;
-    CudaArray* energy;
+    CudaArray* potentialEnergy;
+    CudaArray* kineticEnergy;
     CudaArray* uniformRandoms;
     CudaArray* randomSeed;
     CudaParameterSet* perDofValues;
@@ -1142,7 +1190,8 @@ private:
     std::vector<double> contextValuesDouble;
     std::vector<std::vector<CUfunction> > kernels;
     std::vector<std::vector<std::vector<void*> > > kernelArgs;
-    CUfunction sumEnergyKernel, randomKernel;
+    std::vector<void*> kineticEnergyArgs;
+    CUfunction sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
@@ -1224,30 +1273,6 @@ private:
     CudaArray* moleculeAtoms;
     CudaArray* moleculeStartIndex;
     CUfunction kernel;
-};
-
-/**
- * This kernel is invoked to calculate the kinetic energy of the system.
- */
-class CudaCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
-public:
-    CudaCalcKineticEnergyKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcKineticEnergyKernel(name, platform), cu(cu) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    double execute(ContextImpl& context);
-private:
-    CudaContext& cu;
-    std::vector<double> masses;
 };
 
 /**

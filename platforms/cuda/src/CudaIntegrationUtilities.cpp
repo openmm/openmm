@@ -851,3 +851,41 @@ void CudaIntegrationUtilities::loadCheckpoint(istream& stream) {
     stream.read((char*) &randomSeedVec[0], sizeof(int4)*randomSeed->getSize());
     randomSeed->upload(randomSeedVec);
 }
+
+double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
+    int numParticles = context.getNumAtoms();
+    int paddedNumParticles = context.getPaddedNumAtoms();
+    long long* force = (long long*) context.getPinnedBuffer();
+    context.getForce().download(force);
+    double forceScale = timeShift/0xFFFFFFFF;
+    double energy = 0.0;
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+        vector<double4> velm;
+        context.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++) {
+            double4 v = velm[i];
+            if (v.w != 0) {
+                double scale = forceScale*v.w;
+                v.x += scale*force[i];
+                v.y += scale*force[i+paddedNumParticles];
+                v.z += scale*force[i+paddedNumParticles*2];
+                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+            }
+        }
+    }
+    else {
+        vector<float4> velm;
+        context.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++) {
+            double4 v = make_double4(velm[i].x, velm[i].y, velm[i].z, velm[i].w);
+            if (v.w != 0) {
+                double scale = forceScale*v.w;
+                v.x += scale*force[i];
+                v.y += scale*force[i+paddedNumParticles];
+                v.z += scale*force[i+paddedNumParticles*2];
+                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+            }
+        }
+    }
+    return 0.5*energy;
+}

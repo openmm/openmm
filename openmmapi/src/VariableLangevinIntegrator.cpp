@@ -69,6 +69,10 @@ vector<string> VariableLangevinIntegrator::getKernelNames() {
     return names;
 }
 
+double VariableLangevinIntegrator::computeKineticEnergy() {
+    return kernel.getAs<IntegrateVariableLangevinStepKernel>().computeKineticEnergy(*context, *this);
+}
+
 void VariableLangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();

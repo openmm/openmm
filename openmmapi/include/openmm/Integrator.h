@@ -119,6 +119,12 @@ protected:
      */
     virtual void stateChanged(State::DataType changed) {
     }
+    /**
+     * Compute the kinetic energy of the system at the current time.  This may be different from simply
+     * mv<sup>2</sup>/2.  For example, a leapfrog integrator will store velocities offset by half a step,
+     * but the kinetic energy should be computed at the current time, not delayed by half a step.
+     */
+    virtual double computeKineticEnergy() = 0;
 private:
     double stepSize, constraintTol;
 };

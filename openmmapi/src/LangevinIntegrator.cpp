@@ -68,6 +68,10 @@ vector<string> LangevinIntegrator::getKernelNames() {
     return names;
 }
 
+double LangevinIntegrator::computeKineticEnergy() {
+    return kernel.getAs<IntegrateLangevinStepKernel>().computeKineticEnergy(*context, *this);
+}
+
 void LangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();

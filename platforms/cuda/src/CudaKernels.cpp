@@ -4024,6 +4024,10 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
     cu.setStepCount(cu.getStepCount()+1);
 }
 
+double CudaIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
 CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
     cu.setAsCurrent();
     if (params != NULL)
@@ -4107,6 +4111,10 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
     cu.setStepCount(cu.getStepCount()+1);
 }
 
+double CudaIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
 CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 }
 
@@ -4163,6 +4171,10 @@ void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const Browni
 
     cu.setTime(cu.getTime()+stepSize);
     cu.setStepCount(cu.getStepCount()+1);
+}
+
+double CudaIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0);
 }
 
 CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() {
@@ -4240,6 +4252,10 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
     cu.setTime(time);
     cu.setStepCount(cu.getStepCount()+1);
     return dt;
+}
+
+double CudaIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
 CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKernel() {
@@ -4332,6 +4348,10 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     return dt;
 }
 
+double CudaIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
 class CudaIntegrateCustomStepKernel::ReorderListener : public CudaContext::ReorderListener {
 public:
     ReorderListener(CudaContext& cu, CudaParameterSet& perDofValues, vector<vector<float> >& localPerDofValuesFloat, vector<vector<double> >& localPerDofValuesDouble, bool& deviceValuesAreCurrent) :
@@ -4401,8 +4421,10 @@ CudaIntegrateCustomStepKernel::~CudaIntegrateCustomStepKernel() {
         delete contextParameterValues;
     if (sumBuffer != NULL)
         delete sumBuffer;
-    if (energy != NULL)
-        delete energy;
+    if (potentialEnergy != NULL)
+        delete potentialEnergy;
+    if (kineticEnergy != NULL)
+        delete kineticEnergy;
     if (uniformRandoms != NULL)
         delete uniformRandoms;
     if (randomSeed != NULL)
@@ -4419,7 +4441,8 @@ void CudaIntegrateCustomStepKernel::initialize(const System& system, const Custo
     int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
     globalValues = new CudaArray(cu, max(1, numGlobalVariables), elementSize, "globalVariables");
     sumBuffer = new CudaArray(cu, 3*system.getNumParticles(), elementSize, "sumBuffer");
-    energy = new CudaArray(cu, 1, cu.getEnergyBuffer().getElementSize(), "energy");
+    potentialEnergy = new CudaArray(cu, 1, cu.getEnergyBuffer().getElementSize(), "potentialEnergy");
+    kineticEnergy = new CudaArray(cu, 1, cu.getEnergyBuffer().getElementSize(), "kineticEnergy");
     perDofValues = new CudaParameterSet(cu, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
     cu.addReorderListener(new ReorderListener(cu, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
     prevStepSize = -1.0;
@@ -4480,7 +4503,8 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
     variables["uniform"] = "uniform"+suffix;
     variables["m"] = "mass";
     variables["dt"] = "stepSize";
-    variables[energyName] = "energy[0]";
+    if (energyName != "")
+        variables[energyName] = "energy[0]";
     for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
         variables[integrator.getGlobalVariableName(i)] = "globals["+cu.intToString(i)+"]";
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++)
@@ -4491,7 +4515,7 @@ string CudaIntegrateCustomStepKernel::createPerDofComputation(const string& vari
     return cu.getExpressionUtilities().createExpressions(expressions, variables, functions, "temp"+cu.intToString(component)+"_", "", "double");
 }
 
-void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
+void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
     cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     int numAtoms = cu.getNumAtoms();
@@ -4718,7 +4742,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 args1.push_back(&integration.getRandom().getDevicePointer());
                 args1.push_back(NULL);
                 args1.push_back(&uniformRandoms->getDevicePointer());
-                args1.push_back(&energy->getDevicePointer());
+                args1.push_back(&potentialEnergy->getDevicePointer());
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     args1.push_back(&perDofValues->getBuffers()[i].getMemory());
                 kernelArgs[step].push_back(args1);
@@ -4767,7 +4791,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
                 args.push_back(&contextParameterValues->getDevicePointer());
                 args.push_back(NULL);
                 args.push_back(NULL);
-                args.push_back(&energy->getDevicePointer());
+                args.push_back(&potentialEnergy->getDevicePointer());
                 kernelArgs[step].push_back(args);
             }
             else if (stepType[step] == CustomIntegrator::ConstrainPositions) {
@@ -4784,12 +4808,60 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             }
         }
         
-        // Create the kernel for summing energy.
+        // Create the kernel for summing the potential energy.
 
         defines["SUM_OUTPUT_INDEX"] = "0";
         defines["SUM_BUFFER_SIZE"] = cu.intToString(cu.getEnergyBuffer().getSize());
         CUmodule module = cu.createModule(CudaKernelSources::customIntegrator, defines);
-        sumEnergyKernel = cu.getKernel(module, cu.getUseDoublePrecision() ? "computeDoubleSum" : "computeFloatSum");
+        sumPotentialEnergyKernel = cu.getKernel(module, cu.getUseDoublePrecision() ? "computeDoubleSum" : "computeFloatSum");
+        
+        // Create the kernel for computing kinetic energy.
+
+        stringstream computeKE;
+        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
+            const CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
+            computeKE << buffer.getType()<<" perDofx"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index];\n";
+            computeKE << buffer.getType()<<" perDofy"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index+1];\n";
+            computeKE << buffer.getType()<<" perDofz"<<cu.intToString(i+1)<<" = perDofValues"<<cu.intToString(i+1)<<"[3*index+2];\n";
+        }
+        Lepton::ParsedExpression keExpression = Lepton::Parser::parse(integrator.getKineticEnergyExpression()).optimize();
+        for (int i = 0; i < 3; i++)
+            computeKE << createPerDofComputation("", keExpression, i, integrator, "f", "");
+        map<string, string> replacements;
+        replacements["COMPUTE_STEP"] = computeKE.str();
+        stringstream args;
+        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++) {
+            const CudaNonbondedUtilities::ParameterInfo& buffer = perDofValues->getBuffers()[i];
+            string valueName = "perDofValues"+cu.intToString(i+1);
+            args << ", " << buffer.getType() << "* __restrict__ " << valueName;
+        }
+        replacements["PARAMETER_ARGUMENTS"] = args.str();
+        if (defines.find("LOAD_POS_AS_DELTA") != defines.end())
+            defines.erase("LOAD_POS_AS_DELTA");
+        module = cu.createModule(cu.replaceStrings(CudaKernelSources::customIntegratorPerDof, replacements), defines);
+        kineticEnergyKernel = cu.getKernel(module, "computePerDof");
+        kineticEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
+        kineticEnergyArgs.push_back(NULL);
+        kineticEnergyArgs.push_back(&integration.getPosDelta().getDevicePointer());
+        kineticEnergyArgs.push_back(&cu.getVelm().getDevicePointer());
+        kineticEnergyArgs.push_back(&cu.getForce().getDevicePointer());
+        kineticEnergyArgs.push_back(&integration.getStepSize().getDevicePointer());
+        kineticEnergyArgs.push_back(&globalValues->getDevicePointer());
+        kineticEnergyArgs.push_back(&contextParameterValues->getDevicePointer());
+        kineticEnergyArgs.push_back(&sumBuffer->getDevicePointer());
+        kineticEnergyArgs.push_back(&integration.getRandom().getDevicePointer());
+        kineticEnergyArgs.push_back(NULL);
+        kineticEnergyArgs.push_back(&uniformRandoms->getDevicePointer());
+        kineticEnergyArgs.push_back(&potentialEnergy->getDevicePointer());
+        for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
+            kineticEnergyArgs.push_back(&perDofValues->getBuffers()[i].getMemory());
+        keNeedsForce = usesVariable(keExpression, "f");
+
+        // Create a second kernel to sum the values.
+
+        defines["SUM_BUFFER_SIZE"] = cu.intToString(3*numAtoms);
+        module = cu.createModule(CudaKernelSources::customIntegrator, defines);
+        sumKineticEnergyKernel = cu.getKernel(module, useDouble ? "computeDoubleSum" : "computeFloatSum");
     }
     
     // Make sure all values (variables, parameters, etc.) stored on the device are up to date.
@@ -4837,6 +4909,13 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         if (paramsChanged)
             contextParameterValues->upload(contextValuesFloat);
     }
+}
+
+void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
+    prepareForComputation(context, integrator, forcesAreValid);
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+    int numSteps = integrator.getNumComputations();
 
     // Loop over computation steps in the integrator and execute them.
 
@@ -4863,8 +4942,8 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             recordChangedParameters(context);
             context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
             if (computeEnergy) {
-                void* args[] = {&cu.getEnergyBuffer().getDevicePointer(), &energy->getDevicePointer()};
-                cu.executeKernel(sumEnergyKernel, &args[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+                void* args[] = {&cu.getEnergyBuffer().getDevicePointer(), &potentialEnergy->getDevicePointer()};
+                cu.executeKernel(sumPotentialEnergyKernel, &args[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
             }
             forcesAreValid = true;
         }
@@ -4912,8 +4991,43 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
 
     // Update the time and step count.
 
-    cu.setTime(cu.getTime()+stepSize);
+    cu.setTime(cu.getTime()+integrator.getStepSize());
     cu.setStepCount(cu.getStepCount()+1);
+}
+
+double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
+    prepareForComputation(context, integrator, forcesAreValid);
+    if (keNeedsForce && !forcesAreValid) {
+        // Compute the force.  We want to then mark that forces are valid, which means also computing
+        // potential energy if any steps will expect it to be valid too.
+        
+        bool willNeedEnergy = false;
+        for (int i = 0; i < integrator.getNumComputations(); i++)
+            willNeedEnergy |= needsEnergy[i];
+        context.calcForcesAndEnergy(true, willNeedEnergy, -1);
+        if (willNeedEnergy) {
+            void* args[] = {&cu.getEnergyBuffer().getDevicePointer(), &potentialEnergy->getDevicePointer()};
+            cu.executeKernel(sumPotentialEnergyKernel, &args[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+        }
+        forcesAreValid = true;
+    }
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    int randomIndex = 0;
+    kineticEnergyArgs[1] = &posCorrection;
+    kineticEnergyArgs[10] = &randomIndex;
+    cu.executeKernel(kineticEnergyKernel, &kineticEnergyArgs[0], cu.getNumAtoms());
+    void* args[] = {&sumBuffer->getDevicePointer(), &kineticEnergy->getDevicePointer()};
+    cu.executeKernel(sumKineticEnergyKernel, args, CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+        double ke;
+        kineticEnergy->download(&ke);
+        return ke;
+    }
+    else {
+        float ke;
+        kineticEnergy->download(&ke);
+        return ke;
+    }
 }
 
 void CudaIntegrateCustomStepKernel::recordChangedParameters(ContextImpl& context) {
@@ -5114,39 +5228,6 @@ void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context)
         m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }
-}
-
-void CudaCalcKineticEnergyKernel::initialize(const System& system) {
-    cu.setAsCurrent();
-    int numParticles = system.getNumParticles();
-    masses.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        masses[i] = system.getParticleMass(i);
-}
-
-double CudaCalcKineticEnergyKernel::execute(ContextImpl& context) {
-    // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
-    // on the CPU.
-
-    const vector<int>& order = cu.getAtomIndex();
-    double energy = 0.0;
-    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-        double4* velm = (double4*) cu.getPinnedBuffer();
-        cu.getVelm().download(velm);
-        for (size_t i = 0; i < masses.size(); ++i) {
-            double4 v = velm[i];
-            energy += masses[order[i]]*(v.x*v.x+v.y*v.y+v.z*v.z);
-        }
-    }
-    else {
-        float4* velm = (float4*) cu.getPinnedBuffer();
-        cu.getVelm().download(velm);
-        for (size_t i = 0; i < masses.size(); ++i) {
-            float4 v = velm[i];
-            energy += masses[order[i]]*(v.x*v.x+v.y*v.y+v.z*v.z);
-        }
-    }
-    return 0.5*energy;
 }
 
 CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {

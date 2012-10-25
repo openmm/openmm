@@ -59,9 +59,11 @@ void testSingleBond() {
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    CustomIntegrator integrator(0.01);
+    const double dt = 0.01;
+    CustomIntegrator integrator(dt);
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
+    integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -70,23 +72,25 @@ void testSingleBond() {
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(1, 0, 0);
     context.setPositions(positions);
+    vector<Vec3> velocities(2);
+    velocities[0] = Vec3(-0.5*dt*0.5*0.5, 0, 0);
+    velocities[1] = Vec3(0.5*dt*0.5*0.5, 0, 0);
+    context.setVelocities(velocities);
     
     // This is simply a harmonic oscillator, so compare it to the analytical solution.
     
     const double freq = 1.0;;
-    State state = context.getState(State::Energy);
-    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
     for (int i = 0; i < 1000; ++i) {
-        state = context.getState(State::Positions | State::Velocities | State::Energy);
+        State state = context.getState(State::Positions | State::Velocities | State::Energy);
         double time = state.getTime();
         double expectedDist = 1.5+0.5*std::cos(freq*time);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
-        double expectedSpeed = -0.5*freq*std::sin(freq*time);
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 1e-4);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 1e-4);
+        double expectedSpeed = -0.5*freq*std::sin(freq*(time-dt/2));
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 1e-4);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 1e-4);
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        ASSERT_EQUAL_TOL(0.5*0.5*0.5, energy, 1e-4);
         integrator.step(1);
     }
 }

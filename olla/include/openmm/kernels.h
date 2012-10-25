@@ -843,6 +843,13 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      */
     virtual void execute(ContextImpl& context, const VerletIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) = 0;
 };
 
 /**
@@ -869,6 +876,13 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
     virtual void execute(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
 };
 
 /**
@@ -895,6 +909,13 @@ public:
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
     virtual void execute(ContextImpl& context, const BrownianIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) = 0;
 };
 
 /**
@@ -918,11 +939,18 @@ public:
      * Execute the kernel.
      *
      * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      * @return the size of the step that was taken
      */
     virtual double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator) = 0;
 };
 
 /**
@@ -946,11 +974,18 @@ public:
      * Execute the kernel.
      *
      * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      * @return the size of the step that was taken
      */
     virtual double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) = 0;
 };
 
 /**
@@ -981,6 +1016,17 @@ public:
      *                       end of the step.
      */
     virtual void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the CustomIntegrator this kernel is being used for
+     * @param forcesAreValid if the context has been modified since the last time step, this will be
+     *                       false to show that cached forces are invalid and must be recalculated.
+     *                       On exit, this should specify whether the cached forces are valid at the
+     *                       end of the step.
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) = 0;
     /**
      * Get the values of all global variables.
      *
@@ -1072,30 +1118,6 @@ public:
      * @param context    the context in which to execute this kernel
      */
     virtual void restoreCoordinates(ContextImpl& context) = 0;
-};
-
-/**
- * This kernel is invoked to calculate the kinetic energy of the system.
- */
-class CalcKineticEnergyKernel : public KernelImpl {
-public:
-    static std::string Name() {
-        return "CalcKineticEnergy";
-    }
-    CalcKineticEnergyKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     */
-    virtual void initialize(const System& system) = 0;
-    /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     */
-    virtual double execute(ContextImpl& context) = 0;
 };
 
 /**

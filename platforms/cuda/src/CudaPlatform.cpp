@@ -75,7 +75,6 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(IntegrateCustomStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(CudaDeviceIndex());
     platformProperties.push_back(CudaUseBlockingSync());

@@ -175,6 +175,10 @@ protected:
      * Get the names of all Kernels used by this Integrator.
      */
     std::vector<std::string> getKernelNames();
+    /**
+     * Compute the kinetic energy of the system at the current time.
+     */
+    double computeKineticEnergy();
 private:
     double temperature, friction;
     int numCopies, randomNumberSeed;

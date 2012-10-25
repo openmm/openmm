@@ -120,8 +120,6 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLApplyAndersenThermostatKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
-    if (name == CalcKineticEnergyKernel::Name())
-        return new OpenCLCalcKineticEnergyKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())
         return new OpenCLRemoveCMMotionKernel(name, platform, cl);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
