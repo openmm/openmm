@@ -90,7 +90,8 @@ void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, 
     useCutoff = usesCutoff;
     usePeriodic = usesPeriodic;
     cutoff = cutoffDistance;
-    kernelSource += kernel+"\n";
+    if (kernel.size() > 0)
+        kernelSource += kernel+"\n";
     nonbondedForceGroup = forceGroup;
 }
 
@@ -124,8 +125,6 @@ void CudaNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclu
 }
 
 void CudaNonbondedUtilities::initialize(const System& system) {
-    if (cutoff == -1.0)
-        return; // There are no nonbonded interactions in the System.
     string errorMessage = "Error initializing nonbonded utilities";    
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.

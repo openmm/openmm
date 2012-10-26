@@ -115,7 +115,8 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
     useCutoff = usesCutoff;
     usePeriodic = usesPeriodic;
     cutoff = cutoffDistance;
-    kernelSource += kernel+"\n";
+    if (kernel.size() > 0)
+        kernelSource += kernel+"\n";
     nonbondedForceGroup = forceGroup;
 }
 
@@ -149,9 +150,6 @@ void OpenCLNonbondedUtilities::requestExclusions(const vector<vector<int> >& exc
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {
-    if (cutoff == -1.0)
-        return; // There are no nonbonded interactions in the System.
-    
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
         
@@ -267,7 +265,8 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Create kernels.
 
-    forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
+    if (kernelSource.size() > 0)
+        forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
     if (useCutoff) {
         map<string, string> defines;
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
@@ -364,7 +363,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
-    if (cutoff != -1.0) {
+    if (kernelSource.size() > 0) {
         if (useCutoff) {
             setPeriodicBoxSizeArg(context, forceKernel, 10);
             setInvPeriodicBoxSizeArg(context, forceKernel, 11);
@@ -410,7 +409,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
 void OpenCLNonbondedUtilities::setTileRange(int startTileIndex, int numTiles) {
     this->startTileIndex = startTileIndex;
     this->numTiles = numTiles;
-    if (cutoff == -1.0)
+    if (kernelSource.size() == 0)
         return; // There are no nonbonded interactions in the System.
     forceKernel.setArg<cl_uint>(6, startTileIndex);
     forceKernel.setArg<cl_uint>(7, startTileIndex+numTiles);
