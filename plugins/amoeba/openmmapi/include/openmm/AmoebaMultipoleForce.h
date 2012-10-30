@@ -311,7 +311,6 @@ public:
     void getElectrostaticPotential(const std::vector< Vec3 >& inputGrid,
                                     Context& context, std::vector< double >& outputElectrostaticPotential);
 
-
     /**
      * Get the system multipole moments.
      * 
@@ -328,8 +327,7 @@ public:
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
                                       quadrupole_zx, quadrupole_zy, quadrupole_zz)
      */
-
-    void getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMonents);
+    void getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMoments);
 
 protected:
     ForceImpl* createImpl();

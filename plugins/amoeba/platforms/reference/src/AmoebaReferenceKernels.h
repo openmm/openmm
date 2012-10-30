@@ -29,7 +29,8 @@
 
 #include "openmm/System.h"
 #include "openmm/amoebaKernels.h"
-//#include "openmm/AmoebaMultipoleForce.h"
+#include "openmm/AmoebaMultipoleForce.h"
+#include "AmoebaReferenceMultipoleForce.h"
 #include "SimTKReference/ReferenceNeighborList.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
@@ -307,6 +308,14 @@ public:
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
+     * Setup for AmoebaReferenceMultipoleForce instance. 
+     *
+     * @param context        the current context
+     *
+     * @return pointer to initialized instance of AmoebaReferenceMultipoleForce
+     */
+    AmoebaReferenceMultipoleForce* setupAmoebaReferenceMultipoleForce(ContextImpl& context );
+    /**
      * Execute the kernel to calculate the forces and/or energy.
      *
      * @param context        the context in which to execute this kernel
@@ -316,29 +325,32 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /** 
-     * Execute the kernel to calculate the electrostatic potential
+     * Calculate the electrostatic potential given vector of grid coordinates.
      *
-     * @param context        the context in which to execute this kernel
-     * @param inputGrid      input grid coordinates
+     * @param context                      context
+     * @param inputGrid                    input grid coordinates
      * @param outputElectrostaticPotential output potential 
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential );
 
     /**
-     * Get the system multipole moments
+     * Get the system multipole moments.
      *
-     * @param context      context
-     * @param outputMultipoleMonents (charge,
+     * @param context                context 
+     * @param outputMultipoleMonents vector of multipole moments:
+                                     (charge,
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
                                       quadrupole_zx, quadrupole_zy, quadrupole_zz )
      */
-    void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMonents);
+    void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments);
 
 private:
+
     int numMultipoles;
+    AmoebaMultipoleForce::NonbondedMethod nonbondedMethod;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     std::vector<RealOpenMM> charges;
     std::vector<RealOpenMM> dipoles;
@@ -352,10 +364,13 @@ private:
     std::vector<int>   multipoleAtomYs;
     std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo;
 
-    //int iterativeMethod;
-    int nonbondedMethod;
     int mutualInducedMaxIterations;
     RealOpenMM mutualInducedTargetEpsilon;
+
+    bool usePme;
+    RealOpenMM alphaEwald;
+    RealOpenMM cutoffDistance;
+    std::vector<int> pmeGridDimension;
 
     System& system;
 };
@@ -465,21 +480,21 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
  
     /**
-     *  Get include-cavity term flag 
+     *  Get the 'include cavity term' flag.
      *
      *  @return includeCavityTerm
      */
     int getIncludeCavityTerm( void ) const;
 
     /**
-     *  Get number of particles
+     *  Get the number of particles.
      *
      *  @return number of particles
      */
     int getNumParticles( void ) const;
 
     /**
-     *  Get directPolarization flag 
+     *  Get Direct Polarization flag.
      *
      *  @return directPolarization
      *
@@ -487,7 +502,7 @@ public:
     int getDirectPolarization( void ) const;
 
     /**
-     *  Get solute dielectric
+     *  Get the solute dielectric.
      *
      *  @return soluteDielectric
      *
@@ -495,7 +510,7 @@ public:
     RealOpenMM getSoluteDielectric( void ) const;
 
     /**
-     *  Get solvent dielectric
+     *  Get the solvent dielectric.
      *
      *  @return solventDielectric
      *
@@ -503,7 +518,7 @@ public:
     RealOpenMM getSolventDielectric( void ) const;
 
     /**
-     *  Get dielectric offset
+     *  Get the dielectric offset.
      *
      *  @return dielectricOffset
      *
@@ -511,7 +526,7 @@ public:
     RealOpenMM getDielectricOffset( void ) const;
 
     /**
-     *  Get probeRadius
+     *  Get the probe radius.
      *
      *  @return probeRadius
      *
@@ -519,7 +534,7 @@ public:
     RealOpenMM getProbeRadius( void ) const;
 
     /**
-     *  Get surfaceAreaFactor
+     *  Get the surface area factor.
      *
      *  @return surfaceAreaFactor
      *
@@ -527,7 +542,7 @@ public:
     RealOpenMM getSurfaceAreaFactor( void ) const;
 
     /**
-     *  Get atomic radii
+     *  Get the vector of particle radii.
      *
      *  @param atomicRadii vector of atomic radii
      *
@@ -535,7 +550,7 @@ public:
     void getAtomicRadii( std::vector<RealOpenMM>& atomicRadii ) const;
 
     /**
-     *  Get scale factors
+     *  Get the vector of scale factors.
      *
      *  @param scaleFactors vector of scale factors
      *
@@ -543,7 +558,7 @@ public:
     void getScaleFactors( std::vector<RealOpenMM>& scaleFactors ) const;
 
     /**
-     *  Get charges
+     *  Get the vector of charges.
      *
      *  @param charges vector of charges
      *

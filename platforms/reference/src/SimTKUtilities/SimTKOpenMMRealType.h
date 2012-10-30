@@ -53,6 +53,8 @@
 #define ATAN           atanf
 #define TANH           tanhf
 
+#define FLOOR          floorf
+
 #define ATOF           atoff
 
 #define PI_M               3.141592653589f
@@ -82,6 +84,8 @@
 #define ASIN           asin
 #define ATAN           atan
 #define TANH           tanh
+
+#define FLOOR          floor
 
 #define ATOF           atof
 
