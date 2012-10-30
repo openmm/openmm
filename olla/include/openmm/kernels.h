@@ -222,6 +222,13 @@ public:
      * @param tol        the distance tolerance within which constraints must be satisfied.
      */
     virtual void apply(ContextImpl& context, double tol) = 0;
+    /**
+     * Update particle velocities to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the velocity tolerance within which constraints must be satisfied.
+     */
+    virtual void applyToVelocities(ContextImpl& context, double tol) = 0;
 };
 
 /**

@@ -33,6 +33,8 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ForceImpl.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "sfmt/SFMT.h"
 #include <cmath>
 
 using namespace OpenMM;
@@ -151,6 +153,41 @@ void Context::setVelocities(const vector<Vec3>& velocities) {
     impl->setVelocities(velocities);
 }
 
+void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
+    System& system = impl->getSystem();
+    
+    // Generate the list of Gaussian random numbers.
+    
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(randomSeed, sfmt);
+    vector<double> randoms;
+    while (randoms.size() < system.getNumParticles()*3) {
+        double x, y, r2;
+        do {
+            x = 2.0*genrand_real2(sfmt)-1.0;
+            y = 2.0*genrand_real2(sfmt)-1.0;
+            r2 = x*x + y*y;
+        } while (r2 >= 1.0 || r2 == 0.0);
+        double multiplier = sqrt((-2.0*log(r2))/r2);
+        randoms.push_back(x*multiplier);
+        randoms.push_back(y*multiplier);
+    }
+    
+    // Assign the velocities.
+    
+    vector<Vec3> velocities(system.getNumParticles(), Vec3());
+    int nextRandom = 0;
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        double mass = system.getParticleMass(i);
+        if (mass != 0) {
+            double velocityScale = sqrt(BOLTZ*temperature/mass);
+            velocities[i] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+        }
+    }
+    setVelocities(velocities);
+    impl->applyVelocityConstraints(1e-5);
+}
+
 double Context::getParameter(const string& name) {
     return impl->getParameter(name);
 }
@@ -165,6 +202,10 @@ void Context::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c)
 
 void Context::applyConstraints(double tol) {
     impl->applyConstraints(tol);
+}
+
+void Context::applyVelocityConstraints(double tol) {
+    impl->applyVelocityConstraints(tol);
 }
 
 void Context::computeVirtualSites() {

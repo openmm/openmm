@@ -192,6 +192,10 @@ void ContextImpl::applyConstraints(double tol) {
     applyConstraintsKernel.getAs<ApplyConstraintsKernel>().apply(*this, tol);
 }
 
+void ContextImpl::applyVelocityConstraints(double tol) {
+    applyConstraintsKernel.getAs<ApplyConstraintsKernel>().applyToVelocities(*this, tol);
+}
+
 void ContextImpl::computeVirtualSites() {
     virtualSitesKernel.getAs<VirtualSitesKernel>().computePositions(*this);
 }

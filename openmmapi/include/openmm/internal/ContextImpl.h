@@ -170,6 +170,12 @@ public:
      */
     void applyConstraints(double tol);
     /**
+     * Update the velocities of particles so the net velocity of each constrained distance is zero.
+     *
+     * @param tol    the velocity tolerance within which constraints must be satisfied.
+     */
+    void applyVelocityConstraints(double tol);
+    /**
      * Recompute the locations of all virtual sites.  There is rarely a reason to call
      * this, since virtual sites are also updated by applyConstraints().  This is only
      * for the rare situations when you want to enforce virtual sites but <i>not</i>

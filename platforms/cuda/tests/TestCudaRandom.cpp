@@ -38,6 +38,10 @@
 #include "../src/CudaContext.h"
 #include "../src/CudaIntegrationUtilities.h"
 #include "openmm/System.h"
+#include "openmm/Context.h"
+#include "CudaPlatform.h"
+#include "openmm/VerletIntegrator.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <iostream>
 
 using namespace OpenMM;
@@ -84,9 +88,53 @@ void testGaussian() {
     ASSERT_EQUAL_TOL(0.0, c4, 3.0/pow(numValues, 1.0/4.0));
 }
 
+void testRandomVelocities() {
+    // Create a system.
+    
+    const int numParticles = 10000;
+    const double temperture = 100.0;
+    CudaPlatform platform;
+    System system;
+    VerletIntegrator integrator(0.01);
+    for (int i = 0; i < numParticles; ++i)
+        system.addParticle(10.0+sin(0.1*i));
+    for (int i = 0; i < numParticles-1; ++i)
+        system.addConstraint(i, i+1, 1.0);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+    context.setPositions(positions);
+    
+    // Ask the context to generate random velocities.
+    
+    context.setVelocitiesToTemperature(temperture);
+    State state = context.getState(State::Velocities);
+    
+    // See if they respect constraints.
+    
+    for (int i = 1; i < numParticles; i++) {
+        Vec3 v1 = state.getVelocities()[i-1];
+        Vec3 v2 = state.getVelocities()[i];
+        double vel = (v1-v2).dot(positions[i-1]-positions[i]);
+        ASSERT_EQUAL_TOL(0.0, vel, 2e-5);
+    }
+    
+    // See if the temperature is correct.
+
+    double ke = 0;
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 v = state.getVelocities()[i];
+        ke += 0.5*system.getParticleMass(i)*v.dot(v);
+    }
+    double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temperture;
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 4/sqrt(numParticles));
+}
+
 int main() {
     try {
         testGaussian();
+        testRandomVelocities();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

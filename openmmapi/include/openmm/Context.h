@@ -35,6 +35,7 @@
 #include "Integrator.h"
 #include "State.h"
 #include "System.h"
+#include <ctime>
 #include <iosfwd>
 #include <map>
 #include <string>
@@ -149,6 +150,14 @@ public:
      */
     void setVelocities(const std::vector<Vec3>& velocities);
     /**
+     * Set the velocities of all particles in the System to random values chosen from a Boltzmann
+     * distribution at a given temperature.
+     * 
+     * @param temperature    the temperature for which to select the velocities (measured in Kelvin)
+     * @param randomSeed     the random number seed to use when selecting velocities
+     */
+    void setVelocitiesToTemperature(double temperature, int randomSeed=time(NULL));
+    /**
      * Get the value of an adjustable parameter defined by a Force object in the System.
      * 
      * @param name the name of the parameter to get
@@ -180,6 +189,12 @@ public:
      * @param tol    the distance tolerance within which constraints must be satisfied.
      */
     void applyConstraints(double tol);
+    /**
+     * Update the velocities of particles so the net velocity of each constrained distance is zero.
+     *
+     * @param tol    the velocity tolerance within which constraints must be satisfied.
+     */
+    void applyVelocityConstraints(double tol);
     /**
      * Recompute the locations of all virtual sites.  There is rarely a reason to call
      * this, since virtual sites are also updated by applyConstraints().  This is only

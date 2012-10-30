@@ -206,6 +206,13 @@ public:
      * @param tol        the distance tolerance within which constraints must be satisfied.
      */
     void apply(ContextImpl& context, double tol);
+    /**
+     * Update particle velocities to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the velocity tolerance within which constraints must be satisfied.
+     */
+    void applyToVelocities(ContextImpl& context, double tol);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceConstraintAlgorithm* constraints;

@@ -399,6 +399,10 @@ void CudaApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     integration.computeVirtualSites();
 }
 
+void CudaApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
+    cu.getIntegrationUtilities().applyVelocityConstraints(tol);
+}
+
 void CudaVirtualSitesKernel::initialize(const System& system) {
 }
 

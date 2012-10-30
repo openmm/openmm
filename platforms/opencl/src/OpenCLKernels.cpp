@@ -424,6 +424,10 @@ void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     integration.computeVirtualSites();
 }
 
+void OpenCLApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
+    cl.getIntegrationUtilities().applyVelocityConstraints(tol);
+}
+
 void OpenCLVirtualSitesKernel::initialize(const System& system) {
 }
 

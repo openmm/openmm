@@ -326,6 +326,18 @@ void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     ReferenceVirtualSites::computePositions(context.getSystem(), positions);
 }
 
+void ReferenceApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
+    if (constraints == NULL) {
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, tol);
+    }
+    vector<RealVec>& positions = extractPositions(context);
+    vector<RealVec>& velocities = extractVelocities(context);
+    constraints->setTolerance(tol);
+    constraints->applyToVelocities(data.numParticles, positions, velocities, inverseMasses);
+}
+
 void ReferenceVirtualSitesKernel::initialize(const System& system) {
 }
 
