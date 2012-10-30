@@ -1273,6 +1273,7 @@ private:
     CudaArray* moleculeAtoms;
     CudaArray* moleculeStartIndex;
     CUfunction kernel;
+    std::vector<int> lastAtomOrder;
 };
 
 /**

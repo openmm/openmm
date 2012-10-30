@@ -5469,10 +5469,38 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     cl.executeKernel(kernel, cl.getNumAtoms());
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
+    lastAtomOrder = cl.getAtomIndex();
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    if (cl.getAtomsWereReordered()) {
+        // The atoms were reordered since we saved the positions, so we need to fix them.
+        
+        const vector<int> atomOrder = cl.getAtomIndex();
+        int numAtoms = cl.getNumAtoms();
+        if (cl.getUseDoublePrecision()) {
+            mm_double4* pos = (mm_double4*) cl.getPinnedBuffer();
+            savedPositions->download(pos);
+            vector<mm_double4> fixedPos(cl.getPaddedNumAtoms());
+            for (int i = 0; i < numAtoms; i++)
+                fixedPos[lastAtomOrder[i]] = pos[i];
+            for (int i = 0; i < numAtoms; i++)
+                pos[i] = fixedPos[atomOrder[i]];
+            cl.getPosq().upload(pos);
+        }
+        else {
+            mm_float4* pos = (mm_float4*) cl.getPinnedBuffer();
+            savedPositions->download(pos);
+            vector<mm_float4> fixedPos(cl.getPaddedNumAtoms());
+            for (int i = 0; i < numAtoms; i++)
+                fixedPos[lastAtomOrder[i]] = pos[i];
+            for (int i = 0; i < numAtoms; i++)
+                pos[i] = fixedPos[atomOrder[i]];
+            cl.getPosq().upload(pos);
+        }
+    }
+    else
+        cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
 }
 
 OpenCLRemoveCMMotionKernel::~OpenCLRemoveCMMotionKernel() {

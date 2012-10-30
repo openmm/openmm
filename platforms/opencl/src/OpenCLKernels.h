@@ -1282,6 +1282,7 @@ private:
     OpenCLArray* moleculeAtoms;
     OpenCLArray* moleculeStartIndex;
     cl::Kernel kernel;
+    std::vector<int> lastAtomOrder;
 };
 
 /**

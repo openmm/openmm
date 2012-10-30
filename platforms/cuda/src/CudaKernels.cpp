@@ -5217,16 +5217,45 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
     cu.executeKernel(kernel, args, cu.getNumAtoms());
     for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
         cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
+    lastAtomOrder = cu.getAtomIndex();
 }
 
 void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     cu.setAsCurrent();
-    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-    CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
-    if (result != CUDA_SUCCESS) {
-        std::stringstream m;
-        m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(m.str());
+    if (cu.getAtomsWereReordered()) {
+        // The atoms were reordered since we saved the positions, so we need to fix them.
+        
+        const vector<int> atomOrder = cu.getAtomIndex();
+        int numAtoms = cu.getNumAtoms();
+        if (cu.getUseDoublePrecision()) {
+            double4* pos = (double4*) cu.getPinnedBuffer();
+            savedPositions->download(pos);
+            vector<double4> fixedPos(cu.getPaddedNumAtoms());
+            for (int i = 0; i < numAtoms; i++)
+                fixedPos[lastAtomOrder[i]] = pos[i];
+            for (int i = 0; i < numAtoms; i++)
+                pos[i] = fixedPos[atomOrder[i]];
+            cu.getPosq().upload(pos);
+        }
+        else {
+            float4* pos = (float4*) cu.getPinnedBuffer();
+            savedPositions->download(pos);
+            vector<float4> fixedPos(cu.getPaddedNumAtoms());
+            for (int i = 0; i < numAtoms; i++)
+                fixedPos[lastAtomOrder[i]] = pos[i];
+            for (int i = 0; i < numAtoms; i++)
+                pos[i] = fixedPos[atomOrder[i]];
+            cu.getPosq().upload(pos);
+        }
+    }
+    else {
+        int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
+        CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
+        if (result != CUDA_SUCCESS) {
+            std::stringstream m;
+            m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
+            throw OpenMMException(m.str());
+        }
     }
 }
 
