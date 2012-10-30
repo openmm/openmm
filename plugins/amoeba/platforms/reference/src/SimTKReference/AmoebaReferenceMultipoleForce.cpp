@@ -4407,6 +4407,10 @@ RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateKirkwoodED
     return energy;
 }
 
+const int AmoebaReferencePmeMultipoleForce::AMOEBA_PME_ORDER = 5;
+
+const RealOpenMM AmoebaReferencePmeMultipoleForce::SQRT_PI = 1.77245385091;
+
 AmoebaReferencePmeMultipoleForce::AmoebaReferencePmeMultipoleForce( void ) :
                AmoebaReferenceMultipoleForce(PME),
                _cutoffDistance(1.0), _cutoffDistanceSquared(1.0),

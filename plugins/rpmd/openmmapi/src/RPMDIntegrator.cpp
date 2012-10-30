@@ -91,7 +91,7 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
 }
 
 double RPMDIntegrator::computeKineticEnergy() {
-    kernel.getAs<IntegrateRPMDStepKernel>().computeKineticEnergy(*context, *this);
+    return kernel.getAs<IntegrateRPMDStepKernel>().computeKineticEnergy(*context, *this);
 }
 
 void RPMDIntegrator::step(int steps) {

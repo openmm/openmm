@@ -1285,8 +1285,8 @@ public:
 
 private:
 
-    static const int AMOEBA_PME_ORDER     = 5;
-    static const RealOpenMM SQRT_PI       = 1.77245385091;
+    static const int AMOEBA_PME_ORDER;
+    static const RealOpenMM SQRT_PI;
 
     RealOpenMM _alphaEwald;
     RealOpenMM _cutoffDistance;
