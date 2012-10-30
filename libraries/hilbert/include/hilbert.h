@@ -13,6 +13,8 @@ typedef unsigned long long bitmask_t;
 typedef unsigned int halfmask_t;
 #if defined(OPENMM_BUILDING_SHARED_LIBRARY)
     #define WINDOWS_EXPORT __declspec(dllexport)
+#else
+#define WINDOWS_EXPORT
 #endif
 #else
 #include <stdint.h>
