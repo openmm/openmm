@@ -50,13 +50,14 @@ using namespace std;
 
 const double TOL = 1e-5;
 
+CudaPlatform platform;
+
 void testCMAPTorsions() {
     const int mapSize = 36;
 
     // Create two systems: one with a pair of periodic torsions, and one with a CMAP torsion
     // that approximates the same force.
 
-    CudaPlatform platform;
     System system1;
     for (int i = 0; i < 5; i++)
         system1.addParticle(1.0);
@@ -104,8 +105,10 @@ void testCMAPTorsions() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testCMAPTorsions();
     }
     catch(const exception& e) {

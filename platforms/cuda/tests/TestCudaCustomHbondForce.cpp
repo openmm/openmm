@@ -51,9 +51,9 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testHbond() {
-    CudaPlatform platform;
+CudaPlatform platform;
 
+void testHbond() {
     // Create a system using a CustomHbondForce.
 
     System customSystem;
@@ -149,7 +149,6 @@ void testHbond() {
 }
 
 void testExclusions() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -176,7 +175,6 @@ void testExclusions() {
 }
 
 void testCutoff() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -204,7 +202,6 @@ void testCutoff() {
 }
 
 void testCustomFunctions() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -233,8 +230,10 @@ void testCustomFunctions() {
     ASSERT_EQUAL_TOL(0.1*2+0.1*2, state.getPotentialEnergy(), TOL);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testHbond();
         testExclusions();
         testCutoff();

@@ -52,6 +52,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 const double TOL = 1e-5;
 
 void testForces() {
@@ -78,9 +80,8 @@ void testForces() {
     ReferencePlatform ref;
     VerletIntegrator integrator1(0.01);
     Context context1(system, integrator1, ref);
-    OpenCLPlatform cl;
     VerletIntegrator integrator2(0.01);
-    Context context2(system, integrator2, cl);
+    Context context2(system, integrator2, platform);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
@@ -97,8 +98,10 @@ void testForces() {
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), TOL);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testForces();
     }
     catch(const exception& e) {

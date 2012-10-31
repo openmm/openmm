@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 const double TOL = 1e-5;
 
 void testCMAPTorsions() {
@@ -56,7 +58,6 @@ void testCMAPTorsions() {
     // Create two systems: one with a pair of periodic torsions, and one with a CMAP torsion
     // that approximates the same force.
 
-    OpenCLPlatform platform;
     System system1;
     for (int i = 0; i < 5; i++)
         system1.addParticle(1.0);
@@ -104,8 +105,10 @@ void testCMAPTorsions() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testCMAPTorsions();
     }
     catch(const exception& e) {

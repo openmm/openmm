@@ -49,10 +49,11 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleParticle() {
-    CudaPlatform platform;
     System system;
     system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
@@ -87,7 +88,6 @@ void testSingleParticle() {
 }
 
 void testCutoffAndPeriodic() {
-    CudaPlatform cl;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -113,7 +113,7 @@ void testCutoffAndPeriodic() {
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
-    Context context(system, integrator, cl);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
@@ -144,7 +144,6 @@ void testCutoffAndPeriodic() {
 }
 
 void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBCForce::NonbondedMethod method2) {
-    CudaPlatform cl;
     ReferencePlatform reference;
     System system;
     GBSAOBCForce* gbsa = new GBSAOBCForce();
@@ -168,7 +167,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     system.addForce(nonbonded);
     LangevinIntegrator integrator1(0, 0.1, 0.01);
     LangevinIntegrator integrator2(0, 0.1, 0.01);
-    Context context(system, integrator1, cl);
+    Context context(system, integrator1, platform);
     Context refContext(system, integrator2, reference);
 
     // Set random (but uniformly distributed) positions for all the particles.
@@ -224,8 +223,10 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testSingleParticle();
         testCutoffAndPeriodic();
         for (int i = 5; i < 11; i++) {

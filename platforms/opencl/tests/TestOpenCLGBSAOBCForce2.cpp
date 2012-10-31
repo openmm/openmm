@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Cuda implementations of GBVIForce, GBSAOBCForce and the softcore versions of
+ * This tests the OpenCL implementations of GBVIForce, GBSAOBCForce and the softcore versions of
  * these forces.
  */
 
@@ -2850,7 +2850,7 @@ static int checkRequiredLibsAreAvailable( const StringVector& requiredLibs, cons
  
 void runSystemComparisonTest( System& system1, System& system2, 
                               const std::vector<Vec3>& positions, MapStringToDouble& inputArgumentMap,
-                              const std::string& idString, FILE* log ){
+                              const std::string& idString, const std::string& precision, FILE* log ){
 
     int applyAssert                      = 0;
     int platformId1                      = 0;
@@ -2914,9 +2914,11 @@ void runSystemComparisonTest( System& system1, System& system2,
 #if TEST_PLATFORM == TEST_OPENCL_PLATFORM
     ReferencePlatform platform1;   
     OpenCLPlatform platform2;
+    platform2.setPropertyDefaultValue("OpenCLPrecision", precision);
 #elif TEST_PLATFORM == TEST_CUDA_PLATFORM
     ReferencePlatform platform1;   
     CudaPlatform platform2;
+    platform2.setPropertyDefaultValue("CudaPrecision", precision);
 #else
     Platform& platform1 = Platform::getPlatformByName( platformName1 );
     if( deviceId1 ){
@@ -3059,7 +3061,7 @@ void serializeSystemAndPositions( System& system, const std::vector<Vec3>& posit
     return;
 }
 
-void runTests( MapStringToDouble& inputArgumentMap, FILE* log ){
+void runTests( MapStringToDouble& inputArgumentMap, const std::string& precision, FILE* log ){
 
     double lambda1                       = 1.0;
     double lambda2                       = 1.0;
@@ -3327,12 +3329,18 @@ void runTests( MapStringToDouble& inputArgumentMap, FILE* log ){
 
     std::stringstream idString;
     idString << "Nb " << nonbondedMethod << " l2 " << std::fixed << setprecision(2) << lambda2;
-    runSystemComparisonTest( standardSystem, systemCopy, positions, inputArgumentMap, idString.str(), log );
+    runSystemComparisonTest( standardSystem, systemCopy, positions, inputArgumentMap, idString.str(), precision, log );
 
 }
 
-int main() {
+int main(int argc, char* argv[]) {
 
+    std::string precision;
+    if (argc > 1)
+        precision = std::string(argv[1]);
+    else
+        precision = "single";
+    
     try {
 
 #ifdef USE_SOFTCORE
@@ -3503,7 +3511,7 @@ int main() {
             int wasException = 0;
             for( unsigned int kk = 0; kk < vectorOfMapStringToDouble.size() && wasException < 3; kk++ ){
                 try {
-                    runTests( vectorOfMapStringToDouble[kk], log );
+                    runTests( vectorOfMapStringToDouble[kk], precision, log );
                 } catch(const exception& e) {
                     std::stringstream msg;
 #if IMPLICIT_SOLVENT == TEST_NONBONDED

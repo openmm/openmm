@@ -50,11 +50,12 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 /**
  * Check that massless particles are handled correctly.
  */
 void testMasslessParticle() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(0.0);
     system.addParticle(1.0);
@@ -91,7 +92,6 @@ void testMasslessParticle() {
  * Test a TwoParticleAverageSite virtual site.
  */
 void testTwoParticleAverage() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -128,7 +128,6 @@ void testTwoParticleAverage() {
  * Test a ThreeParticleAverageSite virtual site.
  */
 void testThreeParticleAverage() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -170,7 +169,6 @@ void testThreeParticleAverage() {
  * Test an OutOfPlaneSite virtual site.
  */
 void testOutOfPlane() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -220,7 +218,6 @@ void testOutOfPlane() {
  * when using virtual sites.
  */
 void testConservationLaws() {
-    OpenCLPlatform platform;
     System system;
     NonbondedForce* forceField = new NonbondedForce();
     system.addForce(forceField);
@@ -329,7 +326,6 @@ void testConservationLaws() {
 void testReordering() {
     const double cutoff = 2.0;
     const double boxSize = 20.0;
-    OpenCLPlatform platform;
     System system;
     NonbondedForce* nonbonded = new NonbondedForce();
     system.addForce(nonbonded);
@@ -430,8 +426,10 @@ void testReordering() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testMasslessParticle();
         testTwoParticleAverage();
         testThreeParticleAverage();

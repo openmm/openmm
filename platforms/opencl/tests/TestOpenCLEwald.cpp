@@ -50,6 +50,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 const double TOL = 1e-5;
 
 void testEwaldPME(bool includeExceptions) {
@@ -61,7 +63,6 @@ void testEwaldPME(bool includeExceptions) {
     const double boxSize 	= 3.00646;
     double tol 				= 1e-5;
 
-    OpenCLPlatform cl;
     ReferencePlatform reference;
     System system;
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -96,7 +97,7 @@ void testEwaldPME(bool includeExceptions) {
 
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context clContext(system, integrator1, cl);
+    Context clContext(system, integrator1, platform);
     Context referenceContext(system, integrator2, reference);
     clContext.setPositions(positions);
     referenceContext.setPositions(positions);
@@ -126,7 +127,7 @@ void testEwaldPME(bool includeExceptions) {
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
     VerletIntegrator integrator3(0.01);
-    Context clContext2(system, integrator3, cl);
+    Context clContext2(system, integrator3, platform);
     clContext2.setPositions(positions);
 
     tol = 1e-2;
@@ -165,7 +166,7 @@ void testEwaldPME(bool includeExceptions) {
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
     VerletIntegrator integrator4(0.01);
-    Context clContext3(system, integrator4, cl);
+    Context clContext3(system, integrator4, platform);
     clContext3.setPositions(positions);
 
     tol = 1e-2;
@@ -174,7 +175,6 @@ void testEwaldPME(bool includeExceptions) {
 }
 
 void testEwald2Ions() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -220,7 +220,6 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
         positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
     }
     force->setNonbondedMethod(method);
-    OpenCLPlatform platform;
 
     // For various values of the cutoff and error tolerance, see if the actual error is reasonable.
 
@@ -253,13 +252,15 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
-     testEwaldPME(false);
-     testEwaldPME(true);
-//     testEwald2Ions();
-     testErrorTolerance(NonbondedForce::Ewald);
-     testErrorTolerance(NonbondedForce::PME);
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+        testEwaldPME(false);
+        testEwaldPME(true);
+//        testEwald2Ions();
+        testErrorTolerance(NonbondedForce::Ewald);
+        testErrorTolerance(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

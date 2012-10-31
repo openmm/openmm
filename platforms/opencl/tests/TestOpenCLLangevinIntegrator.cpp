@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -97,7 +98,6 @@ void testSingleBond() {
 void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
-    OpenCLPlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
@@ -133,7 +133,6 @@ void testConstraints() {
     const int numParticles = 8;
     const int numConstraints = 5;
     const double temp = 100.0;
-    OpenCLPlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     integrator.setConstraintTolerance(1e-5);
@@ -181,8 +180,6 @@ void testConstraints() {
 void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
-    const double collisionFreq = 10.0;
-    OpenCLPlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
@@ -237,8 +234,10 @@ void testRandomSeed() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testSingleBond();
         testTemperature();
         testConstraints();

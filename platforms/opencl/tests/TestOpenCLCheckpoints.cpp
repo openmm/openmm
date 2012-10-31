@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 const double TOL = 1e-5;
 
 void compareStates(State& s1, State& s2) {
@@ -71,7 +73,6 @@ void testCheckpoint() {
     const int numParticles = 100;
     const double boxSize = 5.0;
     const double temperature = 200.0;
-    OpenCLPlatform platform;
     System system;
     system.addForce(new AndersenThermostat(0.0, 100.0));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -158,8 +159,10 @@ void testCheckpoint() {
     compareStates(s6, s8);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testCheckpoint();
     }
     catch(const exception& e) {

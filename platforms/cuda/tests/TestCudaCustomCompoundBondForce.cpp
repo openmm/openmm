@@ -51,9 +51,9 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testBond() {
-    CudaPlatform platform;
+CudaPlatform platform;
 
+void testBond() {
     // Create a system using a CustomCompoundBondForce.
 
     System customSystem;
@@ -142,7 +142,6 @@ void testBond() {
 }
 
 void testPositionDependence() {
-    CudaPlatform platform;
     System customSystem;
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
@@ -168,7 +167,6 @@ void testPositionDependence() {
 }
 
 void testParallelComputation() {
-    CudaPlatform platform;
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -201,8 +199,10 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testBond();
         testPositionDependence();
         testParallelComputation();

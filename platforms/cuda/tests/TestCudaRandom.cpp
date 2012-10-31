@@ -47,13 +47,14 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 void testGaussian() {
     int numAtoms = 5000;
     System system;
     for (int i = 0; i < numAtoms; i++)
         system.addParticle(1.0);
-    CudaPlatform platform;
-    CudaPlatform::PlatformData platformData(system, "", "true", "single",
+    CudaPlatform::PlatformData platformData(system, "", "true", platform.getPropertyDefaultValue("CudaPrecision"),
             platform.getPropertyDefaultValue(CudaPlatform::CudaCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaTempDirectory()));
     CudaContext& context = *platformData.contexts[0];
     context.initialize();
@@ -93,7 +94,6 @@ void testRandomVelocities() {
     
     const int numParticles = 10000;
     const double temperture = 100.0;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     for (int i = 0; i < numParticles; ++i)
@@ -131,8 +131,10 @@ void testRandomVelocities() {
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 4/sqrt(numParticles));
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testGaussian();
         testRandomVelocities();
     }

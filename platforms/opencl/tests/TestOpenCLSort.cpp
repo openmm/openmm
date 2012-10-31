@@ -46,6 +46,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 struct SortTrait {
     typedef cl_float DataType;
     typedef cl_float KeyType;
@@ -62,7 +64,7 @@ void verifySorting(vector<float> array) {
 
     System system;
     system.addParticle(0.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", "single");
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"));
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     OpenCLArray data(context, array.size(), sizeof(float), "sortData");
@@ -106,8 +108,10 @@ void testLogValues()
     verifySorting(array);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testUniformValues();
         testLogValues();
     }

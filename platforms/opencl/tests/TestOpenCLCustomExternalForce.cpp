@@ -47,10 +47,11 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 const double TOL = 1e-5;
 
 void testForce() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -100,7 +101,6 @@ void testForce() {
 }
 
 void testManyParameters() {
-    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
@@ -131,7 +131,6 @@ void testManyParameters() {
 }
 
 void testParallelComputation() {
-    OpenCLPlatform platform;
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -162,8 +161,10 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testForce();
         testManyParameters();
         testParallelComputation();

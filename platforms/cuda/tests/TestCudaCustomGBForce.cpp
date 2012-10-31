@@ -50,11 +50,12 @@ using namespace std;
 
 const double TOL = 1e-5;
 
+CudaPlatform platform;
+
 void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMethod customMethod) {
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
-    CudaPlatform platform;
 
     // Create two systems: one with a GBSAOBCForce, and one using a CustomGBForce to implement the same interaction.
 
@@ -168,7 +169,6 @@ void testMembrane() {
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
-    CudaPlatform platform;
 
     // Create a system with an implicit membrane.
 
@@ -254,7 +254,6 @@ void testMembrane() {
 }
 
 void testTabulatedFunction() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -295,7 +294,6 @@ void testTabulatedFunction() {
 }
 
 void testMultipleChainRules() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -323,7 +321,6 @@ void testMultipleChainRules() {
 }
 
 void testPositionDependence() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -383,7 +380,6 @@ void testPositionDependence() {
 }
 
 void testExclusions() {
-    CudaPlatform platform;
     for (int i = 0; i < 4; i++) {
         System system;
         system.addParticle(1.0);
@@ -449,8 +445,10 @@ void testExclusions() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
         testOBC(GBSAOBCForce::CutoffNonPeriodic, CustomGBForce::CutoffNonPeriodic);
         testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);

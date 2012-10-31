@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 const double TOL = 1e-5;
 
 void testSimpleExpression() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -74,7 +75,6 @@ void testSimpleExpression() {
 }
 
 void testParameters() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -135,7 +135,6 @@ void testParameters() {
 }
 
 void testManyParameters() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -174,7 +173,6 @@ void testManyParameters() {
 }
 
 void testExclusions() {
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     CustomNonbondedForce* nonbonded = new CustomNonbondedForce("a*r; a=a1+a2");
@@ -205,7 +203,6 @@ void testExclusions() {
 }
 
 void testCutoff() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -233,7 +230,6 @@ void testCutoff() {
 }
 
 void testPeriodic() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -262,7 +258,6 @@ void testPeriodic() {
 }
 
 void testTabulatedFunction() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -305,7 +300,6 @@ void testCoulombLennardJones() {
     const int numMolecules = 300;
     const int numParticles = numMolecules*2;
     const double boxSize = 20.0;
-    CudaPlatform platform;
 
     // Create two systems: one with a NonbondedForce, and one using a CustomNonbondedForce to implement the same interaction.
 
@@ -377,7 +371,6 @@ void testCoulombLennardJones() {
 }
 
 void testParallelComputation() {
-    CudaPlatform platform;
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -414,8 +407,10 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testSimpleExpression();
         testParameters();
         testManyParameters();

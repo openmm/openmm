@@ -45,6 +45,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 void testHarmonicBonds() {
     const int numParticles = 10;
     System system;
@@ -64,7 +66,6 @@ void testHarmonicBonds() {
     // Minimize it and check that all bonds are at their equilibrium distances.
 
     VerletIntegrator integrator(0.01);
-    OpenCLPlatform platform;
     Context context(system, integrator, platform);
     context.setPositions(positions);
     LocalEnergyMinimizer::minimize(context, 1e-5);
@@ -105,7 +106,6 @@ void testLargeSystem() {
 
     // Minimize it and verify that the energy has decreased.
 
-    OpenCLPlatform platform;
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -167,7 +167,6 @@ void testVirtualSites() {
 
     // Minimize it and verify that the energy has decreased.
     
-    OpenCLPlatform platform;
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -199,8 +198,10 @@ void testVirtualSites() {
     ASSERT(forceNorm < 3*tolerance);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testHarmonicBonds();
         testLargeSystem();
         testVirtualSites();

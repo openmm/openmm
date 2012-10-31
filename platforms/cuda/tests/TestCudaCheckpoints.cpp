@@ -50,6 +50,8 @@ using namespace std;
 
 const double TOL = 1e-5;
 
+CudaPlatform platform;
+
 void compareStates(State& s1, State& s2) {
     ASSERT_EQUAL_TOL(s1.getTime(), s2.getTime(), TOL);
     int numParticles = s1.getPositions().size();
@@ -71,7 +73,6 @@ void testCheckpoint() {
     const int numParticles = 100;
     const double boxSize = 5.0;
     const double temperature = 200.0;
-    CudaPlatform platform;
     System system;
     system.addForce(new AndersenThermostat(0.0, 100.0));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -158,8 +159,10 @@ void testCheckpoint() {
     compareStates(s6, s8);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testCheckpoint();
     }
     catch(const exception& e) {

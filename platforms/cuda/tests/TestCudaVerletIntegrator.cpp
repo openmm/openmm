@@ -48,10 +48,11 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    CudaPlatform platform;
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
@@ -90,7 +91,6 @@ void testConstraints() {
     const int numParticles = 8;
     const int numConstraints = 5;
     const double temp = 100.0;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.001);
     integrator.setConstraintTolerance(1e-5);
@@ -143,8 +143,6 @@ void testConstraints() {
 
 void testConstrainedClusters() {
     const int numParticles = 7;
-    const double temp = 500.0;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.001);
     integrator.setConstraintTolerance(1e-5);
@@ -205,8 +203,10 @@ void testConstrainedClusters() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testSingleBond();
         testConstraints();
         testConstrainedClusters();

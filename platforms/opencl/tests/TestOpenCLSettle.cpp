@@ -47,12 +47,13 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 void testConstraints() {
     const int numMolecules = 10;
     const int numParticles = numMolecules*3;
     const int numConstraints = numMolecules*3;
     const double temp = 100.0;
-    OpenCLPlatform platform;
     System system;
     LangevinIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
@@ -103,8 +104,10 @@ void testConstraints() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testConstraints();
     }
     catch(const exception& e) {

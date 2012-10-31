@@ -49,8 +49,9 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 void testChangingBoxSize() {
-    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 6));
     system.addParticle(1.0);
@@ -100,7 +101,6 @@ void testIdealGas() {
 
     // Create a gas of noninteracting particles.
 
-    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
     vector<Vec3> positions(numParticles);
@@ -146,7 +146,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double pressure = 1.5;
-    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(8, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 8));
     VerletIntegrator integrator(0.01);
@@ -219,7 +218,6 @@ void testWater() {
 
     // Create a box of SPC water molecules.
 
-    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -273,8 +271,10 @@ void testWater() {
     ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.02);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testChangingBoxSize();
         testIdealGas();
         testRandomSeed();

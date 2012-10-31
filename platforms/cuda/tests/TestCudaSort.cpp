@@ -46,6 +46,8 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 class SortTrait : public CudaSort::SortTrait {
     int getDataSize() const {return 4;}
     int getKeySize() const {return 4;}
@@ -62,8 +64,7 @@ void verifySorting(vector<float> array) {
 
     System system;
     system.addParticle(0.0);
-    CudaPlatform platform;
-    CudaPlatform::PlatformData platformData(system, "", "true", "single",
+    CudaPlatform::PlatformData platformData(system, "", "true", platform.getPropertyDefaultValue("CudaPrecision"),
             platform.getPropertyDefaultValue(CudaPlatform::CudaCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaTempDirectory()));
     CudaContext& context = *platformData.contexts[0];
     context.initialize();
@@ -108,8 +109,10 @@ void testLogValues()
     verifySorting(array);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testUniformValues();
         testLogValues();
     }

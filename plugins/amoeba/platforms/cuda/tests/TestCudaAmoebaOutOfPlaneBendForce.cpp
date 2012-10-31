@@ -508,11 +508,12 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
 
 }
 
-int main( int numberOfArguments, char* argv[] ) {
-
+int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaOutOfPlaneBendForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
         FILE* log = NULL;
 
         testOneOutOfPlaneBend( log );

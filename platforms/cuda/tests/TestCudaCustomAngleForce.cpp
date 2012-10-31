@@ -49,9 +49,9 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testAngles() {
-    CudaPlatform platform;
+CudaPlatform platform;
 
+void testAngles() {
     // Create a system using a CustomAngleForce.
 
     System customSystem;
@@ -132,7 +132,6 @@ void testAngles() {
 }
 
 void testParallelComputation() {
-    CudaPlatform platform;
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -161,8 +160,10 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testAngles();
         testParallelComputation();
     }

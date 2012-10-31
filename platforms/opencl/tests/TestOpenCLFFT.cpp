@@ -48,31 +48,34 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
+template <class Real2>
 void testTransform() {
     System system;
     system.addParticle(0.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", "single");
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"));
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     int xsize = 32, ysize = 25, zsize = 30;
-    vector<mm_float2> original(xsize*ysize*zsize);
+    vector<Real2> original(xsize*ysize*zsize);
     vector<t_complex> reference(original.size());
     for (int i = 0; i < (int) original.size(); i++) {
-        mm_float2 value = mm_float2((cl_float) genrand_real2(sfmt), (cl_float) genrand_real2(sfmt));
+        Real2 value = Real2((cl_float) genrand_real2(sfmt), (cl_float) genrand_real2(sfmt));
         original[i] = value;
         reference[i] = t_complex(value.x, value.y);
     }
-    OpenCLArray grid1(context, original.size(), sizeof(mm_float2), "grid1");
-    OpenCLArray grid2(context, original.size(), sizeof(mm_float2), "grid2");
+    OpenCLArray grid1(context, original.size(), sizeof(Real2), "grid1");
+    OpenCLArray grid2(context, original.size(), sizeof(Real2), "grid2");
     grid1.upload(original);
     OpenCLFFT3D fft(context, xsize, ysize, zsize);
 
     // Perform a forward FFT, then verify the result is correct.
 
     fft.execFFT(grid1, grid2, true);
-    vector<mm_float2> result;
+    vector<Real2> result;
     grid2.download(result);
     fftpack_t plan;
     fftpack_init_3d(&plan, xsize, ysize, zsize);
@@ -94,9 +97,14 @@ void testTransform() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
-        testTransform();
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+        if (platform.getPropertyDefaultValue("OpenCLPrecision") == "double")
+            testTransform<mm_double2>();
+        else
+            testTransform<mm_float2>();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

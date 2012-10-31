@@ -47,12 +47,14 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 void testGaussian() {
     int numAtoms = 5000;
     System system;
     for (int i = 0; i < numAtoms; i++)
         system.addParticle(1.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", "single");
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"));
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
@@ -91,7 +93,6 @@ void testRandomVelocities() {
     
     const int numParticles = 10000;
     const double temperture = 100.0;
-    OpenCLPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     for (int i = 0; i < numParticles; ++i)
@@ -129,8 +130,10 @@ void testRandomVelocities() {
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 4/sqrt(numParticles));
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testGaussian();
         testRandomVelocities();
     }

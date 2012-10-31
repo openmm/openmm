@@ -162,12 +162,12 @@ void testWcaDispersionAmmonia( FILE* log ) {
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
 }
 
-int main( int numberOfArguments, char* argv[] ) {
-
+int main(int argc, char* argv[]) {
     try {
         std::cout << "TestCudaAmoebaWcaDispersionForce running test..." << std::endl;
         registerAmoebaCudaKernelFactories();
-
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
         FILE* log = NULL;
 
         // test Wca dispersion force using two ammonia molecules

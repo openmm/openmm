@@ -53,10 +53,11 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 const double TOL = 1e-5;
 
 void testCoulomb() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -79,7 +80,6 @@ void testCoulomb() {
 }
 
 void testLJ() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -104,7 +104,6 @@ void testLJ() {
 }
 
 void testExclusionsAnd14() {
-    CudaPlatform platform;
     System system;
     NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < 5; ++i) {
@@ -192,7 +191,6 @@ void testExclusionsAnd14() {
 }
 
 void testCutoff() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -229,7 +227,6 @@ void testCutoff() {
 }
 
 void testCutoff14() {
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -325,7 +322,6 @@ void testCutoff14() {
 }
 
 void testPeriodic() {
-    CudaPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -366,7 +362,6 @@ void testLargeSystem() {
     const double cutoff = 2.0;
     const double boxSize = 20.0;
     const double tol = 2e-3;
-    CudaPlatform cl;
     ReferencePlatform reference;
     System system;
     for (int i = 0; i < numParticles; i++)
@@ -404,7 +399,7 @@ void testLargeSystem() {
     system.addForce(bonds);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context cuContext(system, integrator1, cl);
+    Context cuContext(system, integrator1, platform);
     Context referenceContext(system, integrator2, reference);
     cuContext.setPositions(positions);
     cuContext.setVelocities(velocities);
@@ -450,7 +445,6 @@ void testBlockInteractions(bool periodic) {
     const int numParticles = blockSize*numBlocks;
     const double cutoff = 1.0;
     const double boxSize = (periodic ? 5.1 : 1.1);
-    CudaPlatform cl;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -467,7 +461,7 @@ void testBlockInteractions(bool periodic) {
     nonbonded->setCutoffDistance(cutoff);
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
-    Context context(system, integrator, cl);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(contextImpl->getPlatformData());
@@ -628,7 +622,6 @@ void testDispersionCorrection() {
     int numParticles = gridSize*gridSize*gridSize;
     double boxSize = gridSize*0.5;
     double cutoff = boxSize/3;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
@@ -695,7 +688,6 @@ void testChangingParameters() {
     const double cutoff = 2.0;
     const double boxSize = 20.0;
     const double tol = 2e-3;
-    CudaPlatform cl;
     ReferencePlatform reference;
     System system;
     for (int i = 0; i < numParticles; i++)
@@ -728,7 +720,7 @@ void testChangingParameters() {
     
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context cuContext(system, integrator1, cl);
+    Context cuContext(system, integrator1, platform);
     Context referenceContext(system, integrator2, reference);
     cuContext.setPositions(positions);
     referenceContext.setPositions(positions);
@@ -761,7 +753,6 @@ void testChangingParameters() {
 }
 
 void testParallelComputation(bool useCutoff) {
-    CudaPlatform platform;
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -820,8 +811,10 @@ void testParallelComputation(bool useCutoff) {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testCoulomb();
         testLJ();
         testExclusionsAnd14();

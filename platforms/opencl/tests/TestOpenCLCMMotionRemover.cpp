@@ -50,6 +50,8 @@
 using namespace OpenMM;
 using namespace std;
 
+OpenCLPlatform platform;
+
 Vec3 calcCM(const vector<Vec3>& values, System& system) {
     Vec3 cm;
     for (int j = 0; j < system.getNumParticles(); ++j) {
@@ -62,7 +64,6 @@ Vec3 calcCM(const vector<Vec3>& values, System& system) {
 
 void testMotionRemoval(Integrator& integrator) {
     const int numParticles = 8;
-    OpenCLPlatform platform;
     System system;
     HarmonicBondForce* bonds = new HarmonicBondForce();
     bonds->addBond(2, 3, 2.0, 0.5);
@@ -103,8 +104,10 @@ void testMotionRemoval(Integrator& integrator) {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         LangevinIntegrator langevin(0.0, 1e-5, 0.01);
         testMotionRemoval(langevin);
         VerletIntegrator verlet(0.01);

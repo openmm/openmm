@@ -48,12 +48,13 @@
 using namespace OpenMM;
 using namespace std;
 
+CudaPlatform platform;
+
 void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 10000;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.005);
     NonbondedForce* forceField = new NonbondedForce();
@@ -92,7 +93,6 @@ void testConstraints() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     const int numSteps = 10000;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.005);
     NonbondedForce* forceField = new NonbondedForce();
@@ -144,7 +144,6 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    CudaPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();
@@ -201,8 +200,10 @@ void testRandomSeed() {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        if (argc > 1)
+            platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testTemperature();
         testConstraints();
         testRandomSeed();
