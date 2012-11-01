@@ -30,8 +30,10 @@ extern "C" __global__ void updateBsplines(const real4* __restrict__ posq, real4*
         for (int j = 1; j < (PME_ORDER-1); j++)
             data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
         data[0] = scale*(make_real3(1)-dr)*data[0];
-        for (int j = 0; j < PME_ORDER; j++)
-            pmeBsplineTheta[i+j*NUM_ATOMS] = make_real4(data[j].x, data[j].y, data[j].z, pos.w);  // Storing the charge here improves cache coherency in the charge spreading kernel
+        for (int j = 0; j < PME_ORDER; j++) {
+            real3 d = data[j]; // Copy it as a workaround for a bug in CUDA 5.0
+            pmeBsplineTheta[i+j*NUM_ATOMS] = make_real4(d.x, d.y, d.z, pos.w);  // Storing the charge here improves cache coherency in the charge spreading kernel
+        }
     }
 }
 
