@@ -45,7 +45,7 @@ using namespace OpenMM;
 
 extern "C" void registerAmoebaCudaKernelFactories();
 
-const double TOL = 1e-5;
+const double TOL = 1e-4;
 #define PI_M               3.141592653589
 #define RADIAN            57.29577951308
 const double DegreesToRadians = PI_M/180.0;

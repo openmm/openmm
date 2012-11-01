@@ -187,7 +187,7 @@ __device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& 
 
 inline __device__ void loadAtomData2(AtomData2& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const real* __restrict__ bornRadius) {
-    float4 atomPosq = posq[atom];
+    real4 atomPosq = posq[atom];
     data.pos = trimTo3(atomPosq);
     data.q = atomPosq.w;
     data.dipole.x = labFrameDipole[atom*3];
@@ -412,7 +412,7 @@ inline __device__ void loadAtomData3(AtomData3& data, int atom, const real4* __r
 __device__ void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& atom2, real3& force) {
     real third = 1/(real) 3;
     real pi43 = 4*third*M_PI;
-    real factor = -POW(M_PI, third)*POW(6, 2/(real) 3)/9;
+    real factor = -POW(M_PI, third)*POW((real) 6, 2/(real) 3)/9;
     real term = pi43/(atom1.bornRadius*atom1.bornRadius*atom1.bornRadius);
     term = factor/POW(term, 4/(real) 3);
 

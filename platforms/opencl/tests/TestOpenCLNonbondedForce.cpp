@@ -473,30 +473,46 @@ void testBlockInteractions(bool periodic) {
 
     // Verify that the bounds of each block were calculated correctly.
 
-    vector<mm_float4> posq;
-    clcontext.getPosq().download(posq);
-    vector<mm_float4> blockCenters(numBlocks);
-    vector<mm_float4> blockBoundingBoxes(numBlocks);
-    nb.getBlockCenters().download(blockCenters);
-    nb.getBlockBoundingBoxes().download(blockBoundingBoxes);
+    vector<mm_double4> posq(clcontext.getPosq().getSize());
+    vector<mm_double4> blockCenters(numBlocks);
+    vector<mm_double4> blockBoundingBoxes(numBlocks);
+    if (clcontext.getUseDoublePrecision()) {
+        clcontext.getPosq().download(posq);
+        nb.getBlockCenters().download(blockCenters);
+        nb.getBlockBoundingBoxes().download(blockBoundingBoxes);
+    }
+    else {
+        vector<mm_float4> posqf(clcontext.getPosq().getSize());
+        vector<mm_float4> blockCentersf(numBlocks);
+        vector<mm_float4> blockBoundingBoxesf(numBlocks);
+        clcontext.getPosq().download(posqf);
+        nb.getBlockCenters().download(blockCentersf);
+        nb.getBlockBoundingBoxes().download(blockBoundingBoxesf);
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = mm_double4(posqf[i].x, posqf[i].y, posqf[i].z, posqf[i].w);
+        for (int i = 0; i < numBlocks; i++) {
+            blockCenters[i] = mm_double4(blockCentersf[i].x, blockCentersf[i].y, blockCentersf[i].z, blockCentersf[i].w);
+            blockBoundingBoxes[i] = mm_double4(blockBoundingBoxesf[i].x, blockBoundingBoxesf[i].y, blockBoundingBoxesf[i].z, blockBoundingBoxesf[i].w);
+        }
+    }
     for (int i = 0; i < numBlocks; i++) {
-        mm_float4 gridSize = blockBoundingBoxes[i];
-        mm_float4 center = blockCenters[i];
+        mm_double4 gridSize = blockBoundingBoxes[i];
+        mm_double4 center = blockCenters[i];
         if (periodic) {
             ASSERT(gridSize.x < 0.5*boxSize);
             ASSERT(gridSize.y < 0.5*boxSize);
             ASSERT(gridSize.z < 0.5*boxSize);
         }
-        float minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
+        double minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
         for (int j = 0; j < blockSize; j++) {
-            mm_float4 pos = posq[i*blockSize+j];
-            float dx = pos.x-center.x;
-            float dy = pos.y-center.y;
-            float dz = pos.z-center.z;
+            mm_double4 pos = posq[i*blockSize+j];
+            double dx = pos.x-center.x;
+            double dy = pos.y-center.y;
+            double dz = pos.z-center.z;
             if (periodic) {
-                dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-                dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-                dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+                dx -= floor(0.5+dx/boxSize)*boxSize;
+                dy -= floor(0.5+dy/boxSize)*boxSize;
+                dz -= floor(0.5+dz/boxSize)*boxSize;
             }
             ASSERT(abs(dx) < gridSize.x+TOL);
             ASSERT(abs(dy) < gridSize.y+TOL);
@@ -538,21 +554,21 @@ void testBlockInteractions(bool periodic) {
 
         // Make sure this tile really should have been flagged based on bounding volumes.
 
-        mm_float4 gridSize1 = blockBoundingBoxes[x];
-        mm_float4 gridSize2 = blockBoundingBoxes[y];
-        mm_float4 center1 = blockCenters[x];
-        mm_float4 center2 = blockCenters[y];
-        float dx = center1.x-center2.x;
-        float dy = center1.y-center2.y;
-        float dz = center1.z-center2.z;
+        mm_double4 gridSize1 = blockBoundingBoxes[x];
+        mm_double4 gridSize2 = blockBoundingBoxes[y];
+        mm_double4 center1 = blockCenters[x];
+        mm_double4 center2 = blockCenters[y];
+        double dx = center1.x-center2.x;
+        double dy = center1.y-center2.y;
+        double dz = center1.z-center2.z;
         if (periodic) {
-            dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-            dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-            dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+            dx -= floor(0.5+dx/boxSize)*boxSize;
+            dy -= floor(0.5+dy/boxSize)*boxSize;
+            dz -= floor(0.5+dz/boxSize)*boxSize;
         }
-        dx = max(0.0f, abs(dx)-gridSize1.x-gridSize2.x);
-        dy = max(0.0f, abs(dy)-gridSize1.y-gridSize2.y);
-        dz = max(0.0f, abs(dz)-gridSize1.z-gridSize2.z);
+        dx = max(0.0, abs(dx)-gridSize1.x-gridSize2.x);
+        dy = max(0.0, abs(dy)-gridSize1.y-gridSize2.y);
+        dz = max(0.0, abs(dz)-gridSize1.z-gridSize2.z);
         ASSERT(sqrt(dx*dx+dy*dy+dz*dz) < cutoff+TOL);
 
         // Check the interaction flags.
@@ -561,16 +577,16 @@ void testBlockInteractions(bool periodic) {
             unsigned int flags = interactionFlags[i];
             for (int atom2 = 0; atom2 < 32; atom2++) {
                 if ((flags & 1) == 0) {
-                    mm_float4 pos2 = posq[y*blockSize+atom2];
+                    mm_double4 pos2 = posq[y*blockSize+atom2];
                     for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                        mm_float4 pos1 = posq[x*blockSize+atom1];
-                        float dx = pos2.x-pos1.x;
-                        float dy = pos2.y-pos1.y;
-                        float dz = pos2.z-pos1.z;
+                        mm_double4 pos1 = posq[x*blockSize+atom1];
+                        double dx = pos2.x-pos1.x;
+                        double dy = pos2.y-pos1.y;
+                        double dz = pos2.z-pos1.z;
                         if (periodic) {
-                            dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-                            dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-                            dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+                            dx -= floor(0.5+dx/boxSize)*boxSize;
+                            dy -= floor(0.5+dy/boxSize)*boxSize;
+                            dz -= floor(0.5+dz/boxSize)*boxSize;
                         }
                         ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
                     }
@@ -587,16 +603,16 @@ void testBlockInteractions(bool periodic) {
             unsigned int y = (unsigned int) std::floor(numBlocks+0.5-std::sqrt((numBlocks+0.5)*(numBlocks+0.5)-2*i));
             unsigned int x = (i-y*numBlocks+y*(y+1)/2);
             for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                mm_float4 pos1 = posq[x*blockSize+atom1];
+                mm_double4 pos1 = posq[x*blockSize+atom1];
                 for (int atom2 = 0; atom2 < blockSize; ++atom2) {
-                    mm_float4 pos2 = posq[y*blockSize+atom2];
-                    float dx = pos1.x-pos2.x;
-                    float dy = pos1.y-pos2.y;
-                    float dz = pos1.z-pos2.z;
+                    mm_double4 pos2 = posq[y*blockSize+atom2];
+                    double dx = pos1.x-pos2.x;
+                    double dy = pos1.y-pos2.y;
+                    double dz = pos1.z-pos2.z;
                     if (periodic) {
-                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+                        dx -= (floor(0.5+dx/boxSize)*boxSize);
+                        dy -= (floor(0.5+dy/boxSize)*boxSize);
+                        dz -= (floor(0.5+dz/boxSize)*boxSize);
                     }
                     ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
                 }

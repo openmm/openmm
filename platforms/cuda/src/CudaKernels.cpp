@@ -4446,7 +4446,7 @@ void CudaIntegrateCustomStepKernel::initialize(const System& system, const Custo
     globalValues = new CudaArray(cu, max(1, numGlobalVariables), elementSize, "globalVariables");
     sumBuffer = new CudaArray(cu, 3*system.getNumParticles(), elementSize, "sumBuffer");
     potentialEnergy = new CudaArray(cu, 1, cu.getEnergyBuffer().getElementSize(), "potentialEnergy");
-    kineticEnergy = new CudaArray(cu, 1, cu.getEnergyBuffer().getElementSize(), "kineticEnergy");
+    kineticEnergy = new CudaArray(cu, 1, elementSize, "kineticEnergy");
     perDofValues = new CudaParameterSet(cu, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
     cu.addReorderListener(new ReorderListener(cu, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
     prevStepSize = -1.0;
@@ -4840,6 +4840,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             args << ", " << buffer.getType() << "* __restrict__ " << valueName;
         }
         replacements["PARAMETER_ARGUMENTS"] = args.str();
+        defines["SUM_BUFFER_SIZE"] = cu.intToString(3*numAtoms);
         if (defines.find("LOAD_POS_AS_DELTA") != defines.end())
             defines.erase("LOAD_POS_AS_DELTA");
         module = cu.createModule(cu.replaceStrings(CudaKernelSources::customIntegratorPerDof, replacements), defines);

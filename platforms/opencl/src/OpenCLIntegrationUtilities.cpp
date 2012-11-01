@@ -942,8 +942,24 @@ void OpenCLIntegrationUtilities::loadCheckpoint(istream& stream) {
 double OpenCLIntegrationUtilities::computeKineticEnergy(double timeShift) {
     int numParticles = context.getNumAtoms();
     double energy = 0.0;
-    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+    if (context.getUseDoublePrecision()) {
         mm_double4* force = (mm_double4*) context.getPinnedBuffer();
+        context.getForce().download(force);
+        vector<mm_double4> velm;
+        context.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++) {
+            mm_double4 v = velm[i];
+            if (v.w != 0) {
+                double scale = timeShift*v.w;
+                v.x += scale*force[i].x;
+                v.y += scale*force[i].y;
+                v.z += scale*force[i].z;
+                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+            }
+        }
+    }
+    else if (context.getUseMixedPrecision()) {
+        mm_float4* force = (mm_float4*) context.getPinnedBuffer();
         context.getForce().download(force);
         vector<mm_double4> velm;
         context.getVelm().download(velm);

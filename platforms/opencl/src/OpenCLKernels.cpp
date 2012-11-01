@@ -4706,7 +4706,7 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
     globalValues = new OpenCLArray(cl, max(1, numGlobalVariables), elementSize, "globalVariables");
     sumBuffer = new OpenCLArray(cl, 3*system.getNumParticles(), elementSize, "sumBuffer");
-    potentialEnergy = new OpenCLArray(cl, 1, elementSize, "potentialEnergy");
+    potentialEnergy = new OpenCLArray(cl, 1, cl.getEnergyBuffer().getElementSize(), "potentialEnergy");
     kineticEnergy = new OpenCLArray(cl, 1, elementSize, "kineticEnergy");
     perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
     cl.addReorderListener(new ReorderListener(cl, *perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
