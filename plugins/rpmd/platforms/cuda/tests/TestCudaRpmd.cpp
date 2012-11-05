@@ -1,0 +1,237 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+/**
+ * This tests the CUDA implementation of RPMDIntegrator.
+ */
+
+#include "openmm/internal/AssertionUtilities.h"
+#include "openmm/Context.h"
+#include "openmm/CustomNonbondedForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/Platform.h"
+#include "openmm/System.h"
+#include "openmm/RPMDIntegrator.h"
+#include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "sfmt/SFMT.h"
+#include <iostream>
+#include <vector>
+
+using namespace OpenMM;
+using namespace std;
+
+void testFreeParticles() {
+    const int numParticles = 100;
+    const int numCopies = 30;
+    const double temperature = 300.0;
+    const double mass = 1.0;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(mass);
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
+    Platform& platform = Platform::getPlatformByName("CUDA");
+    Context context(system, integ, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numCopies; i++)
+    {
+        for (int j = 0; j < numParticles; j++)
+            positions[j] = Vec3(0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt));
+        integ.setPositions(i, positions);
+    }
+    const int numSteps = 1000;
+    integ.step(1000);
+    vector<double> ke(numCopies, 0.0);
+    vector<double> rg(numParticles, 0.0);
+    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(1);
+        vector<State> state(numCopies);
+        for (int j = 0; j < numCopies; j++)
+            state[j] = integ.getState(j, State::Positions | State::Velocities);
+        for (int j = 0; j < numParticles; j++) {
+            double rg2 = 0.0;
+            for (int k = 0; k < numCopies; k++) {
+                Vec3 v = state[k].getVelocities()[j];
+                ke[k] += 0.5*mass*v.dot(v);
+                for (int m = 0; m < numCopies; m++) {
+                    Vec3 delta = state[k].getPositions()[j]-state[m].getPositions()[j];
+                    rg2 += delta.dot(delta);
+                }
+            }
+            rg[j] += rg2/(2*numCopies*numCopies);
+        }
+    }
+    double meanKE = 0.0;
+    for (int i = 0; i < numCopies; i++)
+        meanKE += ke[i];
+    meanKE /= numSteps*numCopies;
+    double expectedKE = 0.5*numCopies*numParticles*3*BOLTZ*temperature;
+    ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 1e-2);
+    double meanRg2 = 0.0;
+    for (int i = 0; i < numParticles; i++)
+        meanRg2 += rg[i];
+    meanRg2 /= numSteps*numParticles;
+    double expectedRg = hbar/(2*sqrt(mass*BOLTZ*temperature));
+    ASSERT_USUALLY_EQUAL_TOL(expectedRg, sqrt(meanRg2), 1e-3);
+}
+
+void testParaHydrogen() {
+    const int numParticles = 32;
+    const int numCopies = 12;
+    const double temperature = 25.0;
+    const double mass = 2.0;
+    const double boxSize = 1.1896;
+    const int numSteps = 1000;
+    const int numBins = 200;
+    const double reference[] = {
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 4.932814042206152e-5, 1.244331241336431e-4, 4.052316284060125e-4,
+        1.544810863683946e-3, 4.376197806690222e-3, 1.025847561714293e-2, 2.286702037465422e-2,
+        4.371052180263602e-2, 7.518538770734748e-2, 0.122351534531647, 0.185758975626622,
+        0.266399984652322, 0.363380262153250, 0.473696401293219, 0.595312098494172,
+        0.726049519422861, 0.862264551954547, 0.991102029379444, 1.1147503922535,
+        1.23587006992066, 1.33495411932817, 1.42208208736987, 1.49273884004107,
+        1.54633319690403, 1.58714702233941, 1.60439217751355, 1.61804190608902,
+        1.60680198476058, 1.58892222973695, 1.56387607986781, 1.52629494593350,
+        1.48421439018970, 1.43656176771959, 1.38752775598872, 1.33310695719931,
+        1.28363477223121, 1.23465642750248, 1.18874848666326, 1.14350496170519,
+        1.10292486009936, 1.06107270157688, 1.02348927970441, 0.989729345271297,
+        0.959273446941802, 0.932264875865758, 0.908818658748942, 0.890946420768315,
+        0.869332737718165, 0.856401736350349, 0.842370069917020, 0.834386614237393,
+        0.826268072171045, 0.821547250199453, 0.818786865315836, 0.819441757028076,
+        0.819156933383128, 0.822275325148621, 0.828919078023881, 0.837233720599450,
+        0.846961908186718, 0.855656955481099, 0.864520333201247, 0.876082425547566,
+        0.886950044046000, 0.900275658318995
+    };
+    
+    // Create a box of para-hydrogen.
+    
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(mass);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize,0,0), Vec3(0,boxSize,0), Vec3(0,0,boxSize));
+    CustomNonbondedForce* nb = new CustomNonbondedForce("2625.49963*(exp(1.713-1.5671*p-0.00993*p*p)-(12.14/p^6+215.2/p^8-143.1/p^9+4813.9/p^10)*(step(rc-p)*exp(-(rc/p-1)^2)+1-step(rc-p))); p=r/0.05291772108; rc=8.32");
+    nb->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(boxSize/2);
+    vector<double> params;
+    for (int i = 0; i < numParticles; i++)
+        nb->addParticle(params);
+    system.addForce(nb);
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.0005);
+    Platform& platform = Platform::getPlatformByName("CUDA");
+    Context context(system, integ, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+    for (int i = 0; i < numCopies; i++)
+        integ.setPositions(i, positions);
+    integ.step(1000);
+    
+    // Simulate it.
+    
+    vector<int> counts(numBins, 0);
+    const double invBoxSize = 1.0/boxSize;
+    double meanKE = 0.0;
+    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    for (int step = 0; step < numSteps; step++) {
+        integ.step(20);
+        vector<State> states(numCopies);
+        for (int i = 0; i < numCopies; i++)
+            states[i] = integ.getState(i, State::Positions | State::Forces);
+        
+        // Record the radial distribution function.
+        
+        const vector<Vec3>& pos = states[0].getPositions();
+        for (int j = 0; j < numParticles; j++)
+            for (int k = 0; k < j; k++) {
+                Vec3 delta = pos[j]-pos[k];
+                delta[0] -= floor(delta[0]*invBoxSize+0.5)*boxSize;
+                delta[1] -= floor(delta[1]*invBoxSize+0.5)*boxSize;
+                delta[2] -= floor(delta[2]*invBoxSize+0.5)*boxSize;
+                double dist = sqrt(delta.dot(delta));
+                int bin = (int) (numBins*(dist/boxSize));
+                counts[bin]++;
+            }
+        
+        // Calculate the quantum contribution to the kinetic energy.
+        
+        vector<Vec3> centroids(numParticles, Vec3());
+        for (int i = 0; i < numCopies; i++) {
+            const vector<Vec3>& pos = states[i].getPositions();
+            for (int j = 0; j < numParticles; j++)
+                centroids[j] += pos[j];
+        }
+        for (int j = 0; j < numParticles; j++)
+            centroids[j] *= 1.0/numCopies;
+        double ke = 0.0;
+        for (int i = 0; i < numCopies; i++) {
+            const vector<Vec3>& pos = states[i].getPositions();
+            const vector<Vec3>& f = states[i].getForces();
+            for (int j = 0; j < numParticles; j++) {
+                Vec3 delta = centroids[j]-pos[j];
+                ke += delta.dot(f[j]);
+            }
+        }
+        meanKE += ke/(2*numCopies*numParticles);
+    }
+    
+    // Check against expected values.
+    
+    double scale = (boxSize*boxSize*boxSize)/(numSteps*0.5*numParticles*numParticles);
+    for (int i = 0; i < numBins/2; i++) {
+        double r1 = i*boxSize/numBins;
+        double r2 = (i+1)*boxSize/numBins;
+        double volume = (4.0/3.0)*M_PI*(r2*r2*r2-r1*r1*r1);
+        ASSERT_USUALLY_EQUAL_TOL(reference[i], scale*counts[i]/volume, 0.1);
+    }
+    meanKE /= numSteps*BOLTZ;
+    ASSERT_USUALLY_EQUAL_TOL(60.0, 1.5*temperature+meanKE, 0.02);
+}
+
+int main() {
+    try {
+        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        testFreeParticles();
+        testParaHydrogen();
+    }
+    catch(const std::exception& e) {
+        std::cout << "exception: " << e.what() << std::endl;
+        std::cout << "FAIL - ERROR.  Test failed." << std::endl;
+        return 1;
+    }
+    std::cout << "Done" << std::endl;
+    return 0;
+}

@@ -182,7 +182,7 @@ protected:
 private:
     double temperature, friction;
     int numCopies, randomNumberSeed;
-    bool forcesAreValid, hasSetPosition, hasSetVelocity;
+    bool forcesAreValid, hasSetPosition, hasSetVelocity, isFirstStep;
     ContextImpl* context;
     Context* owner;
     Kernel kernel;

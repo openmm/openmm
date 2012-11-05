@@ -107,7 +107,6 @@ __kernel void integrateStep(__global float4* posq, __global float4* velm, __glob
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         float4 particlePosq = posq[particle+indexInBlock*PADDED_NUM_ATOMS];
         float4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
-        float invMass = particleVelm.w;
         
         // Forward FFT.
         
@@ -130,7 +129,6 @@ __kernel void integrateStep(__global float4* posq, __global float4* velm, __glob
             const float wt = wk*dt;
             const float coswt = cos(wt);
             const float sinwt = sin(wt);
-            const float wm = wk/particleVelm.w;
             const float4 vprimereal = vreal[indexInBlock]*coswt - qreal[indexInBlock]*(wk*sinwt); // Advance velocity from t to t+dt
             const float4 vprimeimag = vimag[indexInBlock]*coswt - qimag[indexInBlock]*(wk*sinwt);
             qreal[indexInBlock] = vreal[indexInBlock]*(sinwt/wk) + qreal[indexInBlock]*coswt; // Advance position from t to t+dt

@@ -98,10 +98,7 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
 }
 
 void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
-    const System& system = context.getSystem();
-    const int paddedParticles = cl.getPaddedNumAtoms();
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
-
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         pileKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());

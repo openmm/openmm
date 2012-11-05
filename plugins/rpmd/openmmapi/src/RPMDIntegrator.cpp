@@ -42,7 +42,7 @@ using std::string;
 using std::vector;
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
-        owner(NULL), numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false) {
+        owner(NULL), numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
@@ -108,6 +108,15 @@ void RPMDIntegrator::step(int steps) {
         State s = context->getOwner().getState(State::Velocities);
         for (int i = 0; i < numCopies; i++)
             setVelocities(i, s.getVelocities());
+    }
+    if (isFirstStep) {
+        // Call setPositions() on the Context so it doesn't think the user is trying to
+        // run a simulation without setting positions first.  These positions will
+        // immediately get overwritten by the ones stored in this integrator.
+        
+        vector<Vec3> p(context->getSystem().getNumParticles(), Vec3());
+        context->getOwner().setPositions(p);
+        isFirstStep = false;
     }
     for (int i = 0; i < steps; ++i) {
         kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);
