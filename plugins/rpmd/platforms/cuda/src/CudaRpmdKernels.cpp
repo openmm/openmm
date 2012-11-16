@@ -70,6 +70,7 @@ CudaIntegrateRPMDStepKernel::~CudaIntegrateRPMDStepKernel() {
     if (velocities != NULL)
         delete velocities;
 }
+
 void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
     cu.getPlatformData().initializeContexts(system);
     numCopies = integrator.getNumCopies();
@@ -80,20 +81,33 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     if (numCopies != findFFTDimension(numCopies))
         throw OpenMMException("RPMDIntegrator: the number of copies must be a multiple of powers of 2, 3, and 5.");
     int paddedParticles = cu.getPaddedNumAtoms();
+    bool useDoublePrecision = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
+    int elementSize = (useDoublePrecision ? sizeof(double4) : sizeof(float4));
     forces = CudaArray::create<long long>(cu, numCopies*paddedParticles*3, "rpmdForces");
-    positions = CudaArray::create<float4>(cu, numCopies*paddedParticles, "rpmdPositions");
-    velocities = CudaArray::create<float4>(cu, numCopies*paddedParticles, "rpmdVelocities");
+    positions = new CudaArray(cu, numCopies*paddedParticles, elementSize, "rpmdPositions");
+    velocities = new CudaArray(cu, numCopies*paddedParticles, elementSize, "rpmdVelocities");
     cu.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
     
-    vector<float4> temp(positions->getSize());
-    for (int i = 0; i < positions->getSize(); i++)
-        temp[i] = make_float4(0, 0, 0, 0);
-    positions->upload(temp);
-    for (int i = 0; i < velocities->getSize(); i++)
-        temp[i] = make_float4(0, 0, 0, 1);
-    velocities->upload(temp);
+    if (useDoublePrecision) {
+        vector<double4> temp(positions->getSize());
+        for (int i = 0; i < positions->getSize(); i++)
+            temp[i] = make_double4(0, 0, 0, 0);
+        positions->upload(temp);
+        for (int i = 0; i < velocities->getSize(); i++)
+            temp[i] = make_double4(0, 0, 0, 1);
+        velocities->upload(temp);
+    }
+    else {
+        vector<float4> temp(positions->getSize());
+        for (int i = 0; i < positions->getSize(); i++)
+            temp[i] = make_float4(0, 0, 0, 0);
+        positions->upload(temp);
+        for (int i = 0; i < velocities->getSize(); i++)
+            temp[i] = make_float4(0, 0, 0, 1);
+        velocities->upload(temp);
+    }
 
     // Create kernels.
     
@@ -114,8 +128,9 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     pileKernel = cu.getKernel(module, "applyPileThermostat");
     stepKernel = cu.getKernel(module, "integrateStep");
     velocitiesKernel = cu.getKernel(module, "advanceVelocities");
-    copyToContextKernel = cu.getKernel(module, "copyToContext");
-    copyFromContextKernel = cu.getKernel(module, "copyFromContext");
+    copyPositionsToContextKernel = cu.getKernel(module, "copyPositionsToContext");
+    copyVelocitiesToContextKernel = cu.getKernel(module, "copyVelocitiesToContext");
+    copyForcesFromContextKernel = cu.getKernel(module, "copyForcesFromContext");
     translateKernel = cu.getKernel(module, "applyCellTranslations");
 }
 
@@ -129,19 +144,23 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
     
     // Apply the PILE-L thermostat.
     
+    bool useDoublePrecision = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
     double dt = integrator.getStepSize();
     float dtFloat = (float) dt;
+    void* dtPtr = (useDoublePrecision ? (void*) &dt : (void*) &dtFloat);
     double kT = integrator.getTemperature()*BOLTZ;
     float kTFloat = (float) kT;
+    void* kTPtr = (useDoublePrecision ? (void*) &kT : (void*) &kTFloat);
     double friction = integrator.getFriction();
     float frictionFloat = (float) friction;
+    void* frictionPtr = (useDoublePrecision ? (void*) &friction : (void*) &frictionFloat);
     int randomIndex = integration.prepareRandomNumbers(numParticles*numCopies);
-    void* pileArgs[] = {&velocities->getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex, &dtFloat, &kTFloat, &frictionFloat};
+    void* pileArgs[] = {&velocities->getDevicePointer(), &integration.getRandom().getDevicePointer(), &randomIndex, dtPtr, kTPtr, frictionPtr};
     cu.executeKernel(pileKernel, pileArgs, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
-    void* stepArgs[] = {&positions->getDevicePointer(), &velocities->getDevicePointer(), &forces->getDevicePointer(), &dtFloat, &kTFloat};
+    void* stepArgs[] = {&positions->getDevicePointer(), &velocities->getDevicePointer(), &forces->getDevicePointer(), dtPtr, kTPtr};
     cu.executeKernel(stepKernel, stepArgs, numParticles*numCopies, workgroupSize);
 
     // Calculate forces based on the updated positions.
@@ -150,7 +169,7 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
     
     // Update velocities.
 
-    void* velocitiesArgs[] = {&velocities->getDevicePointer(), &forces->getDevicePointer(), &dtFloat};
+    void* velocitiesArgs[] = {&velocities->getDevicePointer(), &forces->getDevicePointer(), dtPtr};
     cu.executeKernel(velocitiesKernel, velocitiesArgs, numParticles*numCopies, workgroupSize);
 
     // Apply the PILE-L thermostat again.
@@ -167,10 +186,10 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
 void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     for (int i = 0; i < numCopies; i++) {
         void* copyToContextArgs[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
-        cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
+        cu.executeKernel(copyPositionsToContextKernel, copyToContextArgs, cu.getNumAtoms());
         context.calcForcesAndEnergy(true, false);
         void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
-        cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
+        cu.executeKernel(copyForcesFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
         if (cu.getAtomsWereReordered() && cu.getNonbondedUtilities().getUsePeriodic()) {
             // Atoms may have been translated into a different periodic box, so apply
             // the same translation to all the beads.
@@ -190,11 +209,29 @@ void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
     if (pos.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setPositions()");
-    vector<float4> posq(cu.getPaddedNumAtoms());
-    cu.getPosq().download(posq);
-    for (int i = 0; i < numParticles; i++)
-        posq[i] = make_float4((float) pos[i][0], (float) pos[i][1], (float) pos[i][2], posq[i].w);
-    CUresult result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &posq[0], numParticles*sizeof(float4));
+    CUresult result;
+    if (cu.getUseDoublePrecision()) {
+        vector<double4> posq(cu.getPaddedNumAtoms());
+        cu.getPosq().download(posq);
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = make_double4(pos[i][0], pos[i][1], pos[i][2], posq[i].w);
+        result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
+    }
+    else if (cu.getUseMixedPrecision()) {
+        vector<float4> posqf(cu.getPaddedNumAtoms());
+        cu.getPosq().download(posqf);
+        vector<double4> posq(cu.getPaddedNumAtoms());
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = make_double4(pos[i][0], pos[i][1], pos[i][2], posqf[i].w);
+        result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &posq[0], numParticles*sizeof(double4));
+    }
+    else {
+        vector<float4> posq(cu.getPaddedNumAtoms());
+        cu.getPosq().download(posq);
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = make_float4((float) pos[i][0], (float) pos[i][1], (float) pos[i][2], posq[i].w);
+        result = cuMemcpyHtoD(positions->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &posq[0], numParticles*sizeof(float4));
+    }
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error uploading array "<<positions->getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
@@ -207,11 +244,21 @@ void CudaIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& ve
         throw OpenMMException("RPMDIntegrator: Cannot set velocities before the integrator is added to a Context");
     if (vel.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setVelocities()");
-    vector<float4> velm(cu.getPaddedNumAtoms());
-    cu.getVelm().download(velm);
-    for (int i = 0; i < numParticles; i++)
-        velm[i] = make_float4((float) vel[i][0], (float) vel[i][1], (float) vel[i][2], velm[i].w);
-    CUresult result = cuMemcpyHtoD(velocities->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &velm[0], numParticles*sizeof(float4));
+    CUresult result;
+    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+        vector<double4> velm(cu.getPaddedNumAtoms());
+        cu.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++)
+            velm[i] = make_double4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
+        result = cuMemcpyHtoD(velocities->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(double4), &velm[0], numParticles*sizeof(double4));
+    }
+    else {
+        vector<float4> velm(cu.getPaddedNumAtoms());
+        cu.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++)
+            velm[i] = make_float4((float) vel[i][0], (float) vel[i][1], (float) vel[i][2], velm[i].w);
+        result = cuMemcpyHtoD(velocities->getDevicePointer()+copy*cu.getPaddedNumAtoms()*sizeof(float4), &velm[0], numParticles*sizeof(float4));
+    }
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error uploading array "<<velocities->getName()<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";
@@ -221,9 +268,9 @@ void CudaIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& ve
 
 void CudaIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
     void* copyPositionsArgs[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &copy};
-    cu.executeKernel(copyToContextKernel, copyPositionsArgs, cu.getNumAtoms());
+    cu.executeKernel(copyPositionsToContextKernel, copyPositionsArgs, cu.getNumAtoms());
     void* copyVelocitiesArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &copy};
-    cu.executeKernel(copyToContextKernel, copyVelocitiesArgs, cu.getNumAtoms());
+    cu.executeKernel(copyVelocitiesToContextKernel, copyVelocitiesArgs, cu.getNumAtoms());
 }
 
 string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, bool forward) {
@@ -237,10 +284,10 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
     string multImag = (forward ? "multiplyComplexImagPart" : "multiplyComplexImagPartConj");
 
     source<<"{\n";
-    source<<"float3* real0 = "<<variable<<"real;\n";
-    source<<"float3* imag0 = "<<variable<<"imag;\n";
-    source<<"float3* real1 = &temp[blockStart];\n";
-    source<<"float3* imag1 = &temp[blockStart+blockDim.x];\n";
+    source<<"mixed3* real0 = "<<variable<<"real;\n";
+    source<<"mixed3* imag0 = "<<variable<<"imag;\n";
+    source<<"mixed3* real1 = &temp[blockStart];\n";
+    source<<"mixed3* imag1 = &temp[blockStart+blockDim.x];\n";
 
     // Factor size, generating an appropriate block of code for each factor.
 
@@ -254,39 +301,39 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float3 c0r = real"<<input<<"[i];\n";
-            source<<"float3 c0i = imag"<<input<<"[i];\n";
-            source<<"float3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float3 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float3 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float3 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float3 c4r = real"<<input<<"[i+"<<(4*L*m)<<"];\n";
-            source<<"float3 c4i = imag"<<input<<"[i+"<<(4*L*m)<<"];\n";
-            source<<"float3 d0r = c1r+c4r;\n";
-            source<<"float3 d0i = c1i+c4i;\n";
-            source<<"float3 d1r = c2r+c3r;\n";
-            source<<"float3 d1i = c2i+c3i;\n";
-            source<<"float3 d2r = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
-            source<<"float3 d2i = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
-            source<<"float3 d3r = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
-            source<<"float3 d3i = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
-            source<<"float3 d4r = d0r+d1r;\n";
-            source<<"float3 d4i = d0i+d1i;\n";
-            source<<"float3 d5r = "<<cu.doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
-            source<<"float3 d5i = "<<cu.doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
-            source<<"float3 d6r = c0r-0.25f*d4r;\n";
-            source<<"float3 d6i = c0i-0.25f*d4i;\n";
-            source<<"float3 d7r = d6r+d5r;\n";
-            source<<"float3 d7i = d6i+d5i;\n";
-            source<<"float3 d8r = d6r-d5r;\n";
-            source<<"float3 d8i = d6i-d5i;\n";
+            source<<"mixed3 c0r = real"<<input<<"[i];\n";
+            source<<"mixed3 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed3 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed3 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed3 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed3 c4r = real"<<input<<"[i+"<<(4*L*m)<<"];\n";
+            source<<"mixed3 c4i = imag"<<input<<"[i+"<<(4*L*m)<<"];\n";
+            source<<"mixed3 d0r = c1r+c4r;\n";
+            source<<"mixed3 d0i = c1i+c4i;\n";
+            source<<"mixed3 d1r = c2r+c3r;\n";
+            source<<"mixed3 d1i = c2i+c3i;\n";
+            source<<"mixed3 d2r = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
+            source<<"mixed3 d2i = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
+            source<<"mixed3 d3r = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
+            source<<"mixed3 d3i = "<<cu.doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
+            source<<"mixed3 d4r = d0r+d1r;\n";
+            source<<"mixed3 d4i = d0i+d1i;\n";
+            source<<"mixed3 d5r = "<<cu.doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
+            source<<"mixed3 d5i = "<<cu.doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
+            source<<"mixed3 d6r = c0r-0.25f*d4r;\n";
+            source<<"mixed3 d6i = c0i-0.25f*d4i;\n";
+            source<<"mixed3 d7r = d6r+d5r;\n";
+            source<<"mixed3 d7i = d6i+d5i;\n";
+            source<<"mixed3 d8r = d6r-d5r;\n";
+            source<<"mixed3 d8i = d6i-d5i;\n";
             string coeff = cu.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
-            source<<"float3 d9r = "<<sign<<"*(d2i+"<<coeff<<"*d3i);\n";
-            source<<"float3 d9i = "<<sign<<"*(-d2r-"<<coeff<<"*d3r);\n";
-            source<<"float3 d10r = "<<sign<<"*("<<coeff<<"*d2i-d3i);\n";
-            source<<"float3 d10i = "<<sign<<"*(d3r-"<<coeff<<"*d2r);\n";
+            source<<"mixed3 d9r = "<<sign<<"*(d2i+"<<coeff<<"*d3i);\n";
+            source<<"mixed3 d9i = "<<sign<<"*(-d2r-"<<coeff<<"*d3r);\n";
+            source<<"mixed3 d10r = "<<sign<<"*("<<coeff<<"*d2i-d3i);\n";
+            source<<"mixed3 d10i = "<<sign<<"*(d3r-"<<coeff<<"*d2r);\n";
             source<<"real"<<output<<"[i+4*j*"<<m<<"] = c0r+d4r;\n";
             source<<"imag"<<output<<"[i+4*j*"<<m<<"] = c0i+d4i;\n";
             source<<"real"<<output<<"[i+(4*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(5*L)<<"], d7r+d9r, d7i+d9i);\n";
@@ -307,22 +354,22 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float3 c0r = real"<<input<<"[i];\n";
-            source<<"float3 c0i = imag"<<input<<"[i];\n";
-            source<<"float3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float3 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float3 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float3 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float3 d0r = c0r+c2r;\n";
-            source<<"float3 d0i = c0i+c2i;\n";
-            source<<"float3 d1r = c0r-c2r;\n";
-            source<<"float3 d1i = c0i-c2i;\n";
-            source<<"float3 d2r = c1r+c3r;\n";
-            source<<"float3 d2i = c1i+c3i;\n";
-            source<<"float3 d3r = "<<sign<<"*(c1i-c3i);\n";
-            source<<"float3 d3i = "<<sign<<"*(c3r-c1r);\n";
+            source<<"mixed3 c0r = real"<<input<<"[i];\n";
+            source<<"mixed3 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed3 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed3 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed3 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed3 d0r = c0r+c2r;\n";
+            source<<"mixed3 d0i = c0i+c2i;\n";
+            source<<"mixed3 d1r = c0r-c2r;\n";
+            source<<"mixed3 d1i = c0i-c2i;\n";
+            source<<"mixed3 d2r = c1r+c3r;\n";
+            source<<"mixed3 d2i = c1i+c3i;\n";
+            source<<"mixed3 d3r = "<<sign<<"*(c1i-c3i);\n";
+            source<<"mixed3 d3i = "<<sign<<"*(c3r-c1r);\n";
             source<<"real"<<output<<"[i+3*j*"<<m<<"] = d0r+d2r;\n";
             source<<"imag"<<output<<"[i+3*j*"<<m<<"] = d0i+d2i;\n";
             source<<"real"<<output<<"[i+(3*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(4*L)<<"], d1r+d3r, d1i+d3i);\n";
@@ -341,18 +388,18 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float3 c0r = real"<<input<<"[i];\n";
-            source<<"float3 c0i = imag"<<input<<"[i];\n";
-            source<<"float3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float3 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float3 d0r = c1r+c2r;\n";
-            source<<"float3 d0i = c1i+c2i;\n";
-            source<<"float3 d1r = c0r-0.5f*d0r;\n";
-            source<<"float3 d1i = c0i-0.5f*d0i;\n";
-            source<<"float3 d2r = "<<sign<<"*"<<cu.doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
-            source<<"float3 d2i = "<<sign<<"*"<<cu.doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
+            source<<"mixed3 c0r = real"<<input<<"[i];\n";
+            source<<"mixed3 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed3 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed3 d0r = c1r+c2r;\n";
+            source<<"mixed3 d0i = c1i+c2i;\n";
+            source<<"mixed3 d1r = c0r-0.5f*d0r;\n";
+            source<<"mixed3 d1i = c0i-0.5f*d0i;\n";
+            source<<"mixed3 d2r = "<<sign<<"*"<<cu.doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
+            source<<"mixed3 d2i = "<<sign<<"*"<<cu.doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
             source<<"real"<<output<<"[i+2*j*"<<m<<"] = c0r+d0r;\n";
             source<<"imag"<<output<<"[i+2*j*"<<m<<"] = c0i+d0i;\n";
             source<<"real"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
@@ -369,10 +416,10 @@ string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, 
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float3 c0r = real"<<input<<"[i];\n";
-            source<<"float3 c0i = imag"<<input<<"[i];\n";
-            source<<"float3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c0r = real"<<input<<"[i];\n";
+            source<<"mixed3 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed3 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed3 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
             source<<"real"<<output<<"[i+j*"<<m<<"] = c0r+c1r;\n";
             source<<"imag"<<output<<"[i+j*"<<m<<"] = c0i+c1i;\n";
             source<<"real"<<output<<"[i+(j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -221,9 +221,11 @@ void testParaHydrogen() {
     ASSERT_USUALLY_EQUAL_TOL(60.0, 1.5*temperature+meanKE, 0.02);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
         Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        if (argc > 1)
+            Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
     }

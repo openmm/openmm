@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,7 @@ OpenCLIntegrateRPMDStepKernel::~OpenCLIntegrateRPMDStepKernel() {
     if (velocities != NULL)
         delete velocities;
 }
+
 void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
     cl.getPlatformData().initializeContexts(system);
     numCopies = integrator.getNumCopies();
@@ -59,20 +60,34 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     if (numCopies != OpenCLFFT3D::findLegalDimension(numCopies))
         throw OpenMMException("RPMDIntegrator: the number of copies must be a multiple of powers of 2, 3, and 5.");
     int paddedParticles = cl.getPaddedNumAtoms();
-    forces = OpenCLArray::create<mm_float4>(cl, numCopies*paddedParticles, "rpmdForces");
-    positions = OpenCLArray::create<mm_float4>(cl, numCopies*paddedParticles, "rpmdPositions");
-    velocities = OpenCLArray::create<mm_float4>(cl, numCopies*paddedParticles, "rpmdVelocities");
+    int forceElementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+    forces = new OpenCLArray(cl, numCopies*paddedParticles, forceElementSize, "rpmdForces");
+    bool useDoublePrecision = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
+    int elementSize = (useDoublePrecision ? sizeof(mm_double4) : sizeof(mm_float4));
+    positions = new OpenCLArray(cl, numCopies*paddedParticles, elementSize, "rpmdPositions");
+    velocities = new OpenCLArray(cl, numCopies*paddedParticles, elementSize, "rpmdVelocities");
     cl.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
     
-    vector<mm_float4> temp(positions->getSize());
-    for (int i = 0; i < positions->getSize(); i++)
-        temp[i] = mm_float4(0, 0, 0, 0);
-    positions->upload(temp);
-    for (int i = 0; i < velocities->getSize(); i++)
-        temp[i] = mm_float4(0, 0, 0, 1);
-    velocities->upload(temp);
+    if (useDoublePrecision) {
+        vector<mm_double4> temp(positions->getSize());
+        for (int i = 0; i < positions->getSize(); i++)
+            temp[i] = mm_double4(0, 0, 0, 0);
+        positions->upload(temp);
+        for (int i = 0; i < velocities->getSize(); i++)
+            temp[i] = mm_double4(0, 0, 0, 1);
+        velocities->upload(temp);
+    }
+    else {
+        vector<mm_float4> temp(positions->getSize());
+        for (int i = 0; i < positions->getSize(); i++)
+            temp[i] = mm_float4(0, 0, 0, 0);
+        positions->upload(temp);
+        for (int i = 0; i < velocities->getSize(); i++)
+            temp[i] = mm_float4(0, 0, 0, 1);
+        velocities->upload(temp);
+    }
 
     // Create kernels.
     
@@ -80,6 +95,7 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
     defines["NUM_COPIES"] = cl.intToString(numCopies);
+    defines["THREAD_BLOCK_SIZE"] = cl.intToString(workgroupSize);
     defines["HBAR"] = cl.doubleToString(1.054571628e-34*AVOGADRO/(1000*1e-12));
     defines["SCALE"] = cl.doubleToString(1.0/sqrt((double) numCopies));
     defines["M_PI"] = cl.doubleToString(M_PI);
@@ -92,8 +108,9 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     pileKernel = cl::Kernel(program, "applyPileThermostat");
     stepKernel = cl::Kernel(program, "integrateStep");
     velocitiesKernel = cl::Kernel(program, "advanceVelocities");
-    copyToContextKernel = cl::Kernel(program, "copyToContext");
-    copyFromContextKernel = cl::Kernel(program, "copyFromContext");
+    copyPositionsToContextKernel = cl::Kernel(program, "copyPositionsToContext");
+    copyVelocitiesToContextKernel = cl::Kernel(program, "copyVelocitiesToContext");
+    copyForcesFromContextKernel = cl::Kernel(program, "copyForcesFromContext");
     translateKernel = cl::Kernel(program, "applyCellTranslations");
 }
 
@@ -102,48 +119,56 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         pileKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-        pileKernel.setArg(1, 2*workgroupSize*sizeof(mm_float4), NULL);
-        pileKernel.setArg(2, 2*workgroupSize*sizeof(mm_float4), NULL);
-        pileKernel.setArg(3, numCopies*sizeof(mm_float2), NULL);
         stepKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
         stepKernel.setArg<cl::Buffer>(1, velocities->getDeviceBuffer());
         stepKernel.setArg<cl::Buffer>(2, forces->getDeviceBuffer());
-        stepKernel.setArg(3, 2*workgroupSize*sizeof(mm_float4), NULL);
-        stepKernel.setArg(4, 2*workgroupSize*sizeof(mm_float4), NULL);
-        stepKernel.setArg(5, 2*workgroupSize*sizeof(mm_float4), NULL);
-        stepKernel.setArg(6, numCopies*sizeof(mm_float2), NULL);
         velocitiesKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
         velocitiesKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
         translateKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
         translateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
         translateKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
+        copyPositionsToContextKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+        copyPositionsToContextKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+        copyPositionsToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
+        copyVelocitiesToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
+        copyVelocitiesToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
+        copyVelocitiesToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
+        copyForcesFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
+        copyForcesFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
+        copyForcesFromContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
     }
     
     // Loop over copies and compute the force on each one.
     
-    copyToContextKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
     if (!forcesAreValid)
         computeForces(context);
     
     // Apply the PILE-L thermostat.
     
+    bool useDoublePrecision = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
     const double dt = integrator.getStepSize();
-    pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
-    pileKernel.setArg<cl::Buffer>(4, integration.getRandom().getDeviceBuffer()); // Do this *after* prepareRandomNumbers(), which might rebuild the array.
-    pileKernel.setArg<cl_float>(6, (cl_float) dt);
-    pileKernel.setArg<cl_float>(7, (cl_float) (integrator.getTemperature()*BOLTZ));
-    pileKernel.setArg<cl_float>(8, (cl_float) integrator.getFriction());
+    pileKernel.setArg<cl_uint>(2, integration.prepareRandomNumbers(numParticles*numCopies));
+    pileKernel.setArg<cl::Buffer>(1, integration.getRandom().getDeviceBuffer()); // Do this *after* prepareRandomNumbers(), which might rebuild the array.
+    if (useDoublePrecision) {
+        pileKernel.setArg<cl_double>(3, dt);
+        pileKernel.setArg<cl_double>(4, integrator.getTemperature()*BOLTZ);
+        pileKernel.setArg<cl_double>(5, integrator.getFriction());
+        stepKernel.setArg<cl_double>(3, dt);
+        stepKernel.setArg<cl_double>(4, integrator.getTemperature()*BOLTZ);
+        velocitiesKernel.setArg<cl_double>(2, dt);
+    }
+    else {
+        pileKernel.setArg<cl_float>(3, (cl_float) dt);
+        pileKernel.setArg<cl_float>(4, (cl_float) (integrator.getTemperature()*BOLTZ));
+        pileKernel.setArg<cl_float>(5, (cl_float) integrator.getFriction());
+        stepKernel.setArg<cl_float>(3, (cl_float) dt);
+        stepKernel.setArg<cl_float>(4, (cl_float) (integrator.getTemperature()*BOLTZ));
+        velocitiesKernel.setArg<cl_float>(2, (cl_float) dt);
+    }
     cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
 
     // Update positions and velocities.
     
-    stepKernel.setArg<cl_float>(7, (cl_float) dt);
-    stepKernel.setArg<cl_float>(8, (cl_float) (integrator.getTemperature()*BOLTZ));
     cl.executeKernel(stepKernel, numParticles*numCopies, workgroupSize);
 
     // Calculate forces based on the updated positions.
@@ -151,12 +176,11 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     computeForces(context);
     
     // Update velocities.
-    velocitiesKernel.setArg<cl_float>(2, (cl_float) dt);
     cl.executeKernel(velocitiesKernel, numParticles*numCopies, workgroupSize);
 
     // Apply the PILE-L thermostat again.
 
-    pileKernel.setArg<cl_uint>(5, integration.prepareRandomNumbers(numParticles*numCopies));
+    pileKernel.setArg<cl_uint>(2, integration.prepareRandomNumbers(numParticles*numCopies));
     cl.executeKernel(pileKernel, numParticles*numCopies, workgroupSize);
 
     // Update the time and step count.
@@ -167,11 +191,11 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
 void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     for (int i = 0; i < numCopies; i++) {
-        copyToContextKernel.setArg<cl_int>(3, i);
-        cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+        copyPositionsToContextKernel.setArg<cl_int>(3, i);
+        cl.executeKernel(copyPositionsToContextKernel, cl.getNumAtoms());
         context.calcForcesAndEnergy(true, false);
-        copyFromContextKernel.setArg<cl_int>(3, i);
-        cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
+        copyForcesFromContextKernel.setArg<cl_int>(3, i);
+        cl.executeKernel(copyForcesFromContextKernel, cl.getNumAtoms());
         if (cl.getAtomsWereReordered() && cl.getNonbondedUtilities().getUsePeriodic()) {
             // Atoms may have been translated into a different periodic box, so apply
             // the same translation to all the beads.
@@ -191,11 +215,28 @@ void OpenCLIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
     if (pos.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setPositions()");
-    vector<mm_float4> posq(cl.getPaddedNumAtoms());
-    cl.getPosq().download(posq);
-    for (int i = 0; i < numParticles; i++)
-        posq[i] = mm_float4((cl_float) pos[i][0], (cl_float) pos[i][1], (cl_float) pos[i][2], posq[i].w);
-    cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &posq[0]);
+    if (cl.getUseDoublePrecision()) {
+        vector<mm_double4> posq(cl.getPaddedNumAtoms());
+        cl.getPosq().download(posq);
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = mm_double4(pos[i][0], pos[i][1], pos[i][2], posq[i].w);
+        cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
+    }
+    else if (cl.getUseMixedPrecision()) {
+        vector<mm_float4> posqf(cl.getPaddedNumAtoms());
+        cl.getPosq().download(posqf);
+        vector<mm_double4> posq(cl.getPaddedNumAtoms());
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = mm_double4(pos[i][0], pos[i][1], pos[i][2], posqf[i].w);
+        cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &posq[0]);
+    }
+    else {
+        vector<mm_float4> posq(cl.getPaddedNumAtoms());
+        cl.getPosq().download(posq);
+        for (int i = 0; i < numParticles; i++)
+            posq[i] = mm_float4((cl_float) pos[i][0], (cl_float) pos[i][1], (cl_float) pos[i][2], posq[i].w);
+        cl.getQueue().enqueueWriteBuffer(positions->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &posq[0]);
+    }
 }
 
 void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& vel) {
@@ -203,22 +244,27 @@ void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
         throw OpenMMException("RPMDIntegrator: Cannot set velocities before the integrator is added to a Context");
     if (vel.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setVelocities()");
-    vector<mm_float4> velm(cl.getPaddedNumAtoms());
-    cl.getVelm().download(velm);
-    for (int i = 0; i < numParticles; i++)
-        velm[i] = mm_float4((cl_float) vel[i][0], (cl_float) vel[i][1], (cl_float) vel[i][2], velm[i].w);
-    cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &velm[0]);
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        vector<mm_double4> velm(cl.getPaddedNumAtoms());
+        cl.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++)
+            velm[i] = mm_double4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
+        cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_double4), numParticles*sizeof(mm_double4), &velm[0]);
+    }
+    else {
+        vector<mm_float4> velm(cl.getPaddedNumAtoms());
+        cl.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++)
+            velm[i] = mm_float4((cl_float) vel[i][0], (cl_float) vel[i][1], (cl_float) vel[i][2], velm[i].w);
+        cl.getQueue().enqueueWriteBuffer(velocities->getDeviceBuffer(), CL_TRUE, copy*cl.getPaddedNumAtoms()*sizeof(mm_float4), numParticles*sizeof(mm_float4), &velm[0]);
+    }
 }
 
 void OpenCLIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
-    copyToContextKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-    copyToContextKernel.setArg<cl_int>(3, copy);
-    cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
-    copyToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-    cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+    copyPositionsToContextKernel.setArg<cl_int>(3, copy);
+    cl.executeKernel(copyPositionsToContextKernel, cl.getNumAtoms());
+    copyVelocitiesToContextKernel.setArg<cl_int>(3, copy);
+    cl.executeKernel(copyVelocitiesToContextKernel, cl.getNumAtoms());
 }
 
 string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable, bool forward) {
@@ -232,10 +278,10 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     string multImag = (forward ? "multiplyComplexImagPart" : "multiplyComplexImagPartConj");
 
     source<<"{\n";
-    source<<"__local float4* real0 = "<<variable<<"real;\n";
-    source<<"__local float4* imag0 = "<<variable<<"imag;\n";
-    source<<"__local float4* real1 = &temp[blockStart];\n";
-    source<<"__local float4* imag1 = &temp[blockStart+get_local_size(0)];\n";
+    source<<"__local mixed4* real0 = "<<variable<<"real;\n";
+    source<<"__local mixed4* imag0 = "<<variable<<"imag;\n";
+    source<<"__local mixed4* real1 = &temp[blockStart];\n";
+    source<<"__local mixed4* imag1 = &temp[blockStart+get_local_size(0)];\n";
 
     // Factor size, generating an appropriate block of code for each factor.
 
@@ -249,39 +295,39 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float4 c0r = real"<<input<<"[i];\n";
-            source<<"float4 c0i = imag"<<input<<"[i];\n";
-            source<<"float4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float4 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float4 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float4 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float4 c4r = real"<<input<<"[i+"<<(4*L*m)<<"];\n";
-            source<<"float4 c4i = imag"<<input<<"[i+"<<(4*L*m)<<"];\n";
-            source<<"float4 d0r = c1r+c4r;\n";
-            source<<"float4 d0i = c1i+c4i;\n";
-            source<<"float4 d1r = c2r+c3r;\n";
-            source<<"float4 d1i = c2i+c3i;\n";
-            source<<"float4 d2r = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
-            source<<"float4 d2i = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
-            source<<"float4 d3r = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
-            source<<"float4 d3i = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
-            source<<"float4 d4r = d0r+d1r;\n";
-            source<<"float4 d4i = d0i+d1i;\n";
-            source<<"float4 d5r = "<<cl.doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
-            source<<"float4 d5i = "<<cl.doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
-            source<<"float4 d6r = c0r-0.25f*d4r;\n";
-            source<<"float4 d6i = c0i-0.25f*d4i;\n";
-            source<<"float4 d7r = d6r+d5r;\n";
-            source<<"float4 d7i = d6i+d5i;\n";
-            source<<"float4 d8r = d6r-d5r;\n";
-            source<<"float4 d8i = d6i-d5i;\n";
+            source<<"mixed4 c0r = real"<<input<<"[i];\n";
+            source<<"mixed4 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed4 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed4 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed4 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed4 c4r = real"<<input<<"[i+"<<(4*L*m)<<"];\n";
+            source<<"mixed4 c4i = imag"<<input<<"[i+"<<(4*L*m)<<"];\n";
+            source<<"mixed4 d0r = c1r+c4r;\n";
+            source<<"mixed4 d0i = c1i+c4i;\n";
+            source<<"mixed4 d1r = c2r+c3r;\n";
+            source<<"mixed4 d1i = c2i+c3i;\n";
+            source<<"mixed4 d2r = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
+            source<<"mixed4 d2i = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
+            source<<"mixed4 d3r = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
+            source<<"mixed4 d3i = "<<cl.doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
+            source<<"mixed4 d4r = d0r+d1r;\n";
+            source<<"mixed4 d4i = d0i+d1i;\n";
+            source<<"mixed4 d5r = "<<cl.doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
+            source<<"mixed4 d5i = "<<cl.doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
+            source<<"mixed4 d6r = c0r-0.25f*d4r;\n";
+            source<<"mixed4 d6i = c0i-0.25f*d4i;\n";
+            source<<"mixed4 d7r = d6r+d5r;\n";
+            source<<"mixed4 d7i = d6i+d5i;\n";
+            source<<"mixed4 d8r = d6r-d5r;\n";
+            source<<"mixed4 d8i = d6i-d5i;\n";
             string coeff = cl.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
-            source<<"float4 d9r = "<<sign<<"*(d2i+"<<coeff<<"*d3i);\n";
-            source<<"float4 d9i = "<<sign<<"*(-d2r-"<<coeff<<"*d3r);\n";
-            source<<"float4 d10r = "<<sign<<"*("<<coeff<<"*d2i-d3i);\n";
-            source<<"float4 d10i = "<<sign<<"*(d3r-"<<coeff<<"*d2r);\n";
+            source<<"mixed4 d9r = "<<sign<<"*(d2i+"<<coeff<<"*d3i);\n";
+            source<<"mixed4 d9i = "<<sign<<"*(-d2r-"<<coeff<<"*d3r);\n";
+            source<<"mixed4 d10r = "<<sign<<"*("<<coeff<<"*d2i-d3i);\n";
+            source<<"mixed4 d10i = "<<sign<<"*(d3r-"<<coeff<<"*d2r);\n";
             source<<"real"<<output<<"[i+4*j*"<<m<<"] = c0r+d4r;\n";
             source<<"imag"<<output<<"[i+4*j*"<<m<<"] = c0i+d4i;\n";
             source<<"real"<<output<<"[i+(4*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(5*L)<<"], d7r+d9r, d7i+d9i);\n";
@@ -302,22 +348,22 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float4 c0r = real"<<input<<"[i];\n";
-            source<<"float4 c0i = imag"<<input<<"[i];\n";
-            source<<"float4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float4 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float4 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float4 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
-            source<<"float4 d0r = c0r+c2r;\n";
-            source<<"float4 d0i = c0i+c2i;\n";
-            source<<"float4 d1r = c0r-c2r;\n";
-            source<<"float4 d1i = c0i-c2i;\n";
-            source<<"float4 d2r = c1r+c3r;\n";
-            source<<"float4 d2i = c1i+c3i;\n";
-            source<<"float4 d3r = "<<sign<<"*(c1i-c3i);\n";
-            source<<"float4 d3i = "<<sign<<"*(c3r-c1r);\n";
+            source<<"mixed4 c0r = real"<<input<<"[i];\n";
+            source<<"mixed4 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed4 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed4 c3r = real"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed4 c3i = imag"<<input<<"[i+"<<(3*L*m)<<"];\n";
+            source<<"mixed4 d0r = c0r+c2r;\n";
+            source<<"mixed4 d0i = c0i+c2i;\n";
+            source<<"mixed4 d1r = c0r-c2r;\n";
+            source<<"mixed4 d1i = c0i-c2i;\n";
+            source<<"mixed4 d2r = c1r+c3r;\n";
+            source<<"mixed4 d2i = c1i+c3i;\n";
+            source<<"mixed4 d3r = "<<sign<<"*(c1i-c3i);\n";
+            source<<"mixed4 d3i = "<<sign<<"*(c3r-c1r);\n";
             source<<"real"<<output<<"[i+3*j*"<<m<<"] = d0r+d2r;\n";
             source<<"imag"<<output<<"[i+3*j*"<<m<<"] = d0i+d2i;\n";
             source<<"real"<<output<<"[i+(3*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(4*L)<<"], d1r+d3r, d1i+d3i);\n";
@@ -336,18 +382,18 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float4 c0r = real"<<input<<"[i];\n";
-            source<<"float4 c0i = imag"<<input<<"[i];\n";
-            source<<"float4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float4 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
-            source<<"float4 d0r = c1r+c2r;\n";
-            source<<"float4 d0i = c1i+c2i;\n";
-            source<<"float4 d1r = c0r-0.5f*d0r;\n";
-            source<<"float4 d1i = c0i-0.5f*d0i;\n";
-            source<<"float4 d2r = "<<sign<<"*"<<cl.doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
-            source<<"float4 d2i = "<<sign<<"*"<<cl.doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
+            source<<"mixed4 c0r = real"<<input<<"[i];\n";
+            source<<"mixed4 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c2r = real"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed4 c2i = imag"<<input<<"[i+"<<(2*L*m)<<"];\n";
+            source<<"mixed4 d0r = c1r+c2r;\n";
+            source<<"mixed4 d0i = c1i+c2i;\n";
+            source<<"mixed4 d1r = c0r-0.5f*d0r;\n";
+            source<<"mixed4 d1i = c0i-0.5f*d0i;\n";
+            source<<"mixed4 d2r = "<<sign<<"*"<<cl.doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
+            source<<"mixed4 d2i = "<<sign<<"*"<<cl.doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
             source<<"real"<<output<<"[i+2*j*"<<m<<"] = c0r+d0r;\n";
             source<<"imag"<<output<<"[i+2*j*"<<m<<"] = c0i+d0i;\n";
             source<<"real"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
@@ -364,10 +410,10 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"if (indexInBlock < "<<(L*m)<<") {\n";
             source<<"int i = indexInBlock;\n";
             source<<"int j = i/"<<m<<";\n";
-            source<<"float4 c0r = real"<<input<<"[i];\n";
-            source<<"float4 c0i = imag"<<input<<"[i];\n";
-            source<<"float4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
-            source<<"float4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c0r = real"<<input<<"[i];\n";
+            source<<"mixed4 c0i = imag"<<input<<"[i];\n";
+            source<<"mixed4 c1r = real"<<input<<"[i+"<<(L*m)<<"];\n";
+            source<<"mixed4 c1i = imag"<<input<<"[i+"<<(L*m)<<"];\n";
             source<<"real"<<output<<"[i+j*"<<m<<"] = c0r+c1r;\n";
             source<<"imag"<<output<<"[i+j*"<<m<<"] = c0i+c1i;\n";
             source<<"real"<<output<<"[i+(j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0r-c1r, c0i-c1i);\n";

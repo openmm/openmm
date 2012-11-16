@@ -165,7 +165,6 @@ void testParaHydrogen() {
     vector<int> counts(numBins, 0);
     const double invBoxSize = 1.0/boxSize;
     double meanKE = 0.0;
-    const RealOpenMM hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
     for (int step = 0; step < numSteps; step++) {
         integ.step(20);
         vector<State> states(numCopies);
@@ -221,9 +220,11 @@ void testParaHydrogen() {
     ASSERT_USUALLY_EQUAL_TOL(60.0, 1.5*temperature+meanKE, 0.02);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
         Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
     }

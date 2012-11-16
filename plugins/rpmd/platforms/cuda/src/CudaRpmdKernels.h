@@ -91,7 +91,7 @@ private:
     CudaArray* forces;
     CudaArray* positions;
     CudaArray* velocities;
-    CUfunction pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
+    CUfunction pileKernel, stepKernel, velocitiesKernel, copyPositionsToContextKernel, copyVelocitiesToContextKernel, copyForcesFromContextKernel, translateKernel;
 };
 
 } // namespace OpenMM
