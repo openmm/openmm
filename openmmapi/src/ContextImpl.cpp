@@ -122,7 +122,6 @@ ContextImpl::~ContextImpl() {
     updateStateDataKernel = Kernel();
     applyConstraintsKernel = Kernel();
     virtualSitesKernel = Kernel();
-    integrator.cleanup();
     platform->contextDestroyed(*this);
 }
 

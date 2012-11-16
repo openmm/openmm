@@ -54,6 +54,7 @@ class ContextImpl;
 class OPENMM_EXPORT Integrator {
 public:
     virtual ~Integrator() {
+        cleanup();
     }
     /**
      * Get the size of each time step, in picoseconds.  If this integrator uses variable time steps,
@@ -92,6 +93,7 @@ public:
      */
     virtual void step(int steps) = 0;
 protected:
+    friend class Context;
     friend class ContextImpl;
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
@@ -103,7 +105,8 @@ protected:
      * This will be called by the Context when it is destroyed to let the Integrator do any necessary
      * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
      */
-    virtual void cleanup() = 0;
+    virtual void cleanup() {
+    };
     /**
      * Get the names of all Kernels used by this Integrator.
      */

@@ -216,6 +216,7 @@ void Context::reinitialize() {
     System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
+    integrator.cleanup();
     delete impl;
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
