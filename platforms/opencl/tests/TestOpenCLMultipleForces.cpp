@@ -54,7 +54,7 @@ using namespace std;
 
 OpenCLPlatform platform;
 
-const double TOL = 1e-5;
+const double TOL = 1e-4;
 
 void testForces() {
     const int numParticles = 100;
