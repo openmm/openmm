@@ -1,5 +1,4 @@
 #define TILE_SIZE 32
-#define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
 /**
  * Reduce the Born sums to compute the Born radii.
@@ -93,7 +92,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
     unsigned int lasty = 0xFFFFFFFF;
-    __shared__ AtomData1 localData[THREAD_BLOCK_SIZE];
+    __shared__ AtomData1 localData[BORN_SUM_THREAD_BLOCK_SIZE];
     do {
         // Extract the coordinates of this tile
         const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
@@ -227,7 +226,7 @@ extern "C" __global__ void computeGKForces(
     unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
     real energy = 0;
-    __shared__ AtomData2 localData[THREAD_BLOCK_SIZE];
+    __shared__ AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
     
     do {
         // Extract the coordinates of this tile
@@ -466,7 +465,7 @@ extern "C" __global__ void computeChainRuleForce(
     const unsigned int numTiles = numTileIndices;
     unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
-    __shared__ AtomData3 localData[THREAD_BLOCK_SIZE];
+    __shared__ AtomData3 localData[CHAIN_RULE_THREAD_BLOCK_SIZE];
     
     do {
         // Extract the coordinates of this tile
@@ -551,7 +550,7 @@ typedef struct {
     real3 pos, force, dipole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS;
     real q, quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ, quadrupoleZZ;
-    float thole, damp, padding;
+    float thole, damp;
 } AtomData4;
 
 __device__ void computeOneEDiffInteractionF1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real& outputEnergy, real3& outputForce);
@@ -618,9 +617,9 @@ extern "C" __global__ void computeEDiffForce(
     unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
     real energy = 0;
-    __shared__ AtomData4 localData[THREAD_BLOCK_SIZE];
-    __shared__ unsigned int exclusionRange[2*WARPS_PER_GROUP];
-    __shared__ int exclusionIndex[WARPS_PER_GROUP];
+    __shared__ AtomData4 localData[EDIFF_THREAD_BLOCK_SIZE];
+    __shared__ unsigned int exclusionRange[2*(EDIFF_THREAD_BLOCK_SIZE/TILE_SIZE)];
+    __shared__ int exclusionIndex[EDIFF_THREAD_BLOCK_SIZE/TILE_SIZE];
     
     do {
         // Extract the coordinates of this tile

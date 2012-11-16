@@ -424,6 +424,7 @@ private:
     CudaContext& cu;
     System& system;
     bool includeSurfaceArea;
+    int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
     CudaArray* params;
     CudaArray* bornSum;
     CudaArray* bornRadii;

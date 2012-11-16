@@ -1644,12 +1644,27 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     }
     params->upload(paramsVector);
     
+    // Select the number of threads for each kernel.
+    
+    double computeBornSumThreadMemory = 4*elementSize+3*sizeof(float);
+    double gkForceThreadMemory = 24*elementSize;
+    double chainRuleThreadMemory = 10*elementSize;
+    double ediffThreadMemory = 28*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cu.TileSize;
+    int maxThreads = cu.getNonbondedUtilities().getForceThreadBlockSize();
+    computeBornSumThreads = min(maxThreads, cu.computeThreadBlockSize(computeBornSumThreadMemory));
+    gkForceThreads = min(maxThreads, cu.computeThreadBlockSize(gkForceThreadMemory));
+    chainRuleThreads = min(maxThreads, cu.computeThreadBlockSize(chainRuleThreadMemory));
+    ediffThreads = min(maxThreads, cu.computeThreadBlockSize(ediffThreadMemory));
+    
     // Create the kernels.
     
     map<string, string> defines;
     defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = cu.intToString(paddedNumAtoms);
-    defines["THREAD_BLOCK_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
+    defines["BORN_SUM_THREAD_BLOCK_SIZE"] = cu.intToString(computeBornSumThreads);
+    defines["GK_FORCE_THREAD_BLOCK_SIZE"] = cu.intToString(gkForceThreads);
+    defines["CHAIN_RULE_THREAD_BLOCK_SIZE"] = cu.intToString(chainRuleThreads);
+    defines["EDIFF_THREAD_BLOCK_SIZE"] = cu.intToString(ediffThreads);
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
     defines["GK_C"] = cu.doubleToString(2.455);
     double solventDielectric = force.getSolventDielectric();
@@ -1710,10 +1725,9 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     int numTiles = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
-    int forceThreadBlockSize = nb.getForceThreadBlockSize();
     void* computeBornSumArgs[] = {&bornSum->getDevicePointer(), &cu.getPosq().getDevicePointer(),
         &params->getDevicePointer(), &numTiles};
-    cu.executeKernel(computeBornSumKernel, computeBornSumArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    cu.executeKernel(computeBornSumKernel, computeBornSumArgs, numForceThreadBlocks*computeBornSumThreads, computeBornSumThreads);
     void* reduceBornSumArgs[] = {&bornSum->getDevicePointer(), &params->getDevicePointer(), &bornRadii->getDevicePointer()};
     cu.executeKernel(reduceBornSumKernel, reduceBornSumArgs, cu.getNumAtoms());
 }
@@ -1724,7 +1738,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
-    int forceThreadBlockSize = nb.getForceThreadBlockSize();
     
     // Compute the GK force.
     
@@ -1732,7 +1745,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
         &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &labFrameDipoles.getDevicePointer(),
         &labFrameQuadrupoles.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
         &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
-    cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*gkForceThreads, gkForceThreads);
 
     // Compute the surface area force.
     
@@ -1745,14 +1758,14 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     
     void* chainRuleArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices,
         &params->getDevicePointer(), &bornRadii->getDevicePointer(), &bornForce->getDevicePointer()};
-    cu.executeKernel(chainRuleKernel, chainRuleArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);    
+    cu.executeKernel(chainRuleKernel, chainRuleArgs, numForceThreadBlocks*chainRuleThreads, chainRuleThreads);    
     void* ediffArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
         &cu.getPosq().getDevicePointer(), &nb.getExclusionIndices().getDevicePointer(), &nb.getExclusionRowIndices().getDevicePointer(),
         &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(), &startTileIndex, &numTileIndices,
         &labFrameDipoles.getDevicePointer(), &labFrameQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(),
         &inducedDipolePolar.getDevicePointer(), &inducedDipoleS->getDevicePointer(), &inducedDipolePolarS->getDevicePointer(),
         &dampingAndThole.getDevicePointer()};
-    cu.executeKernel(ediffKernel, ediffArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    cu.executeKernel(ediffKernel, ediffArgs, numForceThreadBlocks*ediffThreads, ediffThreads);
 }
 
 /* -------------------------------------------------------------------------- *
