@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/Platform.h"
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/AmoebaBondForce.h"
 #include "openmm/serialization/XmlSerializer.h"
@@ -74,6 +75,7 @@ void testSerialization() {
 
 int main() {
     try {
+        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
         testSerialization();
     }
     catch(const exception& e) {
