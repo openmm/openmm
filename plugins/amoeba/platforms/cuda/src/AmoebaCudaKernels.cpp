@@ -958,6 +958,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
         pmeDefines["M_PI"] = cu.doubleToString(M_PI);
         pmeDefines["SQRT_PI"] = cu.doubleToString(sqrt(M_PI));
+        if (force.getPolarizationType() == AmoebaMultipoleForce::Direct)
+            pmeDefines["DIRECT_POLARIZATION"] = "";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::multipolePme, pmeDefines);
         pmeUpdateBsplinesKernel = cu.getKernel(module, "updateBsplines");
         pmeAtomRangeKernel = cu.getKernel(module, "findAtomRangeForGrid");
