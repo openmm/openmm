@@ -565,7 +565,6 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = "$(OPENMM_INCLUDE_PATH)/OpenMM.h" \
-                         "$(OPENMM_INCLUDE_PATH)/OpenMMFreeEnergy.h" \
                          "$(OPENMM_INCLUDE_PATH)/openmm"
 
 # This tag can be used to specify the character encoding of the source files 

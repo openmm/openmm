@@ -570,8 +570,7 @@ INPUT                  = "@CMAKE_SOURCE_DIR@/openmmapi" \
                          "@CMAKE_SOURCE_DIR@/serialization/include/openmm/serialization/SerializationProxy.h" \
                          "@CMAKE_SOURCE_DIR@/serialization/include/openmm/serialization/XmlSerializer.h" \
                          "@CMAKE_SOURCE_DIR@/plugins/amoeba/openmmapi" \
-                         "@CMAKE_SOURCE_DIR@/plugins/rpmd/openmmapi" \
-                         "@CMAKE_SOURCE_DIR@/plugins/freeEnergy/openmmapi"
+                         "@CMAKE_SOURCE_DIR@/plugins/rpmd/openmmapi"
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 

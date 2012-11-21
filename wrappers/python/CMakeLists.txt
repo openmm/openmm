@@ -177,7 +177,7 @@ set (STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
 ### Make a list of all folders containing include files the wrappers must be compiled against. ###
 ##################################################################################################
 
-SET(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/freeEnergy/openmmapi plugins/rpmd/openmmapi)
+SET(WRAPPER_BASE_SUBDIRS . openmmapi olla serialization plugins/amoeba/openmmapi plugins/rpmd/openmmapi)
 SET(WRAPPER_INCLUDE_DIRS) # start empty
 FOREACH(subdir ${WRAPPER_BASE_SUBDIRS})
     # append

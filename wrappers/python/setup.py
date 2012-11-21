@@ -111,7 +111,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
 
     libraries=['OpenMM',
                'OpenMMSerialization', 
-               'OpenMMFreeEnergy',
                'OpenMMAmoeba',
                'OpenMMRPMD',
               ]

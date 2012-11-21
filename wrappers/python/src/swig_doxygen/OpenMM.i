@@ -41,7 +41,6 @@ namespace std {
 
 #include <exception>
 #include "OpenMM.h"
-#include "OpenMMFreeEnergy.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/RPMDIntegrator.h"
 #include "openmm/serialization/SerializationNode.h"
