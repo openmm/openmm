@@ -298,7 +298,8 @@ extern "C" __global__ void computeElectrostatics(
                 localData[threadIdx.x].torque = make_real3(0);
 #ifdef USE_CUTOFF
                 unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-                if (!hasExclusions && flags != 0xFFFFFFFF) {
+                if (!hasExclusions && flags == 0) { // TODO: Why doesn't the flags != 0 block work?
+//                if (!hasExclusions && flags != 0xFFFFFFFF) {
                     if (flags == 0) {
                         // No interactions in this tile.
                     }
