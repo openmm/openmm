@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the CUDA implementation of CudaAmoebaMultipoleForce.
+ * This tests the CUDA implementation of AmoebaGeneralizedKirkwoodForce.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -56,13 +56,10 @@ extern "C" void registerAmoebaCudaKernelFactories();
 
 // setup for 2 ammonia molecules
 
-static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::PolarizationType polarizationType,
-                                                     int includeCavityTerm, std::vector<Vec3>& forces, double& energy, FILE* log ){
+static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce,
+                                  AmoebaMultipoleForce::PolarizationType polarizationType, int includeCavityTerm) {
 
     // beginning of Multipole setup
-
-    System system;
-
 
     AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
     int numberOfParticles                             = 8;
@@ -261,7 +258,6 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Polar
 
     // GK force
 
-    AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
     amoebaGeneralizedKirkwoodForce->setSolventDielectric(   7.8300000e+01 );
     amoebaGeneralizedKirkwoodForce->setSoluteDielectric(    1.0000000e+00 );
     amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm( includeCavityTerm );
@@ -275,25 +271,10 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Polar
         amoebaGeneralizedKirkwoodForce->addParticle(   1.9320000e-01,   1.2360000e-01,   6.9000000e-01 );
     }
     system.addForce(amoebaGeneralizedKirkwoodForce);
+}
 
-    // 1-2 bonds needed 
-/*
-    AmoebaBondForce* AmoebaBondForce  = new AmoebaBondForce();
-
-    // addBond: particle1, particle2, length, quadraticK
-
-    AmoebaBondForce->addBond( 0, 1,   0.0000000e+00,   0.0000000e+00 );
-    AmoebaBondForce->addBond( 0, 2,   0.0000000e+00,   0.0000000e+00 );
-    AmoebaBondForce->addBond( 0, 3,   0.0000000e+00,   0.0000000e+00 );
-
-    AmoebaBondForce->addBond( 4, 5,   0.0000000e+00,   0.0000000e+00 );
-    AmoebaBondForce->addBond( 4, 6,   0.0000000e+00,   0.0000000e+00 );
-    AmoebaBondForce->addBond( 4, 7,   0.0000000e+00,   0.0000000e+00 );
-    AmoebaBondForce->setAmoebaGlobalBondCubic( -2.5500000e+01 ); 
-    AmoebaBondForce->setAmoebaGlobalBondQuartic( 3.7931250e+02 ); 
-    system.addForce(AmoebaBondForce);
-*/
-    std::vector<Vec3> positions(numberOfParticles);
+static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>& forces, double& energy, FILE* log) {
+    std::vector<Vec3> positions(context.getSystem().getNumParticles());
 
     positions[0]              = Vec3(   1.5927280e-01,  1.7000000e-06,   1.6491000e-03 );
     positions[1]              = Vec3(   2.0805540e-01, -8.1258800e-02,   3.7282500e-02 );
@@ -303,11 +284,6 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Polar
     positions[5]              = Vec3(  -2.0428260e-01,  8.1071500e-02,   4.1343900e-02 );
     positions[6]              = Vec3(  -6.7308300e-02,  1.2800000e-05,   1.0623300e-02 );
     positions[7]              = Vec3(  -2.0426290e-01, -8.1231400e-02,   4.1033500e-02 );
-
-    std::string platformName;
-    platformName = "CUDA";
-    LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    Context context(system, integrator, Platform::getPlatformByName( platformName ) );
 
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
@@ -7001,8 +6977,8 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
 // compare forces and energies 
 
 static void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
-                                 std::vector<Vec3>& expectedForces,
-                                 std::vector<Vec3>& forces, double tolerance, FILE* log ) {
+                                 const std::vector<Vec3>& expectedForces,
+                                 const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
 
 //#define AMOEBA_DEBUG
 #ifdef AMOEBA_DEBUG
@@ -7128,7 +7104,12 @@ static void testGeneralizedKirkwoodAmmoniaDirectPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Direct, 0, forces, energy, log );
+    System system;
+    AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
+    setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Direct, 0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy, log );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -7.6636680e+01;
@@ -7156,7 +7137,12 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Mutual, 0, forces, energy, log );
+    System system;
+    AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
+    setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Mutual, 0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy, log );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     =  -7.8018875e+01;
@@ -7175,6 +7161,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarization( FILE* log ) {
 }
 
 // test GK mutual polarization for system comprised of two ammonia molecules
+// including cavity term
 
 static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE* log ) {
 
@@ -7184,7 +7171,12 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Mutual, 1, forces, energy, log );
+    System system;
+    AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
+    setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Mutual, 1);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy, log );
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -6.0434582e+01;
@@ -7200,6 +7192,31 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm( FILE
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    
+    // Try changing the particle parameters and make sure it's still correct.
+    
+    for (int i = 0; i < numberOfParticles; i++) {
+        double charge, radius, scale;
+        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale);
+        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale);
+    }
+    LangevinIntegrator integrator2(0.0, 0.1, 0.01);
+    Context context2(system, integrator2, context.getPlatform());
+    context2.setPositions(context.getState(State::Positions).getPositions());
+    State state1 = context.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaGeneralizedKirkwoodForce->updateParametersInContext(context);
+    state1 = context.getState(State::Forces | State::Energy);
+    compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log);
 }
 
 // test GK direct polarization for villin system

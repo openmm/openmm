@@ -68,6 +68,7 @@ public:
      * long range dispersion correction to the energy.
      */
     static double calcDispersionCorrection(const System& system, const AmoebaVdwForce& force);
+    void updateParametersInContext(ContextImpl& context);
 private:
     AmoebaVdwForce& owner;
     Kernel kernel;

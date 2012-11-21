@@ -98,3 +98,7 @@ void AmoebaAngleForce::setAmoebaGlobalAngleSextic(double sexticK ) {
 ForceImpl* AmoebaAngleForce::createImpl() {
     return new AmoebaAngleForceImpl(*this);
 }
+
+void AmoebaAngleForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

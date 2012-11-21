@@ -61,6 +61,7 @@ public:
     Kernel& getKernel() {
         return kernel;
     }
+    void updateParametersInContext(ContextImpl& context);
 private:
     AmoebaGeneralizedKirkwoodForce& owner;
     Kernel kernel;

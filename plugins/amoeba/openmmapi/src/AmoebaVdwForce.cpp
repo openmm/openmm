@@ -122,3 +122,6 @@ ForceImpl* AmoebaVdwForce::createImpl() {
     return new AmoebaVdwForceImpl(*this);
 }
 
+void AmoebaVdwForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaVdwForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

@@ -79,6 +79,7 @@ public:
      * @return total maximum dispersion energy for the system
      */
     static double getTotalMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force);
+    void updateParametersInContext(ContextImpl& context);
 
 private:
     AmoebaWcaDispersionForce& owner;

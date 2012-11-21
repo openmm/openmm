@@ -130,3 +130,7 @@ void AmoebaWcaDispersionForce::setSlevy( double inputSlevy ){
 ForceImpl* AmoebaWcaDispersionForce::createImpl() {
     return new AmoebaWcaDispersionForceImpl(*this);
 }
+
+void AmoebaWcaDispersionForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaWcaDispersionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

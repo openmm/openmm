@@ -192,3 +192,6 @@ void AmoebaMultipoleForceImpl::getSystemMultipoleMoments( ContextImpl& context, 
     kernel.getAs<CalcAmoebaMultipoleForceKernel>().getSystemMultipoleMoments(context, outputMultipoleMonents);
 }
 
+void AmoebaMultipoleForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcAmoebaMultipoleForceKernel>().copyParametersToContext(context, owner);
+}

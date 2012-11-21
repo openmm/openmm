@@ -86,6 +86,7 @@ public:
                                     std::vector< double >& outputElectrostaticPotential );
 
     void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMonents );
+    void updateParametersInContext(ContextImpl& context);
  
 
 private:

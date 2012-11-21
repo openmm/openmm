@@ -62,3 +62,6 @@ std::vector<std::string> AmoebaStretchBendForceImpl::getKernelNames() {
     return names;
 }
 
+void AmoebaStretchBendForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcAmoebaStretchBendForceKernel>().copyParametersToContext(context, owner);
+}

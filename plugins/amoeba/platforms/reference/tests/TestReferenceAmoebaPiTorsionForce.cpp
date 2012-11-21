@@ -297,7 +297,21 @@ void testOnePiTorsion( FILE* log ) {
 
     context.setPositions(positions);
     compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
-
+    
+    // Try changing the torsion parameters and make sure it's still correct.
+    
+    amoebaPiTorsionForce->setPiTorsionParameters(0, 0, 1, 2, 3, 4, 5, 1.2*kTorsion);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaPiTorsionForce->updateParametersInContext(context);
+    compareWithExpectedForceAndEnergy( context, *amoebaPiTorsionForce, TOL, "testOnePiTorsion", log );
 }
 
 int main( int numberOfArguments, char* argv[] ) {

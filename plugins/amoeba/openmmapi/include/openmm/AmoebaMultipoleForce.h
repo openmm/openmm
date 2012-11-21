@@ -328,6 +328,18 @@ public:
                                       quadrupole_zx, quadrupole_zy, quadrupole_zz)
      */
     void getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMoments);
+    /**
+     * Update the multipole parameters in a Context to match those stored in this Force object.  This method
+     * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setMultipoleParameters() to modify this object's parameters, then call updateParametersInState() to
+     * copy them over to the Context.
+     * 
+     * This method has several limitations.  The only information it updates is the parameters of multipoles.
+     * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
+     * changed by reinitializing the Context.  Furthermore, this method cannot be used to add new multipoles,
+     * only to change the parameters of existing ones.
+     */
+    void updateParametersInContext(Context& context);
 
 protected:
     ForceImpl* createImpl();

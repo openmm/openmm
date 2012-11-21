@@ -111,6 +111,23 @@ double ReferenceCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool in
     return static_cast<double>(energy);
 }
 
+void ReferenceCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaBondForce& force) {
+    if (numBonds != force.getNumBonds())
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numBonds; ++i) {
+        int particle1Index, particle2Index;
+        double lengthValue, kValue;
+        force.getBondParameters(i, particle1Index, particle2Index, lengthValue, kValue);
+        if (particle1Index != particle1[i] || particle2Index != particle2[i])
+            throw OpenMMException("updateParametersInContext: The set of particles in a bond has changed");
+        length[i] = (RealOpenMM) lengthValue;
+        kQuadratic[i] = (RealOpenMM) kValue;
+    }
+}
+
 // ***************************************************************************
 
 ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, System& system) :
@@ -147,6 +164,23 @@ double ReferenceCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool i
     RealOpenMM energy      = amoebaReferenceAngleForce.calculateForceAndEnergy( numAngles, 
                                        posData, particle1, particle2, particle3, angle, kQuadratic, globalAngleCubic, globalAngleQuartic, globalAnglePentic, globalAngleSextic, forceData );
     return static_cast<double>(energy);
+}
+
+void ReferenceCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaAngleForce& force) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1Index, particle2Index, particle3Index;
+        double angleValue, k;
+        force.getAngleParameters(i, particle1Index, particle2Index, particle3Index, angleValue, k);
+        if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        angle[i] = (RealOpenMM) angleValue;
+        kQuadratic[i] = (RealOpenMM) k;
+    }
 }
 
 ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system) : 
@@ -187,6 +221,23 @@ double ReferenceCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context,
     return static_cast<double>(energy);
 }
 
+void ReferenceCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaInPlaneAngleForce& force) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numAngles; ++i) {
+        int particle1Index, particle2Index, particle3Index, particle4Index;
+        double angleValue, k;
+        force.getAngleParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, angleValue, k);
+        if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] || particle4Index != particle4[i])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        angle[i] = (RealOpenMM) angleValue;
+        kQuadratic[i] = (RealOpenMM) k;
+    }
+}
+
 ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
 }
@@ -222,6 +273,23 @@ double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bo
     return static_cast<double>(energy);
 }
 
+void ReferenceCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaPiTorsionForce& force) {
+    if (numPiTorsions != force.getNumPiTorsions())
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numPiTorsions; ++i) {
+        int particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index;
+        double kTorsionParameter;
+        force.getPiTorsionParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index, kTorsionParameter);
+        if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] ||
+            particle4Index != particle4[i] || particle5Index != particle5[i] || particle6Index != particle6[i])
+            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
+        kTorsion[i] = (RealOpenMM) kTorsionParameter;
+    }
+}
+
 ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
 }
@@ -253,6 +321,25 @@ double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, 
     RealOpenMM energy      = amoebaReferenceStretchBendForce.calculateForceAndEnergy( numStretchBends, posData, particle1, particle2, particle3,
                                                                                       lengthABParameters, lengthCBParameters, angleParameters, kParameters, forceData );
     return static_cast<double>(energy);
+}
+
+void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaStretchBendForce& force) {
+    if (numStretchBends != force.getNumStretchBends())
+        throw OpenMMException("updateParametersInContext: The number of stretch-bends has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numStretchBends; ++i) {
+        int particle1Index, particle2Index, particle3Index;
+        double lengthAB, lengthCB, angle, k;
+        force.getStretchBendParameters(i, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k);
+        if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i])
+            throw OpenMMException("updateParametersInContext: The set of particles in a stretch-bend has changed");
+        lengthABParameters[i] = (RealOpenMM) lengthAB;
+        lengthCBParameters[i] = (RealOpenMM) lengthCB;
+        angleParameters[i] = (RealOpenMM) angle;
+        kParameters[i] = (RealOpenMM) k;
+    }
 }
 
 ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system) :
@@ -296,6 +383,22 @@ double ReferenceCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& contex
                                                                                          globalOutOfPlaneBendAnglePentic,
                                                                                          globalOutOfPlaneBendAngleSextic, forceData ); 
     return static_cast<double>(energy);
+}
+
+void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaOutOfPlaneBendForce& force) {
+    if (numOutOfPlaneBends != force.getNumOutOfPlaneBends())
+        throw OpenMMException("updateParametersInContext: The number of out-of-plane bends has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numOutOfPlaneBends; ++i) {
+        int particle1Index, particle2Index, particle3Index, particle4Index;
+        double k;
+        force.getOutOfPlaneBendParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, k);
+        if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] || particle4Index != particle4[i])
+            throw OpenMMException("updateParametersInContext: The set of particles in an out-of-plane bend has changed");
+        kParameters[i] = (RealOpenMM) k;
+    }
 }
 
 ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, System& system) :
@@ -627,6 +730,43 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextI
     return;
 }
 
+void ReferenceCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) {
+    if (numMultipoles != force.getNumMultipoles())
+        throw OpenMMException("updateParametersInContext: The number of multipoles has changed");
+
+    // Record the values.
+
+    int dipoleIndex = 0;
+    int quadrupoleIndex = 0;
+    for (int i = 0; i < numMultipoles; ++i) {
+        int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
+        double charge, tholeD, dampingFactorD, polarityD;
+        std::vector<double> dipolesD;
+        std::vector<double> quadrupolesD;
+        force.getMultipoleParameters(i, charge, dipolesD, quadrupolesD, axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY, tholeD, dampingFactorD, polarityD);
+        axisTypes[i] = axisType;
+        multipoleAtomZs[i] = multipoleAtomZ;
+        multipoleAtomXs[i] = multipoleAtomX;
+        multipoleAtomYs[i] = multipoleAtomY;
+        charges[i] = (RealOpenMM) charge;
+        tholes[i] = (RealOpenMM) tholeD;
+        dampingFactors[i] = (RealOpenMM) dampingFactorD;
+        polarity[i] = (RealOpenMM) polarityD;
+        dipoles[dipoleIndex++] = (RealOpenMM) dipolesD[0];
+        dipoles[dipoleIndex++] = (RealOpenMM) dipolesD[1];
+        dipoles[dipoleIndex++] = (RealOpenMM) dipolesD[2];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[0];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[1];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[2];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[3];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[4];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[5];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[6];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[7];
+        quadrupoles[quadrupoleIndex++] = (RealOpenMM) quadrupolesD[8];
+    }
+}
+
 /* -------------------------------------------------------------------------- *
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */
@@ -737,6 +877,21 @@ double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& c
     return 0.0;
 }
 
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numParticles; ++i) {
+        double particleCharge, particleRadius, scalingFactor;
+        force.getParticleParameters(i, particleCharge, particleRadius, scalingFactor);
+        atomicRadii[i] = particleRadius;
+        scaleFactors[i] = scalingFactor;
+        charges[i] = particleCharge;
+    }
+}
+
 ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system) :
        CalcAmoebaVdwForceKernel(name, platform), system(system) {
     useCutoff = 0;
@@ -819,6 +974,23 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     return static_cast<double>(energy);
 }
 
+void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numParticles; ++i) {
+        int indexIV;
+        double sigma, epsilon, reduction;
+        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction);
+        indexIVs[i] = indexIV;
+        sigmas[i] = (RealOpenMM) sigma;
+        epsilons[i] = (RealOpenMM) epsilon;
+        reductions[i]= (RealOpenMM) reduction;
+    }
+}
+
 /* -------------------------------------------------------------------------- *
  *                           AmoebaWcaDispersion                              *
  * -------------------------------------------------------------------------- */
@@ -864,4 +1036,18 @@ double ReferenceCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context
     AmoebaReferenceWcaDispersionForce amoebaReferenceWcaDispersionForce( epso, epsh, rmino, rminh, awater, shctd, dispoff, slevy );
     RealOpenMM energy      = amoebaReferenceWcaDispersionForce.calculateForceAndEnergy( numParticles, posData, radii, epsilons, totalMaximumDispersionEnergy, forceData);
     return static_cast<double>(energy);
+}
+
+void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    for (int i = 0; i < numParticles; ++i) {
+        double radius, epsilon;
+        force.getParticleParameters(i, radius, epsilon);
+        radii[i] = (RealOpenMM) radius;
+        epsilons[i] = (RealOpenMM) epsilon;
+    }
 }

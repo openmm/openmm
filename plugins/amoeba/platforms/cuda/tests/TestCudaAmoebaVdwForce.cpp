@@ -174,6 +174,35 @@ void testVdw( FILE* log ) {
         ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
     }
     ASSERT_EQUAL_TOL( expectedEnergy, state.getPotentialEnergy(), tolerance );
+    
+    // Try changing the particle parameters and make sure it's still correct.
+    
+    for (int i = 0; i < numberOfParticles; i++) {
+        int indexIV;
+        double mass, sigma, epsilon, reduction;
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction);
+    }
+    LangevinIntegrator integrator2(0.0, 0.1, 0.01);
+    Context context2(system, integrator2, Platform::getPlatformByName(platformName));
+    context2.setPositions(positions);
+    State state1 = context.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        for (int i = 0; i < numberOfParticles; i++)
+            ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], tolerance);
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaVdwForce->updateParametersInContext(context);
+    state1 = context.getState(State::Forces | State::Energy);
+    for (int i = 0; i < numberOfParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], tolerance);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), tolerance);
 }
 
 void setupAndGetForcesEnergyVdwAmmonia( const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule, double cutoff,

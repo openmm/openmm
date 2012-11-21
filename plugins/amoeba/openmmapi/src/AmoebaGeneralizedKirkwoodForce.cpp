@@ -93,3 +93,7 @@ void AmoebaGeneralizedKirkwoodForce::setSurfaceAreaFactor(double inputSurfaceAre
 ForceImpl* AmoebaGeneralizedKirkwoodForce::createImpl() {
     return new AmoebaGeneralizedKirkwoodForceImpl(*this);
 }
+
+void AmoebaGeneralizedKirkwoodForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaGeneralizedKirkwoodForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

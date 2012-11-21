@@ -123,6 +123,30 @@ double CudaCalcAmoebaBondForceKernel::execute(ContextImpl& context, bool include
     return 0.0;
 }
 
+void CudaCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaBondForce& force) {
+    cu.setAsCurrent();
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumBonds()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
+    if (numBonds != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    
+    // Record the per-bond parameters.
+    
+    vector<float2> paramVector(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        int atom1, atom2;
+        double length, k;
+        force.getBondParameters(startIndex+i, atom1, atom2, length, k);
+        paramVector[i] = make_float2((float) length, (float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
 /* -------------------------------------------------------------------------- *
  *                            AmoebaAngleForce                                *
  * -------------------------------------------------------------------------- */
@@ -195,6 +219,30 @@ void CudaCalcAmoebaAngleForceKernel::initialize(const System& system, const Amoe
 
 double CudaCalcAmoebaAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void CudaCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaAngleForce& force) {
+    cu.setAsCurrent();
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    if (numAngles != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    
+    // Record the per-angle parameters.
+    
+    vector<float2> paramVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        int atom1, atom2, atom3;
+        double angle, k;
+        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
+        paramVector[i] = make_float2((float) angle, (float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
 }
 
 /* -------------------------------------------------------------------------- *
@@ -271,6 +319,30 @@ double CudaCalcAmoebaInPlaneAngleForceKernel::execute(ContextImpl& context, bool
     return 0.0;
 }
 
+void CudaCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaInPlaneAngleForce& force) {
+    cu.setAsCurrent();
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumAngles()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
+    if (numAngles != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of in-plane angles has changed");
+    
+    // Record the per-angle parameters.
+    
+    vector<float2> paramVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        int atom1, atom2, atom3, atom4;
+        double angle, k;
+        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, atom4, angle, k);
+        paramVector[i] = make_float2((float) angle, (float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
 /* -------------------------------------------------------------------------- *
   *                              AmoebaPiTorsion                              *
  * -------------------------------------------------------------------------- */
@@ -342,6 +414,30 @@ double CudaCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool in
     return 0.0;
 }
 
+void CudaCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaPiTorsionForce& force) {
+    cu.setAsCurrent();
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumPiTorsions()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumPiTorsions()/numContexts;
+    if (numPiTorsions != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    
+    // Record the per-torsion parameters.
+    
+    vector<float> paramVector(numPiTorsions);
+    for (int i = 0; i < numPiTorsions; i++) {
+        int atom1, atom2, atom3, atom4, atom5, atom6;
+        double k;
+        force.getPiTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, atom5, atom6, k);
+        paramVector[i] = (float) k;
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
+}
+
 /* -------------------------------------------------------------------------- *
  *                           AmoebaStretchBend                                *
  * -------------------------------------------------------------------------- */
@@ -409,6 +505,30 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
 
 double CudaCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void CudaCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaStretchBendForce& force) {
+    cu.setAsCurrent();
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumStretchBends()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumStretchBends()/numContexts;
+    if (numStretchBends != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of bend-stretch terms has changed");
+    
+    // Record the per-stretch-bend parameters.
+    
+    vector<float4> paramVector(numStretchBends);
+    for (int i = 0; i < numStretchBends; i++) {
+        int atom1, atom2, atom3;
+        double lengthAB, lengthCB, angle, k;
+        force.getStretchBendParameters(startIndex+i, atom1, atom2, atom3, lengthAB, lengthCB, angle, k);
+        paramVector[i] = make_float4((float) lengthAB, (float) lengthCB, (float) angle, (float) k);
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
 }
 
 /* -------------------------------------------------------------------------- *
@@ -483,6 +603,30 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, c
 
 double CudaCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
+}
+
+void CudaCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaOutOfPlaneBendForce& force) {
+    cu.setAsCurrent();
+    int numContexts = cu.getPlatformData().contexts.size();
+    int startIndex = cu.getContextIndex()*force.getNumOutOfPlaneBends()/numContexts;
+    int endIndex = (cu.getContextIndex()+1)*force.getNumOutOfPlaneBends()/numContexts;
+    if (numOutOfPlaneBends != endIndex-startIndex)
+        throw OpenMMException("updateParametersInContext: The number of out-of-plane bends has changed");
+    
+    // Record the per-bend parameters.
+    
+    vector<float> paramVector(numOutOfPlaneBends);
+    for (int i = 0; i < numOutOfPlaneBends; i++) {
+        int atom1, atom2, atom3, atom4;
+        double k;
+        force.getOutOfPlaneBendParameters(startIndex+i, atom1, atom2, atom3, atom4, k);
+        paramVector[i] = (float) k;
+    }
+    params->upload(paramVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cu.invalidateMolecules();
 }
 
 /* -------------------------------------------------------------------------- *
@@ -1558,6 +1702,61 @@ void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& 
         computeSystemMultipoleMoments<float, float4, float4>(context, outputMultipoleMoments);
 }
 
+void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cu.setAsCurrent();
+    if (force.getNumMultipoles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of multipoles has changed");
+    
+    // Record the per-multipole parameters.
+    
+    cu.getPosq().download(cu.getPinnedBuffer());
+    float4* posqf = (float4*) cu.getPinnedBuffer();
+    double4* posqd = (double4*) cu.getPinnedBuffer();
+    vector<float2> dampingAndTholeVec;
+    vector<float> polarizabilityVec;
+    vector<float> molecularDipolesVec;
+    vector<float> molecularQuadrupolesVec;
+    vector<int4> multipoleParticlesVec;
+    for (int i = 0; i < force.getNumMultipoles(); i++) {
+        double charge, thole, damping, polarity;
+        int axisType, atomX, atomY, atomZ;
+        vector<double> dipole, quadrupole;
+        force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        if (cu.getUseDoublePrecision())
+            posqd[i].w = charge;
+        else
+            posqf[i].w = (float) charge;
+        dampingAndTholeVec.push_back(make_float2((float) damping, (float) thole));
+        polarizabilityVec.push_back((float) polarity);
+        multipoleParticlesVec.push_back(make_int4(atomX, atomY, atomZ, axisType));
+        for (int j = 0; j < 3; j++)
+            molecularDipolesVec.push_back((float) dipole[j]);
+        molecularQuadrupolesVec.push_back((float) quadrupole[0]);
+        molecularQuadrupolesVec.push_back((float) quadrupole[1]);
+        molecularQuadrupolesVec.push_back((float) quadrupole[2]);
+        molecularQuadrupolesVec.push_back((float) quadrupole[4]);
+        molecularQuadrupolesVec.push_back((float) quadrupole[5]);
+    }
+    for (int i = force.getNumMultipoles(); i < cu.getPaddedNumAtoms(); i++) {
+        dampingAndTholeVec.push_back(make_float2(0, 0));
+        polarizabilityVec.push_back(0);
+        multipoleParticlesVec.push_back(make_int4(0, 0, 0, 0));
+        for (int j = 0; j < 3; j++)
+            molecularDipolesVec.push_back(0);
+        for (int j = 0; j < 5; j++)
+            molecularQuadrupolesVec.push_back(0);
+    }
+    dampingAndThole->upload(dampingAndTholeVec);
+    polarizability->upload(polarizabilityVec);
+    multipoleParticles->upload(multipoleParticlesVec);
+    molecularDipoles->upload(molecularDipolesVec);
+    molecularQuadrupoles->upload(molecularQuadrupolesVec);
+    cu.getPosq().upload(cu.getPinnedBuffer());
+    cu.invalidateMolecules();
+}
+
 /* -------------------------------------------------------------------------- *
  *                       AmoebaGeneralizedKirkwood                            *
  * -------------------------------------------------------------------------- */
@@ -1770,6 +1969,25 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     cu.executeKernel(ediffKernel, ediffArgs, numForceThreadBlocks*ediffThreads, ediffThreads);
 }
 
+void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cu.setAsCurrent();
+    if (force.getNumParticles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<float2> paramsVector(cu.getPaddedNumAtoms());
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        paramsVector[i] = make_float2((float) radius, (float) (scalingFactor*radius));
+    }
+    params->upload(paramsVector);
+    cu.invalidateMolecules();
+}
+
 /* -------------------------------------------------------------------------- *
  *                           AmoebaVdw                                        *
  * -------------------------------------------------------------------------- */
@@ -1913,6 +2131,36 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
     return dispersionCoefficient/(box.x*box.y*box.z);
 }
 
+void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cu.setAsCurrent();
+    if (force.getNumParticles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
+    vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
+    vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int ivIndex;
+        double sigma, epsilon, reductionFactor;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor);
+        sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        bondReductionAtomsVec[i] = ivIndex;
+        bondReductionFactorsVec[i] = (float) reductionFactor;
+    }
+    sigmaEpsilon->upload(sigmaEpsilonVec);
+    bondReductionAtoms->upload(bondReductionAtomsVec);
+    bondReductionFactors->upload(bondReductionFactorsVec);
+    if (force.getUseDispersionCorrection())
+        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
+    else
+        dispersionCoefficient = 0.0;               
+    cu.invalidateMolecules();
+}
+
 /* -------------------------------------------------------------------------- *
  *                           AmoebaWcaDispersion                              *
  * -------------------------------------------------------------------------- */
@@ -1936,6 +2184,7 @@ CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(s
 }
 
 CudaCalcAmoebaWcaDispersionForceKernel::~CudaCalcAmoebaWcaDispersionForceKernel() {
+    cu.setAsCurrent();
     if (radiusEpsilon != NULL)
         delete radiusEpsilon;
 }
@@ -1990,4 +2239,23 @@ double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, boo
         &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &radiusEpsilon->getDevicePointer()};
     cu.executeKernel(forceKernel, forceArgs, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     return totalMaximumDispersionEnergy;
+}
+
+void CudaCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cu.setAsCurrent();
+    if (force.getNumParticles() != cu.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<float2> radiusEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 0));
+    for (int i = 0; i < cu.getNumAtoms(); i++) {
+        double radius, epsilon;
+        force.getParticleParameters(i, radius, epsilon);
+        radiusEpsilonVec[i] = make_float2((float) radius, (float) epsilon);
+    }
+    radiusEpsilon->upload(radiusEpsilonVec);
+    cu.invalidateMolecules();
 }

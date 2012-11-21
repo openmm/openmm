@@ -237,3 +237,7 @@ void AmoebaMultipoleForce::getSystemMultipoleMoments(Context& context, std::vect
 ForceImpl* AmoebaMultipoleForce::createImpl() {
     return new AmoebaMultipoleForceImpl(*this);
 }
+
+void AmoebaMultipoleForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaMultipoleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

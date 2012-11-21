@@ -160,6 +160,16 @@ public:
      * @param quadratic k   the quadratic force constant for the angle, measured in kJ/mol/radian^2
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, int particle4, double length, double quadraticK );
+    /**
+     * Update the per-angle parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setAngleParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * The only information this method updates is the values of per-angle parameters.  The set of particles involved
+     * in an angle cannot be changed, nor can new angles be added.
+     */
+    void updateParametersInContext(Context& context);
 
 protected:
     ForceImpl* createImpl();

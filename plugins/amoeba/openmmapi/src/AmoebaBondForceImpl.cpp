@@ -72,3 +72,7 @@ vector<pair<int, int> > AmoebaBondForceImpl::getBondedParticles() const {
     }   
     return bonds;
 }
+
+void AmoebaBondForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcAmoebaBondForceKernel>().copyParametersToContext(context, owner);
+}

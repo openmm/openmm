@@ -65,6 +65,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaBondForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaBondForce& force);
 private:
     class ForceInfo;
     int numBonds;
@@ -96,6 +103,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaAngleForce& force);
 private:
     class ForceInfo;
     int numAngles;
@@ -127,6 +141,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaInPlaneAngleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaInPlaneAngleForce& force);
 private:
     class ForceInfo;
     int numAngles;
@@ -158,6 +179,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaPiTorsionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaPiTorsionForce& force);
 private:
     class ForceInfo;
     int numPiTorsions;
@@ -189,6 +217,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaStretchBendForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaStretchBendForce& force);
 private:
     class ForceInfo;
     int numStretchBends;
@@ -220,6 +255,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaOutOfPlaneBendForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaOutOfPlaneBendForce& force);
 private:
     class ForceInfo;
     int numOutOfPlaneBends;
@@ -306,8 +348,13 @@ public:
      *                                quadrupole_zx, quadrupole_zy, quadrupole_zz )
      */
     void getSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-
-
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaMultipoleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
 private:
     class ForceInfo;
     class SortTrait : public CudaSort::SortTrait {
@@ -419,6 +466,13 @@ public:
     CudaArray* getInducedDipolesPolar() {
         return inducedDipolePolarS;
     }
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaGeneralizedKirkwoodForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force);
 private:
     class ForceInfo;
     CudaContext& cu;
@@ -460,6 +514,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaVdwForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
 private:
     class ForceInfo;
     CudaContext& cu;
@@ -498,6 +559,13 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaWcaDispersionForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force);
 private:
     class ForceInfo;
     CudaContext& cu;

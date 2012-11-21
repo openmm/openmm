@@ -152,6 +152,16 @@ public:
      * @param k             the force constant for the out-of-plane bend
      */
     void setOutOfPlaneBendParameters(int index, int particle1, int particle2, int particle3, int particle4, double k);
+    /**
+     * Update the per-bend term parameters in a Context to match those stored in this Force object.  This method provides
+     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
+     * Simply call setOutOfPlaneBendParameters() to modify this object's parameters, then call updateParametersInState()
+     * to copy them over to the Context.
+     * 
+     * The only information this method updates is the values of per-bend term parameters.  The set of particles involved
+     * in a term cannot be changed, nor can new terms be added.
+     */
+    void updateParametersInContext(Context& context);
 
 protected:
     ForceImpl* createImpl();

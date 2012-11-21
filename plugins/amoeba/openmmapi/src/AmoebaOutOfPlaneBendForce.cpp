@@ -102,3 +102,7 @@ void AmoebaOutOfPlaneBendForce::setOutOfPlaneBendParameters(int index, int parti
 ForceImpl* AmoebaOutOfPlaneBendForce::createImpl() {
     return new AmoebaOutOfPlaneBendForceImpl(*this);
 }
+
+void AmoebaOutOfPlaneBendForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaOutOfPlaneBendForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

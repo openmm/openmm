@@ -204,6 +204,22 @@ void testTwoBond( FILE* log ) {
 
     context.setPositions(positions);
     compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond", log );
+    
+    // Try changing the bond parameters and make sure it's still correct.
+    
+    amoebaBondForce->setBondParameters(0, 0, 1, 1.1*bondLength, 1.4*quadraticK);
+    amoebaBondForce->setBondParameters(1, 1, 2, 1.2*bondLength, 0.9*quadraticK);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond", log );
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaBondForce->updateParametersInContext(context);
+    compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond", log );
 }
 
 int main(int argc, char* argv[]) {

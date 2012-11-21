@@ -62,3 +62,6 @@ std::vector<std::string> AmoebaAngleForceImpl::getKernelNames() {
     return names;
 }
 
+void AmoebaAngleForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcAmoebaAngleForceKernel>().copyParametersToContext(context, owner);
+}

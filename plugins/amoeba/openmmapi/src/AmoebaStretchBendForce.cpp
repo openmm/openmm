@@ -70,3 +70,7 @@ void AmoebaStretchBendForce::setStretchBendParameters(int index, int particle1, 
 ForceImpl* AmoebaStretchBendForce::createImpl() {
     return new AmoebaStretchBendForceImpl(*this);
 }
+
+void AmoebaStretchBendForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaStretchBendForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

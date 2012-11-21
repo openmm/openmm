@@ -141,3 +141,6 @@ std::vector<std::string> AmoebaWcaDispersionForceImpl::getKernelNames() {
     return names;
 }
 
+void AmoebaWcaDispersionForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcAmoebaWcaDispersionForceKernel>().copyParametersToContext(context, owner);
+}

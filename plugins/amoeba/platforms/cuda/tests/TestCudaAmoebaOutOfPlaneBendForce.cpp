@@ -335,7 +335,21 @@ void testOneOutOfPlaneBend( FILE* log ) {
 
     context.setPositions(positions);
     compareWithExpectedForceAndEnergy( context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log );
-
+    
+    // Try changing the bend parameters and make sure it's still correct.
+    
+    amoebaOutOfPlaneBendForce->setOutOfPlaneBendParameters(0, 0, 1, 2, 3, 1.1*kOutOfPlaneBend);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareWithExpectedForceAndEnergy( context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log );
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaOutOfPlaneBendForce->updateParametersInContext(context);
+    compareWithExpectedForceAndEnergy( context, *amoebaOutOfPlaneBendForce, TOL, "testOneOutOfPlaneBend", log );
 }
 
 void testOneOutOfPlaneBend2( FILE* log, int setId ) {

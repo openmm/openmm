@@ -376,7 +376,21 @@ void testOneAngle( FILE* log ) {
 
     context.setPositions(positions);
     compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log );
-
+    
+    // Try changing the angle parameters and make sure it's still correct.
+    
+    amoebaInPlaneAngleForce->setAngleParameters(0, 0, 1, 2, 3, 1.1*angle, 1.4*quadraticK);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log );
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaInPlaneAngleForce->updateParametersInContext(context);
+    compareWithExpectedForceAndEnergy( context, *amoebaInPlaneAngleForce, TOL, "testOneInPlaneAngle", log );
 }
 
 int main(int argc, char* argv[]) {

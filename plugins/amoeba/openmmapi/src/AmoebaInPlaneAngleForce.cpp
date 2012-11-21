@@ -100,3 +100,7 @@ double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleSextic( void ) const 
 ForceImpl* AmoebaInPlaneAngleForce::createImpl() {
     return new AmoebaInPlaneAngleForceImpl(*this);
 }
+
+void AmoebaInPlaneAngleForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaInPlaneAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

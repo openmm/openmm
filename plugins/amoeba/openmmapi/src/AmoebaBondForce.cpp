@@ -78,3 +78,7 @@ double AmoebaBondForce::getAmoebaGlobalBondQuartic( void ) const {
 ForceImpl* AmoebaBondForce::createImpl() {
     return new AmoebaBondForceImpl(*this);
 }
+
+void AmoebaBondForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

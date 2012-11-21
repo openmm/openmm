@@ -67,3 +67,7 @@ void AmoebaPiTorsionForce::setPiTorsionParameters(int index, int particle1, int 
 ForceImpl* AmoebaPiTorsionForce::createImpl() {
     return new AmoebaPiTorsionForceImpl(*this);
 }
+
+void AmoebaPiTorsionForce::updateParametersInContext(Context& context) {
+    dynamic_cast<AmoebaPiTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -74,7 +74,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
-
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaBondForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaBondForce& force) = 0;
 };
 
 /**
@@ -108,6 +114,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaAngleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaAngleForce& force) = 0;
 };
 
 /**
@@ -141,6 +154,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaInPlaneAngleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaInPlaneAngleForce& force) = 0;
 };
 
 /**
@@ -174,6 +194,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaPiTorsionForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaPiTorsionForce& force) = 0;
 };
 
 /**
@@ -207,6 +234,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaStretchBendForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaStretchBendForce& force) = 0;
 };
 
 /**
@@ -240,6 +274,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaOutOfPlaneBendForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaOutOfPlaneBendForce& force) = 0;
 };
 
 /**
@@ -311,7 +352,13 @@ public:
                                             std::vector< double >& outputElectrostaticPotential ) = 0;
 
     virtual void getSystemMultipoleMoments( ContextImpl& context, std::vector< double >& outputMultipoleMonents ) = 0;
-
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaMultipoleForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) = 0;
 };
 
 /**
@@ -345,6 +392,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaGeneralizedKirkwoodForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force) = 0;
 };
 
 
@@ -378,6 +432,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaVdwForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) = 0;
 };
 
 /**
@@ -411,6 +472,13 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaWcaDispersionForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force) = 0;
 };
 
 } // namespace OpenMM

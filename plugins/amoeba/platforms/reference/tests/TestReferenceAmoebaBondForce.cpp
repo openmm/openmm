@@ -40,6 +40,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
 #include <vector>
+#include <math.h>
 
 using namespace OpenMM;
 
@@ -198,6 +199,22 @@ void testTwoBond( FILE* log ) {
     positions[2] = Vec3(1, 0, 1);
 
     context.setPositions(positions);
+    compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond", log );
+    
+    // Try changing the bond parameters and make sure it's still correct.
+    
+    amoebaBondForce->setBondParameters(0, 0, 1, 1.1*bondLength, 1.4*quadraticK);
+    amoebaBondForce->setBondParameters(1, 1, 2, 1.2*bondLength, 0.9*quadraticK);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond", log );
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaBondForce->updateParametersInContext(context);
     compareWithExpectedForceAndEnergy( context, *amoebaBondForce, TOL, "testTwoBond", log );
 }
 

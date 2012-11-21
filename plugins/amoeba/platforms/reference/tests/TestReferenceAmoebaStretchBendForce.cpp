@@ -283,7 +283,21 @@ void testOneStretchBend( FILE* log ) {
 
     context.setPositions(positions);
     compareWithExpectedForceAndEnergy( context, *amoebaStretchBendForce, TOL, "testOneStretchBend", log );
-
+    
+    // Try changing the stretch-bend parameters and make sure it's still correct.
+    
+    amoebaStretchBendForce->setStretchBendParameters(0, 0, 1, 2, 1.1*abLength, 1.2*cbLength, 1.3*angleStretchBend, 1.4*kStretchBend);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareWithExpectedForceAndEnergy( context, *amoebaStretchBendForce, TOL, "testOneStretchBend", log );
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaStretchBendForce->updateParametersInContext(context);
+    compareWithExpectedForceAndEnergy( context, *amoebaStretchBendForce, TOL, "testOneStretchBend", log );
 }
 
 int main( int numberOfArguments, char* argv[] ) {

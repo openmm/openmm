@@ -54,13 +54,39 @@ const double TOL = 1e-4;
 
 extern "C" void registerAmoebaCudaKernelFactories();
 
-void setupAndGetForcesEnergyWcaDispersionAmmonia( std::vector<Vec3>& forces, double& energy, FILE* log ){
+void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
+                          const std::vector<Vec3>& expectedForces,
+                          const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
 
-    // beginning of WcaDispersion setup
+#ifdef AMOEBA_DEBUG
+    if( log ){
+        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e\n", testName.c_str(), expectedEnergy, energy );
+        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
+                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
+        }
+        (void) fflush( log );
+    }
+#endif
 
+    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+        ASSERT_EQUAL_VEC_MOD( expectedForces[ii], forces[ii], tolerance, testName );
+    }
+    ASSERT_EQUAL_TOL_MOD( expectedEnergy, energy, tolerance, testName );
+}
+
+// test Wca dispersion
+
+void testWcaDispersionAmmonia( FILE* log ) {
+
+    std::string testName      = "testWcaDispersionAmmonia";
+
+    int numberOfParticles     = 8;
+
+    // Create the system.
+    
     System system;
-    AmoebaWcaDispersionForce* amoebaWcaDispersionForce        = new AmoebaWcaDispersionForce();;
-    int numberOfParticles                                     = 8;
+    AmoebaWcaDispersionForce* amoebaWcaDispersionForce = new AmoebaWcaDispersionForce();;
 
     amoebaWcaDispersionForce->setEpso(    4.6024000e-01 );
     amoebaWcaDispersionForce->setEpsh(    5.6484000e-02 );
@@ -106,47 +132,13 @@ void setupAndGetForcesEnergyWcaDispersionAmmonia( std::vector<Vec3>& forces, dou
     Context context(system, integrator, Platform::getPlatformByName( platformName ) );
 
     context.setPositions(positions);
-    State state                      = context.getState(State::Forces | State::Energy);
-    forces                           = state.getForces();
-    energy                           = state.getPotentialEnergy();
-}
-
-void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
-                          std::vector<Vec3>& expectedForces,
-                          std::vector<Vec3>& forces, double tolerance, FILE* log ) {
-
-#ifdef AMOEBA_DEBUG
-    if( log ){
-        (void) fprintf( log, "%s: expected energy=%14.7e %14.7e\n", testName.c_str(), expectedEnergy, energy );
-        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
-                            expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
-        }
-        (void) fflush( log );
-    }
-#endif
-
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        ASSERT_EQUAL_VEC_MOD( expectedForces[ii], forces[ii], tolerance, testName );
-    }
-    ASSERT_EQUAL_TOL_MOD( expectedEnergy, energy, tolerance, testName );
-}
-
-// test Wca dispersion
-
-void testWcaDispersionAmmonia( FILE* log ) {
-
-    std::string testName      = "testWcaDispersionAmmonia";
-
-    int numberOfParticles     = 8;
-    std::vector<Vec3> forces;
-    double energy;
-
-    setupAndGetForcesEnergyWcaDispersionAmmonia( forces, energy, log );
-    std::vector<Vec3> expectedForces(numberOfParticles);
+    State state = context.getState(State::Forces | State::Energy);
+    std::vector<Vec3> forces = state.getForces();
+    double energy = state.getPotentialEnergy();
 
     // TINKER-computed values
 
+    std::vector<Vec3> expectedForces(numberOfParticles);
     double expectedEnergy     =  -2.6981209e+01;
 
     expectedForces[0]         = Vec3(   4.7839388e+00,  -7.3510133e-04,  -5.0382764e-01 );
@@ -160,6 +152,31 @@ void testWcaDispersionAmmonia( FILE* log ) {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    
+    // Try changing the particle parameters and make sure it's still correct.
+    
+    for (int i = 0; i < numberOfParticles; i++) {
+        double radius, epsilon;
+        amoebaWcaDispersionForce->getParticleParameters(i, radius, epsilon);
+        amoebaWcaDispersionForce->setParticleParameters(i, 0.9*radius, 2.0*epsilon);
+    }
+    LangevinIntegrator integrator2(0.0, 0.1, 0.01);
+    Context context2(system, integrator2, Platform::getPlatformByName(platformName));
+    context2.setPositions(positions);
+    State state1 = context.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareForcesEnergy(testName, state1.getPotentialEnergy(), state2.getPotentialEnergy(), state1.getForces(), state2.getForces(), tolerance, log);
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaWcaDispersionForce->updateParametersInContext(context);
+    state1 = context.getState(State::Forces | State::Energy);
+    compareForcesEnergy(testName, state1.getPotentialEnergy(), state2.getPotentialEnergy(), state1.getForces(), state2.getForces(), tolerance, log);
 }
 
 int main(int argc, char* argv[]) {

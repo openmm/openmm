@@ -6,14 +6,14 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
  * to deal in the Software without restriction, including without limitation  *
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
  * and/or sell copies of the Software, and to permit persons to whom the      *
  * Software is furnished to do so, subject to the following conditions:       *
  *                                                                            *
@@ -21,16 +21,16 @@
  * all copies or substantial portions of the Software.                        *
  *                                                                            *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,  *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
- * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,   *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
  * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the CUDA implementation of CudaAmoebaMultipoleForce.
+ * This tests the CUDA implementation of AmoebaMultipoleForce.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -56,13 +56,9 @@ extern "C" void registerAmoebaCudaKernelFactories();
 
 // setup for 2 ammonia molecules
 
-static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
-                                                     AmoebaMultipoleForce::PolarizationType polarizationType,
-                                                     double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces, double& energy, FILE* log ){
-
-    // beginning of Multipole setup
-
-    System system;
+static void setupMultipoleAmmonia(System& system, AmoebaMultipoleForce* amoebaMultipoleForce, AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
+                                  AmoebaMultipoleForce::PolarizationType polarizationType,
+                                  double cutoff, int inputPmeGridDimension) {
 
     // box
 
@@ -72,7 +68,6 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Nonbo
     Vec3 c( 0.0, 0.0, boxDimension );
     system.setDefaultPeriodicBoxVectors( a, b, c );
 
-    AmoebaMultipoleForce* amoebaMultipoleForce        = new AmoebaMultipoleForce();;
     int numberOfParticles                             = 8;
 
     amoebaMultipoleForce->setNonbondedMethod( nonbondedMethod );
@@ -130,23 +125,23 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Nonbo
     system.addParticle( 1.0080000e+00 );
     system.addParticle( 1.0080000e+00 );
     system.addParticle( 1.0080000e+00 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9e-01,  2.8135002e-01,  4.96e-04 );
 
     // second N
 
     system.addParticle(   1.4007000e+01 );
-    amoebaMultipoleForce->addParticle(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
+    amoebaMultipoleForce->addParticle(  -5.796e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9e-01,  3.1996314e-01,  1.073e-03 );
 
     // 3 H attached to second N
 
     system.addParticle(   1.0080000e+00 );
     system.addParticle(   1.0080000e+00 );
     system.addParticle(   1.0080000e+00 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9e-01,  2.8135002e-01,  4.96e-04 );
 
     // covalent maps
 
@@ -272,25 +267,11 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Nonbo
     covalentMap.push_back( 6 );
     covalentMap.push_back( 7 );
     amoebaMultipoleForce->setCovalentMap( 7, static_cast<OpenMM::AmoebaMultipoleForce::CovalentType>(4), covalentMap );
+    system.addForce(amoebaMultipoleForce);
+}
 
-    // 1-2 bonds needed 
-
-    AmoebaBondForce* amoebaBondForce  = new AmoebaBondForce();
-
-    // addBond: particle1, particle2, length, quadraticK
-
-    amoebaBondForce->addBond( 0, 1,   0.0000000e+00,   0.0000000e+00 );
-    amoebaBondForce->addBond( 0, 2,   0.0000000e+00,   0.0000000e+00 );
-    amoebaBondForce->addBond( 0, 3,   0.0000000e+00,   0.0000000e+00 );
-
-    amoebaBondForce->addBond( 4, 5,   0.0000000e+00,   0.0000000e+00 );
-    amoebaBondForce->addBond( 4, 6,   0.0000000e+00,   0.0000000e+00 );
-    amoebaBondForce->addBond( 4, 7,   0.0000000e+00,   0.0000000e+00 );
-    amoebaBondForce->setAmoebaGlobalBondCubic( -2.5500000e+01 ); 
-    amoebaBondForce->setAmoebaGlobalBondQuartic( 3.7931250e+02 ); 
-    system.addForce(amoebaBondForce);
-
-    std::vector<Vec3> positions(numberOfParticles);
+static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>& forces, double& energy) {
+    std::vector<Vec3> positions(context.getSystem().getNumParticles());
 
     positions[0]              = Vec3(   1.5927280e-01,  1.7000000e-06,   1.6491000e-03 );
     positions[1]              = Vec3(   2.0805540e-01, -8.1258800e-02,   3.7282500e-02 );
@@ -301,13 +282,6 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Nonbo
     positions[6]              = Vec3(  -6.7308300e-02,  1.2800000e-05,   1.0623300e-02 );
     positions[7]              = Vec3(  -2.0426290e-01, -8.1231400e-02,   4.1033500e-02 );
 
-    system.addForce(amoebaMultipoleForce);
-
-    std::string platformName;
-    platformName = "CUDA";
-    LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    Context context(system, integrator, Platform::getPlatformByName( platformName ) );
-
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
     forces                           = state.getForces();
@@ -317,9 +291,8 @@ static void setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::Nonbo
 // compare forces and energies 
 
 static void compareForcesEnergy( std::string& testName, double expectedEnergy, double energy,
-                                 std::vector<Vec3>& expectedForces,
-                                 std::vector<Vec3>& forces, double tolerance, FILE* log ) {
-
+                                 const std::vector<Vec3>& expectedForces,
+                                 const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
 
 //#define AMOEBA_DEBUG
 #ifdef AMOEBA_DEBUG
@@ -369,7 +342,6 @@ static void compareForcesEnergy( std::string& testName, double expectedEnergy, d
 static void compareForceNormsEnergy( std::string& testName, double expectedEnergy, double energy,
                                      std::vector<Vec3>& expectedForces,
                                      const std::vector<Vec3>& forces, double tolerance, FILE* log ) {
-
 
 //#define AMOEBA_DEBUG
 #ifdef AMOEBA_DEBUG
@@ -447,8 +419,13 @@ static void testMultipoleAmmoniaDirectPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Direct, 
-                                             cutoff, inputPmeGridDimension, forces, energy, log );
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Direct, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -1.7428832e+01;
@@ -478,8 +455,13 @@ static void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleAmmonia( AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
-                                             cutoff, inputPmeGridDimension, forces, energy, log );
+    System system;
+    AmoebaMultipoleForce* amoebaMultipoleForce = new AmoebaMultipoleForce();;
+    setupMultipoleAmmonia(system, amoebaMultipoleForce, AmoebaMultipoleForce::NoCutoff, AmoebaMultipoleForce::Mutual, 
+                                             cutoff, inputPmeGridDimension);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("CUDA"));
+    getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
     double expectedEnergy     = -1.7790449e+01;
@@ -495,6 +477,38 @@ static void testMultipoleAmmoniaMutualPolarization( FILE* log ) {
 
     double tolerance          = 1.0e-04;
     compareForcesEnergy( testName, expectedEnergy, energy, expectedForces, forces, tolerance, log );
+    
+    // Try changing the particle parameters and make sure it's still correct.
+    
+    for (int i = 0; i < numberOfParticles; i++) {
+        double charge, thole, damping, polarity;
+        int axisType, atomX, atomY, atomZ;
+        std::vector<double> dipole, quadrupole;
+        amoebaMultipoleForce->getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        dipole[0] *= 0.7;
+        quadrupole[2] *= 1.5;
+        quadrupole[6] *= 1.5;
+        amoebaMultipoleForce->setMultipoleParameters(i, 1.1*charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, 1.3*thole, 1.4*damping, 1.5*polarity);
+    }
+    LangevinIntegrator integrator2(0.0, 0.1, 0.01);
+    Context context2(system, integrator2, context.getPlatform());
+    context2.setPositions(context.getState(State::Positions).getPositions());
+    State state1 = context.getState(State::Forces | State::Energy);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    bool exceptionThrown = false;
+    try {
+        // This should throw an exception.
+        compareForcesEnergy( testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log );
+        for (int i = 0; i < numberOfParticles; i++)
+            ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], tolerance);
+    }
+    catch (std::exception ex) {
+        exceptionThrown = true;
+    }
+    ASSERT(exceptionThrown);
+    amoebaMultipoleForce->updateParametersInContext(context);
+    state1 = context.getState(State::Forces | State::Energy);
+    compareForcesEnergy( testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance, log );
 }
 
 // setup for box of 4 water molecules -- used to test PME
