@@ -44,7 +44,7 @@ class StateDataReporter(object):
     written in comma-separated-value (CSV) format, but you can specify a different separator to use.
     """
     
-    def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False, separator=','):
+    def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False, separator=',', systemMass=None):
         """Create a StateDataReporter.
     
         Parameters:
@@ -59,6 +59,10 @@ class StateDataReporter(object):
          - volume (boolean=False) Whether to write the periodic box volume to the file
          - density (boolean=False) Whether to write the system density to the file
          - separator (string=',') The separator to use between columns in the file
+         - systemMass (mass=None) The total mass to use for the system when reporting density.  If this is
+           None (the default), the system mass is computed by summing the masses of all particles.  This
+           parameter is useful when the particle masses do not reflect their actual physical mass, such as
+           when some particles have had their masses set to 0 to immobilize them.
         """
         self._reportInterval = reportInterval
         self._openedFile = isinstance(file, str)
@@ -76,6 +80,7 @@ class StateDataReporter(object):
         self._density = density
         self._separator = separator
         self._needEnergy = potentialEnergy or kineticEnergy or totalEnergy or temperature
+        self._totalMass = systemMass
         self._hasInitialized = False
     
     def describeNextReport(self, simulation):
@@ -110,10 +115,13 @@ class StateDataReporter(object):
                     dof -= 3
                 self._dof = dof
             if self._density:
-                # Compute the total system mass.
-                self._totalMass = 0*unit.dalton
-                for i in range(system.getNumParticles()):
-                    self._totalMass += system.getParticleMass(i)
+                if self._totalMass is None:
+                    # Compute the total system mass.
+                    self._totalMass = 0*unit.dalton
+                    for i in range(system.getNumParticles()):
+                        self._totalMass += system.getParticleMass(i)
+                elif not unit.is_quantity(self._totalMass):
+                    self._totalMass = self._totalMass*unit.dalton
             
             # Write the headers.
             
