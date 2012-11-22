@@ -477,6 +477,8 @@ void CudaCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& conte
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     
@@ -619,6 +621,8 @@ void CudaCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     
@@ -707,6 +711,8 @@ void CudaCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& cont
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    if (numAngles == 0)
+        return;
     
     // Record the per-angle parameters.
     
@@ -850,6 +856,8 @@ void CudaCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& contex
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    if (numAngles == 0)
+        return;
     
     // Record the per-angle parameters.
     
@@ -939,6 +947,8 @@ void CudaCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& co
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -1033,6 +1043,8 @@ void CudaCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& context,
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -1267,6 +1279,8 @@ void CudaCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& cont
     int endIndex = (cu.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -3112,6 +3126,8 @@ void CudaCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& con
     int endIndex = (cu.getContextIndex()+1)*force.getNumParticles()/numContexts;
     if (numParticles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    if (numParticles == 0)
+        return;
     
     // Record the per-particle parameters.
     
@@ -3622,28 +3638,33 @@ void CudaCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& contex
     
     // Record the per-donor parameters.
     
-    vector<vector<float> > donorParamVector(numDonors);
-    vector<double> parameters;
-    for (int i = 0; i < numDonors; i++) {
-        int d1, d2, d3;
-        force.getDonorParameters(startIndex+i, d1, d2, d3, parameters);
-        donorParamVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            donorParamVector[i][j] = (float) parameters[j];
+    if (numDonors > 0) {
+        vector<vector<float> > donorParamVector(numDonors);
+        vector<double> parameters;
+        for (int i = 0; i < numDonors; i++) {
+            int d1, d2, d3;
+            force.getDonorParameters(startIndex+i, d1, d2, d3, parameters);
+            donorParamVector[i].resize(parameters.size());
+            for (int j = 0; j < (int) parameters.size(); j++)
+                donorParamVector[i][j] = (float) parameters[j];
+        }
+        donorParams->setParameterValues(donorParamVector);
     }
-    donorParams->setParameterValues(donorParamVector);
     
     // Record the per-acceptor parameters.
     
-    vector<vector<float> > acceptorParamVector(numAcceptors);
-    for (int i = 0; i < numAcceptors; i++) {
-        int a1, a2, a3;
-        force.getAcceptorParameters(i, a1, a2, a3, parameters);
-        acceptorParamVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            acceptorParamVector[i][j] = (float) parameters[j];
+    if (numAcceptors > 0) {
+        vector<vector<float> > acceptorParamVector(numAcceptors);
+        vector<double> parameters;
+        for (int i = 0; i < numAcceptors; i++) {
+            int a1, a2, a3;
+            force.getAcceptorParameters(i, a1, a2, a3, parameters);
+            acceptorParamVector[i].resize(parameters.size());
+            for (int j = 0; j < (int) parameters.size(); j++)
+                acceptorParamVector[i][j] = (float) parameters[j];
+        }
+        acceptorParams->setParameterValues(acceptorParamVector);
     }
-    acceptorParams->setParameterValues(acceptorParamVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -3951,6 +3972,8 @@ void CudaCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImpl&
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     

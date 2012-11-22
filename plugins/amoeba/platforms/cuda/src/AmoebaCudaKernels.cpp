@@ -130,6 +130,8 @@ void CudaCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& context
     int endIndex = (cu.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     
@@ -228,6 +230,8 @@ void CudaCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& contex
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    if (numAngles == 0)
+        return;
     
     // Record the per-angle parameters.
     
@@ -326,6 +330,8 @@ void CudaCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(ContextImpl&
     int endIndex = (cu.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of in-plane angles has changed");
+    if (numAngles == 0)
+        return;
     
     // Record the per-angle parameters.
     
@@ -421,6 +427,8 @@ void CudaCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImpl& co
     int endIndex = (cu.getContextIndex()+1)*force.getNumPiTorsions()/numContexts;
     if (numPiTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numPiTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -514,6 +522,8 @@ void CudaCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& 
     int endIndex = (cu.getContextIndex()+1)*force.getNumStretchBends()/numContexts;
     if (numStretchBends != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bend-stretch terms has changed");
+    if (numStretchBends == 0)
+        return;
     
     // Record the per-stretch-bend parameters.
     
@@ -612,6 +622,8 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(ContextImp
     int endIndex = (cu.getContextIndex()+1)*force.getNumOutOfPlaneBends()/numContexts;
     if (numOutOfPlaneBends != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of out-of-plane bends has changed");
+    if (numOutOfPlaneBends == 0)
+        return;
     
     // Record the per-bend parameters.
     

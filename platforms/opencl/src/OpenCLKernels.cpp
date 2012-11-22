@@ -499,6 +499,8 @@ void OpenCLCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
     int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     
@@ -638,6 +640,8 @@ void OpenCLCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
     int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     
@@ -723,6 +727,8 @@ void OpenCLCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
     int endIndex = (cl.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    if (numAngles == 0)
+        return;
     
     // Record the per-angle parameters.
     
@@ -863,6 +869,8 @@ void OpenCLCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& cont
     int endIndex = (cl.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
+    if (numAngles == 0)
+        return;
     
     // Record the per-angle parameters.
     
@@ -949,6 +957,8 @@ void OpenCLCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
     int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -1033,6 +1043,8 @@ void OpenCLCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& contex
     int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -1261,6 +1273,8 @@ void OpenCLCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& co
     int endIndex = (cl.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
+    if (numTorsions == 0)
+        return;
     
     // Record the per-torsion parameters.
     
@@ -3272,6 +3286,8 @@ void OpenCLCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& c
     int endIndex = (cl.getContextIndex()+1)*force.getNumParticles()/numContexts;
     if (numParticles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    if (numParticles == 0)
+        return;
     
     // Record the per-particle parameters.
     
@@ -3812,28 +3828,33 @@ void OpenCLCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
     
     // Record the per-donor parameters.
     
-    vector<vector<cl_float> > donorParamVector(numDonors);
-    vector<double> parameters;
-    for (int i = 0; i < numDonors; i++) {
-        int d1, d2, d3;
-        force.getDonorParameters(startIndex+i, d1, d2, d3, parameters);
-        donorParamVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            donorParamVector[i][j] = (cl_float) parameters[j];
+    if (numDonors > 0) {
+        vector<vector<cl_float> > donorParamVector(numDonors);
+        vector<double> parameters;
+        for (int i = 0; i < numDonors; i++) {
+            int d1, d2, d3;
+            force.getDonorParameters(startIndex+i, d1, d2, d3, parameters);
+            donorParamVector[i].resize(parameters.size());
+            for (int j = 0; j < (int) parameters.size(); j++)
+                donorParamVector[i][j] = (cl_float) parameters[j];
+        }
+        donorParams->setParameterValues(donorParamVector);
     }
-    donorParams->setParameterValues(donorParamVector);
     
     // Record the per-acceptor parameters.
     
-    vector<vector<cl_float> > acceptorParamVector(numAcceptors);
-    for (int i = 0; i < numAcceptors; i++) {
-        int a1, a2, a3;
-        force.getAcceptorParameters(i, a1, a2, a3, parameters);
-        acceptorParamVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            acceptorParamVector[i][j] = (cl_float) parameters[j];
+    if (numAcceptors > 0) {
+        vector<vector<cl_float> > acceptorParamVector(numAcceptors);
+        vector<double> parameters;
+        for (int i = 0; i < numAcceptors; i++) {
+            int a1, a2, a3;
+            force.getAcceptorParameters(i, a1, a2, a3, parameters);
+            acceptorParamVector[i].resize(parameters.size());
+            for (int j = 0; j < (int) parameters.size(); j++)
+                acceptorParamVector[i][j] = (cl_float) parameters[j];
+        }
+        acceptorParams->setParameterValues(acceptorParamVector);
     }
-    acceptorParams->setParameterValues(acceptorParamVector);
     
     // Mark that the current reordering may be invalid.
     
@@ -4138,6 +4159,8 @@ void OpenCLCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
     int endIndex = (cl.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
+    if (numBonds == 0)
+        return;
     
     // Record the per-bond parameters.
     
