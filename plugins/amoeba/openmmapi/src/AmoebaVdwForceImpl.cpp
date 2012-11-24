@@ -179,7 +179,11 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
             } else {
                 double iSigma2 = iSigma*iSigma;
                 double jSigma2 = jSigma*jSigma;
-                sigma = 2.0f * (iSigma2 * iSigma + jSigma2 * jSigma) / (iSigma2 + jSigma2);
+		if ((iSigma2 + jSigma2) != 0.0) {
+		  sigma = 2.0f * (iSigma2 * iSigma + jSigma2 * jSigma) / (iSigma2 + jSigma2);
+		} else {
+		  sigma = 0.0;
+		}
             }
             // ARITHMETIC = 1
             // GEOMETRIC  = 2
@@ -190,11 +194,19 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
             } else if (epsilonCombiningRule == "GEOMETRIC") {
                 epsilon = std::sqrt(iEpsilon * jEpsilon);
             } else if (epsilonCombiningRule == "HARMONIC") {
-                epsilon = 2.0f * (iEpsilon * jEpsilon) / (iEpsilon + jEpsilon);
+	      if ((iEpsilon + jEpsilon) != 0.0) {
+		  epsilon = 2.0f * (iEpsilon * jEpsilon) / (iEpsilon + jEpsilon);
+		} else {
+		epsilon = 0.0;
+	      }
             } else {
-                double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
-                epsilon = 4.0f * (iEpsilon * jEpsilon) / (epsilonS * epsilonS);
-            }
+	      double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
+	      if (epsilonS != 0.0) {
+		epsilon = 4.0f * (iEpsilon * jEpsilon) / (epsilonS * epsilonS);
+	      } else {
+		epsilon = 0.0;
+	      }
+	    }
             int count = class1->second * class2->second;
             // Below is an exact copy of stuff from the previous block.
             double rv = sigma;

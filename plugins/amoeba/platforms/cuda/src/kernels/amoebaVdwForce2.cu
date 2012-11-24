@@ -12,17 +12,28 @@
 #else
     real sigma1_2 = sigmaEpsilon1.x*sigmaEpsilon1.x;
     real sigma2_2 = sigmaEpsilon2.x*sigmaEpsilon2.x;
-    real sigma = 2*(sigmaEpsilon1.x*sigma1_2 + sigmaEpsilon2.x*sigma2_2)/(sigma1_2+sigma2_2);
+    real sigmasum = sigma1_2+sigma2_2;
+    real sigma = 0.0f;
+    if (sigmasum != 0.0f) {
+        sigma = 2*(sigmaEpsilon1.x*sigma1_2 + sigmaEpsilon2.x*sigma2_2)/(sigma1_2+sigma2_2);
+    }
 #endif
 #if EPSILON_COMBINING_RULE == 1
     real epsilon = 0.5f*(sigmaEpsilon1.y + sigmaEpsilon2.y);
 #elif EPSILON_COMBINING_RULE == 2
     real epsilon = SQRT(sigmaEpsilon1.y*sigmaEpsilon2.y);
 #elif EPSILON_COMBINING_RULE == 3
-    real epsilon = 2*(sigmaEpsilon1.y*sigmaEpsilon2.y)/(sigmaEpsilon1.y+sigmaEpsilon2.y);
+    real epssum = sigmaEpsilon1.y+sigmaEpsilon2.y;
+    real epsilon = 0.0f;
+    if (epssum != 0.0f) {
+        real epsilon = 2*(sigmaEpsilon1.y*sigmaEpsilon2.y)/(sigmaEpsilon1.y+sigmaEpsilon2.y);
+    }
 #else
     real epsilon_s = SQRT(sigmaEpsilon1.y) + SQRT(sigmaEpsilon2.y);
-    real epsilon = 4*sigmaEpsilon1.y*sigmaEpsilon2.y/(epsilon_s*epsilon_s);
+    real epsilon = 0.0f;
+    if (epsilon_s != 0.0f) {
+        epsilon = 4*sigmaEpsilon1.y*sigmaEpsilon2.y/(epsilon_s*epsilon_s);
+    }
 #endif
     real r6 = r2*r2*r2;
     real r7 = r6*r;
