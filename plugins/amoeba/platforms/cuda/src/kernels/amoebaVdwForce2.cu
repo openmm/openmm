@@ -26,7 +26,7 @@
     real epssum = sigmaEpsilon1.y+sigmaEpsilon2.y;
     real epsilon = 0.0f;
     if (epssum != 0.0f) {
-        real epsilon = 2*(sigmaEpsilon1.y*sigmaEpsilon2.y)/(sigmaEpsilon1.y+sigmaEpsilon2.y);
+        epsilon = 2*(sigmaEpsilon1.y*sigmaEpsilon2.y)/(sigmaEpsilon1.y+sigmaEpsilon2.y);
     }
 #else
     real epsilon_s = SQRT(sigmaEpsilon1.y) + SQRT(sigmaEpsilon2.y);
