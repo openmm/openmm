@@ -1050,4 +1050,5 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(Contex
         radii[i] = (RealOpenMM) radius;
         epsilons[i] = (RealOpenMM) epsilon;
     }
+    totalMaximumDispersionEnergy = (RealOpenMM) AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
 }
