@@ -173,40 +173,40 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
             // GEOMETRIC  = 2
             // CUBIC-MEAN = 3
             if (sigmaCombiningRule == "ARITHMETIC") {
-                sigma = iSigma + jSigma;
+              sigma = iSigma + jSigma;
             } else if (sigmaCombiningRule == "GEOMETRIC") {
-                sigma = 2.0f * std::sqrt(iSigma * jSigma);
+              sigma = 2.0f * std::sqrt(iSigma * jSigma);
             } else {
-                double iSigma2 = iSigma*iSigma;
-                double jSigma2 = jSigma*jSigma;
-		if ((iSigma2 + jSigma2) != 0.0) {
-		  sigma = 2.0f * (iSigma2 * iSigma + jSigma2 * jSigma) / (iSigma2 + jSigma2);
-		} else {
-		  sigma = 0.0;
-		}
+              double iSigma2 = iSigma*iSigma;
+              double jSigma2 = jSigma*jSigma;
+              if ((iSigma2 + jSigma2) != 0.0) {
+                sigma = 2.0f * (iSigma2 * iSigma + jSigma2 * jSigma) / (iSigma2 + jSigma2);
+              } else {
+                sigma = 0.0;
+              }
             }
             // ARITHMETIC = 1
             // GEOMETRIC  = 2
             // HARMONIC   = 3
             // HHG        = 4
             if (epsilonCombiningRule == "ARITHMETIC") {
-                epsilon = 0.5f * (iEpsilon + jEpsilon);
+              epsilon = 0.5f * (iEpsilon + jEpsilon);
             } else if (epsilonCombiningRule == "GEOMETRIC") {
-                epsilon = std::sqrt(iEpsilon * jEpsilon);
+              epsilon = std::sqrt(iEpsilon * jEpsilon);
             } else if (epsilonCombiningRule == "HARMONIC") {
-	      if ((iEpsilon + jEpsilon) != 0.0) {
-		  epsilon = 2.0f * (iEpsilon * jEpsilon) / (iEpsilon + jEpsilon);
-		} else {
-		epsilon = 0.0;
-	      }
+              if ((iEpsilon + jEpsilon) != 0.0) {
+                epsilon = 2.0f * (iEpsilon * jEpsilon) / (iEpsilon + jEpsilon);
+              } else {
+                epsilon = 0.0;
+              }
             } else {
-	      double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
-	      if (epsilonS != 0.0) {
-		epsilon = 4.0f * (iEpsilon * jEpsilon) / (epsilonS * epsilonS);
-	      } else {
-		epsilon = 0.0;
-	      }
-	    }
+              double epsilonS = std::sqrt(iEpsilon) + std::sqrt(jEpsilon);
+              if (epsilonS != 0.0) {
+                epsilon = 4.0f * (iEpsilon * jEpsilon) / (epsilonS * epsilonS);
+              } else {
+                epsilon = 0.0;
+              }
+            }
             int count = class1->second * class2->second;
             // Below is an exact copy of stuff from the previous block.
             double rv = sigma;
