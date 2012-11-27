@@ -77,7 +77,7 @@ void computeBornSum(
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                real4 delta = (float4) (localData[baseLocalAtom+j].x-posq1.x, localData[baseLocalAtom+j].y-posq1.y, localData[baseLocalAtom+j].z-posq1.z, 0);
+                real4 delta = (real4) (localData[baseLocalAtom+j].x-posq1.x, localData[baseLocalAtom+j].y-posq1.y, localData[baseLocalAtom+j].z-posq1.z, 0);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
                 delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
@@ -98,9 +98,9 @@ void computeBornSum(
                 real l_ij2 = l_ij*l_ij;
                 real u_ij2 = u_ij*u_ij;
                 real ratio = LOG(u_ij * RECIP(l_ij));
-                bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
-                                 (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeInteraction);
-                bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeInteraction && params1.x < params2.y-r);
+                bornSum += (includeInteraction ? l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
+                                 (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2) : (real) 0);
+                bornSum += (includeInteraction && params1.x < params2.y-r ? 2.0f*(RECIP(params1.x)-l_ij) : (real) 0);
             }
 
             // Sum the forces and write results.
@@ -132,7 +132,7 @@ void computeBornSum(
                 localData[get_local_id(0)].x = tempPosq.x;
                 localData[get_local_id(0)].y = tempPosq.y;
                 localData[get_local_id(0)].z = tempPosq.z;
-                real2 tempParams = global_params[j];
+                float2 tempParams = global_params[j];
                 localData[get_local_id(0)].radius = tempParams.x;
                 localData[get_local_id(0)].scaledRadius = tempParams.y;
             }
@@ -166,9 +166,9 @@ void computeBornSum(
                     real u_ij2 = u_ij*u_ij;
                     real ratio = LOG(u_ij * RECIP(l_ij));
                     unsigned int includeTerm = (includeInteraction && params1.x < rScaledRadiusJ);
-                    bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
-                                     (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeTerm);
-                    bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeTerm && params1.x < params2.y-r);
+                    bornSum += (includeTerm ? l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
+                                     (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2) : (real) 0);
+                    bornSum += (includeTerm && params1.x < params2.y-r ? 2.0f*(RECIP(params1.x)-l_ij) : (real) 0);
                 }
                 real rScaledRadiusI = r+params1.y;
                 {
@@ -179,8 +179,8 @@ void computeBornSum(
                     real ratio = LOG(u_ij * RECIP(l_ij));
                     real term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                      (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
-                    term += select(0.0f, 2.0f*(RECIP(params2.x)-l_ij), params2.x < params1.y-r);
-                    localBornSum[tj+localForceOffset] += select(0.0f, term, includeInteraction && params2.x < rScaledRadiusI);
+                    term += (params2.x < params1.y-r ? 2.0f*(RECIP(params2.x)-l_ij) : (real) 0);
+                    localBornSum[tj+localForceOffset] += (includeInteraction && params2.x < rScaledRadiusI ? term : (real) 0);
                 }
                 barrier(CLK_LOCAL_MEM_FENCE);
                 tj = (tj+1) & (TILE_SIZE-1);
@@ -323,13 +323,13 @@ void computeGBSAForce1(
                 real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                 real dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
-                tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
-                dGpol_dalpha2_ij = select(dGpol_dalpha2_ij, 0.0f, r2 > CUTOFF_SQUARED);
+                dEdR = (r2 > CUTOFF_SQUARED ? (real) 0 : dEdR);
+                tempEnergy = (r2 > CUTOFF_SQUARED ? (real) 0 : tempEnergy);
+                dGpol_dalpha2_ij = (r2 > CUTOFF_SQUARED ? (real) 0 : dGpol_dalpha2_ij);
 #endif
-                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
-                energy += select(0.0f, 0.5f*tempEnergy, includeInteraction);
-                delta.xyz *= select(0.0f, dEdR, includeInteraction);
+                force.w += (includeInteraction ? dGpol_dalpha2_ij*bornRadius2 : (real) 0);
+                energy += (includeInteraction ? 0.5f*tempEnergy : (real) 0);
+                delta.xyz *= (includeInteraction ? dEdR : (real) 0);
                 force.xyz -= delta.xyz;
             }
 
@@ -412,18 +412,18 @@ void computeGBSAForce1(
                 real dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                 real dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
-                tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
-                dGpol_dalpha2_ij = select(dGpol_dalpha2_ij, 0.0f, r2 > CUTOFF_SQUARED);
+                dEdR = (r2 > CUTOFF_SQUARED ? (real) 0 : dEdR);
+                tempEnergy = (r2 > CUTOFF_SQUARED ? (real) 0 : tempEnergy);
+                dGpol_dalpha2_ij = (r2 > CUTOFF_SQUARED ? (real) 0 : dGpol_dalpha2_ij);
 #endif
-                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
-                energy += select(0.0f, tempEnergy, includeInteraction);
-                delta.xyz *= select(0.0f, dEdR, includeInteraction);
+                force.w += (includeInteraction ? dGpol_dalpha2_ij*bornRadius2 : (real) 0);
+                energy += (includeInteraction ? tempEnergy : (real) 0);
+                delta.xyz *= (includeInteraction ? dEdR : (real) 0);
                 force.xyz -= delta.xyz;
                 localForce[tj+localForceOffset].x += delta.x;
                 localForce[tj+localForceOffset].y += delta.y;
                 localForce[tj+localForceOffset].z += delta.z;
-                localForce[tj+localForceOffset].w += select(0.0f, dGpol_dalpha2_ij*bornRadius1, includeInteraction);
+                localForce[tj+localForceOffset].w += (includeInteraction ? dGpol_dalpha2_ij*bornRadius1 : (real) 0);
                 barrier(CLK_LOCAL_MEM_FENCE);
                 tj = (tj+1) & (TILE_SIZE-1);
             }
@@ -446,10 +446,10 @@ void computeGBSAForce1(
                 atom_add(&forceBuffers[offset1+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0xFFFFFFFF));
                 atom_add(&forceBuffers[offset1+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0xFFFFFFFF));
                 atom_add(&global_bornForce[offset1], (long) ((force.w + localData[tgx].temp_w)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset2], (long) ((localData[get_local_id(0)].fx + localForce[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset2+PADDED_NUM_ATOMS], (long) ((localData[get_local_id(0)].fy + localForce[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset2+2*PADDED_NUM_ATOMS], (long) ((localData[get_local_id(0)].fz + localForce[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
-                atom_add(&global_bornForce[offset2], (long) ((localData[get_local_id(0)].fw + localForce[get_local_id(0)+TILE_SIZE].w)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2], (long) ((localForce[get_local_id(0)].x + localForce[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2+PADDED_NUM_ATOMS], (long) ((localForce[get_local_id(0)].y + localForce[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset2+2*PADDED_NUM_ATOMS], (long) ((localForce[get_local_id(0)].z + localForce[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
+                atom_add(&global_bornForce[offset2], (long) ((localForce[get_local_id(0)].w + localForce[get_local_id(0)+TILE_SIZE].w)*0xFFFFFFFF));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
