@@ -1435,7 +1435,6 @@ class AmoebaBondGenerator:
         self.types2 = []
         self.length = []
         self.k = []
-        self.hasBeenCalled = 0
     
     #=============================================================================================
 
@@ -1463,11 +1462,6 @@ class AmoebaBondGenerator:
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        if (self.hasBeenCalled):
-             return
-
-        self.hasBeenCalled = 1
 
         #countConstraint(data)
 
@@ -1554,8 +1548,6 @@ class AmoebaAngleGenerator:
 
         self.angle = []
         self.k = []
-
-        self.hasBeenCalled = 0
     
     #=============================================================================================
 
@@ -1609,10 +1601,6 @@ class AmoebaAngleGenerator:
     #=============================================================================================
     
     def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-
-        if (self.hasBeenCalled):
-             return
-        self.hasBeenCalled += 1
 
         # get force
 
@@ -1687,8 +1675,6 @@ class AmoebaAngleGenerator:
     #=============================================================================================
     
     def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-
-        self.hasBeenCalled += 1
 
         # get force
 
@@ -1773,7 +1759,6 @@ class AmoebaOutOfPlaneBendGenerator:
         self.types4 = []
 
         self.ks = []
-        self.hasBeenCalled = 0
 
     #=============================================================================================
     # Local version of findAtomTypes needed since class indices are 0 (i.e., not recognized)
@@ -1863,10 +1848,6 @@ class AmoebaOutOfPlaneBendGenerator:
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        if (self.hasBeenCalled):
-             return
-        self.hasBeenCalled = 1
 
         # get force
 
@@ -2017,8 +1998,6 @@ class AmoebaOutOfPlaneBendGenerator:
             if (force.__class__.__name__ == 'AmoebaAngleGenerator'): 
                 force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
                 force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, inPlaneAngles, args)
-            if (force.__class__.__name__ == 'AmoebaBondGenerator'): 
-                force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'): 
@@ -2049,7 +2028,6 @@ class AmoebaTorsionGenerator:
         self.t1 = []
         self.t2 = []
         self.t3 = []
-        self.hasBeenCalled = 0
     
     #=============================================================================================
 
@@ -2102,10 +2080,6 @@ class AmoebaTorsionGenerator:
     #=============================================================================================
 
     def createForce(self, sys, data, nontorsionedMethod, nontorsionedCutoff, args):
-
-        if (self.hasBeenCalled):
-             return
-        self.hasBeenCalled = 1
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.PeriodicTorsionForce]
@@ -2169,7 +2143,6 @@ class AmoebaPiTorsionGenerator:
         self.types1 = []
         self.types2 = []
         self.k = []
-        self.hasBeenCalled = 0
     
     #=============================================================================================
 
@@ -2197,10 +2170,6 @@ class AmoebaPiTorsionGenerator:
     #=============================================================================================
 
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
-
-        if (self.hasBeenCalled):
-             return
-        self.hasBeenCalled = 1
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.AmoebaPiTorsionForce]
@@ -2292,8 +2261,6 @@ class AmoebaTorsionTorsionGenerator:
         self.gridIndex = []
 
         self.grids = []
-
-        self.hasBeenCalled = 0
     
     #=============================================================================================
 
@@ -2443,10 +2410,6 @@ class AmoebaTorsionTorsionGenerator:
  
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
 
-        if (self.hasBeenCalled):
-             return
-        self.hasBeenCalled = 1
-
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.AmoebaTorsionTorsionForce]
 
@@ -2536,7 +2499,6 @@ class AmoebaStretchBendGenerator:
 
         self.k1 = []
         self.k2 = []
-        self.hasBeenCalled = 0
     
     #=============================================================================================
 
@@ -2588,10 +2550,6 @@ class AmoebaStretchBendGenerator:
     #=============================================================================================
 
     def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-
-        if (self.hasBeenCalled):
-             return
-        self.hasBeenCalled = 1
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.AmoebaStretchBendForce]
@@ -2900,7 +2858,6 @@ class AmoebaMultipoleGenerator:
         self.polar15Scale = polar15Scale 
 
         self.typeMap = {}
-        self.hasBeenCalled = 0
 
     #=============================================================================================
     # Set axis type
@@ -3207,10 +3164,6 @@ class AmoebaMultipoleGenerator:
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        if (self.hasBeenCalled ):
-            return
-        self.hasBeenCalled = 1
 
         methodMap = {NoCutoff:mm.AmoebaMultipoleForce.NoCutoff,
                      PME:mm.AmoebaMultipoleForce.PME}
@@ -3638,7 +3591,6 @@ class AmoebaGeneralizedKirkwoodGenerator:
         self.includeCavityTerm = includeCavityTerm
         self.probeRadius = probeRadius
         self.surfaceAreaFactor = surfaceAreaFactor
-        self.hasBeenCalled = 0
 
         self.radiusTypeMap = {}
         self.radiusTypeMap['Bondi'] = {}
@@ -3820,9 +3772,6 @@ class AmoebaGeneralizedKirkwoodGenerator:
     
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        if (self.hasBeenCalled ):
-            return
-
         if( nonbondedMethod != NoCutoff ):
             raise ValueError( "Only the nonbondedMethod=NoCutoff option is available for implicit solvent simulations." )
 
@@ -3865,8 +3814,6 @@ class AmoebaGeneralizedKirkwoodGenerator:
 
         else:
             force = existing[0]
-
-        self.hasBeenCalled = 1
 
         # add particles to force
         # throw error if particle type not available 
@@ -3913,8 +3860,6 @@ class AmoebaUreyBradleyGenerator:
         self.length = []
         self.k = []
 
-        self.hasBeenCalled = 0
-    
     #=============================================================================================
 
     @staticmethod
@@ -3944,11 +3889,6 @@ class AmoebaUreyBradleyGenerator:
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        if (self.hasBeenCalled):
-             return
- 
-        self.hasBeenCalled = 1
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mm.HarmonicBondForce]
