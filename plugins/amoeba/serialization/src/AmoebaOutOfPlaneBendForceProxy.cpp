@@ -44,10 +44,10 @@ AmoebaOutOfPlaneBendForceProxy::AmoebaOutOfPlaneBendForceProxy() : Serialization
 void AmoebaOutOfPlaneBendForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaOutOfPlaneBendForce& force = *reinterpret_cast<const AmoebaOutOfPlaneBendForce*>(object);
-    node.setDoubleProperty("OutOfPlaneBendCubic",   force.getAmoebaGlobalOutOfPlaneBendCubic());
-    node.setDoubleProperty("OutOfPlaneBendQuartic", force.getAmoebaGlobalOutOfPlaneBendQuartic());
-    node.setDoubleProperty("OutOfPlaneBendPentic",  force.getAmoebaGlobalOutOfPlaneBendPentic());
-    node.setDoubleProperty("OutOfPlaneBendSextic",  force.getAmoebaGlobalOutOfPlaneBendSextic());
+    node.setDoubleProperty("cubic",   force.getAmoebaGlobalOutOfPlaneBendCubic());
+    node.setDoubleProperty("quartic", force.getAmoebaGlobalOutOfPlaneBendQuartic());
+    node.setDoubleProperty("pentic",  force.getAmoebaGlobalOutOfPlaneBendPentic());
+    node.setDoubleProperty("sextic",  force.getAmoebaGlobalOutOfPlaneBendSextic());
 
     SerializationNode& bonds = node.createChildNode("OutOfPlaneBend").setIntProperty( "size", force.getNumOutOfPlaneBends() );
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumOutOfPlaneBends()); ii++) {
@@ -64,10 +64,10 @@ void* AmoebaOutOfPlaneBendForceProxy::deserialize(const SerializationNode& node)
     AmoebaOutOfPlaneBendForce* force = new AmoebaOutOfPlaneBendForce();
     try {
 
-        force->setAmoebaGlobalOutOfPlaneBendCubic(node.getDoubleProperty(  "OutOfPlaneBendCubic"));
-        force->setAmoebaGlobalOutOfPlaneBendQuartic(node.getDoubleProperty("OutOfPlaneBendQuartic"));
-        force->setAmoebaGlobalOutOfPlaneBendPentic(node.getDoubleProperty( "OutOfPlaneBendPentic"));
-        force->setAmoebaGlobalOutOfPlaneBendSextic(node.getDoubleProperty( "OutOfPlaneBendSextic"));
+        force->setAmoebaGlobalOutOfPlaneBendCubic(node.getDoubleProperty(  "cubic"));
+        force->setAmoebaGlobalOutOfPlaneBendQuartic(node.getDoubleProperty("quartic"));
+        force->setAmoebaGlobalOutOfPlaneBendPentic(node.getDoubleProperty( "pentic"));
+        force->setAmoebaGlobalOutOfPlaneBendSextic(node.getDoubleProperty( "sextic"));
 
         const SerializationNode& bonds = node.getChildNode("OutOfPlaneBend");
         for (unsigned int ii = 0; ii < bonds.getChildren().size(); ii++) {
