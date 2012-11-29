@@ -1526,16 +1526,6 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
             if (48.033324*sqrt(max(total1, total2)/cu.getNumAtoms()) < inducedEpsilon)
                 break;
         }
-        vector<double> d;
-        labFrameDipoles->download(d);
-        const vector<int> order = cu.getAtomIndex();
-        for (int i = 0; i < 10; i++)
-            printf("%d %d\n", i, order[i]);
-        vector<Vec3> dv(order.size());
-        for (int i = 0; i < dv.size(); i++)
-            dv[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
-        for (int i = 0; i < 10; i++)
-            printf("c %d %g %g %g\n", i, dv[i][0], dv[i][1], dv[i][2]);
         
         // Compute electrostatic force.
         
