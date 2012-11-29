@@ -226,22 +226,24 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
 
             // Compute forces.
 
+            unsigned int tj = tgx;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                int atom2 = y*TILE_SIZE+j;
+                int atom2 = y*TILE_SIZE+tj;
                 if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                     real3 tempForce;
                     real tempEnergy;
-                    computeOneInteraction(data, localData[tbx+j], rmixo, rmixh, emixo, emixh, tempForce, tempEnergy);
+                    computeOneInteraction(data, localData[tbx+tj], rmixo, rmixh, emixo, emixh, tempForce, tempEnergy);
                     data.force += tempForce;
-                    localData[tbx+j].force -= tempForce;
+                    localData[tbx+tj].force -= tempForce;
                     energy += (x == y ? 0.5f*tempEnergy : tempEnergy);
                     real emjxo, emjxh, rmjxo, rmjxh;
-                    initParticleParameters(localData[tbx+j].radius, localData[tbx+j].epsilon, rmjxo, rmjxh, emjxo, emjxh);
-                    computeOneInteraction(localData[tbx+j], data, rmjxo, rmjxh, emjxo, emjxh, tempForce, tempEnergy);
+                    initParticleParameters(localData[tbx+tj].radius, localData[tbx+tj].epsilon, rmjxo, rmjxh, emjxo, emjxh);
+                    computeOneInteraction(localData[tbx+tj], data, rmjxo, rmjxh, emjxo, emjxh, tempForce, tempEnergy);
                     data.force -= tempForce;
-                    localData[tbx+j].force += tempForce;
+                    localData[tbx+tj].force += tempForce;
                     energy += (x == y ? 0.5f*tempEnergy : tempEnergy);
                 }
+                tj = (tj+1) & (TILE_SIZE-1);
             }
             unsigned int offset = x*TILE_SIZE + tgx;
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));

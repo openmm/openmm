@@ -2231,7 +2231,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
     defines["SHCTD"] = cu.doubleToString(force.getShctd());
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::amoebaWcaForce, defines);
     forceKernel = cu.getKernel(module, "computeWCAForce");
-    totalMaximumDispersionEnergy =  AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
+    totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
 
     // Add an interaction to the default nonbonded kernel.  This doesn't actually do any calculations.  It's
     // just so that CudaNonbondedUtilities will keep track of the tiles.
@@ -2269,5 +2269,6 @@ void CudaCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(ContextImpl
         radiusEpsilonVec[i] = make_float2((float) radius, (float) epsilon);
     }
     radiusEpsilon->upload(radiusEpsilonVec);
+    totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
     cu.invalidateMolecules();
 }
