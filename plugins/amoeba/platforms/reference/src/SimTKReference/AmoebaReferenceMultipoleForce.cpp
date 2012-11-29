@@ -1553,6 +1553,10 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateForceAndEnergy( const std::ve
     setup( particlePositions, charges, dipoles, quadrupoles, tholes,
            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
            multipoleAtomCovalentInfo, particleData );
+    for (int i = 0; i < 10; i++)
+        printf("r %d %g %g %g\n", i, particleData[i].dipole[0], particleData[i].dipole[1], particleData[i].dipole[2]);
+//    for (int i = 0; i < 10; i++)
+//        printf("r %d %g %g %g\n", i, dipoles[3*i], dipoles[3*i+1], dipoles[3*i+2]);
 
     std::vector<RealVec> torques;
     initializeRealVecVector( torques );
