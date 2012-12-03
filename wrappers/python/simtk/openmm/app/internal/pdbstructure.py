@@ -708,28 +708,10 @@ class Atom(object):
         except ValueError: self.formal_charge = None
         # figure out atom element
         try:
-            # First try to find a sensible element symbol from columns 76-77
+            # Try to find a sensible element symbol from columns 76-77
             self.element = element.get_by_symbol(self.element_symbol)
         except KeyError:
-            # otherwise, deduce element from first two characters of atom name
-            # remove digits found in some hydrogen atom names
-            symbol = self.name_with_spaces[0:2].strip().lstrip("0123456789")
-            try:
-                # Some molecular dynamics PDB files, such as gromacs with ffamber force
-                # field, include 4-character hydrogen atom names beginning with "H".
-                # Hopefully elements like holmium (Ho) and mercury (Hg) will have fewer than four
-                # characters in the atom name.  This problem is the fault of molecular
-                # dynamics code authors who feel the need to make up their own atom
-                # nomenclature because it is too tedious to read that provided by the PDB.
-                # These are the same folks who invent their own meanings for biochemical terms
-                # like "dipeptide".  Clowntards.
-                if len(self.name) == 4 and self.name[0:1] == "H":
-                    self.element = element.hydrogen
-                else:
-                    self.element = element.get_by_symbol(symbol)
-            except KeyError:
-                # OK, I give up
-                self.element = None
+            self.element = None
 
     def iter_locations(self):
         """

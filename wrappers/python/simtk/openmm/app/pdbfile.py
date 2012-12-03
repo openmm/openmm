@@ -92,30 +92,30 @@ class PDBFile(object):
                     if atomName in atomReplacements:
                         atomName = atomReplacements[atomName]
                     atomName = atomName.strip()
-                    element = None
-
-                    # Try to guess the element.
-                    
-                    upper = atomName.upper()
-                    if upper.startswith('CL'):
-                        element = elem.chlorine
-                    elif upper.startswith('NA'):
-                        element = elem.sodium
-                    elif upper.startswith('MG'):
-                        element = elem.magnesium
-                    elif upper.startswith('BE'):
-                        element = elem.beryllium
-                    elif upper.startswith('LI'):
-                        element = elem.lithium
-                    elif upper.startswith('K'):
-                        element = elem.potassium
-                    elif( len( residue ) == 1 and upper.startswith('CA') ):
-                        element = elem.calcium
-                    else:
-                        try:
-                            element = elem.get_by_symbol(atomName[0])
-                        except KeyError:
-                            pass
+                    element = atom.element
+                    if element is None:
+                        # Try to guess the element.
+                        
+                        upper = atomName.upper()
+                        if upper.startswith('CL'):
+                            element = elem.chlorine
+                        elif upper.startswith('NA'):
+                            element = elem.sodium
+                        elif upper.startswith('MG'):
+                            element = elem.magnesium
+                        elif upper.startswith('BE'):
+                            element = elem.beryllium
+                        elif upper.startswith('LI'):
+                            element = elem.lithium
+                        elif upper.startswith('K'):
+                            element = elem.potassium
+                        elif( len( residue ) == 1 and upper.startswith('CA') ):
+                            element = elem.calcium
+                        else:
+                            try:
+                                element = elem.get_by_symbol(atomName[0])
+                            except KeyError:
+                                pass
                     newAtom = top.addAtom(atomName, element, r)
                     atomByNumber[atom.serial_number] = newAtom
         self._positions = []
