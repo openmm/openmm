@@ -337,11 +337,13 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
         maxTiles = numTiles;
     delete interactingTiles;
     interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
-    forceArgs[8] = &interactingTiles->getDevicePointer();
+    if (forceArgs.size() > 0)
+        forceArgs[8] = &interactingTiles->getDevicePointer();
     findInteractingBlocksArgs[5] = &interactingTiles->getDevicePointer();
     delete interactionFlags;
     interactionFlags = CudaArray::create<unsigned int>(context, maxTiles, "interactionFlags");
-    forceArgs[13] = &interactionFlags->getDevicePointer();
+    if (forceArgs.size() > 0)
+        forceArgs[13] = &interactionFlags->getDevicePointer();
     findInteractingBlocksArgs[6] = &interactionFlags->getDevicePointer();
     findInteractionsWithinBlocksArgs[3] = &interactingTiles->getDevicePointer();
     findInteractionsWithinBlocksArgs[6] = &interactionFlags->getDevicePointer();
