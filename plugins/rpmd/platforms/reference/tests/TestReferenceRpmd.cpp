@@ -106,7 +106,6 @@ void testFreeParticles() {
 
 int main() {
     try {
-        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
         testFreeParticles();
     }
     catch(const std::exception& e) {

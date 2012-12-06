@@ -304,7 +304,6 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaStretchBendForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
 
         FILE* log = NULL;
         //FILE* log = stderr;

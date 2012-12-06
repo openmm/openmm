@@ -48,6 +48,16 @@ extern "C" void registerKernelFactories() {
     }
 }
 
+extern "C" OPENMM_EXPORT void registerRPMDCudaKernelFactories() {
+    try {
+        Platform::getPlatformByName("CUDA");
+    }
+    catch (...) {
+        Platform::registerPlatform(new CudaPlatform());
+    }
+    registerKernelFactories();
+}
+
 KernelImpl* CudaRpmdKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CudaContext& cl = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
     if (name == IntegrateRPMDStepKernel::Name())

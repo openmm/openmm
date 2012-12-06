@@ -315,7 +315,6 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestCudaAmoebaAngleForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         //FILE* log = fopen( "AmoebaAngleForce.log", "w" );;
         FILE* log = NULL;
         //FILE* log = stderr;

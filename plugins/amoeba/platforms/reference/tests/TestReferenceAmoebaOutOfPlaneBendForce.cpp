@@ -521,7 +521,6 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaOutOfPlaneBendForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
 
         //FILE* log = stderr;
         FILE* log = NULL;

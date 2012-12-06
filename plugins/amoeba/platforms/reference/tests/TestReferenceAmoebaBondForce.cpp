@@ -222,7 +222,6 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaBondForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         FILE* log = NULL;
         //FILE* log = stderr;
 

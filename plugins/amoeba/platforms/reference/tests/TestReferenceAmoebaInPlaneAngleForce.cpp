@@ -391,7 +391,6 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "TestReferenceAmoebaInPlaneAngleForce running test..." << std::endl;
-        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         FILE* log = NULL;
         //FILE* log = stderr;
         //FILE* log = fopen( "AmoebaInPlaneAngleForce.log", "w" );;

@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" OPENMM_EXPORT void registerRPMDCudaKernelFactories();
+
 void testFreeParticles() {
     const int numParticles = 100;
     const int numCopies = 30;
@@ -222,7 +224,7 @@ void testParaHydrogen() {
 
 int main(int argc, char* argv[]) {
     try {
-        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        registerRPMDCudaKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testFreeParticles();
