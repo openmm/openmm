@@ -48,6 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" OPENMM_EXPORT void registerRPMDOpenCLKernelFactories();
+
 void testFreeParticles() {
     const int numParticles = 100;
     const int numCopies = 30;
@@ -223,7 +225,7 @@ void testParaHydrogen() {
 
 int main(int argc, char* argv[]) {
     try {
-        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        registerRPMDOpenCLKernelFactories();
         if (argc > 1)
             Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testFreeParticles();

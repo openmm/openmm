@@ -48,6 +48,16 @@ extern "C" void registerKernelFactories() {
     }
 }
 
+extern "C" OPENMM_EXPORT void registerRPMDOpenCLKernelFactories() {
+    try {
+        Platform::getPlatformByName("OpenCL");
+    }
+    catch (...) {
+        Platform::registerPlatform(new OpenCLPlatform());
+    }
+    registerKernelFactories();
+}
+
 KernelImpl* OpenCLRpmdKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     OpenCLContext& cl = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
     if (name == IntegrateRPMDStepKernel::Name())

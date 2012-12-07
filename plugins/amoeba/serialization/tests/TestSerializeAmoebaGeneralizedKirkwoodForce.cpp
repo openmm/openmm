@@ -94,7 +94,6 @@ void testSerialization() {
 
 int main() {
     try {
-        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
         testSerialization();
     }
     catch(const exception& e) {
