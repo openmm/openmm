@@ -149,9 +149,9 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
-			defaultOptimizationOptions = "";
-		else
-	        defaultOptimizationOptions = "-cl-fast-relaxed-math";
+            defaultOptimizationOptions = "";
+        else
+            defaultOptimizationOptions = "-cl-fast-relaxed-math";
         supports64BitGlobalAtomics = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_int64_base_atomics") != string::npos);
         supportsDoublePrecision = (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
         if ((useDoublePrecision || useMixedPrecision) && !supportsDoublePrecision)

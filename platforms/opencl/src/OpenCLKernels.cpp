@@ -2302,7 +2302,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
     int numParticles = force.getNumParticles();
     params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customGBParameters", true);
-    computedValues = new OpenCLParameterSet(cl, force.getNumComputedValues(), numParticles, "customGBComputedValues", true);
+    computedValues = new OpenCLParameterSet(cl, force.getNumComputedValues(), numParticles, "customGBComputedValues", true, cl.getUseDoublePrecision());
     if (force.getNumGlobalParameters() > 0)
         globals = OpenCLArray::create<cl_float>(cl, force.getNumGlobalParameters(), "customGBGlobals", CL_MEM_READ_ONLY);
     vector<vector<cl_float> > paramVector(numParticles);

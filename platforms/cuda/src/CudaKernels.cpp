@@ -2246,7 +2246,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
 
     int numParticles = force.getNumParticles();
     params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), numParticles, "customGBParameters", true);
-    computedValues = new CudaParameterSet(cu, force.getNumComputedValues(), numParticles, "customGBComputedValues", true);
+    computedValues = new CudaParameterSet(cu, force.getNumComputedValues(), numParticles, "customGBComputedValues", true, cu.getUseDoublePrecision());
     if (force.getNumGlobalParameters() > 0)
         globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customGBGlobals");
     vector<vector<float> > paramVector(numParticles);
