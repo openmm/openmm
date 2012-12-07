@@ -311,7 +311,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
         system.addParticle( 1.0 );
     }
 
-    double multipoleData[] = {
+    static const double multipoleData[] = {
         0,   1.1164000e-01,   0.0000000e+00,   0.0000000e+00,   7.3465672e-03,  -1.5868283e-04,   0.0000000e+00,  -1.3245349e-05,   0.0000000e+00,  -3.2179944e-04,   0.0000000e+00,  -1.3245349e-05,   0.0000000e+00,   4.8048227e-04, 0, 1, 4, -1,   3.9000000e-01,   3.1996314e-01,   1.0730000e-03,
         1,   1.8220000e-02,   8.7176654e-03,   6.6850957e-03,   1.4157078e-02,  -1.9774681e-04,  -1.5194348e-04,  -1.9436780e-04,  -1.5194348e-04,  -2.6774460e-04,  -5.9291372e-05,  -1.9436780e-04,  -5.9291372e-05,   4.6549141e-04, 0, 0, 2, 7,   3.9000000e-01,   3.3178695e-01,   1.3340000e-03,
         2,   8.5068000e-01,  -8.9166360e-04,   0.0000000e+00,   1.4682022e-02,   2.7501601e-04,   0.0000000e+00,  -6.9353730e-06,   0.0000000e+00,  -3.8828755e-04,   0.0000000e+00,  -6.9353730e-06,   0.0000000e+00,   1.1327154e-04, 0, 3, 1, -1,   3.9000000e-01,   3.3178695e-01,   1.3340000e-03,
@@ -925,7 +925,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     std::vector<double> dipole(3);
     std::vector<double> quadrupole(9);
     unsigned int entriesPerParticle = 21;
-    double* data    = multipoleData;
+    const double* data    = multipoleData;
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
 
         dipole[0]       = data[dipoleIndex + 0];
@@ -951,7 +951,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
     // covalent maps for multipole force
     // structure: particle index, map type, number of entries, entries ... 
 
-    int covalentMapData[] = {
+    static const int covalentMapData[] = {
         0, 0, 4,  1, 4, 5, 6,
         0, 1, 3,  2, 7, 8,
         0, 2, 5,  3, 9, 12, 13, 19,
@@ -5747,7 +5747,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
 
     // addParticle: charge, radius, scalingFactor
 
-    double generalizedKirkwoodData[] = {
+    static const double generalizedKirkwoodData[] = {
       1.1164000e-01,   1.5965000e-01,   6.9000000e-01,
       1.8220000e-02,   1.7510000e-01,   6.9000000e-01,
       8.5068000e-01,   1.7510000e-01,   6.9000000e-01,
@@ -6346,7 +6346,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
      -9.0443000e-01,   1.5656000e-01,   6.9000000e-01
     };
 
-    double* gkData = generalizedKirkwoodData;
+    const double* gkData = generalizedKirkwoodData;
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
         amoebaGeneralizedKirkwoodForce->addParticle( gkData[0], gkData[1], gkData[2] );
         gkData += 3;
@@ -6357,7 +6357,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
 
     std::vector<Vec3> positions(numberOfParticles);
 
-    double positionsData[] = {
+    static const double positionsData[] = {
       1.4717950e-01,  -1.0081856e+00,  -3.8562320e-01,
       4.8537500e-02,  -9.0291270e-01,  -3.5820030e-01,
      -2.6019700e-02,  -9.3169790e-01,  -2.2723420e-01,
@@ -6956,7 +6956,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
       4.2022320e-01,  -1.0755661e+00,   3.7395090e-01,
     };
 
-    double* positionsDataPtr = positionsData;
+    const double* positionsDataPtr = positionsData;
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
         positions[ii]     = Vec3( positionsDataPtr[0], positionsDataPtr[1], positionsDataPtr[2] );
         positionsDataPtr += 3;
@@ -7233,7 +7233,7 @@ static void testGeneralizedKirkwoodVillinDirectPolarization( FILE* log ) {
 
     double expectedEnergy            = -8.4281157e+03;
 
-    double forceData[] = {
+    static const double forceData[] = {
       1.4000030e+02,   6.5353942e+01,  -1.5232364e+02,
      -2.0189390e+01,  -8.9048971e+01,   1.6728524e+02,
       1.5879992e+02,   6.1585467e+02,  -4.3582690e+02,
@@ -7832,7 +7832,7 @@ static void testGeneralizedKirkwoodVillinDirectPolarization( FILE* log ) {
      -4.8728150e+02,   3.3969945e+01,   3.6799170e+01,
     };
 
-    double* forceDataPtr = forceData;
+    const double* forceDataPtr = forceData;
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
         expectedForces[ii]    = Vec3( forceDataPtr[0], forceDataPtr[1], forceDataPtr[2] );
         forceDataPtr         += 3;
@@ -7857,7 +7857,7 @@ static void testGeneralizedKirkwoodVillinMutualPolarization( FILE* log ) {
 
     double expectedEnergy            = -8.6477811e+03;
 
-    double forceData[] = {
+    static const double forceData[] = {
       1.2966353e+02,   8.5572073e+01,  -1.4934563e+02,
      -3.6953516e+01,  -5.4877368e+01,   1.5127299e+02,
       1.9708505e+02,   6.2850891e+02,  -5.0909467e+02,
@@ -8456,7 +8456,7 @@ static void testGeneralizedKirkwoodVillinMutualPolarization( FILE* log ) {
      -5.4092846e+02,  -4.6549548e+01,   2.9199345e+01
     };
 
-    double* forceDataPtr = forceData;
+    const double* forceDataPtr = forceData;
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){ 
         expectedForces[ii]    = Vec3( forceDataPtr[0], forceDataPtr[1], forceDataPtr[2] );
         forceDataPtr         += 3;
