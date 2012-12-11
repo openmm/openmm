@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -83,7 +83,7 @@ public:
     /**
      * Get the names of all Platform-specific properties this Platform supports.
      */
-    const std::vector<std::string>& getPropertyNames();
+    const std::vector<std::string>& getPropertyNames() const;
     /**
      * Get the value of a Platform-specific property for a Context.
      *
