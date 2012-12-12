@@ -29,6 +29,7 @@
 
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "windowsExportCuda.h"
 
 namespace OpenMM {
     
@@ -38,7 +39,7 @@ class CudaContext;
  * This Platform subclass uses CUDA implementations of the OpenMM kernels.
  */
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
+class OPENMM_EXPORT_CUDA CudaPlatform : public Platform {
 public:
     class PlatformData;
     CudaPlatform();
@@ -91,7 +92,7 @@ public:
     }
 };
 
-class OPENMM_EXPORT CudaPlatform::PlatformData {
+class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
     PlatformData(const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
             const std::string& compilerProperty, const std::string& tempProperty);

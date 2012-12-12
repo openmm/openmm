@@ -83,48 +83,48 @@ extern "C" {
  <xsl:variable name="name_lower" select="lower-case($name)"/>
  <xsl:variable name="name_upper" select="upper-case($name)"/>
 /* <xsl:value-of select="$name"/> */
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_create_(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_lower"/>_create_(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
     result = <xsl:value-of select="$name"/>_create(size);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_CREATE(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_upper"/>_CREATE(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
     result = <xsl:value-of select="$name"/>_create(size);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_destroy_(<xsl:value-of select="$name"/>*&amp; array) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_lower"/>_destroy_(<xsl:value-of select="$name"/>*&amp; array) {
     <xsl:value-of select="$name"/>_destroy(array);
     array = 0;
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_DESTROY(<xsl:value-of select="$name"/>*&amp; array) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_upper"/>_DESTROY(<xsl:value-of select="$name"/>*&amp; array) {
     <xsl:value-of select="$name"/>_destroy(array);
     array = 0;
 }
-OPENMM_EXPORT int <xsl:value-of select="$name_lower"/>_getsize_(const <xsl:value-of select="$name"/>* const&amp; array) {
+OPENMM_EXPORT_AMOEBA int <xsl:value-of select="$name_lower"/>_getsize_(const <xsl:value-of select="$name"/>* const&amp; array) {
     return <xsl:value-of select="$name"/>_getSize(array);
 }
-OPENMM_EXPORT int <xsl:value-of select="$name_upper"/>_GETSIZE(const <xsl:value-of select="$name"/>* const&amp; array) {
+OPENMM_EXPORT_AMOEBA int <xsl:value-of select="$name_upper"/>_GETSIZE(const <xsl:value-of select="$name"/>* const&amp; array) {
     return <xsl:value-of select="$name"/>_getSize(array);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_resize_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_lower"/>_resize_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
     <xsl:value-of select="$name"/>_resize(array, size);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_RESIZE(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_upper"/>_RESIZE(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
     <xsl:value-of select="$name"/>_resize(array, size);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_append(array, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_append(array, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
     result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
     result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
 </xsl:template>
@@ -188,7 +188,7 @@ OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of 
 <xsl:template name="constructor">
  <xsl:param name="function_name"/>
  <xsl:param name="suffix"/>
-OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; result')"/>
+OPENMM_EXPORT_AMOEBA <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; result')"/>
   <!-- Generate the list of arguments -->
   <xsl:for-each select="Argument">
    <xsl:value-of select="', '"/>
@@ -231,7 +231,7 @@ OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', 
 <!-- Print out the definition of a destructor -->
 <xsl:template name="destructor">
  <xsl:param name="function_name"/>
-OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; destroy) {')"/>
+OPENMM_EXPORT_AMOEBA <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; destroy) {')"/>
     OpenMM_<xsl:value-of select="concat(@name, '_destroy(destroy);')"/>
     destroy = 0;
 }
@@ -245,7 +245,7 @@ OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', 
  <!-- First the method signature -->
  <xsl:variable name="has_return" select="@returns=$int_type_id or @returns=$double_type_id"/>
  <xsl:variable name="has_return_arg" select="not($has_return or @returns=$void_type_id)"/>
-OPENMM_EXPORT <xsl:if test="$has_return">
+OPENMM_EXPORT_AMOEBA <xsl:if test="$has_return">
   <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template>
  </xsl:if>
  <xsl:if test="not($has_return)">

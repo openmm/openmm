@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include <vector>
 
 namespace OpenMM {
@@ -45,7 +45,7 @@ namespace OpenMM {
  * an out-of-plane bend has been added, you can modify its force field parameters by calling setOutOfPlaneBendParameters().
  */
 
-class OPENMM_EXPORT AmoebaOutOfPlaneBendForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaOutOfPlaneBendForce : public Force {
 
 public:
 

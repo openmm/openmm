@@ -43,7 +43,7 @@ namespace OpenMM {
  * user defined mathematical expressions.
  */
 
-class OPENMM_EXPORT CudaExpressionUtilities {
+class OPENMM_EXPORT_CUDA CudaExpressionUtilities {
 public:
     CudaExpressionUtilities(CudaContext& context) : context(context) {
     }

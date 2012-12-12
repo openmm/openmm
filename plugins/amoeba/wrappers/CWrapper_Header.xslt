@@ -32,8 +32,8 @@
 #ifndef AMOEBA_OPENMM_CWRAPPER_H_
 #define AMOEBA_OPENMM_CWRAPPER_H_
 
-#ifndef OPENMM_EXPORT
-#define OPENMM_EXPORT
+#ifndef OPENMM_EXPORT_AMOEBA
+#define OPENMM_EXPORT_AMOEBA
 #endif
 
 /* Global Constants */
@@ -54,9 +54,9 @@ extern "C" {
 #endif
 
 /* OpenMM_3D_DoubleArray */
-OPENMM_EXPORT OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3);
-OPENMM_EXPORT void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values);
-OPENMM_EXPORT void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);
+OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3);
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values);
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);
 
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'int'"/>
@@ -80,13 +80,13 @@ OPENMM_EXPORT void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array);
  <xsl:param name="element_type"/>
  <xsl:param name="name"/>
 /* <xsl:value-of select="$name"/> */
-extern OPENMM_EXPORT <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size);
-extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array);
-extern OPENMM_EXPORT int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array);
-extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size);
-extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value);
-extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value);
-extern OPENMM_EXPORT <xsl:value-of select="concat($element_type, ' ', $name)"/>_get(const <xsl:value-of select="$name"/>* array, int index);
+extern OPENMM_EXPORT_AMOEBA <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size);
+extern OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array);
+extern OPENMM_EXPORT_AMOEBA int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array);
+extern OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size);
+extern OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value);
+extern OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value);
+extern OPENMM_EXPORT_AMOEBA <xsl:value-of select="concat($element_type, ' ', $name)"/>_get(const <xsl:value-of select="$name"/>* array, int index);
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -110,7 +110,7 @@ extern OPENMM_EXPORT <xsl:value-of select="concat($element_type, ' ', $name)"/>_
    </xsl:call-template>
   </xsl:for-each>
  </xsl:if>
-extern OPENMM_EXPORT void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target);')"/>
+extern OPENMM_EXPORT_AMOEBA void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target);')"/>
  <!-- Methods -->
  <xsl:variable name="methods" select="/GCC_XML/Method[@context=$class_id and @access='public']"/>
  <xsl:for-each select="$methods">
@@ -143,7 +143,7 @@ typedef enum {
 <!-- Print out the declaration for a constructor -->
 <xsl:template name="constructor">
  <xsl:param name="suffix"/>
-extern OPENMM_EXPORT OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
+extern OPENMM_EXPORT_AMOEBA OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
   <xsl:for-each select="Argument">
    <xsl:if test="position() > 1">, </xsl:if>
    <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template>
@@ -155,7 +155,7 @@ extern OPENMM_EXPORT OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @na
 <!-- Print out the declaration for a method -->
 <xsl:template name="method">
  <xsl:param name="class_name"/>
-extern OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
+extern OPENMM_EXPORT_AMOEBA <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
  <xsl:if test="not(@static='1')">
   <xsl:if test="@const='1'">
    <xsl:value-of select="'const '"/>

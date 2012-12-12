@@ -61,7 +61,7 @@ namespace OpenMM {
  * by ForceImpls during calcForcesAndEnergy().
  */
 
-class OPENMM_EXPORT OpenCLNonbondedUtilities {
+class OPENMM_EXPORT_OPENCL OpenCLNonbondedUtilities {
 public:
     class ParameterInfo;
     OpenCLNonbondedUtilities(OpenCLContext& context);

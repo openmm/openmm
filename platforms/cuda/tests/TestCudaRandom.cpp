@@ -128,7 +128,7 @@ void testRandomVelocities() {
         ke += 0.5*system.getParticleMass(i)*v.dot(v);
     }
     double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temperture;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 4/sqrt(numParticles));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 4/sqrt((double) numParticles));
 }
 
 int main(int argc, char* argv[]) {

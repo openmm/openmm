@@ -43,7 +43,7 @@ namespace OpenMM {
  * user defined mathematical expressions.
  */
 
-class OPENMM_EXPORT OpenCLExpressionUtilities {
+class OPENMM_EXPORT_OPENCL OpenCLExpressionUtilities {
 public:
     OpenCLExpressionUtilities(OpenCLContext& context) : context(context) {
     }

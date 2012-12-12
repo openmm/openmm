@@ -29,7 +29,7 @@
 
 #include "OpenCLArray.h"
 #include "OpenCLKernelSources.h"
-#include "openmm/internal/windowsExport.h"
+#include "windowsExportOpenCL.h"
 #include <map>
 
 namespace OpenMM {

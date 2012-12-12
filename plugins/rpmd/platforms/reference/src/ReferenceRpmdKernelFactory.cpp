@@ -27,7 +27,6 @@
 #include "ReferenceRpmdKernelFactory.h"
 #include "ReferenceRpmdKernels.h"
 #include "ReferencePlatform.h"
-#include "openmm/internal/windowsExport.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 

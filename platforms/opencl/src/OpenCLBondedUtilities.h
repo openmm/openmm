@@ -78,7 +78,7 @@ namespace OpenMM {
  * from your interaction code.
  */
 
-class OPENMM_EXPORT OpenCLBondedUtilities {
+class OPENMM_EXPORT_OPENCL OpenCLBondedUtilities {
 public:
     OpenCLBondedUtilities(OpenCLContext& context);
     ~OpenCLBondedUtilities();

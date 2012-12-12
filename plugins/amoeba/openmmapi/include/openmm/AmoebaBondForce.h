@@ -34,7 +34,7 @@
 
 #include "openmm/Force.h"
 #include "openmm/Vec3.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include <map>
 #include <vector>
 
@@ -50,7 +50,7 @@ namespace OpenMM {
  * a bond has been added, you can modify its force field parameters by calling setBondParameters().
  */
 
-class OPENMM_EXPORT AmoebaBondForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaBondForce : public Force {
 
 public:
 

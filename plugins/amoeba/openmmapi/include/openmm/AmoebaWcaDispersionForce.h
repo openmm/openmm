@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include <vector>
 
 namespace OpenMM {
@@ -46,7 +46,7 @@ namespace OpenMM {
  * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
  */
 
-class OPENMM_EXPORT AmoebaWcaDispersionForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaWcaDispersionForce : public Force {
 
 public:
 

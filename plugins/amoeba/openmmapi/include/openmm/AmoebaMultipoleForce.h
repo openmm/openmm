@@ -34,7 +34,7 @@
 
 #include "openmm/Force.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include "openmm/Vec3.h"
 
 #include <sstream>
@@ -49,7 +49,7 @@ namespace OpenMM {
  * an entry has been added, you can modify its force field parameters by calling setMultipoleParameters().
  */
 
-class OPENMM_EXPORT AmoebaMultipoleForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaMultipoleForce : public Force {
 
 public:
 

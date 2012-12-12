@@ -29,7 +29,7 @@
 
 #include "openmm/System.h"
 #include "CudaContext.h"
-#include "openmm/internal/windowsExport.h"
+#include "windowsExportCuda.h"
 #include <iosfwd>
 
 namespace OpenMM {
@@ -39,7 +39,7 @@ namespace OpenMM {
  * common workspace arrays, random number generation, and enforcing constraints.
  */
 
-class OPENMM_EXPORT CudaIntegrationUtilities {
+class OPENMM_EXPORT_CUDA CudaIntegrationUtilities {
 public:
     CudaIntegrationUtilities(CudaContext& context, const System& system);
     ~CudaIntegrationUtilities();

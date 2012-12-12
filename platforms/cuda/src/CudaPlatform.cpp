@@ -42,7 +42,7 @@
 using namespace OpenMM;
 using namespace std;
 
-extern "C" OPENMM_EXPORT void registerPlatforms() {
+extern "C" OPENMM_EXPORT_CUDA void registerPlatforms() {
     Platform::registerPlatform(new CudaPlatform());
 }
 

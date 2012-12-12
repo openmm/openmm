@@ -24,6 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "AmoebaCudaKernels.h"
 #include "CudaAmoebaKernelSources.h"
 #include "openmm/internal/ContextImpl.h"

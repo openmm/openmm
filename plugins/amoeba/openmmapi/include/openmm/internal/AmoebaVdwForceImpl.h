@@ -47,7 +47,7 @@ class System;
  * This is the internal implementation of AmoebaVdwForce.
  */
 
-class AmoebaVdwForceImpl : public ForceImpl {
+class OPENMM_EXPORT_AMOEBA AmoebaVdwForceImpl : public ForceImpl {
 public:
     AmoebaVdwForceImpl(AmoebaVdwForce& owner);
     ~AmoebaVdwForceImpl();

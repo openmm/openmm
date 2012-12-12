@@ -36,7 +36,7 @@
 #include "openmm/Kernel.h"
 #include "openmm/State.h"
 #include "openmm/Vec3.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportRpmd.h"
 
 namespace OpenMM {
 
@@ -54,7 +54,7 @@ namespace OpenMM {
  * state information.
  */
 
-class OPENMM_EXPORT RPMDIntegrator : public Integrator {
+class OPENMM_EXPORT_RPMD RPMDIntegrator : public Integrator {
 public:
     /**
      * Create a RPMDIntegrator.

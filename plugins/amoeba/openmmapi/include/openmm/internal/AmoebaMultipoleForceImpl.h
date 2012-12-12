@@ -45,7 +45,7 @@ namespace OpenMM {
  * This is the internal implementation of AmoebaMultipoleForce.
  */
 
-class OPENMM_EXPORT AmoebaMultipoleForceImpl : public ForceImpl {
+class OPENMM_EXPORT_AMOEBA AmoebaMultipoleForceImpl : public ForceImpl {
 public:
     AmoebaMultipoleForceImpl(AmoebaMultipoleForce& owner);
     ~AmoebaMultipoleForceImpl();

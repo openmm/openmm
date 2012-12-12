@@ -49,26 +49,26 @@ using namespace std;
 extern "C" {
 
 /* OpenMM_2D_IntArray */
-OPENMM_EXPORT OpenMM_2D_IntArray* OpenMM_2D_IntArray_create(int size) {
+OPENMM_EXPORT_AMOEBA OpenMM_2D_IntArray* OpenMM_2D_IntArray_create(int size) {
     return reinterpret_cast&lt;OpenMM_2D_IntArray*&gt;(new vector&lt;vector&lt;int&gt; &gt;(size));
 }
-OPENMM_EXPORT void OpenMM_2D_IntArray_destroy(OpenMM_2D_IntArray* array) {
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_destroy(OpenMM_2D_IntArray* array) {
     delete reinterpret_cast&lt;vector&lt;vector&lt;int&gt; &gt;*&gt;(array);
 }
-OPENMM_EXPORT int OpenMM_2D_IntArray_getSize(const OpenMM_2D_IntArray* array) {
+OPENMM_EXPORT_AMOEBA int OpenMM_2D_IntArray_getSize(const OpenMM_2D_IntArray* array) {
     return reinterpret_cast&lt;const vector&lt;vector&lt;int&gt; &gt;*&gt;(array)->size();
 }
-OPENMM_EXPORT void OpenMM_2D_IntArray_resize(OpenMM_2D_IntArray* array, int size) {
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_resize(OpenMM_2D_IntArray* array, int size) {
     reinterpret_cast&lt;vector&lt;vector&lt;int&gt; &gt;*&gt;(array)->resize(size);
 }
-OPENMM_EXPORT void OpenMM_2D_IntArray_append(OpenMM_2D_IntArray* array, int index1, int value ) {
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_append(OpenMM_2D_IntArray* array, int index1, int value ) {
     vector&lt;vector&lt;int&gt; &gt;* array2DInt = reinterpret_cast&lt;vector&lt;vector&lt;int&gt; &gt;*&gt;(array);
     if( array2DInt->size() &lt;= index1 ){
         array2DInt->resize( index1+1 );
     }
     (*array2DInt)[index1].push_back( value );
 }
-OPENMM_EXPORT void OpenMM_2D_IntArray_set(OpenMM_2D_IntArray* array, int index1, int index2, int value) {
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_set(OpenMM_2D_IntArray* array, int index1, int index2, int value) {
     vector&lt;vector&lt;int&gt; &gt;* array2DInt = reinterpret_cast&lt;vector&lt;vector&lt;int&gt; &gt;*&gt;(array);
     if( array2DInt->size() &lt;= index1 ){
         array2DInt->resize( index1+1 );
@@ -78,7 +78,7 @@ OPENMM_EXPORT void OpenMM_2D_IntArray_set(OpenMM_2D_IntArray* array, int index1,
     }
     (*array2DInt)[index1][index2] = value;
 }
-OPENMM_EXPORT void OpenMM_2D_IntArray_get(const OpenMM_2D_IntArray* array, int index1, int index2, int* value) {
+OPENMM_EXPORT_AMOEBA void OpenMM_2D_IntArray_get(const OpenMM_2D_IntArray* array, int index1, int index2, int* value) {
     const vector&lt;vector&lt;int&gt; &gt;* array2DInt = reinterpret_cast&lt;const vector&lt;vector&lt;int&gt; &gt;*&gt;(array);
     if ( array2DInt->size() &lt;= index1 )
         throw OpenMMException("OpenMM_2D_IntArray_get: first index out of range.");
@@ -89,7 +89,7 @@ OPENMM_EXPORT void OpenMM_2D_IntArray_get(const OpenMM_2D_IntArray* array, int i
 }
 
 /* OpenMM_3D_DoubleArray */
-OPENMM_EXPORT OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3) {
+OPENMM_EXPORT_AMOEBA OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int size2, int size3) {
     int ii, jj;  
     std::vector&lt; std::vector&lt; std::vector&lt;double&gt; &gt; &gt;* v3D_Array = new std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt;(size1);
 
@@ -102,7 +102,7 @@ OPENMM_EXPORT OpenMM_3D_DoubleArray* OpenMM_3D_DoubleArray_create(int size1, int
     return reinterpret_cast&lt;OpenMM_3D_DoubleArray*&gt;(v3D_Array);
 }
 
-OPENMM_EXPORT void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values) {
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int index1, int index2, OpenMM_DoubleArray* values) {
     unsigned int ii;
     std::vector&lt; std::vector&lt; std::vector&lt;double&gt; &gt; &gt;* v3D_Array = reinterpret_cast&lt;std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt;*&gt;(array);
     std::vector&lt;double&gt; * value_array                            = reinterpret_cast&lt;std::vector&lt;double&gt; *&gt;(values);
@@ -111,7 +111,7 @@ OPENMM_EXPORT void OpenMM_3D_DoubleArray_set(OpenMM_3D_DoubleArray* array, int i
     }    
 }
 
-OPENMM_EXPORT void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array) {
+OPENMM_EXPORT_AMOEBA void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array) {
     delete reinterpret_cast&lt;std::vector&lt;std::vector&lt;std::vector&lt;double&gt; &gt; &gt;*&gt;(array);
 }
 
@@ -134,25 +134,25 @@ OPENMM_EXPORT void OpenMM_3D_DoubleArray_destroy( OpenMM_3D_DoubleArray* array) 
  <xsl:param name="element_type"/>
  <xsl:param name="name"/>
 /* <xsl:value-of select="$name"/> */
-OPENMM_EXPORT <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size) {
+OPENMM_EXPORT_AMOEBA <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size) {
     return reinterpret_cast&lt;<xsl:value-of select="$name"/>*&gt;(new vector&lt;<xsl:value-of select="$element_type"/>&gt;(size));
 }
-OPENMM_EXPORT void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array) {
     delete reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array);
 }
-OPENMM_EXPORT int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array) {
+OPENMM_EXPORT_AMOEBA int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array) {
     return reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->size();
 }
-OPENMM_EXPORT void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size) {
     reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->resize(size);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value) {
     reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->push_back(value);
 }
-OPENMM_EXPORT void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT_AMOEBA void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value) {
     (*reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index] = value;
 }
-OPENMM_EXPORT <info xml:space="preserve"> <xsl:value-of select="$element_type"/>  <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
+OPENMM_EXPORT_AMOEBA <info xml:space="preserve"> <xsl:value-of select="$element_type"/>  <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
     return (*reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index];
 }
 </info>
@@ -173,7 +173,7 @@ OPENMM_EXPORT <info xml:space="preserve"> <xsl:value-of select="$element_type"/>
    </xsl:call-template>
   </xsl:for-each>
  </xsl:if>
-OPENMM_EXPORT void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target) {')"/>
+OPENMM_EXPORT_AMOEBA void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target) {')"/>
     delete reinterpret_cast&lt;<xsl:value-of select="@name"/>*&gt;(target);
 }
  <!-- Methods -->
@@ -198,7 +198,7 @@ OPENMM_EXPORT void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_'
 <!-- Print out the definition of a constructor -->
 <xsl:template name="constructor">
  <xsl:param name="suffix"/>
-OPENMM_EXPORT OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
+OPENMM_EXPORT_AMOEBA OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
   <xsl:for-each select="Argument">
    <xsl:if test="position() > 1">, </xsl:if>
    <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template>
@@ -223,7 +223,7 @@ OPENMM_EXPORT OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_c
  <xsl:param name="class_id"/>
  <!-- First the method signature -->
  <xsl:value-of select="$newline"/>
-OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
+OPENMM_EXPORT_AMOEBA <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
  <xsl:if test="not(@static='1')">
   <xsl:if test="@const='1'">
    <xsl:value-of select="'const '"/>

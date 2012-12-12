@@ -39,7 +39,7 @@
 #include <cuda.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
-#include "openmm/internal/windowsExport.h"
+#include "windowsExportCuda.h"
 #include "CudaPlatform.h"
 
 namespace OpenMM {
@@ -63,7 +63,7 @@ class System;
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT CudaContext {
+class OPENMM_EXPORT_CUDA CudaContext {
 public:
     class WorkTask;
     class WorkThread;

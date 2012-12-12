@@ -29,6 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -36,10 +39,6 @@
 #include <cmath>
 #include <map>
 #include <sstream>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 using namespace OpenMM;
 using namespace std;

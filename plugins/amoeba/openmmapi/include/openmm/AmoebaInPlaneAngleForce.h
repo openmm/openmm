@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include <vector>
 
 namespace OpenMM {
@@ -48,7 +48,7 @@ namespace OpenMM {
  * an angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
 
-class OPENMM_EXPORT AmoebaInPlaneAngleForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaInPlaneAngleForce : public Force {
 
 public:
 

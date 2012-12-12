@@ -40,7 +40,7 @@ class CudaNonbondedUtilities;
  * on the number of parameters required.
  */
 
-class OPENMM_EXPORT CudaParameterSet {
+class OPENMM_EXPORT_CUDA CudaParameterSet {
 public:
     /**
      * Create an CudaParameterSet.

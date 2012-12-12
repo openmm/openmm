@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 
 #include <vector>
 #include <cmath>
@@ -50,7 +50,7 @@ typedef std::vector< std::vector< std::vector<float> > > TorsionTorsionGridFloat
  * a torsion-torsion has been added, you can modify its force field parameters by calling setTorsionTorsionParameters().
  */
 
-class OPENMM_EXPORT AmoebaTorsionTorsionForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaTorsionTorsionForce : public Force {
 
 public:
     /**

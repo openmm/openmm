@@ -29,7 +29,7 @@
 
 #include "openmm/Platform.h"
 #include "openmm/System.h"
-
+#include "windowsExportOpenCL.h"
 namespace OpenMM {
     
 class OpenCLContext;
@@ -38,7 +38,7 @@ class OpenCLContext;
  * This Platform subclass uses OpenCL implementations of the OpenMM kernels.
  */
 
-class OPENMM_EXPORT OpenCLPlatform : public Platform {
+class OPENMM_EXPORT_OPENCL OpenCLPlatform : public Platform {
 public:
     class PlatformData;
     OpenCLPlatform();
@@ -77,7 +77,7 @@ public:
     }
 };
 
-class OPENMM_EXPORT OpenCLPlatform::PlatformData {
+class OPENMM_EXPORT_OPENCL OpenCLPlatform::PlatformData {
 public:
     PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty);
     ~PlatformData();

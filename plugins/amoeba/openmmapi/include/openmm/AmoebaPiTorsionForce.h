@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include "openmm/internal/windowsExport.h"
+#include "openmm/internal/windowsExportAmoeba.h"
 #include <vector>
 
 namespace OpenMM {
@@ -45,7 +45,7 @@ namespace OpenMM {
  * a torsion has been added, you can modify its force field parameters by calling setPiTorsionParameters().
  */
 
-class OPENMM_EXPORT AmoebaPiTorsionForce : public Force {
+class OPENMM_EXPORT_AMOEBA AmoebaPiTorsionForce : public Force {
 
 public:
 

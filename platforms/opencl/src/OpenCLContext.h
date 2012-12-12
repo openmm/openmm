@@ -37,7 +37,7 @@
     #define NOMINMAX
 #endif
 #include <cl.hpp>
-#include "openmm/internal/windowsExport.h"
+#include "windowsExportOpenCL.h"
 #include "OpenCLPlatform.h"
 
 namespace OpenMM {
@@ -153,7 +153,7 @@ struct mm_int16 {
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT OpenCLContext {
+class OPENMM_EXPORT_OPENCL OpenCLContext {
 public:
     class WorkTask;
     class WorkThread;

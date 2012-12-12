@@ -27,7 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/windowsExport.h"
+#include "windowsExportOpenCL.h"
 #include <vector>
 
 namespace OpenMM {
@@ -37,7 +37,7 @@ namespace OpenMM {
  * about the behavior and requirements of that force.
  */
 
-class OPENMM_EXPORT OpenCLForceInfo {
+class OPENMM_EXPORT_OPENCL OpenCLForceInfo {
 public:
     OpenCLForceInfo(int requiredForceBuffers) : requiredForceBuffers(requiredForceBuffers) {
     }

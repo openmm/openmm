@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaArray.h"
-#include "openmm/internal/windowsExport.h"
+#include "windowsExportCuda.h"
 #include "CudaContext.h"
 
 namespace OpenMM {
@@ -66,7 +66,7 @@ namespace OpenMM {
  * elements).
  */
     
-class OPENMM_EXPORT CudaSort {
+class OPENMM_EXPORT_CUDA CudaSort {
 public:
     class SortTrait;
     /**

@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/internal/windowsExportAmoebaSerialization.h"
 #include "openmm/serialization/SerializationProxy.h"
 
 namespace OpenMM {
@@ -41,7 +41,7 @@ namespace OpenMM {
  * This is a proxy for serializing AmoebaTorsionTorsionForce objects.
  */
 
-class OPENMM_EXPORT AmoebaTorsionTorsionForceProxy : public SerializationProxy {
+class OPENMM_EXPORT_AMOEBA_SERIALIZATION AmoebaTorsionTorsionForceProxy : public SerializationProxy {
 public:
     AmoebaTorsionTorsionForceProxy();
     void serialize(const void* object, SerializationNode& node) const;

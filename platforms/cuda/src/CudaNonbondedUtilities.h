@@ -61,7 +61,7 @@ namespace OpenMM {
  * by ForceImpls during calcForcesAndEnergy().
  */
 
-class OPENMM_EXPORT CudaNonbondedUtilities {
+class OPENMM_EXPORT_CUDA CudaNonbondedUtilities {
 public:
     class ParameterInfo;
     CudaNonbondedUtilities(CudaContext& context);

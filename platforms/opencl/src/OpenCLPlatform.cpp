@@ -39,7 +39,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-extern "C" OPENMM_EXPORT void registerPlatforms() {
+extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
     Platform::registerPlatform(new OpenCLPlatform());
 }
 

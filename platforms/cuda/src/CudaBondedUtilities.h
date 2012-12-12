@@ -78,7 +78,7 @@ namespace OpenMM {
  * from your interaction code.
  */
 
-class OPENMM_EXPORT CudaBondedUtilities {
+class OPENMM_EXPORT_CUDA CudaBondedUtilities {
 public:
     CudaBondedUtilities(CudaContext& context);
     ~CudaBondedUtilities();
