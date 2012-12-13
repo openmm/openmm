@@ -26,13 +26,13 @@ for i in range(numPlatforms):
     platform = Platform.getPlatform(i)
     print i+1, platform.getName(),
     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
-    simulation = Simulation(pdb.topology, system, integrator, platform)
-    simulation.context.setPositions(pdb.positions)
     try:
+        simulation = Simulation(pdb.topology, system, integrator, platform)
+        simulation.context.setPositions(pdb.positions)
         forces[i] = simulation.context.getState(getForces=True).getForces()
         print "- Successfully computed forces"
     except:
-        print "- Error computing forces"
+        print "- Error computing forces with", platform.getName(), "platform"
 
 # See how well the platforms agree.
 
