@@ -48,7 +48,7 @@ void AmoebaBondForceProxy::serialize(const void* object, SerializationNode& node
     node.setDoubleProperty("cubic",   force.getAmoebaGlobalBondCubic());
     node.setDoubleProperty("quartic", force.getAmoebaGlobalBondQuartic());
 
-    SerializationNode& bonds = node.createChildNode("Bonds").setIntProperty( "size", force.getNumBonds() );
+    SerializationNode& bonds = node.createChildNode("Bonds");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumBonds()); ii++) {
         int particle1, particle2;
         double distance, k;

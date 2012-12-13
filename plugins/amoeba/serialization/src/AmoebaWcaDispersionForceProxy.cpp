@@ -53,11 +53,11 @@ void AmoebaWcaDispersionForceProxy::serialize(const void* object, SerializationN
     node.setDoubleProperty("Dispoff", force.getDispoff());
     node.setDoubleProperty("Slevy",   force.getSlevy());
 
-    SerializationNode& particles = node.createChildNode("WcaDispersionParticles").setIntProperty( "size", force.getNumParticles() );
+    SerializationNode& particles = node.createChildNode("WcaDispersionParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
         double radius, epsilon;
         force.getParticleParameters( ii,  radius, epsilon );
-        particles.createChildNode("Particle").setIntProperty("index", ii).setDoubleProperty("radius", radius).setDoubleProperty("epsilon", epsilon);
+        particles.createChildNode("Particle").setDoubleProperty("radius", radius).setDoubleProperty("epsilon", epsilon);
     }
 
 }

@@ -56,8 +56,6 @@ static void getCovalentTypes( std::vector<std::string>& covalentTypes ){
 
 static void addCovalentMap( SerializationNode& particleExclusions, int particleIndex, std::string mapName, std::vector< int > covalentMap ){
     SerializationNode& map   = particleExclusions.createChildNode(mapName);
-    map.setIntProperty( "index", particleIndex );
-    map.setIntProperty( "size", covalentMap.size() );
     for (unsigned int ii = 0; ii < covalentMap.size(); ii++) {
         map.createChildNode("Cv").setIntProperty( "v", covalentMap[ii] );
     }
@@ -93,7 +91,7 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     std::vector<std::string> covalentTypes;
     getCovalentTypes( covalentTypes );
 
-    SerializationNode& particles = node.createChildNode("MultipoleParticles").setIntProperty( "size", force.getNumMultipoles() );
+    SerializationNode& particles = node.createChildNode("MultipoleParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumMultipoles()); ii++) {
 
         int axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY;
@@ -106,13 +104,13 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
                                       axisType, multipoleAtomZ, multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity );
 
         SerializationNode& particle    = particles.createChildNode("Particle");
-        particle.setIntProperty("index", ii).setIntProperty("axisType", axisType).setIntProperty("multipoleAtomZ", multipoleAtomZ).setIntProperty("multipoleAtomX", multipoleAtomX).setIntProperty("multipoleAtomY", multipoleAtomY);
+        particle.setIntProperty("axisType", axisType).setIntProperty("multipoleAtomZ", multipoleAtomZ).setIntProperty("multipoleAtomX", multipoleAtomX).setIntProperty("multipoleAtomY", multipoleAtomY);
         particle.setDoubleProperty("charge", charge).setDoubleProperty("thole", thole).setDoubleProperty("damp", dampingFactor).setDoubleProperty("polarity", polarity);
 
-        SerializationNode& dipole      = particle.createChildNode("Dipole").setIntProperty( "size", 3 );
+        SerializationNode& dipole      = particle.createChildNode("Dipole");
         dipole.setDoubleProperty( "d0", molecularDipole[0] ).setDoubleProperty( "d1", molecularDipole[1] ).setDoubleProperty( "d2", molecularDipole[2] );
 
-        SerializationNode& quadrupole  = particle.createChildNode("Quadrupole").setIntProperty( "size", 9 );
+        SerializationNode& quadrupole  = particle.createChildNode("Quadrupole");
         quadrupole.setDoubleProperty( "q0", molecularQuadrupole[0] ).setDoubleProperty( "q1", molecularQuadrupole[1] ).setDoubleProperty( "q2", molecularQuadrupole[2] );
         quadrupole.setDoubleProperty( "q3", molecularQuadrupole[3] ).setDoubleProperty( "q4", molecularQuadrupole[4] ).setDoubleProperty( "q5", molecularQuadrupole[5] );
         quadrupole.setDoubleProperty( "q6", molecularQuadrupole[6] ).setDoubleProperty( "q7", molecularQuadrupole[7] ).setDoubleProperty( "q8", molecularQuadrupole[8] );

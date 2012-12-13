@@ -76,7 +76,6 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
     // value5 = F_xy       partial f wrt x,y
 
     SerializationNode& grids = node.createChildNode("TorsionTorsionGrids");
-    grids.setIntProperty("size", static_cast<int>(force.getNumTorsionTorsionGrids()));
     for (unsigned int kk = 0; kk < static_cast<unsigned int>(force.getNumTorsionTorsionGrids()); kk++) {
 
         const std::vector< std::vector< std::vector<double> > > grid = force.getTorsionTorsionGrid( kk );
@@ -87,11 +86,10 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
             gridCount += grid[ii].size();
         }
 
-        SerializationNode& gridNode = grids.createChildNode("TorsionTorsionGrid").setIntProperty("size", static_cast<int>(gridCount) );
+        SerializationNode& gridNode = grids.createChildNode("TorsionTorsionGrid");
         for ( unsigned int ii = 0; ii < grid.size(); ii++) {
             SerializationNode& gridSerializationRow = gridNode.createChildNode("RowNode");
             gridSerializationRow.setIntProperty("dim", ii );
-            gridSerializationRow.setIntProperty("size", static_cast<int>(grid[ii].size() ) );
             for ( unsigned int jj = 0; jj < grid[ii].size(); jj++) {
                 SerializationNode& gridSerializationColumnNode = gridSerializationRow.createChildNode("ColumnNode");
                 gridSerializationColumnNode.setIntProperty("dim", jj );

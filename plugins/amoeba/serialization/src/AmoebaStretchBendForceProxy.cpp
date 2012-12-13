@@ -44,7 +44,7 @@ AmoebaStretchBendForceProxy::AmoebaStretchBendForceProxy() : SerializationProxy(
 void AmoebaStretchBendForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const AmoebaStretchBendForce& force = *reinterpret_cast<const AmoebaStretchBendForce*>(object);
-    SerializationNode& bonds = node.createChildNode("StretchBendAngles").setIntProperty( "size", force.getNumStretchBends() );
+    SerializationNode& bonds = node.createChildNode("StretchBendAngles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumStretchBends()); ii++) {
         int particle1, particle2, particle3;
         double distanceAB, distanceCB, angle, k;

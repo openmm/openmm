@@ -51,7 +51,7 @@ void AmoebaInPlaneAngleForceProxy::serialize(const void* object, SerializationNo
     node.setDoubleProperty("pentic",     force.getAmoebaGlobalInPlaneAnglePentic());
     node.setDoubleProperty("sextic",     force.getAmoebaGlobalInPlaneAngleSextic());
 
-    SerializationNode& bonds = node.createChildNode("InPlaneAngles").setIntProperty( "size", force.getNumAngles() );
+    SerializationNode& bonds = node.createChildNode("InPlaneAngles");
     for ( unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumAngles()); ii++) {
         int particle1, particle2, particle3, particle4;
         double distance, k;

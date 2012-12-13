@@ -51,7 +51,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
 
     node.setIntProperty("method", (int) force.getNonbondedMethod());
 
-    SerializationNode& particles = node.createChildNode("VdwParticles").setIntProperty("size", force.getNumParticles() );
+    SerializationNode& particles = node.createChildNode("VdwParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
 
         int ivIndex;
@@ -59,14 +59,12 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
         force.getParticleParameters( ii, ivIndex, sigma, epsilon, reductionFactor );
 
         SerializationNode& particle = particles.createChildNode("Particle");
-        particle.setIntProperty("index", ii).setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor);
+        particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor);
 
         std::vector< int > exclusions;
         force.getParticleExclusions( ii,  exclusions );
 
         SerializationNode& particleExclusions = particle.createChildNode("ParticleExclusions");
-        particleExclusions.setIntProperty("size", exclusions.size() );
-        particleExclusions.setIntProperty("index", ii );
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
             particleExclusions.createChildNode( "excl" ).setIntProperty( "index", exclusions[jj] );
         }

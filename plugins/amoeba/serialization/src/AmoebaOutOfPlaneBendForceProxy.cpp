@@ -49,7 +49,7 @@ void AmoebaOutOfPlaneBendForceProxy::serialize(const void* object, Serialization
     node.setDoubleProperty("pentic",  force.getAmoebaGlobalOutOfPlaneBendPentic());
     node.setDoubleProperty("sextic",  force.getAmoebaGlobalOutOfPlaneBendSextic());
 
-    SerializationNode& bonds = node.createChildNode("OutOfPlaneBend").setIntProperty( "size", force.getNumOutOfPlaneBends() );
+    SerializationNode& bonds = node.createChildNode("OutOfPlaneBend");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumOutOfPlaneBends()); ii++) {
         int particle1, particle2, particle3, particle4;
         double k;
