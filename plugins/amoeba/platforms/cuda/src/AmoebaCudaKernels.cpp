@@ -1888,6 +1888,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     defines["GK_FD"] = cu.doubleToString(2*(1-solventDielectric)/(1+2*solventDielectric));
     defines["GK_FQ"] = cu.doubleToString(3*(1-solventDielectric)/(2+3*solventDielectric));
     defines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
+    defines["M_PI"] = cu.doubleToString(M_PI);
     defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/force.getSoluteDielectric());
     if (multipoles->getPolarizationType() == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
@@ -2237,6 +2238,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
     defines["RMINH"] = cu.doubleToString(force.getRminh());
     defines["AWATER"] = cu.doubleToString(force.getAwater());
     defines["SHCTD"] = cu.doubleToString(force.getShctd());
+    defines["M_PI"] = cu.doubleToString(M_PI);
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaAmoebaKernelSources::amoebaWcaForce, defines);
     forceKernel = cu.getKernel(module, "computeWCAForce");
     totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
