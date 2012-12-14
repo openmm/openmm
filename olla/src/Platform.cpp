@@ -280,7 +280,7 @@ const string& Platform::getDefaultPluginsDirectory() {
 }
 
 const string& Platform::getOpenMMVersion() {
-    static const string version = "4.1";
+    static const string version = "5.0";
     return version;
 }
 
