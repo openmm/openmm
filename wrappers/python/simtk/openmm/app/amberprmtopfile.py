@@ -111,7 +111,8 @@ class AmberPrmtopFile(object):
             top.setUnitCellDimensions(tuple(x.value_in_unit(unit.nanometer) for x in prmtop.getBoxBetaAndDimensions()[1:4])*unit.nanometer)
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, removeCMMotion=True):
+                     constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, removeCMMotion=True,
+                     ewaldErrorTolerance=0.0005):
         """Construct an OpenMM System representing the topology described by this prmtop file.
         
         Parameters:
@@ -125,6 +126,7 @@ class AmberPrmtopFile(object):
          - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
          - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
+         - ewaldErrorTolerance (float=0.0005) The error tolerance to use if nonbondedMethod is Ewald or PME.
         Returns: the newly created System
         """
         methodMap = {ff.NoCutoff:'NoCutoff',
@@ -161,6 +163,9 @@ class AmberPrmtopFile(object):
         sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
                                                  nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
                                                  soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater)
+        for force in sys.getForces():
+            if isinstance(force, mm.NonbondedForce):
+                force.setEwaldErrorTolerance(ewaldErrorTolerance)
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
         return sys
