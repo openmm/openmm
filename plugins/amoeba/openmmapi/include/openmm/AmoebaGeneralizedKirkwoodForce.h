@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include "openmm/internal/windowsExportAmoeba.h"
+#include "internal/windowsExportAmoeba.h"
 #include <vector>
 
 namespace OpenMM {

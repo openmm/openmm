@@ -34,7 +34,7 @@
 
 #include "openmm/Force.h"
 #include "openmm/Vec3.h"
-#include "openmm/internal/windowsExportAmoeba.h"
+#include "internal/windowsExportAmoeba.h"
 #include <map>
 #include <vector>
 
