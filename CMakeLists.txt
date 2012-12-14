@@ -548,7 +548,7 @@ IF(DOXYGEN_EXECUTABLE)
     ENDIF (OPENMM_BUILD_PYTHON_WRAPPERS)
 ENDIF(DOXYGEN_EXECUTABLE)
 
-install(FILES docs/OpenMMUsersGuide.pdf docs/OpenMMApplicationGuide.pdf docs/OpenMMDeveloperGuide.pdf
+install(FILES docs/OpenMMUsersGuide.pdf docs/OpenMMDeveloperGuide.pdf
     DESTINATION docs/)
 
 FILE(GLOB LICENSE_FILES "docs/licenses/*.txt")
