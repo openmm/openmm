@@ -1,5 +1,5 @@
-#define STORE_DERIVATIVE_1(INDEX) atomicAdd(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (deriv##INDEX##_1*0xFFFFFFFF)));
-#define STORE_DERIVATIVE_2(INDEX) atomicAdd(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].deriv##INDEX*0xFFFFFFFF)));
+#define STORE_DERIVATIVE_1(INDEX) atomicAdd(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (deriv##INDEX##_1*0x100000000)));
+#define STORE_DERIVATIVE_2(INDEX) atomicAdd(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].deriv##INDEX*0x100000000)));
 #define TILE_SIZE 32
 
 typedef struct {
@@ -211,16 +211,16 @@ extern "C" __global__ void computeN2Energy(unsigned long long* __restrict__ forc
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0xFFFFFFFF)));
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
             STORE_DERIVATIVES_1
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
             STORE_DERIVATIVES_2
         }
         pos++;

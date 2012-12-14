@@ -7,7 +7,7 @@ extern "C" __global__ void reduceBornSum(const long long* __restrict__ bornSum, 
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         // Get summed Born data
 
-        real sum = RECIP(0xFFFFFFFF)*bornSum[index];
+        real sum = RECIP(0x100000000)*bornSum[index];
 
         // Now calculate Born radius.
 
@@ -33,7 +33,7 @@ extern "C" __global__ void computeSurfaceAreaForce(long long* __restrict__ bornF
         ratio6 = ratio6*ratio6*ratio6;
         ratio6 = ratio6*ratio6;
         real saTerm = SURFACE_AREA_FACTOR * r * r * ratio6;
-        bornForce[index] += (long long) (saTerm*0xFFFFFFFF/bornRadius);
+        bornForce[index] += (long long) (saTerm*0x100000000/bornRadius);
         energy += saTerm;
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] -= energy/6;
@@ -157,11 +157,11 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&bornSum[offset], static_cast<unsigned long long>((long long) (data.bornSum*0xFFFFFFFF)));
+            atomicAdd(&bornSum[offset], static_cast<unsigned long long>((long long) (data.bornSum*0x100000000)));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&bornSum[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0xFFFFFFFF)));
+            atomicAdd(&bornSum[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0x100000000)));
         }
         lasty = y;
         pos++;
@@ -276,9 +276,9 @@ extern "C" __global__ void computeGKForces(
                     }
                 }
                 data.force *= 0.5f;
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                 
                 // Compute torques.
                 
@@ -292,9 +292,9 @@ extern "C" __global__ void computeGKForces(
                         data.force += tempTorque;
                     }
                 }
-                atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                 
                 // Compute chain rule terms.
                 
@@ -304,7 +304,7 @@ extern "C" __global__ void computeGKForces(
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
                         computeOneInteractionB1B2(data, localData[tbx+j]);
                 }
-                atomicAdd(&bornForce[atom1], static_cast<unsigned long long>((long long) (data.bornForce*0xFFFFFFFF)));
+                atomicAdd(&bornForce[atom1], static_cast<unsigned long long>((long long) (data.bornForce*0x100000000)));
             }
             else {
                 // This is an off-diagonal tile.
@@ -330,13 +330,13 @@ extern "C" __global__ void computeGKForces(
                 localData[threadIdx.x].force *= 0.5f;
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
                 }
 
                 // Compute torques.
@@ -358,13 +358,13 @@ extern "C" __global__ void computeGKForces(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
                 }
 
                 // Compute chain rule terms.
@@ -379,9 +379,9 @@ extern "C" __global__ void computeGKForces(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&bornForce[offset], static_cast<unsigned long long>((long long) (data.bornForce*0xFFFFFFFF)));
+                    atomicAdd(&bornForce[offset], static_cast<unsigned long long>((long long) (data.bornForce*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&bornForce[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornForce*0xFFFFFFFF)));
+                    atomicAdd(&bornForce[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornForce*0x100000000)));
                 }
             }
         }
@@ -405,7 +405,7 @@ inline __device__ void loadAtomData3(AtomData3& data, int atom, const real4* __r
     float2 params1 = params[atom];
     data.radius = params1.x;
     data.scaledRadius = params1.y;
-    data.bornForce = bornForce[atom]/(real) 0xFFFFFFFF;
+    data.bornForce = bornForce[atom]/(real) 0x100000000;
 }
 
 __device__ void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& atom2, real3& force) {
@@ -506,9 +506,9 @@ extern "C" __global__ void computeChainRuleForce(
                         localData[tbx+j].force += tempForce;
                     }
                 }
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) ((data.force.x+localData[threadIdx.x].force.x)*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.y+localData[threadIdx.x].force.y)*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.z+localData[threadIdx.x].force.z)*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) ((data.force.x+localData[threadIdx.x].force.x)*0x100000000)));
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.y+localData[threadIdx.x].force.y)*0x100000000)));
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.z+localData[threadIdx.x].force.z)*0x100000000)));
             }
             else {
                 // This is an off-diagonal tile.
@@ -532,13 +532,13 @@ extern "C" __global__ void computeChainRuleForce(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
                 }
             }
         }
@@ -687,9 +687,9 @@ extern "C" __global__ void computeEDiffForce(
                     }
                 }
                 data.force *= ENERGY_SCALE_FACTOR;
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
 
                 
                 // Compute torques.
@@ -706,9 +706,9 @@ extern "C" __global__ void computeEDiffForce(
                     }
                 }
                 data.force *= ENERGY_SCALE_FACTOR;
-                atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
             }
             else {
                 // This is an off-diagonal tile.
@@ -740,13 +740,13 @@ extern "C" __global__ void computeEDiffForce(
                 localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
                 }
 
                 // Compute torques.
@@ -770,13 +770,13 @@ extern "C" __global__ void computeEDiffForce(
                 localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0xFFFFFFFF)));
-                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0xFFFFFFFF)));
+                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
                 }
             }
         }

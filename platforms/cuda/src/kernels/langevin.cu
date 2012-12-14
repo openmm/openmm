@@ -7,7 +7,7 @@ enum {VelScale, ForceScale, NoiseScale, MaxParams};
 extern "C" __global__ void integrateLangevinPart1(mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta,
         const mixed* __restrict__ paramBuffer, const mixed2* __restrict__ dt, const float4* __restrict__ random, unsigned int randomIndex) {
     mixed vscale = paramBuffer[VelScale];
-    mixed fscale = paramBuffer[ForceScale]/(mixed) 0xFFFFFFFF;
+    mixed fscale = paramBuffer[ForceScale]/(mixed) 0x100000000;
     mixed noisescale = paramBuffer[NoiseScale];
     mixed stepSize = dt[0].y;
     int index = blockIdx.x*blockDim.x+threadIdx.x;
@@ -75,7 +75,7 @@ extern "C" __global__ void selectLangevinStepSize(mixed maxStepSize, mixed error
     mixed* error = &params[MaxParams];
     mixed err = 0;
     unsigned int index = threadIdx.x;
-    const mixed scale = RECIP((mixed) 0xFFFFFFFF);
+    const mixed scale = RECIP((mixed) 0x100000000);
     while (index < NUM_ATOMS) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+PADDED_NUM_ATOMS], scale*force[index+PADDED_NUM_ATOMS*2]);
         mixed invMass = velm[index].w;

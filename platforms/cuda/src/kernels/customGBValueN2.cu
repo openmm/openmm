@@ -238,11 +238,11 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (value*0xFFFFFFFF)));
+            atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (value*0x100000000)));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0xFFFFFFFF)));
+            atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
         }
         lasty = y;
         pos++;

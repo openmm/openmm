@@ -132,21 +132,21 @@ extern "C" __global__ void computeDonorForces(unsigned long long* __restrict__ f
 
         if (donorIndex < NUM_DONORS) {
             if (atoms.x > -1) {
-                atomicAdd(&force[atoms.x], static_cast<unsigned long long>((long long) (f1.x*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.x+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.y*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.x+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.z*0xFFFFFFFF)));
+                atomicAdd(&force[atoms.x], static_cast<unsigned long long>((long long) (f1.x*0x100000000)));
+                atomicAdd(&force[atoms.x+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.y*0x100000000)));
+                atomicAdd(&force[atoms.x+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.z*0x100000000)));
                 __threadfence_block();
             }
             if (atoms.y > -1) {
-                atomicAdd(&force[atoms.y], static_cast<unsigned long long>((long long) (f2.x*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.y+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.y*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.y+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.z*0xFFFFFFFF)));
+                atomicAdd(&force[atoms.y], static_cast<unsigned long long>((long long) (f2.x*0x100000000)));
+                atomicAdd(&force[atoms.y+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.y*0x100000000)));
+                atomicAdd(&force[atoms.y+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.z*0x100000000)));
                 __threadfence_block();
             }
             if (atoms.z > -1) {
-                atomicAdd(&force[atoms.z], static_cast<unsigned long long>((long long) (f3.x*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.z+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.y*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.z+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.z*0xFFFFFFFF)));
+                atomicAdd(&force[atoms.z], static_cast<unsigned long long>((long long) (f3.x*0x100000000)));
+                atomicAdd(&force[atoms.z+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.y*0x100000000)));
+                atomicAdd(&force[atoms.z+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.z*0x100000000)));
                 __threadfence_block();
             }
         }
@@ -219,21 +219,21 @@ extern "C" __global__ void computeAcceptorForces(unsigned long long* __restrict_
 
         if (acceptorIndex < NUM_ACCEPTORS) {
             if (atoms.x > -1) {
-                atomicAdd(&force[atoms.x], static_cast<unsigned long long>((long long) (f1.x*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.x+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.y*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.x+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.z*0xFFFFFFFF)));
+                atomicAdd(&force[atoms.x], static_cast<unsigned long long>((long long) (f1.x*0x100000000)));
+                atomicAdd(&force[atoms.x+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.y*0x100000000)));
+                atomicAdd(&force[atoms.x+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f1.z*0x100000000)));
                 __threadfence_block();
             }
             if (atoms.y > -1) {
-                atomicAdd(&force[atoms.y], static_cast<unsigned long long>((long long) (f2.x*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.y+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.y*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.y+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.z*0xFFFFFFFF)));
+                atomicAdd(&force[atoms.y], static_cast<unsigned long long>((long long) (f2.x*0x100000000)));
+                atomicAdd(&force[atoms.y+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.y*0x100000000)));
+                atomicAdd(&force[atoms.y+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f2.z*0x100000000)));
                 __threadfence_block();
             }
             if (atoms.z > -1) {
-                atomicAdd(&force[atoms.z], static_cast<unsigned long long>((long long) (f3.x*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.z+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.y*0xFFFFFFFF)));
-                atomicAdd(&force[atoms.z+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.z*0xFFFFFFFF)));
+                atomicAdd(&force[atoms.z], static_cast<unsigned long long>((long long) (f3.x*0x100000000)));
+                atomicAdd(&force[atoms.z+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.y*0x100000000)));
+                atomicAdd(&force[atoms.z+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (f3.z*0x100000000)));
                 __threadfence_block();
             }
         }

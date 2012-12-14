@@ -16,8 +16,8 @@
     real t2I = (l_ij2I-u_ij2I);
     real term1 = (0.5f*(0.25f+obcParams2.y*obcParams2.y*invRSquaredOver4)*t2J + t1J*invRSquaredOver4)*invR;
     real term2 = (0.5f*(0.25f+obcParams1.y*obcParams1.y*invRSquaredOver4)*t2I + t1I*invRSquaredOver4)*invR;
-    real tempdEdR = (obcParams1.x < rScaledRadiusJ ? bornForce1*term1/0xFFFFFFFF : 0);
-    tempdEdR += (obcParams2.x < rScaledRadiusI ? bornForce2*term2/0xFFFFFFFF : 0);
+    real tempdEdR = (obcParams1.x < rScaledRadiusJ ? bornForce1*term1/0x100000000 : 0);
+    tempdEdR += (obcParams2.x < rScaledRadiusI ? bornForce2*term2/0x100000000 : 0);
 #ifdef USE_CUTOFF
     unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED);
 #else

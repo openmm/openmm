@@ -288,7 +288,7 @@ void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& fo
     int numParticles = context.getSystem().getNumParticles();
     int paddedNumParticles = cu.getPaddedNumAtoms();
     forces.resize(numParticles);
-    double scale = 1.0/(double) 0xFFFFFFFF;
+    double scale = 1.0/(double) 0x100000000;
     for (int i = 0; i < numParticles; ++i)
         forces[order[i]] = Vec3(scale*force[i], scale*force[i+paddedNumParticles], scale*force[i+paddedNumParticles*2]);
 }
@@ -2618,7 +2618,7 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         extraArgs << ", const long long* __restrict__ derivBuffersIn";
         for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
             load << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
-                    " = RECIP(0xFFFFFFFF)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cu.intToString(i) << "];\n";
+                    " = RECIP(0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cu.intToString(i) << "];\n";
         
         // Compute the various expressions.
         
@@ -2660,9 +2660,9 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         
         // Record values.
         
-        compute << "forceBuffers[index] += (long long) (force.x*0xFFFFFFFF);\n";
-        compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (long long) (force.y*0xFFFFFFFF);\n";
-        compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (long long) (force.z*0xFFFFFFFF);\n";
+        compute << "forceBuffers[index] += (long long) (force.x*0x100000000);\n";
+        compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (long long) (force.y*0x100000000);\n";
+        compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (long long) (force.z*0x100000000);\n";
         for (int i = 1; i < force.getNumComputedValues(); i++) {
             compute << "real totalDeriv"<<i<<" = dV"<<i<<"dV0";
             for (int j = 1; j < i; j++)

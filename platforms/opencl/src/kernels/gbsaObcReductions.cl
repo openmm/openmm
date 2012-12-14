@@ -19,7 +19,7 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
 
         int totalSize = bufferSize*numBuffers;
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        real sum = (1/(real) 0xFFFFFFFF)*bornSum[index];
+        real sum = (1/(real) 0x100000000)*bornSum[index];
 #else
         real sum = bornSum[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
@@ -59,7 +59,7 @@ __kernel void reduceBornForce(int bufferSize, int numBuffers, __global real* bor
 
         int totalSize = bufferSize*numBuffers;
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        real force = (1/(real) 0xFFFFFFFF)*bornForceIn[index];
+        real force = (1/(real) 0x100000000)*bornForceIn[index];
 #else
         real force = bornForce[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)

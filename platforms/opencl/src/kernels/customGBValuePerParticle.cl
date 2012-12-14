@@ -14,7 +14,7 @@ __kernel void computePerParticleValues(int bufferSize, int numBuffers, __global 
         // Reduce the pairwise value
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        real sum = (1.0f/0xFFFFFFFF)*valueBuffers[index];
+        real sum = (1.0f/0x100000000)*valueBuffers[index];
 #else
         int totalSize = bufferSize*numBuffers;
         real sum = valueBuffers[index];

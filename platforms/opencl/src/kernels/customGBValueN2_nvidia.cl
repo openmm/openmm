@@ -241,11 +241,11 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 #ifdef SUPPORTS_64_BIT_ATOMICS
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atom_add(&global_value[offset], (long) (value*0xFFFFFFFF));
+            atom_add(&global_value[offset], (long) (value*0x100000000));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atom_add(&global_value[offset], (long) (local_value[get_local_id(0)]*0xFFFFFFFF));
+            atom_add(&global_value[offset], (long) (local_value[get_local_id(0)]*0x100000000));
         }
 #else
         int writeX = (pos < end ? x : -1);

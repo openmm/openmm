@@ -295,15 +295,15 @@ __kernel void computeNonbonded(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atom_add(&forceBuffers[offset], (long) (force.x*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset], (long) (force.x*0x100000000));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atom_add(&forceBuffers[offset], (long) (localData[get_local_id(0)].fx*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset], (long) (localData[get_local_id(0)].fx*0x100000000));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fy*0x100000000));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (localData[get_local_id(0)].fz*0x100000000));
         }
 #else
         int writeX = (pos < end ? x : -1);

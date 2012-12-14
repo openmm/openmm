@@ -88,7 +88,7 @@ extern "C" __global__ void integrateStep(mixed4* posq, mixed4* velm, long long* 
     const int indexInBlock = threadIdx.x-blockStart;
     const mixed nkT = NUM_COPIES*kT;
     const mixed twown = 2.0f*nkT/HBAR;
-    const mixed forceScale = 1/(mixed) 0xFFFFFFFF;
+    const mixed forceScale = 1/(mixed) 0x100000000;
     __shared__ mixed3 q[2*THREAD_BLOCK_SIZE];
     __shared__ mixed3 v[2*THREAD_BLOCK_SIZE];
     __shared__ mixed3 temp[2*THREAD_BLOCK_SIZE];
@@ -165,7 +165,7 @@ extern "C" __global__ void advanceVelocities(mixed4* velm, long long* force, mix
     const int numBlocks = (blockDim.x*gridDim.x)/NUM_COPIES;
     const int blockStart = NUM_COPIES*(threadIdx.x/NUM_COPIES);
     const int indexInBlock = threadIdx.x-blockStart;
-    const mixed forceScale = 1/(mixed) 0xFFFFFFFF;
+    const mixed forceScale = 1/(mixed) 0x100000000;
 
     // Update velocities.
     

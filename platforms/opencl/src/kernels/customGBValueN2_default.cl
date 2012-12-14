@@ -134,7 +134,7 @@ void computeN2Value(__global const real4* restrict posq, __local real4* restrict
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 const unsigned int offset = x*TILE_SIZE + tgx;
-                atom_add(&global_value[offset], (long) ((value + tempBuffer[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
+                atom_add(&global_value[offset], (long) ((value + tempBuffer[get_local_id(0)+TILE_SIZE])*0x100000000));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
@@ -216,8 +216,8 @@ void computeN2Value(__global const real4* restrict posq, __local real4* restrict
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 const unsigned int offset1 = x*TILE_SIZE + tgx;
                 const unsigned int offset2 = y*TILE_SIZE + tgx;
-                atom_add(&global_value[offset1], (long) ((value + tempBuffer[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
-                atom_add(&global_value[offset2], (long) ((local_value[get_local_id(0)] + local_value[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
+                atom_add(&global_value[offset1], (long) ((value + tempBuffer[get_local_id(0)+TILE_SIZE])*0x100000000));
+                atom_add(&global_value[offset2], (long) ((local_value[get_local_id(0)] + local_value[get_local_id(0)+TILE_SIZE])*0x100000000));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;

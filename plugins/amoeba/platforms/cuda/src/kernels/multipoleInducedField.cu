@@ -387,36 +387,36 @@ extern "C" __global__ void computeInducedField(
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (data.field.x*0xFFFFFFFF)));
-            atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.y*0xFFFFFFFF)));
-            atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.z*0xFFFFFFFF)));
-            atomicAdd(&fieldPolar[offset], static_cast<unsigned long long>((long long) (data.fieldPolar.x*0xFFFFFFFF)));
-            atomicAdd(&fieldPolar[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.y*0xFFFFFFFF)));
-            atomicAdd(&fieldPolar[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.z*0xFFFFFFFF)));
+            atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (data.field.x*0x100000000)));
+            atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.y*0x100000000)));
+            atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.z*0x100000000)));
+            atomicAdd(&fieldPolar[offset], static_cast<unsigned long long>((long long) (data.fieldPolar.x*0x100000000)));
+            atomicAdd(&fieldPolar[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.y*0x100000000)));
+            atomicAdd(&fieldPolar[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.z*0x100000000)));
 #ifdef USE_GK
-            atomicAdd(&fieldS[offset], static_cast<unsigned long long>((long long) (data.fieldS.x*0xFFFFFFFF)));
-            atomicAdd(&fieldS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldS.y*0xFFFFFFFF)));
-            atomicAdd(&fieldS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldS.z*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarS[offset], static_cast<unsigned long long>((long long) (data.fieldPolarS.x*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.y*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.z*0xFFFFFFFF)));
+            atomicAdd(&fieldS[offset], static_cast<unsigned long long>((long long) (data.fieldS.x*0x100000000)));
+            atomicAdd(&fieldS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldS.y*0x100000000)));
+            atomicAdd(&fieldS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldS.z*0x100000000)));
+            atomicAdd(&fieldPolarS[offset], static_cast<unsigned long long>((long long) (data.fieldPolarS.x*0x100000000)));
+            atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.y*0x100000000)));
+            atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.z*0x100000000)));
 #endif
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0xFFFFFFFF)));
-            atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0xFFFFFFFF)));
-            atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0xFFFFFFFF)));
-            atomicAdd(&fieldPolar[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.x*0xFFFFFFFF)));
-            atomicAdd(&fieldPolar[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.y*0xFFFFFFFF)));
-            atomicAdd(&fieldPolar[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.z*0xFFFFFFFF)));
+            atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
+            atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
+            atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
+            atomicAdd(&fieldPolar[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.x*0x100000000)));
+            atomicAdd(&fieldPolar[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.y*0x100000000)));
+            atomicAdd(&fieldPolar[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.z*0x100000000)));
 #ifdef USE_GK
-            atomicAdd(&fieldS[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.x*0xFFFFFFFF)));
-            atomicAdd(&fieldS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.y*0xFFFFFFFF)));
-            atomicAdd(&fieldS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.z*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarS[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.x*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.y*0xFFFFFFFF)));
-            atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.z*0xFFFFFFFF)));
+            atomicAdd(&fieldS[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.x*0x100000000)));
+            atomicAdd(&fieldS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.y*0x100000000)));
+            atomicAdd(&fieldS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.z*0x100000000)));
+            atomicAdd(&fieldPolarS[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.x*0x100000000)));
+            atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.y*0x100000000)));
+            atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.z*0x100000000)));
 #endif
         }
         pos++;
@@ -433,7 +433,7 @@ extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__
 #else
     const real ewaldScale = 0;
 #endif
-    const real fieldScale = 1/(real) 0xFFFFFFFF;
+    const real fieldScale = 1/(real) 0x100000000;
     real sumErrors = 0;
     real sumPolarErrors = 0;
     for (int atom = blockIdx.x*blockDim.x + threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {

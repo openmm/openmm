@@ -5,7 +5,7 @@
 extern "C" __global__ void integrateBrownianPart1(mixed tauDeltaT, mixed noiseAmplitude, const long long* __restrict__ force,
         mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const float4* __restrict__ random, unsigned int randomIndex) {
     randomIndex += blockIdx.x*blockDim.x+threadIdx.x;
-    const mixed fscale = tauDeltaT/(mixed) 0xFFFFFFFF;
+    const mixed fscale = tauDeltaT/(mixed) 0x100000000;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         mixed invMass = velm[index].w;
         if (invMass != 0) {

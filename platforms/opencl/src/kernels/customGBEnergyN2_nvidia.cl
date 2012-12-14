@@ -1,8 +1,8 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #ifdef SUPPORTS_64_BIT_ATOMICS
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#define STORE_DERIVATIVE_1(INDEX) atom_add(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (long) (deriv##INDEX##_1*0xFFFFFFFF));
-#define STORE_DERIVATIVE_2(INDEX) atom_add(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (long) (local_deriv##INDEX[get_local_id(0)]*0xFFFFFFFF));
+#define STORE_DERIVATIVE_1(INDEX) atom_add(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (long) (deriv##INDEX##_1*0x100000000));
+#define STORE_DERIVATIVE_2(INDEX) atom_add(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (long) (local_deriv##INDEX[get_local_id(0)]*0x100000000));
 #else
 #define STORE_DERIVATIVE_1(INDEX) derivBuffers##INDEX[offset] += deriv##INDEX##_1;
 #define STORE_DERIVATIVE_2(INDEX) derivBuffers##INDEX[offset] += local_deriv##INDEX[get_local_id(0)];
@@ -211,16 +211,16 @@ __kernel void computeN2Energy(
 #ifdef SUPPORTS_64_BIT_ATOMICS
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atom_add(&forceBuffers[offset], (long) (force.x*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset], (long) (force.x*0x100000000));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
             STORE_DERIVATIVES_1
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atom_add(&forceBuffers[offset], (long) (local_force[get_local_id(0)].x*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (local_force[get_local_id(0)].y*0xFFFFFFFF));
-            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (local_force[get_local_id(0)].z*0xFFFFFFFF));
+            atom_add(&forceBuffers[offset], (long) (local_force[get_local_id(0)].x*0x100000000));
+            atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (local_force[get_local_id(0)].y*0x100000000));
+            atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (local_force[get_local_id(0)].z*0x100000000));
             STORE_DERIVATIVES_2
         }
 #else

@@ -102,9 +102,9 @@ extern "C" __global__ void calculateEwaldForces(unsigned long long* __restrict__
 
         // Record the force on the atom.
 
-        atomicAdd(&forceBuffers[atom], static_cast<unsigned long long>((long long) (force.x*0xFFFFFFFF)));
-        atomicAdd(&forceBuffers[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0xFFFFFFFF)));
-        atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0xFFFFFFFF)));
+        atomicAdd(&forceBuffers[atom], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
+        atomicAdd(&forceBuffers[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
+        atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
         atom += blockDim.x*gridDim.x;
     }
 }

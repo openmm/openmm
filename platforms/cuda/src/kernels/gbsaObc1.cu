@@ -13,7 +13,7 @@ extern "C" __global__ void reduceBornSum(float alpha, float beta, float gamma, c
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         // Get summed Born data
 
-        real sum = RECIP(0xFFFFFFFF)*bornSum[index];
+        real sum = RECIP(0x100000000)*bornSum[index];
 
         // Now calculate Born radius and OBC term.
 
@@ -41,7 +41,7 @@ extern "C" __global__ void reduceBornForce(long long* __restrict__ bornForce, re
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         // Get summed Born force
 
-        real force = RECIP(0xFFFFFFFF)*bornForce[index];
+        real force = RECIP(0x100000000)*bornForce[index];
 
         // Now calculate the actual force
 
@@ -53,7 +53,7 @@ extern "C" __global__ void reduceBornForce(long long* __restrict__ bornForce, re
         force += saTerm/bornRadius;
         energy += saTerm;
         force *= bornRadius*bornRadius*obcChain[index];
-        bornForce[index] = (long long) (force*0xFFFFFFFF);
+        bornForce[index] = (long long) (force*0x100000000);
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy/-6;
 }
@@ -317,11 +317,11 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&global_bornSum[offset], static_cast<unsigned long long>((long long) (bornSum*0xFFFFFFFF)));
+            atomicAdd(&global_bornSum[offset], static_cast<unsigned long long>((long long) (bornSum*0x100000000)));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&global_bornSum[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0xFFFFFFFF)));
+            atomicAdd(&global_bornSum[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0x100000000)));
         }
         lasty = y;
         pos++;
@@ -607,17 +607,17 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0xFFFFFFFF)));
-            atomicAdd(&global_bornForce[offset], static_cast<unsigned long long>((long long) (force.w*0xFFFFFFFF)));
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+            atomicAdd(&global_bornForce[offset], static_cast<unsigned long long>((long long) (force.w*0x100000000)));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0xFFFFFFFF)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0xFFFFFFFF)));
-            atomicAdd(&global_bornForce[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fw*0xFFFFFFFF)));
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
+            atomicAdd(&global_bornForce[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fw*0x100000000)));
         }
         lasty = y;
         pos++;

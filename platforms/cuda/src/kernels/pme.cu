@@ -106,12 +106,12 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
                 z -= (z >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
 #ifdef USE_DOUBLE_PRECISION
                 unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
-                atomicAdd(&ulonglong_p[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z],  static_cast<unsigned long long>((long long) (add*0xFFFFFFFF)));
+                atomicAdd(&ulonglong_p[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z],  static_cast<unsigned long long>((long long) (add*0x100000000)));
 #elif __CUDA_ARCH__ < 200
                 unsigned long long * ulonglong_p = (unsigned long long *) originalPmeGrid;
                 int gridIndex = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z;
                 gridIndex = (gridIndex%2 == 0 ? gridIndex/2 : (gridIndex+GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z)/2);
-                atomicAdd(&ulonglong_p[gridIndex],  static_cast<unsigned long long>((long long) (add*0xFFFFFFFF)));
+                atomicAdd(&ulonglong_p[gridIndex],  static_cast<unsigned long long>((long long) (add*0x100000000)));
 #else
                 atomicAdd(&originalPmeGrid[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z], add*EPSILON_FACTOR);
 #endif
@@ -123,7 +123,7 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
 extern "C" __global__ void finishSpreadCharge(long long* __restrict__ originalPmeGrid) {
     real* floatGrid = (real*) originalPmeGrid;
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    real scale = EPSILON_FACTOR/(real) 0xFFFFFFFF;
+    real scale = EPSILON_FACTOR/(real) 0x100000000;
 #ifdef USE_DOUBLE_PRECISION
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
         floatGrid[index] = scale*originalPmeGrid[index];
@@ -262,8 +262,8 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
             }
         }
         real q = pos.w*EPSILON_FACTOR;
-        forceBuffers[atom] +=  static_cast<unsigned long long>((long long) (-q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x*0xFFFFFFFF));
-        forceBuffers[atom+PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y*0xFFFFFFFF));
-        forceBuffers[atom+2*PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z*0xFFFFFFFF));
+        forceBuffers[atom] +=  static_cast<unsigned long long>((long long) (-q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x*0x100000000));
+        forceBuffers[atom+PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y*0x100000000));
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z*0x100000000));
     }
 }

@@ -126,9 +126,9 @@ void gridSpreadCharge(__global const real4* restrict posq, __global const int2* 
                 y -= (y >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 z -= (z >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
 #ifdef USE_DOUBLE_PRECISION
-                atom_add(&pmeGrid[2*(x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z)], (long) (add*0xFFFFFFFF));
+                atom_add(&pmeGrid[2*(x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z)], (long) (add*0x100000000));
 #else
-                atom_add(&pmeGrid[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z], (long) (add*0xFFFFFFFF));
+                atom_add(&pmeGrid[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z], (long) (add*0x100000000));
 #endif
             }
         }
@@ -138,7 +138,7 @@ void gridSpreadCharge(__global const real4* restrict posq, __global const int2* 
 __kernel void finishSpreadCharge(__global long* restrict pmeGrid) {
     __global real2* realGrid = (__global real2*) pmeGrid;
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    real scale = EPSILON_FACTOR/(real) 0xFFFFFFFF;
+    real scale = EPSILON_FACTOR/(real) 0x100000000;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
 #ifdef USE_DOUBLE_PRECISION
         long value = pmeGrid[2*index];

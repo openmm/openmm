@@ -7,7 +7,7 @@ extern "C" __global__ void computePerParticleValues(real4* posq, long long* valu
     for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
         // Load the pairwise value
 
-        real sum = valueBuffers[index]/(real) 0xFFFFFFFF;
+        real sum = valueBuffers[index]/(real) 0x100000000;
         
         // Now calculate other values
 

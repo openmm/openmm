@@ -86,7 +86,7 @@ __kernel void reduceReal4Buffer(__global real4* restrict buffer, int bufferSize,
  */
 __kernel void reduceForces(__global const long* restrict longBuffer, __global real4* restrict buffer, int bufferSize, int numBuffers) {
     int totalSize = bufferSize*numBuffers;
-    real scale = 1/(real) 0xFFFFFFFF;
+    real scale = 1/(real) 0x100000000;
     for (int index = get_global_id(0); index < bufferSize; index += get_global_size(0)) {
         real4 sum = (real4) (scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0);
         for (int i = index; i < totalSize; i += bufferSize)

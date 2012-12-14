@@ -111,7 +111,7 @@ void computeBornSum(
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 const unsigned int offset = x*TILE_SIZE + tgx;
-                atom_add(&global_bornSum[offset], (long) ((bornSum + localTemp[tgx])*0xFFFFFFFF));
+                atom_add(&global_bornSum[offset], (long) ((bornSum + localTemp[tgx])*0x100000000));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
@@ -195,8 +195,8 @@ void computeBornSum(
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 const unsigned int offset1 = x*TILE_SIZE + tgx;
                 const unsigned int offset2 = y*TILE_SIZE + tgx;
-                atom_add(&global_bornSum[offset1], (long) ((bornSum + localTemp[tgx])*0xFFFFFFFF));
-                atom_add(&global_bornSum[offset2], (long) ((localBornSum[get_local_id(0)] + localBornSum[get_local_id(0)+TILE_SIZE])*0xFFFFFFFF));
+                atom_add(&global_bornSum[offset1], (long) ((bornSum + localTemp[tgx])*0x100000000));
+                atom_add(&global_bornSum[offset2], (long) ((localBornSum[get_local_id(0)] + localBornSum[get_local_id(0)+TILE_SIZE])*0x100000000));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
@@ -345,10 +345,10 @@ void computeGBSAForce1(
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 const unsigned int offset = x*TILE_SIZE + tgx;
-                atom_add(&forceBuffers[offset], (long) ((force.x + localData[tgx].temp_x)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0xFFFFFFFF));
-                atom_add(&global_bornForce[offset], (long) ((force.w + localData[tgx].temp_w)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset], (long) ((force.x + localData[tgx].temp_x)*0x100000000));
+                atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0x100000000));
+                atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0x100000000));
+                atom_add(&global_bornForce[offset], (long) ((force.w + localData[tgx].temp_w)*0x100000000));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
@@ -442,14 +442,14 @@ void computeGBSAForce1(
                 barrier(CLK_LOCAL_MEM_FENCE);
                 const unsigned int offset1 = x*TILE_SIZE + tgx;
                 const unsigned int offset2 = y*TILE_SIZE + tgx;
-                atom_add(&forceBuffers[offset1], (long) ((force.x + localData[tgx].temp_x)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset1+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset1+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0xFFFFFFFF));
-                atom_add(&global_bornForce[offset1], (long) ((force.w + localData[tgx].temp_w)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset2], (long) ((localForce[get_local_id(0)].x + localForce[get_local_id(0)+TILE_SIZE].x)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset2+PADDED_NUM_ATOMS], (long) ((localForce[get_local_id(0)].y + localForce[get_local_id(0)+TILE_SIZE].y)*0xFFFFFFFF));
-                atom_add(&forceBuffers[offset2+2*PADDED_NUM_ATOMS], (long) ((localForce[get_local_id(0)].z + localForce[get_local_id(0)+TILE_SIZE].z)*0xFFFFFFFF));
-                atom_add(&global_bornForce[offset2], (long) ((localForce[get_local_id(0)].w + localForce[get_local_id(0)+TILE_SIZE].w)*0xFFFFFFFF));
+                atom_add(&forceBuffers[offset1], (long) ((force.x + localData[tgx].temp_x)*0x100000000));
+                atom_add(&forceBuffers[offset1+PADDED_NUM_ATOMS], (long) ((force.y + localData[tgx].temp_y)*0x100000000));
+                atom_add(&forceBuffers[offset1+2*PADDED_NUM_ATOMS], (long) ((force.z + localData[tgx].temp_z)*0x100000000));
+                atom_add(&global_bornForce[offset1], (long) ((force.w + localData[tgx].temp_w)*0x100000000));
+                atom_add(&forceBuffers[offset2], (long) ((localForce[get_local_id(0)].x + localForce[get_local_id(0)+TILE_SIZE].x)*0x100000000));
+                atom_add(&forceBuffers[offset2+PADDED_NUM_ATOMS], (long) ((localForce[get_local_id(0)].y + localForce[get_local_id(0)+TILE_SIZE].y)*0x100000000));
+                atom_add(&forceBuffers[offset2+2*PADDED_NUM_ATOMS], (long) ((localForce[get_local_id(0)].z + localForce[get_local_id(0)+TILE_SIZE].z)*0x100000000));
+                atom_add(&global_bornForce[offset2], (long) ((localForce[get_local_id(0)].w + localForce[get_local_id(0)+TILE_SIZE].w)*0x100000000));
 #else
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
                 const unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;

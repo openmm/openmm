@@ -478,13 +478,13 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
         phi[20*m+18] = tuv012;
         phi[20*m+19] = tuv111;
         real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-        long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-GRID_SIZE_X*invPeriodicBoxSize.x*tuv100)*0xFFFFFFFF);
+        long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-GRID_SIZE_X*invPeriodicBoxSize.x*tuv100)*0x100000000);
         fieldBuffers[m] = fieldx;
         fieldPolarBuffers[m] = fieldx;
-        long long fieldy = (long long) ((dipoleScale*labFrameDipole[m*3+1]-GRID_SIZE_Y*invPeriodicBoxSize.y*tuv010)*0xFFFFFFFF);
+        long long fieldy = (long long) ((dipoleScale*labFrameDipole[m*3+1]-GRID_SIZE_Y*invPeriodicBoxSize.y*tuv010)*0x100000000);
         fieldBuffers[m+PADDED_NUM_ATOMS] = fieldy;
         fieldPolarBuffers[m+PADDED_NUM_ATOMS] = fieldy;
-        long long fieldz = (long long) ((dipoleScale*labFrameDipole[m*3+2]-GRID_SIZE_Z*invPeriodicBoxSize.z*tuv001)*0xFFFFFFFF);
+        long long fieldz = (long long) ((dipoleScale*labFrameDipole[m*3+2]-GRID_SIZE_Z*invPeriodicBoxSize.z*tuv001)*0x100000000);
         fieldBuffers[m+2*PADDED_NUM_ATOMS] = fieldz;
         fieldPolarBuffers[m+2*PADDED_NUM_ATOMS] = fieldz;
     }
@@ -723,17 +723,17 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         torqueBuffers[i] = (long long) (EPSILON_FACTOR*(multipole[3]*yscale*phi[2] - multipole[2]*zscale*phi[3]
                       + 2*(multipole[6]-multipole[5])*yscale*zscale*phi[9]
                       + multipole[8]*xscale*yscale*phi[7] + multipole[9]*yscale*yscale*phi[5]
-                      - multipole[7]*xscale*zscale*phi[8] - multipole[9]*zscale*zscale*phi[6])*0xFFFFFFFF);
+                      - multipole[7]*xscale*zscale*phi[8] - multipole[9]*zscale*zscale*phi[6])*0x100000000);
 
         torqueBuffers[i+PADDED_NUM_ATOMS] = (long long) (EPSILON_FACTOR*(multipole[1]*zscale*phi[3] - multipole[3]*xscale*phi[1]
                       + 2*(multipole[4]-multipole[6])*xscale*zscale*phi[8]
                       + multipole[7]*yscale*zscale*phi[9] + multipole[8]*zscale*zscale*phi[6]
-                      - multipole[8]*xscale*xscale*phi[4] - multipole[9]*xscale*yscale*phi[7])*0xFFFFFFFF);
+                      - multipole[8]*xscale*xscale*phi[4] - multipole[9]*xscale*yscale*phi[7])*0x100000000);
 
         torqueBuffers[i+PADDED_NUM_ATOMS*2] = (long long) (EPSILON_FACTOR*(multipole[2]*xscale*phi[1] - multipole[1]*yscale*phi[2]
                       + 2*(multipole[5]-multipole[4])*xscale*yscale*phi[7]
                       + multipole[7]*xscale*xscale*phi[4] + multipole[9]*xscale*zscale*phi[8]
-                      - multipole[7]*yscale*yscale*phi[5] - multipole[8]*yscale*zscale*phi[9])*0xFFFFFFFF);
+                      - multipole[7]*yscale*yscale*phi[5] - multipole[8]*yscale*zscale*phi[9])*0x100000000);
 
         // Compute the force and energy.
 
@@ -757,9 +757,9 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         f.x *= EPSILON_FACTOR*xscale;
         f.y *= EPSILON_FACTOR*yscale;
         f.z *= EPSILON_FACTOR*zscale;
-        forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0xFFFFFFFF));
-        forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0xFFFFFFFF));
-        forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0xFFFFFFFF));
+        forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
+        forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
+        forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*EPSILON_FACTOR*energy;
 }
@@ -801,17 +801,17 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         torqueBuffers[i] += (long long) (0.5f*EPSILON_FACTOR*(multipole[3]*yscale*phidp[2] - multipole[2]*zscale*phidp[3]
                       + 2*(multipole[6]-multipole[5])*yscale*zscale*phidp[9]
                       + multipole[8]*xscale*yscale*phidp[7] + multipole[9]*yscale*yscale*phidp[5]
-                      - multipole[7]*xscale*zscale*phidp[8] - multipole[9]*zscale*zscale*phidp[6])*0xFFFFFFFF);
+                      - multipole[7]*xscale*zscale*phidp[8] - multipole[9]*zscale*zscale*phidp[6])*0x100000000);
 
         torqueBuffers[i+PADDED_NUM_ATOMS] += (long long) (0.5f*EPSILON_FACTOR*(multipole[1]*zscale*phidp[3] - multipole[3]*xscale*phidp[1]
                       + 2*(multipole[4]-multipole[6])*xscale*zscale*phidp[8]
                       + multipole[7]*yscale*zscale*phidp[9] + multipole[8]*zscale*zscale*phidp[6]
-                      - multipole[8]*xscale*xscale*phidp[4] - multipole[9]*xscale*yscale*phidp[7])*0xFFFFFFFF);
+                      - multipole[8]*xscale*xscale*phidp[4] - multipole[9]*xscale*yscale*phidp[7])*0x100000000);
 
         torqueBuffers[i+PADDED_NUM_ATOMS*2] += (long long) (0.5f*EPSILON_FACTOR*(multipole[2]*xscale*phidp[1] - multipole[1]*yscale*phidp[2]
                       + 2*(multipole[5]-multipole[4])*xscale*yscale*phidp[7]
                       + multipole[7]*xscale*xscale*phidp[4] + multipole[9]*xscale*zscale*phidp[8]
-                      - multipole[7]*yscale*yscale*phidp[5] - multipole[8]*yscale*zscale*phidp[9])*0xFFFFFFFF);
+                      - multipole[7]*yscale*yscale*phidp[5] - multipole[8]*yscale*zscale*phidp[9])*0x100000000);
 
         // Compute the force and energy.
 
@@ -865,18 +865,18 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         f.x *= 0.5f*EPSILON_FACTOR*xscale;
         f.y *= 0.5f*EPSILON_FACTOR*yscale;
         f.z *= 0.5f*EPSILON_FACTOR*zscale;
-        forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0xFFFFFFFF));
-        forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0xFFFFFFFF));
-        forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0xFFFFFFFF));
+        forceBuffers[i] -= static_cast<unsigned long long>((long long) (f.x*0x100000000));
+        forceBuffers[i+PADDED_NUM_ATOMS] -= static_cast<unsigned long long>((long long) (f.y*0x100000000));
+        forceBuffers[i+PADDED_NUM_ATOMS*2] -= static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*EPSILON_FACTOR*energy;
 }
 
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip,
         long long* __restrict__ inducedField, long long* __restrict__ inducedFieldPolar, real4 invPeriodicBoxSize) {
-    real xscale = GRID_SIZE_X*invPeriodicBoxSize.x*0xFFFFFFFF;
-    real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y*0xFFFFFFFF;
-    real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z*0xFFFFFFFF;
+    real xscale = GRID_SIZE_X*invPeriodicBoxSize.x*0x100000000;
+    real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y*0x100000000;
+    real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z*0x100000000;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         inducedField[i] -= (long long) (xscale*phid[10*i+1]);
         inducedField[i+PADDED_NUM_ATOMS] -= (long long) (yscale*phid[10*i+2]);

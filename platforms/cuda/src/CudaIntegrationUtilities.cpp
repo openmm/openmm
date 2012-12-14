@@ -857,7 +857,7 @@ double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
     int paddedNumParticles = context.getPaddedNumAtoms();
     long long* force = (long long*) context.getPinnedBuffer();
     context.getForce().download(force);
-    double forceScale = timeShift/0xFFFFFFFF;
+    double forceScale = timeShift/0x100000000;
     double energy = 0.0;
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         vector<double4> velm;

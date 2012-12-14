@@ -2715,7 +2715,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             extraArgs << ", __global const long* restrict derivBuffersIn";
             for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
                 reduce << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
-                        " = (1.0f/0xFFFFFFFF)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cl.intToString(i) << "];\n";
+                        " = (1.0f/0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cl.intToString(i) << "];\n";
         }
         else {
             for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)

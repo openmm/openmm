@@ -775,15 +775,15 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
 }
 
 inline __device__ real3 loadForce(int index, long long* __restrict__ force) {
-    real scale = 1/((real) 0xFFFFFFFF);
+    real scale = 1/((real) 0x100000000);
     return make_real3(scale*force[index], scale*force[index+PADDED_NUM_ATOMS], scale*force[index+PADDED_NUM_ATOMS*2]);
 }
 
 inline __device__ void addForce(int index, long long* __restrict__ force, real3 value) {
     unsigned long long* f = (unsigned long long*) force;
-    atomicAdd(&f[index], static_cast<unsigned long long>((long long) (value.x*0xFFFFFFFF)));
-    atomicAdd(&f[index+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (value.y*0xFFFFFFFF)));
-    atomicAdd(&f[index+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>((long long) (value.z*0xFFFFFFFF)));
+    atomicAdd(&f[index], static_cast<unsigned long long>((long long) (value.x*0x100000000)));
+    atomicAdd(&f[index+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (value.y*0x100000000)));
+    atomicAdd(&f[index+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>((long long) (value.z*0x100000000)));
 }
 
 /**
