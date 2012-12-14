@@ -94,7 +94,7 @@ class AmberPrmtopFile(object):
                 try:
                     element = elem.get_by_symbol(atomName[0])
                 except KeyError:
-                    pass
+                    element = None
             top.addAtom(atomName, element, r)
         
         # Add bonds to the topology
