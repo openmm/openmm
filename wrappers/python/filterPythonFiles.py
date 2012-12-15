@@ -51,7 +51,7 @@ while True:
         # Print out the docstring in Doxygen syntax, followed by the declaration.
         
         for s in docstrings:
-            print "%s##%s" % (prefix, s.rstrip())
+            print "%s##%s" % (prefix, s.strip())
         print declaration
         if len(docstrings) == 0:
             print line
