@@ -288,7 +288,7 @@ void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& fo
     int numParticles = context.getSystem().getNumParticles();
     int paddedNumParticles = cu.getPaddedNumAtoms();
     forces.resize(numParticles);
-    double scale = 1.0/(double) 0x100000000;
+    double scale = 1.0/(double) 0x100000000LL;
     for (int i = 0; i < numParticles; ++i)
         forces[order[i]] = Vec3(scale*force[i], scale*force[i+paddedNumParticles], scale*force[i+paddedNumParticles*2]);
 }
