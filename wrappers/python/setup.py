@@ -12,8 +12,8 @@ import struct
 
 from distutils.core import setup
 
-MAJOR_VERSION_NUM='4'
-MINOR_VERSION_NUM='1'
+MAJOR_VERSION_NUM='5'
+MINOR_VERSION_NUM='0'
 BUILD_INFO='0'
 
 def reportError(message):
