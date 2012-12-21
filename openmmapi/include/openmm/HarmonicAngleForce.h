@@ -43,7 +43,8 @@ namespace OpenMM {
 /**
  * This class implements an interaction between groups of three particles that varies harmonically with the angle
  * between them.  To use it, create a HarmonicAngleForce object then call addAngle() once for each angle.  After
- * an angle has been added, you can modify its force field parameters by calling setAngleParameters().
+ * an angle has been added, you can modify its force field parameters by calling setAngleParameters().  This will
+ * have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT HarmonicAngleForce : public Force {

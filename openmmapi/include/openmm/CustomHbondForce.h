@@ -68,7 +68,7 @@ namespace OpenMM {
  *
  * Next, call addDonor() and addAcceptor() to define donors and acceptors and specify their parameter values.
  * After a donor or acceptor has been added, you can modify its parameters by calling setDonorParameters() or
- * setAcceptorParameters().
+ * setAcceptorParameters().  This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  *
  * CustomHbondForce also lets you specify "exclusions", particular combinations of donors and acceptors whose
  * interactions should be omitted from force and energy calculations.  This is most often used for particles

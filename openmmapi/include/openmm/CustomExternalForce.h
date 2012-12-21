@@ -50,7 +50,8 @@ namespace OpenMM {
  * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Finally, call addParticle() once for each particle that should be affected by the force.  After a particle has been added,
- * you can modify its parameters by calling setParticleParameters().
+ * you can modify its parameters by calling setParticleParameters().  This will have no effect on Contexts that already exist unless
+ * you call updateParametersInContext().
  *
  * As an example, the following code creates a CustomExternalForce that attracts each particle to a target position (x0, y0, z0)
  * via a harmonic potential:

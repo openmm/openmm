@@ -51,6 +51,7 @@ namespace OpenMM {
  * parameters, and addGlobalParameter() to define global parameters.  The values of per-angle parameters are specified as
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Finally, call addAngle() once for each angle.  After an angle has been added, you can modify its parameters by calling setAngleParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  *
  * As an example, the following code creates a CustomAngleForce that implements a harmonic potential:
  *

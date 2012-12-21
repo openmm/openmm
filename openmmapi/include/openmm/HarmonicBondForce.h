@@ -43,7 +43,8 @@ namespace OpenMM {
 /**
  * This class implements an interaction between pairs of particles that varies harmonically with the distance
  * between them.  To use it, create a HarmonicBondForce object then call addBond() once for each bond.  After
- * a bond has been added, you can modify its force field parameters by calling setBondParameters().
+ * a bond has been added, you can modify its force field parameters by calling setBondParameters().  This will
+ * have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT HarmonicBondForce : public Force {

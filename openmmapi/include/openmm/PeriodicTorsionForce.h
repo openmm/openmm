@@ -43,7 +43,8 @@ namespace OpenMM {
 /**
  * This class implements an interaction between groups of four particles that varies periodically with the torsion angle
  * between them.  To use it, create a PeriodicTorsionForce object then call addTorsion() once for each torsion.  After
- * a torsion has been added, you can modify its force field parameters by calling setTorsionParameters().
+ * a torsion has been added, you can modify its force field parameters by calling setTorsionParameters().  This will
+ * have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT PeriodicTorsionForce : public Force {

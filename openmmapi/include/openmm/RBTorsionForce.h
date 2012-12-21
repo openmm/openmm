@@ -44,6 +44,7 @@ namespace OpenMM {
  * This class implements an interaction between groups of four particles that varies with the torsion angle between them
  * according to the Ryckaert-Bellemans potential.  To use it, create an RBTorsionForce object then call addTorsion() once
  * for each torsion.  After a torsion has been added, you can modify its force field parameters by calling setTorsionParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT RBTorsionForce : public Force {

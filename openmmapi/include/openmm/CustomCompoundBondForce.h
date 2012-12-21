@@ -69,7 +69,8 @@ namespace OpenMM {
  * Context::setParameter().
  *
  * Next, call addBond() to define bonds and specify their parameter values.  After a bond has been added, you can
- * modify its parameters by calling setBondParameters().
+ * modify its parameters by calling setBondParameters().  This will have no effect on Contexts that already exist unless
+ * you call updateParametersInContext().
  *
  * As an example, the following code creates a CustomCompoundBondForce that implements a Urey-Bradley potential.  This
  * is an interaction between three particles that depends on the angle formed by p1-p2-p3, and on the distance between

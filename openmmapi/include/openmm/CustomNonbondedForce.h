@@ -57,7 +57,8 @@ namespace OpenMM {
  * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
  * The number of particles for which you set parameters must be exactly equal to the number of particles in the
  * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
- * you can modify its parameters by calling setParticleParameters().
+ * you can modify its parameters by calling setParticleParameters().  This will have no effect on Contexts that already exist
+ * unless you call updateParametersInContext().
  *
  * CustomNonbondedForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
  * omitted from force and energy calculations.  This is most often used for particles that are bonded to each other.

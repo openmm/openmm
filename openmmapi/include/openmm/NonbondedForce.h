@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,7 +53,8 @@ namespace OpenMM {
  * System to define its parameters.  The number of particles for which you define nonbonded parameters must
  * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
- * by calling setParticleParameters().
+ * by calling setParticleParameters().  This will have no effect on Contexts that already exist unless you
+ * call updateParametersInContext().
  *
  * NonbondedForce also lets you specify "exceptions", particular pairs of particles whose interactions should be
  * computed based on different parameters than those defined for the individual particles.  This can be used to
