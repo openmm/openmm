@@ -46,6 +46,7 @@ namespace OpenMM {
  * 
  * To use it, create an AmoebaAngleForce object then call addAngle() once for each angle.  After
  * an angle has been added, you can modify its force field parameters by calling setAngleParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaAngleForce : public Force {

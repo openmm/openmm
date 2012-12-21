@@ -43,6 +43,7 @@ namespace OpenMM {
  * 
  * To use it, create a StretchBendForce object then call addStretchBend() once for each stretch-bend.  After
  * a stretch-bend has been added, you can modify its force field parameters by calling setStretchBendParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaStretchBendForce : public Force {

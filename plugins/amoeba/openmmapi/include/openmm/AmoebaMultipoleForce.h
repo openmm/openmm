@@ -47,6 +47,7 @@ namespace OpenMM {
  *
  * To use it, create an AmoebaMultipoleForce object then call addMultipole() once for each atom.  After
  * an entry has been added, you can modify its force field parameters by calling setMultipoleParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaMultipoleForce : public Force {

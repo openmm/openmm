@@ -43,6 +43,7 @@ namespace OpenMM {
  * 
  * To use it, create an AmoebaVdwForce object then call addParticle() once for each particle.  After
  * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  * 
  * A unique feature of this class is that the interaction site for a particle does not need to be
  * exactly at the particle's location.  Instead, it can be placed a fraction of the distance from that

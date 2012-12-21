@@ -43,6 +43,7 @@ namespace OpenMM {
  * 
  * To use it, create an OutOfPlaneBendForce object then call addOutOfPlaneBend() once for each outOfPlaneBend.  After
  * an out-of-plane bend has been added, you can modify its force field parameters by calling setOutOfPlaneBendParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaOutOfPlaneBendForce : public Force {

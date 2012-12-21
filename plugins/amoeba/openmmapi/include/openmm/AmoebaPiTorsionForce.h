@@ -43,6 +43,7 @@ namespace OpenMM {
  * 
  * To use it, create an AmoebaPiTorsionForce object then call addPiTorsion() once for each torsion.  After
  * a torsion has been added, you can modify its force field parameters by calling setPiTorsionParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaPiTorsionForce : public Force {

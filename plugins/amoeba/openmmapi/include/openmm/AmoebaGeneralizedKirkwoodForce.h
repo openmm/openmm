@@ -45,7 +45,8 @@ namespace OpenMM {
  * System to define its parameters.  The number of particles for which you define parameters must
  * be equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
- * by calling setParticleParameters().
+ * by calling setParticleParameters().  This will have no effect on Contexts that already exist unless you
+ * call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaGeneralizedKirkwoodForce : public Force {

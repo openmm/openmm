@@ -48,6 +48,7 @@ namespace OpenMM {
  * 
  * To use it, create an AmoebaBondForce object then call addBond() once for each bond.  After
  * a bond has been added, you can modify its force field parameters by calling setBondParameters().
+ * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
 class OPENMM_EXPORT_AMOEBA AmoebaBondForce : public Force {
