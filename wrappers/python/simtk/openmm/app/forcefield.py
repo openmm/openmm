@@ -3463,7 +3463,7 @@ class AmoebaMultipoleGenerator:
 
                     atom.multipoleDict = savedMultipoleDict
                     atom.polarizationGroups = dict()
-                    newIndex = force.addParticle(savedMultipoleDict['charge'], savedMultipoleDict['dipole'], savedMultipoleDict['quadrupole'], savedMultipoleDict['axisType'],
+                    newIndex = force.addMultipole(savedMultipoleDict['charge'], savedMultipoleDict['dipole'], savedMultipoleDict['quadrupole'], savedMultipoleDict['axisType'],
                                                                  zaxis, xaxis, yaxis, savedMultipoleDict['thole'], savedMultipoleDict['pdamp'], savedMultipoleDict['polarizability'])
                     if (atomIndex == newIndex):
                         force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent12, bonded12ParticleSets[atomIndex])

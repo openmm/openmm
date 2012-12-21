@@ -177,7 +177,7 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
             molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q7" ) );
             molecularQuadrupole.push_back( quadrupole.getDoubleProperty( "q8" ) );
 
-            force->addParticle( particle.getDoubleProperty("charge"), molecularDipole, molecularQuadrupole,
+            force->addMultipole( particle.getDoubleProperty("charge"), molecularDipole, molecularQuadrupole,
                                 particle.getIntProperty("axisType"),
                                 particle.getIntProperty("multipoleAtomZ"),
                                 particle.getIntProperty("multipoleAtomX"),

@@ -102,7 +102,7 @@ static void setupMultipoleAmmonia(System& system, AmoebaMultipoleForce* amoebaMu
     // first N
 
     system.addParticle( 1.4007000e+01 );
-    amoebaMultipoleForce->addParticle(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
+    amoebaMultipoleForce->addMultipole(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
 
     // 3 H attached to first N
 
@@ -125,23 +125,23 @@ static void setupMultipoleAmmonia(System& system, AmoebaMultipoleForce* amoebaMu
     system.addParticle( 1.0080000e+00 );
     system.addParticle( 1.0080000e+00 );
     system.addParticle( 1.0080000e+00 );
-    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9e-01,  2.8135002e-01,  4.96e-04 );
-    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9e-01,  2.8135002e-01,  4.96e-04 );
-    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addMultipole(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addMultipole(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addMultipole(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9e-01,  2.8135002e-01,  4.96e-04 );
 
     // second N
 
     system.addParticle(   1.4007000e+01 );
-    amoebaMultipoleForce->addParticle(  -5.796e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9e-01,  3.1996314e-01,  1.073e-03 );
+    amoebaMultipoleForce->addMultipole(  -5.796e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9e-01,  3.1996314e-01,  1.073e-03 );
 
     // 3 H attached to second N
 
     system.addParticle(   1.0080000e+00 );
     system.addParticle(   1.0080000e+00 );
     system.addParticle(   1.0080000e+00 );
-    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9e-01,  2.8135002e-01,  4.96e-04 );
-    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9e-01,  2.8135002e-01,  4.96e-04 );
-    amoebaMultipoleForce->addParticle(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addMultipole(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addMultipole(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9e-01,  2.8135002e-01,  4.96e-04 );
+    amoebaMultipoleForce->addMultipole(   1.932e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9e-01,  2.8135002e-01,  4.96e-04 );
 
     // covalent maps
 
@@ -584,11 +584,11 @@ static void setupAndGetForcesEnergyMultipoleWater( AmoebaMultipoleForce::Nonbond
     hydrogenMolecularQuadrupole[8] =   1.3452570e-04;
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
-        amoebaMultipoleForce->addParticle( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
+        amoebaMultipoleForce->addMultipole( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
                                             3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
     }
 
@@ -811,11 +811,11 @@ static void testQuadrupoleValidation( FILE* log ){
     hydrogenMolecularQuadrupole[8] =   1.3452570e-04;
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
-        amoebaMultipoleForce->addParticle( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
+        amoebaMultipoleForce->addMultipole( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
                                             3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
     }
 
@@ -1009,8 +1009,8 @@ static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::
     ionQuadrupole[6] =   0.0000000e+00;
     ionQuadrupole[7] =   0.0000000e+00;
     ionQuadrupole[8] =   0.0000000e+00;
-    amoebaMultipoleForce->addParticle(  -1.0000000e+00, ionDipole, ionQuadrupole, 5, -1, -1, -1,   3.9000000e-01,   3.9842202e-01,   4.0000000e-03 );
-    amoebaMultipoleForce->addParticle(   1.0000000e+00, ionDipole, ionQuadrupole, 5, -1, -1, -1,   3.9000000e-01,   2.2209062e-01,   1.2000000e-04 );
+    amoebaMultipoleForce->addMultipole(  -1.0000000e+00, ionDipole, ionQuadrupole, 5, -1, -1, -1,   3.9000000e-01,   3.9842202e-01,   4.0000000e-03 );
+    amoebaMultipoleForce->addMultipole(   1.0000000e+00, ionDipole, ionQuadrupole, 5, -1, -1, -1,   3.9000000e-01,   2.2209062e-01,   1.2000000e-04 );
 
     // waters
 
@@ -1054,11 +1054,11 @@ static void setupAndGetForcesEnergyMultipoleIonsAndWater( AmoebaMultipoleForce::
     hydrogenMolecularQuadrupole[8] =   1.3452570e-04;
 
     for( unsigned int jj = 2; jj < numberOfParticles; jj += 3 ){
-        amoebaMultipoleForce->addParticle( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
+        amoebaMultipoleForce->addMultipole( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
                                             3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
     }
 
@@ -1293,11 +1293,11 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::No
     hydrogenMolecularQuadrupole[8] =   1.3452570e-04;
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += 3 ){
-        amoebaMultipoleForce->addParticle( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
+        amoebaMultipoleForce->addMultipole( -5.1966000e-01, oxygenMolecularDipole, oxygenMolecularQuadrupole, 1, jj+1, jj+2, -1,
                                             3.9000000e-01, 3.0698765e-01, 8.3700000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+2, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
-        amoebaMultipoleForce->addParticle(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
+        amoebaMultipoleForce->addMultipole(  2.5983000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 0, jj, jj+1, -1, 
                                             3.9000000e-01, 2.8135002e-01, 4.9600000e-04 );
     }
 

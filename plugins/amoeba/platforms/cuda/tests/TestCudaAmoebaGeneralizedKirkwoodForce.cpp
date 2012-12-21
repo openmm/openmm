@@ -89,7 +89,7 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     // first N
 
     system.addParticle( 1.4007000e+01 );
-    amoebaMultipoleForce->addParticle(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
+    amoebaMultipoleForce->addMultipole(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
 
     // 3 H attached to first N
 
@@ -112,23 +112,23 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     system.addParticle( 1.0080000e+00 );
     system.addParticle( 1.0080000e+00 );
     system.addParticle( 1.0080000e+00 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
 
     // second N
 
     system.addParticle(   1.4007000e+01 );
-    amoebaMultipoleForce->addParticle(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
+    amoebaMultipoleForce->addMultipole(  -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03 );
 
     // 3 H attached to second N
 
     system.addParticle(   1.0080000e+00 );
     system.addParticle(   1.0080000e+00 );
     system.addParticle(   1.0080000e+00 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
-    amoebaMultipoleForce->addParticle(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
+    amoebaMultipoleForce->addMultipole(   1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04 );
 
     // covalent maps
 
@@ -943,7 +943,7 @@ static void setupAndGetForcesEnergyMultipoleVillin( AmoebaMultipoleForce::Polari
         quadrupole[7]   = data[quadrupoleIndex + 7];
         quadrupole[8]   = data[quadrupoleIndex + 8];
 
-        amoebaMultipoleForce->addParticle( data[chargeIndex], dipole, quadrupole, static_cast<int>(data[axisTypeIndex]),
+        amoebaMultipoleForce->addMultipole( data[chargeIndex], dipole, quadrupole, static_cast<int>(data[axisTypeIndex]),
                                            static_cast<int>(data[multipoleAtomZIndex]), static_cast<int>(data[multipoleAtomXIndex]), static_cast<int>(data[multipoleAtomYIndex]),
                                            data[tholeIndex], data[dampingFactorIndex], data[polarityIndex] );
         data           += entriesPerParticle;

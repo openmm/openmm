@@ -83,7 +83,7 @@ void testSerialization() {
         for( unsigned int jj = 0; jj < 9; jj++ ){
             molecularQuadrupole.push_back( static_cast<double>(rand()) );
         }
-        force1.addParticle( static_cast<double>(ii+1), molecularDipole, molecularQuadrupole, AmoebaMultipoleForce::Bisector,
+        force1.addMultipole( static_cast<double>(ii+1), molecularDipole, molecularQuadrupole, AmoebaMultipoleForce::Bisector,
                             ii+1, ii+2, ii+3, static_cast<double>(rand()), static_cast<double>(rand()), static_cast<double>(rand()) );
 
         for( unsigned int jj = 0; jj < covalentTypes.size(); jj++ ){
