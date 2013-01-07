@@ -4466,7 +4466,8 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
         selectSizeKernel.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(5, cl.getForce().getDeviceBuffer());
-        selectSizeKernel.setArg(6, blockSize*sizeof(cl_float), NULL);
+        int elementSize = (useDouble ? sizeof(cl_double) : sizeof(cl_float));
+        selectSizeKernel.setArg(6, blockSize*elementSize, NULL);
     }
 
     // Select the step size to use.
@@ -4572,8 +4573,9 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         selectSizeKernel.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(7, params->getDeviceBuffer());
-        selectSizeKernel.setArg(8, params->getSize()*sizeof(cl_float), NULL);
-        selectSizeKernel.setArg(9, blockSize*sizeof(cl_float), NULL);
+	int elementSize = (useDouble ? sizeof(cl_double) : sizeof(cl_float));
+        selectSizeKernel.setArg(8, params->getSize()*elementSize, NULL);
+        selectSizeKernel.setArg(9, blockSize*elementSize, NULL);
     }
 
     // Select the step size to use.

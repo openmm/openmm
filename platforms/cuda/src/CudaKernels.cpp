@@ -4329,7 +4329,7 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
             useDouble ? (void*) &kT : (void*) &kTFloat,
             &cu.getIntegrationUtilities().getStepSize().getDevicePointer(),
             &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &params->getDevicePointer()};
-    int sharedSize = blockSize*(useDouble ? sizeof(double) : sizeof(float));
+    int sharedSize = 2*blockSize*(useDouble ? sizeof(double) : sizeof(float));
     cu.executeKernel(selectSizeKernel, argsSelect, blockSize, blockSize, sharedSize);
 
     // Call the first integration kernel.
