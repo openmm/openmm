@@ -35,7 +35,7 @@ import os
 import sys
 from simtk.openmm import Vec3
 from re import sub, match
-from simtk.unit import nanometers, angstroms
+from simtk.unit import nanometers, angstroms, Quantity
 import element as elem
 try:
     import numpy

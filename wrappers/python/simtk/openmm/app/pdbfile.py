@@ -39,7 +39,7 @@ from copy import copy
 from simtk.openmm import Vec3
 from simtk.openmm.app.internal.pdbstructure import PdbStructure
 from simtk.openmm.app import Topology
-from simtk.unit import nanometers, angstroms, is_quantity, norm
+from simtk.unit import nanometers, angstroms, is_quantity, norm, Quantity
 import element as elem
 try:
     import numpy
