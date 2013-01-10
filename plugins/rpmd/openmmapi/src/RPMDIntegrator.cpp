@@ -86,6 +86,15 @@ void RPMDIntegrator::setVelocities(int copy, const vector<Vec3>& velocities) {
 }
 
 State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int groups) {
+    if (isFirstStep) {
+        // Call setPositions() on the Context so it doesn't think the user is trying to
+        // run a simulation without setting positions first.  These positions will
+        // immediately get overwritten by the ones stored in this integrator.
+        
+        vector<Vec3> p(context->getSystem().getNumParticles(), Vec3());
+        context->getOwner().setPositions(p);
+        isFirstStep = false;
+    }
     kernel.getAs<IntegrateRPMDStepKernel>().copyToContext(copy, *context);
     return context->getOwner().getState(types, enforcePeriodicBox, groups);
 }
