@@ -99,7 +99,7 @@ void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     System system;
-    VariableLangevinIntegrator integrator(temp, 2.0, 1e-4);
+    VariableLangevinIntegrator integrator(temp, 5.0, 1e-4);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
@@ -122,11 +122,11 @@ void testTemperature() {
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
-        integrator.step(1);
+        integrator.step(5);
     }
     ke /= 1000;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
 }
 
 void testConstraints() {
@@ -228,6 +228,65 @@ void testRandomSeed() {
     }
 }
 
+void testArgonBox() {
+    const int gridSize = 8;
+    const double mass = 40.0;            // Ar atomic mass
+    const double temp = 120.0;           // K
+    const double epsilon = BOLTZ * temp; // L-J well depth for Ar
+    const double sigma = 0.34;           // L-J size for Ar in nm
+    const double density = 0.8;          // atoms / sigma^3
+    double cellSize = sigma / pow(density, 0.333);
+    double boxSize = gridSize * cellSize;
+    double cutoff = 2.0 * sigma;
+
+    // Create a box of argon atoms.
+    
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    const Vec3 half(0.5, 0.5, 0.5);
+    int numParticles = 0;
+    for (int i = 0; i < gridSize; i++) {
+        for (int j = 0; j < gridSize; j++) {
+            for (int k = 0; k < gridSize; k++) {
+                system.addParticle(mass);
+                nonbonded->addParticle(0, sigma, epsilon);
+                positions.push_back((Vec3(i, j, k) + half + Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*0.1) * cellSize);
+                ++numParticles;
+            }
+        }
+    }
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(nonbonded);
+
+    VariableLangevinIntegrator integrator(temp, 6.0, 1e-5);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
+
+    // Equilibrate.
+
+    integrator.stepTo(2.0);
+
+    // Make sure the temperature is correct.
+    
+    double ke = 0.0;
+    for (int i = 0; i < 400; ++i) {
+        double t = 2.0 + 0.01 * (i + 1);
+        integrator.stepTo(t);
+        State state = context.getState(State::Energy);
+        ke += state.getKineticEnergy();
+    }
+    ke /= 400;
+    double expected = 1.5 * numParticles * BOLTZ * temp;
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.01);
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -236,6 +295,7 @@ int main(int argc, char* argv[]) {
         testTemperature();
         testConstraints();
         testRandomSeed();
+        testArgonBox();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
@@ -244,5 +304,3 @@ int main(int argc, char* argv[]) {
     cout << "Done" << endl;
     return 0;
 }
-
-

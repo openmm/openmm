@@ -211,6 +211,62 @@ void testConstrainedClusters() {
     ASSERT(context.getState(State::Positions).getTime() > 0.1);
 }
 
+void testArgonBox() {
+    const int gridSize = 8;
+    const double mass = 40.0;            // Ar atomic mass
+    const double temp = 120.0;           // K
+    const double epsilon = BOLTZ * temp; // L-J well depth for Ar
+    const double sigma = 0.34;           // L-J size for Ar in nm
+    const double density = 0.8;          // atoms / sigma^3
+    double cellSize = sigma / pow(density, 0.333);
+    double boxSize = gridSize * cellSize;
+    double cutoff = 2.0 * sigma;
+
+    // Create a box of argon atoms.
+    
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    const Vec3 half(0.5, 0.5, 0.5);
+    for (int i = 0; i < gridSize; i++) {
+        for (int j = 0; j < gridSize; j++) {
+            for (int k = 0; k < gridSize; k++) {
+                system.addParticle(mass);
+                nonbonded->addParticle(0, sigma, epsilon);
+                positions.push_back((Vec3(i, j, k) + half + Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*0.1) * cellSize);
+            }
+        }
+    }
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(nonbonded);
+
+    VariableVerletIntegrator integrator(1e-5);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
+
+    // Equilibrate.
+    
+    integrator.stepTo(1.0);
+
+    // Simulate it and see whether energy remains constant.
+    
+    State state0 = context.getState(State::Energy);
+    double initialEnergy = state0.getKineticEnergy() + state0.getPotentialEnergy();
+    for (int i = 0; i < 20; i++) {
+        double t = 1.0 + 0.05*(i+1);
+        integrator.stepTo(t);
+        State state = context.getState(State::Energy);
+        double energy = state.getKineticEnergy() + state.getPotentialEnergy();
+        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -218,6 +274,7 @@ int main(int argc, char* argv[]) {
         testSingleBond();
         testConstraints();
         testConstrainedClusters();
+        testArgonBox();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
