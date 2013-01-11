@@ -389,7 +389,7 @@ void OpenCLContext::initialize() {
     }
     addAutoclearBuffer(*forceBuffers);
     addAutoclearBuffer(*energyBuffer);
-    int bufferBytes = max(posq->getSize()*posq->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
+    int bufferBytes = max(velm->getSize()*velm->getElementSize(), energyBuffer->getSize()*energyBuffer->getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = queue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
