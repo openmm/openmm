@@ -240,7 +240,7 @@ void testVelocityConstraints() {
 void testWithThermostat() {
     const int numParticles = 8;
     const double temp = 100.0;
-    const double collisionFreq = 10.0;
+    const double collisionFreq = 20.0;
     const int numSteps = 10000;
     System system;
     CustomIntegrator integrator(0.005);
