@@ -319,21 +319,16 @@ public:
      * <i>lowest nonvanishing moment</i> has a well defined value.  This means that if the system has a net
      * nonzero charge, the dipole and quadrupole moments are not well defined and should be ignored.  If the
      * net charge is zero, the dipole moment is well defined (and really represents a dipole density), but
-     * the quadrupole moment is still undefined and should be ignored.  Specify "compute = True" if you want
-     * to do an energy and force calculation prior to getting the moments; if compute = False, it will be faster
-     * but we will lose accuracy.  Specify "order" for the maximum order computed (order = 2 means we go up 
-     * through quadrupoles.)
+     * the quadrupole moment is still undefined and should be ignored.
      *
      * @param context      context
-     * @param compute      Whether to compute energies and forces first
-     * @param order        Maximum order to go through, above 2 for quadrupole has no effect
      * @param outputMultipoleMonents (charge,
                                       dipole_x, dipole_y, dipole_z,
                                       quadrupole_xx, quadrupole_xy, quadrupole_xz,
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
                                       quadrupole_zx, quadrupole_zy, quadrupole_zz)
      */
-    void getSystemMultipoleMoments(Context& context, bool compute, int order, std::vector< double >& outputMultipoleMoments);
+    void getSystemMultipoleMoments(Context& context, std::vector< double >& outputMultipoleMoments);
     /**
      * Update the multipole parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.

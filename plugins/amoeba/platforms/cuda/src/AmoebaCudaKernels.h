@@ -341,15 +341,13 @@ public:
      * Get the system multipole moments
      *
      * @param context      context
-     * @param compute      Whether to compute energies and forces first
-     * @param order        Maximum order to go through, above 2 for quadrupole has no effect
      * @param outputMultipoleMoments (charge,
      *                                dipole_x, dipole_y, dipole_z,
      *                                quadrupole_xx, quadrupole_xy, quadrupole_xz,
      *                                quadrupole_yx, quadrupole_yy, quadrupole_yz,
      *                                quadrupole_zx, quadrupole_zy, quadrupole_zz )
      */
-    void getSystemMultipoleMoments(ContextImpl& context, bool compute, int order, std::vector<double>& outputMultipoleMoments);
+    void getSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     /**
      * Copy changed parameters over to a context.
      *
@@ -370,7 +368,7 @@ private:
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
-    template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, int order, std::vector<double>& outputMultipoleMoments);
+    template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     double inducedEpsilon;

@@ -380,8 +380,6 @@ public:
      * Get the system multipole moments.
      *
      * @param context                context 
-     * @param compute                Whether to compute energies and forces first
-     * @param order                  Maximum order to go through, above 2 for quadrupole has no effect
      * @param outputMultipoleMonents vector of multipole moments:
                                      (charge,
                                       dipole_x, dipole_y, dipole_z,
@@ -389,7 +387,7 @@ public:
                                       quadrupole_yx, quadrupole_yy, quadrupole_yz,
                                       quadrupole_zx, quadrupole_zy, quadrupole_zz )
      */
-    void getSystemMultipoleMoments(ContextImpl& context, bool compute, int order, std::vector< double >& outputMultipoleMoments);
+    void getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments);
     /**
      * Copy changed parameters over to a context.
      *
