@@ -41,7 +41,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff, double stepSize) : owner(NULL) {
+BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff, double stepSize) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);

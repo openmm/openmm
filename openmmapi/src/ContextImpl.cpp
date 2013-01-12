@@ -48,7 +48,8 @@ using namespace OpenMM;
 using namespace std;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
-         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), lastForceGroups(-1), platform(platform), platformData(NULL) {
+        owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
+        lastForceGroups(-1), platform(platform), platformData(NULL) {
     if (system.getNumParticles() == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");
     
@@ -122,6 +123,12 @@ ContextImpl::~ContextImpl() {
     updateStateDataKernel = Kernel();
     applyConstraintsKernel = Kernel();
     virtualSitesKernel = Kernel();
+    if (!integratorIsDeleted) {
+        // The Context is being deleted before the Integrator, so call cleanup() on it now.
+        
+        integrator.cleanup();
+        integrator.context = NULL;
+    }
     platform->contextDestroyed(*this);
 }
 

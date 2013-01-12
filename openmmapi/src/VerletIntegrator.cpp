@@ -40,7 +40,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VerletIntegrator::VerletIntegrator(double stepSize) : owner(NULL) {
+VerletIntegrator::VerletIntegrator(double stepSize) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-4);
 }

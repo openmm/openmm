@@ -42,7 +42,7 @@ using std::string;
 using std::vector;
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
-        owner(NULL), numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);

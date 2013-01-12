@@ -132,8 +132,6 @@ protected:
 private:
     double temperature, friction;
     int randomNumberSeed;
-    ContextImpl* context;
-    Context* owner;
     Kernel kernel;
 };
 

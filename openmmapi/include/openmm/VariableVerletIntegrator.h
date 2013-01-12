@@ -115,8 +115,6 @@ protected:
     double computeKineticEnergy();
 private:
     double errorTol;
-    ContextImpl* context;
-    Context* owner;
     Kernel kernel;
 };
 

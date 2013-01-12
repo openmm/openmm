@@ -243,6 +243,13 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(std::istream& stream);
+    /**
+     * This is invoked by the Integrator when it is deleted.  This is needed to ensure the cleanup process
+     * is done correctly, since we don't know whether the Integrator or Context will be deleted first.
+     */
+    void integratorDeleted() {
+        integratorIsDeleted = true;
+    }
 private:
     friend class Context;
     static void tagParticlesInMolecule(int particle, int molecule, std::vector<int>& particleMolecule, std::vector<std::vector<int> >& particleBonds);
@@ -252,7 +259,7 @@ private:
     std::vector<ForceImpl*> forceImpls;
     std::map<std::string, double> parameters;
     mutable std::vector<std::vector<int> > molecules;
-    bool hasInitializedForces, hasSetPositions;
+    bool hasInitializedForces, hasSetPositions, integratorIsDeleted;
     int lastForceGroups;
     Platform* platform;
     Kernel initializeForcesKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;

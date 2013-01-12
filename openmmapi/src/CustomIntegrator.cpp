@@ -42,7 +42,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-CustomIntegrator::CustomIntegrator(double stepSize) : owner(NULL), globalsAreCurrent(true), forcesAreValid(false) {
+CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), forcesAreValid(false) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-4);
     setRandomNumberSeed((int) time(NULL));

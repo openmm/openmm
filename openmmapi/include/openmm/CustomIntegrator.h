@@ -473,8 +473,6 @@ private:
     mutable bool globalsAreCurrent;
     int randomNumberSeed;
     bool forcesAreValid;
-    ContextImpl* context;
-    Context* owner;
     Kernel kernel;
 };
 

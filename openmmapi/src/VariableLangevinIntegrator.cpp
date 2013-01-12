@@ -42,7 +42,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, double frictionCoeff, double errorTol) : owner(NULL) {
+VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, double frictionCoeff, double errorTol) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setErrorTolerance(errorTol);

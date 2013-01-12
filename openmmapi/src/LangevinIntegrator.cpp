@@ -41,7 +41,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff, double stepSize) : owner(NULL) {
+LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff, double stepSize) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);

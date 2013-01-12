@@ -77,8 +77,6 @@ protected:
      */
     double computeKineticEnergy();
 private:
-    ContextImpl* context;
-    Context* owner;
     Kernel kernel;
 };
 
