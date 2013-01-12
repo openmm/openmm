@@ -1596,7 +1596,7 @@ void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& 
 }
 
 template <class T, class T4, class M4>
-void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
+void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextImpl& context, int order, vector<double>& outputMultipoleMoments) {
     // Compute the local coordinates relative to the center of mass.
     int numAtoms = cu.getNumAtoms();
     vector<T4> posq;
@@ -1641,56 +1641,66 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     double zyqdp = 0.0;
     double zzqdp = 0.0;
     vector<T> labDipoleVec, inducedDipoleVec, quadrupoleVec;
-    labFrameDipoles->download(labDipoleVec);
-    inducedDipole->download(inducedDipoleVec);
-    labFrameQuadrupoles->download(quadrupoleVec);
+    if (order >= 1) {
+        labFrameDipoles->download(labDipoleVec);
+        inducedDipole->download(inducedDipoleVec);
+    }
+    if (order >= 2) {
+        labFrameQuadrupoles->download(quadrupoleVec);
+    }
     for (int i = 0; i < numAtoms; i++) {
         totalCharge += posqLocal[i].w;
-        double netDipoleX = (labDipoleVec[3*i]    + inducedDipoleVec[3*i]);
-        double netDipoleY = (labDipoleVec[3*i+1]  + inducedDipoleVec[3*i+1]);
-        double netDipoleZ = (labDipoleVec[3*i+2]  + inducedDipoleVec[3*i+2]);
-        xdpl += posqLocal[i].x*posqLocal[i].w + netDipoleX;
-        ydpl += posqLocal[i].y*posqLocal[i].w + netDipoleY;
-        zdpl += posqLocal[i].z*posqLocal[i].w + netDipoleZ;
-        xxqdp += posqLocal[i].x*posqLocal[i].x*posqLocal[i].w + 2*posqLocal[i].x*netDipoleX;
-        xyqdp += posqLocal[i].x*posqLocal[i].y*posqLocal[i].w + posqLocal[i].x*netDipoleY + posqLocal[i].y*netDipoleX;
-        xzqdp += posqLocal[i].x*posqLocal[i].z*posqLocal[i].w + posqLocal[i].x*netDipoleZ + posqLocal[i].z*netDipoleX;
-        yxqdp += posqLocal[i].y*posqLocal[i].x*posqLocal[i].w + posqLocal[i].y*netDipoleX + posqLocal[i].x*netDipoleY;
-        yyqdp += posqLocal[i].y*posqLocal[i].y*posqLocal[i].w + 2*posqLocal[i].y*netDipoleY;
-        yzqdp += posqLocal[i].y*posqLocal[i].z*posqLocal[i].w + posqLocal[i].y*netDipoleZ + posqLocal[i].z*netDipoleY;
-        zxqdp += posqLocal[i].z*posqLocal[i].x*posqLocal[i].w + posqLocal[i].z*netDipoleX + posqLocal[i].x*netDipoleZ;
-        zyqdp += posqLocal[i].z*posqLocal[i].y*posqLocal[i].w + posqLocal[i].z*netDipoleY + posqLocal[i].y*netDipoleZ;
-        zzqdp += posqLocal[i].z*posqLocal[i].z*posqLocal[i].w + 2*posqLocal[i].z*netDipoleZ;
+	double netDipoleX = (labDipoleVec[3*i]    + inducedDipoleVec[3*i]);
+	double netDipoleY = (labDipoleVec[3*i+1]  + inducedDipoleVec[3*i+1]);
+	double netDipoleZ = (labDipoleVec[3*i+2]  + inducedDipoleVec[3*i+2]);
+	if (order >= 1) {
+            xdpl += posqLocal[i].x*posqLocal[i].w + netDipoleX;
+            ydpl += posqLocal[i].y*posqLocal[i].w + netDipoleY;
+            zdpl += posqLocal[i].z*posqLocal[i].w + netDipoleZ;
+	}
+	if (order >= 2) {
+            xxqdp += posqLocal[i].x*posqLocal[i].x*posqLocal[i].w + 2*posqLocal[i].x*netDipoleX;
+            xyqdp += posqLocal[i].x*posqLocal[i].y*posqLocal[i].w + posqLocal[i].x*netDipoleY + posqLocal[i].y*netDipoleX;
+            xzqdp += posqLocal[i].x*posqLocal[i].z*posqLocal[i].w + posqLocal[i].x*netDipoleZ + posqLocal[i].z*netDipoleX;
+            yxqdp += posqLocal[i].y*posqLocal[i].x*posqLocal[i].w + posqLocal[i].y*netDipoleX + posqLocal[i].x*netDipoleY;
+            yyqdp += posqLocal[i].y*posqLocal[i].y*posqLocal[i].w + 2*posqLocal[i].y*netDipoleY;
+            yzqdp += posqLocal[i].y*posqLocal[i].z*posqLocal[i].w + posqLocal[i].y*netDipoleZ + posqLocal[i].z*netDipoleY;
+            zxqdp += posqLocal[i].z*posqLocal[i].x*posqLocal[i].w + posqLocal[i].z*netDipoleX + posqLocal[i].x*netDipoleZ;
+            zyqdp += posqLocal[i].z*posqLocal[i].y*posqLocal[i].w + posqLocal[i].z*netDipoleY + posqLocal[i].y*netDipoleZ;
+            zzqdp += posqLocal[i].z*posqLocal[i].z*posqLocal[i].w + 2*posqLocal[i].z*netDipoleZ;
+	}
     }
 
     // Convert the quadrupole from traced to traceless form.
  
-    double qave = (xxqdp + yyqdp + zzqdp)/3;
-    xxqdp = 1.5*(xxqdp-qave);
-    xyqdp = 1.5*xyqdp;
-    xzqdp = 1.5*xzqdp;
-    yxqdp = 1.5*yxqdp;
-    yyqdp = 1.5*(yyqdp-qave);
-    yzqdp = 1.5*yzqdp;
-    zxqdp = 1.5*zxqdp;
-    zyqdp = 1.5*zyqdp;
-    zzqdp = 1.5*(zzqdp-qave);
+    if (order >= 2) {
+        double qave = (xxqdp + yyqdp + zzqdp)/3;
+        xxqdp = 1.5*(xxqdp-qave);
+        xyqdp = 1.5*xyqdp;
+        xzqdp = 1.5*xzqdp;
+        yxqdp = 1.5*yxqdp;
+        yyqdp = 1.5*(yyqdp-qave);
+        yzqdp = 1.5*yzqdp;
+        zxqdp = 1.5*zxqdp;
+        zyqdp = 1.5*zyqdp;
+        zzqdp = 1.5*(zzqdp-qave);
 
     // Add the traceless atomic quadrupoles to the total quadrupole moment.
 
-    for (int i = 0; i < numAtoms; i++) {
-        xxqdp = xxqdp + 3*quadrupoleVec[5*i];
-        xyqdp = xyqdp + 3*quadrupoleVec[5*i+1];
-        xzqdp = xzqdp + 3*quadrupoleVec[5*i+2];
-        yxqdp = yxqdp + 3*quadrupoleVec[5*i+1];
-        yyqdp = yyqdp + 3*quadrupoleVec[5*i+3];
-        yzqdp = yzqdp + 3*quadrupoleVec[5*i+4];
-        zxqdp = zxqdp + 3*quadrupoleVec[5*i+2];
-        zyqdp = zyqdp + 3*quadrupoleVec[5*i+4];
-        zzqdp = zzqdp + -3*(quadrupoleVec[5*i]+quadrupoleVec[5*i+3]);
-    }
- 
-    double debye = 4.80321;
+        for (int i = 0; i < numAtoms; i++) {
+            xxqdp = xxqdp + 3*quadrupoleVec[5*i];
+            xyqdp = xyqdp + 3*quadrupoleVec[5*i+1];
+            xzqdp = xzqdp + 3*quadrupoleVec[5*i+2];
+            yxqdp = yxqdp + 3*quadrupoleVec[5*i+1];
+            yyqdp = yyqdp + 3*quadrupoleVec[5*i+3];
+            yzqdp = yzqdp + 3*quadrupoleVec[5*i+4];
+            zxqdp = zxqdp + 3*quadrupoleVec[5*i+2];
+            zyqdp = zyqdp + 3*quadrupoleVec[5*i+4];
+            zzqdp = zzqdp + -3*(quadrupoleVec[5*i]+quadrupoleVec[5*i+3]);
+        }
+    } 
+
+    double debye = 48.0321; // If we use 4.80321 then the result is ten times too small.
     outputMultipoleMoments.resize(13);
     outputMultipoleMoments[0] = totalCharge;
     outputMultipoleMoments[1] = xdpl*debye;
@@ -1707,14 +1717,15 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     outputMultipoleMoments[12] = zzqdp*debye;
 }
 
-void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
-    context.calcForcesAndEnergy(false, false, -1);
+void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, bool compute, int order, vector<double>& outputMultipoleMoments) {
+    if (compute)
+        context.calcForcesAndEnergy(false, false, -1);
     if (cu.getUseDoublePrecision())
-        computeSystemMultipoleMoments<double, double4, double4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<double, double4, double4>(context, order, outputMultipoleMoments);
     else if (cu.getUseMixedPrecision())
-        computeSystemMultipoleMoments<float, float4, double4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<float, float4, double4>(context, order, outputMultipoleMoments);
     else
-        computeSystemMultipoleMoments<float, float4, float4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<float, float4, float4>(context, order, outputMultipoleMoments);
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) {

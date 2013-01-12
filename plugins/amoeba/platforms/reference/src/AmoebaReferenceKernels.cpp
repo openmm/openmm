@@ -708,7 +708,7 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextI
     return;
 }
 
-void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, std::vector< double >& outputMultipoleMoments){
+void ReferenceCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, bool compute, int order, std::vector< double >& outputMultipoleMoments){
 
     // retrieve masses
 

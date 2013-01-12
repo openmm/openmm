@@ -1915,7 +1915,7 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::No
     context.setPositions(positions);
 
     if( testName == "testSystemMultipoleMoments" ){
-        amoebaMultipoleForce->getSystemMultipoleMoments( context, outputMultipoleMoments );
+        amoebaMultipoleForce->getSystemMultipoleMoments( context, 1, 2, outputMultipoleMoments );
     } else if( testName == "testMultipoleGridPotential" ){
         amoebaMultipoleForce->getElectrostaticPotential( inputGrid, context, outputGridPotential );
     } else {
