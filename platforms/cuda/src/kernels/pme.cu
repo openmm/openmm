@@ -152,26 +152,18 @@ reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict_
         int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
         int ky = remainder/(GRID_SIZE_Z/2+1);
         int kz = remainder-ky*(GRID_SIZE_Z/2+1);
-
-        // reciprocal space indices
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
-
-        // find the coordinates of the reciprocal space vectors
         real mhx = mx*invPeriodicBoxSize.x;
         real mhy = my*invPeriodicBoxSize.y;
         real mhz = mz*invPeriodicBoxSize.z;
-
         real bx = pmeBsplineModuliX[kx];
         real by = pmeBsplineModuliY[ky];
         real bz = pmeBsplineModuliZ[kz];
-
         real2 grid = halfcomplex_pmeGrid[index];
-
         real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
         real denom = m2*bx*by*bz;
-
         real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
 
         if (kx != 0 || ky != 0 || kz != 0) {
@@ -180,13 +172,48 @@ reciprocalConvolution(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict_
     }
 }
 
-extern "C" __global__
-void gridEvaluateEnergy(const real* __restrict__ originalGrid, const real* __restrict__ convolvedGrid, real* __restrict__ energyBuffer) {
+
+extern "C" __global__ void
+gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ energyBuffer,
+                      const real* __restrict__ pmeBsplineModuliX,
+                      const real* __restrict__ pmeBsplineModuliY, const real* __restrict__ pmeBsplineModuliZ,
+                      real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+    // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    real energy = 0;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
-        energy += originalGrid[index]*convolvedGrid[index];
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5*energy;
+    const real recipScaleFactor = RECIP(M_PI*periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
+ 
+	real energy = 0;
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x) {
+        // real indices
+        int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z));
+        int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z);
+        int ky = remainder/(GRID_SIZE_Z);
+        int kz = remainder-ky*(GRID_SIZE_Z);
+		int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
+		int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
+		int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
+		real mhx = mx*invPeriodicBoxSize.x;
+		real mhy = my*invPeriodicBoxSize.y;
+		real mhz = mz*invPeriodicBoxSize.z;
+		real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+		real bx = pmeBsplineModuliX[kx];
+		real by = pmeBsplineModuliY[ky];
+		real bz = pmeBsplineModuliZ[kz];
+		real denom = m2*bx*by*bz;
+		real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+
+		if(kz >= (GRID_SIZE_Z/2+1)) {
+			kx = ((kx == 0) ? kx : GRID_SIZE_X-kx);
+			ky = ((ky == 0) ? ky : GRID_SIZE_Y-ky);
+			kz = GRID_SIZE_Z-kz;
+		} 
+		int indexInHalfComplexGrid = kz + ky*(GRID_SIZE_Z/2+1)+kx*(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
+		real2 grid = halfcomplex_pmeGrid[indexInHalfComplexGrid];
+		if (kx != 0 || ky != 0 || kz != 0) {
+			energy += eterm*(grid.x*grid.x + grid.y*grid.y);
+		}
+    }
+	energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
 }
 
 extern "C" __global__

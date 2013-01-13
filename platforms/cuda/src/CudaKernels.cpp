@@ -1686,6 +1686,11 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         else
             cufftExecR2C(fftForward, (float*) originalPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
 
+        if (includeEnergy) {
+            void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
+            cu.executeKernel(pmeEvalEnergyKernel, computeEnergyArgs, cu.getNumAtoms());
+        }
+
         void* convolutionArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeConvolutionKernel, convolutionArgs, cu.getNumAtoms());
 
@@ -1694,11 +1699,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         else
             cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  convolvedPmeGrid->getDevicePointer());
 
-        if (includeEnergy) {
-            void* computeEnergyArgs[] = {&originalPmeGrid->getDevicePointer(), &convolvedPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer() };
-            cu.executeKernel(pmeEvalEnergyKernel, computeEnergyArgs, cu.getNumAtoms());
-        }
-        
+
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &convolvedPmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms());
