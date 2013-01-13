@@ -37,7 +37,6 @@
 #include <map>
 #include <vector>
 #include "internal/windowsExport.h"
-#include "internal/ContextImpl.h"
 
 namespace OpenMM {
 
@@ -54,18 +53,8 @@ class ContextImpl;
 
 class OPENMM_EXPORT Integrator {
 public:
-    Integrator() : owner(NULL), context(NULL) {
-    }
-    virtual ~Integrator() {
-        if (context != NULL) {
-            // The Integrator is being deleted before the Context, so do cleanup now,
-            // then notify the ContextImpl so its own destructor won't try to clean up
-            // the (no longer existing) Integrator.
-            
-            cleanup();
-            context->integratorDeleted();
-        }
-    }
+    Integrator();
+    virtual ~Integrator();
     /**
      * Get the size of each time step, in picoseconds.  If this integrator uses variable time steps,
      * the size of the most recent step is returned.
