@@ -1340,12 +1340,10 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete exceptionParams;
     if (cosSinSums != NULL)
         delete cosSinSums;
-    if (originalPmeGrid != NULL)
-        delete originalPmeGrid;
+    if (directPmeGrid != NULL)
+        delete directPmeGrid;
     if (reciprocalPmeGrid != NULL)
         delete reciprocalPmeGrid;
-    if (convolvedPmeGrid != NULL)
-        delete convolvedPmeGrid;
     if (pmeBsplineModuliX != NULL)
         delete pmeBsplineModuliX;
     if (pmeBsplineModuliY != NULL)
@@ -1521,11 +1519,10 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
 
-        originalPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, cu.getComputeCapability() >= 2.0 ? elementSize : sizeof(long long), "originalPmeGrid");
-        convolvedPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, elementSize, "convolvedPmeGrid");
+        directPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*gridSizeZ, cu.getComputeCapability() >= 2.0 ? elementSize : sizeof(long long), "originalPmeGrid");
         reciprocalPmeGrid = new CudaArray(cu, gridSizeX*gridSizeY*(gridSizeZ/2+1), 2*elementSize, "reciprocalPmeGrid");
 
-        cu.addAutoclearBuffer(*originalPmeGrid);
+        cu.addAutoclearBuffer(*directPmeGrid);
 
         pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
         pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
@@ -1660,7 +1657,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         void* forcesArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums->getDevicePointer(), cu.getPeriodicBoxSizePointer()};
         cu.executeKernel(ewaldForcesKernel, forcesArgs, cu.getNumAtoms());
     }
-    if (originalPmeGrid != NULL && cu.getContextIndex() == 0 && includeReciprocal) {
+    if (directPmeGrid != NULL && cu.getContextIndex() == 0 && includeReciprocal) {
         void* bsplinesArgs[] = {&cu.getPosq().getDevicePointer(), &pmeBsplineTheta->getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         int bsplinesSharedSize = cu.ThreadBlockSize*PmeOrder*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
@@ -1672,19 +1669,19 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeAtomRangeKernel, rangeArgs, cu.getNumAtoms());
 
-        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &originalPmeGrid->getDevicePointer(), &pmeBsplineTheta->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
+        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid->getDevicePointer(), &pmeBsplineTheta->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), PmeOrder*PmeOrder*PmeOrder);
-        void* finishSpreadArgs[] = {&originalPmeGrid->getDevicePointer()};
+        void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
 
         if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0) {
-            void* finishSpreadArgs[] = {&originalPmeGrid->getDevicePointer()};
-            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, originalPmeGrid->getSize());
+            void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
+            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, directPmeGrid->getSize());
         }
 
         if (cu.getUseDoublePrecision())
-            cufftExecD2Z(fftForward, (double*) originalPmeGrid->getDevicePointer(), (double2*) reciprocalPmeGrid->getDevicePointer());
+            cufftExecD2Z(fftForward, (double*) directPmeGrid->getDevicePointer(), (double2*) reciprocalPmeGrid->getDevicePointer());
         else
-            cufftExecR2C(fftForward, (float*) originalPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
+            cufftExecR2C(fftForward, (float*) directPmeGrid->getDevicePointer(), (float2*) reciprocalPmeGrid->getDevicePointer());
 
         if (includeEnergy) {
             void* computeEnergyArgs[] = {&reciprocalPmeGrid->getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &pmeBsplineModuliX->getDevicePointer(), &pmeBsplineModuliY->getDevicePointer(), &pmeBsplineModuliZ->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
@@ -1695,12 +1692,12 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         cu.executeKernel(pmeConvolutionKernel, convolutionArgs, cu.getNumAtoms());
 
         if (cu.getUseDoublePrecision())
-            cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid->getDevicePointer(), (double*) convolvedPmeGrid->getDevicePointer());
+            cufftExecZ2D(fftBackward, (double2*) reciprocalPmeGrid->getDevicePointer(), (double*) directPmeGrid->getDevicePointer());
         else
-            cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  convolvedPmeGrid->getDevicePointer());
+            cufftExecC2R(fftBackward, (float2*) reciprocalPmeGrid->getDevicePointer(), (float*)  directPmeGrid->getDevicePointer());
 
 
-        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &convolvedPmeGrid->getDevicePointer(),
+        void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(),
                 cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms());
 

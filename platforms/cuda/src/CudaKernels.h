@@ -556,7 +556,7 @@ private:
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), originalPmeGrid(NULL), reciprocalPmeGrid(NULL), convolvedPmeGrid(NULL),
+            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
             pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDTheta(NULL),
             pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
     }
@@ -602,9 +602,8 @@ private:
     CudaArray* sigmaEpsilon;
     CudaArray* exceptionParams;
     CudaArray* cosSinSums;
-    CudaArray* originalPmeGrid;
+    CudaArray* directPmeGrid;
     CudaArray* reciprocalPmeGrid;
-    CudaArray* convolvedPmeGrid;
     CudaArray* pmeBsplineModuliX;
     CudaArray* pmeBsplineModuliY;
     CudaArray* pmeBsplineModuliZ;
