@@ -41,6 +41,7 @@
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
 
+#include <algorithm>
 #include <cmath>
 #ifdef _MSC_VER
 #include <windows.h>
@@ -976,8 +977,15 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         force.getCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent11, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
         exclusions[i].insert(exclusions[i].end(), allAtoms.begin(), allAtoms.end());
+
+        // Workaround for bug in TINKER: if an atom is listed in both the PolarizationCovalent11
+        // and PolarizationCovalent12 maps, the latter takes precedence.
+
+        vector<int> atoms12;
+        force.getCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent12, atoms12);
         for (int j = 0; j < (int) atoms.size(); j++)
-            polarizationFlagValues.push_back(make_int2(i, atoms[j]));
+            if (find(atoms12.begin(), atoms12.end(), atoms[j]) == atoms12.end())
+                polarizationFlagValues.push_back(make_int2(i, atoms[j]));
     }
     
     // Record other options.
@@ -1281,7 +1289,14 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
         int offset2 = atom2-y*CudaContext::TileSize;
         int f1 = (value == 0 || value == 1 ? 1 : 0);
         int f2 = (value == 0 || value == 2 ? 1 : 0);
-        if (x > y) {
+        if (x == y) {
+            int index = CudaNonbondedUtilities::findExclusionIndex(x, y, exclusionIndices, exclusionRowIndices);
+            covalentFlagsVec[index+offset1].x |= f1<<offset2;
+            covalentFlagsVec[index+offset1].y |= f2<<offset2;
+            covalentFlagsVec[index+offset2].x |= f1<<offset1;
+            covalentFlagsVec[index+offset2].y |= f2<<offset1;
+        }
+        else if (x > y) {
             int index = CudaNonbondedUtilities::findExclusionIndex(x, y, exclusionIndices, exclusionRowIndices);
             covalentFlagsVec[index+offset1].x |= f1<<offset2;
             covalentFlagsVec[index+offset1].y |= f2<<offset2;
@@ -1305,7 +1320,12 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
         int offset1 = atom1-x*CudaContext::TileSize;
         int y = atom2/CudaContext::TileSize;
         int offset2 = atom2-y*CudaContext::TileSize;
-        if (x > y) {
+        if (x == y) {
+            int index = CudaNonbondedUtilities::findExclusionIndex(x, y, exclusionIndices, exclusionRowIndices);
+            polarizationGroupFlagsVec[index+offset1] |= 1<<offset2;
+            polarizationGroupFlagsVec[index+offset2] |= 1<<offset1;
+        }
+        else if (x > y) {
             int index = CudaNonbondedUtilities::findExclusionIndex(x, y, exclusionIndices, exclusionRowIndices);
             polarizationGroupFlagsVec[index+offset1] |= 1<<offset2;
         }
