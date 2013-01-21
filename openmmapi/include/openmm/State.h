@@ -104,6 +104,7 @@ public:
     const std::map<std::string, double>& getParameters() const;
 private:
     friend class Context;
+	friend class StateProxy;
     State(double time, int numParticles, int types);
     std::vector<Vec3>& updPositions();
     std::vector<Vec3>& updVelocities();

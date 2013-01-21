@@ -70,6 +70,7 @@
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/SystemProxy.h"
+#include "openmm/serialization/StateProxy.h"
 
 #if defined(WIN32)
     #include <windows.h>
@@ -106,4 +107,5 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
+	SerializationProxy::registerProxy(typeid(State), new StateProxy());
 }
