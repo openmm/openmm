@@ -40,6 +40,7 @@
 #include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
 
 using namespace OpenMM;
 using namespace std;
