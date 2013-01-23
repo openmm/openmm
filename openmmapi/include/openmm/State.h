@@ -125,7 +125,7 @@ private:
  * @private
  */
 
-class State::StateBuilder {
+class OPENMM_EXPORT State::StateBuilder {
 public:
     StateBuilder(double time);
     State getState();
