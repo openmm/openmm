@@ -73,31 +73,69 @@ const map<string, double>& State::getParameters() const {
         throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
     return parameters;
 }
-State::State(double time, int numParticles, int types) : types(types), time(time), ke(0), pe(0),
-        positions( (types & Positions) == 0 ? 0 : numParticles), velocities( (types & Velocities) == 0 ? 0 : numParticles),
-        forces( (types & Forces) == 0 ? 0 : numParticles) {
+State::State(double time) : types(0), time(time), ke(0), pe(0) {
 }
-State::State() : types(0), time(0.0), ke(0), pe(0), positions(0), velocities(0), forces(0) {
+State::State() : types(0), time(0.0), ke(0), pe(0) {
 }
-vector<Vec3>& State::updPositions() {
-    return positions;
+void State::setPositions(const std::vector<Vec3>& pos) {
+    positions = pos;
+    types |= Positions;
 }
-vector<Vec3>& State::updVelocities() {
-    return velocities;
+
+void State::setVelocities(const std::vector<Vec3>& vel) {
+    velocities = vel;
+    types |= Velocities;
 }
-vector<Vec3>& State::updForces() {
-    return forces;
+
+void State::setForces(const std::vector<Vec3>& force) {
+    forces = force;
+    types |= Forces;
 }
-map<string, double>& State::updParameters() {
-    return parameters;
+
+void State::setParameters(const std::map<std::string, double>& params) {
+    parameters = params;
+    types |= Parameters;
 }
+
 void State::setEnergy(double kinetic, double potential) {
     ke = kinetic;
     pe = potential;
+    types |= Energy;
 }
 
 void State::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
     periodicBoxVectors[0] = a;
     periodicBoxVectors[1] = b;
     periodicBoxVectors[2] = c;
+}
+
+State::StateBuilder::StateBuilder(double time) : state(time) {
+}
+
+State State::StateBuilder::getState() {
+    return state;
+}
+
+void State::StateBuilder::setPositions(const std::vector<Vec3>& pos) {
+    state.setPositions(pos);
+}
+
+void State::StateBuilder::setVelocities(const std::vector<Vec3>& vel) {
+    state.setVelocities(vel);
+}
+
+void State::StateBuilder::setForces(const std::vector<Vec3>& force) {
+    state.setForces(force);
+}
+
+void State::StateBuilder::setParameters(const std::map<std::string, double>& params) {
+    state.setParameters(params);
+}
+
+void State::StateBuilder::setEnergy(double ke, double pe) {
+    state.setEnergy(ke, pe);
+}
+
+void State::StateBuilder::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+    state.setPeriodicBoxVectors(a, b, c);
 }

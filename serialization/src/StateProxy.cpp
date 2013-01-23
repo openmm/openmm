@@ -55,7 +55,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         SerializationNode& parametersNode = node.createChildNode("Parameters");
         map<string, double> stateParams = s.getParameters();
         map<string, double>::const_iterator it;
-        for(it = stateParams.begin(); it!=stateParams.end();it++) {
+        for (it = stateParams.begin(); it!=stateParams.end();it++) {
             parametersNode.setDoubleProperty(it->first, it->second);
         }
     } catch (const OpenMMException &) {
@@ -73,7 +73,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         s.getPositions();
         SerializationNode& positionsNode = node.createChildNode("Positions");
         vector<Vec3> statePositions = s.getPositions();
-        for(int i=0; i<statePositions.size();i++) {
+        for (int i=0; i<statePositions.size();i++) {
     	   positionsNode.createChildNode("Position").setDoubleProperty("x", statePositions[i][0]).setDoubleProperty("y", statePositions[i][1]).setDoubleProperty("z", statePositions[i][2]);
         }
     } catch (const OpenMMException &) {
@@ -83,7 +83,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         s.getVelocities();
         SerializationNode& velocitiesNode = node.createChildNode("Velocities");
         vector<Vec3> stateVelocities = s.getVelocities();
-        for(int i=0; i<stateVelocities.size();i++) {
+        for (int i=0; i<stateVelocities.size();i++) {
     	   velocitiesNode.createChildNode("Velocity").setDoubleProperty("x", stateVelocities[i][0]).setDoubleProperty("y", stateVelocities[i][1]).setDoubleProperty("z", stateVelocities[i][2]);
         }
     } catch (const OpenMMException &) {
@@ -93,7 +93,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         s.getForces();
         SerializationNode& forcesNode = node.createChildNode("Forces");
         vector<Vec3> stateForces = s.getForces();
-        for(int i=0; i<stateForces.size();i++) {
+        for (int i=0; i<stateForces.size();i++) {
         	forcesNode.createChildNode("Force").setDoubleProperty("x", stateForces[i][0]).setDoubleProperty("y", stateForces[i][1]).setDoubleProperty("z", stateForces[i][2]);
         }
     } catch (const OpenMMException &) {
@@ -119,7 +119,7 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
         // inStateParams is really a <string,double> pair, where string is the name and double is the value
         // but we want to avoid casting a string to a double and instead use the built in routines,
         map<string, string> inStateParams = parametersNode.getProperties();
-        for(map<string, string>::const_iterator pit = inStateParams.begin(); pit != inStateParams.end(); pit++) {
+        for (map<string, string>::const_iterator pit = inStateParams.begin(); pit != inStateParams.end(); pit++) {
             outStateParams[pit->first] = parametersNode.getDoubleProperty(pit->first);
         }
         types = types | State::Parameters;
@@ -141,7 +141,7 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
     vector<Vec3> outForces;
     try {
         const SerializationNode& positionsNode = node.getChildNode("Positions");
-        for(int i=0; i<(int) positionsNode.getChildren().size();i++) {
+        for (int i = 0; i < (int) positionsNode.getChildren().size(); i++) {
             const SerializationNode& particle = positionsNode.getChildren()[i];
             outPositions.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
         }
@@ -151,7 +151,7 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
     }
     try {
         const SerializationNode& velocitiesNode = node.getChildNode("Velocities");
-        for(int i=0; i<(int) velocitiesNode.getChildren().size();i++) {
+        for (int i = 0; i < (int) velocitiesNode.getChildren().size(); i++) {
             const SerializationNode& particle = velocitiesNode.getChildren()[i];
             outVelocities.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
         }
@@ -161,41 +161,42 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
     }
     try {
         const SerializationNode& forcesNode = node.getChildNode("Forces");
-        for(int i=0; i<(int) forcesNode.getChildren().size();i++) {
+        for (int i = 0; i < (int) forcesNode.getChildren().size(); i++) {
             const SerializationNode& particle = forcesNode.getChildren()[i];
             outForces.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
         }
         types = types | State::Forces;
     } catch (const OpenMMException &) {
         // do nothing
-    }   
-    int numParticles = max(outPositions.size(), max(outForces.size(), outVelocities.size()));
+    }
     vector<int> arraySizes;
-    State *s = new State(outTime,numParticles,types);
-    if(types & State::Positions) {
-        s->updPositions() = outPositions;
+    State::StateBuilder builder(outTime);
+    if (types & State::Positions) {
+        builder.setPositions(outPositions);
         arraySizes.push_back(outPositions.size());
     }  
-    if(types & State::Velocities) {
-        s->updVelocities() = outVelocities;
+    if (types & State::Velocities) {
+        builder.setVelocities(outVelocities);
         arraySizes.push_back(outVelocities.size());
     }
-    if(types & State::Forces) {
-        s->updForces() = outForces;
-        arraySizes.push_back(outVelocities.size());
+    if (types & State::Forces) {
+        builder.setForces(outForces);
+        arraySizes.push_back(outForces.size());
     }
-    if(types & State::Energy) {
-        s->setEnergy(kineticEnergy, potentialEnergy);
+    if (types & State::Energy) {
+        builder.setEnergy(kineticEnergy, potentialEnergy);
     }
-    if(types & State::Parameters) {
-        s->updParameters() = outStateParams;
+    if (types & State::Parameters) {
+        builder.setParameters(outStateParams);
     }
 
-    for(int i=1; i<arraySizes.size();i++) {
-        if(arraySizes[i] != arraySizes[i-1]) {
+    for (int i = 1; i < arraySizes.size(); i++) {
+        if (arraySizes[i] != arraySizes[i-1]) {
             throw(OpenMMException("State Deserialization Particle Size Mismatch, check number of particles in Forces, Velocities, Positions!"));
         }
     }
-    s->setPeriodicBoxVectors(outAVec, outBVec, outCVec);
+    builder.setPeriodicBoxVectors(outAVec, outBVec, outCVec);
+    State *s = new State();
+    *s = builder.getState();
 	return s;
 }

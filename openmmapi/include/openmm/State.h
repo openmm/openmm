@@ -52,6 +52,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT State {
 public:
+    class StateBuilder;
     /**
      * This is an enumeration of the types of data which may be stored in a State.  When you create
      * a State, use these values to specify which data types it should contain.
@@ -103,13 +104,11 @@ public:
      */
     const std::map<std::string, double>& getParameters() const;
 private:
-    friend class Context;
-	friend class StateProxy;
-    State(double time, int numParticles, int types);
-    std::vector<Vec3>& updPositions();
-    std::vector<Vec3>& updVelocities();
-    std::vector<Vec3>& updForces();
-    std::map<std::string, double>& updParameters();
+    State(double time);
+    void setPositions(const std::vector<Vec3>& pos);
+    void setVelocities(const std::vector<Vec3>& vel);
+    void setForces(const std::vector<Vec3>& force);
+    void setParameters(const std::map<std::string, double>& params);
     void setEnergy(double ke, double pe);
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     int types;
@@ -119,6 +118,25 @@ private:
     std::vector<Vec3> forces;
     Vec3 periodicBoxVectors[3];
     std::map<std::string, double> parameters;
+};
+
+/**
+ * Internal class used to construct new State objects.
+ * @private
+ */
+
+class State::StateBuilder {
+public:
+    StateBuilder(double time);
+    State getState();
+    void setPositions(const std::vector<Vec3>& pos);
+    void setVelocities(const std::vector<Vec3>& vel);
+    void setForces(const std::vector<Vec3>& force);
+    void setParameters(const std::map<std::string, double>& params);
+    void setEnergy(double ke, double pe);
+    void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+private:
+    State state;
 };
 
 } // namespace OpenMM

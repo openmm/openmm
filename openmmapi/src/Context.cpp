@@ -82,28 +82,33 @@ Platform& Context::getPlatform() {
 }
 
 State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
-    State state(impl->getTime(), impl->getSystem().getNumParticles(), types);
+    State::StateBuilder builder(impl->getTime());
     Vec3 periodicBoxSize[3];
     impl->getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
-    state.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
+    builder.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
     bool includeForces = types&State::Forces;
     bool includeEnergy = types&State::Energy;
     if (includeForces || includeEnergy) {
         double energy = impl->calcForcesAndEnergy(includeForces || includeEnergy, includeEnergy, groups);
         if (includeEnergy)
-            state.setEnergy(impl->calcKineticEnergy(), energy);
-        if (includeForces)
-            impl->getForces(state.updForces());
+            builder.setEnergy(impl->calcKineticEnergy(), energy);
+        if (includeForces) {
+            vector<Vec3> forces;
+            impl->getForces(forces);
+            builder.setForces(forces);
+        }
     }
     if (types&State::Parameters) {
+        map<string, double> params;
         for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)
-            state.updParameters()[iter->first] = iter->second;
+            params[iter->first] = iter->second;
+        builder.setParameters(params);
     }
     if (types&State::Positions) {
-        impl->getPositions(state.updPositions());
+        vector<Vec3> positions;
+        impl->getPositions(positions);
         if (enforcePeriodicBox) {
             const vector<vector<int> >& molecules = impl->getMolecules();
-            vector<Vec3>& positions = state.updPositions();
             for (int i = 0; i < (int) molecules.size(); i++) {
                 // Find the molecule center.
 
@@ -131,10 +136,14 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
                 }
             }
         }
+        builder.setPositions(positions);
     }
-    if (types&State::Velocities)
-        impl->getVelocities(state.updVelocities());
-    return state;
+    if (types&State::Velocities) {
+        vector<Vec3> velocities;
+        impl->getVelocities(velocities);
+        builder.setVelocities(velocities);
+    }
+    return builder.getState();
 }
 
 void Context::setTime(double time) {
