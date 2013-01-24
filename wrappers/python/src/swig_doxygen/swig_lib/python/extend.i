@@ -200,9 +200,7 @@ Parameters:
                       paramMap=paramMap)
         return state
   }
-
 }
-
 
 %extend OpenMM::NonbondedForce {
   %pythoncode {
@@ -229,7 +227,6 @@ Parameters:
   }
 }
 
-
 %extend OpenMM::System {
   %pythoncode {
     def __getstate__(self):
@@ -242,6 +239,90 @@ Parameters:
     def getForces(self):
         """Get the list of Forces in this System"""
         return [self.getForce(i) for i in range(self.getNumForces())]
+  }
+}
+
+%extend OpenMM::XmlSerializer {
+  static std::string _serializeStateAsLists(
+                                const std::vector<Vec3>& pos, 
+                                const std::vector<Vec3>& vel, 
+                                const std::vector<Vec3>& forces,
+                                double kineticEnergy,
+                                double potentialEnergy,
+                                double time,
+                                const std::vector<Vec3>& boxVectors,
+                                const std::map<string, double>& params,
+                                int types) {
+    OpenMM::State myState =  _convertListsToState(pos,vel,forces,kineticEnergy,potentialEnergy,time,boxVectors,params,types);
+    std::stringstream buffer;
+    OpenMM::XmlSerializer::serialize<OpenMM::State>(&myState, "State", buffer);
+    return buffer.str();
+  }
+  
+  static PyObject* _deserializeStringIntoLists(const std::string &filename) {
+    std::fstream stateFile(filename.c_str(), std::ios::in);
+    OpenMM::State* deserializedState = OpenMM::XmlSerializer::deserialize<OpenMM::State>(stateFile);
+    PyObject* obj = _convertStateToLists(*deserializedState);
+    delete deserializedState;
+    return obj;
+  }
+
+  %pythoncode {
+    @staticmethod
+    def serializeState(pythonState):
+      positions = []
+      velocities = []
+      forces = []
+      kineticEnergy = 0.0
+      potentialEnergy = 0.0
+      types = 0
+      try:
+        positions = pythonState.getPositions().value_in_unit(unit.nanometers)
+        types |= 1
+      except:
+        pass
+      try:
+        velocities = pythonState.getVelocities().value_in_unit(unit.nanometers/unit.picoseconds)
+        types |= 2
+      except: 
+        pass
+      try:
+        forces = pythonState.getForces().value_in_unit(unit.kilojoules_per_mole/unit.nanometers)
+        types |= 4
+      except:
+        pass
+      try:
+        kineticEnergy = pythonState.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+        potentialEnergy = pythonState.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+        types |= 8
+      except:
+        pass
+      try:
+        params = pythonState.getParameters()
+        types |= 16
+      except:
+        pass
+      time = pythonState.getTime().value_in_unit(unit.picoseconds)
+      boxVectors = pythonState.getPeriodicBoxVectors().value_in_unit(unit.nanometers)
+      string = XmlSerializer._serializeStateAsLists(positions, velocities, forces, kineticEnergy, potentialEnergy, time, boxVectors, params, types)
+      return string  
+
+    @staticmethod
+    def deserializeState(pythonString):
+      print pythonString
+      print type(pythonString)
+
+      (simTime, periodicBoxVectorsList, energy, coordList, velList,
+       forceList, paramMap) = XmlSerializer._deserializeStringIntoLists(pythonString)
+      
+      state = State(simTime=simTime,
+                    energy=energy,
+                    coordList=coordList,
+                    velList=velList,
+                    forceList=forceList,
+                    periodicBoxVectorsList=periodicBoxVectorsList,
+                    paramMap=paramMap)
+      return state
   }
 }
 

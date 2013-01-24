@@ -11,7 +11,6 @@ RVDW_PER_SIGMA=math.pow(2, 1/6.0)/2.0
 
 import simtk.unit as unit
 
-
 class State(_object):
     """
      A State object records a snapshot of the
@@ -72,6 +71,14 @@ class State(_object):
         self._forceList=forceList
         self._forceListNumpy=None
         self._paramMap=paramMap
+
+    def __getstate__(self):
+        serializationString = XmlSerializer.serializeState(self)
+        return serializationString
+
+    def __setstate__(self, serializationString):
+        state = XmlSerializer.deserializeState(serializationString)
+        self.this = state.this
 
     def getTime(self):
         """Get the time for which this State was created."""

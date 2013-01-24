@@ -30,6 +30,7 @@ namespace std {
   %template(vectorpairii) vector< pair<int,int> >;
   %template(vectorstring) vector<string>;
   %template(mapstringstring) map<string,string>;
+  %template(mapstringdouble) map<string,double>;
 };
 
 %include "windows.i"
@@ -40,6 +41,7 @@ namespace std {
 #include <sstream>
 
 #include <exception>
+#include <fstream>
 #include "OpenMM.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/RPMDIntegrator.h"

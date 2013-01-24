@@ -20,6 +20,30 @@ PyObject *copyVVec3ToList(std::vector<Vec3> vVec3) {
   return pyList;
 }
 
+State _convertListsToState( const std::vector<Vec3> &pos, 
+                            const std::vector<Vec3> &vel, 
+                            const std::vector<Vec3> &forces,
+                            double kineticEnergy,
+                            double potentialEnergy,
+                            double time,
+                            const std::vector<Vec3> &boxVectors,
+                            const std::map<std::string, double> &params,
+                            int types ) {  
+    State::StateBuilder sb(time); 
+    if(types & State::Positions)
+      sb.setPositions(pos);
+    if(types & State::Velocities)
+      sb.setVelocities(vel);
+    if(types & State::Forces)
+      sb.setForces(forces);
+    if(types & State::Energy)
+      sb.setEnergy(kineticEnergy, potentialEnergy);
+    if(types & State::Parameters)
+      sb.setParameters(params);
+    sb.setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    return sb.getState();
+}
+
 PyObject *_convertStateToLists(const State& state) {
     double simTime;
     PyObject *pPeriodicBoxVectorsList;
