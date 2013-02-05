@@ -309,9 +309,7 @@ Parameters:
 
     @staticmethod
     def deserializeState(pythonString):
-      print pythonString
-      print type(pythonString)
-
+    
       (simTime, periodicBoxVectorsList, energy, coordList, velList,
        forceList, paramMap) = XmlSerializer._deserializeStringIntoLists(pythonString)
       
