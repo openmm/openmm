@@ -259,9 +259,10 @@ Parameters:
     return buffer.str();
   }
   
-  static PyObject* _deserializeStringIntoLists(const std::string &filename) {
-    std::fstream stateFile(filename.c_str(), std::ios::in);
-    OpenMM::State* deserializedState = OpenMM::XmlSerializer::deserialize<OpenMM::State>(stateFile);
+  static PyObject* _deserializeStringIntoLists(const std::string &stateAsString) {
+    std::stringstream ss;
+    ss << stateAsString;
+    OpenMM::State* deserializedState = OpenMM::XmlSerializer::deserialize<OpenMM::State>(ss);
     PyObject* obj = _convertStateToLists(*deserializedState);
     delete deserializedState;
     return obj;
