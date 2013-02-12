@@ -77,8 +77,10 @@ class State(_object):
         return serializationString
 
     def __setstate__(self, serializationString):
-        state = XmlSerializer.deserializeState(serializationString)
-        self.this = state.this
+        print 'calling set state'
+        dState = XmlSerializer.deserializeState(serializationString)
+        # Safe provided no __slots__ or other weird things are used
+        self.__dict__.update(dState.__dict__)
 
     def getTime(self):
         """Get the time for which this State was created."""
