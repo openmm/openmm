@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -84,6 +84,7 @@ public:
      */
     void copyToContext(int copy, ContextImpl& context);
 private:
+    void initializeKernels(ContextImpl& context);
     void computeForces(ContextImpl& context);
     std::string createFFT(int size, const std::string& variable, bool forward);
     OpenCLContext& cl;
@@ -92,7 +93,7 @@ private:
     OpenCLArray* forces;
     OpenCLArray* positions;
     OpenCLArray* velocities;
-    cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyPositionsToContextKernel, copyVelocitiesToContextKernel, copyForcesFromContextKernel, translateKernel;
+    cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
 };
 
 } // namespace OpenMM

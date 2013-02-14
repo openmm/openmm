@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
+#include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
@@ -223,6 +224,55 @@ void testParaHydrogen() {
     ASSERT_USUALLY_EQUAL_TOL(60.0, 1.5*temperature+meanKE, 0.02);
 }
 
+Vec3 calcCM(const vector<Vec3>& values, System& system) {
+    Vec3 cm;
+    for (int j = 0; j < system.getNumParticles(); ++j) {
+        cm[0] += values[j][0]*system.getParticleMass(j);
+        cm[1] += values[j][1]*system.getParticleMass(j);
+        cm[2] += values[j][2]*system.getParticleMass(j);
+    }
+    return cm;
+}
+
+void testCMMotionRemoval() {
+    const int numParticles = 100;
+    const int numCopies = 30;
+    const double temperature = 300.0;
+    const double mass = 1.0;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(mass);
+    system.addForce(new CMMotionRemover());
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
+    Platform& platform = Platform::getPlatformByName("OpenCL");
+    Context context(system, integ, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numCopies; i++)
+    {
+        for (int j = 0; j < numParticles; j++)
+            positions[j] = Vec3(0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt));
+        Vec3 cmPos = calcCM(positions, system);
+        for (int j = 0; j < numParticles; j++)
+            positions[j] -= cmPos*(1/(mass*numParticles));
+        integ.setPositions(i, positions);
+    }
+    
+    // Make sure the CMMotionRemover is getting applied.
+    
+    for (int i = 0; i < 200; ++i) {
+        integ.step(1);
+        Vec3 pos;
+        for (int j = 0; j < numCopies; j++) {
+            State state = integ.getState(0, State::Positions | State::Velocities);
+            pos += calcCM(state.getPositions(), system);
+        }
+        pos *= 1.0/numCopies;
+        ASSERT_EQUAL_VEC(Vec3(), pos, 0.5);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         registerRPMDOpenCLKernelFactories();
@@ -230,6 +280,7 @@ int main(int argc, char* argv[]) {
             Platform::getPlatformByName("OpenCL").setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testFreeParticles();
         testParaHydrogen();
+        testCMMotionRemoval();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

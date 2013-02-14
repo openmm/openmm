@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -128,9 +128,8 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     pileKernel = cu.getKernel(module, "applyPileThermostat");
     stepKernel = cu.getKernel(module, "integrateStep");
     velocitiesKernel = cu.getKernel(module, "advanceVelocities");
-    copyPositionsToContextKernel = cu.getKernel(module, "copyPositionsToContext");
-    copyVelocitiesToContextKernel = cu.getKernel(module, "copyVelocitiesToContext");
-    copyForcesFromContextKernel = cu.getKernel(module, "copyForcesFromContext");
+    copyToContextKernel = cu.getKernel(module, "copyDataToContext");
+    copyFromContextKernel = cu.getKernel(module, "copyDataFromContext");
     translateKernel = cu.getKernel(module, "applyCellTranslations");
 }
 
@@ -185,11 +184,11 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
 
 void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     for (int i = 0; i < numCopies; i++) {
-        void* copyToContextArgs[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
-        cu.executeKernel(copyPositionsToContextKernel, copyToContextArgs, cu.getNumAtoms());
+        void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+                &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
+        context.updateContextState();
         context.calcForcesAndEnergy(true, false);
-        void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
-        cu.executeKernel(copyForcesFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
         if (cu.getAtomsWereReordered() && cu.getNonbondedUtilities().getUsePeriodic()) {
             // Atoms may have been translated into a different periodic box, so apply
             // the same translation to all the beads.
@@ -197,6 +196,9 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
             void* args[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
             cu.executeKernel(translateKernel, args, cu.getNumAtoms());
         }
+        void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
+                &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &positions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
     }
 }
 
@@ -267,10 +269,9 @@ void CudaIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& ve
 }
 
 void CudaIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
-    void* copyPositionsArgs[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &copy};
-    cu.executeKernel(copyPositionsToContextKernel, copyPositionsArgs, cu.getNumAtoms());
-    void* copyVelocitiesArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &copy};
-    cu.executeKernel(copyVelocitiesToContextKernel, copyVelocitiesArgs, cu.getNumAtoms());
+    void* copyArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
+            &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &copy};
+    cu.executeKernel(copyToContextKernel, copyArgs, cu.getNumAtoms());
 }
 
 string CudaIntegrateRPMDStepKernel::createFFT(int size, const string& variable, bool forward) {

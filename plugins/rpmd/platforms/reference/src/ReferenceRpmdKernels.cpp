@@ -186,7 +186,6 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
         for (int j = 0; j < numParticles; j++)
             velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
 
-
     // Apply the PILE-L thermostat again.
     
     for (int particle = 0; particle < numParticles; particle++) {

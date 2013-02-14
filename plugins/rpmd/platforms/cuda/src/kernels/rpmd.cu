@@ -181,35 +181,33 @@ extern "C" __global__ void advanceVelocities(mixed4* velm, long long* force, mix
 }
 
 /**
- * Copy a set of positions from the integrator's arrays to the context.
+ * Copy a set of positions and velocities from the integrator's arrays to the context.
  */
-extern "C" __global__ void copyPositionsToContext(mixed4* src, real4* dst, int* order, int copy) {
+extern "C" __global__ void copyDataToContext(mixed4* srcVel, mixed4* dstVel, mixed4* srcPos, real4* dstPos, int* order, int copy) {
     const int base = copy*PADDED_NUM_ATOMS;
     for (int particle = blockIdx.x*blockDim.x+threadIdx.x; particle < NUM_ATOMS; particle += blockDim.x*gridDim.x) {
-        mixed4 posq = src[base+order[particle]];
-        dst[particle] = make_real4(posq.x, posq.y, posq.z, posq.w);
+        int index = base+order[particle];
+        dstVel[particle] = srcVel[index];
+        mixed4 posq = srcPos[index];
+        dstPos[particle] = make_real4(posq.x, posq.y, posq.z, posq.w);
     }
 }
 
 /**
- * Copy a set of velocities from the integrator's arrays to the context.
+ * Copy a set of positions, velocities, and forces from the context to the integrator's arrays.
  */
-extern "C" __global__ void copyVelocitiesToContext(mixed4* src, mixed4* dst, int* order, int copy) {
+extern "C" __global__ void copyDataFromContext(long long* srcForce, long long* dstForce, mixed4* srcVel, mixed4* dstVel,
+        real4* srcPos, mixed4* dstPos, int* order, int copy) {
     const int base = copy*PADDED_NUM_ATOMS;
     for (int particle = blockIdx.x*blockDim.x+threadIdx.x; particle < NUM_ATOMS; particle += blockDim.x*gridDim.x) {
-        dst[particle] = src[base+order[particle]];
-    }
-}
+        int index = order[particle];
+        dstForce[base*3+index] = srcForce[particle];
+        dstForce[base*3+index+PADDED_NUM_ATOMS] = srcForce[particle+PADDED_NUM_ATOMS];
+        dstForce[base*3+index+PADDED_NUM_ATOMS*2] = srcForce[particle+PADDED_NUM_ATOMS*2];
+        dstVel[base+index] = srcVel[particle];
+        real4 posq = srcPos[particle];
+        dstPos[base+index] = make_mixed4(posq.x, posq.y, posq.z, posq.w);
 
-/**
- * Copy a set of forces from the context to the integrator's arrays.
- */
-extern "C" __global__ void copyForcesFromContext(long long* src, long long* dst, int* order, int copy) {
-    const int base = copy*PADDED_NUM_ATOMS*3;
-    for (int particle = blockIdx.x*blockDim.x+threadIdx.x; particle < NUM_ATOMS; particle += blockDim.x*gridDim.x) {
-        dst[base+order[particle]] = src[particle];
-        dst[base+order[particle]+PADDED_NUM_ATOMS] = src[particle+PADDED_NUM_ATOMS];
-        dst[base+order[particle]+PADDED_NUM_ATOMS*2] = src[particle+PADDED_NUM_ATOMS*2];
     }
 }
 

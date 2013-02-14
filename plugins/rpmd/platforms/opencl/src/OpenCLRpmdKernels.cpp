@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -108,35 +108,40 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     pileKernel = cl::Kernel(program, "applyPileThermostat");
     stepKernel = cl::Kernel(program, "integrateStep");
     velocitiesKernel = cl::Kernel(program, "advanceVelocities");
-    copyPositionsToContextKernel = cl::Kernel(program, "copyPositionsToContext");
-    copyVelocitiesToContextKernel = cl::Kernel(program, "copyVelocitiesToContext");
-    copyForcesFromContextKernel = cl::Kernel(program, "copyForcesFromContext");
+    copyToContextKernel = cl::Kernel(program, "copyDataToContext");
+    copyFromContextKernel = cl::Kernel(program, "copyDataFromContext");
     translateKernel = cl::Kernel(program, "applyCellTranslations");
+}
+
+void OpenCLIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
+    hasInitializedKernel = true;
+    pileKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
+    stepKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+    stepKernel.setArg<cl::Buffer>(1, velocities->getDeviceBuffer());
+    stepKernel.setArg<cl::Buffer>(2, forces->getDeviceBuffer());
+    velocitiesKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
+    velocitiesKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
+    translateKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+    translateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    translateKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
+    copyToContextKernel.setArg<cl::Buffer>(4, cl.getAtomIndexArray().getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(3, velocities->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(5, positions->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(6, cl.getAtomIndexArray().getDeviceBuffer());
 }
 
 void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
     OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        pileKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-        stepKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-        stepKernel.setArg<cl::Buffer>(1, velocities->getDeviceBuffer());
-        stepKernel.setArg<cl::Buffer>(2, forces->getDeviceBuffer());
-        velocitiesKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-        velocitiesKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
-        translateKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-        translateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        translateKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-        copyPositionsToContextKernel.setArg<cl::Buffer>(0, positions->getDeviceBuffer());
-        copyPositionsToContextKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        copyPositionsToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-        copyVelocitiesToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
-        copyVelocitiesToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-        copyVelocitiesToContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-        copyForcesFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
-        copyForcesFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
-        copyForcesFromContextKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
-    }
+    if (!hasInitializedKernel)
+        initializeKernels(context);
     
     // Loop over copies and compute the force on each one.
     
@@ -191,11 +196,10 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
 void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     for (int i = 0; i < numCopies; i++) {
-        copyPositionsToContextKernel.setArg<cl_int>(3, i);
-        cl.executeKernel(copyPositionsToContextKernel, cl.getNumAtoms());
+        copyToContextKernel.setArg<cl_int>(5, i);
+        cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+        context.updateContextState();
         context.calcForcesAndEnergy(true, false);
-        copyForcesFromContextKernel.setArg<cl_int>(3, i);
-        cl.executeKernel(copyForcesFromContextKernel, cl.getNumAtoms());
         if (cl.getAtomsWereReordered() && cl.getNonbondedUtilities().getUsePeriodic()) {
             // Atoms may have been translated into a different periodic box, so apply
             // the same translation to all the beads.
@@ -203,6 +207,8 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
             translateKernel.setArg<cl_int>(3, i);
             cl.executeKernel(translateKernel, cl.getNumAtoms());
         }
+        copyFromContextKernel.setArg<cl_int>(7, i);
+        cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
     }
 }
 
@@ -261,10 +267,10 @@ void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
 }
 
 void OpenCLIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
-    copyPositionsToContextKernel.setArg<cl_int>(3, copy);
-    cl.executeKernel(copyPositionsToContextKernel, cl.getNumAtoms());
-    copyVelocitiesToContextKernel.setArg<cl_int>(3, copy);
-    cl.executeKernel(copyVelocitiesToContextKernel, cl.getNumAtoms());
+    if (!hasInitializedKernel)
+        initializeKernels(context);
+    copyToContextKernel.setArg<cl_int>(5, copy);
+    cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
 }
 
 string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable, bool forward) {

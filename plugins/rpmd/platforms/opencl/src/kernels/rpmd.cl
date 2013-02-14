@@ -172,32 +172,29 @@ __kernel void advanceVelocities(__global mixed4* velm, __global real4* force, mi
 }
 
 /**
- * Copy a set of positions from the integrator's arrays to the context.
+ * Copy a set of positions and velocities from the integrator's arrays to the context.
  */
-__kernel void copyPositionsToContext(__global mixed4* src, __global real4* dst, __global int* order, int copy) {
+__kernel void copyDataToContext(__global mixed4* srcVel, __global mixed4* dstVel, __global mixed4* srcPos,
+        __global real4* dstPos, __global int* order, int copy) {
     const int base = copy*PADDED_NUM_ATOMS;
     for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
-        dst[particle] = convert_real4(src[base+order[particle]]);
+        int index = base+order[particle];
+        dstVel[particle] = srcVel[index];
+        dstPos[particle] = convert_real4(srcPos[index]);
     }
 }
 
 /**
- * Copy a set of velocities from the integrator's arrays to the context.
+ * Copy a set of positions, velocities, and forces from the context to the integrator's arrays.
  */
-__kernel void copyVelocitiesToContext(__global mixed4* src, __global mixed4* dst, __global int* order, int copy) {
+__kernel void copyDataFromContext(__global real4* srcForce, __global real4* dstForce, __global mixed4* srcVel,
+        __global mixed4* dstVel, __global real4* srcPos, __global mixed4* dstPos, __global int* order, int copy) {
     const int base = copy*PADDED_NUM_ATOMS;
     for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
-        dst[particle] = src[base+order[particle]];
-    }
-}
-
-/**
- * Copy a set forces from the context to the integrator's arrays.
- */
-__kernel void copyForcesFromContext(__global real4* src, __global real4* dst, __global int* order, int copy) {
-    const int base = copy*PADDED_NUM_ATOMS;
-    for (int particle = get_global_id(0); particle < NUM_ATOMS; particle += get_global_size(0)) {
-        dst[base+order[particle]] = src[particle];
+        int index = base+order[particle];
+        dstForce[index] = srcForce[particle];
+        dstVel[index] = srcVel[particle];
+        dstPos[index] = convert_mixed4(srcPos[particle]);
     }
 }
 
