@@ -871,9 +871,9 @@ void OpenCLContext::validateMolecules() {
     vector<mm_int4> newCellOffsets(numAtoms);
     if (useDoublePrecision) {
         vector<mm_double4> oldPosq(paddedNumAtoms);
-        vector<mm_double4> newPosq(paddedNumAtoms);
+        vector<mm_double4> newPosq(paddedNumAtoms, mm_double4(0,0,0,0));
         vector<mm_double4> oldVelm(paddedNumAtoms);
-        vector<mm_double4> newVelm(paddedNumAtoms);
+        vector<mm_double4> newVelm(paddedNumAtoms, mm_double4(0,0,0,0));
         posq->download(oldPosq);
         velm->download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
@@ -887,11 +887,11 @@ void OpenCLContext::validateMolecules() {
     }
     else if (useMixedPrecision) {
         vector<mm_float4> oldPosq(paddedNumAtoms);
-        vector<mm_float4> newPosq(paddedNumAtoms);
+        vector<mm_float4> newPosq(paddedNumAtoms, mm_float4(0,0,0,0));
         vector<mm_float4> oldPosqCorrection(paddedNumAtoms);
-        vector<mm_float4> newPosqCorrection(paddedNumAtoms);
+        vector<mm_float4> newPosqCorrection(paddedNumAtoms, mm_float4(0,0,0,0));
         vector<mm_double4> oldVelm(paddedNumAtoms);
-        vector<mm_double4> newVelm(paddedNumAtoms);
+        vector<mm_double4> newVelm(paddedNumAtoms, mm_double4(0,0,0,0));
         posq->download(oldPosq);
         velm->download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
@@ -907,9 +907,9 @@ void OpenCLContext::validateMolecules() {
     }
     else {
         vector<mm_float4> oldPosq(paddedNumAtoms);
-        vector<mm_float4> newPosq(paddedNumAtoms);
+        vector<mm_float4> newPosq(paddedNumAtoms, mm_float4(0,0,0,0));
         vector<mm_float4> oldVelm(paddedNumAtoms);
-        vector<mm_float4> newVelm(paddedNumAtoms);
+        vector<mm_float4> newVelm(paddedNumAtoms, mm_float4(0,0,0,0));
         posq->download(oldPosq);
         velm->download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
@@ -981,9 +981,9 @@ void OpenCLContext::reorderAtomsImpl(bool enforcePeriodic) {
     // Loop over each group of identical molecules and reorder them.
 
     vector<int> originalIndex(numAtoms);
-    vector<Real4> newPosq(paddedNumAtoms);
-    vector<Real4> newPosqCorrection(paddedNumAtoms);
-    vector<Mixed4> newVelm(paddedNumAtoms);
+    vector<Real4> newPosq(paddedNumAtoms, Real4(0,0,0,0));
+    vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
+    vector<Mixed4> newVelm(paddedNumAtoms, Mixed4(0,0,0,0));
     vector<mm_int4> newCellOffsets(numAtoms);
     for (int group = 0; group < (int) moleculeGroups.size(); group++) {
         // Find the center of each molecule.

@@ -1376,9 +1376,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
     int numParticles = force.getNumParticles();
     sigmaEpsilon = OpenCLArray::create<mm_float2>(cl, cl.getPaddedNumAtoms(), "sigmaEpsilon");
-    vector<mm_float4> posqf(cl.getPaddedNumAtoms());
-    vector<mm_double4> posqd(cl.getPaddedNumAtoms());
-    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms());
+    vector<mm_float4> posqf(cl.getPaddedNumAtoms(), mm_float4(0,0,0,0));
+    vector<mm_double4> posqd(cl.getPaddedNumAtoms(), mm_double4(0,0,0,0));
+    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms(), mm_float2(0,0));
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
     hasCoulomb = false;
@@ -1761,7 +1761,7 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     posq.download(cl.getPinnedBuffer());
     mm_float4* posqf = (mm_float4*) cl.getPinnedBuffer();
     mm_double4* posqd = (mm_double4*) cl.getPinnedBuffer();
-    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms());
+    vector<mm_float2> sigmaEpsilonVector(cl.getPaddedNumAtoms(), mm_float2(0,0));
     double sumSquaredCharges = 0.0;
     const vector<cl_int>& order = cl.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -2042,7 +2042,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     }
     vector<mm_float4> posqf(cl.getPaddedNumAtoms());
     vector<mm_double4> posqd(cl.getPaddedNumAtoms());
-    vector<mm_float2> paramsVector(cl.getPaddedNumAtoms());
+    vector<mm_float2> paramsVector(cl.getPaddedNumAtoms(), mm_float2(1,1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, scalingFactor;
@@ -2202,7 +2202,7 @@ void OpenCLCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
     mm_float4* posqf = (mm_float4*) cl.getPinnedBuffer();
     mm_double4* posqd = (mm_double4*) cl.getPinnedBuffer();
     posq.download(cl.getPinnedBuffer());
-    vector<mm_float2> paramsVector(cl.getPaddedNumAtoms());
+    vector<mm_float2> paramsVector(cl.getPaddedNumAtoms(), mm_float2(1,1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < numParticles; i++) {
         double charge, radius, scalingFactor;
