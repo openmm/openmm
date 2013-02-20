@@ -401,6 +401,17 @@ class SwigInputBuilder:
             extendString +=    "           ss << inputString;\n" 
             extendString +=    "           return XmlSerializer::deserialize<OpenMM::System>( ss );\n"
             extendString +=    "       }\n"
+            extendString +=    "       static std::string serializeIntegrator( const OpenMM::Integrator *object ){\n"
+            extendString +=    "           std::stringstream ss;\n"
+            extendString +=    "           XmlSerializer::serialize<OpenMM::Integrator>( object, \"Integrator\", ss );\n"
+            extendString +=    "           return ss.str();\n"
+            extendString +=    "       }\n"
+            extendString +=    "\n"
+            extendString +=    "       static OpenMM::Integrator* deserializeIntegrator( const char* inputString ){\n"
+            extendString +=    "           std::stringstream ss;\n"
+            extendString +=    "           ss << inputString;\n" 
+            extendString +=    "           return XmlSerializer::deserialize<OpenMM::Integrator>( ss );\n"
+            extendString +=    "       }\n"
             extendString +=    "    };\n"   
 
             self.fOut.write("%s%s\n" % (INDENT, extendString))

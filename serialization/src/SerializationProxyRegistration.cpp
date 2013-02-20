@@ -49,6 +49,8 @@
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
+#include "openmm/LangevinIntegrator.h"
 #include "openmm/serialization/SerializationProxy.h"
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
@@ -71,6 +73,9 @@
 #include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/SystemProxy.h"
 #include "openmm/serialization/StateProxy.h"
+#include "openmm/serialization/VerletIntegratorProxy.h"
+#include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/IntegratorProxy.h"
 
 #if defined(WIN32)
     #include <windows.h>
@@ -108,4 +113,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
 	SerializationProxy::registerProxy(typeid(State), new StateProxy());
+	SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());
+	SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
+	SerializationProxy::registerProxy(typeid(Integrator), new IntegratorProxy());
 }
