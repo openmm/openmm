@@ -65,7 +65,7 @@ namespace OpenMM {
  *
  * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
  *
- * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
+ * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
  *
  * This force depends on two parameters: sigma and epsilon.  The following code defines these as per-particle parameters:
  *
