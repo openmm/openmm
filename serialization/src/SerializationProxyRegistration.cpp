@@ -115,5 +115,4 @@ extern "C" void registerSerializationProxies() {
 	SerializationProxy::registerProxy(typeid(State), new StateProxy());
 	SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());
 	SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
-	SerializationProxy::registerProxy(typeid(Integrator), new IntegratorProxy());
 }
