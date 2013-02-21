@@ -75,7 +75,6 @@
 #include "openmm/serialization/StateProxy.h"
 #include "openmm/serialization/VerletIntegratorProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
-#include "openmm/serialization/IntegratorProxy.h"
 
 #if defined(WIN32)
     #include <windows.h>
