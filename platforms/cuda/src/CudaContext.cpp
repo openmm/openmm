@@ -827,9 +827,9 @@ void CudaContext::validateMolecules() {
     vector<int4> newCellOffsets(numAtoms);
     if (useDoublePrecision) {
         vector<double4> oldPosq(paddedNumAtoms);
-        vector<double4> newPosq(paddedNumAtoms);
+        vector<double4> newPosq(paddedNumAtoms, make_double4(0, 0, 0, 0));
         vector<double4> oldVelm(paddedNumAtoms);
-        vector<double4> newVelm(paddedNumAtoms);
+        vector<double4> newVelm(paddedNumAtoms, make_double4(0, 0, 0, 0));
         posq->download(oldPosq);
         velm->download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
@@ -843,11 +843,11 @@ void CudaContext::validateMolecules() {
     }
     else if (useMixedPrecision) {
         vector<float4> oldPosq(paddedNumAtoms);
-        vector<float4> newPosq(paddedNumAtoms);
+        vector<float4> newPosq(paddedNumAtoms, make_float4(0, 0, 0, 0));
         vector<float4> oldPosqCorrection(paddedNumAtoms);
-        vector<float4> newPosqCorrection(paddedNumAtoms);
+        vector<float4> newPosqCorrection(paddedNumAtoms, make_float4(0, 0, 0, 0));
         vector<double4> oldVelm(paddedNumAtoms);
-        vector<double4> newVelm(paddedNumAtoms);
+        vector<double4> newVelm(paddedNumAtoms, make_double4(0, 0, 0, 0));
         posq->download(oldPosq);
         velm->download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
@@ -863,9 +863,9 @@ void CudaContext::validateMolecules() {
     }
     else {
         vector<float4> oldPosq(paddedNumAtoms);
-        vector<float4> newPosq(paddedNumAtoms);
+        vector<float4> newPosq(paddedNumAtoms, make_float4(0, 0, 0, 0));
         vector<float4> oldVelm(paddedNumAtoms);
-        vector<float4> newVelm(paddedNumAtoms);
+        vector<float4> newVelm(paddedNumAtoms, make_float4(0, 0, 0, 0));
         posq->download(oldPosq);
         velm->download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
@@ -905,9 +905,9 @@ template <class Real, class Real4, class Mixed, class Mixed4>
 void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
     // Find the range of positions and the number of bins along each axis.
 
-    vector<Real4> oldPosq(paddedNumAtoms);
-    vector<Real4> oldPosqCorrection(paddedNumAtoms);
-    vector<Mixed4> oldVelm(paddedNumAtoms);
+    vector<Real4> oldPosq(paddedNumAtoms, (Real4) {0, 0, 0, 0});
+    vector<Real4> oldPosqCorrection(paddedNumAtoms, (Real4) {0, 0, 0, 0});
+    vector<Mixed4> oldVelm(paddedNumAtoms, (Mixed4) {0, 0, 0, 0});
     posq->download(oldPosq);
     velm->download(oldVelm);
     if (useMixedPrecision)

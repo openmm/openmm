@@ -1409,7 +1409,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     CudaArray& posq = cu.getPosq();
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
-    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms());
+    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
     hasCoulomb = false;
@@ -1747,7 +1747,7 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     posq.download(cu.getPinnedBuffer());
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
-    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms());
+    vector<float2> sigmaEpsilonVector(cu.getPaddedNumAtoms(), make_float2(0, 0));
     double sumSquaredCharges = 0.0;
     const vector<int>& order = cu.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -2026,7 +2026,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     CudaArray& posq = cu.getPosq();
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
-    vector<float2> paramsVector(cu.getPaddedNumAtoms());
+    vector<float2> paramsVector(cu.getPaddedNumAtoms(), make_float2(1, 1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, scalingFactor;
@@ -2144,7 +2144,7 @@ void CudaCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, c
     float4* posqf = (float4*) cu.getPinnedBuffer();
     double4* posqd = (double4*) cu.getPinnedBuffer();
     posq.download(cu.getPinnedBuffer());
-    vector<float2> paramsVector(cu.getPaddedNumAtoms());
+    vector<float2> paramsVector(cu.getPaddedNumAtoms(), make_float2(1, 1));
     const double dielectricOffset = 0.009;
     for (int i = 0; i < numParticles; i++) {
         double charge, radius, scalingFactor;
