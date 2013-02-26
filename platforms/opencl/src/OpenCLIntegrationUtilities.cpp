@@ -933,7 +933,7 @@ void OpenCLIntegrationUtilities::createCheckpoint(ostream& stream) {
 
 void OpenCLIntegrationUtilities::loadCheckpoint(istream& stream) {
     if(random == NULL) 
-        return;
+        return; 
     stream.read((char*) &randomPos, sizeof(int));
     vector<mm_float4> randomVec(random->getSize());
     stream.read((char*) &randomVec[0], sizeof(mm_float4)*random->getSize());
