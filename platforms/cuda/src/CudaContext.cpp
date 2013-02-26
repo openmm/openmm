@@ -905,9 +905,11 @@ template <class Real, class Real4, class Mixed, class Mixed4>
 void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
     // Find the range of positions and the number of bins along each axis.
 
-    vector<Real4> oldPosq(paddedNumAtoms, (Real4) {0, 0, 0, 0});
-    vector<Real4> oldPosqCorrection(paddedNumAtoms, (Real4) {0, 0, 0, 0});
-    vector<Mixed4> oldVelm(paddedNumAtoms, (Mixed4) {0, 0, 0, 0});
+    Real4 padding = {0, 0, 0, 0};
+    vector<Real4> oldPosq(paddedNumAtoms, padding);
+    vector<Real4> oldPosqCorrection(paddedNumAtoms, padding);
+	Mixed4 paddingMixed = {0, 0, 0, 0};
+    vector<Mixed4> oldVelm(paddedNumAtoms, paddingMixed);
     posq->download(oldPosq);
     velm->download(oldVelm);
     if (useMixedPrecision)
