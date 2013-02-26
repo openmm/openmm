@@ -833,6 +833,8 @@ int CudaIntegrationUtilities::prepareRandomNumbers(int numValues) {
 }
 
 void CudaIntegrationUtilities::createCheckpoint(ostream& stream) {
+    if(random == NULL) 
+        return;
     stream.write((char*) &randomPos, sizeof(int));
     vector<float4> randomVec;
     random->download(randomVec);
@@ -843,6 +845,8 @@ void CudaIntegrationUtilities::createCheckpoint(ostream& stream) {
 }
 
 void CudaIntegrationUtilities::loadCheckpoint(istream& stream) {
+    if(random == NULL) 
+        return;
     stream.read((char*) &randomPos, sizeof(int));
     vector<float4> randomVec(random->getSize());
     stream.read((char*) &randomVec[0], sizeof(float4)*random->getSize());
