@@ -1713,18 +1713,18 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
     double debye = 4.80321;
     outputMultipoleMoments.resize(13);
     outputMultipoleMoments[0] = totalCharge;
-    outputMultipoleMoments[1] = xdpl*debye;
-    outputMultipoleMoments[2] = ydpl*debye;
-    outputMultipoleMoments[3] = zdpl*debye;
-    outputMultipoleMoments[4] = xxqdp*debye;
-    outputMultipoleMoments[5] = xyqdp*debye;
-    outputMultipoleMoments[6] = xzqdp*debye;
-    outputMultipoleMoments[7] = yxqdp*debye;
-    outputMultipoleMoments[8] = yyqdp*debye;
-    outputMultipoleMoments[9] = yzqdp*debye;
-    outputMultipoleMoments[10] = zxqdp*debye;
-    outputMultipoleMoments[11] = zyqdp*debye;
-    outputMultipoleMoments[12] = zzqdp*debye;
+    outputMultipoleMoments[1] = 10.0*xdpl*debye;
+    outputMultipoleMoments[2] = 10.0*ydpl*debye;
+    outputMultipoleMoments[3] = 10.0*zdpl*debye;
+    outputMultipoleMoments[4] = 100.0*xxqdp*debye;
+    outputMultipoleMoments[5] = 100.0*xyqdp*debye;
+    outputMultipoleMoments[6] = 100.0*xzqdp*debye;
+    outputMultipoleMoments[7] = 100.0*yxqdp*debye;
+    outputMultipoleMoments[8] = 100.0*yyqdp*debye;
+    outputMultipoleMoments[9] = 100.0*yzqdp*debye;
+    outputMultipoleMoments[10] = 100.0*zxqdp*debye;
+    outputMultipoleMoments[11] = 100.0*zyqdp*debye;
+    outputMultipoleMoments[12] = 100.0*zzqdp*debye;
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {

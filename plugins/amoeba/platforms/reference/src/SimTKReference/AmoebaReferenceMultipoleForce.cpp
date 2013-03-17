@@ -1666,14 +1666,14 @@ void AmoebaReferenceMultipoleForce::calculateAmoebaSystemMultipoleMoments( const
 
     outputMultipoleMoments[0]  = netchg;
 
-    dpl                       *= debye;
+    dpl                       *= 10.0*debye;
     outputMultipoleMoments[1]  = dpl[0];
     outputMultipoleMoments[2]  = dpl[1];
     outputMultipoleMoments[3]  = dpl[2];
     
     debye *= 3.0;
     for( unsigned int ii = 4; ii < 13; ii++ ){
-        outputMultipoleMoments[ii] *= debye;
+        outputMultipoleMoments[ii] *= 100.0*debye;
     }
 
     return;
