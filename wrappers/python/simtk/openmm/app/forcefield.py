@@ -88,7 +88,10 @@ class ForceField(object):
                     element = None
                     if 'element' in type.attrib:
                         element = elem.get_by_symbol(type.attrib['element'])
-                    self._atomTypes[type.attrib['name']] = (type.attrib['class'], float(type.attrib['mass']), element)
+                    name = type.attrib['name']
+                    if name in self._atomTypes:
+                        raise ValueError('Found multiple definitions for atom type: '+name)
+                    self._atomTypes[name] = (type.attrib['class'], float(type.attrib['mass']), element)
             
             # Load the residue templates.
             
