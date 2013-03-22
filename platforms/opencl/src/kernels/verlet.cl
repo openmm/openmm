@@ -98,8 +98,8 @@ __kernel void selectVerletStepSize(int numAtoms, mixed maxStepSize, mixed errorT
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     if (get_local_id(0) == 0) {
-        mixed totalError = sqrt(error[0]/(numAtoms*3));
-        mixed newStepSize = sqrt(errorTol/totalError);
+        mixed totalError = SQRT(error[0]/(numAtoms*3));
+        mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)
             newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.

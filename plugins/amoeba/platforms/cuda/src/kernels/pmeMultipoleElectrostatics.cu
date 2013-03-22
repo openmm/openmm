@@ -1,4 +1,3 @@
-#define TILE_SIZE 32
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
 typedef struct {
@@ -182,253 +181,223 @@ __device__ void computeSelfEnergyAndTorque(AtomData& atom1, real& energy) {
  */
 extern "C" __global__ void computeElectrostatics(
         unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, real* __restrict__ energyBuffer,
-        const real4* __restrict__ posq, const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices,
-        const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, unsigned int startTileIndex, unsigned int numTileIndices,
+        const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
+        const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const unsigned int* __restrict__ interactionFlags,
+        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #endif
         const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole,
         const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
-    unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-#ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
-    unsigned int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
-    unsigned int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
-#else
-    const unsigned int numTiles = numTileIndices;
-    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
-    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
-#endif
+    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
+    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
+    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
+    const unsigned int tbx = threadIdx.x - tgx;
     real energy = 0;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
-    __shared__ unsigned int exclusionRange[2*WARPS_PER_GROUP];
-    __shared__ int exclusionIndex[WARPS_PER_GROUP];
-#ifndef ENABLE_SHUFFLE
-    __shared__ real tempBuffer[3*THREAD_BLOCK_SIZE];
-#endif
+
+    // First loop: process tiles that contain exclusions.
     
-    do {
-        // Extract the coordinates of this tile
-        const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-        const unsigned int tbx = threadIdx.x - tgx;
-        const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
-        unsigned int x, y;
+    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+        const ushort2 tileIndices = exclusionTiles[pos];
+        const unsigned int x = tileIndices.x;
+        const unsigned int y = tileIndices.y;
         AtomData data;
-        if (pos < end) {
-#ifdef USE_CUTOFF
-            if (numTiles <= maxTiles) {
-                ushort2 tileIndices = tiles[pos];
-                x = tileIndices.x;
-                y = tileIndices.y;
-            }
-            else
-#endif
-            {
-                y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-                if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                    y += (x < y ? -1 : 1);
-                    x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        unsigned int atom1 = x*TILE_SIZE + tgx;
+        loadAtomData(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
+        data.force = make_real3(0);
+        data.torque = make_real3(0);
+        uint2 covalent = covalentFlags[pos*TILE_SIZE+tgx];
+        unsigned int polarizationGroup = polarizationGroupFlags[pos*TILE_SIZE+tgx];
+        if (x == y) {
+            // This tile is on the diagonal.
+
+            localData[threadIdx.x].pos = data.pos;
+            localData[threadIdx.x].q = data.q;
+            localData[threadIdx.x].dipole = data.dipole;
+            localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
+            localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
+            localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
+            localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
+            localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
+            localData[threadIdx.x].inducedDipole = data.inducedDipole;
+            localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
+            localData[threadIdx.x].thole = data.thole;
+            localData[threadIdx.x].damp = data.damp;
+
+            // Compute forces.
+
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                int atom2 = y*TILE_SIZE+j;
+                if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    float d = computeDScaleFactor(polarizationGroup, j);
+                    float p = computePScaleFactor(covalent, polarizationGroup, j);
+                    float m = computeMScaleFactor(covalent, j);
+                    computeOneInteraction(data, localData[tbx+j], true, d, p, m, 0.5f, energy, periodicBoxSize, invPeriodicBoxSize);
                 }
             }
+            if (atom1 < NUM_ATOMS)
+                computeSelfEnergyAndTorque(data, energy);
+            data.force *= -ENERGY_SCALE_FACTOR;
+            data.torque *= ENERGY_SCALE_FACTOR;
+            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.torque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0x100000000)));
+        }
+        else {
+            // This is an off-diagonal tile.
+
+            unsigned int j = y*TILE_SIZE + tgx;
+            loadAtomData(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
+            localData[threadIdx.x].force = make_real3(0);
+            localData[threadIdx.x].torque = make_real3(0);
+            unsigned int tj = tgx;
+            for (j = 0; j < TILE_SIZE; j++) {
+                int atom2 = y*TILE_SIZE+tj;
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    float d = computeDScaleFactor(polarizationGroup, tj);
+                    float p = computePScaleFactor(covalent, polarizationGroup, tj);
+                    float m = computeMScaleFactor(covalent, tj);
+                    computeOneInteraction(data, localData[tbx+tj], true, d, p, m, 1, energy, periodicBoxSize, invPeriodicBoxSize);
+                }
+                tj = (tj + 1) & (TILE_SIZE - 1);
+            }
+            data.force *= -ENERGY_SCALE_FACTOR;
+            data.torque *= ENERGY_SCALE_FACTOR;
+            localData[threadIdx.x].force *= -ENERGY_SCALE_FACTOR;
+            localData[threadIdx.x].torque *= ENERGY_SCALE_FACTOR;
+            unsigned int offset = x*TILE_SIZE + tgx;
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.torque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0x100000000)));
+            offset = y*TILE_SIZE + tgx;
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.z*0x100000000)));
+        }
+    }
+
+    // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
+    // of them (no cutoff).
+
+#ifdef USE_CUTOFF
+    const unsigned int numTiles = interactionCount[0];
+    int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
+    int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
+#else
+    const unsigned int numTiles = numTileIndices;
+    int pos = startTileIndex+warp*numTiles/totalWarps;
+    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+#endif
+    int skipBase = 0;
+    int currentSkipIndex = tbx;
+    __shared__ int atomIndices[THREAD_BLOCK_SIZE];
+    __shared__ int skipTiles[THREAD_BLOCK_SIZE];
+    skipTiles[threadIdx.x] = -1;
+    
+    while (pos < end) {
+        bool includeTile = true;
+
+        // Extract the coordinates of this tile.
+        
+        unsigned int x, y;
+#ifdef USE_CUTOFF
+        if (numTiles <= maxTiles) {
+            ushort2 tileIndices = tiles[pos];
+            x = tileIndices.x;
+        }
+        else
+#endif
+        {
+            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+                y += (x < y ? -1 : 1);
+                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            }
+
+            // Skip over tiles that have exclusions, since they were already processed.
+
+            while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+                if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
+                    ushort2 tile = exclusionTiles[skipBase+tgx];
+                    skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                }
+                else
+                    skipTiles[threadIdx.x] = end;
+                skipBase += TILE_SIZE;            
+                currentSkipIndex = tbx;
+            }
+            while (skipTiles[currentSkipIndex] < pos)
+                currentSkipIndex++;
+            includeTile = (skipTiles[currentSkipIndex] != pos);
+        }
+        if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
+
+            // Load atom data for this tile.
+
+            AtomData data;
             loadAtomData(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
             data.force = make_real3(0);
             data.torque = make_real3(0);
-            
-            // Locate the exclusion data for this tile.
-
-            if (tgx < 2)
-                exclusionRange[2*localGroupIndex+tgx] = exclusionRowIndices[x+tgx];
-            if (tgx == 0)
-                exclusionIndex[localGroupIndex] = -1;
-            for (unsigned int i = exclusionRange[2*localGroupIndex]+tgx; i < exclusionRange[2*localGroupIndex+1]; i += TILE_SIZE)
-                if (exclusionIndices[i] == y)
-                    exclusionIndex[localGroupIndex] = i*TILE_SIZE;
-            bool hasExclusions = (exclusionIndex[localGroupIndex] > -1);
-            if (pos >= end)
-                ; // This warp is done.
-            else if (x == y) {
-                // This tile is on the diagonal.
-
-                localData[threadIdx.x].pos = data.pos;
-                localData[threadIdx.x].q = data.q;
-                localData[threadIdx.x].dipole = data.dipole;
-                localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
-                localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
-                localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
-                localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
-                localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
-                localData[threadIdx.x].inducedDipole = data.inducedDipole;
-                localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
-                localData[threadIdx.x].thole = data.thole;
-                localData[threadIdx.x].damp = data.damp;
-                uint2 covalent = covalentFlags[exclusionIndex[localGroupIndex]+tgx];
-                unsigned int polarizationGroup = polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx];
-                
-                // Compute forces.
-                
-                for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    int atom2 = y*TILE_SIZE+j;
-                    if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        float d = computeDScaleFactor(polarizationGroup, j);
-                        float p = computePScaleFactor(covalent, polarizationGroup, j);
-                        float m = computeMScaleFactor(covalent, j);
-                        computeOneInteraction(data, localData[tbx+j], hasExclusions, d, p, m, 0.5f, energy, periodicBoxSize, invPeriodicBoxSize);
-                    }
-                }
-                if (atom1 < NUM_ATOMS)
-                    computeSelfEnergyAndTorque(data, energy);
-                data.force *= -ENERGY_SCALE_FACTOR;
-                data.torque *= ENERGY_SCALE_FACTOR;
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
-                atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.torque.x*0x100000000)));
-                atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0x100000000)));
-                atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0x100000000)));
-            }
-            else {
-                // This is an off-diagonal tile.
-
-                unsigned int j = y*TILE_SIZE + tgx;
-                loadAtomData(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
-                localData[threadIdx.x].force = make_real3(0);
-                localData[threadIdx.x].torque = make_real3(0);
 #ifdef USE_CUTOFF
-                unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-                if (!hasExclusions && flags == 0) { // TODO: Why doesn't the flags != 0 block work?
-//                if (!hasExclusions && flags != 0xFFFFFFFF) {
-                    if (flags == 0) {
-                        // No interactions in this tile.
-                    }
-                    else {
-                        // Compute only a subset of the interactions in this tile.
-
-                        for (j = 0; j < TILE_SIZE; j++) {
-                            if ((flags&(1<<j)) != 0) {
-                                int atom2 = tbx+j;
-                                real3 oldForce = localData[atom2].force;
-                                real3 oldTorque = localData[atom2].torque;
-                                localData[atom2].force = make_real3(0);
-                                localData[atom2].torque = make_real3(0);
-                                computeOneInteraction(data, localData[tbx+j], false, 1, 1, 1, 1, energy, periodicBoxSize, invPeriodicBoxSize);
-                                real3 newForce = localData[atom2].force;
-                                real3 newTorque = localData[atom2].torque;
-                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-#ifdef ENABLE_SHUFFLE
-                                    for (int i = 16; i >= 1; i /= 2) {
-                                        newForce.x += __shfl_xor(newForce.x, i, 32);
-                                        newForce.y += __shfl_xor(newForce.y, i, 32);
-                                        newForce.z += __shfl_xor(newForce.z, i, 32);
-                                        newTorque.x += __shfl_xor(newTorque.x, i, 32);
-                                        newTorque.y += __shfl_xor(newTorque.y, i, 32);
-                                        newTorque.z += __shfl_xor(newTorque.z, i, 32);
-                                    }
-                                    if (tgx == 0) {
-                                        localData[atom2].force -= newForce;
-                                        localData[atom2].torque -= newTorque;
-                                    }
+            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
 #else
-                                    int bufferIndex = 3*threadIdx.x;
-                                    tempBuffer[bufferIndex] = newForce.x;
-                                    tempBuffer[bufferIndex+1] = newForce.y;
-                                    tempBuffer[bufferIndex+2] = newForce.z;
-                                    if (tgx % 4 == 0) {
-                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                    }
-                                    if (tgx == 0) {
-                                        localData[atom2].force.x -= tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                        localData[atom2].force.y -= tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                        localData[atom2].force.z -= tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                    }
-                                    tempBuffer[bufferIndex] = newTorque.x;
-                                    tempBuffer[bufferIndex+1] = newTorque.y;
-                                    tempBuffer[bufferIndex+2] = newTorque.z;
-                                    if (tgx % 4 == 0) {
-                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                    }
-                                    if (tgx == 0) {
-                                        localData[atom2].torque.x -= tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                        localData[atom2].torque.y -= tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                        localData[atom2].torque.z -= tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                    }
+            unsigned int j = y*TILE_SIZE + tgx;
 #endif
-                                }
-                            }
-                        }
-                        data.force *= -ENERGY_SCALE_FACTOR;
-                        data.torque *= -ENERGY_SCALE_FACTOR;
-                        localData[threadIdx.x].force *= -ENERGY_SCALE_FACTOR;
-                        localData[threadIdx.x].torque *= -ENERGY_SCALE_FACTOR;
-                        if (pos < end) {
-                            unsigned int offset = x*TILE_SIZE + tgx;
-                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
-                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.torque.x*0x100000000)));
-                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0x100000000)));
-                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0x100000000)));
-                            offset = y*TILE_SIZE + tgx;
-                            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-                            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-                            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
-                            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.x*0x100000000)));
-                            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.y*0x100000000)));
-                            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.z*0x100000000)));
-                        }
-                    }
-                }
-                else
-#endif
-                {
-                    // Compute the full set of interactions in this tile.
+            atomIndices[threadIdx.x] = j;
+            loadAtomData(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
+            localData[threadIdx.x].force = make_real3(0);
+            localData[threadIdx.x].torque = make_real3(0);
 
-                    uint2 covalent = (hasExclusions ? covalentFlags[exclusionIndex[localGroupIndex]+tgx] : make_uint2(0, 0));
-                    unsigned int polarizationGroup = (hasExclusions ? polarizationGroupFlags[exclusionIndex[localGroupIndex]+tgx] : 0);
-                    
-                    // Compute forces.
-                    
-                    unsigned int tj = tgx;
-                    for (j = 0; j < TILE_SIZE; j++) {
-                        int atom2 = y*TILE_SIZE+tj;
-                        if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                            float d = computeDScaleFactor(polarizationGroup, tj);
-                            float p = computePScaleFactor(covalent, polarizationGroup, tj);
-                            float m = computeMScaleFactor(covalent, tj);
-                            computeOneInteraction(data, localData[tbx+tj], hasExclusions, d, p, m, 1, energy, periodicBoxSize, invPeriodicBoxSize);
-                        }
-                        tj = (tj + 1) & (TILE_SIZE - 1);
-                    }
-                    data.force *= -ENERGY_SCALE_FACTOR;
-                    data.torque *= ENERGY_SCALE_FACTOR;
-                    localData[threadIdx.x].force *= -ENERGY_SCALE_FACTOR;
-                    localData[threadIdx.x].torque *= ENERGY_SCALE_FACTOR;
-                    if (pos < end) {
-                        unsigned int offset = x*TILE_SIZE + tgx;
-                        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
-                        atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.torque.x*0x100000000)));
-                        atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0x100000000)));
-                        atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0x100000000)));
-                        offset = y*TILE_SIZE + tgx;
-                        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-                        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-                        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
-                        atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.x*0x100000000)));
-                        atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.y*0x100000000)));
-                        atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.z*0x100000000)));
-                    }
+            // Compute forces.
+
+            unsigned int tj = tgx;
+            for (j = 0; j < TILE_SIZE; j++) {
+                int atom2 = atomIndices[tbx+tj];
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    computeOneInteraction(data, localData[tbx+tj], false, 1, 1, 1, 1, energy, periodicBoxSize, invPeriodicBoxSize);
                 }
+                tj = (tj + 1) & (TILE_SIZE - 1);
             }
+            data.force *= -ENERGY_SCALE_FACTOR;
+            data.torque *= ENERGY_SCALE_FACTOR;
+            localData[threadIdx.x].force *= -ENERGY_SCALE_FACTOR;
+            localData[threadIdx.x].torque *= ENERGY_SCALE_FACTOR;
+
+            // Write results.
+
+            unsigned int offset = x*TILE_SIZE + tgx;
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.torque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.torque.z*0x100000000)));
+#ifdef USE_CUTOFF
+            offset = atomIndices[threadIdx.x];
+#else
+            offset = y*TILE_SIZE + tgx;
+#endif
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.x*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.y*0x100000000)));
+            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].torque.z*0x100000000)));
         }
         pos++;
-    } while (pos < end);
+    }
     energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy*ENERGY_SCALE_FACTOR;
 }

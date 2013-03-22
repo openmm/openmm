@@ -59,7 +59,7 @@ void testTransform() {
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
-    int xsize = 32, ysize = 25, zsize = 30;
+    int xsize = 28, ysize = 25, zsize = 30;
     vector<Real2> original(xsize*ysize*zsize);
     vector<t_complex> reference(original.size());
     for (int i = 0; i < (int) original.size(); i++) {
@@ -81,8 +81,8 @@ void testTransform() {
     fftpack_init_3d(&plan, xsize, ysize, zsize);
     fftpack_exec_3d(plan, FFTPACK_FORWARD, &reference[0], &reference[0]);
     for (int i = 0; i < (int) result.size(); ++i) {
-        ASSERT_EQUAL_TOL(reference[i].re, result[i].x, 1e-4);
-        ASSERT_EQUAL_TOL(reference[i].im, result[i].y, 1e-4);
+        ASSERT_EQUAL_TOL(reference[i].re, result[i].x, 1e-3);
+        ASSERT_EQUAL_TOL(reference[i].im, result[i].y, 1e-3);
     }
     fftpack_destroy(plan);
 

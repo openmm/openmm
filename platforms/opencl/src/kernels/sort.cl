@@ -5,6 +5,47 @@ KEY_TYPE getValue(DATA_TYPE value) {
 }
 
 /**
+ * Sort a list that is short enough to entirely fit in local memory.  This is executed as
+ * a single thread block.
+ */
+__kernel void sortShortList(__global DATA_TYPE* __restrict__ data, uint length, __local DATA_TYPE* dataBuffer) {
+    // Load the data into local memory.
+    
+    for (int index = get_local_id(0); index < length; index += get_local_size(0))
+        dataBuffer[index] = data[index];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Perform a bitonic sort in local memory.
+
+    for (unsigned int k = 2; k < 2*length; k *= 2) {
+        for (unsigned int j = k/2; j > 0; j /= 2) {
+            for (unsigned int i = get_local_id(0); i < length; i += get_local_size(0)) {
+                int ixj = i^j;
+                if (ixj > i && ixj < length) {
+                    DATA_TYPE value1 = dataBuffer[i];
+                    DATA_TYPE value2 = dataBuffer[ixj];
+                    bool ascending = ((i&k) == 0);
+                    for (unsigned int mask = k*2; mask < 2*length; mask *= 2)
+                        ascending = ((i&mask) == 0 ? !ascending : ascending);
+                    KEY_TYPE lowKey  = (ascending ? getValue(value1) : getValue(value2));
+                    KEY_TYPE highKey = (ascending ? getValue(value2) : getValue(value1));
+                    if (lowKey > highKey) {
+                        dataBuffer[i] = value2;
+                        dataBuffer[ixj] = value1;
+                    }
+                }
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+    }
+
+    // Write the data back to global memory.
+
+    for (int index = get_local_id(0); index < length; index += get_local_size(0))
+        data[index] = dataBuffer[index];
+}
+
+/**
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.
  */

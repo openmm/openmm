@@ -99,7 +99,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
-        ccmaConvergedBuffer(NULL), vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
+        vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL), hasInitializedPosConstraintKernels(false), hasInitializedVelConstraintKernels(false) {
     // Create workspace arrays.
 
@@ -479,8 +479,6 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaNumAtomConstraints = OpenCLArray::create<cl_int>(context, numAtoms, "CcmaAtomConstraintsIndex");
         ccmaConstraintMatrixColumn = OpenCLArray::create<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConverged = OpenCLArray::create<cl_int>(context, 2, "CcmaConverged");
-        ccmaConvergedBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, 2*sizeof(cl_int));
-        ccmaConvergedMemory = (cl_int*) context.getQueue().enqueueMapBuffer(*ccmaConvergedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, 2*sizeof(cl_int));
         vector<mm_int2> atomsVec(ccmaAtoms->getSize());
         vector<cl_int> atomConstraintsVec(ccmaAtomConstraints->getSize());
         vector<cl_int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
@@ -660,24 +658,28 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
     cl::Program vsiteProgram = context.createProgram(OpenCLKernelSources::virtualSites, defines);
     vsitePositionKernel = cl::Kernel(vsiteProgram, "computeVirtualSites");
-    vsitePositionKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-    setPosqCorrectionArg(context, vsitePositionKernel, 1);
-    vsitePositionKernel.setArg<cl::Buffer>(2, vsite2AvgAtoms->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(3, vsite2AvgWeights->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(4, vsite3AvgAtoms->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(5, vsite3AvgWeights->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(6, vsiteOutOfPlaneAtoms->getDeviceBuffer());
-    vsitePositionKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    int index = 0;
+    vsitePositionKernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
+    if (context.getUseMixedPrecision())
+        vsitePositionKernel.setArg<cl::Buffer>(index++, context.getPosqCorrection().getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsite2AvgAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsite2AvgWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsite3AvgAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsite3AvgWeights->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneAtoms->getDeviceBuffer());
+    vsitePositionKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneWeights->getDeviceBuffer());
     vsiteForceKernel = cl::Kernel(vsiteProgram, "distributeForces");
-    vsiteForceKernel.setArg<cl::Buffer>(0, context.getPosq().getDeviceBuffer());
-    setPosqCorrectionArg(context, vsiteForceKernel, 1);
-    // Skip argument 2: the force array hasn't been created yet.
-    vsiteForceKernel.setArg<cl::Buffer>(3, vsite2AvgAtoms->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(4, vsite2AvgWeights->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(5, vsite3AvgAtoms->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(6, vsite3AvgWeights->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(7, vsiteOutOfPlaneAtoms->getDeviceBuffer());
-    vsiteForceKernel.setArg<cl::Buffer>(8, vsiteOutOfPlaneWeights->getDeviceBuffer());
+    index = 0;
+    vsiteForceKernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
+    index++; // Skip argument 1: the force array hasn't been created yet.
+    if (context.getUseMixedPrecision())
+        vsiteForceKernel.setArg<cl::Buffer>(index++, context.getPosqCorrection().getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsite2AvgAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsite2AvgWeights->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsite3AvgAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsite3AvgWeights->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneAtoms->getDeviceBuffer());
+    vsiteForceKernel.setArg<cl::Buffer>(index++, vsiteOutOfPlaneWeights->getDeviceBuffer());
     numVsites = num2Avg+num3Avg+numOutOfPlane;
 }
 
@@ -718,8 +720,6 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete ccmaDelta2;
     if (ccmaConverged != NULL)
         delete ccmaConverged;
-    if (ccmaConvergedBuffer != NULL)
-        delete ccmaConvergedBuffer;
     if (vsite2AvgAtoms != NULL)
         delete vsite2AvgAtoms;
     if (vsite2AvgWeights != NULL)
@@ -807,6 +807,7 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
                 ccmaDirectionsKernel.setArg<cl::Buffer>(3, context.getPosqCorrection().getDeviceBuffer());
             else
                 ccmaDirectionsKernel.setArg<void*>(3, NULL);
+            ccmaDirectionsKernel.setArg<cl::Buffer>(4, ccmaConverged->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(2, constrainVelocities ? context.getVelm().getDeviceBuffer() : posDelta->getDeviceBuffer());
@@ -834,23 +835,19 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
         context.executeKernel(ccmaDirectionsKernel, ccmaAtoms->getSize());
         const int checkInterval = 4;
         cl::Event event;
+        int* converged = (int*) context.getPinnedBuffer();
         for (int i = 0; i < 150; i++) {
             ccmaForceKernel.setArg<cl_int>(7, i);
-            if (i == 0) {
-                ccmaConvergedMemory[0] = 1;
-                ccmaConvergedMemory[1] = 0;
-                context.getQueue().enqueueWriteBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(cl_int), ccmaConvergedMemory);
-            }
             context.executeKernel(ccmaForceKernel, ccmaAtoms->getSize());
             if ((i+1)%checkInterval == 0)
-                context.getQueue().enqueueReadBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(cl_int), ccmaConvergedMemory, NULL, &event);
+                context.getQueue().enqueueReadBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(cl_int), converged, NULL, &event);
             ccmaMultiplyKernel.setArg<cl_int>(5, i);
             context.executeKernel(ccmaMultiplyKernel, ccmaAtoms->getSize());
             ccmaUpdateKernel.setArg<cl_int>(8, i);
             context.executeKernel(ccmaUpdateKernel, context.getNumAtoms());
             if ((i+1)%checkInterval == 0) {
                 event.wait();
-                if (ccmaConvergedMemory[i%2])
+                if (converged[i%2])
                     break;
             }
         }
@@ -864,7 +861,7 @@ void OpenCLIntegrationUtilities::computeVirtualSites() {
 
 void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
     if (numVsites > 0) {
-        vsiteForceKernel.setArg<cl::Buffer>(2, context.getForce().getDeviceBuffer());
+        vsiteForceKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
         context.executeKernel(vsiteForceKernel, numVsites);
     }
 }

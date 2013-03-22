@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,8 @@
 #include <vector>
 
 namespace OpenMM {
+    
+class OpenCLSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -121,12 +123,6 @@ public:
         return usePeriodic;
     }
     /**
-     * Get whether there is one force buffer per atom block.
-     */
-    bool getForceBufferPerAtomBlock() {
-        return forceBufferPerAtomBlock;
-    }
-    /**
      * Get the number of work groups used for computing nonbonded forces.
      */
     int getNumForceThreadBlocks() {
@@ -193,16 +189,22 @@ public:
         return *interactingTiles;
     }
     /**
-     * Get the array containing flags for tiles with interactions.
+     * Get the array containing the atoms in each tile with interactions.
      */
-    OpenCLArray& getInteractionFlags() {
-        return *interactionFlags;
+    OpenCLArray& getInteractingAtoms() {
+        return *interactingAtoms;
     }
     /**
      * Get the array containing exclusion flags.
      */
     OpenCLArray& getExclusions() {
         return *exclusions;
+    }
+    /**
+     * Get the array containing tiles with exclusions.
+     */
+    OpenCLArray& getExclusionTiles() {
+        return *exclusionTiles;
     }
     /**
      * Get the array containing the index into the exclusion array for each tile.
@@ -229,9 +231,17 @@ public:
         return numTiles;
     }
     /**
-     * Set the range of tiles that should be processed by this context.
+     * Set whether to add padding to the cutoff distance when building the neighbor list.
+     * This increases the size of the neighbor list (and thus the cost of computing interactions),
+     * but also means we don't need to rebuild it every time step.  The default value is true,
+     * since usually this improves performance.  For very expensive interactions, however,
+     * it may be better to set this to false.
      */
-    void setTileRange(int startTileIndex, int numTiles);
+    void setUsePadding(bool padding);
+    /**
+     * Set the range of atom blocks and tiles that should be processed by this context.
+     */
+    void setAtomBlockRange(double startFraction, double endFraction);
     /**
      * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
      * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
@@ -245,28 +255,36 @@ public:
      */
     cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const;
 private:
-    static int findExclusionIndex(int x, int y, const std::vector<cl_uint>& exclusionIndices, const std::vector<cl_uint>& exclusionRowIndices);
+    class BlockSortTrait;
     OpenCLContext& context;
     cl::Kernel forceKernel;
     cl::Kernel findBlockBoundsKernel;
+    cl::Kernel sortBoxDataKernel;
     cl::Kernel findInteractingBlocksKernel;
     cl::Kernel findInteractionsWithinBlocksKernel;
+    OpenCLArray* exclusionTiles;
     OpenCLArray* exclusions;
     OpenCLArray* exclusionIndices;
     OpenCLArray* exclusionRowIndices;
     OpenCLArray* interactingTiles;
-    OpenCLArray* interactionFlags;
+    OpenCLArray* interactingAtoms;
     OpenCLArray* interactionCount;
     OpenCLArray* blockCenter;
     OpenCLArray* blockBoundingBox;
+    OpenCLArray* sortedBlocks;
+    OpenCLArray* sortedBlockCenter;
+    OpenCLArray* sortedBlockBoundingBox;
+    OpenCLArray* oldPositions;
+    OpenCLArray* rebuildNeighborList;
+    OpenCLSort* blockSorter;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
-    bool useCutoff, usePeriodic, forceBufferPerAtomBlock, deviceIsCpu, anyExclusions;
-    int numForceBuffers, startTileIndex, numTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup;
+    bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding;
+    int numForceBuffers, startTileIndex, numTiles, startBlockIndex, numBlocks, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup;
 };
 
 /**

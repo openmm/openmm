@@ -48,15 +48,15 @@ using namespace std;
 
 OpenCLPlatform platform;
 
-struct SortTrait {
-    typedef cl_float DataType;
-    typedef cl_float KeyType;
-    static const char* clDataType() {return "float";}
-    static const char* clKeyType() {return "float";}
-    static const char* clMinKey() {return "-MAXFLOAT";}
-    static const char* clMaxKey() {return "MAXFLOAT";}
-    static const char* clMaxValue() {return "MAXFLOAT";}
-    static const char* clSortKey() {return "value";}
+class SortTrait : public OpenCLSort::SortTrait {
+    int getDataSize() const {return 4;}
+    int getKeySize() const {return 4;}
+    const char* getDataType() const {return "float";}
+    const char* getKeyType() const {return "float";}
+    const char* getMinKey() const {return "-MAXFLOAT";}
+    const char* getMaxKey() const {return "MAXFLOAT";}
+    const char* getMaxValue() const {return "MAXFLOAT";}
+    const char* getSortKey() const {return "value";}
 };
 
 void verifySorting(vector<float> array) {
@@ -69,7 +69,7 @@ void verifySorting(vector<float> array) {
     context.initialize();
     OpenCLArray data(context, array.size(), sizeof(float), "sortData");
     data.upload(array);
-    OpenCLSort<SortTrait> sort(context, array.size());
+    OpenCLSort sort(context, new SortTrait(), array.size());
     sort.sort(data);
     vector<float> sorted;
     data.download(sorted);
@@ -86,8 +86,7 @@ void verifySorting(vector<float> array) {
     ASSERT(elements1 == elements2);
 }
 
-void testUniformValues()
-{
+void testUniformValues() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
@@ -97,12 +96,21 @@ void testUniformValues()
     verifySorting(array);
 }
 
-void testLogValues()
-{
+void testLogValues() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
     vector<float> array(10000);
+    for (int i = 0; i < (int) array.size(); i++)
+        array[i] = (float) log(genrand_real2(sfmt));
+    verifySorting(array);
+}
+
+void testShortList() {
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+ 
+    vector<float> array(500);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) log(genrand_real2(sfmt));
     verifySorting(array);
@@ -114,6 +122,7 @@ int main(int argc, char* argv[]) {
             platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testUniformValues();
         testLogValues();
+        testShortList();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -118,7 +118,7 @@ private:
 };
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
-        CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextTiles(data.contexts.size()), contextForces(NULL),
+        CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextNonbondedFractions(data.contexts.size()), contextForces(NULL),
         pinnedPositionBuffer(NULL), pinnedForceBuffer(NULL) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new CudaCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
@@ -141,6 +141,8 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     sumKernel = cu.getKernel(module, "sumForces");
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).initialize(system);
+    for (int i = 0; i < (int) contextNonbondedFractions.size(); i++)
+        contextNonbondedFractions[i] = 1/(double) contextNonbondedFractions.size();
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
@@ -184,30 +186,26 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         void* args[] = {&cu.getForce().getDevicePointer(), &contextForces->getDevicePointer(), &bufferSize, &numBuffers};
         cu.executeKernel(sumKernel, args, bufferSize);
         
-        // Balance work between the contexts by transferring a few nonbonded tiles from the context that
+        // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
         
         int firstIndex = 0, lastIndex = 0;
-        int totalTiles = 0;
         for (int i = 0; i < (int) completionTimes.size(); i++) {
             if (completionTimes[i] < completionTimes[firstIndex])
                 firstIndex = i;
             if (completionTimes[i] > completionTimes[lastIndex])
                 lastIndex = i;
-            contextTiles[i] = data.contexts[i]->getNonbondedUtilities().getNumTiles();
-            totalTiles += contextTiles[i];
         }
-        int tilesToTransfer = totalTiles/1000;
-        if (tilesToTransfer < 1)
-            tilesToTransfer = 1;
-        if (tilesToTransfer > contextTiles[lastIndex])
-            tilesToTransfer = contextTiles[lastIndex];
-        contextTiles[firstIndex] += tilesToTransfer;
-        contextTiles[lastIndex] -= tilesToTransfer;
-        int startIndex = 0;
-        for (int i = 0; i < (int) contextTiles.size(); i++) {
-            data.contexts[i]->getNonbondedUtilities().setTileRange(startIndex, contextTiles[i]);
-            startIndex += contextTiles[i];
+        double fractionToTransfer = min(0.001, contextNonbondedFractions[lastIndex]);
+        contextNonbondedFractions[firstIndex] += fractionToTransfer;
+        contextNonbondedFractions[lastIndex] -= fractionToTransfer;
+        double startFraction = 0.0;
+        for (int i = 0; i < (int) contextNonbondedFractions.size(); i++) {
+            double endFraction = startFraction+contextNonbondedFractions[i];
+            if (i == contextNonbondedFractions.size()-1)
+                endFraction = 1.0; // Avoid roundoff error
+            data.contexts[i]->getNonbondedUtilities().setAtomBlockRange(startFraction, endFraction);
+            startFraction = endFraction;
         }
     }
     return energy;

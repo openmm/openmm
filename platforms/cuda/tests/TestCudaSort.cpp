@@ -87,8 +87,7 @@ void verifySorting(vector<float> array) {
     ASSERT(elements1 == elements2);
 }
 
-void testUniformValues()
-{
+void testUniformValues() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
@@ -98,12 +97,21 @@ void testUniformValues()
     verifySorting(array);
 }
 
-void testLogValues()
-{
+void testLogValues() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
     vector<float> array(10000);
+    for (int i = 0; i < (int) array.size(); i++)
+        array[i] = (float) log(genrand_real2(sfmt));
+    verifySorting(array);
+}
+
+void testShortList() {
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    vector<float> array(500);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) log(genrand_real2(sfmt));
     verifySorting(array);
@@ -115,6 +123,7 @@ int main(int argc, char* argv[]) {
             platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testUniformValues();
         testLogValues();
+        testShortList();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

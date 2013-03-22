@@ -356,7 +356,7 @@ void testDispersionCorrection() {
 
     int gridSize = 5;
     int numParticles = gridSize*gridSize*gridSize;
-    double boxSize = gridSize*0.5;
+    double boxSize = gridSize*0.7;
     double cutoff = boxSize/3;
     ReferencePlatform platform;
     System system;

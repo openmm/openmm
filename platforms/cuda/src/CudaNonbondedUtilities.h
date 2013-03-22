@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,8 @@
 #include <vector>
 
 namespace OpenMM {
+    
+class CudaSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -181,16 +183,22 @@ public:
         return *interactingTiles;
     }
     /**
-     * Get the array containing flags for tiles with interactions.
+     * Get the array containing the atoms in each tile with interactions.
      */
-    CudaArray& getInteractionFlags() {
-        return *interactionFlags;
+    CudaArray& getInteractingAtoms() {
+        return *interactingAtoms;
     }
     /**
      * Get the array containing exclusion flags.
      */
     CudaArray& getExclusions() {
         return *exclusions;
+    }
+    /**
+     * Get the array containing tiles with exclusions.
+     */
+    CudaArray& getExclusionTiles() {
+        return *exclusionTiles;
     }
     /**
      * Get the array containing the index into the exclusion array for each tile.
@@ -217,9 +225,17 @@ public:
         return numTiles;
     }
     /**
-     * Set the range of tiles that should be processed by this context.
+     * Set whether to add padding to the cutoff distance when building the neighbor list.
+     * This increases the size of the neighbor list (and thus the cost of computing interactions),
+     * but also means we don't need to rebuild it every time step.  The default value is true,
+     * since usually this improves performance.  For very expensive interactions, however,
+     * it may be better to set this to false.
      */
-    void setTileRange(int startTileIndex, int numTiles);
+    void setUsePadding(bool padding);
+    /**
+     * Set the range of atom blocks and tiles that should be processed by this context.
+     */
+    void setAtomBlockRange(double startFraction, double endFraction);
     /**
      * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
      * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
@@ -232,42 +248,38 @@ public:
      * @param isSymmetric   specifies whether the interaction is symmetric
      */
     CUfunction createInteractionKernel(const std::string& source, std::vector<ParameterInfo>& params, std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric);
-    /**
-     * This is a utility routine for locating data in the exclusions array.  It takes the (x,y) indices of a tile,
-     * and returns the location in the array where the data for that tile begins.
-     * 
-     * This routine requires that x >= y.  If not, it will throw an exception.
-     * 
-     * @param x                   the x index of the tile
-     * @param y                   the y index of the tile
-     * @param exclusionIndices    the content of the exclusionIndices array
-     * @param exclusionRowIndices the content of the exclusionRowIndices array
-     * @return the index in the exclusions array at which the data for that tile begins
-     */
-    static int findExclusionIndex(int x, int y, const std::vector<unsigned int>& exclusionIndices, const std::vector<unsigned int>& exclusionRowIndices);
 private:
+    class BlockSortTrait;
     CudaContext& context;
     CUfunction forceKernel;
     CUfunction findBlockBoundsKernel;
+    CUfunction sortBoxDataKernel;
     CUfunction findInteractingBlocksKernel;
     CUfunction findInteractionsWithinBlocksKernel;
+    CudaArray* exclusionTiles;
     CudaArray* exclusions;
     CudaArray* exclusionIndices;
     CudaArray* exclusionRowIndices;
     CudaArray* interactingTiles;
-    CudaArray* interactionFlags;
+    CudaArray* interactingAtoms;
     CudaArray* interactionCount;
     CudaArray* blockCenter;
     CudaArray* blockBoundingBox;
-    std::vector<void*> forceArgs, findBlockBoundsArgs, findInteractingBlocksArgs, findInteractionsWithinBlocksArgs;
+    CudaArray* sortedBlocks;
+    CudaArray* sortedBlockCenter;
+    CudaArray* sortedBlockBoundingBox;
+    CudaArray* oldPositions;
+    CudaArray* rebuildNeighborList;
+    CudaSort* blockSorter;
+    std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
-    bool useCutoff, usePeriodic, anyExclusions;
-    int startTileIndex, numTiles, maxTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup, numAtoms;
+    bool useCutoff, usePeriodic, anyExclusions, usePadding;
+    int startTileIndex, numTiles, startBlockIndex, numBlocks, maxTiles, numForceThreadBlocks, forceThreadBlockSize, nonbondedForceGroup, numAtoms;
 };
 
 /**

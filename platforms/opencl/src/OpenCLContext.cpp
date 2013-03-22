@@ -97,6 +97,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             // Try to figure out which device is the fastest.
 
             int bestSpeed = -1;
+            bool bestSupportsDouble = false;
             for (int i = 0; i < (int) devices.size(); i++) {
                 if (platformVendor == "Apple" && devices[i].getInfo<CL_DEVICE_VENDOR>() == "AMD")
                     continue; // Don't use AMD GPUs on OS X due to serious bugs.
@@ -135,9 +136,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     }
                 }
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-                if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
+                bool supportsDouble = (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
+                if (maxSize >= minThreadBlockSize && speed > bestSpeed && (supportsDouble || !bestSupportsDouble)) {
                     deviceIndex = i;
                     bestSpeed = speed;
+                    bestSupportsDouble = supportsDouble;
                 }
             }
         }
@@ -173,9 +176,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             }
         }
         else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
-            // Disable 64 bit atomics.  A future version of the driver will support them, but until we can test that,
-            // it's safest not to use them.
-            supports64BitGlobalAtomics = false;
             if (device.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
                 /// \todo Is 6 a good value for the OpenCL CPU device?
                 // numThreadBlocksPerComputeUnit = ?;
@@ -190,14 +190,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     // check for errors.
                     try {
 #ifdef CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD
-                        // AMD has both 32 and 64 width SIMDs. Can determine by using:
-                        // simdWidth = device.getInfo<CL_DEVICE_WAVEFRONT_WIDTH_AMD>();
                         // Must catch cl:Error as will fail if runtime does not support queries.
-                        // However, the 32 width NVIDIA kernels do not have all the necessary
-                        // barriers and so will not work for AMD.
-                        // So for now leave default of 1 which will use the default kernels.
 
                         cl_uint simdPerComputeUnit = device.getInfo<CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD>();
+                        simdWidth = device.getInfo<CL_DEVICE_WAVEFRONT_WIDTH_AMD>();
+
                         // If the GPU has multiple SIMDs per compute unit then it is uses the scalar instruction
                         // set instead of the VLIW instruction set. It therefore needs more thread blocks per
                         // compute unit to hide memory latency.
@@ -226,6 +223,10 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["SUPPORTS_64_BIT_ATOMICS"] = "";
         if (supportsDoublePrecision)
             compilationDefines["SUPPORTS_DOUBLE_PRECISION"] = "";
+        if (simdWidth >= 32)
+            compilationDefines["SYNC_WARPS"] = "";
+        else
+            compilationDefines["SYNC_WARPS"] = "barrier(CLK_LOCAL_MEM_FENCE)";
         vector<cl::Device> contextDevices;
         contextDevices.push_back(device);
         cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[platformIndex](), 0};

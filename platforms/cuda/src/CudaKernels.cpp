@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1351,10 +1351,6 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete pmeBsplineModuliY;
     if (pmeBsplineModuliZ != NULL)
         delete pmeBsplineModuliZ;
-    if (pmeBsplineTheta != NULL)
-        delete pmeBsplineTheta;
-    if (pmeBsplineDTheta != NULL)
-        delete pmeBsplineDTheta;
     if (pmeAtomRange != NULL)
         delete pmeAtomRange;
     if (pmeAtomGridIndex != NULL)
@@ -1507,13 +1503,13 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         if (cu.getUseDoublePrecision())
             pmeDefines["USE_DOUBLE_PRECISION"] = "1";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
-        pmeUpdateBsplinesKernel = cu.getKernel(module, "updateBsplines");
-        pmeAtomRangeKernel = cu.getKernel(module, "findAtomRangeForGrid");
+        pmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
         pmeSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
         pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
         pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
         pmeEvalEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
         pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+        cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_L1);
         cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
 
         // Create required data structures.
@@ -1528,7 +1524,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         pmeBsplineModuliX = new CudaArray(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
         pmeBsplineModuliY = new CudaArray(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
         pmeBsplineModuliZ = new CudaArray(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
-        pmeBsplineTheta = new CudaArray(cu, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
         pmeAtomRange = CudaArray::create<int>(cu, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
         pmeAtomGridIndex = CudaArray::create<int2>(cu, numParticles, "pmeAtomGridIndex");
         sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
@@ -1659,20 +1654,14 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         cu.executeKernel(ewaldForcesKernel, forcesArgs, cu.getNumAtoms());
     }
     if (directPmeGrid != NULL && cu.getContextIndex() == 0 && includeReciprocal) {
-        void* bsplinesArgs[] = {&cu.getPosq().getDevicePointer(), &pmeBsplineTheta->getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(),
-                cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
-        int bsplinesSharedSize = cu.ThreadBlockSize*PmeOrder*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-        cu.executeKernel(pmeUpdateBsplinesKernel, bsplinesArgs, cu.getNumAtoms(), cu.ThreadBlockSize, bsplinesSharedSize);
+        void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
+        cu.executeKernel(pmeGridIndexKernel, gridIndexArgs, cu.getNumAtoms());
 
         sort->sort(*pmeAtomGridIndex);
 
-        void* rangeArgs[] = {&pmeAtomGridIndex->getDevicePointer(), &pmeAtomRange->getDevicePointer(), &cu.getPosq().getDevicePointer(),
-                cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
-        cu.executeKernel(pmeAtomRangeKernel, rangeArgs, cu.getNumAtoms());
-
-        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid->getDevicePointer(), &pmeBsplineTheta->getDevicePointer(), cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
-        cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), PmeOrder*PmeOrder*PmeOrder);
-        void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
+        void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &directPmeGrid->getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+                cu.getInvPeriodicBoxSizePointer(), &pmeAtomGridIndex->getDevicePointer()};
+        cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
 
         if (cu.getUseDoublePrecision() || cu.getComputeCapability() < 2.0) {
             void* finishSpreadArgs[] = {&directPmeGrid->getDevicePointer()};
@@ -1699,8 +1688,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
 
         void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &directPmeGrid->getDevicePointer(),
-                cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer()};
-        cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms());
+                cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), &pmeAtomGridIndex->getDevicePointer()};
+        cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
 
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
@@ -2071,6 +2060,14 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
         defines["FORCE_WORK_GROUP_SIZE"] = cu.intToString(nb.getForceThreadBlockSize());
+        defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+        int numExclusionTiles = nb.getExclusionTiles().getSize();
+        defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
+        int numContexts = cu.getPlatformData().contexts.size();
+        int startExclusionIndex = cu.getContextIndex()*numExclusionTiles/numContexts;
+        int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
+        defines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
+        defines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
         map<string, string> replacements;
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::gbsaObc1, replacements), defines);
         computeBornSumKernel = cu.getKernel(module, "computeBornSum");
@@ -2083,12 +2080,12 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             computeSumArgs.push_back(cu.getPeriodicBoxSizePointer());
             computeSumArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             computeSumArgs.push_back(&maxTiles);
-            computeSumArgs.push_back(&nb.getInteractionFlags().getDevicePointer());
+            computeSumArgs.push_back(&nb.getBlockCenters().getDevicePointer());
+            computeSumArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
             computeSumArgs.push_back(&maxTiles);
-        computeSumArgs.push_back(&nb.getExclusionIndices().getDevicePointer());
-        computeSumArgs.push_back(&nb.getExclusionRowIndices().getDevicePointer());
+        computeSumArgs.push_back(&nb.getExclusionTiles().getDevicePointer());
         force1Kernel = cu.getKernel(module, "computeGBSAForce1");
         force1Args.push_back(&cu.getForce().getDevicePointer());
         force1Args.push_back(&bornForce->getDevicePointer());
@@ -2101,12 +2098,12 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             force1Args.push_back(cu.getPeriodicBoxSizePointer());
             force1Args.push_back(cu.getInvPeriodicBoxSizePointer());
             force1Args.push_back(&maxTiles);
-            force1Args.push_back(&nb.getInteractionFlags().getDevicePointer());
+            force1Args.push_back(&nb.getBlockCenters().getDevicePointer());
+            force1Args.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
             force1Args.push_back(&maxTiles);
-        force1Args.push_back(&nb.getExclusionIndices().getDevicePointer());
-        force1Args.push_back(&nb.getExclusionRowIndices().getDevicePointer());
+        force1Args.push_back(&nb.getExclusionTiles().getDevicePointer());
         reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
         reduceBornForceKernel = cu.getKernel(module, "reduceBornForce");
     }
@@ -2115,8 +2112,8 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             maxTiles = nb.getInteractingTiles().getSize();
             computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
             force1Args[5] = &nb.getInteractingTiles().getDevicePointer();
-            computeSumArgs[8] = &nb.getInteractionFlags().getDevicePointer();
-            force1Args[10] = &nb.getInteractionFlags().getDevicePointer();
+            computeSumArgs[9] = &nb.getInteractingAtoms().getDevicePointer();
+            force1Args[11] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(computeBornSumKernel, &computeSumArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -2244,16 +2241,17 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
     // Record parameters and exclusions.
 
     int numParticles = force.getNumParticles();
-    params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), numParticles, "customGBParameters", true);
-    computedValues = new CudaParameterSet(cu, force.getNumComputedValues(), numParticles, "customGBComputedValues", true, cu.getUseDoublePrecision());
+    int paddedNumParticles = cu.getPaddedNumAtoms();
+    int numParams = force.getNumPerParticleParameters();
+    params = new CudaParameterSet(cu, force.getNumPerParticleParameters(), paddedNumParticles, "customGBParameters", true);
+    computedValues = new CudaParameterSet(cu, force.getNumComputedValues(), paddedNumParticles, "customGBComputedValues", true, cu.getUseDoublePrecision());
     if (force.getNumGlobalParameters() > 0)
         globals = CudaArray::create<float>(cu, force.getNumGlobalParameters(), "customGBGlobals");
-    vector<vector<float> > paramVector(numParticles);
+    vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
         force.getParticleParameters(i, parameters);
-        paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
         exclusionList[i].push_back(i);
@@ -2406,23 +2404,22 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
         replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
         replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
-        map<string, string> defines;
         if (useCutoff)
-            defines["USE_CUTOFF"] = "1";
+            pairValueDefines["USE_CUTOFF"] = "1";
         if (usePeriodic)
-            defines["USE_PERIODIC"] = "1";
+            pairValueDefines["USE_PERIODIC"] = "1";
         if (useExclusionsForValue)
-            defines["USE_EXCLUSIONS"] = "1";
+            pairValueDefines["USE_EXCLUSIONS"] = "1";
         if (atomParamSize%2 == 0 && !cu.getUseDoublePrecision())
-            defines["NEED_PADDING"] = "1";
-        defines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
-        defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
-        defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
-        defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-        defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customGBValueN2, replacements), defines);
-        pairValueKernel = cu.getKernel(module, "computeN2Value");
+            pairValueDefines["NEED_PADDING"] = "1";
+        pairValueDefines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
+        pairValueDefines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
+        pairValueDefines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+        pairValueDefines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+        pairValueDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+        pairValueDefines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+        pairValueDefines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+        pairValueSrc = cu.replaceStrings(CudaKernelSources::customGBValueN2, replacements);
         if (useExclusionsForValue)
             cu.getNonbondedUtilities().requestExclusions(exclusionList);
     }
@@ -2574,23 +2571,22 @@ void CudaCalcCustomGBForceKernel::initialize(const System& system, const CustomG
         replacements["RECORD_DERIVATIVE_2"] = recordDeriv.str();
         replacements["STORE_DERIVATIVES_1"] = storeDerivs1.str();
         replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
-        map<string, string> defines;
         if (useCutoff)
-            defines["USE_CUTOFF"] = "1";
+            pairEnergyDefines["USE_CUTOFF"] = "1";
         if (usePeriodic)
-            defines["USE_PERIODIC"] = "1";
+            pairEnergyDefines["USE_PERIODIC"] = "1";
         if (anyExclusions)
-            defines["USE_EXCLUSIONS"] = "1";
+            pairEnergyDefines["USE_EXCLUSIONS"] = "1";
         if (atomParamSize%2 == 0 && !cu.getUseDoublePrecision())
-            defines["NEED_PADDING"] = "1";
-        defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
-        defines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
-        defines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
-        defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-        defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-        CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::customGBEnergyN2, replacements), defines);
-        pairEnergyKernel = cu.getKernel(module, "computeN2Energy");
+            pairEnergyDefines["NEED_PADDING"] = "1";
+        pairEnergyDefines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize());
+        pairEnergyDefines["WARPS_PER_GROUP"] = cu.intToString(cu.getNonbondedUtilities().getForceThreadBlockSize()/CudaContext::TileSize);
+        pairEnergyDefines["CUTOFF_SQUARED"] = cu.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+        pairEnergyDefines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+        pairEnergyDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+        pairEnergyDefines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
+        pairEnergyDefines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
+        pairEnergySrc = cu.replaceStrings(CudaKernelSources::customGBEnergyN2, replacements);
     }
     {
         // Create the kernel to reduce the derivatives and calculate per-particle energy terms.
@@ -2834,14 +2830,46 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
+        
+        // These two kernels can't be compiled in initialize(), because the nonbonded utilities object
+        // has not yet been initialized then.
+
+        {
+            int numExclusionTiles = cu.getNonbondedUtilities().getExclusionTiles().getSize();
+            pairValueDefines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
+            int numContexts = cu.getPlatformData().contexts.size();
+            int startExclusionIndex = cu.getContextIndex()*numExclusionTiles/numContexts;
+            int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
+            pairValueDefines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
+            pairValueDefines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
+            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+pairValueSrc, pairValueDefines);
+            pairValueKernel = cu.getKernel(module, "computeN2Value");
+            pairValueSrc = "";
+            pairValueDefines.clear();
+        }
+        {
+            int numExclusionTiles = cu.getNonbondedUtilities().getExclusionTiles().getSize();
+            pairEnergyDefines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
+            int numContexts = cu.getPlatformData().contexts.size();
+            int startExclusionIndex = cu.getContextIndex()*numExclusionTiles/numContexts;
+            int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
+            pairEnergyDefines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
+            pairEnergyDefines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
+            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+pairEnergySrc, pairEnergyDefines);
+            pairEnergyKernel = cu.getKernel(module, "computeN2Energy");
+            pairEnergySrc = "";
+            pairEnergyDefines.clear();
+        }
+
+        // Set arguments for kernels.
+        
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cu.getNumAtomBlocks()*(cu.getNumAtomBlocks()+1)/2);
         valueBuffers = CudaArray::create<long long>(cu, cu.getPaddedNumAtoms(), "customGBValueBuffers");
         cu.addAutoclearBuffer(*valueBuffers);
         cu.clearBuffer(valueBuffers->getDevicePointer(), sizeof(long long)*valueBuffers->getSize());
         pairValueArgs.push_back(&cu.getPosq().getDevicePointer());
         pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());
-        pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusionIndices().getDevicePointer());
-        pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusionRowIndices().getDevicePointer());
+        pairValueArgs.push_back(&cu.getNonbondedUtilities().getExclusionTiles().getDevicePointer());
         pairValueArgs.push_back(&valueBuffers->getDevicePointer());
         if (nb.getUseCutoff()) {
             pairValueArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
@@ -2849,7 +2877,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             pairValueArgs.push_back(cu.getPeriodicBoxSizePointer());
             pairValueArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             pairValueArgs.push_back(&maxTiles);
-            pairValueArgs.push_back(&nb.getInteractionFlags().getDevicePointer());
+            pairValueArgs.push_back(&nb.getBlockCenters().getDevicePointer());
+            pairValueArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
             pairValueArgs.push_back(&maxTiles);
@@ -2881,15 +2910,15 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
         pairEnergyArgs.push_back(&cu.getEnergyBuffer().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getPosq().getDevicePointer());
         pairEnergyArgs.push_back(&cu.getNonbondedUtilities().getExclusions().getDevicePointer());
-        pairEnergyArgs.push_back(&cu.getNonbondedUtilities().getExclusionIndices().getDevicePointer());
-        pairEnergyArgs.push_back(&cu.getNonbondedUtilities().getExclusionRowIndices().getDevicePointer());
+        pairEnergyArgs.push_back(&cu.getNonbondedUtilities().getExclusionTiles().getDevicePointer());
         if (nb.getUseCutoff()) {
             pairEnergyArgs.push_back(&nb.getInteractingTiles().getDevicePointer());
             pairEnergyArgs.push_back(&nb.getInteractionCount().getDevicePointer());
             pairEnergyArgs.push_back(cu.getPeriodicBoxSizePointer());
             pairEnergyArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             pairEnergyArgs.push_back(&maxTiles);
-            pairEnergyArgs.push_back(&nb.getInteractionFlags().getDevicePointer());
+            pairEnergyArgs.push_back(&nb.getBlockCenters().getDevicePointer());
+            pairEnergyArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
             pairEnergyArgs.push_back(&maxTiles);
@@ -2953,10 +2982,10 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
     if (nb.getUseCutoff()) {
         if (maxTiles < nb.getInteractingTiles().getSize()) {
             maxTiles = nb.getInteractingTiles().getSize();
-            pairValueArgs[5] = &nb.getInteractingTiles().getDevicePointer();
-            pairEnergyArgs[6] = &nb.getInteractingTiles().getDevicePointer();
-            pairValueArgs[10] = &nb.getInteractionFlags().getDevicePointer();
-            pairEnergyArgs[11] = &nb.getInteractionFlags().getDevicePointer();
+            pairValueArgs[4] = &nb.getInteractingTiles().getDevicePointer();
+            pairEnergyArgs[5] = &nb.getInteractingTiles().getDevicePointer();
+            pairValueArgs[10] = &nb.getInteractingAtoms().getDevicePointer();
+            pairEnergyArgs[11] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(pairValueKernel, &pairValueArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -2976,11 +3005,10 @@ void CudaCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, 
     
     // Record the per-particle parameters.
     
-    vector<vector<float> > paramVector(numParticles);
+    vector<vector<float> > paramVector(cu.getPaddedNumAtoms(), vector<float>(force.getNumPerParticleParameters(), 0));
     vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
         force.getParticleParameters(i, parameters);
-        paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
     }

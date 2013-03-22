@@ -1,28 +1,28 @@
-typedef struct {
-    real4 posq;
-    real value, temp;
-    ATOM_PARAMETER_DATA
-#ifdef NEED_PADDING
-    float padding;
+#ifdef SUPPORTS_64_BIT_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #endif
-} AtomData;
 
 /**
  * Compute a value based on pair interactions.
  */
-extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions,
-        const ushort2* __restrict__ exclusionTiles, unsigned long long* __restrict__ global_value,
+__kernel void computeN2Value(__global const real4* restrict posq, __local real4* restrict local_posq, __global const unsigned int* restrict exclusions,
+        __global const ushort2* exclusionTiles,
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        __global long* restrict global_value,
+#else
+        __global real* restrict global_value,
+#endif
+        __local real* restrict local_value,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, __global const real4* restrict blockCenter, __global const int* restrict interactingAtoms
 #else
         unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-    const unsigned int tbx = threadIdx.x - tgx;
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
+    const unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
+    const unsigned int warp = get_global_id(0)/TILE_SIZE;
+    const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
+    const unsigned int tbx = get_local_id(0) - tgx;
 
     // First loop: process tiles that contain exclusions.
     
@@ -42,17 +42,16 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
         if (x == y) {
             // This tile is on the diagonal.
 
-            const unsigned int localAtomIndex = threadIdx.x;
-            localData[localAtomIndex].posq = posq1;
+            const unsigned int localAtomIndex = get_local_id(0);
+            local_posq[localAtomIndex] = posq1;
             LOAD_LOCAL_PARAMETERS_FROM_1
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+j;
-                real4 posq2 = localData[atom2].posq;
-                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                real4 posq2 = local_posq[atom2];
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
@@ -79,28 +78,28 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
+                SYNC_WARPS;
             }
         }
         else {
             // This is an off-diagonal tile.
 
-            const unsigned int localAtomIndex = threadIdx.x;
+            const unsigned int localAtomIndex = get_local_id(0);
             unsigned int j = y*TILE_SIZE + tgx;
-            localData[localAtomIndex].posq = posq[j];
+            local_posq[localAtomIndex] = posq[j];
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-            localData[localAtomIndex].value = 0;
+            local_value[localAtomIndex] = 0;
+            SYNC_WARPS;
 #ifdef USE_EXCLUSIONS
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+tj;
-                real4 posq2 = localData[atom2].posq;
-                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                real4 posq2 = local_posq[atom2];
+                real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
@@ -121,7 +120,7 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                         COMPUTE_VALUE
                     }
                     value += tempValue1;
-                    localData[tbx+tj].value += tempValue2;
+                    local_value[tbx+tj] += tempValue2;
 #ifdef USE_CUTOFF
                 }
 #endif
@@ -129,17 +128,26 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                 excl >>= 1;
 #endif
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
         }
 
         // Write results.
 
+#ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset = x*TILE_SIZE + tgx;
-        atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (value*0x100000000)));
+        atom_add(&global_value[offset], (long) (value*0x100000000));
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&global_value[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
+            atom_add(&global_value[offset], (long) (local_value[get_local_id(0)]*0x100000000));
         }
+#else
+        unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
+        unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
+        global_value[offset1] += value;
+        if (x != y)
+            global_value[offset2] += local_value[get_local_id(0)];
+#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -155,14 +163,14 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ int atomIndices[THREAD_BLOCK_SIZE];
-    __shared__ int skipTiles[THREAD_BLOCK_SIZE];
-    skipTiles[threadIdx.x] = -1;
-    
+    __local int atomIndices[FORCE_WORK_GROUP_SIZE];
+    __local int skipTiles[FORCE_WORK_GROUP_SIZE];
+    skipTiles[get_local_id(0)] = -1;
+
     while (pos < end) {
         real value = 0;
         bool includeTile = true;
-        
+
         // Extract the coordinates of this tile.
         
         unsigned int x, y;
@@ -185,15 +193,18 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
 
             // Skip over tiles that have exclusions, since they were already processed.
 
+            SYNC_WARPS;
             while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+                SYNC_WARPS;
                 if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                     ushort2 tile = exclusionTiles[skipBase+tgx];
-                    skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                    skipTiles[get_local_id(0)] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
                 }
                 else
-                    skipTiles[threadIdx.x] = end;
+                    skipTiles[get_local_id(0)] = end;
                 skipBase += TILE_SIZE;            
                 currentSkipIndex = tbx;
+                SYNC_WARPS;
             }
             while (skipTiles[currentSkipIndex] < pos)
                 currentSkipIndex++;
@@ -206,35 +217,35 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
             
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-            const unsigned int localAtomIndex = threadIdx.x;
+            const unsigned int localAtomIndex = get_local_id(0);
 #ifdef USE_CUTOFF
             unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
-            atomIndices[threadIdx.x] = j;
+            atomIndices[get_local_id(0)] = j;
             if (j < PADDED_NUM_ATOMS) {
-                localData[localAtomIndex].posq = posq[j];
+                local_posq[localAtomIndex] = posq[j];
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-                localData[localAtomIndex].value = 0;
+                local_value[localAtomIndex] = 0;
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
                 // box, then skip having to apply periodic boundary conditions later.
 
                 real4 blockCenterX = blockCenter[x];
-                posq1.x -= floor((posq1.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                posq1.y -= floor((posq1.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                posq1.z -= floor((posq1.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-                localData[threadIdx.x].posq.x -= floor((localData[threadIdx.x].posq.x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                localData[threadIdx.x].posq.y -= floor((localData[threadIdx.x].posq.y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                localData[threadIdx.x].posq.z -= floor((localData[threadIdx.x].posq.z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                posq1.xyz -= floor((posq1.xyz-blockCenterX.xyz)*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
+                local_posq[get_local_id(0)].x -= floor((local_posq[get_local_id(0)].x-blockCenterX.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                local_posq[get_local_id(0)].y -= floor((local_posq[get_local_id(0)].y-blockCenterX.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                local_posq[get_local_id(0)].z -= floor((local_posq[get_local_id(0)].z-blockCenterX.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                SYNC_WARPS;
                 unsigned int tj = tgx;
-                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real4 posq2 = localData[atom2].posq;
-                    real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                    real4 posq2 = local_posq[atom2];
+                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     if (r2 < CUTOFF_SQUARED) {
                         real invR = RSQRT(r2);
@@ -247,25 +258,24 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                             COMPUTE_VALUE
                         }
                         value += tempValue1;
-                        localData[tbx+tj].value += tempValue2;
+                        local_value[tbx+tj] += tempValue2;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
             else
 #endif
             {
                 // We need to apply periodic boundary conditions separately for each interaction.
-
+                
                 unsigned int tj = tgx;
-                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real4 posq2 = localData[atom2].posq;
-                    real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+                    real4 posq2 = local_posq[atom2];
+                    real4 delta = (real4) (posq2.xyz - posq1.xyz, 0);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    delta.xyz -= floor(delta.xyz*invPeriodicBoxSize.xyz+0.5f)*periodicBoxSize.xyz;
 #endif
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
@@ -281,24 +291,33 @@ extern "C" __global__ void computeN2Value(const real4* __restrict__ posq, const 
                             COMPUTE_VALUE
                         }
                         value += tempValue1;
-                        localData[tbx+tj].value += tempValue2;
+                        local_value[tbx+tj] += tempValue2;
 #ifdef USE_CUTOFF
                     }
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
         
             // Write results.
-
-            atomicAdd(&global_value[atom1], static_cast<unsigned long long>((long long) (value*0x100000000)));
+        
 #ifdef USE_CUTOFF
-            unsigned int atom2 = atomIndices[threadIdx.x];
+            unsigned int atom2 = atomIndices[get_local_id(0)];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            atom_add(&global_value[atom1], (long) (value*0x100000000));
             if (atom2 < PADDED_NUM_ATOMS)
-                atomicAdd(&global_value[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].value*0x100000000)));
+                atom_add(&global_value[atom2], (long) (local_value[get_local_id(0)]*0x100000000));
+#else
+            unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
+            unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
+            global_value[offset1] += value;
+            if (atom2 < PADDED_NUM_ATOMS)
+                global_value[offset2] += local_value[get_local_id(0)];
+#endif
         }
         pos++;
     }

@@ -557,8 +557,7 @@ class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcNonbondedForceKernel(name, platform),
             cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
-            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -607,8 +606,6 @@ private:
     CudaArray* pmeBsplineModuliX;
     CudaArray* pmeBsplineModuliY;
     CudaArray* pmeBsplineModuliZ;
-    CudaArray* pmeBsplineTheta;
-    CudaArray* pmeBsplineDTheta;
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
@@ -617,9 +614,6 @@ private:
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;
-    CUfunction pmeAtomRangeKernel;
-    CUfunction pmeZIndexKernel;
-    CUfunction pmeUpdateBsplinesKernel;
     CUfunction pmeSpreadChargeKernel;
     CUfunction pmeFinishSpreadChargeKernel;
     CUfunction pmeEvalEnergyKernel;
@@ -776,6 +770,8 @@ private:
     System& system;
     CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
     std::vector<void*> pairValueArgs, perParticleValueArgs, pairEnergyArgs, perParticleEnergyArgs, gradientChainRuleArgs;
+    std::string pairValueSrc, pairEnergySrc;
+    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
 };
 
 /**

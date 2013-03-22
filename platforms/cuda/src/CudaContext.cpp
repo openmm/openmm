@@ -61,7 +61,7 @@ using namespace OpenMM;
 using namespace std;
 
 const int CudaContext::ThreadBlockSize = 64;
-const int CudaContext::TileSize = 32;
+const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
@@ -369,6 +369,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         src << "typedef float3 mixed3;\n";
         src << "typedef float4 mixed4;\n";
     }
+    src << "typedef unsigned int tileflags;\n";
     for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
         src << "#define " << iter->first;
         if (!iter->second.empty())

@@ -26,9 +26,16 @@ void storePos(__global real4* restrict posq, __global real4* restrict posqCorrec
 /**
  * Compute the positions of virtual sites
  */
-__kernel void computeVirtualSites(__global real4* restrict posq, __global real4* restrict posqCorrection, __global const int4* restrict avg2Atoms,
-        __global const real2* restrict avg2Weights, __global const int4* restrict avg3Atoms, __global const real4* restrict avg3Weights,
+__kernel void computeVirtualSites(__global real4* restrict posq,
+#ifdef USE_MIXED_PRECISION
+        __global real4* restrict posqCorrection,
+#endif
+        __global const int4* restrict avg2Atoms, __global const real2* restrict avg2Weights,
+        __global const int4* restrict avg3Atoms, __global const real4* restrict avg3Weights,
         __global const int4* restrict outOfPlaneAtoms, __global const real4* restrict outOfPlaneWeights) {
+#ifndef USE_MIXED_PRECISION
+        __global real4* posqCorrection = 0;
+#endif
     
     // Two particle average sites.
     
@@ -74,11 +81,17 @@ __kernel void computeVirtualSites(__global real4* restrict posq, __global real4*
 /**
  * Distribute forces from virtual sites to the atoms they are based on.
  */
-__kernel void distributeForces(__global const real4* restrict posq, __global real4* restrict posqCorrection, __global real4* restrict force,
+__kernel void distributeForces(__global const real4* restrict posq, __global real4* restrict force,
+#ifdef USE_MIXED_PRECISION
+        __global real4* restrict posqCorrection,
+#endif
         __global const int4* restrict avg2Atoms, __global const real2* restrict avg2Weights,
         __global const int4* restrict avg3Atoms, __global const real4* restrict avg3Weights,
         __global const int4* restrict outOfPlaneAtoms, __global const real4* restrict outOfPlaneWeights) {
-    
+#ifndef USE_MIXED_PRECISION
+        __global real4* posqCorrection = 0;
+#endif
+
     // Two particle average sites.
     
     for (int index = get_global_id(0); index < NUM_2_AVERAGE; index += get_global_size(0)) {

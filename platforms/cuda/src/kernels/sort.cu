@@ -3,7 +3,49 @@ __device__ KEY_TYPE getValue(DATA_TYPE value) {
 }
 
 extern "C" {
+
+/**
+ * Sort a list that is short enough to entirely fit in local memory.  This is executed as
+ * a single thread block.
+ */
+__global__ void sortShortList(DATA_TYPE* __restrict__ data, unsigned int length) {
+    // Load the data into local memory.
     
+    extern __shared__ DATA_TYPE dataBuffer[];
+    for (int index = threadIdx.x; index < length; index += blockDim.x)
+        dataBuffer[index] = data[index];
+    __syncthreads();
+
+    // Perform a bitonic sort in local memory.
+
+    for (unsigned int k = 2; k < 2*length; k *= 2) {
+        for (unsigned int j = k/2; j > 0; j /= 2) {
+            for (unsigned int i = threadIdx.x; i < length; i += blockDim.x) {
+                int ixj = i^j;
+                if (ixj > i && ixj < length) {
+                    DATA_TYPE value1 = dataBuffer[i];
+                    DATA_TYPE value2 = dataBuffer[ixj];
+                    bool ascending = ((i&k) == 0);
+                    for (unsigned int mask = k*2; mask < 2*length; mask *= 2)
+                        ascending = ((i&mask) == 0 ? !ascending : ascending);
+                    KEY_TYPE lowKey  = (ascending ? getValue(value1) : getValue(value2));
+                    KEY_TYPE highKey = (ascending ? getValue(value2) : getValue(value1));
+                    if (lowKey > highKey) {
+                        dataBuffer[i] = value2;
+                        dataBuffer[ixj] = value1;
+                    }
+                }
+            }
+            __syncthreads();
+        }
+    }
+
+    // Write the data back to global memory.
+
+    for (int index = threadIdx.x; index < length; index += blockDim.x)
+        data[index] = dataBuffer[index];
+}
+
 /**
  * Calculate the minimum and maximum value in the array to be sorted.  This kernel
  * is executed as a single work group.

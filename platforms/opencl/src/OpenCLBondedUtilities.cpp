@@ -99,43 +99,55 @@ void OpenCLBondedUtilities::initialize(const System& system) {
             numBuffers[i] = max(numBuffers[i], bufferCounter[i][j]);
     }
     
-    // Figure out how many force buffers will be required.
-    
-    for (int i = 0; i < numForces; i++)
-        numForceBuffers = max(numForceBuffers, numBuffers[i]);
-    int bufferLimit = max(numForceBuffers, (int) context.getPlatformData().contexts.size());
-    if (context.getNonbondedUtilities().getHasInteractions())
-        bufferLimit = max(bufferLimit, context.getNonbondedUtilities().getNumForceBuffers());
-    
     // For efficiency, we want to merge multiple forces into a single kernel - but only if that
-    // won't increase the number of force buffers.  Figure out sets of forces that can be merged.
+    // won't increase the number of force buffers.
     
-    vector<int> unmerged(numForces);
-    for (int i = 0; i < numForces; i++)
-        unmerged[i] = i;
-    for (int i = 0; i < numForces; i++)
-        for (int j = i-1; j >= 0; j--) {
-            if (numBuffers[unmerged[j]] <= numBuffers[unmerged[j+1]])
-                break;
-            int temp = unmerged[j+1];
-            unmerged[j+1] = unmerged[j];
-            unmerged[j] = temp;
-        }
-    while (unmerged.size() > 0) {
-        int sum = numBuffers[unmerged.back()];
-        int i;
-        for (i = 0; i < (int) unmerged.size()-1; i++) {
-            if (sum+numBuffers[unmerged[i]] > bufferLimit)
-                break;
-            sum += numBuffers[unmerged[i]];
-        }
+    if (context.getSupports64BitGlobalAtomics()) {
+        // Put all the forces in the same set.
+        
+        numForceBuffers = 1;
         forceSets.push_back(vector<int>());
-        for (int j = 0; j < i; j++)
-            forceSets.back().push_back(unmerged[j]);
-        forceSets.back().push_back(unmerged.back());
-        for (int j = 0; j < i; j++)
-            unmerged.erase(unmerged.begin());
-        unmerged.pop_back();
+        for (int i = 0; i < numForces; i++)
+            forceSets[0].push_back(i);
+    }
+    else {
+        // Figure out how many force buffers will be required.
+    
+        for (int i = 0; i < numForces; i++)
+            numForceBuffers = max(numForceBuffers, numBuffers[i]);
+        int bufferLimit = max(numForceBuffers, (int) context.getPlatformData().contexts.size());
+        if (context.getNonbondedUtilities().getHasInteractions())
+            bufferLimit = max(bufferLimit, context.getNonbondedUtilities().getNumForceBuffers());
+        
+        // Figure out sets of forces that can be merged.
+        
+        vector<int> unmerged(numForces);
+        for (int i = 0; i < numForces; i++)
+            unmerged[i] = i;
+        for (int i = 0; i < numForces; i++)
+            for (int j = i-1; j >= 0; j--) {
+                if (numBuffers[unmerged[j]] <= numBuffers[unmerged[j+1]])
+                    break;
+                int temp = unmerged[j+1];
+                unmerged[j+1] = unmerged[j];
+                unmerged[j] = temp;
+            }
+        while (unmerged.size() > 0) {
+            int sum = numBuffers[unmerged.back()];
+            int i;
+            for (i = 0; i < (int) unmerged.size()-1; i++) {
+                if (sum+numBuffers[unmerged[i]] > bufferLimit)
+                    break;
+                sum += numBuffers[unmerged[i]];
+            }
+            forceSets.push_back(vector<int>());
+            for (int j = 0; j < i; j++)
+                forceSets.back().push_back(unmerged[j]);
+            forceSets.back().push_back(unmerged.back());
+            for (int j = 0; j < i; j++)
+                unmerged.erase(unmerged.begin());
+            unmerged.pop_back();
+        }
     }
 
     // Update the buffer indices based on merged sets.
@@ -162,9 +174,13 @@ void OpenCLBondedUtilities::initialize(const System& system) {
         const vector<int>& set = *iter;
         int setSize = set.size();
         stringstream s;
+        s<<"#ifdef SUPPORTS_64_BIT_ATOMICS\n";
+        s<<"#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable\n";
+        s<<"#endif\n";
         for (int i = 0; i < (int) prefixCode.size(); i++)
             s<<prefixCode[i];
-        s<<"__kernel void computeBondedForces(__global real4* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, int groups";
+        string bufferType = (context.getSupports64BitGlobalAtomics() ? "long" : "real4");
+        s<<"__kernel void computeBondedForces(__global "<<bufferType<<"* restrict forceBuffers, __global real* restrict energyBuffer, __global const real4* restrict posq, int groups";
         for (int i = 0; i < setSize; i++) {
             int force = set[i];
             string indexType = "uint"+(indexWidth[force] == 1 ? "" : context.intToString(indexWidth[force]));
@@ -219,10 +235,17 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
     s<<computeForce<<"\n";
     for (int i = 0; i < numAtoms; i++) {
         s<<"    {\n";
-        s<<"    unsigned int offset = atom"<<(i+1)<<"+buffers"<<suffix[i]<<"*PADDED_NUM_ATOMS;\n";
-        s<<"    real4 force = forceBuffers[offset];\n";
-        s<<"    force.xyz += force"<<(i+1)<<".xyz;\n";
-        s<<"    forceBuffers[offset] = force;\n";
+        if (context.getSupports64BitGlobalAtomics()) {
+            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"], (long) (force"<<(i+1)<<".x*0x100000000));\n";
+            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (long) (force"<<(i+1)<<".y*0x100000000));\n";
+            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"+2*PADDED_NUM_ATOMS], (long) (force"<<(i+1)<<".z*0x100000000));\n";
+        }
+        else {
+            s<<"    unsigned int offset = atom"<<(i+1)<<"+buffers"<<suffix[i]<<"*PADDED_NUM_ATOMS;\n";
+            s<<"    real4 force = forceBuffers[offset];\n";
+            s<<"    force.xyz += force"<<(i+1)<<".xyz;\n";
+            s<<"    forceBuffers[offset] = force;\n";
+        }
         s<<"    }\n";
     }
     s<<"}\n";
@@ -235,7 +258,10 @@ void OpenCLBondedUtilities::computeInteractions(int groups) {
         for (int i = 0; i < (int) forceSets.size(); i++) {
             int index = 0;
             cl::Kernel& kernel = kernels[i];
-            kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
+            if (context.getSupports64BitGlobalAtomics())
+                kernel.setArg<cl::Buffer>(index++, context.getLongForceBuffer().getDeviceBuffer());
+            else
+                kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
             kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
             kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
             index++;

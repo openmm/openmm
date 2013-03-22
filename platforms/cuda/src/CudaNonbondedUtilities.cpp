@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,8 @@
 #include "CudaArray.h"
 #include "CudaKernelSources.h"
 #include "CudaExpressionUtilities.h"
+#include "CudaSort.h"
+#include <algorithm>
 #include <map>
 #include <set>
 #include <utility>
@@ -43,15 +45,33 @@ using namespace std;
         throw OpenMMException(m.str());\
     }
 
-CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false),
-        exclusionIndices(NULL), exclusionRowIndices(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
-        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), nonbondedForceGroup(0) {
+
+class CudaNonbondedUtilities::BlockSortTrait : public CudaSort::SortTrait {
+public:
+    BlockSortTrait(bool useDouble) : useDouble(useDouble) {
+    }
+    int getDataSize() const {return useDouble ? sizeof(double2) : sizeof(float2);}
+    int getKeySize() const {return useDouble ? sizeof(double) : sizeof(float);}
+    const char* getDataType() const {return "real2";}
+    const char* getKeyType() const {return "real";}
+    const char* getMinKey() const {return "-3.40282e+38f";}
+    const char* getMaxKey() const {return "3.40282e+38f";}
+    const char* getMaxValue() const {return "make_real2(3.40282e+38f, 3.40282e+38f)";}
+    const char* getSortKey() const {return "value.x";}
+private:
+    bool useDouble;
+};
+
+CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), cutoff(-1.0), useCutoff(false), anyExclusions(false), usePadding(true),
+        exclusionIndices(NULL), exclusionRowIndices(NULL), exclusionTiles(NULL), exclusions(NULL), interactingTiles(NULL), interactingAtoms(NULL),
+        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), sortedBlocks(NULL), sortedBlockCenter(NULL), sortedBlockBoundingBox(NULL),
+        oldPositions(NULL), rebuildNeighborList(NULL), blockSorter(NULL), nonbondedForceGroup(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
-    numForceThreadBlocks = 3*multiprocessors;
+    numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
 }
 
@@ -60,18 +80,32 @@ CudaNonbondedUtilities::~CudaNonbondedUtilities() {
         delete exclusionIndices;
     if (exclusionRowIndices != NULL)
         delete exclusionRowIndices;
+    if (exclusionTiles != NULL)
+        delete exclusionTiles;
     if (exclusions != NULL)
         delete exclusions;
     if (interactingTiles != NULL)
         delete interactingTiles;
-    if (interactionFlags != NULL)
-        delete interactionFlags;
+    if (interactingAtoms != NULL)
+        delete interactingAtoms;
     if (interactionCount != NULL)
         delete interactionCount;
     if (blockCenter != NULL)
         delete blockCenter;
     if (blockBoundingBox != NULL)
         delete blockBoundingBox;
+    if (sortedBlocks != NULL)
+        delete sortedBlocks;
+    if (sortedBlockCenter != NULL)
+        delete sortedBlockCenter;
+    if (sortedBlockBoundingBox != NULL)
+        delete sortedBlockBoundingBox;
+    if (oldPositions != NULL)
+        delete oldPositions;
+    if (rebuildNeighborList != NULL)
+        delete rebuildNeighborList;
+    if (blockSorter != NULL)
+        delete blockSorter;
 }
 
 void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
@@ -124,6 +158,10 @@ void CudaNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclu
     }
 }
 
+static bool compareUshort2(ushort2 a, ushort2 b) {
+    return ((a.y < b.y) || (a.y == b.y && a.x < b.x));
+}
+
 void CudaNonbondedUtilities::initialize(const System& system) {
     string errorMessage = "Error initializing nonbonded utilities";    
     if (atomExclusions.size() == 0) {
@@ -138,13 +176,10 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 
     numAtoms = context.getNumAtoms();
     int numAtomBlocks = context.getNumAtomBlocks();
-    int totalTiles = numAtomBlocks*(numAtomBlocks+1)/2;
     int numContexts = context.getPlatformData().contexts.size();
-    startTileIndex = context.getContextIndex()*totalTiles/numContexts;
-    int endTileIndex = (context.getContextIndex()+1)*totalTiles/numContexts;
-    numTiles = endTileIndex-startTileIndex;
+    setAtomBlockRange(context.getContextIndex()/(double) numContexts, (context.getContextIndex()+1)/(double) numContexts);
 
-    // Build a list of indices for the tiles with exclusions.
+    // Build a list of tiles that contain exclusions.
 
     set<pair<int, int> > tilesWithExclusions;
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
@@ -155,19 +190,29 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             tilesWithExclusions.insert(make_pair(max(x, y), min(x, y)));
         }
     }
-    if (context.getPaddedNumAtoms() > context.getNumAtoms()) {
-        for (int i = 0; i < numAtomBlocks; ++i)
-            tilesWithExclusions.insert(make_pair(numAtomBlocks-1, i));
+    vector<ushort2> exclusionTilesVec;
+    for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter)
+        exclusionTilesVec.push_back(make_ushort2((unsigned short) iter->first, (unsigned short) iter->second));
+    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), compareUshort2);
+    exclusionTiles = CudaArray::create<ushort2>(context, exclusionTilesVec.size(), "exclusionTiles");
+    exclusionTiles->upload(exclusionTilesVec);
+    map<pair<int, int>, int> exclusionTileMap;
+    for (int i = 0; i < (int) exclusionTilesVec.size(); i++) {
+        ushort2 tile = exclusionTilesVec[i];
+        exclusionTileMap[make_pair(tile.x, tile.y)] = i;
+    }
+    vector<vector<int> > exclusionBlocksForBlock(numAtomBlocks);
+    for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter) {
+        exclusionBlocksForBlock[iter->first].push_back(iter->second);
+        if (iter->first != iter->second)
+            exclusionBlocksForBlock[iter->second].push_back(iter->first);
     }
     vector<unsigned int> exclusionRowIndicesVec(numAtomBlocks+1, 0);
     vector<unsigned int> exclusionIndicesVec;
-    int currentRow = 0;
-    for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter) {
-        while (iter->first != currentRow)
-            exclusionRowIndicesVec[++currentRow] = exclusionIndicesVec.size();
-        exclusionIndicesVec.push_back(iter->second);
+    for (int i = 0; i < numAtomBlocks; i++) {
+        exclusionIndicesVec.insert(exclusionIndicesVec.end(), exclusionBlocksForBlock[i].begin(), exclusionBlocksForBlock[i].end());
+        exclusionRowIndicesVec[i+1] = exclusionIndicesVec.size();
     }
-    exclusionRowIndicesVec[++currentRow] = exclusionIndicesVec.size();
     exclusionIndices = CudaArray::create<unsigned int>(context, exclusionIndicesVec.size(), "exclusionIndices");
     exclusionRowIndices = CudaArray::create<unsigned int>(context, exclusionRowIndicesVec.size(), "exclusionRowIndices");
     exclusionIndices->upload(exclusionIndicesVec);
@@ -175,8 +220,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 
     // Record the exclusion data.
 
-    exclusions = CudaArray::create<unsigned int>(context, tilesWithExclusions.size()*CudaContext::TileSize, "exclusions");
-    vector<unsigned int> exclusionVec(exclusions->getSize(), 0xFFFFFFFF);
+    exclusions = CudaArray::create<tileflags>(context, tilesWithExclusions.size()*CudaContext::TileSize, "exclusions");
+    tileflags allFlags = (tileflags) -1;
+    vector<tileflags> exclusionVec(exclusions->getSize(), allFlags);
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
         int x = atom1/CudaContext::TileSize;
         int offset1 = atom1-x*CudaContext::TileSize;
@@ -185,31 +231,12 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             int y = atom2/CudaContext::TileSize;
             int offset2 = atom2-y*CudaContext::TileSize;
             if (x > y) {
-                int index = findExclusionIndex(x, y, exclusionIndicesVec, exclusionRowIndicesVec);
-                exclusionVec[index+offset1] &= 0xFFFFFFFF-(1<<offset2);
+                int index = exclusionTileMap[make_pair(x, y)]*CudaContext::TileSize;
+                exclusionVec[index+offset1] &= allFlags-(1<<offset2);
             }
             else {
-                int index = findExclusionIndex(y, x, exclusionIndicesVec, exclusionRowIndicesVec);
-                exclusionVec[index+offset2] &= 0xFFFFFFFF-(1<<offset1);
-            }
-        }
-    }
-
-    // Mark all interactions that involve a padding atom as being excluded.
-
-    for (int atom1 = context.getNumAtoms(); atom1 < context.getPaddedNumAtoms(); ++atom1) {
-        int x = atom1/CudaContext::TileSize;
-        int offset1 = atom1-x*CudaContext::TileSize;
-        for (int atom2 = 0; atom2 < context.getPaddedNumAtoms(); ++atom2) {
-            int y = atom2/CudaContext::TileSize;
-            int offset2 = atom2-y*CudaContext::TileSize;
-            if (x >= y) {
-                int index = findExclusionIndex(x, y, exclusionIndicesVec, exclusionRowIndicesVec);
-                exclusionVec[index+offset1] &= 0xFFFFFFFF-(1<<offset2);
-            }
-            if (y >= x) {
-                int index = findExclusionIndex(y, x, exclusionIndicesVec, exclusionRowIndicesVec);
-                exclusionVec[index+offset2] &= 0xFFFFFFFF-(1<<offset1);
+                int index = exclusionTileMap[make_pair(y, x)]*CudaContext::TileSize;
+                exclusionVec[index+offset2] &= allFlags-(1<<offset1);
             }
         }
     }
@@ -219,26 +246,34 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     // Create data structures for the neighbor list.
 
     if (useCutoff) {
-        // Select a size for the arrays that hold the neighbor list.  This estimate is intentionally very
-        // high, because if it ever is too small, we have to fall back to the N^2 algorithm.
+        // Select a size for the arrays that hold the neighbor list.  We have to make a fairly
+        // arbitrary guess, but if this turns out to be too small we'll increase it later.
 
-        double4 boxSize = context.getPeriodicBoxSize();
-        maxTiles = (int) (numTiles*(cutoff/boxSize.x+cutoff/boxSize.y+cutoff/boxSize.z));
+        maxTiles = 20*numAtomBlocks;
         if (maxTiles > numTiles)
             maxTiles = numTiles;
         if (maxTiles < 1)
             maxTiles = 1;
         interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
-        interactionFlags = CudaArray::create<unsigned int>(context, maxTiles, "interactionFlags");
+        interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
         interactionCount = CudaArray::create<unsigned int>(context, 1, "interactionCount");
+        int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        blockCenter = new CudaArray(context, numAtomBlocks, 4*elementSize, "blockCenter");
+        blockBoundingBox = new CudaArray(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
+        sortedBlocks = new CudaArray(context, numAtomBlocks, 2*elementSize, "sortedBlocks");
+        sortedBlockCenter = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
+        sortedBlockBoundingBox = new CudaArray(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
+        oldPositions = new CudaArray(context, numAtoms, 4*elementSize, "oldPositions");
         if (context.getUseDoublePrecision()) {
-            blockCenter = CudaArray::create<double4>(context, numAtomBlocks, "blockCenter");
-            blockBoundingBox = CudaArray::create<double4>(context, numAtomBlocks, "blockBoundingBox");
+            vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
+            oldPositions->upload(oldPositionsVec);
         }
         else {
-            blockCenter = CudaArray::create<float4>(context, numAtomBlocks, "blockCenter");
-            blockBoundingBox = CudaArray::create<float4>(context, numAtomBlocks, "blockBoundingBox");
+            vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
+            oldPositions->upload(oldPositionsVec);
         }
+        rebuildNeighborList = CudaArray::create<int>(context, 1, "rebuildNeighborList");
+        blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
         vector<unsigned int> count(1, 0);
         interactionCount->upload(count);
     }
@@ -248,11 +283,22 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     if (kernelSource.size() > 0)
         forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
     if (useCutoff) {
+        double padding = (usePadding ? 0.1*cutoff : 0.0);
+        double paddedCutoff = cutoff+padding;
         map<string, string> defines;
+        defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
-        defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
+        defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
+        defines["PADDING"] = context.doubleToString(padding);
+        defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
+        defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
+        defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles->getSize());
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
+        int maxExclusions = 0;
+        for (int i = 0; i < (int) exclusionBlocksForBlock.size(); i++)
+            maxExclusions = (maxExclusions > exclusionBlocksForBlock[i].size() ? maxExclusions : exclusionBlocksForBlock[i].size());
+        defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
         findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
         findBlockBoundsArgs.push_back(&numAtoms);
@@ -261,7 +307,18 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&context.getPosq().getDevicePointer());
         findBlockBoundsArgs.push_back(&blockCenter->getDevicePointer());
         findBlockBoundsArgs.push_back(&blockBoundingBox->getDevicePointer());
-        findBlockBoundsArgs.push_back(&interactionCount->getDevicePointer());
+        findBlockBoundsArgs.push_back(&rebuildNeighborList->getDevicePointer());
+        findBlockBoundsArgs.push_back(&sortedBlocks->getDevicePointer());
+        sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
+        sortBoxDataArgs.push_back(&sortedBlocks->getDevicePointer());
+        sortBoxDataArgs.push_back(&blockCenter->getDevicePointer());
+        sortBoxDataArgs.push_back(&blockBoundingBox->getDevicePointer());
+        sortBoxDataArgs.push_back(&sortedBlockCenter->getDevicePointer());
+        sortBoxDataArgs.push_back(&sortedBlockBoundingBox->getDevicePointer());
+        sortBoxDataArgs.push_back(&context.getPosq().getDevicePointer());
+        sortBoxDataArgs.push_back(&oldPositions->getDevicePointer());
+        sortBoxDataArgs.push_back(&interactionCount->getDevicePointer());
+        sortBoxDataArgs.push_back(&rebuildNeighborList->getDevicePointer());
         findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
@@ -269,33 +326,19 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksArgs.push_back(&blockBoundingBox->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactionCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingTiles->getDevicePointer());
-        findInteractingBlocksArgs.push_back(&interactionFlags->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&interactingAtoms->getDevicePointer());
         findInteractingBlocksArgs.push_back(&context.getPosq().getDevicePointer());
         findInteractingBlocksArgs.push_back(&maxTiles);
-        findInteractingBlocksArgs.push_back(&startTileIndex);
-        findInteractingBlocksArgs.push_back(&numTiles);
-        findInteractionsWithinBlocksKernel = context.getKernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
-        findInteractionsWithinBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
-        findInteractionsWithinBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
-        findInteractionsWithinBlocksArgs.push_back(&context.getPosq().getDevicePointer());
-        findInteractionsWithinBlocksArgs.push_back(&interactingTiles->getDevicePointer());
-        findInteractionsWithinBlocksArgs.push_back(&blockCenter->getDevicePointer());
-        findInteractionsWithinBlocksArgs.push_back(&blockBoundingBox->getDevicePointer());
-        findInteractionsWithinBlocksArgs.push_back(&interactionFlags->getDevicePointer());
-        findInteractionsWithinBlocksArgs.push_back(&interactionCount->getDevicePointer());
-        findInteractionsWithinBlocksArgs.push_back(&maxTiles);
+        findInteractingBlocksArgs.push_back(&startBlockIndex);
+        findInteractingBlocksArgs.push_back(&numBlocks);
+        findInteractingBlocksArgs.push_back(&sortedBlocks->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&sortedBlockCenter->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&sortedBlockBoundingBox->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&exclusionIndices->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&exclusionRowIndices->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&oldPositions->getDevicePointer());
+        findInteractingBlocksArgs.push_back(&rebuildNeighborList->getDevicePointer());
     }
-}
-
-int CudaNonbondedUtilities::findExclusionIndex(int x, int y, const vector<unsigned int>& exclusionIndices, const vector<unsigned int>& exclusionRowIndices) {
-    if (x < y)
-        throw OpenMMException("Internal error: called findExclusionIndex with x<y");
-    int start = exclusionRowIndices[x];
-    int end = exclusionRowIndices[x+1];
-    for (int i = start; i < end; i++)
-        if (exclusionIndices[i] == y)
-            return i*CudaContext::TileSize;
-    throw OpenMMException("Internal error: exclusion in unexpected tile");
 }
 
 void CudaNonbondedUtilities::prepareInteractions() {
@@ -311,13 +354,17 @@ void CudaNonbondedUtilities::prepareInteractions() {
     // Compute the neighbor list.
 
     context.executeKernel(findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
-    context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms());
-    context.executeKernel(findInteractionsWithinBlocksKernel, &findInteractionsWithinBlocksArgs[0], context.getNumAtoms(), 128);
+    blockSorter->sort(*sortedBlocks);
+    context.executeKernel(sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
+    context.executeKernel(findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
 }
 
 void CudaNonbondedUtilities::computeInteractions() {
-    if (kernelSource.size() > 0)
+    if (kernelSource.size() > 0) {
         context.executeKernel(forceKernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        if (context.getComputeForceCount() == 1)
+            updateNeighborListSize(); // This is the first time step, so check whether our initial guess was large enough.
+    }
 }
 
 void CudaNonbondedUtilities::updateNeighborListSize() {
@@ -332,26 +379,42 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     // this from happening in the future.
 
     maxTiles = (int) (1.2*pinnedInteractionCount[0]);
-    int numTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
-    if (maxTiles > numTiles)
-        maxTiles = numTiles;
+    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    if (maxTiles > totalTiles)
+        maxTiles = totalTiles;
     delete interactingTiles;
+    delete interactingAtoms;
+    interactingTiles = NULL; // Avoid an error in the destructor if the following allocation fails
+    interactingAtoms = NULL;
     interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
+    interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
     if (forceArgs.size() > 0)
-        forceArgs[8] = &interactingTiles->getDevicePointer();
+        forceArgs[7] = &interactingTiles->getDevicePointer();
     findInteractingBlocksArgs[5] = &interactingTiles->getDevicePointer();
-    delete interactionFlags;
-    interactionFlags = CudaArray::create<unsigned int>(context, maxTiles, "interactionFlags");
     if (forceArgs.size() > 0)
-        forceArgs[13] = &interactionFlags->getDevicePointer();
-    findInteractingBlocksArgs[6] = &interactionFlags->getDevicePointer();
-    findInteractionsWithinBlocksArgs[3] = &interactingTiles->getDevicePointer();
-    findInteractionsWithinBlocksArgs[6] = &interactionFlags->getDevicePointer();
+        forceArgs[13] = &interactingAtoms->getDevicePointer();
+    findInteractingBlocksArgs[6] = &interactingAtoms->getDevicePointer();
+    if (context.getUseDoublePrecision()) {
+        vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
+        oldPositions->upload(oldPositionsVec);
+    }
+    else {
+        vector<float4> oldPositionsVec(numAtoms, make_float4(1e30f, 1e30f, 1e30f, 0));
+        oldPositions->upload(oldPositionsVec);
+    }
 }
 
-void CudaNonbondedUtilities::setTileRange(int startTileIndex, int numTiles) {
-    this->startTileIndex = startTileIndex;
-    this->numTiles = numTiles;
+void CudaNonbondedUtilities::setUsePadding(bool padding) {
+    usePadding = padding;
+}
+
+void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endFraction) {
+    int numAtomBlocks = context.getNumAtomBlocks();
+    startBlockIndex = (int) (startFraction*numAtomBlocks);
+    numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
+    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    startTileIndex = (int) (startFraction*totalTiles);;
+    numTiles = (int) (endFraction*totalTiles)-startTileIndex;
 }
 
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
@@ -447,6 +510,14 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
+    defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
+    int numExclusionTiles = exclusionTiles->getSize();
+    defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(numExclusionTiles);
+    int numContexts = context.getPlatformData().contexts.size();
+    int startExclusionIndex = context.getContextIndex()*numExclusionTiles/numContexts;
+    int endExclusionIndex = (context.getContextIndex()+1)*numExclusionTiles/numContexts;
+    defines["FIRST_EXCLUSION_TILE"] = context.intToString(startExclusionIndex);
+    defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
@@ -461,8 +532,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     forceArgs.push_back(&context.getEnergyBuffer().getDevicePointer());
     forceArgs.push_back(&context.getPosq().getDevicePointer());
     forceArgs.push_back(&exclusions->getDevicePointer());
-    forceArgs.push_back(&exclusionIndices->getDevicePointer());
-    forceArgs.push_back(&exclusionRowIndices->getDevicePointer());
+    forceArgs.push_back(&exclusionTiles->getDevicePointer());
     forceArgs.push_back(&startTileIndex);
     forceArgs.push_back(&numTiles);
     if (useCutoff) {
@@ -471,7 +541,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         forceArgs.push_back(context.getPeriodicBoxSizePointer());
         forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
         forceArgs.push_back(&maxTiles);
-        forceArgs.push_back(&interactionFlags->getDevicePointer());
+        forceArgs.push_back(&blockCenter->getDevicePointer());
+        forceArgs.push_back(&interactingAtoms->getDevicePointer());
     }
     for (int i = 0; i < (int) params.size(); i++)
         forceArgs.push_back(&params[i].getMemory());

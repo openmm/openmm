@@ -556,7 +556,7 @@ class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
-            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDTheta(NULL),
+            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
             pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
@@ -586,15 +586,15 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
-    struct SortTrait {
-        typedef mm_int2 DataType;
-        typedef cl_int KeyType;
-        static const char* clDataType() {return "int2";}
-        static const char* clKeyType() {return "int";}
-        static const char* clMinKey() {return "INT_MIN";}
-        static const char* clMaxKey() {return "INT_MAX";}
-        static const char* clMaxValue() {return "(int2) (INT_MAX, INT_MAX)";}
-        static const char* clSortKey() {return "value.y";}
+    class SortTrait : public OpenCLSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "INT_MIN";}
+        const char* getMaxKey() const {return "INT_MAX";}
+        const char* getMaxValue() const {return "(int2) (INT_MAX, INT_MAX)";}
+        const char* getSortKey() const {return "value.y";}
     };
     OpenCLContext& cl;
     bool hasInitializedKernel;
@@ -607,10 +607,9 @@ private:
     OpenCLArray* pmeBsplineModuliY;
     OpenCLArray* pmeBsplineModuliZ;
     OpenCLArray* pmeBsplineTheta;
-    OpenCLArray* pmeBsplineDTheta;
     OpenCLArray* pmeAtomRange;
     OpenCLArray* pmeAtomGridIndex;
-    OpenCLSort<SortTrait>* sort;
+    OpenCLSort* sort;
     OpenCLFFT3D* fft;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
@@ -625,7 +624,6 @@ private:
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
-    int interpolateForceThreads;
     bool hasCoulomb, hasLJ;
     static const int PmeOrder = 5;
 };
@@ -775,6 +773,8 @@ private:
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     System& system;
     cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    std::string pairValueSrc, pairEnergySrc;
+    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
 };
 
 /**

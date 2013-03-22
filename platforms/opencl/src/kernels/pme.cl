@@ -15,6 +15,7 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
         pmeAtomGridIndex[i] = (int2) (i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
+#ifndef SUPPORTS_64_BIT_ATOMICS
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
         data[0] = 1.0f-dr;
@@ -33,6 +34,7 @@ __kernel void updateBsplines(__global const real4* restrict posq, __global real4
             data[j].w = pos.w; // Storing the charge here improves cache coherency in the charge spreading kernel
             pmeBsplineTheta[i+j*NUM_ATOMS] = data[j];
         }
+#endif
     }
 }
 
@@ -80,56 +82,66 @@ __kernel void recordZIndex(__global int2* restrict pmeAtomGridIndex, __global co
 #ifdef SUPPORTS_64_BIT_ATOMICS
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
-#define BUFFER_SIZE (PME_ORDER*PME_ORDER*PME_ORDER)
-
-__kernel __attribute__((reqd_work_group_size(BUFFER_SIZE, 1, 1)))
-void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
+__kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
         __global long* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    int ix = get_local_id(0)/(PME_ORDER*PME_ORDER);
-    int remainder = get_local_id(0)-ix*PME_ORDER*PME_ORDER;
-    int iy = remainder/PME_ORDER;
-    int iz = remainder-iy*PME_ORDER;
-    __local real4 theta[PME_ORDER];
-    __local real charge[BUFFER_SIZE];
-    __local int basex[BUFFER_SIZE];
-    __local int basey[BUFFER_SIZE];
-    __local int basez[BUFFER_SIZE];
-    if (ix < PME_ORDER) {
-        for (int baseIndex = get_group_id(0)*BUFFER_SIZE; baseIndex < NUM_ATOMS; baseIndex += get_num_groups(0)*BUFFER_SIZE) {
-            // Load the next block of atoms into the buffers.
+    const real4 scale = 1/(real) (PME_ORDER-1);
+    real4 data[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves efficiency when writing
+    // the grid values.
+    
+    for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
+        int atom = pmeAtomGridIndex[i].x;
+        real4 pos = posq[atom];
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        real4 t = (real4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+                           (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
+                           (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
+        int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
+                                 ((int) t.y) % GRID_SIZE_Y,
+                                 ((int) t.z) % GRID_SIZE_Z, 0);
 
-            if (get_local_id(0) < BUFFER_SIZE) {
-                int atomIndex = baseIndex+get_local_id(0);
-                if (atomIndex < NUM_ATOMS) {
-                    real4 pos = posq[atomIndex];
-                    charge[get_local_id(0)] = pos.w;
-                    pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-                    pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-                    pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-                    basex[get_local_id(0)] = (int) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X);
-                    basey[get_local_id(0)] = (int) ((pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y);
-                    basez[get_local_id(0)] = (int) ((pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z);
-                }
-            }
-            barrier(CLK_LOCAL_MEM_FENCE);
-            int lastIndex = min(BUFFER_SIZE, NUM_ATOMS-baseIndex);
-            for (int index = 0; index < lastIndex; index++) {
-                int atomIndex = index+baseIndex;
-                if (get_local_id(0) < PME_ORDER)
-                    theta[get_local_id(0)] = pmeBsplineTheta[atomIndex+get_local_id(0)*NUM_ATOMS];
-                barrier(CLK_LOCAL_MEM_FENCE);
-                real add = charge[index]*theta[ix].x*theta[iy].y*theta[iz].z;
-                int x = basex[index]+ix;
-                int y = basey[index]+iy;
-                int z = basez[index]+iz;
-                x -= (x >= GRID_SIZE_X ? GRID_SIZE_X : 0);
-                y -= (y >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                z -= (z >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+        // Since we need the full set of thetas, it's faster to compute them here than load them
+        // from global memory.
+
+        real4 dr = (real4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+        data[PME_ORDER-1] = 0.0f;
+        data[1] = dr;
+        data[0] = 1.0f-dr;
+        for (int j = 3; j < PME_ORDER; j++) {
+            real div = RECIP(j-1.0f);
+            data[j-1] = div*dr*data[j-2];
+            for (int k = 1; k < (j-1); k++)
+                data[j-k-1] = div*((dr+(real4) k) *data[j-k-2] + (-dr+(real4) (j-k))*data[j-k-1]);
+            data[0] = div*(- dr+1.0f)*data[0];
+        }
+        data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
+        for (int j = 1; j < (PME_ORDER-1); j++)
+            data[PME_ORDER-j-1] = scale*((dr+(real4) j)*data[PME_ORDER-j-2] + (-dr+(real4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
+        data[0] = scale*(-dr+1.0f)*data[0];
+
+        // Spread the charge from this atom onto each grid point.
+
+        for (int ix = 0; ix < PME_ORDER; ix++) {
+            int xindex = gridIndex.x+ix;
+            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            for (int iy = 0; iy < PME_ORDER; iy++) {
+                int yindex = gridIndex.y+iy;
+                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                for (int iz = 0; iz < PME_ORDER; iz++) {
+                    int zindex = gridIndex.z+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+                    int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
+                    real add = pos.w*data[ix].x*data[iy].y*data[iz].z;
 #ifdef USE_DOUBLE_PRECISION
-                atom_add(&pmeGrid[2*(x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z)], (long) (add*0x100000000));
+                    atom_add(&pmeGrid[2*index], (long) (add*0x100000000));
 #else
-                atom_add(&pmeGrid[x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z], (long) (add*0x100000000));
+                    atom_add(&pmeGrid[index], (long) (add*0x100000000));
 #endif
+
+                }
             }
         }
     }
@@ -147,6 +159,75 @@ __kernel void finishSpreadCharge(__global long* restrict pmeGrid) {
 #endif
         real2 realValue = (real2) ((real) (value*scale), 0);
         realGrid[index] = realValue;
+    }
+}
+#elif defined(DEVICE_IS_CPU)
+__kernel void gridSpreadCharge(__global const real4* restrict posq, __global const int2* restrict pmeAtomGridIndex, __global const int* restrict pmeAtomRange,
+        __global real2* restrict pmeGrid, __global const real4* restrict pmeBsplineTheta, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
+    const int firstx = get_global_id(0)*GRID_SIZE_X/get_global_size(0);
+    const int lastx = (get_global_id(0)+1)*GRID_SIZE_X/get_global_size(0);
+    if (firstx == lastx)
+        return;
+    const real4 scale = 1/(real) (PME_ORDER-1);
+    real4 data[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves efficiency when writing
+    // the grid values.
+    
+    for (int i = 0; i < NUM_ATOMS; i++) {
+        int atom = i;//pmeAtomGridIndex[i].x;
+        real4 pos = posq[atom];
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        real4 t = (real4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+                           (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
+                           (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
+        int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
+                                 ((int) t.y) % GRID_SIZE_Y,
+                                 ((int) t.z) % GRID_SIZE_Z, 0);
+
+        // Spread the charge from this atom onto each grid point.
+
+        bool hasComputedThetas = false;
+        for (int ix = 0; ix < PME_ORDER; ix++) {
+            int xindex = gridIndex.x+ix;
+            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            if (xindex < firstx || xindex >= lastx)
+                continue;
+            if (!hasComputedThetas) {
+                hasComputedThetas = true;
+                
+                // Since we need the full set of thetas, it's faster to compute them here than load them
+                // from global memory.
+
+                real4 dr = (real4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+                data[PME_ORDER-1] = 0.0f;
+                data[1] = dr;
+                data[0] = 1.0f-dr;
+                for (int j = 3; j < PME_ORDER; j++) {
+                    real div = RECIP(j-1.0f);
+                    data[j-1] = div*dr*data[j-2];
+                    for (int k = 1; k < (j-1); k++)
+                        data[j-k-1] = div*((dr+(real4) k) *data[j-k-2] + (-dr+(real4) (j-k))*data[j-k-1]);
+                    data[0] = div*(- dr+1.0f)*data[0];
+                }
+                data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
+                for (int j = 1; j < (PME_ORDER-1); j++)
+                    data[PME_ORDER-j-1] = scale*((dr+(real4) j)*data[PME_ORDER-j-2] + (-dr+(real4) (PME_ORDER-j))*data[PME_ORDER-j-1]);
+                data[0] = scale*(-dr+1.0f)*data[0];
+            }
+            for (int iy = 0; iy < PME_ORDER; iy++) {
+                int yindex = gridIndex.y+iy;
+                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                for (int iz = 0; iz < PME_ORDER; iz++) {
+                    int zindex = gridIndex.z+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+                    int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
+                    pmeGrid[index].x += EPSILON_FACTOR*pos.w*data[ix].x*data[iy].y*data[iz].z;
+                }
+            }
+        }
     }
 }
 #else
@@ -239,11 +320,16 @@ __kernel void reciprocalConvolution(__global real2* restrict pmeGrid, __global r
 }
 
 __kernel void gridInterpolateForce(__global const real4* restrict posq, __global real4* restrict forceBuffers, __global const real2* restrict pmeGrid,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize, __local real4* restrict bsplinesCache) {
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, __global int2* restrict pmeAtomGridIndex) {
     const real4 scale = 1/(real) (PME_ORDER-1);
-    __local real4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
-    __local real4* ddata = &bsplinesCache[get_local_id(0)*PME_ORDER + get_local_size(0)*PME_ORDER];
-    for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
+    real4 data[PME_ORDER];
+    real4 ddata[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves cache performance when loading
+    // the grid values.
+    
+    for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
+        int atom = pmeAtomGridIndex[i].x;
         real4 force = 0.0f;
         real4 pos = posq[atom];
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
@@ -293,29 +379,10 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
                     real gridvalue = pmeGrid[index].x;
                     force.x += ddata[ix].x*data[iy].y*data[iz].z*gridvalue;
                     force.y += data[ix].x*ddata[iy].y*data[iz].z*gridvalue;
-#ifndef MAC_AMD_WORKAROUND
-                    force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
-#endif
-                }
-            }
-        }
-#ifdef MAC_AMD_WORKAROUND
-        for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xindex = gridIndex.x+ix;
-            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
-            for (int iy = 0; iy < PME_ORDER; iy++) {
-                int yindex = gridIndex.y+iy;
-                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                for (int iz = 0; iz < PME_ORDER; iz++) {
-                    int zindex = gridIndex.z+iz;
-                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-                    int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;
-                    real gridvalue = pmeGrid[index].x;
                     force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
                 }
             }
         }
-#endif
         real4 totalForce = forceBuffers[atom];
         real q = pos.w*EPSILON_FACTOR;
         totalForce.x -= q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x;

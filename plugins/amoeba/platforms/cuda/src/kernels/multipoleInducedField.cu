@@ -1,4 +1,3 @@
-#define TILE_SIZE 32
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
 typedef struct {
@@ -199,194 +198,221 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
  * Compute the mutual induced field.
  */
 extern "C" __global__ void computeInducedField(
-        unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq,
+        unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const ushort2* __restrict__ exclusionTiles, 
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const unsigned int* __restrict__ interactionFlags,
+        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real* __restrict__ inducedDipoleS,
         const real* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
 #endif
         const float2* __restrict__ dampingAndThole) {
-    unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-#ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
-    unsigned int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
-    unsigned int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
-#else
-    const unsigned int numTiles = numTileIndices;
-    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
-    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
-#endif
+    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
+    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
+    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
+    const unsigned int tbx = threadIdx.x - tgx;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
-#ifndef ENABLE_SHUFFLE
-//    __shared__ real tempBuffer[3*THREAD_BLOCK_SIZE];
-#endif
+
+    // First loop: process tiles that contain exclusions.
     
-    do {
-        // Extract the coordinates of this tile
-        const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-        const unsigned int tbx = threadIdx.x - tgx;
-        unsigned int x, y;
+    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+        const ushort2 tileIndices = exclusionTiles[pos];
+        const unsigned int x = tileIndices.x;
+        const unsigned int y = tileIndices.y;
         AtomData data;
         zeroAtomData(data);
-        if (pos < end) {
-#ifdef USE_CUTOFF
-            if (numTiles <= maxTiles) {
-                ushort2 tileIndices = tiles[pos];
-                x = tileIndices.x;
-                y = tileIndices.y;
-            }
-            else
+        unsigned int atom1 = x*TILE_SIZE + tgx;
+#ifdef USE_GK
+        loadAtomData(data, atom1, posq, inducedDipole, inducedDipolePolar, dampingAndThole, inducedDipoleS, inducedDipolePolarS, bornRadii);
+#else
+        loadAtomData(data, atom1, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
 #endif
-            {
-                y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-                if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-                    y += (x < y ? -1 : 1);
-                    x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-                }
+        if (x == y) {
+            // This tile is on the diagonal.
+
+            localData[threadIdx.x].pos = data.pos;
+            localData[threadIdx.x].inducedDipole = data.inducedDipole;
+            localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
+            localData[threadIdx.x].thole = data.thole;
+            localData[threadIdx.x].damp = data.damp;
+#ifdef USE_GK
+            localData[threadIdx.x].inducedDipoleS = data.inducedDipoleS;
+            localData[threadIdx.x].inducedDipolePolarS = data.inducedDipolePolarS;
+            localData[threadIdx.x].bornRadius = data.bornRadius;
+#endif
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                real3 delta = localData[tbx+j].pos-data.pos;
+#ifdef USE_PERIODIC
+                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+#endif
+                int atom2 = y*TILE_SIZE+j;
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
+                    computeOneInteraction(data, localData[tbx+j], delta, atom1 == atom2);
             }
+        }
+        else {
+            // This is an off-diagonal tile.
+
+#ifdef USE_GK
+            loadAtomData(localData[threadIdx.x], y*TILE_SIZE+tgx, posq, inducedDipole, inducedDipolePolar, dampingAndThole, inducedDipoleS, inducedDipolePolarS, bornRadii);
+#else
+            loadAtomData(localData[threadIdx.x], y*TILE_SIZE+tgx, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
+#endif
+            zeroAtomData(localData[threadIdx.x]);
+            unsigned int tj = tgx;
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                real3 delta = localData[tbx+tj].pos-data.pos;
+#ifdef USE_PERIODIC
+                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+#endif
+                int atom2 = y*TILE_SIZE+j;
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
+                    computeOneInteraction(data, localData[tbx+tj], delta, false);
+                tj = (tj + 1) & (TILE_SIZE - 1);
+            }
+        }
+
+        // Write results.
+
+        unsigned int offset = x*TILE_SIZE + tgx;
+        atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (data.field.x*0x100000000)));
+        atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.y*0x100000000)));
+        atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.z*0x100000000)));
+        atomicAdd(&fieldPolar[offset], static_cast<unsigned long long>((long long) (data.fieldPolar.x*0x100000000)));
+        atomicAdd(&fieldPolar[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.y*0x100000000)));
+        atomicAdd(&fieldPolar[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolar.z*0x100000000)));
+#ifdef USE_GK
+        atomicAdd(&fieldS[offset], static_cast<unsigned long long>((long long) (data.fieldS.x*0x100000000)));
+        atomicAdd(&fieldS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldS.y*0x100000000)));
+        atomicAdd(&fieldS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldS.z*0x100000000)));
+        atomicAdd(&fieldPolarS[offset], static_cast<unsigned long long>((long long) (data.fieldPolarS.x*0x100000000)));
+        atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.y*0x100000000)));
+        atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.z*0x100000000)));
+#endif
+        if (x != y) {
+            offset = y*TILE_SIZE + tgx;
+            atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
+            atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
+            atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
+            atomicAdd(&fieldPolar[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.x*0x100000000)));
+            atomicAdd(&fieldPolar[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.y*0x100000000)));
+            atomicAdd(&fieldPolar[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolar.z*0x100000000)));
+#ifdef USE_GK
+            atomicAdd(&fieldS[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.x*0x100000000)));
+            atomicAdd(&fieldS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.y*0x100000000)));
+            atomicAdd(&fieldS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldS.z*0x100000000)));
+            atomicAdd(&fieldPolarS[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.x*0x100000000)));
+            atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.y*0x100000000)));
+            atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fieldPolarS.z*0x100000000)));
+#endif
+        }
+    }
+
+    // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
+    // of them (no cutoff).
+
+#ifdef USE_CUTOFF
+    const unsigned int numTiles = interactionCount[0];
+    int pos = (numTiles > maxTiles ? startTileIndex+warp*numTileIndices/totalWarps : warp*numTiles/totalWarps);
+    int end = (numTiles > maxTiles ? startTileIndex+(warp+1)*numTileIndices/totalWarps : (warp+1)*numTiles/totalWarps);
+#else
+    const unsigned int numTiles = numTileIndices;
+    int pos = startTileIndex+warp*numTiles/totalWarps;
+    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+#endif
+    int skipBase = 0;
+    int currentSkipIndex = tbx;
+    __shared__ int atomIndices[THREAD_BLOCK_SIZE];
+    __shared__ int skipTiles[THREAD_BLOCK_SIZE];
+    skipTiles[threadIdx.x] = -1;
+    
+    while (pos < end) {
+        bool includeTile = true;
+
+        // Extract the coordinates of this tile.
+        
+        unsigned int x, y;
+#ifdef USE_CUTOFF
+        if (numTiles <= maxTiles) {
+            ushort2 tileIndices = tiles[pos];
+            x = tileIndices.x;
+        }
+        else
+#endif
+        {
+            y = (unsigned int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+                y += (x < y ? -1 : 1);
+                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            }
+
+            // Skip over tiles that have exclusions, since they were already processed.
+
+            while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+                if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
+                    ushort2 tile = exclusionTiles[skipBase+tgx];
+                    skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                }
+                else
+                    skipTiles[threadIdx.x] = end;
+                skipBase += TILE_SIZE;            
+                currentSkipIndex = tbx;
+            }
+            while (skipTiles[currentSkipIndex] < pos)
+                currentSkipIndex++;
+            includeTile = (skipTiles[currentSkipIndex] != pos);
+        }
+        if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
+
+            // Load atom data for this tile.
+
+            AtomData data;
+            zeroAtomData(data);
 #ifdef USE_GK
             loadAtomData(data, atom1, posq, inducedDipole, inducedDipolePolar, dampingAndThole, inducedDipoleS, inducedDipolePolarS, bornRadii);
 #else
             loadAtomData(data, atom1, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
 #endif
-            if (pos >= end)
-                ; // This warp is done.
-            else if (x == y) {
-                // This tile is on the diagonal.
-
-                localData[threadIdx.x].pos = data.pos;
-                localData[threadIdx.x].inducedDipole = data.inducedDipole;
-                localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
-                localData[threadIdx.x].thole = data.thole;
-                localData[threadIdx.x].damp = data.damp;
-#ifdef USE_GK
-                localData[threadIdx.x].inducedDipoleS = data.inducedDipoleS;
-                localData[threadIdx.x].inducedDipolePolarS = data.inducedDipolePolarS;
-                localData[threadIdx.x].bornRadius = data.bornRadius;
-#endif
-                for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    real3 delta = localData[tbx+j].pos-data.pos;
-#ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-#endif
-                    int atom2 = y*TILE_SIZE+j;
-                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
-                        computeOneInteraction(data, localData[tbx+j], delta, atom1 == atom2);
-                }
-            }
-            else {
-                // This is an off-diagonal tile.
-
-#ifdef USE_GK
-                loadAtomData(localData[threadIdx.x], y*TILE_SIZE+tgx, posq, inducedDipole, inducedDipolePolar, dampingAndThole, inducedDipoleS, inducedDipolePolarS, bornRadii);
-#else
-                loadAtomData(localData[threadIdx.x], y*TILE_SIZE+tgx, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
-#endif
-                zeroAtomData(localData[threadIdx.x]);
 #ifdef USE_CUTOFF
-                unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
-                if (flags == 0) { // TODO: Figure out what the flags != 0 case doesn't work!!!
-//                if (flags != 0xFFFFFFFF) {
-                    if (flags == 0) {
-                        // No interactions in this tile.
-                    }
-/*                    else {
-                        // Compute only a subset of the interactions in this tile.
-
-                        for (int j = 0; j < TILE_SIZE; j++) {
-                            if ((flags&(1<<j)) != 0) {
-                                int atom2 = tbx+j;
-                                real3 delta = localData[atom2].pos-data.pos;
-#ifdef USE_PERIODIC
-                                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
-#endif
-                                real3 fields[4];
-                                computeOneInteraction(data, localData[atom2], delta, fields);
-                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                                    data.field += fields[0];
-                                    data.fieldPolar += fields[1];
-#ifdef ENABLE_SHUFFLE
-                                    for (int i = 16; i >= 1; i /= 2) {
-                                        fields[2].x += __shfl_xor(fields[2].x, i, 32);
-                                        fields[2].y += __shfl_xor(fields[2].y, i, 32);
-                                        fields[2].z += __shfl_xor(fields[2].z, i, 32);
-                                        fields[3].x += __shfl_xor(fields[3].x, i, 32);
-                                        fields[3].y += __shfl_xor(fields[3].y, i, 32);
-                                        fields[3].z += __shfl_xor(fields[3].z, i, 32);
-                                    }
-                                    if (tgx == 0) {
-                                        localData[atom2].field += fields[2];
-                                        localData[atom2].fieldPolar += fields[3];
-                                    }
+            unsigned int j = (numTiles <= maxTiles ? interactingAtoms[pos*TILE_SIZE+tgx] : y*TILE_SIZE + tgx);
 #else
-                                    int bufferIndex = 3*threadIdx.x;
-                                    tempBuffer[bufferIndex] = fields[2].x;
-                                    tempBuffer[bufferIndex+1] = fields[2].y;
-                                    tempBuffer[bufferIndex+2] = fields[2].z;
-                                    if (tgx % 4 == 0) {
-                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                    }
-                                    if (tgx == 0) {
-                                        localData[atom2].field.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                        localData[atom2].field.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                        localData[atom2].field.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                    }
-                                    tempBuffer[bufferIndex] = fields[3].x;
-                                    tempBuffer[bufferIndex+1] = fields[3].y;
-                                    tempBuffer[bufferIndex+2] = fields[3].z;
-                                    if (tgx % 4 == 0) {
-                                        tempBuffer[bufferIndex] += tempBuffer[bufferIndex+3]+tempBuffer[bufferIndex+6]+tempBuffer[bufferIndex+9];
-                                        tempBuffer[bufferIndex+1] += tempBuffer[bufferIndex+4]+tempBuffer[bufferIndex+7]+tempBuffer[bufferIndex+10];
-                                        tempBuffer[bufferIndex+2] += tempBuffer[bufferIndex+5]+tempBuffer[bufferIndex+8]+tempBuffer[bufferIndex+11];
-                                    }
-                                    if (tgx == 0) {
-                                        localData[atom2].fieldPolar.x += tempBuffer[bufferIndex]+tempBuffer[bufferIndex+12]+tempBuffer[bufferIndex+24]+tempBuffer[bufferIndex+36]+tempBuffer[bufferIndex+48]+tempBuffer[bufferIndex+60]+tempBuffer[bufferIndex+72]+tempBuffer[bufferIndex+84];
-                                        localData[atom2].fieldPolar.y += tempBuffer[bufferIndex+1]+tempBuffer[bufferIndex+13]+tempBuffer[bufferIndex+25]+tempBuffer[bufferIndex+37]+tempBuffer[bufferIndex+49]+tempBuffer[bufferIndex+61]+tempBuffer[bufferIndex+73]+tempBuffer[bufferIndex+85];
-                                        localData[atom2].fieldPolar.z += tempBuffer[bufferIndex+2]+tempBuffer[bufferIndex+14]+tempBuffer[bufferIndex+26]+tempBuffer[bufferIndex+38]+tempBuffer[bufferIndex+50]+tempBuffer[bufferIndex+62]+tempBuffer[bufferIndex+74]+tempBuffer[bufferIndex+86];
-                                    }
+            unsigned int j = y*TILE_SIZE + tgx;
 #endif
-                                }
-                            }
-                        }
-                    }*/
-                }
-                else
+            atomIndices[threadIdx.x] = j;
+#ifdef USE_GK
+            loadAtomData(localData[threadIdx.x], j, posq, inducedDipole, inducedDipolePolar, dampingAndThole, inducedDipoleS, inducedDipolePolarS, bornRadii);
+#else
+            loadAtomData(localData[threadIdx.x], j, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
 #endif
-                {
-                    // Compute the full set of interactions in this tile.
+            zeroAtomData(localData[threadIdx.x]);
 
-                    unsigned int tj = tgx;
-                    for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                        real3 delta = localData[tbx+tj].pos-data.pos;
+            // Compute the full set of interactions in this tile.
+
+            unsigned int tj = tgx;
+            for (j = 0; j < TILE_SIZE; j++) {
+                real3 delta = localData[tbx+tj].pos-data.pos;
 #ifdef USE_PERIODIC
-                        delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                        delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                        delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                        int atom2 = y*TILE_SIZE+j;
-                        if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
-                            computeOneInteraction(data, localData[tbx+tj], delta, false);
-                        tj = (tj + 1) & (TILE_SIZE - 1);
-                    }
-                }
+                int atom2 = atomIndices[tbx+tj];
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
+                    computeOneInteraction(data, localData[tbx+tj], delta, false);
+                tj = (tj + 1) & (TILE_SIZE - 1);
             }
-        }
-        
-        // Write results.
-        
-        if (pos < end) {
-            const unsigned int offset = x*TILE_SIZE + tgx;
+
+            // Write results.
+
+            unsigned int offset = x*TILE_SIZE + tgx;
             atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (data.field.x*0x100000000)));
             atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.y*0x100000000)));
             atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.field.z*0x100000000)));
@@ -401,9 +427,11 @@ extern "C" __global__ void computeInducedField(
             atomicAdd(&fieldPolarS[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.y*0x100000000)));
             atomicAdd(&fieldPolarS[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.fieldPolarS.z*0x100000000)));
 #endif
-        }
-        if (pos < end && x != y) {
-            const unsigned int offset = y*TILE_SIZE + tgx;
+#ifdef USE_CUTOFF
+            offset = atomIndices[threadIdx.x];
+#else
+            offset = y*TILE_SIZE + tgx;
+#endif
             atomicAdd(&field[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
             atomicAdd(&field[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
             atomicAdd(&field[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
@@ -420,7 +448,7 @@ extern "C" __global__ void computeInducedField(
 #endif
         }
         pos++;
-    } while (pos < end);
+    }
 }
 
 extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,

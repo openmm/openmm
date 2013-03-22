@@ -1,7 +1,6 @@
 #if USE_EWALD
-bool needCorrection = isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
+bool needCorrection = hasExclusions && isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
 if (!isExcluded || needCorrection) {
-    real tempForce = 0;
     if (r2 < CUTOFF_SQUARED || needCorrection) {
         const real alphaR = EWALD_ALPHA*r;
         const real expAlphaRSqr = EXP(-alphaR*alphaR);
@@ -16,6 +15,7 @@ if (!isExcluded || needCorrection) {
         t *= t;
         t *= t;
         const real erfcAlphaR = RECIP(t*t);
+        real tempForce = 0;
         if (needCorrection) {
             // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
@@ -36,8 +36,8 @@ if (!isExcluded || needCorrection) {
             tempEnergy += prefactor*erfcAlphaR;
 #endif
         }
+        dEdR += tempForce*invR*invR;
     }
-    dEdR += tempForce*invR*invR;
 }
 #else
 {

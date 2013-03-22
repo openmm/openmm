@@ -42,6 +42,8 @@
 #include "windowsExportCuda.h"
 #include "CudaPlatform.h"
 
+typedef unsigned int tileflags;
+
 namespace OpenMM {
 
 class CudaArray;

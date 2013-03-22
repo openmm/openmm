@@ -48,12 +48,12 @@ inline __device__ real computeAngle(real4 vec1, real4 vec2) {
 
         real3 crossProduct = cross(vec1, vec2);
         real scale = vec1.w*vec2.w;
-        angle = asin(SQRT(dot(crossProduct, crossProduct)/scale));
+        angle = ASIN(SQRT(dot(crossProduct, crossProduct)/scale));
         if (cosine < 0.0f)
             angle = M_PI-angle;
     }
     else
-       angle = acos(cosine);
+       angle = ACOS(cosine);
     return angle;
 }
 

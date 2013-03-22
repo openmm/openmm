@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,9 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLArray.h"
-#include "OpenCLKernelSources.h"
 #include "windowsExportOpenCL.h"
-#include <map>
 
 namespace OpenMM {
 
@@ -38,26 +36,19 @@ namespace OpenMM {
  * This class sorts arrays of values.  It supports any type of values, not just scalars,
  * so long as an appropriate sorting key can be defined by which to sort them.
  * 
- * The class is templatized by a "trait" class that defines the type of data to
+ * The sorting behavior is specified by a "trait" class that defines the type of data to
  * sort and the key for sorting it.  Here is an example of a trait class for
  * sorting floats:
  * 
- * struct FloatTrait {
- *     // The name of the data and key types being sorted.
- *     // Both the host type and OpenCL type is required.
- *     // For primitive types they will be the same.
- *     typedef cl_float DataType;
- *     typedef cl_float KeyType;
- *     static const char* clDataType() {return "float";}
- *     static const char* clKeyType() {return "float";}
- *     // The minimum value a key can take.
- *     static const char* clMinKey() {return "-MAXFLOAT";}
- *     // The maximum value a key can take.
- *     static const char* clMaxKey() {return "MAXFLOAT";}
- *     // A value whose key is guaranteed to equal clMaxKey().
- *     static const char* clMaxValue() {return "MAXFLOAT";}
- *     // The OpenCL code to select the key from the data value.
- *     static const char* clSortKey() {return "value";}
+ * class FloatTrait : public OpenCLSort::SortTrait {
+ *     int getDataSize() const {return 4;}
+ *     int getKeySize() const {return 4;}
+ *     const char* getDataType() const {return "float";}
+ *     const char* getKeyType() const {return "float";}
+ *     const char* getMinKey() const {return "-MAXFLOAT";}
+ *     const char* getMaxKey() const {return "MAXFLOAT";}
+ *     const char* getMaxValue() const {return "MAXFLOAT";}
+ *     const char* getSortKey() const {return "value";}
  * };
  *
  * The algorithm used is a bucket sort, followed by a bitonic sort within each bucket
@@ -74,139 +65,76 @@ namespace OpenMM {
  * elements).
  */
     
-template <class TRAIT>
-class OpenCLSort {
+class OPENMM_EXPORT_OPENCL OpenCLSort {
 public:
+    class SortTrait;
     /**
      * Create an OpenCLSort object for sorting data of a particular type.
      *
      * @param context    the context in which to perform calculations
+     * @param trait      a SortTrait defining the type of data to sort.  It should have been allocated
+     *                   on the heap with the "new" operator.  This object takes over ownership of it,
+     *                   and deletes it when the OpenCLSort is deleted.
      * @param length     the length of the arrays this object will be used to sort
      */
-    OpenCLSort(OpenCLContext& context, unsigned int length) : context(context),
-            dataRange(NULL), bucketOfElement(NULL), offsetInBucket(NULL), bucketOffset(NULL), buckets(NULL) {
-        // Create kernels.
-
-        std::map<std::string, std::string> replacements;
-        replacements["DATA_TYPE"] = TRAIT::clDataType();
-        replacements["KEY_TYPE"] =  TRAIT::clKeyType();
-        replacements["SORT_KEY"] = TRAIT::clSortKey();
-        replacements["MIN_KEY"] = TRAIT::clMinKey();
-        replacements["MAX_KEY"] = TRAIT::clMaxKey();
-        replacements["MAX_VALUE"] = TRAIT::clMaxValue();
-        replacements["VALUE_IS_INT2"] = (TRAIT::clDataType() == std::string("int2") ? "1" : "0");
-        cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::sort, replacements));
-        computeRangeKernel = cl::Kernel(program, "computeRange");
-        assignElementsKernel = cl::Kernel(program, "assignElementsToBuckets");
-        computeBucketPositionsKernel = cl::Kernel(program, "computeBucketPositions");
-        copyToBucketsKernel = cl::Kernel(program, "copyDataToBuckets");
-        sortBucketsKernel = cl::Kernel(program, "sortBuckets");
-
-        // Work out the work group sizes for various kernels.
-
-        unsigned int maxGroupSize = std::min(256, (int) context.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
-        for (rangeKernelSize = 1; rangeKernelSize*2 <= maxGroupSize; rangeKernelSize *= 2)
-            ;
-        positionsKernelSize = rangeKernelSize;
-        sortKernelSize = rangeKernelSize/2;
-        if (rangeKernelSize > length)
-            rangeKernelSize = length;
-        unsigned int maxLocalBuffer = (unsigned int) ((context.getDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()/sizeof(typename TRAIT::DataType))/2);
-        if (sortKernelSize > maxLocalBuffer)
-            sortKernelSize = maxLocalBuffer;
-        unsigned int targetBucketSize = sortKernelSize/2;
-        unsigned int numBuckets = length/targetBucketSize;
-        if (numBuckets < 1)
-            numBuckets = 1;
-        if (positionsKernelSize > numBuckets)
-            positionsKernelSize = numBuckets;
-
-        // Create workspace arrays.
-
-        dataRange = OpenCLArray::create<typename TRAIT::KeyType>(context, 2, "sortDataRange");
-        bucketOffset = OpenCLArray::create<cl_uint>(context, numBuckets, "bucketOffset");
-        bucketOfElement = OpenCLArray::create<cl_uint>(context, length, "bucketOfElement");
-        offsetInBucket = OpenCLArray::create<cl_uint>(context, length, "offsetInBucket");
-        buckets = OpenCLArray::create<typename TRAIT::DataType>(context, length, "buckets");
-    }
-    ~OpenCLSort() {
-        if (dataRange != NULL)
-            delete dataRange;
-        if (bucketOfElement != NULL)
-            delete bucketOfElement;
-        if (offsetInBucket != NULL)
-            delete offsetInBucket;
-        if (bucketOffset != NULL)
-            delete bucketOffset;
-        if (buckets != NULL)
-            delete buckets;
-    }
+    OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length);
+    ~OpenCLSort();
     /**
      * Sort an array.
      */
-    void sort(OpenCLArray& data) {
-
-        if (data.getSize() != bucketOfElement->getSize())
-            throw OpenMMException("OpenCLSort called with different data size");
-        if (data.getSize() == 0)
-            return;
-
-        // Compute the range of data values.
-
-        computeRangeKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        computeRangeKernel.setArg<cl_uint>(1, data.getSize());
-        computeRangeKernel.setArg<cl::Buffer>(2, dataRange->getDeviceBuffer());
-        computeRangeKernel.setArg(3, rangeKernelSize*sizeof(typename TRAIT::KeyType), NULL);
-        context.executeKernel(computeRangeKernel, rangeKernelSize, rangeKernelSize);
-
-        // Assign array elements to buckets.
-
-        unsigned int numBuckets = bucketOffset->getSize();
-        context.clearBuffer(*bucketOffset);
-        assignElementsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        assignElementsKernel.setArg<cl_int>(1, data.getSize());
-        assignElementsKernel.setArg<cl_int>(2, numBuckets);
-        assignElementsKernel.setArg<cl::Buffer>(3, dataRange->getDeviceBuffer());
-        assignElementsKernel.setArg<cl::Buffer>(4, bucketOffset->getDeviceBuffer());
-        assignElementsKernel.setArg<cl::Buffer>(5, bucketOfElement->getDeviceBuffer());
-        assignElementsKernel.setArg<cl::Buffer>(6, offsetInBucket->getDeviceBuffer());
-        context.executeKernel(assignElementsKernel, data.getSize());
-
-        // Compute the position of each bucket.
-
-        computeBucketPositionsKernel.setArg<cl_int>(0, numBuckets);
-        computeBucketPositionsKernel.setArg<cl::Buffer>(1, bucketOffset->getDeviceBuffer());
-        computeBucketPositionsKernel.setArg(2, positionsKernelSize*sizeof(cl_int), NULL);
-        context.executeKernel(computeBucketPositionsKernel, positionsKernelSize, positionsKernelSize);
-
-        // Copy the data into the buckets.
-
-        copyToBucketsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl::Buffer>(1, buckets->getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl_int>(2, data.getSize());
-        copyToBucketsKernel.setArg<cl::Buffer>(3, bucketOffset->getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl::Buffer>(4, bucketOfElement->getDeviceBuffer());
-        copyToBucketsKernel.setArg<cl::Buffer>(5, offsetInBucket->getDeviceBuffer());
-        context.executeKernel(copyToBucketsKernel, data.getSize());
-
-        // Sort each bucket.
-
-        sortBucketsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-        sortBucketsKernel.setArg<cl::Buffer>(1, buckets->getDeviceBuffer());
-        sortBucketsKernel.setArg<cl_int>(2, numBuckets);
-        sortBucketsKernel.setArg<cl::Buffer>(3, bucketOffset->getDeviceBuffer());
-        sortBucketsKernel.setArg(4, sortKernelSize*sizeof(typename TRAIT::DataType), NULL);
-        context.executeKernel(sortBucketsKernel, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize);
-    }
+    void sort(OpenCLArray& data);
 private:
     OpenCLContext& context;
+    SortTrait* trait;
     OpenCLArray* dataRange;
     OpenCLArray* bucketOfElement;
     OpenCLArray* offsetInBucket;
     OpenCLArray* bucketOffset;
     OpenCLArray* buckets;
-    cl::Kernel computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
-    unsigned int rangeKernelSize, positionsKernelSize, sortKernelSize;
+    cl::Kernel shortListKernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
+    unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
+    bool isShortList;
+};
+
+/**
+ * A subclass of SortTrait defines the type of value to sort, and the key for sorting them.
+ */
+class OpenCLSort::SortTrait {
+public:
+    virtual ~SortTrait() {
+    }
+    /**
+     * Get the size of each data value in bytes.
+     */
+    virtual int getDataSize() const = 0;
+    /**
+     * Get the size of each key value in bytes.
+     */
+    virtual int getKeySize() const = 0;
+    /**
+     * Get the data type of the values to sort.
+     */
+    virtual const char* getDataType() const = 0;
+    /**
+     * Get the data type of the sorting key.
+     */
+    virtual const char* getKeyType() const = 0;
+    /**
+     * Get the minimum value a key can take.
+     */
+    virtual const char* getMinKey() const = 0;
+    /**
+     * Get the maximum value a key can take.
+     */
+    virtual const char* getMaxKey() const = 0;
+    /**
+     * Get a value whose key is guaranteed to equal getMaxKey().
+     */
+    virtual const char* getMaxValue() const = 0;
+    /**
+     * Get the CUDA code to select the key from the data value.
+     */
+    virtual const char* getSortKey() const = 0;
 };
 
 } // namespace OpenMM

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -99,7 +99,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
-        ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConvergedMemory(NULL),
+        ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
         vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL) {
     // Create workspace arrays.
@@ -466,9 +466,8 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         ccmaAtoms = CudaArray::create<int2>(context, numCCMA, "CcmaAtoms");
         ccmaAtomConstraints = CudaArray::create<int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
         ccmaNumAtomConstraints = CudaArray::create<int>(context, numAtoms, "CcmaAtomConstraintsIndex");
-        CHECK_RESULT2(cuMemHostAlloc((void**) &ccmaConvergedMemory, 2*sizeof(int), CU_MEMHOSTALLOC_DEVICEMAP), "Error allocating pinned memory");
-        CHECK_RESULT2(cuMemHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
         ccmaConstraintMatrixColumn = CudaArray::create<int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
+        ccmaConverged = CudaArray::create<int>(context, 2, "ccmaConverged");
         vector<int2> atomsVec(ccmaAtoms->getSize());
         vector<int> atomConstraintsVec(ccmaAtomConstraints->getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
@@ -680,8 +679,8 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
         delete ccmaDelta1;
     if (ccmaDelta2 != NULL)
         delete ccmaDelta2;
-    if (ccmaConvergedMemory != NULL)
-        cuMemFreeHost(ccmaConvergedMemory);
+    if (ccmaConverged != NULL)
+        delete ccmaConverged;
     if (vsite2AvgAtoms != NULL)
         delete vsite2AvgAtoms;
     if (vsite2AvgWeights != NULL)
@@ -734,33 +733,32 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
         context.executeKernel(shakeKernel, args, shakeAtoms->getSize());
     }
     if (ccmaAtoms != NULL) {
-        void* directionsArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(), &context.getPosq().getDevicePointer(), &posCorrection};
+        void* directionsArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(), &context.getPosq().getDevicePointer(), &posCorrection, &ccmaConverged->getDevicePointer()};
         context.executeKernel(ccmaDirectionsKernel, directionsArgs, ccmaAtoms->getSize());
         int i;
         void* forceArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(),
                 constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
-                &ccmaReducedMass->getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaConvergedDeviceMemory,
+                &ccmaReducedMass->getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaConverged->getDevicePointer(),
                 tolPointer, &i};
         void* multiplyArgs[] = {&ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
-                &ccmaConstraintMatrixColumn->getDevicePointer(), &ccmaConstraintMatrixValue->getDevicePointer(), &ccmaConvergedDeviceMemory, &i};
+                &ccmaConstraintMatrixColumn->getDevicePointer(), &ccmaConstraintMatrixValue->getDevicePointer(), &ccmaConverged->getDevicePointer(), &i};
         void* updateArgs[] = {&ccmaNumAtomConstraints->getDevicePointer(), &ccmaAtomConstraints->getDevicePointer(), &ccmaDistance->getDevicePointer(),
                 constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
                 &context.getVelm().getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
-                &ccmaConvergedDeviceMemory, &i};
+                &ccmaConverged->getDevicePointer(), &i};
         const int checkInterval = 4;
+        int* converged = (int*) context.getPinnedBuffer();
         for (i = 0; i < 150; i++) {
-            if (i == 0) {
-                ccmaConvergedMemory[0] = 1;
-                ccmaConvergedMemory[1] = 0;
-            }
             context.executeKernel(ccmaForceKernel, forceArgs, ccmaAtoms->getSize());
-            if ((i+1)%checkInterval == 0)
+            if ((i+1)%checkInterval == 0) {
+                ccmaConverged->download(converged, false);
                 CHECK_RESULT2(cuEventRecord(ccmaEvent, 0), "Error recording event for CCMA");
+            }
             context.executeKernel(ccmaMultiplyKernel, multiplyArgs, ccmaAtoms->getSize());
             context.executeKernel(ccmaUpdateKernel, updateArgs, context.getNumAtoms());
             if ((i+1)%checkInterval == 0) {
                 CHECK_RESULT2(cuEventSynchronize(ccmaEvent), "Error synchronizing on event for CCMA");
-                if (ccmaConvergedMemory[i%2])
+                if (converged[i%2])
                     break;
             }
         }

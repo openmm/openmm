@@ -95,8 +95,8 @@ extern "C" __global__ void selectLangevinStepSize(mixed maxStepSize, mixed error
     if (blockIdx.x*blockDim.x+threadIdx.x == 0) {
         // Select the new step size.
 
-        mixed totalError = sqrt(error[0]/(NUM_ATOMS*3));
-        mixed newStepSize = sqrt(errorTol/totalError);
+        mixed totalError = SQRT(error[0]/(NUM_ATOMS*3));
+        mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)
             newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
@@ -108,9 +108,9 @@ extern "C" __global__ void selectLangevinStepSize(mixed maxStepSize, mixed error
 
         // Recalculate the integration parameters.
 
-        mixed vscale = exp(-newStepSize/tau);
+        mixed vscale = EXP(-newStepSize/tau);
         mixed fscale = (1-vscale)*tau;
-        mixed noisescale = sqrt(2*kT/tau)*sqrt(0.5f*(1-vscale*vscale)*tau);
+        mixed noisescale = SQRT(2*kT/tau)*SQRT(0.5f*(1-vscale*vscale)*tau);
         params[VelScale] = vscale;
         params[ForceScale] = fscale;
         params[NoiseScale] = noisescale;

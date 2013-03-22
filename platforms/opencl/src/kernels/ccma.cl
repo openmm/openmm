@@ -10,7 +10,8 @@ mixed4 loadPos(__global const real4* restrict posq, __global const real4* restri
 /**
  * Compute the direction each constraint is pointing in.  This is called once at the beginning of constraint evaluation.
  */
-__kernel void computeConstraintDirections(__global const int2* restrict constraintAtoms, __global mixed4* restrict constraintDistance, __global const real4* restrict atomPositions, __global const real4* restrict posCorrection) {
+__kernel void computeConstraintDirections(__global const int2* restrict constraintAtoms, __global mixed4* restrict constraintDistance,
+        __global const real4* restrict atomPositions, __global const real4* restrict posCorrection, __global int* restrict converged) {
     for (int index = get_global_id(0); index < NUM_CONSTRAINTS; index += get_global_size(0)) {
         // Compute the direction for this constraint.
 
@@ -22,6 +23,10 @@ __kernel void computeConstraintDirections(__global const int2* restrict constrai
         dir.y = oldPos1.y-oldPos2.y;
         dir.z = oldPos1.z-oldPos2.z;
         constraintDistance[index] = dir;
+    }
+    if (get_global_id(0) == 0) {
+        converged[0] = 1;
+        converged[1] = 0;
     }
 }
 

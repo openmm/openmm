@@ -11,7 +11,7 @@ if (cosangle > 0.99f || cosangle < -0.99f) {
 
     real4 cross_prod = cross(cp0, cp1);
     real scale = dot(cp0, cp0)*dot(cp1, cp1);
-    theta = asin(sqrt(dot(cross_prod, cross_prod)/scale));
+    theta = asin(SQRT(dot(cross_prod, cross_prod)/scale));
     if (cosangle < 0)
         theta = PI-theta;
 }
@@ -21,7 +21,7 @@ theta = (dot(v0, cp1) >= 0 ? theta : -theta);
 COMPUTE_FORCE
 real normCross1 = dot(cp0, cp0);
 real normSqrBC = dot(v1, v1);
-real normBC = sqrt(normSqrBC);
+real normBC = SQRT(normSqrBC);
 real normCross2 = dot(cp1, cp1);
 real dp = 1.0f/normSqrBC;
 real4 ff = (real4) ((-dEdAngle*normBC)/normCross1, dot(v0, v1)*dp, dot(v2, v1)*dp, (dEdAngle*normBC)/normCross2);

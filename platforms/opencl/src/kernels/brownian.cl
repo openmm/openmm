@@ -8,9 +8,9 @@ __kernel void integrateBrownianPart1(mixed tauDeltaT, mixed noiseAmplitude, __gl
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
         mixed invMass = velm[index].w;
         if (invMass != 0) {
-            posDelta[index] = (mixed4) (tauDeltaT*invMass*force[index].x + noiseAmplitude*sqrt(invMass)*random[randomIndex].x,
-                                        tauDeltaT*invMass*force[index].y + noiseAmplitude*sqrt(invMass)*random[randomIndex].y,
-                                        tauDeltaT*invMass*force[index].z + noiseAmplitude*sqrt(invMass)*random[randomIndex].z, 0);
+            posDelta[index] = (mixed4) (tauDeltaT*invMass*force[index].x + noiseAmplitude*SQRT(invMass)*random[randomIndex].x,
+                                        tauDeltaT*invMass*force[index].y + noiseAmplitude*SQRT(invMass)*random[randomIndex].y,
+                                        tauDeltaT*invMass*force[index].z + noiseAmplitude*SQRT(invMass)*random[randomIndex].z, 0);
         }
         randomIndex += get_global_size(0);
     }

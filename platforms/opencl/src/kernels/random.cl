@@ -25,7 +25,7 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x1 = sqrt(-2.0f * log(x1));
+        x1 = SQRT(-2.0f * LOG(x1));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
@@ -50,7 +50,7 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x3 = sqrt(-2.0f * log(x3));
+        x3 = SQRT(-2.0f * LOG(x3));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
@@ -75,7 +75,7 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x5 = sqrt(-2.0f * log(x5));
+        x5 = SQRT(-2.0f * LOG(x5));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
@@ -100,7 +100,7 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x7 = sqrt(-2.0f * log(x7));
+        x7 = SQRT(-2.0f * LOG(x7));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;

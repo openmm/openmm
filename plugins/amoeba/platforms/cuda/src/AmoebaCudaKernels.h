@@ -398,9 +398,6 @@ private:
     CudaArray* pmeBsplineModuliX;
     CudaArray* pmeBsplineModuliY;
     CudaArray* pmeBsplineModuliZ;
-    CudaArray* pmeTheta1;
-    CudaArray* pmeTheta2;
-    CudaArray* pmeTheta3;
     CudaArray* pmeIgrid;
     CudaArray* pmePhi;
     CudaArray* pmePhid;
@@ -411,8 +408,8 @@ private:
     CudaSort* sort;
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
-    CUfunction pmeUpdateBsplinesKernel, pmeAtomRangeKernel, pmeZIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeConvolutionKernel, pmeFixedPotentialKernel, pmeInducedPotentialKernel;
-    CUfunction pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
+    CUfunction pmeGridIndexKernel, pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
+    CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
 };
@@ -477,8 +474,9 @@ private:
     class ForceInfo;
     CudaContext& cu;
     System& system;
-    bool includeSurfaceArea;
+    bool includeSurfaceArea, hasInitializedKernels;
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
+    std::map<std::string, std::string> defines;
     CudaArray* params;
     CudaArray* bornSum;
     CudaArray* bornRadii;

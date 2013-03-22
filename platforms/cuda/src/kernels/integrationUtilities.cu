@@ -24,14 +24,14 @@ extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restri
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x1 = sqrt(-2.0f * log(x1));
+        x1 = SQRT(-2.0f * LOG(x1));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
         state.w = m;
         carry = k >> 30;
         float x2 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.x = x1 * cos(2.0f * 3.14159265f * x2);
+        value.x = x1 * COS(2.0f * 3.14159265f * x2);
 
         // Generate second value.
 
@@ -49,14 +49,14 @@ extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restri
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x3 = sqrt(-2.0f * log(x3));
+        x3 = SQRT(-2.0f * LOG(x3));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
         state.w = m;
         carry = k >> 30;
         float x4 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.y = x3 * cos(2.0f * 3.14159265f * x4);
+        value.y = x3 * COS(2.0f * 3.14159265f * x4);
 
         // Generate third value.
 
@@ -74,14 +74,14 @@ extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restri
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x5 = sqrt(-2.0f * log(x5));
+        x5 = SQRT(-2.0f * LOG(x5));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
         state.w = m;
         carry = k >> 30;
         float x6 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.z = x5 * cos(2.0f * 3.14159265f * x6);
+        value.z = x5 * COS(2.0f * 3.14159265f * x6);
 
         // Generate fourth value.
 
@@ -99,14 +99,14 @@ extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restri
         state.y ^= state.y << 13;
         state.y ^= state.y >> 17;
         state.y ^= state.y << 5;
-        x7 = sqrt(-2.0f * log(x7));
+        x7 = SQRT(-2.0f * LOG(x7));
         k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
         m = state.w + state.w + state.z + carry;
         state.z = state.w;
         state.w = m;
         carry = k >> 30;
         float x8 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.w = x7 * cos(2.0f * 3.14159265f * x8);
+        value.w = x7 * COS(2.0f * 3.14159265f * x8);
 
         // Record the values.
 
@@ -412,9 +412,9 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         mixed yaksYd = zaksZd*xaksXd - xaksZd*zaksXd;
         mixed zaksYd = xaksZd*yaksXd - yaksZd*xaksXd;
 
-        mixed axlng = sqrt(xaksXd*xaksXd + yaksXd*yaksXd + zaksXd*zaksXd);
-        mixed aylng = sqrt(xaksYd*xaksYd + yaksYd*yaksYd + zaksYd*zaksYd);
-        mixed azlng = sqrt(xaksZd*xaksZd + yaksZd*yaksZd + zaksZd*zaksZd);
+        mixed axlng = SQRT(xaksXd*xaksXd + yaksXd*yaksXd + zaksXd*zaksXd);
+        mixed aylng = SQRT(xaksYd*xaksYd + yaksYd*yaksYd + zaksYd*zaksYd);
+        mixed azlng = SQRT(xaksZd*xaksZd + yaksZd*yaksZd + zaksZd*zaksZd);
         mixed trns11 = xaksXd / axlng;
         mixed trns21 = yaksXd / axlng;
         mixed trns31 = zaksXd / axlng;
@@ -440,13 +440,13 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         //                                        --- Step2  A2' ---
 
         float rc = 0.5f*params.y;
-        mixed rb = sqrt(params.x*params.x-rc*rc);
+        mixed rb = SQRT(params.x*params.x-rc*rc);
         mixed ra = rb*(m1+m2)*invTotalMass;
         rb -= ra;
         mixed sinphi = za1d/ra;
-        mixed cosphi = sqrt(1-sinphi*sinphi);
+        mixed cosphi = SQRT(1-sinphi*sinphi);
         mixed sinpsi = (zb1d-zc1d) / (2*rc*cosphi);
-        mixed cospsi = sqrt(1-sinpsi*sinpsi);
+        mixed cospsi = SQRT(1-sinpsi*sinpsi);
 
         mixed ya2d =   ra*cosphi;
         mixed xb2d = - rc*cospsi;
@@ -454,7 +454,7 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         mixed yc2d = - rb*cosphi + rc*sinpsi*sinphi;
         mixed xb2d2 = xb2d*xb2d;
         mixed hh2 = 4.0f*xb2d2 + (yb2d-yc2d)*(yb2d-yc2d) + (zb1d-zc1d)*(zb1d-zc1d);
-        mixed deltx = 2.0f*xb2d + sqrt(4.0f*xb2d2 - hh2 + params.y*params.y);
+        mixed deltx = 2.0f*xb2d + SQRT(4.0f*xb2d2 - hh2 + params.y*params.y);
         xb2d -= deltx*0.5f;
 
         //                                        --- Step3  al,be,ga ---
@@ -464,11 +464,11 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         mixed gamma = xb0d*yb1d - xb1d*yb0d + xc0d*yc1d - xc1d*yc0d;
 
         mixed al2be2 = alpha*alpha + beta*beta;
-        mixed sintheta = (alpha*gamma - beta*sqrt(al2be2 - gamma*gamma)) / al2be2;
+        mixed sintheta = (alpha*gamma - beta*SQRT(al2be2 - gamma*gamma)) / al2be2;
 
         //                                        --- Step4  A3' ---
 
-        mixed costheta = sqrt(1-sintheta*sintheta);
+        mixed costheta = SQRT(1-sintheta*sintheta);
         mixed xa3d = - ya2d*sintheta;
         mixed ya3d =   ya2d*costheta;
         mixed za3d = za1d;
@@ -534,9 +534,9 @@ extern "C" __global__ void applySettleToVelocities(int numClusters, mixed tol, c
         mixed3 eAB = make_mixed3(apos1.x-apos0.x, apos1.y-apos0.y, apos1.z-apos0.z);
         mixed3 eBC = make_mixed3(apos2.x-apos1.x, apos2.y-apos1.y, apos2.z-apos1.z);
         mixed3 eCA = make_mixed3(apos0.x-apos2.x, apos0.y-apos2.y, apos0.z-apos2.z);
-        eAB *= rsqrt(eAB.x*eAB.x + eAB.y*eAB.y + eAB.z*eAB.z);
-        eBC *= rsqrt(eBC.x*eBC.x + eBC.y*eBC.y + eBC.z*eBC.z);
-        eCA *= rsqrt(eCA.x*eCA.x + eCA.y*eCA.y + eCA.z*eCA.z);
+        eAB *= RSQRT(eAB.x*eAB.x + eAB.y*eAB.y + eAB.z*eAB.z);
+        eBC *= RSQRT(eBC.x*eBC.x + eBC.y*eBC.y + eBC.z*eBC.z);
+        eCA *= RSQRT(eCA.x*eCA.x + eCA.y*eCA.y + eCA.z*eCA.z);
         mixed vAB = (v1.x-v0.x)*eAB.x + (v1.y-v0.y)*eAB.y + (v1.z-v0.z)*eAB.z;
         mixed vBC = (v2.x-v1.x)*eBC.x + (v2.y-v1.y)*eBC.y + (v2.z-v1.z)*eBC.z;
         mixed vCA = (v0.x-v2.x)*eCA.x + (v0.y-v2.y)*eCA.y + (v0.z-v2.z)*eCA.z;
@@ -574,7 +574,8 @@ extern "C" __global__ void applySettleToVelocities(int numClusters, mixed tol, c
 /**
  * Compute the direction each CCMA constraint is pointing in.  This is called once at the beginning of constraint evaluation.
  */
-extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restrict__ constraintAtoms, mixed4* __restrict__ constraintDistance, const real4* __restrict__ atomPositions, const real4* __restrict__ posqCorrection) {
+extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restrict__ constraintAtoms, mixed4* __restrict__ constraintDistance,
+        const real4* __restrict__ atomPositions, const real4* __restrict__ posqCorrection, int* __restrict__ converged) {
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
         // Compute the direction for this constraint.
 
@@ -586,6 +587,10 @@ extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restric
         dir.y = oldPos1.y-oldPos2.y;
         dir.z = oldPos1.z-oldPos2.z;
         constraintDistance[index] = dir;
+    }
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        converged[0] = 1;
+        converged[1] = 0;
     }
 }
 
@@ -605,6 +610,7 @@ extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __rest
     __syncthreads();
     mixed lowerTol = 1-2*tol+tol*tol;
     mixed upperTol = 1+2*tol+tol*tol;
+    bool threadConverged = true;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
         // Compute the force due to this constraint.
 
@@ -620,14 +626,13 @@ extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __rest
         mixed dist2 = dir.w*dir.w;
         mixed diff = dist2 - rp2;
         delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0.0f);
-
-        // See whether it has converged.
-
-        if (groupConverged && (rp2 < lowerTol*dist2 || rp2 > upperTol*dist2)) {
-            groupConverged = 0;
-            converged[iteration%2] = 0;
-        }
+        threadConverged &= (rp2 > lowerTol*dist2 && rp2 < upperTol*dist2);
     }
+    if (groupConverged && !threadConverged)
+        groupConverged = 0;
+    __syncthreads();
+    if (threadIdx.x == 0 && !groupConverged)
+        converged[iteration%2] = 0;
 }
 
 /**

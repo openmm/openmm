@@ -15,7 +15,7 @@ __kernel void integrateLangevinPart1(__global mixed4* restrict velm, __global co
     while (index < NUM_ATOMS) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
-            mixed sqrtInvMass = sqrt(velocity.w);
+            mixed sqrtInvMass = SQRT(velocity.w);
             velocity.x = vscale*velocity.x + fscale*velocity.w*force[index].x + noisescale*sqrtInvMass*random[randomIndex].x;
             velocity.y = vscale*velocity.y + fscale*velocity.w*force[index].y + noisescale*sqrtInvMass*random[randomIndex].y;
             velocity.z = vscale*velocity.z + fscale*velocity.w*force[index].z + noisescale*sqrtInvMass*random[randomIndex].z;
@@ -96,8 +96,8 @@ __kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed ta
     if (get_global_id(0) == 0) {
         // Select the new step size.
 
-        mixed totalError = sqrt(error[0]/(NUM_ATOMS*3));
-        mixed newStepSize = sqrt(errorTol/totalError);
+        mixed totalError = SQRT(error[0]/(NUM_ATOMS*3));
+        mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)
             newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
@@ -109,9 +109,9 @@ __kernel void selectLangevinStepSize(mixed maxStepSize, mixed errorTol, mixed ta
 
         // Recalculate the integration parameters.
 
-        mixed vscale = exp(-newStepSize/tau);
+        mixed vscale = EXP(-newStepSize/tau);
         mixed fscale = (1-vscale)*tau;
-        mixed noisescale = sqrt(2*kT/tau)*sqrt(0.5f*(1-vscale*vscale)*tau);
+        mixed noisescale = SQRT(2*kT/tau)*SQRT(0.5f*(1-vscale*vscale)*tau);
         params[VelScale] = vscale;
         params[ForceScale] = fscale;
         params[NoiseScale] = noisescale;

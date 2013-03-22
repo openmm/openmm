@@ -81,8 +81,9 @@ public:
      */
     static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int xsize, int ysize, int zsize);
+    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads);
     int xsize, ysize, zsize;
+    int xthreads, ythreads, zthreads;
     OpenCLContext& context;
     cl::Kernel xkernel, ykernel, zkernel;
 };

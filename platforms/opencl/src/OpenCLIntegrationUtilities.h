@@ -141,8 +141,6 @@ private:
     OpenCLArray* ccmaDelta1;
     OpenCLArray* ccmaDelta2;
     OpenCLArray* ccmaConverged;
-    cl::Buffer* ccmaConvergedBuffer;
-    cl_int* ccmaConvergedMemory;
     OpenCLArray* vsite2AvgAtoms;
     OpenCLArray* vsite2AvgWeights;
     OpenCLArray* vsite3AvgAtoms;

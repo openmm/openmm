@@ -32,7 +32,7 @@ using namespace OpenMM;
 using namespace std;
 
 CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait),
-        dataRange(NULL), bucketOfElement(NULL), offsetInBucket(NULL), bucketOffset(NULL), buckets(NULL) {
+        dataRange(NULL), bucketOfElement(NULL), offsetInBucket(NULL), bucketOffset(NULL), buckets(NULL), dataLength(length) {
     // Create kernels.
 
     map<string, string> replacements;
@@ -43,6 +43,7 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     replacements["MAX_KEY"] = trait->getMaxKey();
     replacements["MAX_VALUE"] = trait->getMaxValue();
     CUmodule module = context.createModule(context.replaceStrings(CudaKernelSources::sort, replacements));
+    shortListKernel = context.getKernel(module, "sortShortList");
     computeRangeKernel = context.getKernel(module, "computeRange");
     assignElementsKernel = context.getKernel(module, "assignElementsToBuckets");
     computeBucketPositionsKernel = context.getKernel(module, "computeBucketPositions");
@@ -53,15 +54,16 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
 
     int maxBlockSize;
     cuDeviceGetAttribute(&maxBlockSize, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, context.getDevice());
-    for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
-        ;
-    positionsKernelSize = rangeKernelSize;
-    sortKernelSize = rangeKernelSize/2;
-    if (rangeKernelSize > length)
-        rangeKernelSize = length;
     int maxSharedMem;
     cuDeviceGetAttribute(&maxSharedMem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, context.getDevice());
     unsigned int maxLocalBuffer = (unsigned int) ((maxSharedMem/trait->getDataSize())/2);
+    isShortList = (length <= maxLocalBuffer);
+    for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
+        ;
+    positionsKernelSize = rangeKernelSize;
+    sortKernelSize = (isShortList ? rangeKernelSize/2 : rangeKernelSize/4);
+    if (rangeKernelSize > length)
+        rangeKernelSize = length;
     if (sortKernelSize > maxLocalBuffer)
         sortKernelSize = maxLocalBuffer;
     unsigned int targetBucketSize = sortKernelSize/2;
@@ -73,11 +75,13 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
 
     // Create workspace arrays.
 
-    dataRange = new CudaArray(context, 2, trait->getKeySize(), "sortDataRange");
-    bucketOffset = CudaArray::create<uint1>(context, numBuckets, "bucketOffset");
-    bucketOfElement = CudaArray::create<uint1>(context, length, "bucketOfElement");
-    offsetInBucket = CudaArray::create<uint1>(context, length, "offsetInBucket");
-    buckets = new CudaArray(context, length, trait->getDataSize(), "buckets");
+    if (!isShortList) {
+        dataRange = new CudaArray(context, 2, trait->getKeySize(), "sortDataRange");
+        bucketOffset = CudaArray::create<uint1>(context, numBuckets, "bucketOffset");
+        bucketOfElement = CudaArray::create<uint1>(context, length, "bucketOfElement");
+        offsetInBucket = CudaArray::create<uint1>(context, length, "offsetInBucket");
+        buckets = new CudaArray(context, length, trait->getDataSize(), "buckets");
+    }
 }
 
 CudaSort::~CudaSort() {
@@ -95,38 +99,44 @@ CudaSort::~CudaSort() {
 }
 
 void CudaSort::sort(CudaArray& data) {
-    if (data.getSize() != bucketOfElement->getSize() || data.getElementSize() != trait->getDataSize())
+    if (data.getSize() != dataLength || data.getElementSize() != trait->getDataSize())
         throw OpenMMException("CudaSort called with different data size");
     if (data.getSize() == 0)
         return;
+    if (isShortList) {
+        // We can use a simpler sort kernel that does the entire operation at once in local memory.
+        
+        void* sortArgs[] = {&data.getDevicePointer(), &dataLength};
+        context.executeKernel(shortListKernel, sortArgs, sortKernelSize, sortKernelSize, dataLength*trait->getDataSize());
+    }
+    else {
+        // Compute the range of data values.
 
-    // Compute the range of data values.
+        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange->getDevicePointer()};
+        context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, rangeKernelSize*trait->getKeySize());
 
-    unsigned int dataSize = data.getSize();
-    void* rangeArgs[] = {&data.getDevicePointer(), &dataSize, &dataRange->getDevicePointer()};
-    context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, rangeKernelSize*trait->getKeySize());
+        // Assign array elements to buckets.
 
-    // Assign array elements to buckets.
+        unsigned int numBuckets = bucketOffset->getSize();
+        context.clearBuffer(*bucketOffset);
+        void* elementsArgs[] = {&data.getDevicePointer(), &dataLength, &numBuckets, &dataRange->getDevicePointer(),
+                &bucketOffset->getDevicePointer(), &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
+        context.executeKernel(assignElementsKernel, elementsArgs, data.getSize());
 
-    unsigned int numBuckets = bucketOffset->getSize();
-    context.clearBuffer(*bucketOffset);
-    void* elementsArgs[] = {&data.getDevicePointer(), &dataSize, &numBuckets, &dataRange->getDevicePointer(),
-            &bucketOffset->getDevicePointer(), &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
-    context.executeKernel(assignElementsKernel, elementsArgs, data.getSize());
+        // Compute the position of each bucket.
 
-    // Compute the position of each bucket.
+        void* computeArgs[] = {&numBuckets, &bucketOffset->getDevicePointer()};
+        context.executeKernel(computeBucketPositionsKernel, computeArgs, positionsKernelSize, positionsKernelSize, positionsKernelSize*sizeof(int));
 
-    void* computeArgs[] = {&numBuckets, &bucketOffset->getDevicePointer()};
-    context.executeKernel(computeBucketPositionsKernel, computeArgs, positionsKernelSize, positionsKernelSize, positionsKernelSize*sizeof(int));
+        // Copy the data into the buckets.
 
-    // Copy the data into the buckets.
+        void* copyArgs[] = {&data.getDevicePointer(), &buckets->getDevicePointer(), &dataLength, &bucketOffset->getDevicePointer(),
+                &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
+        context.executeKernel(copyToBucketsKernel, copyArgs, data.getSize());
 
-    void* copyArgs[] = {&data.getDevicePointer(), &buckets->getDevicePointer(), &dataSize, &bucketOffset->getDevicePointer(),
-            &bucketOfElement->getDevicePointer(), &offsetInBucket->getDevicePointer()};
-    context.executeKernel(copyToBucketsKernel, copyArgs, data.getSize());
+        // Sort each bucket.
 
-    // Sort each bucket.
-
-    void* sortArgs[] = {&data.getDevicePointer(), &buckets->getDevicePointer(), &numBuckets, &bucketOffset->getDevicePointer()};
-    context.executeKernel(sortBucketsKernel, sortArgs, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
+        void* sortArgs[] = {&data.getDevicePointer(), &buckets->getDevicePointer(), &numBuckets, &bucketOffset->getDevicePointer()};
+        context.executeKernel(sortBucketsKernel, sortArgs, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
+    }
 }

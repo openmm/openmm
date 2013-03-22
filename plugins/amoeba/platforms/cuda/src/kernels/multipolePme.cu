@@ -1,7 +1,7 @@
 #define ARRAY(x,y) array[(x)-1+((y)-1)*PME_ORDER]
 
 /**
- * This is called from updateBsplines().  It calculates the spline coefficients for a single atom along a single axis.
+ * Calculate the spline coefficients for a single atom along a single axis.
  */
 __device__ void computeBSplinePoint(real4* thetai, real w, real* array) {
     // initialization to get to 2nd order recursion
@@ -70,15 +70,10 @@ __device__ void computeBSplinePoint(real4* thetai, real w, real* array) {
 }
 
 /**
- * Compute bspline coefficients.
+ * Compute the index of the grid point each atom is associated with.
  */
-extern "C" __global__ void updateBsplines(const real4* __restrict__ posq, int4* __restrict__ igrid, int2* __restrict__ pmeAtomGridIndex,
-        real4* __restrict__ theta1, real4* __restrict__ theta2, real4* __restrict__ theta3, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    extern __shared__ real bsplines_cache[]; // size = block_size*pme_order*pme_order
-    real* array = &bsplines_cache[threadIdx.x*PME_ORDER*PME_ORDER];
-
-    //  get the B-spline coefficients for each multipole site
-
+extern "C" __global__ void findAtomGridIndex(const real4* __restrict__ posq, int2* __restrict__ pmeAtomGridIndex,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         real4 pos = posq[i];
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
@@ -90,254 +85,224 @@ extern "C" __global__ void updateBsplines(const real4* __restrict__ posq, int4* 
         real w = pos.x*invPeriodicBoxSize.x;
         real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
         int ifr = (int) fr;
-        w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
-        computeBSplinePoint(&theta1[i*PME_ORDER], w, array);
 
         // Second axis.
 
         w = pos.y*invPeriodicBoxSize.y;
         fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
         ifr = (int) fr;
-        w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
-        computeBSplinePoint(&theta2[i*PME_ORDER], w, array);
 
         // Third axis.
 
         w = pos.z*invPeriodicBoxSize.z;
         fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
         ifr = (int) fr;
-        w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
-        computeBSplinePoint(&theta3[i*PME_ORDER], w, array);
 
         // Record the grid point.
 
         igrid1 += (igrid1 < 0 ? GRID_SIZE_X : 0);
         igrid2 += (igrid2 < 0 ? GRID_SIZE_Y : 0);
         igrid3 += (igrid3 < 0 ? GRID_SIZE_Z : 0);
-        igrid[i] = make_int4(igrid1, igrid2, igrid3, 0);
         pmeAtomGridIndex[i] = make_int2(i, igrid1*GRID_SIZE_Y*GRID_SIZE_Z+igrid2*GRID_SIZE_Z+igrid3);
     }
 }
 
-/**
- * For each grid point, find the range of sorted atoms associated with that point.
- */
-extern "C" __global__ void findAtomRangeForGrid(int2* __restrict__ pmeAtomGridIndex, int* __restrict__ pmeAtomRange,
-        const real4* __restrict__ posq, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    int thread = blockIdx.x*blockDim.x+threadIdx.x;
-    int start = (NUM_ATOMS*thread)/(blockDim.x*gridDim.x);
-    int end = (NUM_ATOMS*(thread+1))/(blockDim.x*gridDim.x);
-    int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
-    for (int i = start; i < end; ++i) {
-        int2 atomData = pmeAtomGridIndex[i];
-        int gridIndex = atomData.y;
-        if (gridIndex != last) {
-            for (int j = last+1; j <= gridIndex; ++j)
-                pmeAtomRange[j] = i;
-            last = gridIndex;
-        }
-    }
-
-    // Fill in values beyond the last atom.
-
-    if (thread == blockDim.x*gridDim.x-1) {
-        int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-        for (int j = last+1; j <= gridSize; ++j)
-            pmeAtomRange[j] = NUM_ATOMS;
-    }
-}
-
-/**
- * The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
- * some work in the charge spreading kernel.
- */
-extern "C" __global__ void recordZIndex(int2* __restrict__ pmeAtomGridIndex, const real4* __restrict__ posq, real4 periodicBoxSize, real4 invPeriodicBoxSize) {
-    int thread = blockIdx.x*blockDim.x+threadIdx.x;
-    int start = (NUM_ATOMS*thread)/(blockDim.x*gridDim.x);
-    int end = (NUM_ATOMS*(thread+1))/(blockDim.x*gridDim.x);
-    for (int i = start; i < end; ++i) {
-        real posz = posq[pmeAtomGridIndex[i].x].z;
-        posz -= floor(posz*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        real w = posz*invPeriodicBoxSize.z;
-        real fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
-        int z = ((int) fr)-PME_ORDER+1;
-        pmeAtomGridIndex[i].y = z;
-    }
-}
-
 extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex, int* __restrict__ pmeAtomRange,
-        const real4* __restrict__ theta1, const real4* __restrict__ theta2, const real4* __restrict__ theta3, real4 invPeriodicBoxSize) {
+        const real* __restrict__ labFrameQuadrupole, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     const real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
     const real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
     const real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
-    unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    unsigned int numThreads = gridDim.x*blockDim.x;
-    for (int gridIndex = blockIdx.x*blockDim.x+threadIdx.x; gridIndex < numGridPoints; gridIndex += numThreads) {
-        int3 gridPoint;
-        gridPoint.x = gridIndex/(GRID_SIZE_Y*GRID_SIZE_Z);
-        int remainder = gridIndex-gridPoint.x*GRID_SIZE_Y*GRID_SIZE_Z;
-        gridPoint.y = remainder/GRID_SIZE_Z;
-        gridPoint.z = remainder-gridPoint.y*GRID_SIZE_Z;
-        real result = 0;
-        for (int ix = 0; ix < PME_ORDER; ++ix) {
-            int x = gridPoint.x-ix+(gridPoint.x >= ix ? 0 : GRID_SIZE_X);
-            for (int iy = 0; iy < PME_ORDER; ++iy) {
-                int y = gridPoint.y-iy+(gridPoint.y >= iy ? 0 : GRID_SIZE_Y);
-                int z1 = gridPoint.z-PME_ORDER+1;
-                z1 += (z1 >= 0 ? 0 : GRID_SIZE_Z);
-                int z2 = (z1 < gridPoint.z ? gridPoint.z : GRID_SIZE_Z-1);
-                int gridIndex1 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z1;
-                int gridIndex2 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z2;
-                int firstAtom = pmeAtomRange[gridIndex1];
-                int lastAtom = pmeAtomRange[gridIndex2+1];
-                for (int i = firstAtom; i < lastAtom; ++i) {
-                    int2 atomData = pmeAtomGridIndex[i];
-                    int atomIndex = atomData.x;
-                    int z = atomData.y;
-                    int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                    if (iz >= GRID_SIZE_Z)
-                        iz -= GRID_SIZE_Z;
-                    real atomCharge = posq[atomIndex].w;
-                    real atomDipoleX = xscale*labFrameDipole[atomIndex*3];
-                    real atomDipoleY = yscale*labFrameDipole[atomIndex*3+1];
-                    real atomDipoleZ = zscale*labFrameDipole[atomIndex*3+2];
-                    real atomQuadrupoleXX = xscale*xscale*labFrameQuadrupole[atomIndex*5];
-                    real atomQuadrupoleXY = 2*xscale*yscale*labFrameQuadrupole[atomIndex*5+1];
-                    real atomQuadrupoleXZ = 2*xscale*zscale*labFrameQuadrupole[atomIndex*5+2];
-                    real atomQuadrupoleYY = yscale*yscale*labFrameQuadrupole[atomIndex*5+3];
-                    real atomQuadrupoleYZ = 2*yscale*zscale*labFrameQuadrupole[atomIndex*5+4];
-                    real atomQuadrupoleZZ = -zscale*zscale*(labFrameQuadrupole[atomIndex*5]+labFrameQuadrupole[atomIndex*5+3]);
-                    real4 t = theta1[atomIndex*PME_ORDER+ix];
-                    real4 u = theta2[atomIndex*PME_ORDER+iy];
-                    real4 v = theta3[atomIndex*PME_ORDER+iz];
+    real array[PME_ORDER*PME_ORDER];
+    real4 theta1[PME_ORDER];
+    real4 theta2[PME_ORDER];
+    real4 theta3[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves cache performance when loading
+    // the grid values.
+    
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        int m = pmeAtomGridIndex[i].x;
+        real4 pos = posq[m];
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+
+        // Since we need the full set of thetas, it's faster to compute them here than load them
+        // from global memory.
+
+        real w = pos.x*invPeriodicBoxSize.x;
+        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        int ifr = (int) fr;
+        w = fr - ifr;
+        int igrid1 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta1, w, array);
+        w = pos.y*invPeriodicBoxSize.y;
+        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid2 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta2, w, array);
+        w = pos.z*invPeriodicBoxSize.z;
+        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid3 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta3, w, array);
+        igrid1 += (igrid1 < 0 ? GRID_SIZE_X : 0);
+        igrid2 += (igrid2 < 0 ? GRID_SIZE_Y : 0);
+        igrid3 += (igrid3 < 0 ? GRID_SIZE_Z : 0);
+        
+        // Spread the charge from this atom onto each grid point.
+         
+        for (int ix = 0; ix < PME_ORDER; ix++) {
+            int xbase = igrid1+ix;
+            xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
+            real4 t = theta1[ix];
+            
+            for (int iy = 0; iy < PME_ORDER; iy++) {
+                int ybase = igrid2+iy;
+                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                ybase = xbase + ybase*GRID_SIZE_Z;
+                real4 u = theta2[iy];
+                
+                for (int iz = 0; iz < PME_ORDER; iz++) {
+                    int zindex = igrid3+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+                    int index = ybase + zindex;
+                    real4 v = theta3[iz];
+
+                    real atomCharge = pos.w;
+                    real atomDipoleX = xscale*labFrameDipole[m*3];
+                    real atomDipoleY = yscale*labFrameDipole[m*3+1];
+                    real atomDipoleZ = zscale*labFrameDipole[m*3+2];
+                    real atomQuadrupoleXX = xscale*xscale*labFrameQuadrupole[m*5];
+                    real atomQuadrupoleXY = 2*xscale*yscale*labFrameQuadrupole[m*5+1];
+                    real atomQuadrupoleXZ = 2*xscale*zscale*labFrameQuadrupole[m*5+2];
+                    real atomQuadrupoleYY = yscale*yscale*labFrameQuadrupole[m*5+3];
+                    real atomQuadrupoleYZ = 2*yscale*zscale*labFrameQuadrupole[m*5+4];
+                    real atomQuadrupoleZZ = -zscale*zscale*(labFrameQuadrupole[m*5]+labFrameQuadrupole[m*5+3]);
                     real term0 = atomCharge*u.x*v.x + atomDipoleY*u.y*v.x + atomDipoleZ*u.x*v.y + atomQuadrupoleYY*u.z*v.x + atomQuadrupoleZZ*u.x*v.z + atomQuadrupoleYZ*u.y*v.y;
                     real term1 = atomDipoleX*u.x*v.x + atomQuadrupoleXY*u.y*v.x + atomQuadrupoleXZ*u.x*v.y;
                     real term2 = atomQuadrupoleXX * u.x * v.x;
-                    result += term0*t.x + term1*t.y + term2*t.z;
-                }
-                if (z1 > gridPoint.z) {
-                    gridIndex1 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z;
-                    gridIndex2 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+gridPoint.z;
-                    firstAtom = pmeAtomRange[gridIndex1];
-                    lastAtom = pmeAtomRange[gridIndex2+1];
-                    for (int i = firstAtom; i < lastAtom; ++i) {
-                        int2 atomData = pmeAtomGridIndex[i];
-                        int atomIndex = atomData.x;
-                        int z = atomData.y;
-                        int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                        if (iz >= GRID_SIZE_Z)
-                            iz -= GRID_SIZE_Z;
-                        real atomCharge = posq[atomIndex].w;
-                        real atomDipoleX = xscale*labFrameDipole[atomIndex*3];
-                        real atomDipoleY = yscale*labFrameDipole[atomIndex*3+1];
-                        real atomDipoleZ = zscale*labFrameDipole[atomIndex*3+2];
-                        real atomQuadrupoleXX = xscale*xscale*labFrameQuadrupole[atomIndex*5];
-                        real atomQuadrupoleXY = 2*xscale*yscale*labFrameQuadrupole[atomIndex*5+1];
-                        real atomQuadrupoleXZ = 2*xscale*zscale*labFrameQuadrupole[atomIndex*5+2];
-                        real atomQuadrupoleYY = yscale*yscale*labFrameQuadrupole[atomIndex*5+3];
-                        real atomQuadrupoleYZ = 2*yscale*zscale*labFrameQuadrupole[atomIndex*5+4];
-                        real atomQuadrupoleZZ = -zscale*zscale*(labFrameQuadrupole[atomIndex*5]+labFrameQuadrupole[atomIndex*5+3]);
-                        real4 t = theta1[atomIndex*PME_ORDER+ix];
-                        real4 u = theta2[atomIndex*PME_ORDER+iy];
-                        real4 v = theta3[atomIndex*PME_ORDER+iz];
-                        real term0 = atomCharge*u.x*v.x + atomDipoleY*u.y*v.x + atomDipoleZ*u.x*v.y + atomQuadrupoleYY*u.z*v.x + atomQuadrupoleZZ*u.x*v.z + atomQuadrupoleYZ*u.y*v.y;
-                        real term1 = atomDipoleX*u.x*v.x + atomQuadrupoleXY*u.y*v.x + atomQuadrupoleXZ*u.x*v.y;
-                        real term2 = atomQuadrupoleXX * u.x * v.x;
-                        result += term0*t.x + term1*t.y + term2*t.z;
-                    }
+                    real add = term0*t.x + term1*t.y + term2*t.z;
+#ifdef USE_DOUBLE_PRECISION
+                    unsigned long long * ulonglong_p = (unsigned long long *) pmeGrid;
+                    atomicAdd(&ulonglong_p[2*index],  static_cast<unsigned long long>((long long) (add*0x100000000)));
+#else
+                    atomicAdd(&pmeGrid[index].x, add);
+#endif
                 }
             }
         }
-        pmeGrid[gridIndex] = make_real2(result, 0);
     }
 }
 
 extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
-        const real* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex, int* __restrict__ pmeAtomRange,
-        const real4* __restrict__ theta1, const real4* __restrict__ theta2, const real4* __restrict__ theta3, real4 invPeriodicBoxSize) {
+        const real* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid, int2* __restrict__ pmeAtomGridIndex,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize) {
     const real xscale = GRID_SIZE_X*invPeriodicBoxSize.x;
     const real yscale = GRID_SIZE_Y*invPeriodicBoxSize.y;
     const real zscale = GRID_SIZE_Z*invPeriodicBoxSize.z;
-    unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-    unsigned int numThreads = gridDim.x*blockDim.x;
-    for (int gridIndex = blockIdx.x*blockDim.x+threadIdx.x; gridIndex < numGridPoints; gridIndex += numThreads) {
-        int3 gridPoint;
-        gridPoint.x = gridIndex/(GRID_SIZE_Y*GRID_SIZE_Z);
-        int remainder = gridIndex-gridPoint.x*GRID_SIZE_Y*GRID_SIZE_Z;
-        gridPoint.y = remainder/GRID_SIZE_Z;
-        gridPoint.z = remainder-gridPoint.y*GRID_SIZE_Z;
-        real2 result = make_real2(0, 0);
-        for (int ix = 0; ix < PME_ORDER; ++ix) {
-            int x = gridPoint.x-ix+(gridPoint.x >= ix ? 0 : GRID_SIZE_X);
-            for (int iy = 0; iy < PME_ORDER; ++iy) {
-                int y = gridPoint.y-iy+(gridPoint.y >= iy ? 0 : GRID_SIZE_Y);
-                int z1 = gridPoint.z-PME_ORDER+1;
-                z1 += (z1 >= 0 ? 0 : GRID_SIZE_Z);
-                int z2 = (z1 < gridPoint.z ? gridPoint.z : GRID_SIZE_Z-1);
-                int gridIndex1 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z1;
-                int gridIndex2 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z2;
-                int firstAtom = pmeAtomRange[gridIndex1];
-                int lastAtom = pmeAtomRange[gridIndex2+1];
-                for (int i = firstAtom; i < lastAtom; ++i) {
-                    int2 atomData = pmeAtomGridIndex[i];
-                    int atomIndex = atomData.x;
-                    int z = atomData.y;
-                    int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                    if (iz >= GRID_SIZE_Z)
-                        iz -= GRID_SIZE_Z;
-                    real inducedDipoleX = xscale*inducedDipole[atomIndex*3];
-                    real inducedDipoleY = yscale*inducedDipole[atomIndex*3+1];
-                    real inducedDipoleZ = zscale*inducedDipole[atomIndex*3+2];
-                    real inducedDipolePolarX = xscale*inducedDipolePolar[atomIndex*3];
-                    real inducedDipolePolarY = yscale*inducedDipolePolar[atomIndex*3+1];
-                    real inducedDipolePolarZ = zscale*inducedDipolePolar[atomIndex*3+2];
-                    real4 t = theta1[atomIndex*PME_ORDER+ix];
-                    real4 u = theta2[atomIndex*PME_ORDER+iy];
-                    real4 v = theta3[atomIndex*PME_ORDER+iz];
+    real array[PME_ORDER*PME_ORDER];
+    real4 theta1[PME_ORDER];
+    real4 theta2[PME_ORDER];
+    real4 theta3[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves cache performance when loading
+    // the grid values.
+    
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        int m = pmeAtomGridIndex[i].x;
+        real4 pos = posq[m];
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+
+        // Since we need the full set of thetas, it's faster to compute them here than load them
+        // from global memory.
+
+        real w = pos.x*invPeriodicBoxSize.x;
+        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        int ifr = (int) fr;
+        w = fr - ifr;
+        int igrid1 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta1, w, array);
+        w = pos.y*invPeriodicBoxSize.y;
+        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid2 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta2, w, array);
+        w = pos.z*invPeriodicBoxSize.z;
+        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid3 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta3, w, array);
+        igrid1 += (igrid1 < 0 ? GRID_SIZE_X : 0);
+        igrid2 += (igrid2 < 0 ? GRID_SIZE_Y : 0);
+        igrid3 += (igrid3 < 0 ? GRID_SIZE_Z : 0);
+        
+        // Spread the charge from this atom onto each grid point.
+         
+        for (int ix = 0; ix < PME_ORDER; ix++) {
+            int xbase = igrid1+ix;
+            xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
+            real4 t = theta1[ix];
+            
+            for (int iy = 0; iy < PME_ORDER; iy++) {
+                int ybase = igrid2+iy;
+                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                ybase = xbase + ybase*GRID_SIZE_Z;
+                real4 u = theta2[iy];
+                
+                for (int iz = 0; iz < PME_ORDER; iz++) {
+                    int zindex = igrid3+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+                    int index = ybase + zindex;
+                    real4 v = theta3[iz];
+
+                    real inducedDipoleX = xscale*inducedDipole[m*3];
+                    real inducedDipoleY = yscale*inducedDipole[m*3+1];
+                    real inducedDipoleZ = zscale*inducedDipole[m*3+2];
+                    real inducedDipolePolarX = xscale*inducedDipolePolar[m*3];
+                    real inducedDipolePolarY = yscale*inducedDipolePolar[m*3+1];
+                    real inducedDipolePolarZ = zscale*inducedDipolePolar[m*3+2];
                     real term01 = inducedDipoleY*u.y*v.x + inducedDipoleZ*u.x*v.y;
                     real term11 = inducedDipoleX*u.x*v.x;
                     real term02 = inducedDipolePolarY*u.y*v.x + inducedDipolePolarZ*u.x*v.y;
                     real term12 = inducedDipolePolarX*u.x*v.x;
-                    result.x += term01*t.x + term11*t.y;
-                    result.y += term02*t.x + term12*t.y;
-                }
-                if (z1 > gridPoint.z) {
-                    gridIndex1 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z;
-                    gridIndex2 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+gridPoint.z;
-                    firstAtom = pmeAtomRange[gridIndex1];
-                    lastAtom = pmeAtomRange[gridIndex2+1];
-                    for (int i = firstAtom; i < lastAtom; ++i) {
-                        int2 atomData = pmeAtomGridIndex[i];
-                        int atomIndex = atomData.x;
-                        int z = atomData.y;
-                        int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
-                        if (iz >= GRID_SIZE_Z)
-                            iz -= GRID_SIZE_Z;
-                        real inducedDipoleX = xscale*inducedDipole[atomIndex*3];
-                        real inducedDipoleY = yscale*inducedDipole[atomIndex*3+1];
-                        real inducedDipoleZ = zscale*inducedDipole[atomIndex*3+2];
-                        real inducedDipolePolarX = xscale*inducedDipolePolar[atomIndex*3];
-                        real inducedDipolePolarY = yscale*inducedDipolePolar[atomIndex*3+1];
-                        real inducedDipolePolarZ = zscale*inducedDipolePolar[atomIndex*3+2];
-                        real4 t = theta1[atomIndex*PME_ORDER+ix];
-                        real4 u = theta2[atomIndex*PME_ORDER+iy];
-                        real4 v = theta3[atomIndex*PME_ORDER+iz];
-                        real term01 = inducedDipoleY*u.y*v.x + inducedDipoleZ*u.x*v.y;
-                        real term11 = inducedDipoleX*u.x*v.x;
-                        real term02 = inducedDipolePolarY*u.y*v.x + inducedDipolePolarZ*u.x*v.y;
-                        real term12 = inducedDipolePolarX*u.x*v.x;
-                        result.x += term01*t.x + term11*t.y;
-                        result.y += term02*t.x + term12*t.y;
-                    }
+                    real add1 = term01*t.x + term11*t.y;
+                    real add2 = term02*t.x + term12*t.y;
+#ifdef USE_DOUBLE_PRECISION
+                    unsigned long long * ulonglong_p = (unsigned long long *) pmeGrid;
+                    atomicAdd(&ulonglong_p[2*index],  static_cast<unsigned long long>((long long) (add1*0x100000000)));
+                    atomicAdd(&ulonglong_p[2*index+1],  static_cast<unsigned long long>((long long) (add2*0x100000000)));
+#else
+                    atomicAdd(&pmeGrid[index].x, add1);
+                    atomicAdd(&pmeGrid[index].y, add2);
+#endif
                 }
             }
         }
-        pmeGrid[gridIndex] = result;
     }
+}
+
+/**
+ * In double precision, we have to use fixed point to accumulate the grid values, so convert them to floating point.
+ */
+extern "C" __global__ void finishSpreadCharge(long long* __restrict__ pmeGrid) {
+    real* floatGrid = (real*) pmeGrid;
+    const unsigned int gridSize = 2*GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+    real scale = 1/(real) 0x100000000;
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
+        floatGrid[index] = scale*pmeGrid[index];
 }
 
 extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, const real* __restrict__ pmeBsplineModuliX,
@@ -372,12 +337,50 @@ extern "C" __global__ void reciprocalConvolution(real2* __restrict__ pmeGrid, co
 }
 
 extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict__ pmeGrid, real* __restrict__ phi,
-        long long* __restrict__ fieldBuffers, long long* __restrict__ fieldPolarBuffers, const int4* __restrict__ igrid, const real4* __restrict__ theta1,
-        const real4* __restrict__ theta2, const real4* __restrict__ theta3, const real* __restrict__ labFrameDipole, real4 invPeriodicBoxSize) {
-    // extract the permanent multipole field at each site
+        long long* __restrict__ fieldBuffers, long long* __restrict__ fieldPolarBuffers,  const real4* __restrict__ posq,
+        const real* __restrict__ labFrameDipole, real4 periodicBoxSize, real4 invPeriodicBoxSize, int2* __restrict__ pmeAtomGridIndex) {
+    real array[PME_ORDER*PME_ORDER];
+    real4 theta1[PME_ORDER];
+    real4 theta2[PME_ORDER];
+    real4 theta3[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves cache performance when loading
+    // the grid values.
+    
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        int m = pmeAtomGridIndex[i].x;
+        real4 pos = posq[m];
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
 
-    for (int m = blockIdx.x*blockDim.x+threadIdx.x; m < NUM_ATOMS; m += blockDim.x*gridDim.x) {
-        int4 gridPoint = igrid[m];
+        // Since we need the full set of thetas, it's faster to compute them here than load them
+        // from global memory.
+
+        real w = pos.x*invPeriodicBoxSize.x;
+        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        int ifr = (int) fr;
+        w = fr - ifr;
+        int igrid1 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta1, w, array);
+        w = pos.y*invPeriodicBoxSize.y;
+        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid2 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta2, w, array);
+        w = pos.z*invPeriodicBoxSize.z;
+        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid3 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta3, w, array);
+        igrid1 += (igrid1 < 0 ? GRID_SIZE_X : 0);
+        igrid2 += (igrid2 < 0 ? GRID_SIZE_Y : 0);
+        igrid3 += (igrid3 < 0 ? GRID_SIZE_Z : 0);
+
+        // Compute the potential from this grid point.
+
         real tuv000 = 0;
         real tuv001 = 0;
         real tuv010 = 0;
@@ -399,8 +402,8 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
         real tuv012 = 0;
         real tuv111 = 0;
         for (int iz = 0; iz < PME_ORDER; iz++) {
-            int k = gridPoint.z+iz-(gridPoint.z+iz >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-            real4 v = theta3[m*PME_ORDER+iz];
+            int k = igrid3+iz-(igrid3+iz >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+            real4 v = theta3[iz];
             real tu00 = 0;
             real tu10 = 0;
             real tu01 = 0;
@@ -412,14 +415,14 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
             real tu12 = 0;
             real tu03 = 0;
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int j = gridPoint.y+iy-(gridPoint.y+iy >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                real4 u = theta2[m*PME_ORDER+iy];
+                int j = igrid2+iy-(igrid2+iy >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                real4 u = theta2[iy];
                 real4 t = make_real4(0, 0, 0, 0);
                 for (int ix = 0; ix < PME_ORDER; ix++) {
-                    int i = gridPoint.x+ix-(gridPoint.x+ix >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+                    int i = igrid1+ix-(igrid1+ix >= GRID_SIZE_X ? GRID_SIZE_X : 0);
                     int gridIndex = i*GRID_SIZE_Y*GRID_SIZE_Z + j*GRID_SIZE_Z + k;
                     real tq = pmeGrid[gridIndex].x;
-                    real4 tadd = theta1[m*PME_ORDER+ix];
+                    real4 tadd = theta1[ix];
                     t.x += tq*tadd.x;
                     t.y += tq*tadd.y;
                     t.z += tq*tadd.z;
@@ -491,12 +494,50 @@ extern "C" __global__ void computeFixedPotentialFromGrid(const real2* __restrict
 }
 
 extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restrict__ pmeGrid, real* __restrict__ phid,
-        real* __restrict__ phip, real* __restrict__ phidp, const int4* __restrict__ igrid, const real4* __restrict__ theta1,
-        const real4* __restrict__ theta2, const real4* __restrict__ theta3, real4 invPeriodicBoxSize) {
-    // extract the induced dipole field at each site
+        real* __restrict__ phip, real* __restrict__ phidp, const real4* __restrict__ posq,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, int2* __restrict__ pmeAtomGridIndex) {
+    real array[PME_ORDER*PME_ORDER];
+    real4 theta1[PME_ORDER];
+    real4 theta2[PME_ORDER];
+    real4 theta3[PME_ORDER];
+    
+    // Process the atoms in spatially sorted order.  This improves cache performance when loading
+    // the grid values.
+    
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        int m = pmeAtomGridIndex[i].x;
+        real4 pos = posq[m];
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
 
-    for (int m = blockIdx.x*blockDim.x+threadIdx.x; m < NUM_ATOMS; m += blockDim.x*gridDim.x) {
-        int4 gridPoint = igrid[m];
+        // Since we need the full set of thetas, it's faster to compute them here than load them
+        // from global memory.
+
+        real w = pos.x*invPeriodicBoxSize.x;
+        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        int ifr = (int) fr;
+        w = fr - ifr;
+        int igrid1 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta1, w, array);
+        w = pos.y*invPeriodicBoxSize.y;
+        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid2 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta2, w, array);
+        w = pos.z*invPeriodicBoxSize.z;
+        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        ifr = (int) fr;
+        w = fr - ifr;
+        int igrid3 = ifr-PME_ORDER+1;
+        computeBSplinePoint(theta3, w, array);
+        igrid1 += (igrid1 < 0 ? GRID_SIZE_X : 0);
+        igrid2 += (igrid2 < 0 ? GRID_SIZE_Y : 0);
+        igrid3 += (igrid3 < 0 ? GRID_SIZE_Z : 0);
+
+        // Compute the potential from this grid point.
+
         real tuv100_1 = 0;
         real tuv010_1 = 0;
         real tuv001_1 = 0;
@@ -536,8 +577,8 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
         real tuv012 = 0;
         real tuv111 = 0;
         for (int iz = 0; iz < PME_ORDER; iz++) {
-            int k = gridPoint.z+iz-(gridPoint.z+iz >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-            real4 v = theta3[m*PME_ORDER+iz];
+            int k = igrid3+iz-(igrid3+iz >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+            real4 v = theta3[iz];
             real tu00_1 = 0;
             real tu01_1 = 0;
             real tu10_1 = 0;
@@ -561,8 +602,8 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
             real tu12 = 0;
             real tu03 = 0;
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int j = gridPoint.y+iy-(gridPoint.y+iy >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                real4 u = theta2[m*PME_ORDER+iy];
+                int j = igrid2+iy-(igrid2+iy >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                real4 u = theta2[iy];
                 real t0_1 = 0;
                 real t1_1 = 0;
                 real t2_1 = 0;
@@ -571,10 +612,10 @@ extern "C" __global__ void computeInducedPotentialFromGrid(const real2* __restri
                 real t2_2 = 0;
                 real t3 = 0;
                 for (int ix = 0; ix < PME_ORDER; ix++) {
-                    int i = gridPoint.x+ix-(gridPoint.x+ix >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+                    int i = igrid1+ix-(igrid1+ix >= GRID_SIZE_X ? GRID_SIZE_X : 0);
                     int gridIndex = i*GRID_SIZE_Y*GRID_SIZE_Z + j*GRID_SIZE_Z + k;
                     real2 tq = pmeGrid[gridIndex];
-                    real4 tadd = theta1[m*PME_ORDER+ix];
+                    real4 tadd = theta1[ix];
                     t0_1 += tq.x*tadd.x;
                     t1_1 += tq.x*tadd.y;
                     t2_1 += tq.x*tadd.z;
