@@ -309,6 +309,29 @@ CUmodule CudaContext::createModule(const string source, const char* optimization
     return createModule(source, map<string, string>(), optimizationFlags);
 }
 
+#ifdef WIN32
+#include <Windows.h>
+static bool compileInWindows(const string &command) {
+    // COMSPEC is an env variable pointing to full dir of cmd.exe
+    // it always defined on pretty much all Windows OSes
+    string fullcommand = getenv("COMSPEC") + string(" /C ") + command;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory( &si, sizeof(si) );
+    si.cb = sizeof(si);
+    ZeroMemory( &pi, sizeof(pi) );
+    vector<char> args(std::max(1000, (int) fullcommand.size()+1));
+    strcpy(&args[0], fullcommand.c_str());
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    if (!CreateProcess(NULL, &args[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+        return -1;
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    return 0;
+}
+#endif
+
 CUmodule CudaContext::createModule(const string source, const map<string, string>& defines, const char* optimizationFlags) {
     string options = (optimizationFlags == NULL ? defaultOptimizationOptions : string(optimizationFlags));
     stringstream src;
@@ -369,10 +392,11 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     string bits = intToString(8*sizeof(void*));
 #ifdef WIN32
     string command = ""+compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+    int res = compileInWindows(command);
 #else
     string command = "\""+compiler+"\" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
-#endif
     int res = std::system(command.c_str());
+#endif
     try {
         if (res != 0) {
             // Load the error log.
