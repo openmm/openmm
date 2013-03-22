@@ -74,7 +74,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         SerializationNode& positionsNode = node.createChildNode("Positions");
         vector<Vec3> statePositions = s.getPositions();
         for (int i=0; i<statePositions.size();i++) {
-    	   positionsNode.createChildNode("Position").setDoubleProperty("x", statePositions[i][0]).setDoubleProperty("y", statePositions[i][1]).setDoubleProperty("z", statePositions[i][2]);
+           positionsNode.createChildNode("Position").setDoubleProperty("x", statePositions[i][0]).setDoubleProperty("y", statePositions[i][1]).setDoubleProperty("z", statePositions[i][2]);
         }
     } catch (const OpenMMException &) {
         // do nothing
@@ -84,7 +84,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         SerializationNode& velocitiesNode = node.createChildNode("Velocities");
         vector<Vec3> stateVelocities = s.getVelocities();
         for (int i=0; i<stateVelocities.size();i++) {
-    	   velocitiesNode.createChildNode("Velocity").setDoubleProperty("x", stateVelocities[i][0]).setDoubleProperty("y", stateVelocities[i][1]).setDoubleProperty("z", stateVelocities[i][2]);
+           velocitiesNode.createChildNode("Velocity").setDoubleProperty("x", stateVelocities[i][0]).setDoubleProperty("y", stateVelocities[i][1]).setDoubleProperty("z", stateVelocities[i][2]);
         }
     } catch (const OpenMMException &) {
         // do nothing
@@ -94,7 +94,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
         SerializationNode& forcesNode = node.createChildNode("Forces");
         vector<Vec3> stateForces = s.getForces();
         for (int i=0; i<stateForces.size();i++) {
-        	forcesNode.createChildNode("Force").setDoubleProperty("x", stateForces[i][0]).setDoubleProperty("y", stateForces[i][1]).setDoubleProperty("z", stateForces[i][2]);
+            forcesNode.createChildNode("Force").setDoubleProperty("x", stateForces[i][0]).setDoubleProperty("y", stateForces[i][1]).setDoubleProperty("z", stateForces[i][2]);
         }
     } catch (const OpenMMException &) {
         // do nothing
@@ -198,5 +198,5 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
     builder.setPeriodicBoxVectors(outAVec, outBVec, outCVec);
     State *s = new State();
     *s = builder.getState();
-	return s;
+    return s;
 }

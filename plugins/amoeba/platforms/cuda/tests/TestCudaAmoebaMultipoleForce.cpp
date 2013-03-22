@@ -1350,7 +1350,7 @@ static void setupAndGetForcesEnergyMultipoleLargeWater( AmoebaMultipoleForce::No
     system.addForce(amoebaBondForce);
 
     static std::vector<Vec3> positions; // Static to work around bug in Visual Studio that makes compilation very very slow.
-	positions.resize(numberOfParticles);
+    positions.resize(numberOfParticles);
 
     positions[0]             = Vec3(   8.0394300e-01,   5.8680350e-01,    4.9277700e-02 );
     positions[1]             = Vec3(   7.5814940e-01,   5.0226660e-01,    4.0375900e-02 );
@@ -2040,7 +2040,7 @@ static void testPMEMutualPolarizationLargeWater( FILE* log ) {
                                                 cutoff, inputPmeGridDimension, testName,
                                                 forces, energy, outputMultipoleMoments, inputGrid, outputGridPotential, log );
     static std::vector<Vec3> expectedForces; // Static to work around bug in Visual Studio that makes compilation very very slow.
-	expectedForces.resize(numberOfParticles);
+    expectedForces.resize(numberOfParticles);
 
     double expectedEnergy     =  -1.3268930e+04;
 

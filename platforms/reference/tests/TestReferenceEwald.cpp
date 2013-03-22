@@ -88,14 +88,14 @@ void testEwaldExact() {
 //   The potential energy of an ion in a crystal is 
 //   E = - (M*e^2/ 4*pi*epsilon0*a0),
 //   where 
-//   M			:	Madelung constant (dimensionless, for FCC cells such as NaCl it is 1.7476)
-//   e			:	1.6022 × 10−19 C
-//   4*pi*epsilon0	: 	1.112 × 10−10 C²/(J m)
-//   a0			:	0.282 x 10-9 m (perfect cell)
+//   M            :    Madelung constant (dimensionless, for FCC cells such as NaCl it is 1.7476)
+//   e            :    1.6022 × 10−19 C
+//   4*pi*epsilon0:     1.112 × 10−10 C²/(J m)
+//   a0           :    0.282 x 10-9 m (perfect cell)
 // 
 //   E is then the energy per pair of ions, so for our case
 //   E has to be divided by 2 (per ion), multiplied by N(avogadro), multiplied by number of particles, and divided by 1000 for kJ
-   	double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
+    double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
     //cout << "exact\t\t: " << exactEnergy << endl;
     //cout << "calc\t\t: " << state.getPotentialEnergy() << endl;
     ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*EWALD_TOL);

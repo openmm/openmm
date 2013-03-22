@@ -170,7 +170,7 @@ void CpuGBVI::computeBornRadiiUsingQuinticSpline( RealOpenMM atomicRadius3, Real
 
     //  (A - V)*dS/dV - S(V)  = (A-V)*d(qSpline) + (A-V)*U/(A-V)**2 - qSpline - U/(A-V) 
 
-	//                        = (A-V)*d(qSpline) - qSpline        L < V < A**(-3)
+    //                        = (A-V)*d(qSpline) - qSpline        L < V < A**(-3)
 
     //  (A - V)*dS/dV - S(V)  = (A-V)*U*/(A-V)**2 - U/(A-V) = 0   U < V
 

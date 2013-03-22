@@ -95,8 +95,8 @@ ReferenceBondIxn::~ReferenceBondIxn( ){
 
    Do computation in double?
 
-   @param  vector1				first vector
-   @param  vector2			   second vector
+   @param  vector1            first vector
+   @param  vector2            second vector
    @param  hasREntry          if set, then vector1[ReferenceForce::RIndex] = norm of vector
                               defaults to 0 (i.e., R unavailable)
 
@@ -175,8 +175,8 @@ RealOpenMM ReferenceBondIxn::getNormedDotProduct( RealOpenMM* vector1, RealOpenM
 
    Get angle between two vectors
 
-   @param  vector1				first vector
-   @param  vector2			   second vector
+   @param  vector1            first vector
+   @param  vector2            second vector
    @param  outputDotProduct   output cosine of angle between two vectors (optional)
    @param  hasREntry          if set, then vector1[ReferenceForce::RIndex] = norm of vector
                               defaults to 0 -> R unavailable
@@ -228,9 +228,9 @@ RealOpenMM ReferenceBondIxn::getAngleBetweenTwoVectors( RealOpenMM* vector1, Rea
 
    Get dihedral angle between three vectors
 
-   @param  vector1				first vector
-   @param  vector2			   second vector
-   @param  vector3			   third vector
+   @param  vector1            first vector
+   @param  vector2            second vector
+   @param  vector3            third vector
    @param  outputCrossProduct output cross product vectors
    @param  cosineOfAngle      cosine of angle (output)
    @param  signVector         vector to test sign (optional)

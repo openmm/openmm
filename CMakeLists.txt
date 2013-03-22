@@ -167,7 +167,7 @@ SET(OPENMM_SVN_REVISION "${OPENMM_SVN_REVISION}" CACHE STRING "subversion reposi
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
                 -DOPENMM_MAJOR_VERSION=${OPENMM_MAJOR_VERSION}
                 -DOPENMM_MINOR_VERSION=${OPENMM_MINOR_VERSION}
-		-DOPENMM_BUILD_VERSION=${OPENMM_BUILD_VERSION})
+                -DOPENMM_BUILD_VERSION=${OPENMM_BUILD_VERSION})
 
 # CMake quotes automatically when building Visual Studio projects but we need
 # to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
@@ -251,7 +251,7 @@ SET(API_REL_INCLUDE_FILES)   # start these out empty
 SET(API_ABS_INCLUDE_FILES)
 
 FOREACH(dir ${API_INCLUDE_DIRS})
-    FILE(GLOB fullpaths ${dir}/*.h)	# returns full pathnames
+    FILE(GLOB fullpaths ${dir}/*.h) # returns full pathnames
     SET(API_ABS_INCLUDE_FILES ${API_ABS_INCLUDE_FILES} ${fullpaths})
 
     FOREACH(pathname ${fullpaths})

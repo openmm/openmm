@@ -229,7 +229,7 @@ fftpack_exec_3d          (fftpack_t                  setup,
  *  Destroy setup and release all allocated memory.
  *
  *  \param setup Setup returned from fftpack_init_1d(), or one
- *		 of the other initializers.
+ *         of the other initializers.
  *
  */
 void

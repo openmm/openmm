@@ -86,18 +86,18 @@ CudaPlatform::CudaPlatform() {
     setPropertyDefaultValue(CudaPrecision(), "single");
 #ifdef _MSC_VER
     char* bindir = getenv("CUDA_BIN_PATH");
-	string nvcc = (bindir == NULL ? "nvcc.exe" : string(bindir)+"\\nvcc.exe");
+    string nvcc = (bindir == NULL ? "nvcc.exe" : string(bindir)+"\\nvcc.exe");
     int length = GetShortPathName(nvcc.c_str(), NULL, 0);
-	if (length > 0) {
-		vector<char> shortName(length);
-	    GetShortPathName(nvcc.c_str(), &shortName[0], length);
-		nvcc = string(&shortName[0]);
-	}
+    if (length > 0) {
+        vector<char> shortName(length);
+        GetShortPathName(nvcc.c_str(), &shortName[0], length);
+        nvcc = string(&shortName[0]);
+    }
     setPropertyDefaultValue(CudaCompiler(), nvcc);
     setPropertyDefaultValue(CudaTempDirectory(), string(getenv("TEMP")));
 #else
     char* compiler = getenv("OPENMM_CUDA_COMPILER");
-	string nvcc = (compiler == NULL ? "/usr/local/cuda/bin/nvcc" : string(compiler));
+    string nvcc = (compiler == NULL ? "/usr/local/cuda/bin/nvcc" : string(compiler));
     setPropertyDefaultValue(CudaCompiler(), nvcc);
     char* tmpdir = getenv("TMPDIR");
     string tmp = (tmpdir == NULL ? string(P_tmpdir) : string(tmpdir));

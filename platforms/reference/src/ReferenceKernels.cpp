@@ -1756,10 +1756,10 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
         }
         RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
         dynamics = new ReferenceStochasticDynamics(
-				context.getSystem().getNumParticles(), 
-				static_cast<RealOpenMM>(stepSize), 
-				static_cast<RealOpenMM>(tau), 
-				static_cast<RealOpenMM>(temperature) );
+                context.getSystem().getNumParticles(), 
+                static_cast<RealOpenMM>(stepSize), 
+                static_cast<RealOpenMM>(tau), 
+                static_cast<RealOpenMM>(temperature) );
         vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
         findAnglesForCCMA(context.getSystem(), angles);
         constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
@@ -1823,10 +1823,10 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
             delete constraints;
         }
         dynamics = new ReferenceBrownianDynamics(
-				context.getSystem().getNumParticles(), 
-				static_cast<RealOpenMM>(stepSize), 
-				static_cast<RealOpenMM>(friction), 
-				static_cast<RealOpenMM>(temperature) );
+                context.getSystem().getNumParticles(), 
+                static_cast<RealOpenMM>(stepSize), 
+                static_cast<RealOpenMM>(friction), 
+                static_cast<RealOpenMM>(temperature) );
         vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
         findAnglesForCCMA(context.getSystem(), angles);
         constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());

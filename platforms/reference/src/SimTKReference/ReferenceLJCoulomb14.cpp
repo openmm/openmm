@@ -74,8 +74,8 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
    @param atomCoordinates  atom coordinates
    @param parameters       three parameters:
                                         parameters[0]= (c12/c6)**1/6  (sigma)
-										parameters[1]= c6*c6/c12      (4*epsilon)
-										parameters[2]= epsfac*q1*q2
+                                        parameters[1]= c6*c6/c12      (4*epsilon)
+                                        parameters[2]= epsfac*q1*q2
    @param forces           force array (forces added to current values)
    @param totalEnergy      if not null, the energy will be added to this
 

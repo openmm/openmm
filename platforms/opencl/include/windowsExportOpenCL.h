@@ -30,9 +30,9 @@
     #if defined(OPENMM_OPENCL_BUILDING_SHARED_LIBRARY)
         #define OPENMM_EXPORT_OPENCL __declspec(dllexport)
     #elif defined(OPENMM_OPENCL_BUILDING_STATIC_LIBRARY) || defined(OPENMM_OPENCL_USE_STATIC_LIBRARIES)
-		#define OPENMM_EXPORT_OPENCL
+        #define OPENMM_EXPORT_OPENCL
     #else
-		#define OPENMM_EXPORT_OPENCL __declspec(dllimport)   // i.e., a client of a shared library
+        #define OPENMM_EXPORT_OPENCL __declspec(dllimport)   // i.e., a client of a shared library
     #endif
 #else
     #define OPENMM_EXPORT_OPENCL // Linux, Mac

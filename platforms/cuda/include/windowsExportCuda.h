@@ -30,9 +30,9 @@
     #if defined(OPENMM_CUDA_BUILDING_SHARED_LIBRARY)
         #define OPENMM_EXPORT_CUDA __declspec(dllexport)
     #elif defined(OPENMM_CUDA_BUILDING_STATIC_LIBRARY) || defined(OPENMM_CUDA_USE_STATIC_LIBRARIES)
-		#define OPENMM_EXPORT_CUDA
+        #define OPENMM_EXPORT_CUDA
     #else
-		#define OPENMM_EXPORT_CUDA __declspec(dllimport)   // i.e., a client of a shared library
+        #define OPENMM_EXPORT_CUDA __declspec(dllimport)   // i.e., a client of a shared library
     #endif
 #else
     #define OPENMM_EXPORT_CUDA // Linux, Mac

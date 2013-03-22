@@ -45,7 +45,7 @@ if (result != CUDA_SUCCESS) { \
     #include <Windows.h>
     static long long getTime() {
         FILETIME ft;
-        GetSystemTimeAsFileTime(&ft);	 // 100-nanoseconds since 1-1-1601
+        GetSystemTimeAsFileTime(&ft); // 100-nanoseconds since 1-1-1601
         ULARGE_INTEGER result;
         result.LowPart = ft.dwLowDateTime;
         result.HighPart = ft.dwHighDateTime;

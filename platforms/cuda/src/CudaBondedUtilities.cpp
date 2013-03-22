@@ -79,7 +79,7 @@ void CudaBondedUtilities::initialize(const System& system) {
         int startAtom = 0;
         while (startAtom < numAtoms) {
             int width = min(numAtoms-startAtom, 4);
-			int paddedWidth = (width == 3 ? 4 : width);
+            int paddedWidth = (width == 3 ? 4 : width);
             vector<unsigned int> indexVec(paddedWidth*numBonds);
             for (int bond = 0; bond < numBonds; bond++) {
                 for (int atom = 0; atom < width; atom++)

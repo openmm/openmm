@@ -165,31 +165,31 @@ gridEvaluateEnergy(real2* __restrict__ halfcomplex_pmeGrid, real* __restrict__ e
         int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z);
         int ky = remainder/(GRID_SIZE_Z);
         int kz = remainder-ky*(GRID_SIZE_Z);
-    	int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
-    	int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
-    	int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
-    	real mhx = mx*invPeriodicBoxSize.x;
-    	real mhy = my*invPeriodicBoxSize.y;
-    	real mhz = mz*invPeriodicBoxSize.z;
-    	real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
-    	real bx = pmeBsplineModuliX[kx];
-    	real by = pmeBsplineModuliY[ky];
-    	real bz = pmeBsplineModuliZ[kz];
-    	real denom = m2*bx*by*bz;
-    	real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+        int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
+        int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
+        int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
+        real mhx = mx*invPeriodicBoxSize.x;
+        real mhy = my*invPeriodicBoxSize.y;
+        real mhz = mz*invPeriodicBoxSize.z;
+        real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        real bx = pmeBsplineModuliX[kx];
+        real by = pmeBsplineModuliY[ky];
+        real bz = pmeBsplineModuliZ[kz];
+        real denom = m2*bx*by*bz;
+        real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
 
-    	if(kz >= (GRID_SIZE_Z/2+1)) {
-        	kx = ((kx == 0) ? kx : GRID_SIZE_X-kx);
-        	ky = ((ky == 0) ? ky : GRID_SIZE_Y-ky);
-        	kz = GRID_SIZE_Z-kz;
+        if (kz >= (GRID_SIZE_Z/2+1)) {
+            kx = ((kx == 0) ? kx : GRID_SIZE_X-kx);
+            ky = ((ky == 0) ? ky : GRID_SIZE_Y-ky);
+            kz = GRID_SIZE_Z-kz;
         } 
-    	int indexInHalfComplexGrid = kz + ky*(GRID_SIZE_Z/2+1)+kx*(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
-    	real2 grid = halfcomplex_pmeGrid[indexInHalfComplexGrid];
-    	if (kx != 0 || ky != 0 || kz != 0) {
-        	energy += eterm*(grid.x*grid.x + grid.y*grid.y);
+        int indexInHalfComplexGrid = kz + ky*(GRID_SIZE_Z/2+1)+kx*(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
+        real2 grid = halfcomplex_pmeGrid[indexInHalfComplexGrid];
+        if (kx != 0 || ky != 0 || kz != 0) {
+            energy += eterm*(grid.x*grid.x + grid.y*grid.y);
         }
     }
-	energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
 }
 
 extern "C" __global__

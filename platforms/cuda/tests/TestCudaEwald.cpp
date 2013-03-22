@@ -58,10 +58,10 @@ void testEwaldPME(bool includeExceptions) {
 
 //      Use amorphous NaCl system for the tests
 
-    const int numParticles 	= 894;
-    const double cutoff 	= 1.2;
-    const double boxSize 	= 3.00646;
-    double tol 				= 1e-5;
+    const int numParticles = 894;
+    const double cutoff = 1.2;
+    const double boxSize = 3.00646;
+    double tol = 1e-5;
 
     ReferencePlatform reference;
     System system;

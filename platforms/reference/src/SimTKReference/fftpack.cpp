@@ -669,8 +669,8 @@ fftpack_transpose_2d(t_complex *          in_data,
                      int                  nx,
                      int                  ny)
 {
-	t_complex *  src;
-	int          i,j;
+    t_complex *  src;
+    int          i,j;
 
     if(nx<2 || ny<2)
     {
@@ -682,45 +682,45 @@ fftpack_transpose_2d(t_complex *          in_data,
     }
 
     if(in_data == out_data)
-	{
-		src = (t_complex *)malloc(sizeof(t_complex)*nx*ny);
-		memcpy(src,in_data,sizeof(t_complex)*nx*ny);
-	}
-	else
-	{
-		src = in_data;
-	}
+    {
+        src = (t_complex *)malloc(sizeof(t_complex)*nx*ny);
+        memcpy(src,in_data,sizeof(t_complex)*nx*ny);
+    }
+    else
+    {
+        src = in_data;
+    }
 
-	for(i=0;i<nx;i++)
-	{
-		for(j=0;j<ny;j++)
-		{
-			out_data[j*nx+i].re = src[i*ny+j].re;
-			out_data[j*nx+i].im = src[i*ny+j].im;
-		}
-	}
+    for(i=0;i<nx;i++)
+    {
+        for(j=0;j<ny;j++)
+        {
+            out_data[j*nx+i].re = src[i*ny+j].re;
+            out_data[j*nx+i].im = src[i*ny+j].im;
+        }
+    }
 
-	if(src != in_data)
-	{
-		free(src);
-	}
-	return 0;
+    if(src != in_data)
+    {
+        free(src);
+    }
+    return 0;
 }
 
 
 
 static int
 fftpack_transpose_2d_nelem(t_complex *          in_data,
-						   t_complex *          out_data,
-						   int                  nx,
-						   int                  ny,
+                           t_complex *          out_data,
+                           int                  nx,
+                           int                  ny,
                            int                  nelem)
 {
-	t_complex *   src;
-	int           ncopy;
-	int           i,j;
+    t_complex *   src;
+    int           ncopy;
+    int           i,j;
 
-	ncopy = nelem*sizeof(t_complex);
+    ncopy = nelem*sizeof(t_complex);
 
     if(nx<2 || ny<2)
     {
@@ -732,28 +732,28 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
     }
 
     if(in_data == out_data)
-	{
-		src = (t_complex *)malloc(nx*ny*ncopy);
-		memcpy(src,in_data,nx*ny*ncopy);
-	}
-	else
-	{
-		src = in_data;
-	}
+    {
+        src = (t_complex *)malloc(nx*ny*ncopy);
+        memcpy(src,in_data,nx*ny*ncopy);
+    }
+    else
+    {
+        src = in_data;
+    }
 
-	for(i=0;i<nx;i++)
-	{
-		for(j=0;j<ny;j++)
-		{
-			memcpy(out_data + (j*nx+i)*nelem , src + (i*ny+j)*nelem , ncopy);
-		}
-	}
+    for(i=0;i<nx;i++)
+    {
+        for(j=0;j<ny;j++)
+        {
+            memcpy(out_data + (j*nx+i)*nelem , src + (i*ny+j)*nelem , ncopy);
+        }
+    }
 
-	if(src != in_data)
-	{
-		free(src);
-	}
-	return 0;
+    if(src != in_data)
+    {
+        free(src);
+    }
+    return 0;
 }
 
 
@@ -877,7 +877,7 @@ fftpack_init_3d(fftpack_t *        pfft,
 
     *pfft = fft;
 
-	return 0;
+    return 0;
 };
 
 

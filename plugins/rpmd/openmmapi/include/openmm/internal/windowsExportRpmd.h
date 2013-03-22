@@ -30,9 +30,9 @@
     #if defined(OPENMM_RPMD_BUILDING_SHARED_LIBRARY)
         #define OPENMM_EXPORT_RPMD __declspec(dllexport)
     #elif defined(OPENMM_RPMD_BUILDING_STATIC_LIBRARY) || defined(OPENMM_RPMD_USE_STATIC_LIBRARIES)
-		#define OPENMM_EXPORT_RPMD
+        #define OPENMM_EXPORT_RPMD
     #else
-		#define OPENMM_EXPORT_RPMD __declspec(dllimport)   // i.e., a client of a shared library
+        #define OPENMM_EXPORT_RPMD __declspec(dllimport)   // i.e., a client of a shared library
     #endif
 #else
     #define OPENMM_EXPORT_RPMD // Linux, Mac

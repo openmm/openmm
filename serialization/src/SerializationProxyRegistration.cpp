@@ -111,7 +111,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
-	SerializationProxy::registerProxy(typeid(State), new StateProxy());
-	SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());
-	SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(State), new StateProxy());
+    SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
 }

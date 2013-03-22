@@ -933,7 +933,7 @@ void CudaContext::reorderAtomsImpl(bool enforcePeriodic) {
     Real4 padding = {0, 0, 0, 0};
     vector<Real4> oldPosq(paddedNumAtoms, padding);
     vector<Real4> oldPosqCorrection(paddedNumAtoms, padding);
-	Mixed4 paddingMixed = {0, 0, 0, 0};
+    Mixed4 paddingMixed = {0, 0, 0, 0};
     vector<Mixed4> oldVelm(paddedNumAtoms, paddingMixed);
     posq->download(oldPosq);
     velm->download(oldVelm);

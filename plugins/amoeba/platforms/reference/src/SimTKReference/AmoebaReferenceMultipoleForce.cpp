@@ -1686,7 +1686,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPotentialForPart
 
     getPeriodicDelta( deltaR );
 
-	 RealOpenMM r2            = deltaR.dot( deltaR );
+    RealOpenMM r2            = deltaR.dot( deltaR );
     RealOpenMM r             = SQRT( r2 );
 
     RealOpenMM rr1           = 1.0/r;
@@ -3777,7 +3777,7 @@ RealOpenMM AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateKirkwoodED
     RealOpenMM yr         = deltaR[1];
     RealOpenMM zr         = deltaR[2];
 
-	 r                     = SQRT(r2);
+    r                     = SQRT(r2);
     rr1                   = 1.0/r;
     rr3                   = rr1/r2;
     rr5                   = 3.0*rr3/r2;

@@ -53,9 +53,9 @@ void* LangevinIntegratorProxy::deserialize(const SerializationNode& node) const 
     if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
         throw OpenMMException("Unsupported version number");
     LangevinIntegrator *integrator = new LangevinIntegrator(node.getDoubleProperty("temperature"),
-															node.getDoubleProperty("friction"),
-		                                                    node.getDoubleProperty("stepSizeInPs"));
+                                                            node.getDoubleProperty("friction"),
+                                                            node.getDoubleProperty("stepSizeInPs"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-	return integrator;
+    return integrator;
 }

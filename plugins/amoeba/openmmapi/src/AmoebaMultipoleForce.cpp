@@ -69,19 +69,19 @@ void AmoebaMultipoleForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-double AmoebaMultipoleForce::getAEwald() const {		 
-    return aewald;		 
-}		 
-		 
-void AmoebaMultipoleForce::setAEwald(double inputAewald ) {			 
-    aewald = inputAewald;		 
-}		 
+double AmoebaMultipoleForce::getAEwald() const { 
+    return aewald; 
+} 
  
-int AmoebaMultipoleForce::getPmeBSplineOrder( void ) const {		 
-    return pmeBSplineOrder;		 
-}		 
-		 
-void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension ) const {		 
+void AmoebaMultipoleForce::setAEwald(double inputAewald ) { 
+    aewald = inputAewald; 
+} 
+ 
+int AmoebaMultipoleForce::getPmeBSplineOrder( void ) const { 
+    return pmeBSplineOrder; 
+} 
+ 
+void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension ) const { 
     if( gridDimension.size() < 3 ){
         gridDimension.resize(3);
     }
@@ -93,15 +93,15 @@ void AmoebaMultipoleForce::getPmeGridDimensions( std::vector<int>& gridDimension
         gridDimension[0] = gridDimension[1] = gridDimension[2] = 0;
     }
     return;
-}		 
-		 
+} 
+ 
 void AmoebaMultipoleForce::setPmeGridDimensions( const std::vector<int>& gridDimension ) {
     pmeGridDimension.resize(3);
     pmeGridDimension[0] = gridDimension[0];
     pmeGridDimension[1] = gridDimension[1];
     pmeGridDimension[2] = gridDimension[2];
     return;
-}		 
+} 
 
 int AmoebaMultipoleForce::getMutualInducedMaxIterations( void ) const {
     return mutualInducedMaxIterations;

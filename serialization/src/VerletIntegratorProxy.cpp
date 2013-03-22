@@ -53,5 +53,5 @@ void* VerletIntegratorProxy::deserialize(const SerializationNode& node) const {
     double constraintTol = node.getDoubleProperty("constraintTolerance");
     VerletIntegrator *integrator = new VerletIntegrator(stepSize);
     integrator->setConstraintTolerance(constraintTol);
-	return integrator;
+    return integrator;
 }

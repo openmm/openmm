@@ -30,9 +30,9 @@
     #if defined(OPENMM_AMOEBA_SERIALIZATION_BUILDING_SHARED_LIBRARY)
         #define OPENMM_EXPORT_AMOEBA_SERIALIZATION __declspec(dllexport)
     #elif defined(OPENMM_AMOEBA_SERIALIZATION_BUILDING_STATIC_LIBRARY) || defined(OPENMM_AMOEBA_SERIALIZATION_USE_STATIC_LIBRARIES)
-		#define OPENMM_EXPORT_AMOEBA_SERIALIZATION
+        #define OPENMM_EXPORT_AMOEBA_SERIALIZATION
     #else
-		#define OPENMM_EXPORT_AMOEBA_SERIALIZATION __declspec(dllimport)   // i.e., a client of a shared library
+        #define OPENMM_EXPORT_AMOEBA_SERIALIZATION __declspec(dllimport)   // i.e., a client of a shared library
     #endif
 #else
     #define OPENMM_EXPORT_AMOEBA_SERIALIZATION // Linux, Mac
