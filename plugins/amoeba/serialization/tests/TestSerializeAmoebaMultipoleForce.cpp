@@ -40,6 +40,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" void registerAmoebaSerializationProxies();
+
 static void getCovalentTypes( std::vector<std::string>& covalentTypes ){
 
     covalentTypes.push_back( "Covalent12" );
@@ -186,6 +188,7 @@ void testSerialization() {
 
 int main() {
     try {
+        registerAmoebaSerializationProxies();
         testSerialization();
     }
     catch(const exception& e) {

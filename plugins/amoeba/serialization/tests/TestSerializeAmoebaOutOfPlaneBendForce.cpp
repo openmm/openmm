@@ -39,6 +39,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" void registerAmoebaSerializationProxies();
+
 void testSerialization() {
     // Create a Force.
 
@@ -84,6 +86,7 @@ void testSerialization() {
 
 int main() {
     try {
+        registerAmoebaSerializationProxies();
         testSerialization();
     }
     catch(const exception& e) {

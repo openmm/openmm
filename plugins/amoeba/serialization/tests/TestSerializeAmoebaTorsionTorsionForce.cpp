@@ -40,6 +40,8 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" void registerAmoebaSerializationProxies();
+
 static void loadTorsionTorsionGrid( std::vector< std::vector< std::vector<double> > >& gridVector ){
  
     static const int gridSize = 25;
@@ -133,6 +135,7 @@ void testSerialization() {
 
 int main() {
     try {
+        registerAmoebaSerializationProxies();
         testSerialization();
     }
     catch(const exception& e) {
