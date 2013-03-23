@@ -63,9 +63,9 @@ __kernel void applySettle(int numClusters, mixed tol, __global const real4* rest
         mixed yaksYd = zaksZd*xaksXd - xaksZd*zaksXd;
         mixed zaksYd = xaksZd*yaksXd - yaksZd*xaksXd;
 
-        mixed axlng = SQRT(xaksXd*xaksXd + yaksXd*yaksXd + zaksXd*zaksXd);
-        mixed aylng = SQRT(xaksYd*xaksYd + yaksYd*yaksYd + zaksYd*zaksYd);
-        mixed azlng = SQRT(xaksZd*xaksZd + yaksZd*yaksZd + zaksZd*zaksZd);
+        mixed axlng = sqrt(xaksXd*xaksXd + yaksXd*yaksXd + zaksXd*zaksXd);
+        mixed aylng = sqrt(xaksYd*xaksYd + yaksYd*yaksYd + zaksYd*zaksYd);
+        mixed azlng = sqrt(xaksZd*xaksZd + yaksZd*yaksZd + zaksZd*zaksZd);
         mixed trns11 = xaksXd / axlng;
         mixed trns21 = yaksXd / axlng;
         mixed trns31 = zaksXd / axlng;
@@ -91,13 +91,13 @@ __kernel void applySettle(int numClusters, mixed tol, __global const real4* rest
         //                                        --- Step2  A2' ---
 
         float rc = 0.5*params.y;
-        mixed rb = SQRT(params.x*params.x-rc*rc);
+        mixed rb = sqrt(params.x*params.x-rc*rc);
         mixed ra = rb*(m1+m2)*invTotalMass;
         rb -= ra;
         mixed sinphi = za1d / ra;
-        mixed cosphi = SQRT(1.0f - sinphi*sinphi);
+        mixed cosphi = sqrt(1.0f - sinphi*sinphi);
         mixed sinpsi = (zb1d - zc1d) / (2*rc*cosphi);
-        mixed cospsi = SQRT(1.0f - sinpsi*sinpsi);
+        mixed cospsi = sqrt(1.0f - sinpsi*sinpsi);
 
         mixed ya2d =   ra*cosphi;
         mixed xb2d = - rc*cospsi;
@@ -105,7 +105,7 @@ __kernel void applySettle(int numClusters, mixed tol, __global const real4* rest
         mixed yc2d = - rb*cosphi + rc*sinpsi*sinphi;
         mixed xb2d2 = xb2d*xb2d;
         mixed hh2 = 4.0f*xb2d2 + (yb2d-yc2d)*(yb2d-yc2d) + (zb1d-zc1d)*(zb1d-zc1d);
-        mixed deltx = 2.0f*xb2d + SQRT(4.0f*xb2d2 - hh2 + params.y*params.y);
+        mixed deltx = 2.0f*xb2d + sqrt(4.0f*xb2d2 - hh2 + params.y*params.y);
         xb2d -= deltx*0.5;
 
         //                                        --- Step3  al,be,ga ---
@@ -115,11 +115,11 @@ __kernel void applySettle(int numClusters, mixed tol, __global const real4* rest
         mixed gamma = xb0d*yb1d - xb1d*yb0d + xc0d*yc1d - xc1d*yc0d;
 
         mixed al2be2 = alpha*alpha + beta*beta;
-        mixed sintheta = (alpha*gamma - beta*SQRT(al2be2 - gamma*gamma)) / al2be2;
+        mixed sintheta = (alpha*gamma - beta*sqrt(al2be2 - gamma*gamma)) / al2be2;
 
         //                                        --- Step4  A3' ---
 
-        mixed costheta = SQRT(1.0f - sintheta*sintheta);
+        mixed costheta = sqrt(1.0f - sintheta*sintheta);
         mixed xa3d = - ya2d*sintheta;
         mixed ya3d =   ya2d*costheta;
         mixed za3d = za1d;
@@ -186,9 +186,9 @@ __kernel void constrainVelocities(int numClusters, mixed tol, __global const rea
         mixed4 eAB = apos1-apos0;
         mixed4 eBC = apos2-apos1;
         mixed4 eCA = apos0-apos2;
-        eAB.xyz /= SQRT(eAB.x*eAB.x + eAB.y*eAB.y + eAB.z*eAB.z);
-        eBC.xyz /= SQRT(eBC.x*eBC.x + eBC.y*eBC.y + eBC.z*eBC.z);
-        eCA.xyz /= SQRT(eCA.x*eCA.x + eCA.y*eCA.y + eCA.z*eCA.z);
+        eAB.xyz /= sqrt(eAB.x*eAB.x + eAB.y*eAB.y + eAB.z*eAB.z);
+        eBC.xyz /= sqrt(eBC.x*eBC.x + eBC.y*eBC.y + eBC.z*eBC.z);
+        eCA.xyz /= sqrt(eCA.x*eCA.x + eCA.y*eCA.y + eCA.z*eCA.z);
         mixed vAB = (v1.x-v0.x)*eAB.x + (v1.y-v0.y)*eAB.y + (v1.z-v0.z)*eAB.z;
         mixed vBC = (v2.x-v1.x)*eBC.x + (v2.y-v1.y)*eBC.y + (v2.z-v1.z)*eBC.z;
         mixed vCA = (v0.x-v2.x)*eCA.x + (v0.y-v2.y)*eCA.y + (v0.z-v2.z)*eCA.z;
