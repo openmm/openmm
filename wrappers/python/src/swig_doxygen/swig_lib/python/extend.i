@@ -243,6 +243,44 @@ Parameters:
 }
 
 %extend OpenMM::XmlSerializer {
+  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use serialize() instead.") serializeSystem;
+  static std::string serializeSystem(const OpenMM::System* object) {
+      std::stringstream ss;
+      OpenMM::XmlSerializer::serialize<OpenMM::System>(object, "System", ss);
+      return ss.str();
+  }
+
+  %feature(docstring, "This method exists only for backward compatibility. @deprecated Use deserialize() instead.") deserializeSystem;
+  static OpenMM::System* deserializeSystem(const char* inputString) {
+      std::stringstream ss;
+      ss << inputString;
+      return OpenMM::XmlSerializer::deserialize<OpenMM::System>(ss);
+  }
+  
+  static std::string _serializeForce(const OpenMM::Force* object) {
+      std::stringstream ss;
+      OpenMM::XmlSerializer::serialize<OpenMM::Force>(object, "Force", ss);
+      return ss.str();
+  }
+
+  static OpenMM::Force* _deserializeForce(const char* inputString) {
+      std::stringstream ss;
+      ss << inputString;
+      return OpenMM::XmlSerializer::deserialize<OpenMM::Force>(ss);
+  }
+  
+  static std::string _serializeIntegrator(const OpenMM::Integrator* object) {
+      std::stringstream ss;
+      OpenMM::XmlSerializer::serialize<OpenMM::Integrator>(object, "Integrator", ss);
+      return ss.str();
+  }
+
+  static OpenMM::Integrator* _deserializeIntegrator(const char* inputString) {
+      std::stringstream ss;
+      ss << inputString;
+      return OpenMM::XmlSerializer::deserialize<OpenMM::Integrator>(ss);
+  }
+
   static std::string _serializeStateAsLists(
                                 const std::vector<Vec3>& pos, 
                                 const std::vector<Vec3>& vel, 
@@ -270,7 +308,7 @@ Parameters:
 
   %pythoncode {
     @staticmethod
-    def serializeState(pythonState):
+    def _serializeState(pythonState):
       positions = []
       velocities = []
       forces = []
@@ -309,7 +347,7 @@ Parameters:
       return string  
 
     @staticmethod
-    def deserializeState(pythonString):
+    def _deserializeState(pythonString):
     
       (simTime, periodicBoxVectorsList, energy, coordList, velList,
        forceList, paramMap) = XmlSerializer._deserializeStringIntoLists(pythonString)
@@ -322,6 +360,38 @@ Parameters:
                     periodicBoxVectorsList=periodicBoxVectorsList,
                     paramMap=paramMap)
       return state
+
+    @staticmethod
+    def serialize(object):
+      """Serialize an object as XML."""
+      if isinstance(object, System):
+        return XmlSerializer.serializeSystem(object)
+      elif isinstance(object, Force):
+        return XmlSerializer._serializeForce(object)
+      elif isinstance(object, Integrator):
+        return XmlSerializer._serializeIntegrator(object)
+      elif isinstance(object, State):
+        return XmlSerializer._serializeState(object)
+      raise ValueError("Unsupported object type")
+
+    @staticmethod
+    def deserialize(inputString):
+      """Reconstruct an object that has been serialized as XML."""
+      # Look for the first tag to figure out what type of object it is.
+      import re
+      match = re.search("<([^?]\S*)", inputString)
+      if match is None:
+        raise ValueError("Invalid input string")
+      type = match.groups()[0]
+      if type == "System":
+        return XmlSerializer.deserializeSystem(inputString)
+      if type == "Force":
+        return XmlSerializer._deserializeForce(inputString)
+      if type == "Integrator":
+        return XmlSerializer._deserializeIntegrator(inputString)
+      if type == "State":
+        return XmlSerializer._deserializeState(inputString)
+      raise ValueError("Unsupported object type")
   }
 }
 

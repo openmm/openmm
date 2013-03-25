@@ -137,6 +137,8 @@ SKIP_METHODS = [('State',),
                 ('Platform', 'registerKernelFactory'),
                 ('IntegrateRPMDStepKernel',),
                 ('RPMDIntegrator',  'getState'),
+                ('XmlSerializer',  'serialize'),
+                ('XmlSerializer',  'deserialize'),
 ]
 
 # The build script assumes method args that are non-const references are
