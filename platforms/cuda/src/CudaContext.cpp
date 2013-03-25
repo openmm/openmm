@@ -328,7 +328,15 @@ static bool compileInWindows(const string &command) {
         return -1;
     }
     WaitForSingleObject(pi.hProcess, INFINITE);
-    return 0;
+    DWORD exitCode = -1;  
+    if(!GetExitCodeProcess(pi.hProcess, &exitCode)) {
+        throw(OpenMMException("Could not get nvcc.exe's exit code\n"));
+    } else {
+        if(exitCode == 0) 
+            return 0;
+        else
+            return -1;
+    }
 }
 #endif
 
