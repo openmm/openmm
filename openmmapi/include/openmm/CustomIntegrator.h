@@ -156,6 +156,7 @@ namespace OpenMM {
  * integrator.addUpdateContextState();
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
  * integrator.addComputePerDof("x", "x+dt*v");
+ * integrator.addComputePerDof("x1", "x");
  * integrator.addConstrainPositions();
  * integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
  * integrator.addConstrainVelocities();
