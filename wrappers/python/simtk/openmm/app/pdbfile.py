@@ -121,9 +121,11 @@ class PDBFile(object):
         self._positions = []
         for model in pdb.iter_models(True):
             coords = []
-            for atom in model.iter_atoms():
-                pos = atom.get_position().value_in_unit(nanometers)
-                coords.append(Vec3(pos[0], pos[1], pos[2]))
+            for chain in model.iter_chains():
+                for residue in chain.iter_residues():
+                    for atom in residue.atoms:
+                        pos = atom.get_position().value_in_unit(nanometers)
+                        coords.append(Vec3(pos[0], pos[1], pos[2]))
             self._positions.append(coords*nanometers)
         ## The atom positions read from the PDB file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = self._positions[0]
