@@ -11,7 +11,7 @@ __kernel void applyAndersenThermostat(float collisionFrequency, float kT, __glob
         float4 selectRand = random[randomIndex+atomGroups[index]];
         float4 velRand = random[randomIndex+index];
         real scale = (selectRand.w > -randomRange && selectRand.w < randomRange ? 0 : 1);
-        real add = (1-scale)*SQRT(kT*velocity.w);
+        real add = (1-scale)*sqrt(kT*velocity.w);
         velocity.x = scale*velocity.x + add*velRand.x;
         velocity.y = scale*velocity.y + add*velRand.y;
         velocity.z = scale*velocity.z + add*velRand.z;
