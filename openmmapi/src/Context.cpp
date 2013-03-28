@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -144,6 +144,47 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
         builder.setVelocities(velocities);
     }
     return builder.getState();
+}
+
+void Context::setState(const State& state) {
+    // Determine what information the state contains.
+    
+    bool hasPositions = false, hasVelocities = false, hasParameters = false;
+    try {
+        state.getPositions();
+        hasPositions = true;
+    }
+    catch (OpenMMException& ex) {
+        // The State does not include positions.
+    }
+    try {
+        state.getVelocities();
+        hasVelocities = true;
+    }
+    catch (OpenMMException& ex) {
+        // The State does not include velocities.
+    }
+    try {
+        state.getParameters();
+        hasParameters = true;
+    }
+    catch (OpenMMException& ex) {
+        // The State does not include parameters.
+    }
+    
+    // Copy it over.
+    
+    setTime(state.getTime());
+    Vec3 a, b, c;
+    state.getPeriodicBoxVectors(a, b, c);
+    setPeriodicBoxVectors(a, b, c);
+    if (hasPositions)
+        setPositions(state.getPositions());
+    if (hasVelocities)
+        setVelocities(state.getVelocities());
+    if (hasParameters)
+        for (map<string, double>::const_iterator iter = state.getParameters().begin(); iter != state.getParameters().end(); ++iter)
+            setParameter(iter->first, iter->second);
 }
 
 void Context::setTime(double time) {

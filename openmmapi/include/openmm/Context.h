@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -129,6 +129,18 @@ public:
      * and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
      */
     State getState(int types, bool enforcePeriodicBox=false, int groups=0xFFFFFFFF) const;
+    /**
+     * Copy information from a State object into this Context.  This restores the Context to
+     * approximately the same state it was in when the State was created.  If the State does not include
+     * a piece of information (e.g. positions or velocities), that aspect of the Context is
+     * left unchanged.
+     * 
+     * Even when all possible information is included in the State, the effect of calling this method
+     * is still less complete than loadCheckpoint().  For example, it does not restore the internal
+     * states of random number generators.  On the other hand, it has the advantage of not being hardware
+     * specific.
+     */
+    void setState(const State& state);
     /**
      * Set the current time of the simulation (in picoseconds).
      */
