@@ -6,6 +6,9 @@ if (!isExcluded || needCorrection) {
         const real expAlphaRSqr = EXP(-alphaR*alphaR);
         const real prefactor = 138.935456f*posq1.w*posq2.w*invR;
 
+#ifdef USE_DOUBLE_PRECISION
+       const real erfcAlphaR = erfc(alphaR);
+#else
         // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
         // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
         // error of 3e-7.
@@ -15,6 +18,7 @@ if (!isExcluded || needCorrection) {
         t *= t;
         t *= t;
         const real erfcAlphaR = RECIP(t*t);
+#endif
         real tempForce = 0;
         if (needCorrection) {
             // Subtract off the part of this interaction that was included in the reciprocal space contribution.
