@@ -62,10 +62,24 @@ public:
         return key;
     }
     /**
+     * This is the name of the parameter that reports the OpenCL device or devices being used.
+     */
+    static const std::string& OpenCLDeviceName() {
+        static const std::string key = "OpenCLDeviceName";
+        return key;
+    }
+    /**
      * This is the name of the parameter for selecting which OpenCL platform to use.
      */
     static const std::string& OpenCLPlatformIndex() {
         static const std::string key = "OpenCLPlatformIndex";
+        return key;
+    }
+    /**
+     * This is the name of the parameter that reports the OpenCL platform being used.
+     */
+    static const std::string& OpenCLPlatformName() {
+        static const std::string key = "OpenCLPlatformName";
         return key;
     }
     /**

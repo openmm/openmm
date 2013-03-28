@@ -74,10 +74,14 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(OpenCLDeviceIndex());
+    platformProperties.push_back(OpenCLDeviceName());
     platformProperties.push_back(OpenCLPlatformIndex());
+    platformProperties.push_back(OpenCLPlatformName());
     platformProperties.push_back(OpenCLPrecision());
     setPropertyDefaultValue(OpenCLDeviceIndex(), "");
+    setPropertyDefaultValue(OpenCLDeviceName(), "");
     setPropertyDefaultValue(OpenCLPlatformIndex(), "");
+    setPropertyDefaultValue(OpenCLPlatformName(), "");
     setPropertyDefaultValue(OpenCLPrecision(), "single");
 }
 
@@ -133,14 +137,21 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     }
     if (contexts.size() == 0)
         contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this));
-    stringstream device;
+    stringstream deviceIndex, deviceName;
     for (int i = 0; i < (int) contexts.size(); i++) {
-        if (i > 0)
-            device << ',';
-        device << contexts[i]->getDeviceIndex();
+        if (i > 0) {
+            deviceIndex << ',';
+            deviceName << ',';
+        }
+        deviceIndex << contexts[i]->getDeviceIndex();
+        deviceName << contexts[i]->getDevice().getInfo<CL_DEVICE_NAME>();
     }
-    propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
+    propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex.str();
+    propertyValues[OpenCLPlatform::OpenCLDeviceName()] = deviceName.str();
     propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = contexts[0]->intToString(platformIndex);
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+    propertyValues[OpenCLPlatform::OpenCLPlatformName()] = platforms[platformIndex].getInfo<CL_PLATFORM_NAME>();
     propertyValues[OpenCLPlatform::OpenCLPrecision()] = precisionProperty;
     contextEnergy.resize(contexts.size());
 }

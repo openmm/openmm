@@ -63,6 +63,13 @@ public:
         return key;
     }
     /**
+     * This is the name of the parameter that reports the CUDA device or devices being used.
+     */
+    static const std::string& CudaDeviceName() {
+        static const std::string key = "CudaDeviceName";
+        return key;
+    }
+    /**
      * This is the name of the parameter for selecting whether CUDA should sync or spin loop while waiting for results.
      */
     static const std::string& CudaUseBlockingSync() {

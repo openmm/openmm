@@ -42,6 +42,13 @@
 using namespace OpenMM;
 using namespace std;
 
+#define CHECK_RESULT(result, prefix) \
+    if (result != CUDA_SUCCESS) { \
+        std::stringstream m; \
+        m<<prefix<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
+        throw OpenMMException(m.str());\
+    }
+
 extern "C" OPENMM_EXPORT_CUDA void registerPlatforms() {
     Platform::registerPlatform(new CudaPlatform());
 }
@@ -77,11 +84,13 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(CudaDeviceIndex());
+    platformProperties.push_back(CudaDeviceName());
     platformProperties.push_back(CudaUseBlockingSync());
     platformProperties.push_back(CudaPrecision());
     platformProperties.push_back(CudaCompiler());
     platformProperties.push_back(CudaTempDirectory());
     setPropertyDefaultValue(CudaDeviceIndex(), "");
+    setPropertyDefaultValue(CudaDeviceName(), "");
     setPropertyDefaultValue(CudaUseBlockingSync(), "true");
     setPropertyDefaultValue(CudaPrecision(), "single");
 #ifdef _MSC_VER
@@ -161,13 +170,19 @@ CudaPlatform::PlatformData::PlatformData(const System& system, const string& dev
     }
     if (contexts.size() == 0)
         contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, *this));
-    stringstream device;
+    stringstream deviceIndex, deviceName;
     for (int i = 0; i < (int) contexts.size(); i++) {
-        if (i > 0)
-            device << ',';
-        device << contexts[i]->getDeviceIndex();
+        if (i > 0) {
+            deviceIndex << ',';
+            deviceName << ',';
+        }
+        deviceIndex << contexts[i]->getDeviceIndex();
+        char name[1000];
+        CHECK_RESULT(cuDeviceGetName(name, 1000, contexts[i]->getDevice()), "Error querying device name");
+        deviceName << name;
     }
-    propertyValues[CudaPlatform::CudaDeviceIndex()] = device.str();
+    propertyValues[CudaPlatform::CudaDeviceIndex()] = deviceIndex.str();
+    propertyValues[CudaPlatform::CudaDeviceName()] = deviceName.str();
     propertyValues[CudaPlatform::CudaUseBlockingSync()] = blocking ? "true" : "false";
     propertyValues[CudaPlatform::CudaPrecision()] = precisionProperty;
     propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
