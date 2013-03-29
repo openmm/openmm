@@ -207,7 +207,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
 
     if (method == NonbondedForce::NoCutoff)
     {
-        const double delta = 1e-2;
+        const double delta = 0.1;
         double step = 0.5*delta/norm;
         vector<Vec3> positions2(numParticles), positions3(numParticles);
         for (int i = 0; i < numParticles; ++i) {
@@ -220,7 +220,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
         State state2 = context.getState(State::Energy);
         context.setPositions(positions3);
         State state3 = context.getState(State::Energy);
-        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/delta, 1e-3)
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/delta, 1e-2)
     }
 }
 
