@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -58,6 +58,7 @@ class GromacsTopFile(object):
             self.angles = []
             self.dihedrals = []
             self.exclusions = []
+            self.pairs = []
     
     def _processFile(self, file):
         append = ''
@@ -144,6 +145,8 @@ class GromacsTopFile(object):
                 self._processDihedral(line)
             elif self._currentCategory == 'exclusions':
                 self._processExclusion(line)
+            elif self._currentCategory == 'pairs':
+                self._processPair(line)
             elif self._currentCategory == 'atomtypes':
                 self._processAtomType(line)
             elif self._currentCategory == 'bondtypes':
@@ -154,6 +157,8 @@ class GromacsTopFile(object):
                 self._processDihedralType(line)
             elif self._currentCategory == 'implicit_genborn_params':
                 self._processImplicitType(line)
+            elif self._currentCategory == 'pairtypes':
+                self._processPairType(line)
     
     def _processDefaults(self, line):
         """Process the [ defaults ] line."""
@@ -235,6 +240,17 @@ class GromacsTopFile(object):
             raise ValueError('Too few fields in [ exclusions ] line: '+line);
         self._currentMoleculeType.exclusions.append(fields)
     
+    def _processPair(self, line):
+        """Process a line in the [ pairs ] category."""
+        if self._currentMoleculeType is None:
+            raise ValueError('Found [ pairs ] section before [ moleculetype ]')
+        fields = line.split()
+        if len(fields) < 3:
+            raise ValueError('Too few fields in [ pairs ] line: '+line);
+        if fields[2] != '1':
+            raise ValueError('Unsupported function type in [ pairs ] line: '+line);
+        self._currentMoleculeType.pairs.append(fields)
+    
     def _processAtomType(self, line):
         """Process a line in the [ atomtypes ] category."""
         fields = line.split()
@@ -280,6 +296,15 @@ class GromacsTopFile(object):
         if len(fields) < 6:
             raise ValueError('Too few fields in [ implicit_genborn_params ] line: '+line);
         self._implicitTypes[fields[0]] = fields
+    
+    def _processPairType(self, line):
+        """Process a line in the [ pairtypes ] category."""
+        fields = line.split()
+        if len(fields) < 5:
+            raise ValueError('Too few fields in [ pairtypes] line: '+line);
+        if fields[2] != '1':
+            raise ValueError('Unsupported function type in [ pairtypes ] line: '+line);
+        self._pairTypes[fields[0]] = fields
             
     def __init__(self, file, unitCellDimensions=None, includeDir='/usr/local/gromacs/share/gromacs/top', defines={}):
         """Load a top file.
@@ -306,6 +331,7 @@ class GromacsTopFile(object):
         self._angleTypes = {}
         self._dihedralTypes = {}
         self._implicitTypes = {}
+        self._pairTypes = {}
         self._processFile(file)
         
         # Create the Topology from it.
@@ -402,6 +428,8 @@ class GromacsTopFile(object):
         rb = None
         bondIndices = []
         topologyAtoms = list(self.topology.atoms())
+        exceptions = []
+        fudgeQQ = float(self._defaults[4])
         
         # Loop over molecules and create the specified number of each type.
         
@@ -556,10 +584,32 @@ class GromacsTopFile(object):
                 for fields in moleculeType.bonds:
                     atoms = [int(x)-1 for x in fields[:2]]
                     bondIndices.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1]))
+                
+                # Record nonbonded exceptions.
+                
+                for fields in moleculeType.pairs:
+                    atoms = [int(x)-1 for x in fields[:2]]
+                    types = tuple(atomTypes[i] for i in atoms)
+                    if len(fields) >= 5:
+                        params = fields[3:5]
+                    elif types in self._pairTypes:
+                        params = self._pairTypes[types][3:5]
+                    elif types[::-1] in self._pairTypes:
+                        params = self._pairTypes[types[::-1]][3:5]
+                    else:
+                        continue # We'll use the automatically generated parameters
+                    atom1params = nb.getParticleParameters(baseAtomIndex+atoms[0])
+                    atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
+                    exceptions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], atom1params[0]*atom2params[0]*fudgeQQ, params[0], params[1]))
         
+        # Create nonbonded exceptions.
+        
+        nb.createExceptionsFromBonds(bondIndices, fudgeQQ, float(self._defaults[3]))
+        for exception in exceptions:
+            nb.addException(exception[0], exception[1], exception[2], float(exception[3]), float(exception[4]), True)
+
         # Finish configuring the NonbondedForce.
         
-        nb.createExceptionsFromBonds(bondIndices, float(self._defaults[4]), float(self._defaults[3]))
         methodMap = {ff.NoCutoff:mm.NonbondedForce.NoCutoff,
                      ff.CutoffNonPeriodic:mm.NonbondedForce.CutoffNonPeriodic,
                      ff.CutoffPeriodic:mm.NonbondedForce.CutoffPeriodic,
