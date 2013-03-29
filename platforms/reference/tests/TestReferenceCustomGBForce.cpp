@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -245,15 +245,19 @@ void testMembrane() {
         norm += forces[i].dot(forces[i]);
     norm = std::sqrt(norm);
     const double stepSize = 1e-3;
-    double step = stepSize/norm;
+    double step = 0.5*stepSize/norm;
+    vector<Vec3> positions2(numParticles), positions3(numParticles);
     for (int i = 0; i < (int) positions.size(); ++i) {
         Vec3 p = positions[i];
         Vec3 f = forces[i];
-        positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
     }
-    context.setPositions(positions);
+    context.setPositions(positions2);
     State state2 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-2);
+    context.setPositions(positions3);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-3);
 }
 
 void testTabulatedFunction() {
@@ -365,15 +369,19 @@ void testPositionDependence() {
             norm += forces[i].dot(forces[i]);
         norm = std::sqrt(norm);
         const double stepSize = 1e-3;
-        double step = stepSize/norm;
+        double step = 0.5*stepSize/norm;
+        vector<Vec3> positions2(2), positions3(2);
         for (int i = 0; i < (int) positions.size(); ++i) {
             Vec3 p = positions[i];
             Vec3 f = forces[i];
-            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+            positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+            positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
         }
-        context.setPositions(positions);
+        context.setPositions(positions2);
         State state2 = context.getState(State::Energy);
-        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-3*abs(state.getPotentialEnergy()));
+        context.setPositions(positions3);
+        State state3 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-3);
     }
 }
 

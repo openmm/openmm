@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -202,24 +202,25 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     ASSERT_EQUAL_TOL(0.0, diff, 0.001*norm);
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), refState.getPotentialEnergy(), 1e-3);
 
-    // Take a small step in the direction of the energy gradient.  (This doesn't work with cutoffs, since the energy
-    // changes discontinuously at the cutoff distance.)
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+    // (This doesn't work with cutoffs, since the energy changes discontinuously at the cutoff distance.)
 
     if (method == NonbondedForce::NoCutoff)
     {
         const double delta = 1e-2;
-        double step = delta/norm;
+        double step = 0.5*delta/norm;
+        vector<Vec3> positions2(numParticles), positions3(numParticles);
         for (int i = 0; i < numParticles; ++i) {
             Vec3 p = positions[i];
             Vec3 f = state.getForces()[i];
-            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+            positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+            positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
         }
-        context.setPositions(positions);
-
-        // See whether the potential energy changed by the expected amount.
-
+        context.setPositions(positions2);
         State state2 = context.getState(State::Energy);
-        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 1e-3*abs(state.getPotentialEnergy()));
+        context.setPositions(positions3);
+        State state3 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/delta, 1e-3)
     }
 }
 
