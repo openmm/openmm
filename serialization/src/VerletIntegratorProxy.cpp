@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2010 Stanford University and the Authors.           *
- * Authors: Peter Eastman,                                                    *
+ * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -49,9 +49,7 @@ void VerletIntegratorProxy::serialize(const void* object, SerializationNode& nod
 void* VerletIntegratorProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
         throw OpenMMException("Unsupported version number");
-    double stepSize = node.getDoubleProperty("stepSizeInPs");
-    double constraintTol = node.getDoubleProperty("constraintTolerance");
-    VerletIntegrator *integrator = new VerletIntegrator(stepSize);
-    integrator->setConstraintTolerance(constraintTol);
+    VerletIntegrator *integrator = new VerletIntegrator(node.getDoubleProperty("stepSizeInPs"));
+    integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     return integrator;
 }

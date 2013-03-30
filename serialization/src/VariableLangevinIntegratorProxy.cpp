@@ -29,32 +29,34 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/VariableLangevinIntegratorProxy.h"
 #include <OpenMM.h>
 
 using namespace std;
 using namespace OpenMM;
 
-LangevinIntegratorProxy::LangevinIntegratorProxy() : SerializationProxy("LangevinIntegrator") {
+VariableLangevinIntegratorProxy::VariableLangevinIntegratorProxy() : SerializationProxy("VariableLangevinIntegrator") {
 
 }
 
-void LangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
+void VariableLangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const LangevinIntegrator& integrator = *reinterpret_cast<const LangevinIntegrator*>(object);
+    const VariableLangevinIntegrator& integrator = *reinterpret_cast<const VariableLangevinIntegrator*>(object);
     node.setDoubleProperty("stepSizeInPs", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
     node.setDoubleProperty("temperature", integrator.getTemperature());
     node.setDoubleProperty("friction", integrator.getFriction());
+    node.setDoubleProperty("errorTol", integrator.getErrorTolerance());
     node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
 }
 
-void* LangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
+void* VariableLangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
         throw OpenMMException("Unsupported version number");
-    LangevinIntegrator *integrator = new LangevinIntegrator(node.getDoubleProperty("temperature"),
+    VariableLangevinIntegrator *integrator = new VariableLangevinIntegrator(node.getDoubleProperty("temperature"),
                                                             node.getDoubleProperty("friction"),
-                                                            node.getDoubleProperty("stepSizeInPs"));
+                                                            node.getDoubleProperty("errorTol"));
+    integrator->setStepSize(node.getDoubleProperty("stepSizeInPs"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
     return integrator;

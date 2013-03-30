@@ -154,7 +154,7 @@ void CustomIntegrator::getPerDofVariable(int index, vector<Vec3>& values) const 
 
 void CustomIntegrator::setPerDofVariable(int index, const vector<Vec3>& values) {
     ASSERT_VALID_INDEX(index, perDofValues);
-    if (values.size() != context->getSystem().getNumParticles())
+    if (owner != NULL && values.size() != context->getSystem().getNumParticles())
         throw OpenMMException("setPerDofVariable() called with wrong number of values");
     if (owner == NULL)
         perDofValues[index] = values;

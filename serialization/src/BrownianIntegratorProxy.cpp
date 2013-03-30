@@ -29,19 +29,19 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/BrownianIntegratorProxy.h"
 #include <OpenMM.h>
 
 using namespace std;
 using namespace OpenMM;
 
-LangevinIntegratorProxy::LangevinIntegratorProxy() : SerializationProxy("LangevinIntegrator") {
+BrownianIntegratorProxy::BrownianIntegratorProxy() : SerializationProxy("BrownianIntegrator") {
 
 }
 
-void LangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
+void BrownianIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
-    const LangevinIntegrator& integrator = *reinterpret_cast<const LangevinIntegrator*>(object);
+    const BrownianIntegrator& integrator = *reinterpret_cast<const BrownianIntegrator*>(object);
     node.setDoubleProperty("stepSizeInPs", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
     node.setDoubleProperty("temperature", integrator.getTemperature());
@@ -49,10 +49,10 @@ void LangevinIntegratorProxy::serialize(const void* object, SerializationNode& n
     node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
 }
 
-void* LangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
+void* BrownianIntegratorProxy::deserialize(const SerializationNode& node) const {
     if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
         throw OpenMMException("Unsupported version number");
-    LangevinIntegrator *integrator = new LangevinIntegrator(node.getDoubleProperty("temperature"),
+    BrownianIntegrator *integrator = new BrownianIntegrator(node.getDoubleProperty("temperature"),
                                                             node.getDoubleProperty("friction"),
                                                             node.getDoubleProperty("stepSizeInPs"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));

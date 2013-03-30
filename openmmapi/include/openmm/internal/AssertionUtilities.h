@@ -47,6 +47,12 @@ void OPENMM_EXPORT throwException(const char* file, int line, const std::string&
 
 } // namespace OpenMM
 
+static inline bool operator==(const std::string& lhs, const std::string &rhs) {
+    if(lhs.compare(rhs) == 0)
+        return true;
+    return false;
+}
+
 #define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};
 
 #define ASSERT_EQUAL(expected, found) {if (!((expected) == (found))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};

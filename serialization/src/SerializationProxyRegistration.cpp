@@ -49,8 +49,14 @@
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
+
+#include "openmm/BrownianIntegrator.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/VariableLangevinIntegrator.h"
+#include "openmm/VariableVerletIntegrator.h"
+#include "openmm/VerletIntegrator.h"
+
 #include "openmm/serialization/SerializationProxy.h"
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
@@ -72,9 +78,15 @@
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/SystemProxy.h"
+
 #include "openmm/serialization/StateProxy.h"
-#include "openmm/serialization/VerletIntegratorProxy.h"
+
+#include "openmm/serialization/BrownianIntegratorProxy.h"
+#include "openmm/serialization/CustomIntegratorProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/VariableLangevinIntegratorProxy.h"
+#include "openmm/serialization/VariableVerletIntegratorProxy.h"
+#include "openmm/serialization/VerletIntegratorProxy.h"
 
 #if defined(WIN32)
     #include <windows.h>
@@ -112,6 +124,10 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
     SerializationProxy::registerProxy(typeid(State), new StateProxy());
-    SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(BrownianIntegrator), new BrownianIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(CustomIntegrator), new CustomIntegratorProxy());
     SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(VariableLangevinIntegrator), new VariableLangevinIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(VariableVerletIntegrator), new VariableVerletIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(VerletIntegrator), new VerletIntegratorProxy());
 }
