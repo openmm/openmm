@@ -65,14 +65,14 @@ void CustomIntegratorProxy::serialize(const void* object, SerializationNode& nod
     }
     node.setStringProperty("kineticEnergyExpression",integrator.getKineticEnergyExpression());
     node.setIntProperty("randomSeed",integrator.getRandomNumberSeed());
-    node.setDoubleProperty("stepSizeInPs",integrator.getStepSize());
+    node.setDoubleProperty("stepSize",integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance",integrator.getConstraintTolerance());
 }
 
 void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
+    if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
-    CustomIntegrator* integrator = new CustomIntegrator(node.getDoubleProperty("stepSizeInPs"));
+    CustomIntegrator* integrator = new CustomIntegrator(node.getDoubleProperty("stepSize"));
     const SerializationNode& globalVariablesNode = node.getChildNode("GlobalVariables");
     const map<string, string> &globalVariableProp = globalVariablesNode.getProperties();
     for(map<string, string>::const_iterator cit = globalVariableProp.begin(); cit != globalVariableProp.end(); cit++) {
@@ -95,25 +95,24 @@ void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
     for(vector<SerializationNode>::const_iterator cit = computationsList.begin(); cit != computationsList.end(); cit++) {
         CustomIntegrator::ComputationType computationType = static_cast<CustomIntegrator::ComputationType>(cit->getIntProperty("computationType"));
         // make sure that the int casts to a valid enum
-        if(computationType == CustomIntegrator::ComputationType::ComputeGlobal) {
+        if(computationType == CustomIntegrator::ComputeGlobal) {
             integrator->addComputeGlobal(cit->getStringProperty("computationVariable"), cit->getStringProperty("computationExpression"));
-        } else if(computationType == CustomIntegrator::ComputationType::ComputePerDof) {
+        } else if(computationType == CustomIntegrator::ComputePerDof) {
             integrator->addComputePerDof(cit->getStringProperty("computationVariable"), cit->getStringProperty("computationExpression"));
-        } else if(computationType == CustomIntegrator::ComputationType::ComputeSum) {
+        } else if(computationType == CustomIntegrator::ComputeSum) {
             integrator->addComputeSum(cit->getStringProperty("computationVariable"), cit->getStringProperty("computationExpression"));
-        } else if(computationType == CustomIntegrator::ComputationType::ConstrainPositions) {
+        } else if(computationType == CustomIntegrator::ConstrainPositions) {
             integrator->addConstrainPositions();
-        } else if(computationType == CustomIntegrator::ComputationType::ConstrainVelocities) {
+        } else if(computationType == CustomIntegrator::ConstrainVelocities) {
             integrator->addConstrainVelocities();
-        } else if(computationType == CustomIntegrator::ComputationType::UpdateContextState) {
-            integrator->addConstrainVelocities();
+        } else if(computationType == CustomIntegrator::UpdateContextState) {
+            integrator->addUpdateContextState();
         } else {
             throw(OpenMMException("Custom Integrator Deserialization: Unknown computation type"));
         }
     }
     integrator->setKineticEnergyExpression(node.getStringProperty("kineticEnergyExpression"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-    integrator->setStepSize(node.getDoubleProperty("stepSizeInPs"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     return integrator;
 }

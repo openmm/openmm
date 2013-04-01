@@ -42,7 +42,7 @@ LangevinIntegratorProxy::LangevinIntegratorProxy() : SerializationProxy("Langevi
 void LangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const LangevinIntegrator& integrator = *reinterpret_cast<const LangevinIntegrator*>(object);
-    node.setDoubleProperty("stepSizeInPs", integrator.getStepSize());
+    node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
     node.setDoubleProperty("temperature", integrator.getTemperature());
     node.setDoubleProperty("friction", integrator.getFriction());
@@ -50,11 +50,11 @@ void LangevinIntegratorProxy::serialize(const void* object, SerializationNode& n
 }
 
 void* LangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
+    if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
     LangevinIntegrator *integrator = new LangevinIntegrator(node.getDoubleProperty("temperature"),
                                                             node.getDoubleProperty("friction"),
-                                                            node.getDoubleProperty("stepSizeInPs"));
+                                                            node.getDoubleProperty("stepSize"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
     return integrator;

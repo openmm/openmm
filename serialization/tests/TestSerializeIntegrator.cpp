@@ -127,6 +127,9 @@ void testSerializeCustomIntegrator() {
     intg->addComputePerDof("x", "x+dt*v");
     intg->addConstrainPositions();
     intg->addComputePerDof("v", "(x-oldx)/dt");
+    intg->addUpdateContextState();
+    intg->addConstrainVelocities();
+    intg->addComputeSum("summand", "x*x+v*v");
     intg->addPerDofVariable("outf", 0);
     intg->addPerDofVariable("outf1", 0);
     intg->addPerDofVariable("outf2", 0);
@@ -139,6 +142,9 @@ void testSerializeCustomIntegrator() {
     intg->addComputeGlobal("oute", "energy");
     intg->addComputeGlobal("oute1", "energy1");
     intg->addComputeGlobal("oute2", "energy2");
+    intg->addUpdateContextState();
+    intg->addConstrainVelocities();
+    intg->addComputeSum("summand2", "v*v+f*f");
     intg->setConstraintTolerance(1e-5);
     intg->setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
     stringstream ss;

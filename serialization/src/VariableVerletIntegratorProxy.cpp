@@ -43,15 +43,15 @@ void VariableVerletIntegratorProxy::serialize(const void* object, SerializationN
     node.setIntProperty("version", 1);
     const VariableVerletIntegrator& integrator = *reinterpret_cast<const VariableVerletIntegrator*>(object);
     node.setDoubleProperty("errorTol", integrator.getErrorTolerance());
-    node.setDoubleProperty("stepSizeInPs", integrator.getStepSize());
+    node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
 }
 
 void* VariableVerletIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
+    if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
     VariableVerletIntegrator *integrator = new VariableVerletIntegrator(node.getDoubleProperty("errorTol"));
-    integrator->setStepSize(node.getDoubleProperty("stepSizeInPs"));
+    integrator->setStepSize(node.getDoubleProperty("stepSize"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     return integrator;
 }

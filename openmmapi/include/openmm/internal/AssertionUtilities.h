@@ -38,7 +38,6 @@
 
 #include "windowsExport.h"
 #include <cmath>
-#include <string>
 #include <sstream>
 
 namespace OpenMM {
@@ -47,16 +46,10 @@ void OPENMM_EXPORT throwException(const char* file, int line, const std::string&
 
 } // namespace OpenMM
 
-static inline bool operator==(const std::string& lhs, const std::string &rhs) {
-    if(lhs.compare(rhs) == 0)
-        return true;
-    return false;
-}
-
 #define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};
 
 #define ASSERT_EQUAL(expected, found) {if (!((expected) == (found))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
-
+ 
 #define ASSERT_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
 
 #define ASSERT_EQUAL_VEC(expected, found, tol) {double _norm_ = std::sqrt((expected).dot(expected)); double _scale_ = _norm_ > 1.0 ? _norm_ : 1.0; if ((std::abs(((expected)[0])-((found)[0]))/_scale_ > (tol)) || (std::abs(((expected)[1])-((found)[1]))/_scale_ > (tol)) || (std::abs(((expected)[2])-((found)[2]))/_scale_ > (tol))) {std::stringstream details; details << " Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};

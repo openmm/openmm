@@ -102,7 +102,7 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
 }
 
 void* StateProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
+    if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
     double outTime = node.getDoubleProperty("time");
     const SerializationNode& boxVectorsNode = node.getChildNode("PeriodicBoxVectors");

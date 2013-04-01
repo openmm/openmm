@@ -42,7 +42,7 @@ VariableLangevinIntegratorProxy::VariableLangevinIntegratorProxy() : Serializati
 void VariableLangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const VariableLangevinIntegrator& integrator = *reinterpret_cast<const VariableLangevinIntegrator*>(object);
-    node.setDoubleProperty("stepSizeInPs", integrator.getStepSize());
+    node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
     node.setDoubleProperty("temperature", integrator.getTemperature());
     node.setDoubleProperty("friction", integrator.getFriction());
@@ -51,12 +51,12 @@ void VariableLangevinIntegratorProxy::serialize(const void* object, Serializatio
 }
 
 void* VariableLangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1 && node.getIntProperty("version") != 2)
+    if (node.getIntProperty("version") != 1)
         throw OpenMMException("Unsupported version number");
     VariableLangevinIntegrator *integrator = new VariableLangevinIntegrator(node.getDoubleProperty("temperature"),
                                                             node.getDoubleProperty("friction"),
                                                             node.getDoubleProperty("errorTol"));
-    integrator->setStepSize(node.getDoubleProperty("stepSizeInPs"));
+    integrator->setStepSize(node.getDoubleProperty("stepSize"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
     return integrator;
