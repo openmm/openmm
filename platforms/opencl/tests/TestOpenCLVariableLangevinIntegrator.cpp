@@ -99,7 +99,7 @@ void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     System system;
-    VariableLangevinIntegrator integrator(temp, 5.0, 1e-4);
+    VariableLangevinIntegrator integrator(temp, 5.0, 5e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
@@ -111,20 +111,21 @@ void testTemperature() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
 
     // Let it equilibrate.
 
-    integrator.step(10000);
+    integrator.step(5000);
 
     // Now run it for a while and see if the temperature is correct.
 
     double ke = 0.0;
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 5000; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
         integrator.step(5);
     }
-    ke /= 1000;
+    ke /= 5000;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
 }
@@ -276,13 +277,13 @@ void testArgonBox() {
     // Make sure the temperature is correct.
     
     double ke = 0.0;
-    for (int i = 0; i < 400; ++i) {
+    for (int i = 0; i < 2000; ++i) {
         double t = 2.0 + 0.01 * (i + 1);
         integrator.stepTo(t);
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
     }
-    ke /= 400;
+    ke /= 2000;
     double expected = 1.5 * numParticles * BOLTZ * temp;
     ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.01);
 }

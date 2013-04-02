@@ -54,9 +54,9 @@ void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    const int numSteps = 10000;
+    const int numSteps = 5000;
     System system;
-    VerletIntegrator integrator(0.005);
+    VerletIntegrator integrator(0.003);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
@@ -70,6 +70,7 @@ void testTemperature() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
 
     // Let it equilibrate.
 
@@ -81,20 +82,20 @@ void testTemperature() {
     for (int i = 0; i < numSteps; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
-        integrator.step(1);
+        integrator.step(10);
     }
     ke /= numSteps;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
 }
 
 void testConstraints() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
-    const int numSteps = 10000;
+    const int numSteps = 15000;
     System system;
-    VerletIntegrator integrator(0.005);
+    VerletIntegrator integrator(0.004);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
@@ -122,10 +123,11 @@ void testConstraints() {
     positions[6] = Vec3(0, 1, 1);
     positions[7] = Vec3(0, 0, 1);
     context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
 
     // Let it equilibrate.
 
-    integrator.step(10000);
+    integrator.step(5000);
 
     // Now run it for a while and see if the temperature is correct.
 
@@ -137,7 +139,7 @@ void testConstraints() {
     }
     ke /= numSteps;
     double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
 }
 
 void testRandomSeed() {
