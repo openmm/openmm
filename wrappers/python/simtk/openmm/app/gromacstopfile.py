@@ -59,21 +59,24 @@ class GromacsTopFile(object):
             self.dihedrals = []
             self.exclusions = []
             self.pairs = []
+            self.cmaps = []
     
     def _processFile(self, file):
         append = ''
         for line in open(file):
             if line.strip().endswith('\\'):
-                append += line[:line.rfind('\\')]
+                append = '%s %s' % (append, line[:line.rfind('\\')])
             else:
-                self._processLine(append+line, file)
+                self._processLine(append+' '+line, file)
                 append = ''
     
     def _processLine(self, line, file):
         """Process one line from a file."""
+        if ';' in line:
+            line = line[:line.index(';')]
         stripped = line.strip()
         ignore = not all(self._ifStack)
-        if line.startswith('*') or stripped.startswith(';') or len(stripped) == 0:
+        if stripped.startswith('*') or len(stripped) == 0:
             # A comment or empty line.
             return
         
@@ -147,6 +150,8 @@ class GromacsTopFile(object):
                 self._processExclusion(line)
             elif self._currentCategory == 'pairs':
                 self._processPair(line)
+            elif self._currentCategory == 'cmap':
+                self._processCmap(line)
             elif self._currentCategory == 'atomtypes':
                 self._processAtomType(line)
             elif self._currentCategory == 'bondtypes':
@@ -159,6 +164,8 @@ class GromacsTopFile(object):
                 self._processImplicitType(line)
             elif self._currentCategory == 'pairtypes':
                 self._processPairType(line)
+            elif self._currentCategory == 'cmaptypes':
+                self._processCmapType(line)
     
     def _processDefaults(self, line):
         """Process the [ defaults ] line."""
@@ -216,7 +223,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 4:
             raise ValueError('Too few fields in [ angles ] line: '+line);
-        if fields[3] != '1':
+        if fields[3] not in ('1', '5'):
             raise ValueError('Unsupported function type in [ angles ] line: '+line);
         self._currentMoleculeType.angles.append(fields)
     
@@ -227,7 +234,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 5:
             raise ValueError('Too few fields in [ dihedrals ] line: '+line);
-        if fields[4] not in ('1', '3', '4', '9'):
+        if fields[4] not in ('1', '2', '3', '4', '9'):
             raise ValueError('Unsupported function type in [ dihedrals ] line: '+line);
         self._currentMoleculeType.dihedrals.append(fields)
     
@@ -251,6 +258,15 @@ class GromacsTopFile(object):
             raise ValueError('Unsupported function type in [ pairs ] line: '+line);
         self._currentMoleculeType.pairs.append(fields)
     
+    def _processCmap(self, line):
+        """Process a line in the [ cmaps ] category."""
+        if self._currentMoleculeType is None:
+            raise ValueError('Found [ cmap ] section before [ moleculetype ]')
+        fields = line.split()
+        if len(fields) < 6:
+            raise ValueError('Too few fields in [ pairs ] line: '+line);
+        self._currentMoleculeType.cmaps.append(fields)
+    
     def _processAtomType(self, line):
         """Process a line in the [ atomtypes ] category."""
         fields = line.split()
@@ -272,7 +288,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 6:
             raise ValueError('Too few fields in [ angletypes ] line: '+line);
-        if fields[3] != '1':
+        if fields[3] not in ('1', '5'):
             raise ValueError('Unsupported function type in [ angletypes ] line: '+line);
         self._angleTypes[tuple(fields[:3])] = fields
     
@@ -281,7 +297,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 7:
             raise ValueError('Too few fields in [ dihedraltypes ] line: '+line);
-        if fields[4] not in ('1', '3', '4', '9'):
+        if fields[4] not in ('1', '2', '3', '4', '9'):
             raise ValueError('Unsupported function type in [ dihedraltypes ] line: '+line);
         key = tuple(fields[:5])
         if fields[4] == '9' and key in self._dihedralTypes:
@@ -304,8 +320,17 @@ class GromacsTopFile(object):
             raise ValueError('Too few fields in [ pairtypes] line: '+line);
         if fields[2] != '1':
             raise ValueError('Unsupported function type in [ pairtypes ] line: '+line);
-        self._pairTypes[fields[0]] = fields
-            
+        self._pairTypes[tuple(fields[:2])] = fields
+    
+    def _processCmapType(self, line):
+        """Process a line in the [ cmaptypes ] category."""
+        fields = line.split()
+        if len(fields) < 8 or len(fields) < 8+int(fields[6])*int(fields[7]):
+            raise ValueError('Too few fields in [ cmaptypes ] line: '+line);
+        if fields[5] != '1':
+            raise ValueError('Unsupported function type in [ cmaptypes ] line: '+line);
+        self._cmapTypes[tuple(fields[:5])] = fields
+    
     def __init__(self, file, unitCellDimensions=None, includeDir='/usr/local/gromacs/share/gromacs/top', defines={}):
         """Load a top file.
         
@@ -332,6 +357,7 @@ class GromacsTopFile(object):
         self._dihedralTypes = {}
         self._implicitTypes = {}
         self._pairTypes = {}
+        self._cmapTypes = {}
         self._processFile(file)
         
         # Create the Topology from it.
@@ -426,6 +452,9 @@ class GromacsTopFile(object):
         angles = None
         periodic = None
         rb = None
+        harmonicTorsion = None
+        cmap = None
+        mapIndices = {}
         bondIndices = []
         topologyAtoms = list(self.topology.atoms())
         exceptions = []
@@ -499,11 +528,11 @@ class GromacsTopFile(object):
                     atoms = [int(x)-1 for x in fields[:3]]
                     types = tuple(atomTypes[i] for i in atoms)
                     if len(fields) >= 6:
-                        params = fields[4:6]
+                        params = fields[4:]
                     elif types in self._angleTypes:
-                        params = self._angleTypes[types][4:6]
+                        params = self._angleTypes[types][4:]
                     elif types[::-1] in self._angleTypes:
-                        params = self._angleTypes[types[::-1]][4:6]
+                        params = self._angleTypes[types[::-1]][4:]
                     else:
                         raise ValueError('No parameters specified for angle: '+fields[0]+', '+fields[1]+', '+fields[2])
                     # Decide whether to use a constraint or a bond.
@@ -530,7 +559,15 @@ class GromacsTopFile(object):
                             angles = mm.HarmonicAngleForce()
                             sys.addForce(angles)
                         angles.addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], theta, float(params[1]))
-                
+                        if fields[3] == '5':
+                            # This is a Urey-Bradley term, so add the bond.
+                            if bonds is None:
+                                bonds = mm.HarmonicBondForce()
+                                sys.addForce(bonds)
+                            k = float(params[3])
+                            if k != 0:
+                                bonds.addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[2], float(params[2]), k)
+
                 # Add torsions.
                 
                 for fields in moleculeType.dihedrals:
@@ -539,8 +576,8 @@ class GromacsTopFile(object):
                     dihedralType = fields[4]
                     reversedTypes = types[::-1]+(dihedralType,)
                     types = types+(dihedralType,)
-                    if (dihedralType == '1' and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10):
-                        params = fields
+                    if (dihedralType in ('1', '2') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10):
+                        paramsList = [fields]
                     else:
                         # Look for a matching dihedral type.
                         paramsList = None
@@ -551,22 +588,63 @@ class GromacsTopFile(object):
                                     break
                         if paramsList is None:
                             raise ValueError('No parameters specified for dihedral: '+fields[0]+', '+fields[1]+', '+fields[2]+', '+fields[3])
-                        for params in paramsList:
-                            if dihedralType in ('1', '4', '9'):
-                                k = float(params[6])
-                                if k != 0:
-                                    if periodic is None:
-                                        periodic = mm.PeriodicTorsionForce()
-                                        sys.addForce(periodic)
-                                    periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(params[7]), float(params[5])*degToRad, k)
-                            else:
-                                c = [float(x) for x in params[5:11]]
-                                if any(x != 0 for x in c):
-                                    if rb is None:
-                                        rb = mm.RBTorsionForce()
-                                        sys.addForce(rb)
-                                    rb.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], c[0], c[1], c[2], c[3], c[4], c[5])
+                    for params in paramsList:
+                        if dihedralType in ('1', '4', '9'):
+                            # Periodic torsion
+                            k = float(params[6])
+                            if k != 0:
+                                if periodic is None:
+                                    periodic = mm.PeriodicTorsionForce()
+                                    sys.addForce(periodic)
+                                periodic.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], int(params[7]), float(params[5])*degToRad, k)
+                        elif dihedralType == '2':
+                            # Harmonic torsion
+                            k = float(params[6])
+                            if k != 0:
+                                if harmonicTorsion is None:
+                                    harmonicTorsion = mm.CustomTorsionForce('0.5*k*(theta-theta0)^2')
+                                    harmonicTorsion.addPerTorsionParameter('theta0')
+                                    harmonicTorsion.addPerTorsionParameter('k')
+                                    sys.addForce(harmonicTorsion)
+                                harmonicTorsion.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], (float(params[5])*degToRad, k))
+                        else:
+                            # RB Torsion
+                            c = [float(x) for x in params[5:11]]
+                            if any(x != 0 for x in c):
+                                if rb is None:
+                                    rb = mm.RBTorsionForce()
+                                    sys.addForce(rb)
+                                rb.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], c[0], c[1], c[2], c[3], c[4], c[5])
                 
+                # Add CMAP terms.
+
+                for fields in moleculeType.cmaps:
+                    atoms = [int(x)-1 for x in fields[:5]]
+                    types = tuple(atomTypes[i] for i in atoms)
+                    if len(fields) >= 8 and len(fields) >= 8+int(fields[6])*int(fields[7]):
+                        params = fields
+                    elif types in self._cmapTypes:
+                        params = self._cmapTypes[types]
+                    elif types[::-1] in self._cmapTypes:
+                        params = self._cmapTypes[types[::-1]]
+                    else:
+                        raise ValueError('No parameters specified for cmap: '+fields[0]+', '+fields[1]+', '+fields[2]+', '+fields[3]+', '+fields[4])
+                    if cmap is None:
+                        cmap = mm.CMAPTorsionForce()
+                        sys.addForce(cmap)
+                    mapSize = int(params[6])
+                    if mapSize != int(params[7]):
+                        raise ValueError('Non-square CMAPs are not supported')
+                    map = []
+                    for i in range(mapSize):
+                        for j in range(mapSize):
+                            map.append(float(params[8+mapSize*((j+mapSize/2)%mapSize)+((i+mapSize/2)%mapSize)]))
+                    map = tuple(map)
+                    if map not in mapIndices:
+                        mapIndices[map] = cmap.addMap(mapSize, map)
+                    cmap.addTorsion(mapIndices[map], baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3],
+                                 baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], baseAtomIndex+atoms[4])
+
                 # Set nonbonded parameters for particles.
                 
                 for fields in moleculeType.atoms:
