@@ -241,9 +241,9 @@ void testWithThermostat() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 20.0;
-    const int numSteps = 10000;
+    const int numSteps = 5000;
     System system;
-    CustomIntegrator integrator(0.005);
+    CustomIntegrator integrator(0.003);
     integrator.addUpdateContextState();
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
@@ -260,6 +260,7 @@ void testWithThermostat() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
     
     // Let it equilibrate.
     
@@ -271,11 +272,11 @@ void testWithThermostat() {
     for (int i = 0; i < numSteps; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
-        integrator.step(1);
+        integrator.step(10);
     }
     ke /= numSteps;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
 }
 
 /**
