@@ -311,7 +311,7 @@ class ForceField(object):
                             template = t
                             break
                 if matches is None:
-                    raise ValueError('No template found for residue %d (%s)' % (res.index+1, res.name))
+                    raise ValueError('No template found for residue %d (%s).  This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.' % (res.index+1, res.name))
                 for atom, match in zip(res.atoms(), matches):
                     data.atomType[atom] = template.atoms[match].type
                     for site in template.virtualSites:
