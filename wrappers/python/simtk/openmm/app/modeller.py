@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -531,6 +531,7 @@ class Modeller(object):
          - variants (list=None) an optional list of variants to use.  If this is specified, its length must equal the number
            of residues in the model.  variants[i] is the name of the variant to use for residue i (indexed starting at 0).
            If an element is None, the standard rules will be followed to select a variant for that residue.
+        Returns: a list of what variant was actually selected for each residue, in the same format as the variants parameter
         """
         # Check the list of variants.
         
@@ -540,6 +541,7 @@ class Modeller(object):
                 raise ValueError("The length of the variants list must equal the number of residues")
         else:
             variants = [None]*len(residues)
+        actualVariants = [None]*len(residues)
         
         # Load the residue specifications.
         
@@ -664,6 +666,7 @@ class Modeller(object):
                             variant = 'HIP'
                     if variant is not None and variant not in spec.variants:
                         raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
+                    actualVariants[residue.index] = variant
                     
                     # Make a list of hydrogens that should be present in the residue.
                     
@@ -746,3 +749,4 @@ class Modeller(object):
         LocalEnergyMinimizer.minimize(context)
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
+        return actualVariants
