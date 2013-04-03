@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -47,6 +47,7 @@ class Topology(object):
     """
     
     _standardBonds = {}
+    _hasLoadedStandardBonds = False
     
     def __init__(self):
         """Create a new Topology object"""
@@ -133,17 +134,32 @@ class Topology(object):
         """Set the dimensions of the crystallographic unit cell."""
         self._unitCellDimensions = dimensions
     
+    @staticmethod
+    def loadBondDefinitions(file):
+        """Load an XML file containing definitions of bonds that should be used by createStandardBonds().
+        
+        The built in residues.xml file containing definitions for standard amino acids and nucleotides is loaded automatically.
+        This method can be used to load additional definitions for other residue types.  They will then be used in subsequent
+        calls to createStandardBonds().
+        """
+        tree = etree.parse(file)
+        for residue in tree.getroot().findall('Residue'):
+            bonds = []
+            Topology._standardBonds[residue.attrib['name']] = bonds
+            for bond in residue.findall('Bond'):
+                bonds.append((bond.attrib['from'], bond.attrib['to']))        
+    
     def createStandardBonds(self):
-        """Create bonds based on the atom and residue names for all standard residue types."""
-        if len(Topology._standardBonds) == 0:
-            # Load the standard bond defitions.
+        """Create bonds based on the atom and residue names for all standard residue types.
+        
+        Definitions for standard amino acids and nucleotides are built in.  You can call loadBondDefinitions() to load
+        additional definitions for other residue types.
+        """
+        if not Topology._hasLoadedStandardBonds:
+            # Load the standard bond definitions.
             
-            tree = etree.parse(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'))
-            for residue in tree.getroot().findall('Residue'):
-                bonds = []
-                Topology._standardBonds[residue.attrib['name']] = bonds
-                for bond in residue.findall('Bond'):
-                    bonds.append((bond.attrib['from'], bond.attrib['to']))
+            Topology.loadBondDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'))
+            Topology._hasLoadedStandardBonds = True
         for chain in self._chains:
             # First build a map of atom names to atoms.
             
