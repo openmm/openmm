@@ -963,9 +963,9 @@ void OpenCLContext::reorderAtomsImpl(bool enforcePeriodic) {
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
     if (nonbonded->getUsePeriodic()) {
         minx = miny = minz = 0.0;
-        maxx = periodicBoxSize.x;
-        maxy = periodicBoxSize.y;
-        maxz = periodicBoxSize.z;
+        maxx = periodicBoxSizeDouble.x;
+        maxy = periodicBoxSizeDouble.y;
+        maxz = periodicBoxSizeDouble.z;
     }
     else {
         for (int i = 1; i < numAtoms; i++) {
@@ -1013,12 +1013,12 @@ void OpenCLContext::reorderAtomsImpl(bool enforcePeriodic) {
             // Move each molecule position into the same box.
 
             for (int i = 0; i < numMolecules; i++) {
-                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSize.x);
-                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSize.y);
-                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSize.z);
-                Real dx = xcell*periodicBoxSize.x;
-                Real dy = ycell*periodicBoxSize.y;
-                Real dz = zcell*periodicBoxSize.z;
+                int xcell = (int) floor(molPos[i].x*invPeriodicBoxSizeDouble.x);
+                int ycell = (int) floor(molPos[i].y*invPeriodicBoxSizeDouble.y);
+                int zcell = (int) floor(molPos[i].z*invPeriodicBoxSizeDouble.z);
+                Real dx = xcell*periodicBoxSizeDouble.x;
+                Real dy = ycell*periodicBoxSizeDouble.y;
+                Real dz = zcell*periodicBoxSizeDouble.z;
                 if (dx != 0.0f || dy != 0.0f || dz != 0.0f) {
                     molPos[i].x -= dx;
                     molPos[i].y -= dy;
