@@ -2625,21 +2625,21 @@ static void testSystemMultipoleMoments( FILE* log ) {
                                                 cutoff, inputPmeGridDimension, testName,
                                                 forces, energy, outputMultipoleMoments, inputGrid, outputGridPotential, log );
 
-    std::vector<double> tinkerMoments(13);
+    std::vector<double> tinkerMoments(4);
 
     tinkerMoments[0]  =   0.0000000e+00;
-    tinkerMoments[1]  =  -9.1118361e-01;
-    tinkerMoments[2]  =   2.8371876e+00;
-    tinkerMoments[3]  =   5.1518898e+00;
-    tinkerMoments[4]  =  -1.0768808e-01;
-    tinkerMoments[5]  =  -9.0458124e-01;
-    tinkerMoments[6]  =   1.8460385e+00;
-    tinkerMoments[7]  =  -9.0458124e-01;
-    tinkerMoments[8]  =   6.4395591e-02;
-    tinkerMoments[9]  =   1.6692567e-01;
-    tinkerMoments[10] =   1.8460385e-00;
-    tinkerMoments[11] =   1.6692567e-01;
-    tinkerMoments[12] =   4.3292490e-02;
+    tinkerMoments[1]  =  -9.1118361e+00;
+    tinkerMoments[2]  =   2.8371876e+01;
+    tinkerMoments[3]  =   5.1518898e+01;
+//    tinkerMoments[4]  =  -1.0768808e-01; // Quadrupole moments are not uniquely defined when using periodic boundary conditions
+//    tinkerMoments[5]  =  -9.0458124e-01;
+//    tinkerMoments[6]  =   1.8460385e+00;
+//    tinkerMoments[7]  =  -9.0458124e-01;
+//    tinkerMoments[8]  =   6.4395591e-02;
+//    tinkerMoments[9]  =   1.6692567e-01;
+//    tinkerMoments[10] =   1.8460385e-00;
+//    tinkerMoments[11] =   1.6692567e-01;
+//    tinkerMoments[12] =   4.3292490e-02;
 
     double tolerance = 1.0e-04;
     if( log ){
