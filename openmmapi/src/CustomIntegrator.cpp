@@ -44,7 +44,7 @@ using std::vector;
 
 CustomIntegrator::CustomIntegrator(double stepSize) : globalsAreCurrent(true), forcesAreValid(false) {
     setStepSize(stepSize);
-    setConstraintTolerance(1e-4);
+    setConstraintTolerance(1e-5);
     setRandomNumberSeed((int) time(NULL));
     kineticEnergy = "m*v*v/2";
 }

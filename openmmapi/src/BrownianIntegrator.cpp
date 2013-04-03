@@ -45,7 +45,7 @@ BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff,
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
-    setConstraintTolerance(1e-4);
+    setConstraintTolerance(1e-5);
     setRandomNumberSeed((int) time(NULL));
 }
 

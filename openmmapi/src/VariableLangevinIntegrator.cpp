@@ -46,7 +46,7 @@ VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, doubl
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setErrorTolerance(errorTol);
-    setConstraintTolerance(1e-4);
+    setConstraintTolerance(1e-5);
     setRandomNumberSeed((int) time(NULL));
 }
 

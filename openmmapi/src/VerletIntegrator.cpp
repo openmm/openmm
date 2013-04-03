@@ -42,7 +42,7 @@ using std::vector;
 
 VerletIntegrator::VerletIntegrator(double stepSize) {
     setStepSize(stepSize);
-    setConstraintTolerance(1e-4);
+    setConstraintTolerance(1e-5);
 }
 
 void VerletIntegrator::initialize(ContextImpl& contextRef) {
