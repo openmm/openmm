@@ -54,7 +54,8 @@ class Modeller(object):
     and getPositions() to get the results.
     """
         
-    _residueHydrogens = None
+    _residueHydrogens = {}
+    _hasLoadedStandardHydrogens = False
 
     def __init__(self, topology, positions):
         """Create a new Modeller object
@@ -487,14 +488,20 @@ class Modeller(object):
             self.variants = variants
             self.terminal = terminal
     
-    def _loadHydrogenDefinitions(self, file):
-        residueHydrogens = {}
+    @staticmethod
+    def loadHydrogenDefinitions(file):
+        """Load an XML file containing definitions of hydrogens that should be added by addHydrogens().
+        
+        The built in hydrogens.xml file containing definitions for standard amino acids and nucleotides is loaded automatically.
+        This method can be used to load additional definitions for other residue types.  They will then be used in subsequent
+        calls to addHydrogens().
+        """
         tree = etree.parse(file)
         infinity = float('Inf')
         for residue in tree.getroot().findall('Residue'):
             resName = residue.attrib['name']
             data = Modeller._ResidueData(resName)
-            residueHydrogens[resName] = data
+            Modeller._residueHydrogens[resName] = data
             for variant in residue.findall('Variant'):
                 data.variants.append(variant.attrib['name'])
             for hydrogen in residue.findall('H'):
@@ -508,7 +515,6 @@ class Modeller(object):
                 if 'terminal' in hydrogen.attrib:
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
-        return residueHydrogens
     
     def addHydrogens(self, forcefield, pH=7.0, variants=None, hydrogenDefinitions=None):
         """Add missing hydrogens to the model.
@@ -548,15 +554,15 @@ class Modeller(object):
         function will only add hydrogens.  It will never remove ones that are already present in the model, regardless
         of the specified pH.
         
+        Definitions for standard amino acids and nucleotides are built in.  You can call loadHydrogenDefinitions() to load
+        additional definitions for other residue types.
+
         Parameters:
          - forcefield (ForceField) the ForceField to use for determining the positions of hydrogens
          - pH (float=7.0) the pH based on which to select variants
          - variants (list=None) an optional list of variants to use.  If this is specified, its length must equal the number
            of residues in the model.  variants[i] is the name of the variant to use for residue i (indexed starting at 0).
            If an element is None, the standard rules will be followed to select a variant for that residue.
-         - hydrogenDefinitions (File=None) an optional XML file containing definitions for hydrogens to add.  The built in
-           hydrogens.xml file contains definitions for standard amino acids and nucleotides.  This parameter can be used to
-           provide additional definitions for other residue types.
         Returns: a list of what variant was actually selected for each residue, in the same format as the variants parameter
         """
         # Check the list of variants.
@@ -571,13 +577,8 @@ class Modeller(object):
         
         # Load the residue specifications.
         
-        if Modeller._residueHydrogens is None:
-            Modeller._residueHydrogens = self._loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
-        if hydrogenDefinitions is None:
-            residueHydrogens = Modeller._residueHydrogens
-        else:
-            residueHydrogens = Modeller._residueHydrogens.copy()
-            residueHydrogens.update(self._loadHydrogenDefinitions(hydrogenDefinitions))
+        if not Modeller._hasLoadedStandardHydrogens:
+            Modeller.loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
 
         # Make a list of atoms bonded to each atom.
         
@@ -613,10 +614,10 @@ class Modeller(object):
                 newResidue = newTopology.addResidue(residue.name, newChain)
                 isNTerminal = (residue == chain._residues[0])
                 isCTerminal = (residue == chain._residues[-1])
-                if residue.name in residueHydrogens:
+                if residue.name in Modeller._residueHydrogens:
                     # Add hydrogens.  First select which variant to use.
                     
-                    spec = residueHydrogens[residue.name]
+                    spec = Modeller._residueHydrogens[residue.name]
                     variant = variants[residue.index]
                     if variant is None:
                         if residue.name == 'CYS':
