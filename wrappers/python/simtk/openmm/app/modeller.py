@@ -67,7 +67,7 @@ class Modeller(object):
         ## The Topology describing the structure of the system
         self.topology = topology
         if not is_quantity(positions):
-            positions = positions*nanometers
+            positions = positions*nanometer
         ## The list of atom positions
         self.positions = positions
         
