@@ -114,6 +114,10 @@ CudaPlatform::CudaPlatform() {
 #endif
 }
 
+double CudaPlatform::getSpeed() const {
+    return 100;
+}
+
 bool CudaPlatform::supportsDoublePrecision() const {
     return true;
 }

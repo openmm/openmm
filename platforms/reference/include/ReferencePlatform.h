@@ -49,9 +49,7 @@ public:
         static const std::string name = "Reference";
         return name;
     }
-    double getSpeed() const {
-        return 1;
-    }
+    double getSpeed() const;
     bool supportsDoublePrecision() const;
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void contextDestroyed(ContextImpl& context) const;

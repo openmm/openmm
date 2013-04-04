@@ -46,9 +46,7 @@ public:
         static const std::string name = "OpenCL";
         return name;
     }
-    double getSpeed() const {
-        return 100;
-    }
+    double getSpeed() const;
     bool supportsDoublePrecision() const;
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;

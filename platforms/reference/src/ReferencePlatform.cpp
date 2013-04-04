@@ -73,6 +73,10 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
 }
 
+double ReferencePlatform::getSpeed() const {
+    return 1;
+}
+
 bool ReferencePlatform::supportsDoublePrecision() const {
     return (sizeof(RealOpenMM) >= sizeof(double));
 }

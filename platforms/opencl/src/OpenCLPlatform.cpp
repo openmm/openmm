@@ -85,6 +85,10 @@ OpenCLPlatform::OpenCLPlatform() {
     setPropertyDefaultValue(OpenCLPrecision(), "single");
 }
 
+double OpenCLPlatform::getSpeed() const {
+    return 50;
+}
+
 bool OpenCLPlatform::supportsDoublePrecision() const {
     return true;
 }
