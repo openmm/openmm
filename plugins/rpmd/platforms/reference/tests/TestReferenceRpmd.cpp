@@ -77,7 +77,7 @@ void testFreeParticles() {
         integ.step(1);
         vector<State> state(numCopies);
         for (int j = 0; j < numCopies; j++)
-            state[j] = integ.getState(j, State::Positions | State::Velocities);
+            state[j] = integ.getState(j, State::Positions | State::Velocities, true);
         for (int j = 0; j < numParticles; j++) {
             double rg2 = 0.0;
             for (int k = 0; k < numCopies; k++) {

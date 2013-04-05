@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/RpmdKernels.h"
+#include <cmath>
 #include <ctime>
 #include <string>
 
@@ -96,7 +97,61 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
         isFirstStep = false;
     }
     kernel.getAs<IntegrateRPMDStepKernel>().copyToContext(copy, *context);
-    return context->getOwner().getState(types, enforcePeriodicBox, groups);
+    State state = context->getOwner().getState(types, enforcePeriodicBox && copy == 0, groups);
+    if (enforcePeriodicBox && copy > 0 && (types&State::Positions) != 0) {
+        // Apply periodic boundary conditions based on copy 0.  Otherwise, molecules might end
+        // up in different places for different copies.
+        
+        kernel.getAs<IntegrateRPMDStepKernel>().copyToContext(0, *context);
+        State state2 = context->getOwner().getState(State::Positions, false, groups);
+        vector<Vec3> positions = state.getPositions();
+        const vector<Vec3>& refPos = state2.getPositions();
+        const vector<vector<int> >& molecules = context->getMolecules();
+        Vec3 periodicBoxSize[3];
+        state2.getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
+        for (int i = 0; i < (int) molecules.size(); i++) {
+            // Find the molecule center.
+
+            Vec3 center;
+            for (int j = 0; j < (int) molecules[i].size(); j++)
+                center += refPos[molecules[i][j]];
+            center *= 1.0/molecules[i].size();
+
+            // Find the displacement to move it into the first periodic box.
+
+            int xcell = (int) floor(center[0]/periodicBoxSize[0][0]);
+            int ycell = (int) floor(center[1]/periodicBoxSize[1][1]);
+            int zcell = (int) floor(center[2]/periodicBoxSize[2][2]);
+            double dx = xcell*periodicBoxSize[0][0];
+            double dy = ycell*periodicBoxSize[1][1];
+            double dz = zcell*periodicBoxSize[2][2];
+
+            // Translate all the particles in the molecule.
+
+            for (int j = 0; j < (int) molecules[i].size(); j++) {
+                Vec3& pos = positions[molecules[i][j]];
+                pos[0] -= dx;
+                pos[1] -= dy;
+                pos[2] -= dz;
+            }
+        }
+        
+        // Construct the new State.
+        
+        State::StateBuilder builder(state.getTime());
+        builder.setPositions(positions);
+        builder.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
+        if (types&State::Velocities)
+            builder.setVelocities(state.getVelocities());
+        if (types&State::Forces)
+            builder.setForces(state.getForces());
+        if (types&State::Parameters)
+            builder.setParameters(state.getParameters());
+        if (types&State::Energy)
+            builder.setEnergy(state.getKineticEnergy(), state.getPotentialEnergy());
+        state = builder.getState();
+    }
+    return state;
 }
 
 double RPMDIntegrator::computeKineticEnergy() {
