@@ -34,11 +34,13 @@ __kernel void computeConstraintDirections(__global const int2* restrict constrai
  * Compute the force applied by each constraint.
  */
 __kernel void computeConstraintForce(__global const int2* restrict constraintAtoms, __global const mixed4* restrict constraintDistance, __global const mixed4* restrict atomPositions,
-        __global const mixed* restrict reducedMass, __global mixed* restrict delta1, __global int* restrict converged, mixed tol, int iteration) {
+        __global const mixed* restrict reducedMass, __global mixed* restrict delta1, __global int* restrict converged, __global int* restrict hostConvergedFlag, mixed tol, int iteration) {
     __local int groupConverged;
     if (converged[1-iteration%2]) {
-        if (get_global_id(0) == 0)
+        if (get_global_id(0) == 0) {
             converged[iteration%2] = 1;
+            hostConvergedFlag[0] = 1;
+        }
         return; // The constraint iteration has already converged.
     }
     if (get_local_id(0) == 0)

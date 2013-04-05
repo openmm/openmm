@@ -99,7 +99,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
         random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
-        ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
+        ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL), ccmaConvergedMemory(NULL),
         vsite2AvgAtoms(NULL), vsite2AvgWeights(NULL), vsite3AvgAtoms(NULL), vsite3AvgWeights(NULL),
         vsiteOutOfPlaneAtoms(NULL), vsiteOutOfPlaneWeights(NULL) {
     // Create workspace arrays.
@@ -468,6 +468,8 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
         ccmaNumAtomConstraints = CudaArray::create<int>(context, numAtoms, "CcmaAtomConstraintsIndex");
         ccmaConstraintMatrixColumn = CudaArray::create<int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConverged = CudaArray::create<int>(context, 2, "ccmaConverged");
+        CHECK_RESULT2(cuMemHostAlloc((void**) &ccmaConvergedMemory, sizeof(int), CU_MEMHOSTALLOC_DEVICEMAP), "Error allocating pinned memory");
+        CHECK_RESULT2(cuMemHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
         vector<int2> atomsVec(ccmaAtoms->getSize());
         vector<int> atomConstraintsVec(ccmaAtomConstraints->getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints->getSize());
@@ -681,6 +683,8 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
         delete ccmaDelta2;
     if (ccmaConverged != NULL)
         delete ccmaConverged;
+    if (ccmaConvergedMemory != NULL)
+        cuMemFreeHost(ccmaConvergedMemory);
     if (vsite2AvgAtoms != NULL)
         delete vsite2AvgAtoms;
     if (vsite2AvgWeights != NULL)
@@ -739,7 +743,7 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
         void* forceArgs[] = {&ccmaAtoms->getDevicePointer(), &ccmaDistance->getDevicePointer(),
                 constrainVelocities ? &context.getVelm().getDevicePointer() : &posDelta->getDevicePointer(),
                 &ccmaReducedMass->getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaConverged->getDevicePointer(),
-                tolPointer, &i};
+                &ccmaConvergedDeviceMemory, tolPointer, &i};
         void* multiplyArgs[] = {&ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
                 &ccmaConstraintMatrixColumn->getDevicePointer(), &ccmaConstraintMatrixValue->getDevicePointer(), &ccmaConverged->getDevicePointer(), &i};
         void* updateArgs[] = {&ccmaNumAtomConstraints->getDevicePointer(), &ccmaAtomConstraints->getDevicePointer(), &ccmaDistance->getDevicePointer(),
@@ -747,18 +751,16 @@ void CudaIntegrationUtilities::applyConstraints(bool constrainVelocities, double
                 &context.getVelm().getDevicePointer(), &ccmaDelta1->getDevicePointer(), &ccmaDelta2->getDevicePointer(),
                 &ccmaConverged->getDevicePointer(), &i};
         const int checkInterval = 4;
-        int* converged = (int*) context.getPinnedBuffer();
+        ccmaConvergedMemory[0] = 0;
         for (i = 0; i < 150; i++) {
             context.executeKernel(ccmaForceKernel, forceArgs, ccmaAtoms->getSize());
-            if ((i+1)%checkInterval == 0) {
-                ccmaConverged->download(converged, false);
+            if ((i+1)%checkInterval == 0)
                 CHECK_RESULT2(cuEventRecord(ccmaEvent, 0), "Error recording event for CCMA");
-            }
             context.executeKernel(ccmaMultiplyKernel, multiplyArgs, ccmaAtoms->getSize());
             context.executeKernel(ccmaUpdateKernel, updateArgs, context.getNumAtoms());
             if ((i+1)%checkInterval == 0) {
                 CHECK_RESULT2(cuEventSynchronize(ccmaEvent), "Error synchronizing on event for CCMA");
-                if (converged[i%2])
+                if (ccmaConvergedMemory[0])
                     break;
             }
         }

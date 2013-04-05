@@ -598,11 +598,13 @@ extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restric
  * Compute the force applied by each CCMA position constraint.
  */
 extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __restrict__ constraintAtoms, const mixed4* __restrict__ constraintDistance, const mixed4* __restrict__ atomPositions,
-        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, mixed tol, int iteration) {
+        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, int* __restrict__ hostConvergedFlag, mixed tol, int iteration) {
     __shared__ int groupConverged;
     if (converged[1-iteration%2]) {
-        if (blockIdx.x == 0 && threadIdx.x == 0)
+        if (blockIdx.x == 0 && threadIdx.x == 0) {
             converged[iteration%2] = 1;
+            hostConvergedFlag[0] = 1;
+        }
         return; // The constraint iteration has already converged.
     }
     if (threadIdx.x == 0)
@@ -639,11 +641,13 @@ extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __rest
  * Compute the force applied by each CCMA velocity constraint.
  */
 extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __restrict__ constraintAtoms, const mixed4* __restrict__ constraintDistance, const mixed4* __restrict__ atomPositions,
-        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, mixed tol, int iteration) {
+        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, int* __restrict__ hostConvergedFlag, mixed tol, int iteration) {
     __shared__ int groupConverged;
     if (converged[1-iteration%2]) {
-        if (blockIdx.x == 0 && threadIdx.x == 0)
+        if (blockIdx.x == 0 && threadIdx.x == 0) {
             converged[iteration%2] = 1;
+            hostConvergedFlag[0] = 1;
+        }
         return; // The constraint iteration has already converged.
     }
     if (threadIdx.x == 0)
