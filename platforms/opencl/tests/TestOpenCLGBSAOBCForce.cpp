@@ -207,7 +207,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
 
     if (method == NonbondedForce::NoCutoff)
     {
-        const double delta = 0.1;
+        const double delta = 0.3;
         double step = 0.5*delta/norm;
         vector<Vec3> positions2(numParticles), positions3(numParticles);
         for (int i = 0; i < numParticles; ++i) {
