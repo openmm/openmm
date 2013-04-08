@@ -9,7 +9,7 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
     while (index < numValues) {
         float4 value;
 
-        // Generate first value.
+        // Generate first two values.
 
         state.x = state.x * 69069 + 1;
         state.y ^= state.y << 13;
@@ -33,8 +33,9 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
         carry = k >> 30;
         float x2 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
         value.x = x1 * cos(2.0f * 3.14159265f * x2);
+        value.y = x1 * sin(2.0f * 3.14159265f * x2);
 
-        // Generate second value.
+        // Generate next two values.
 
         state.x = state.x * 69069 + 1;
         state.y ^= state.y << 13;
@@ -57,57 +58,8 @@ __kernel void generateRandomNumbers(int numValues, __global float4* restrict ran
         state.w = m;
         carry = k >> 30;
         float x4 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.y = x3 * cos(2.0f * 3.14159265f * x4);
-
-        // Generate third value.
-
-        state.x = state.x * 69069 + 1;
-        state.y ^= state.y << 13;
-        state.y ^= state.y >> 17;
-        state.y ^= state.y << 5;
-        k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
-        m = state.w + state.w + state.z + carry;
-        state.z = state.w;
-        state.w = m;
-        carry = k >> 30;
-        float x5 = (float)max(state.x + state.y + state.w, 0x00000001u) / (float)0xffffffff;
-        state.x = state.x * 69069 + 1;
-        state.y ^= state.y << 13;
-        state.y ^= state.y >> 17;
-        state.y ^= state.y << 5;
-        x5 = SQRT(-2.0f * LOG(x5));
-        k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
-        m = state.w + state.w + state.z + carry;
-        state.z = state.w;
-        state.w = m;
-        carry = k >> 30;
-        float x6 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.z = x5 * cos(2.0f * 3.14159265f * x6);
-
-        // Generate fourth value.
-
-        state.x = state.x * 69069 + 1;
-        state.y ^= state.y << 13;
-        state.y ^= state.y >> 17;
-        state.y ^= state.y << 5;
-        k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
-        m = state.w + state.w + state.z + carry;
-        state.z = state.w;
-        state.w = m;
-        carry = k >> 30;
-        float x7 = (float)max(state.x + state.y + state.w, 0x00000001u) / (float)0xffffffff;
-        state.x = state.x * 69069 + 1;
-        state.y ^= state.y << 13;
-        state.y ^= state.y >> 17;
-        state.y ^= state.y << 5;
-        x7 = SQRT(-2.0f * LOG(x7));
-        k = (state.z >> 2) + (state.w >> 3) + (carry >> 2);
-        m = state.w + state.w + state.z + carry;
-        state.z = state.w;
-        state.w = m;
-        carry = k >> 30;
-        float x8 = (float)(state.x + state.y + state.w) / (float)0xffffffff;
-        value.w = x7 * cos(2.0f * 3.14159265f * x8);
+        value.z = x3 * cos(2.0f * 3.14159265f * x4);
+        value.w = x3 * sin(2.0f * 3.14159265f * x4);
 
         // Record the values.
 

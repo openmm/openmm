@@ -895,7 +895,7 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random = OpenCLArray::create<mm_float4>(context, 32*context.getPaddedNumAtoms(), "random");
+    random = OpenCLArray::create<mm_float4>(context, 4*context.getPaddedNumAtoms(), "random");
     randomSeed = OpenCLArray::create<mm_int4>(context, context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
     randomPos = random->getSize();
 

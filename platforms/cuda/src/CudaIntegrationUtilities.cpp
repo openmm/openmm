@@ -798,7 +798,7 @@ void CudaIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumb
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random = CudaArray::create<float4>(context, 32*context.getPaddedNumAtoms(), "random");
+    random = CudaArray::create<float4>(context, 4*context.getPaddedNumAtoms(), "random");
     randomSeed = CudaArray::create<int4>(context, context.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
     randomPos = random->getSize();
 
