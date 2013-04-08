@@ -106,7 +106,7 @@ public:
     void syncContexts();
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
-    bool removeCM;
+    bool removeCM, peerAccessSupported;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;

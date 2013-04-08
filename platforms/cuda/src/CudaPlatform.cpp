@@ -192,6 +192,26 @@ CudaPlatform::PlatformData::PlatformData(const System& system, const string& dev
     propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
     contextEnergy.resize(contexts.size());
+    
+    // Determine whether peer-to-peer copying is supported, and enable it if so.
+    
+    peerAccessSupported = true;
+    for (int i = 1; i < contexts.size(); i++) {
+        int canAccess;
+        cuDeviceCanAccessPeer(&canAccess, contexts[i]->getDevice(), contexts[0]->getDevice());
+        if (!canAccess) {
+            peerAccessSupported = false;
+            break;
+        }
+    }
+    if (peerAccessSupported) {
+        for (int i = 1; i < contexts.size(); i++) {
+            contexts[0]->setAsCurrent();
+            CHECK_RESULT(cuCtxEnablePeerAccess(contexts[i]->getContext(), 0), "Error enabling peer access");
+            contexts[i]->setAsCurrent();
+            CHECK_RESULT(cuCtxEnablePeerAccess(contexts[0]->getContext(), 0), "Error enabling peer access");
+        }
+    }
 }
 
 CudaPlatform::PlatformData::~PlatformData() {

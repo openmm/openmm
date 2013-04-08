@@ -31,10 +31,10 @@ using namespace OpenMM;
 using namespace std;
 
 
-#define CHECK_RESULT(result) \
+#define CHECK_RESULT(result, prefix) \
 if (result != CUDA_SUCCESS) { \
     std::stringstream m; \
-    m<<errorMessage<<": "<<cu.getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
+    m<<prefix<<": "<<cu.getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
     throw OpenMMException(m.str());\
 }
 
@@ -70,8 +70,15 @@ public:
         // Copy coordinates over to this device and execute the kernel.
 
         cu.setAsCurrent();
-        if (cu.getContextIndex() > 0)
-            cu.getPosq().upload(pinnedMemory, false);
+        if (cu.getContextIndex() > 0) {
+            if (cu.getPlatformData().peerAccessSupported && cu.getPlatformData().contexts.size() < 3) {
+                CudaContext& context0 = *cu.getPlatformData().contexts[0];
+                int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
+                CHECK_RESULT(cuMemcpyPeerAsync(cu.getPosq().getDevicePointer(), cu.getContext(), context0.getPosq().getDevicePointer(), context0.getContext(), numBytes, 0), "Error copying positions");
+            }
+            else
+                cu.getPosq().upload(pinnedMemory, false);
+        }
         kernel.beginComputation(context, includeForce, includeEnergy, groups);
     }
 private:
@@ -86,9 +93,9 @@ private:
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
-            completionTime(completionTime), pinnedMemory(pinnedMemory) {
+            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces) {
     }
     void execute() {
         // Execute the kernel, then download forces.
@@ -97,11 +104,17 @@ public:
         if (includeForce) {
             if (cu.getContextIndex() > 0) {
                 int numAtoms = cu.getPaddedNumAtoms();
-                cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
+                if (cu.getPlatformData().peerAccessSupported) {
+                    int numBytes = numAtoms*3*sizeof(long long);
+                    int offset = (cu.getContextIndex()-1)*numBytes;
+                    CudaContext& context0 = *cu.getPlatformData().contexts[0];
+                    CHECK_RESULT(cuMemcpyPeer(contextForces.getDevicePointer()+offset, context0.getContext(), cu.getForce().getDevicePointer(), cu.getContext(), numBytes), "Error copying forces");
+                }
+                else
+                    cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
             }
             else {
-                string errorMessage = "Error synchronizing CUDA context";
-                CHECK_RESULT(cuCtxSynchronize());
+                CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
             }
         }
         completionTime = getTime();
@@ -115,6 +128,7 @@ private:
     double& energy;
     long long& completionTime;
     long long* pinnedMemory;
+    CudaArray& contextForces;
 };
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
@@ -150,14 +164,14 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
     cu.setAsCurrent();
     if (contextForces == NULL) {
         contextForces = CudaArray::create<long long>(cu, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms(), "contextForces");
-        string errorMessage = "Error allocating pinned memory";
-        CHECK_RESULT(cuMemHostAlloc((void**) &pinnedForceBuffer, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms()*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE));
-        CHECK_RESULT(cuMemHostAlloc(&pinnedPositionBuffer, cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4)), CU_MEMHOSTALLOC_PORTABLE));
+        CHECK_RESULT(cuMemHostAlloc((void**) &pinnedForceBuffer, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms()*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
+        CHECK_RESULT(cuMemHostAlloc(&pinnedPositionBuffer, cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4)), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
     }
 
     // Copy coordinates over to each device and execute the kernel.
     
-    cu.getPosq().download(pinnedPositionBuffer);
+    if (!(cu.getPlatformData().peerAccessSupported && cu.getPlatformData().contexts.size() < 3))
+        cu.getPosq().download(pinnedPositionBuffer);
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
         CudaContext& cu = *data.contexts[i];
@@ -170,7 +184,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         CudaContext& cu = *data.contexts[i];
         CudaContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer));
+        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, *contextForces));
     }
     data.syncContexts();
     double energy = 0.0;
