@@ -10,6 +10,7 @@ RMIN_PER_SIGMA=math.pow(2, 1/6.0)
 RVDW_PER_SIGMA=math.pow(2, 1/6.0)/2.0
 
 import simtk.unit as unit
+from simtk.openmm.vec3 import Vec3
 
 class State(_object):
     """
@@ -102,6 +103,14 @@ class State(_object):
 
         returnValue = unit.Quantity(returnValue, unit.nanometers)
         return returnValue
+    
+    def getPeriodicBoxVolume(self):
+        """Get the volume of the periodic box."""
+        a = self._periodicBoxVectorsList[0]
+        b = self._periodicBoxVectorsList[1]
+        c = self._periodicBoxVectorsList[2]
+        bcrossc = Vec3(b[1]*c[2]-b[2]*c[1], b[2]*c[0]-b[0]*c[2], b[0]*c[1]-b[1]*c[0])
+        return unit.Quantity(unit.dot(a, bcrossc), unit.nanometers*unit.nanometers*unit.nanometers)
 
     def getPositions(self, asNumpy=False):
         """Get the position of each particle with units.

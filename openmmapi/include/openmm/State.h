@@ -100,6 +100,10 @@ public:
      */
     void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
     /**
+     * Get the volume of the periodic box (measured in nm^3).
+     */
+    double getPeriodicBoxVolume() const;
+    /**
      * Get a map containing the values of all parameters.  If this State does not contain parameters, this will throw an exception.
      */
     const std::map<std::string, double>& getParameters() const;

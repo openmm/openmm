@@ -68,6 +68,9 @@ void State::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
     b = periodicBoxVectors[1];
     c = periodicBoxVectors[2];
 }
+double State::getPeriodicBoxVolume() const {
+    return periodicBoxVectors[0].dot(periodicBoxVectors[1].cross(periodicBoxVectors[2]));
+}
 const map<string, double>& State::getParameters() const {
     if ((types&Parameters) == 0)
         throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
