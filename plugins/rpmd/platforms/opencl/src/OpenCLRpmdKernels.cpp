@@ -440,6 +440,7 @@ string OpenCLIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     if (stage%2 == 1) {
         source<<"real0[indexInBlock] = real1[indexInBlock];\n";
         source<<"imag0[indexInBlock] = imag1[indexInBlock];\n";
+        source<<"barrier(CLK_LOCAL_MEM_FENCE);\n";
     }
     source<<"}\n";
     return source.str();
