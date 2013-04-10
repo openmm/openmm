@@ -54,12 +54,8 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
 void RPMDIntegrator::initialize(ContextImpl& contextRef) {
     if (owner != NULL && &contextRef.getOwner() != owner)
         throw OpenMMException("This Integrator is already bound to a context");
-    const System& system = contextRef.getSystem();
-    if (system.getNumConstraints() > 0)
+    if (contextRef.getSystem().getNumConstraints() > 0)
         throw OpenMMException("RPMDIntegrator cannot be used with Systems that include constraints");
-    for (int i = 0; i < system.getNumParticles(); i++)
-        if (system.isVirtualSite(i))
-            throw OpenMMException("RPMDIntegrator cannot be used with Systems that include virtual sites");
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateRPMDStepKernel::Name(), contextRef);

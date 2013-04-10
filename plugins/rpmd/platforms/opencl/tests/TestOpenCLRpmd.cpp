@@ -38,9 +38,11 @@
 #include "openmm/Context.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/RPMDIntegrator.h"
+#include "openmm/VirtualSite.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -273,6 +275,87 @@ void testCMMotionRemoval() {
     }
 }
 
+void testVirtualSites() {
+    const int gridSize = 3;
+    const int numMolecules = gridSize*gridSize*gridSize;
+    const int numParticles = numMolecules*3;
+    const int numCopies = 10;
+    const double spacing = 2.0;
+    const double cutoff = 3.0;
+    const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    system.addForce(nonbonded);
+
+    // Create a cloud of molecules.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numMolecules; i++) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        system.addParticle(0.0);
+        nonbonded->addParticle(-0.2, 0.2, 0.2);
+        nonbonded->addParticle(0.1, 0.2, 0.2);
+        nonbonded->addParticle(0.1, 0.2, 0.2);
+        nonbonded->addException(3*i, 3*i+1, 0, 1, 0);
+        nonbonded->addException(3*i, 3*i+2, 0, 1, 0);
+        nonbonded->addException(3*i+1, 3*i+2, 0, 1, 0);
+        bonds->addBond(3*i, 3*i+1, 1.0, 10000.0);
+        system.setVirtualSite(3*i+2, new TwoParticleAverageSite(3*i, 3*i+1, 0.5, 0.5));
+    }
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
+    Platform& platform = Platform::getPlatformByName("OpenCL");
+    Context context(system, integ, platform);
+    for (int copy = 0; copy < numCopies; copy++) {
+        for (int i = 0; i < gridSize; i++)
+            for (int j = 0; j < gridSize; j++)
+                for (int k = 0; k < gridSize; k++) {
+                    Vec3 pos = Vec3(spacing*(i+0.02*genrand_real2(sfmt)), spacing*(j+0.02*genrand_real2(sfmt)), spacing*(k+0.02*genrand_real2(sfmt)));
+                    int index = k+gridSize*(j+gridSize*i);
+                    positions[3*index] = pos;
+                    positions[3*index+1] = Vec3(pos[0]+1.0, pos[1], pos[2]);
+                    positions[3*index+2] = Vec3();
+                }
+        integ.setPositions(copy, positions);
+    }
+
+    // Check the temperature and virtual site locations.
+    
+    const int numSteps = 1000;
+    integ.step(1000);
+    vector<double> ke(numCopies, 0.0);
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(1);
+        vector<State> state(numCopies);
+        for (int j = 0; j < numCopies; j++) {
+            state[j] = integ.getState(j, State::Positions | State::Velocities | State::Forces, true);
+            const vector<Vec3>& pos = state[j].getPositions();
+            for (int k = 0; k < numMolecules; k++)
+                ASSERT_EQUAL_VEC((pos[3*k]+pos[3*k+1])*0.5, pos[3*k+2], 1e-5);
+        }
+        for (int j = 0; j < numParticles; j++) {
+            for (int k = 0; k < numCopies; k++) {
+                Vec3 v = state[k].getVelocities()[j];
+                ke[k] += 0.5*system.getParticleMass(j)*v.dot(v);
+            }
+        }
+    }
+    double meanKE = 0.0;
+    for (int i = 0; i < numCopies; i++)
+        meanKE += ke[i];
+    meanKE /= numSteps*numCopies;
+    double expectedKE = 0.5*numCopies*(2*numMolecules)*3*BOLTZ*temperature;
+    ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 1e-2);
+}
+
 int main(int argc, char* argv[]) {
     try {
         registerRPMDOpenCLKernelFactories();
@@ -281,6 +364,7 @@ int main(int argc, char* argv[]) {
         testFreeParticles();
         testParaHydrogen();
         testCMMotionRemoval();
+        testVirtualSites();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

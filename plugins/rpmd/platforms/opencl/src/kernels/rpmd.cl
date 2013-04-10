@@ -38,6 +38,8 @@ __kernel void applyPileThermostat(__global mixed4* velm, __global float4* random
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         mixed4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
         mixed invMass = particleVelm.w;
+        if (invMass == 0)
+            continue;
         mixed c3_0 = c2_0*sqrt(nkT*invMass);
         
         // Forward FFT.
@@ -97,6 +99,8 @@ __kernel void integrateStep(__global mixed4* posq, __global mixed4* velm, __glob
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         int index = particle+indexInBlock*PADDED_NUM_ATOMS;
         mixed4 particleVelm = velm[index];
+        if (particleVelm.w == 0)
+            continue;
         particleVelm.xyz += convert_mixed4(force[index]).xyz*(0.5f*dt*particleVelm.w);
         velm[index] = particleVelm;
     }
@@ -113,6 +117,8 @@ __kernel void integrateStep(__global mixed4* posq, __global mixed4* velm, __glob
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         mixed4 particlePosq = posq[particle+indexInBlock*PADDED_NUM_ATOMS];
         mixed4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
+        if (particleVelm.w == 0)
+            continue;
         
         // Forward FFT.
         
@@ -166,6 +172,8 @@ __kernel void advanceVelocities(__global mixed4* velm, __global real4* force, mi
     for (int particle = get_global_id(0)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         int index = particle+indexInBlock*PADDED_NUM_ATOMS;
         mixed4 particleVelm = velm[index];
+        if (particleVelm.w == 0)
+            continue;
         particleVelm.xyz += convert_mixed4(force[index]).xyz*(0.5f*dt*particleVelm.w);
         velm[index] = particleVelm;
     }

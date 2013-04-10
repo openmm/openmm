@@ -187,6 +187,7 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
                 &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
+        context.computeVirtualSites();
         context.updateContextState();
         context.calcForcesAndEnergy(true, false);
         if (cu.getAtomsWereReordered() && cu.getNonbondedUtilities().getUsePeriodic()) {

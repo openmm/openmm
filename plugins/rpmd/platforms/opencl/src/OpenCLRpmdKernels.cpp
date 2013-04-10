@@ -198,6 +198,7 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     for (int i = 0; i < numCopies; i++) {
         copyToContextKernel.setArg<cl_int>(5, i);
         cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+        context.computeVirtualSites();
         context.updateContextState();
         context.calcForcesAndEnergy(true, false);
         if (cl.getAtomsWereReordered() && cl.getNonbondedUtilities().getUsePeriodic()) {
