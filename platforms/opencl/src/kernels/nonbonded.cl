@@ -202,7 +202,7 @@ __kernel void computeNonbonded(
     int skipBase = 0;
     int currentSkipIndex = tbx;
     __local int atomIndices[FORCE_WORK_GROUP_SIZE];
-    __local int skipTiles[FORCE_WORK_GROUP_SIZE];
+    __local volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
     skipTiles[get_local_id(0)] = -1;
 
     while (pos < end) {

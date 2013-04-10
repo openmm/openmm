@@ -760,7 +760,7 @@ extern "C" __global__ void computeEDiffForce(
     int end = startTileIndex+(warp+1)*numTiles/totalWarps;
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ int skipTiles[EDIFF_THREAD_BLOCK_SIZE];
+    __shared__ volatile int skipTiles[EDIFF_THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
 
     while (pos < end) {

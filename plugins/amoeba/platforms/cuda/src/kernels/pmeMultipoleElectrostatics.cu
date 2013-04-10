@@ -302,7 +302,7 @@ extern "C" __global__ void computeElectrostatics(
     int skipBase = 0;
     int currentSkipIndex = tbx;
     __shared__ int atomIndices[THREAD_BLOCK_SIZE];
-    __shared__ int skipTiles[THREAD_BLOCK_SIZE];
+    __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
     
     while (pos < end) {

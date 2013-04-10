@@ -216,7 +216,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
     int skipBase = 0;
     int currentSkipIndex = tbx;
     __shared__ int atomIndices[FORCE_WORK_GROUP_SIZE];
-    __shared__ int skipTiles[FORCE_WORK_GROUP_SIZE];
+    __shared__ volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
     skipTiles[threadIdx.x] = -1;
 
     while (pos < end) {
@@ -568,7 +568,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
     int skipBase = 0;
     int currentSkipIndex = tbx;
     __shared__ int atomIndices[FORCE_WORK_GROUP_SIZE];
-    __shared__ int skipTiles[FORCE_WORK_GROUP_SIZE];
+    __shared__ volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
     skipTiles[threadIdx.x] = -1;
 
     while (pos < end) {
