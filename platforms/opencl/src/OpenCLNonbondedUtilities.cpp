@@ -317,7 +317,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         for (int i = 0; i < (int) exclusionBlocksForBlock.size(); i++)
             maxExclusions = (maxExclusions > exclusionBlocksForBlock[i].size() ? maxExclusions : exclusionBlocksForBlock[i].size());
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
-        defines["GROUP_SIZE"] = (deviceIsCpu ? "32" : "256");
+        defines["GROUP_SIZE"] = (deviceIsCpu ? "32" : "128");
         defines["BUFFER_GROUPS"] = (deviceIsCpu ? "4" : "2");
         string file = (deviceIsCpu ? OpenCLKernelSources::findInteractingBlocks_cpu : OpenCLKernelSources::findInteractingBlocks);
         cl::Program interactingBlocksProgram = context.createProgram(file, defines);
@@ -391,7 +391,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     context.executeKernel(sortBoxDataKernel, context.getNumAtoms());
     setPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 0);
     setInvPeriodicBoxSizeArg(context, findInteractingBlocksKernel, 1);
-    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), deviceIsCpu ? 1 : 256);
+    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms(), deviceIsCpu ? 1 : 128);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
