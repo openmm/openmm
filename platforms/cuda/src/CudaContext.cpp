@@ -47,6 +47,7 @@
 #include <iostream>
 #include <sstream>
 #include <typeinfo>
+#include <cudaProfiler.h>
 
 
 #define CHECK_RESULT(result) CHECK_RESULT2(result, errorMessage);
@@ -253,8 +254,10 @@ CudaContext::~CudaContext() {
     if (thread != NULL)
         delete thread;
     string errorMessage = "Error deleting Context";
-    if (contextIsValid)
+    if (contextIsValid) {
+        cuProfilerStop();
         CHECK_RESULT(cuCtxDestroy(context));
+    }
     contextIsValid = false;
 }
 
