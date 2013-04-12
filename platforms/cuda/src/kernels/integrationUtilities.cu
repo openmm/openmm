@@ -798,3 +798,19 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
         addForce(atoms.w, force, fp3);
     }
 }
+
+/**
+ * Apply a time shift to the velocities before computing kinetic energy.
+ */
+extern "C" __global__ void timeShiftVelocities(mixed4* __restrict__ velm, const long long* __restrict__ force, real timeShift) {
+    const mixed scale = timeShift/(mixed) 0x100000000;
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+        mixed4 velocity = velm[index];
+        if (velocity.w != 0.0) {
+            velocity.x += scale*force[index]*velocity.w;
+            velocity.y += scale*force[index+PADDED_NUM_ATOMS]*velocity.w;
+            velocity.z += scale*force[index+PADDED_NUM_ATOMS*2]*velocity.w;
+            velm[index] = velocity;
+        }
+    }
+}

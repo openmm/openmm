@@ -122,7 +122,7 @@ private:
     cl::Kernel ccmaMultiplyKernel;
     cl::Kernel ccmaPosUpdateKernel, ccmaVelUpdateKernel;
     cl::Kernel vsitePositionKernel, vsiteForceKernel;
-    cl::Kernel randomKernel;
+    cl::Kernel randomKernel, timeShiftKernel;
     OpenCLArray* posDelta;
     OpenCLArray* settleAtoms;
     OpenCLArray* settleParams;

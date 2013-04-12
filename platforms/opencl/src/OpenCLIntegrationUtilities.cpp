@@ -119,6 +119,13 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         vector<mm_float2> step(1, mm_float2(0.0f, 0.0f));
         stepSize->upload(step);
     }
+    
+    // Create the time shift kernel for calculating kinetic energy.
+    
+    map<string, string> timeShiftDefines;
+    timeShiftDefines["NUM_ATOMS"] = context.intToString(system.getNumParticles());
+    cl::Program utilitiesProgram = context.createProgram(OpenCLKernelSources::integrationUtilities, timeShiftDefines);
+    timeShiftKernel = cl::Kernel(utilitiesProgram, "timeShiftVelocities");
 
     // Create kernels for enforcing constraints.
 
@@ -961,54 +968,48 @@ void OpenCLIntegrationUtilities::loadCheckpoint(istream& stream) {
 
 double OpenCLIntegrationUtilities::computeKineticEnergy(double timeShift) {
     int numParticles = context.getNumAtoms();
-    double energy = 0.0;
-    if (context.getUseDoublePrecision()) {
-        mm_double4* force = (mm_double4*) context.getPinnedBuffer();
-        context.getForce().download(force);
-        vector<mm_double4> velm;
-        context.getVelm().download(velm);
-        for (int i = 0; i < numParticles; i++) {
-            mm_double4 v = velm[i];
-            if (v.w != 0) {
-                double scale = timeShift*v.w;
-                v.x += scale*force[i].x;
-                v.y += scale*force[i].y;
-                v.z += scale*force[i].z;
-                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-            }
-        }
+    if (timeShift != 0) {
+        // Copy the velocities into the posDelta array while we temporarily modify them.
+
+        context.getVelm().copyTo(*posDelta);
+
+        // Apply the time shift.
+
+        timeShiftKernel.setArg<cl::Buffer>(0, context.getVelm().getDeviceBuffer());
+        timeShiftKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+            timeShiftKernel.setArg<cl_double>(2, timeShift);
+        else
+            timeShiftKernel.setArg<cl_float>(2, (cl_float) timeShift);
+        context.executeKernel(timeShiftKernel, numParticles);
+        applyConstraints(true, 1e-4);
     }
-    else if (context.getUseMixedPrecision()) {
-        mm_float4* force = (mm_float4*) context.getPinnedBuffer();
-        context.getForce().download(force);
+    
+    // Compute the kinetic energy.
+    
+    double energy = 0.0;
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         vector<mm_double4> velm;
         context.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++) {
             mm_double4 v = velm[i];
-            if (v.w != 0) {
-                double scale = timeShift*v.w;
-                v.x += scale*force[i].x;
-                v.y += scale*force[i].y;
-                v.z += scale*force[i].z;
+            if (v.w != 0)
                 energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-            }
         }
     }
     else {
-        mm_float4* force = (mm_float4*) context.getPinnedBuffer();
-        context.getForce().download(force);
         vector<mm_float4> velm;
         context.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++) {
-            mm_double4 v = mm_double4(velm[i].x, velm[i].y, velm[i].z, velm[i].w);
-            if (v.w != 0) {
-                double scale = timeShift*v.w;
-                v.x += scale*force[i].x;
-                v.y += scale*force[i].y;
-                v.z += scale*force[i].z;
+            mm_float4 v = velm[i];
+            if (v.w != 0)
                 energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-            }
         }
     }
+    
+    // Restore the velocities.
+    
+    if (timeShift != 0)
+        posDelta->copyTo(context.getVelm());
     return 0.5*energy;
 }

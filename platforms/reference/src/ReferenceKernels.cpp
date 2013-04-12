@@ -149,16 +149,38 @@ static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorith
  * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
  * for a leapfrog integrator.
  */
-static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift, ReferenceConstraintAlgorithm* constraints) {
+    vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& velData = extractVelocities(context);
     vector<RealVec>& forceData = extractForces(context);
-    double energy = 0.0;
-    for (int i = 0; i < (int) masses.size(); ++i) {
-        if (masses[i] > 0) {
-            RealVec v = velData[i]+forceData[i]*(timeShift/masses[i]);
-            energy += masses[i]*(v.dot(v));
-        }
+    int numParticles = context.getSystem().getNumParticles();
+    
+    // Compute the shifted velocities.
+    
+    vector<RealVec> shiftedVel(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        if (masses[i] > 0)
+            shiftedVel[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
+        else
+            shiftedVel[i] = velData[i];
     }
+    
+    // Apply constraints to them.
+    
+    if (constraints != NULL) {
+        vector<double> inverseMasses(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
+        constraints->setTolerance(1e-4);
+        constraints->applyToVelocities(numParticles, posData, shiftedVel, inverseMasses);
+    }
+    
+    // Compute the kinetic energy.
+    
+    double energy = 0.0;
+    for (int i = 0; i < numParticles; ++i)
+        if (masses[i] > 0)
+            energy += masses[i]*(shiftedVel[i].dot(shiftedVel[i]));
     return 0.5*energy;
 }
 
@@ -1707,7 +1729,7 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
 }
 
 double ReferenceIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
@@ -1775,7 +1797,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
 }
 
 double ReferenceIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
 }
 
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
@@ -1842,7 +1864,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
 }
 
 double ReferenceIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0);
+    return computeShiftedKineticEnergy(context, masses, 0, constraints);
 }
 
 ReferenceIntegrateVariableLangevinStepKernel::~ReferenceIntegrateVariableLangevinStepKernel() {
@@ -1910,7 +1932,7 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
 }
 
 double ReferenceIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
 }
 
 ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletStepKernel() {
@@ -1972,7 +1994,7 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
 }
 
 double ReferenceIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
+    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize(), constraints);
 }
 
 ReferenceIntegrateCustomStepKernel::~ReferenceIntegrateCustomStepKernel() {

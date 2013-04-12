@@ -643,6 +643,7 @@ CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const S
     vsiteForceKernel = context.getKernel(module, "distributeVirtualSiteForces");
     numVsites = num2Avg+num3Avg+numOutOfPlane;
     randomKernel = context.getKernel(module, "generateRandomNumbers");
+    timeShiftKernel = context.getKernel(module, "timeShiftVelocities");
 }
 
 CudaIntegrationUtilities::~CudaIntegrationUtilities() {
@@ -858,38 +859,46 @@ void CudaIntegrationUtilities::loadCheckpoint(istream& stream) {
 
 double CudaIntegrationUtilities::computeKineticEnergy(double timeShift) {
     int numParticles = context.getNumAtoms();
-    int paddedNumParticles = context.getPaddedNumAtoms();
-    long long* force = (long long*) context.getPinnedBuffer();
-    context.getForce().download(force);
-    double forceScale = timeShift/0x100000000LL;
+    if (timeShift != 0) {
+        float timeShiftFloat = (float) timeShift;
+        void* timeShiftPtr = (context.getUseDoublePrecision() ? (void*) &timeShift : (void*) &timeShiftFloat);
+
+        // Copy the velocities into the posDelta array while we temporarily modify them.
+
+        context.getVelm().copyTo(*posDelta);
+
+        // Apply the time shift.
+
+        void* args[] = {&context.getVelm().getDevicePointer(), &context.getForce().getDevicePointer(), timeShiftPtr};
+        context.executeKernel(timeShiftKernel, args, numParticles);
+        applyConstraints(true, 1e-4);
+    }
+    
+    // Compute the kinetic energy.
+    
     double energy = 0.0;
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
         vector<double4> velm;
         context.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++) {
             double4 v = velm[i];
-            if (v.w != 0) {
-                double scale = forceScale*v.w;
-                v.x += scale*force[i];
-                v.y += scale*force[i+paddedNumParticles];
-                v.z += scale*force[i+paddedNumParticles*2];
+            if (v.w != 0)
                 energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-            }
         }
     }
     else {
         vector<float4> velm;
         context.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++) {
-            double4 v = make_double4(velm[i].x, velm[i].y, velm[i].z, velm[i].w);
-            if (v.w != 0) {
-                double scale = forceScale*v.w;
-                v.x += scale*force[i];
-                v.y += scale*force[i+paddedNumParticles];
-                v.z += scale*force[i+paddedNumParticles*2];
+            float4 v = velm[i];
+            if (v.w != 0)
                 energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-            }
         }
     }
+    
+    // Restore the velocities.
+    
+    if (timeShift != 0)
+        posDelta->copyTo(context.getVelm());
     return 0.5*energy;
 }

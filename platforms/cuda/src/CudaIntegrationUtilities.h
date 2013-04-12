@@ -122,7 +122,7 @@ private:
     CUfunction ccmaMultiplyKernel;
     CUfunction ccmaUpdateKernel;
     CUfunction vsitePositionKernel, vsiteForceKernel;
-    CUfunction randomKernel;
+    CUfunction randomKernel, timeShiftKernel;
     CudaArray* posDelta;
     CudaArray* settleAtoms;
     CudaArray* settleParams;
