@@ -977,7 +977,7 @@ double OpenCLIntegrationUtilities::computeKineticEnergy(double timeShift) {
 
         timeShiftKernel.setArg<cl::Buffer>(0, context.getVelm().getDeviceBuffer());
         timeShiftKernel.setArg<cl::Buffer>(1, context.getForce().getDeviceBuffer());
-        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+        if (context.getUseDoublePrecision())
             timeShiftKernel.setArg<cl_double>(2, timeShift);
         else
             timeShiftKernel.setArg<cl_float>(2, (cl_float) timeShift);
