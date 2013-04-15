@@ -320,8 +320,8 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                 valuesInBuffer = 0;
                 if (get_local_id(0) == 0)
                     bufferFull = false;
-                barrier(CLK_LOCAL_MEM_FENCE);
             }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }
         storeInteractionData(x, buffer, sum, temp, atoms, &numAtoms, &globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, true);
     }

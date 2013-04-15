@@ -343,8 +343,8 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 valuesInBuffer = 0;
                 if (threadIdx.x == 0)
                     bufferFull = false;
-                __syncthreads();
             }
+            __syncthreads();
         }
         storeInteractionData(x, buffer, sum, temp, atoms, numAtoms, globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, true);
     }
