@@ -403,7 +403,11 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     out.close();
     string bits = intToString(8*sizeof(void*));
 #ifdef WIN32
-    string command = ""+compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+#ifdef _DEBUG
+    string command = "\""+compiler+"\" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+#else
+    string command = "\""+compiler+"\" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+#endif
     int res = compileInWindows(command);
 #else
     string command = "\""+compiler+"\" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
