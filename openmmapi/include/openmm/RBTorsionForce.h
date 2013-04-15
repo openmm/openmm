@@ -118,7 +118,7 @@ public:
      */
     void updateParametersInContext(Context& context);
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class RBTorsionInfo;
     std::vector<RBTorsionInfo> rbTorsions;

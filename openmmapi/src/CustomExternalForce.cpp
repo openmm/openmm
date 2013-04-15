@@ -112,7 +112,7 @@ void CustomExternalForce::setParticleParameters(int index, int particle, const v
     particles[index].particle = particle;
 }
 
-ForceImpl* CustomExternalForce::createImpl() {
+ForceImpl* CustomExternalForce::createImpl() const {
     return new CustomExternalForceImpl(*this);
 }
 

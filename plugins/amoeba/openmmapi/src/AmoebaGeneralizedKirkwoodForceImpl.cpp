@@ -36,12 +36,12 @@
 using namespace OpenMM;
 using std::vector;
 
-AmoebaGeneralizedKirkwoodForceImpl::AmoebaGeneralizedKirkwoodForceImpl(AmoebaGeneralizedKirkwoodForce& owner) : owner(owner) {
+AmoebaGeneralizedKirkwoodForceImpl::AmoebaGeneralizedKirkwoodForceImpl(const AmoebaGeneralizedKirkwoodForce& owner) : owner(owner) {
 }
 
 void AmoebaGeneralizedKirkwoodForceImpl::initialize(ContextImpl& context) {
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("AmoebaGeneralizedKirkwoodForce must have exactly as many particles as the System it belongs to.");
 

@@ -47,7 +47,7 @@ public:
     CudaCalcAmoebaBondForceKernel(std::string name, 
                                           const Platform& platform,
                                           CudaContext& cu,
-                                          System& system);
+                                          const System& system);
     ~CudaCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
@@ -76,7 +76,7 @@ private:
     class ForceInfo;
     int numBonds;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -85,7 +85,7 @@ private:
  */
 class CudaCalcAmoebaAngleForceKernel : public CalcAmoebaAngleForceKernel {
 public:
-    CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
@@ -114,7 +114,7 @@ private:
     class ForceInfo;
     int numAngles;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -123,7 +123,7 @@ private:
  */
 class CudaCalcAmoebaInPlaneAngleForceKernel : public CalcAmoebaInPlaneAngleForceKernel {
 public:
-    CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
@@ -152,7 +152,7 @@ private:
     class ForceInfo;
     int numAngles;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -161,7 +161,7 @@ private:
  */
 class CudaCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
 public:
-    CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
@@ -190,7 +190,7 @@ private:
     class ForceInfo;
     int numPiTorsions;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -199,7 +199,7 @@ private:
  */
 class CudaCalcAmoebaStretchBendForceKernel : public CalcAmoebaStretchBendForceKernel {
 public:
-    CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
@@ -228,7 +228,7 @@ private:
     class ForceInfo;
     int numStretchBends;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -237,7 +237,7 @@ private:
  */
 class CudaCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
 public:
-    CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
@@ -266,7 +266,7 @@ private:
     class ForceInfo;
     int numOutOfPlaneBends;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -275,7 +275,7 @@ private:
  */
 class CudaCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
 public:
-    CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
@@ -298,7 +298,7 @@ private:
     int numTorsionTorsions;
     int numTorsionTorsionGrids;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* gridValues;
     CudaArray* gridParams;
     CudaArray* torsionParams;
@@ -309,7 +309,7 @@ private:
  */
 class CudaCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
 public:
-    CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
@@ -374,7 +374,7 @@ private:
     double inducedEpsilon;
     bool hasInitializedScaleFactors, hasInitializedFFT;
     CudaContext& cu;
-    System& system;
+    const System& system;
     std::vector<int3> covalentFlagValues;
     std::vector<int2> polarizationFlagValues;
     CudaArray* multipoleParticles;
@@ -419,7 +419,7 @@ private:
  */
 class CudaCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
 public:
-    CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
@@ -473,7 +473,7 @@ public:
 private:
     class ForceInfo;
     CudaContext& cu;
-    System& system;
+    const System& system;
     bool includeSurfaceArea, hasInitializedKernels;
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
     std::map<std::string, std::string> defines;
@@ -494,7 +494,7 @@ private:
  */
 class CudaCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
 public:
-    CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
@@ -522,7 +522,7 @@ public:
 private:
     class ForceInfo;
     CudaContext& cu;
-    System& system;
+    const System& system;
     bool hasInitializedNonbonded;
     double dispersionCoefficient;
     CudaArray* sigmaEpsilon;
@@ -539,7 +539,7 @@ private:
  */
 class CudaCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
 public:
-    CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system);
+    CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
     ~CudaCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
@@ -567,7 +567,7 @@ public:
 private:
     class ForceInfo;
     CudaContext& cu;
-    System& system;
+    const System& system;
     double totalMaximumDispersionEnergy;
     CudaArray* radiusEpsilon;
     CUfunction forceKernel;

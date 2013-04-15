@@ -47,9 +47,9 @@ class System;
 
 class OPENMM_EXPORT AndersenThermostatImpl : public ForceImpl {
 public:
-    AndersenThermostatImpl(AndersenThermostat& owner);
+    AndersenThermostatImpl(const AndersenThermostat& owner);
     void initialize(ContextImpl& context);
-    AndersenThermostat& getOwner() {
+    const AndersenThermostat& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context);
@@ -66,7 +66,7 @@ public:
     static std::vector<std::vector<int> > calcParticleGroups(const System& system);
 private:
     static void tagParticlesInGroup(int particle, int group, std::vector<int>& particleGroup, std::vector<std::vector<int> >& particleConstraints);
-    AndersenThermostat& owner;
+    const AndersenThermostat& owner;
     Kernel kernel;
 };
 

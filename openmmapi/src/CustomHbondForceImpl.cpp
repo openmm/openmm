@@ -71,7 +71,7 @@ public:
     }
 };
 
-CustomHbondForceImpl::CustomHbondForceImpl(CustomHbondForce& owner) : owner(owner) {
+CustomHbondForceImpl::CustomHbondForceImpl(const CustomHbondForce& owner) : owner(owner) {
 }
 
 CustomHbondForceImpl::~CustomHbondForceImpl() {
@@ -82,7 +82,7 @@ void CustomHbondForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of parameters and exclusions.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     vector<set<int> > exclusions(owner.getNumDonors());
     vector<double> parameters;
     int numDonorParameters = owner.getNumPerDonorParameters();

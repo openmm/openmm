@@ -48,10 +48,10 @@ namespace OpenMM {
 
 class AmoebaBondForceImpl : public ForceImpl {
 public:
-    AmoebaBondForceImpl(AmoebaBondForce& owner);
+    AmoebaBondForceImpl(const AmoebaBondForce& owner);
     ~AmoebaBondForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaBondForce& getOwner() {
+    const AmoebaBondForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -66,7 +66,7 @@ public:
     std::vector< std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
 private:
-    AmoebaBondForce& owner;
+    const AmoebaBondForce& owner;
     Kernel kernel;
 };
 

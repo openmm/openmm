@@ -66,7 +66,7 @@ public:
     /**
      * Get the Force object from which this ForceImpl was created.
      */
-    virtual Force& getOwner() = 0;
+    virtual const Force& getOwner() const = 0;
     /**
      * This method is called at the beginning of each time step.  It give the ForceImpl a chance
      * to modify the state variables (positions, velocities, and parameters) stored in the

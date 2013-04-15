@@ -85,7 +85,7 @@ protected:
      * It should create a new ForceImpl object which can be used by the context for calculating forces.
      * The ForceImpl will be deleted automatically when the Context is deleted.
      */
-    virtual ForceImpl* createImpl() = 0;
+    virtual ForceImpl* createImpl() const = 0;
     /**
      * Get the ForceImpl corresponding to this Force in a Context.
      */

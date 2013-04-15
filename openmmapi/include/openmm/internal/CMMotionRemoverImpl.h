@@ -44,9 +44,9 @@ namespace OpenMM {
 
 class CMMotionRemoverImpl : public ForceImpl {
 public:
-    CMMotionRemoverImpl(CMMotionRemover& owner);
+    CMMotionRemoverImpl(const CMMotionRemover& owner);
     void initialize(ContextImpl& context);
-    CMMotionRemover& getOwner() {
+    const CMMotionRemover& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context);
@@ -59,7 +59,7 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    CMMotionRemover& owner;
+    const CMMotionRemover& owner;
     Kernel kernel;
 };
 

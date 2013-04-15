@@ -43,7 +43,7 @@
 using namespace OpenMM;
 using namespace std;
 
-NonbondedForceImpl::NonbondedForceImpl(NonbondedForce& owner) : owner(owner) {
+NonbondedForceImpl::NonbondedForceImpl(const NonbondedForce& owner) : owner(owner) {
 }
 
 NonbondedForceImpl::~NonbondedForceImpl() {
@@ -54,7 +54,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of exceptions.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("NonbondedForce must have exactly as many particles as the System it belongs to.");
     vector<set<int> > exceptions(owner.getNumParticles());

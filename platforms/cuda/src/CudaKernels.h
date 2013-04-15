@@ -230,7 +230,7 @@ private:
  */
 class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    CudaCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcHarmonicBondForceKernel(name, platform),
+    CudaCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicBondForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
     ~CudaCalcHarmonicBondForceKernel();
@@ -261,7 +261,7 @@ private:
     int numBonds;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -270,7 +270,7 @@ private:
  */
 class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomBondForceKernel(name, platform),
+    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomBondForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
     ~CudaCalcCustomBondForceKernel();
@@ -301,7 +301,7 @@ private:
     int numBonds;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaParameterSet* params;
     CudaArray* globals;
     std::vector<std::string> globalParamNames;
@@ -313,7 +313,7 @@ private:
  */
 class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcHarmonicAngleForceKernel(name, platform),
+    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
     ~CudaCalcHarmonicAngleForceKernel();
@@ -344,7 +344,7 @@ private:
     int numAngles;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -353,7 +353,7 @@ private:
  */
 class CudaCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomAngleForceKernel(name, platform),
+    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomAngleForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
     ~CudaCalcCustomAngleForceKernel();
@@ -384,7 +384,7 @@ private:
     int numAngles;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaParameterSet* params;
     CudaArray* globals;
     std::vector<std::string> globalParamNames;
@@ -396,7 +396,7 @@ private:
  */
 class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
     ~CudaCalcPeriodicTorsionForceKernel();
@@ -427,7 +427,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params;
 };
 
@@ -436,7 +436,7 @@ private:
  */
 class CudaCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcRBTorsionForceKernel(name, platform),
+    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcRBTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params1(NULL), params2(NULL) {
     }
     ~CudaCalcRBTorsionForceKernel();
@@ -467,7 +467,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* params1;
     CudaArray* params2;
 };
@@ -477,7 +477,7 @@ private:
  */
 class CudaCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
-    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCMAPTorsionForceKernel(name, platform),
+    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
     }
     ~CudaCalcCMAPTorsionForceKernel();
@@ -501,7 +501,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaArray* coefficients;
     CudaArray* mapPositions;
     CudaArray* torsionMaps;
@@ -512,7 +512,7 @@ private:
  */
 class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomTorsionForceKernel(name, platform),
+    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
     ~CudaCalcCustomTorsionForceKernel();
@@ -543,7 +543,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaParameterSet* params;
     CudaArray* globals;
     std::vector<std::string> globalParamNames;
@@ -555,7 +555,7 @@ private:
  */
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcNonbondedForceKernel(name, platform),
+    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
             cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
             pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
     }
@@ -632,7 +632,7 @@ private:
  */
 class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomNonbondedForceKernel(name, platform),
+    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
             cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~CudaCalcCustomNonbondedForceKernel();
@@ -667,7 +667,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -724,7 +724,7 @@ private:
  */
 class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
-    CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomGBForceKernel(name, platform),
+    CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomGBForceKernel(name, platform),
             hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
             valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
@@ -767,7 +767,7 @@ private:
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
-    System& system;
+    const System& system;
     CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
     std::vector<void*> pairValueArgs, perParticleValueArgs, pairEnergyArgs, perParticleEnergyArgs, gradientChainRuleArgs;
     std::string pairValueSrc, pairEnergySrc;
@@ -779,7 +779,7 @@ private:
  */
 class CudaCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomExternalForceKernel(name, platform),
+    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomExternalForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
     ~CudaCalcCustomExternalForceKernel();
@@ -810,7 +810,7 @@ private:
     int numParticles;
     bool hasInitializedKernel;
     CudaContext& cu;
-    System& system;
+    const System& system;
     CudaParameterSet* params;
     CudaArray* globals;
     std::vector<std::string> globalParamNames;
@@ -822,7 +822,7 @@ private:
  */
 class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomHbondForceKernel(name, platform),
+    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
             globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
@@ -866,7 +866,7 @@ private:
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
     std::vector<void*> donorArgs, acceptorArgs;
-    System& system;
+    const System& system;
     CUfunction donorKernel, acceptorKernel;
 };
 
@@ -875,7 +875,7 @@ private:
  */
 class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
-    CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+    CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
             cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~CudaCalcCustomCompoundBondForceKernel();
@@ -912,7 +912,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
-    System& system;
+    const System& system;
 };
 
 /**

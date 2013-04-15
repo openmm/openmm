@@ -90,7 +90,7 @@ void AmoebaGeneralizedKirkwoodForce::setSurfaceAreaFactor(double inputSurfaceAre
     surfaceAreaFactor = inputSurfaceAreaFactor;
 }
 
-ForceImpl* AmoebaGeneralizedKirkwoodForce::createImpl() {
+ForceImpl* AmoebaGeneralizedKirkwoodForce::createImpl() const {
     return new AmoebaGeneralizedKirkwoodForceImpl(*this);
 }
 

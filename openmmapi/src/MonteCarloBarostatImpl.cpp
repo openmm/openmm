@@ -45,7 +45,7 @@ const float AVOGADRO = 6.0221367e23f;
 const float RGAS = BOLTZMANN*AVOGADRO; // (J/(mol K))
 const float BOLTZ = RGAS/1000;         // (kJ/(mol K))
 
-MonteCarloBarostatImpl::MonteCarloBarostatImpl(MonteCarloBarostat& owner) : owner(owner), step(0) {
+MonteCarloBarostatImpl::MonteCarloBarostatImpl(const MonteCarloBarostat& owner) : owner(owner), step(0) {
 }
 
 void MonteCarloBarostatImpl::initialize(ContextImpl& context) {

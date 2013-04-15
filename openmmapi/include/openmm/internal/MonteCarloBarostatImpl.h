@@ -46,9 +46,9 @@ namespace OpenMM {
 
 class MonteCarloBarostatImpl : public ForceImpl {
 public:
-    MonteCarloBarostatImpl(MonteCarloBarostat& owner);
+    MonteCarloBarostatImpl(const MonteCarloBarostat& owner);
     void initialize(ContextImpl& context);
-    MonteCarloBarostat& getOwner() {
+    const MonteCarloBarostat& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context);
@@ -59,7 +59,7 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
 private:
-    MonteCarloBarostat& owner;
+    const MonteCarloBarostat& owner;
     int step, numAttempted, numAccepted;
     double volumeScale;
     OpenMM_SFMT::SFMT random;

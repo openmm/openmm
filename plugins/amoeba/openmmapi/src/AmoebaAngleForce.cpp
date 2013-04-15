@@ -95,7 +95,7 @@ void AmoebaAngleForce::setAmoebaGlobalAngleSextic(double sexticK ) {
     _globalSexticK         = sexticK;
 }
 
-ForceImpl* AmoebaAngleForce::createImpl() {
+ForceImpl* AmoebaAngleForce::createImpl() const {
     return new AmoebaAngleForceImpl(*this);
 }
 

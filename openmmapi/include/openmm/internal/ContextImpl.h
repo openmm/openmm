@@ -55,7 +55,7 @@ public:
     /**
      * Create an ContextImpl for a Context;
      */
-    ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties);
+    ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties);
     ~ContextImpl();
     /**
      * Get the Context for which this is the implementation.
@@ -66,7 +66,7 @@ public:
     /**
      * Get System being simulated in this context.
      */
-    System& getSystem() {
+    const System& getSystem() const {
         return system;
     }
     /**
@@ -254,7 +254,7 @@ private:
     friend class Context;
     static void tagParticlesInMolecule(int particle, int molecule, std::vector<int>& particleMolecule, std::vector<std::vector<int> >& particleBonds);
     Context& owner;
-    System& system;
+    const System& system;
     Integrator& integrator;
     std::vector<ForceImpl*> forceImpls;
     std::map<std::string, double> parameters;

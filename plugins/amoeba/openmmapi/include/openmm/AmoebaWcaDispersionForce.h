@@ -123,7 +123,7 @@ public:
     void setSlevy(double inputValue);
 
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class WcaDispersionInfo;
     double epso;

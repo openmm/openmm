@@ -64,7 +64,7 @@ void AmoebaPiTorsionForce::setPiTorsionParameters(int index, int particle1, int 
     piTorsions[index].k          = k;
 }
 
-ForceImpl* AmoebaPiTorsionForce::createImpl() {
+ForceImpl* AmoebaPiTorsionForce::createImpl() const {
     return new AmoebaPiTorsionForceImpl(*this);
 }
 

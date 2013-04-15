@@ -102,7 +102,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 }
 
 void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations) {
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
     lbfgsfloatval_t *x = lbfgs_malloc(numParticles*3);
     if (x == NULL)

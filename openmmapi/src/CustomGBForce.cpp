@@ -202,7 +202,7 @@ void CustomGBForce::setFunctionParameters(int index, const std::string& name, co
     functions[index].max = max;
 }
 
-ForceImpl* CustomGBForce::createImpl() {
+ForceImpl* CustomGBForce::createImpl() const {
     return new CustomGBForceImpl(*this);
 }
 

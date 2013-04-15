@@ -114,7 +114,7 @@ void CustomBondForce::setBondParameters(int index, int particle1, int particle2,
     bonds[index].particle2 = particle2;
 }
 
-ForceImpl* CustomBondForce::createImpl() {
+ForceImpl* CustomBondForce::createImpl() const {
     return new CustomBondForceImpl(*this);
 }
 

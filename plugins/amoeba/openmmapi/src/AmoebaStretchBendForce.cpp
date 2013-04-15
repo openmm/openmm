@@ -67,7 +67,7 @@ void AmoebaStretchBendForce::setStretchBendParameters(int index, int particle1, 
     stretchBends[index].k          = k;
 }
 
-ForceImpl* AmoebaStretchBendForce::createImpl() {
+ForceImpl* AmoebaStretchBendForce::createImpl() const {
     return new AmoebaStretchBendForceImpl(*this);
 }
 

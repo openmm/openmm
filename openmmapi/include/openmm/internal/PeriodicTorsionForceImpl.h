@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class PeriodicTorsionForceImpl : public ForceImpl {
 public:
-    PeriodicTorsionForceImpl(PeriodicTorsionForce& owner);
+    PeriodicTorsionForceImpl(const PeriodicTorsionForce& owner);
     ~PeriodicTorsionForceImpl();
     void initialize(ContextImpl& context);
-    PeriodicTorsionForce& getOwner() {
+    const PeriodicTorsionForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -63,7 +63,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    PeriodicTorsionForce& owner;
+    const PeriodicTorsionForce& owner;
     Kernel kernel;
 };
 

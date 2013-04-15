@@ -40,15 +40,15 @@
 using namespace OpenMM;
 using namespace std;
 
-Context::Context(System& system, Integrator& integrator) : properties(map<string, string>()) {
+Context::Context(const System& system, Integrator& integrator) : properties(map<string, string>()) {
     impl = new ContextImpl(*this, system, integrator, 0, properties);
 }
 
-Context::Context(System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
+Context::Context(const System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
-Context::Context(System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
+Context::Context(const System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
@@ -59,10 +59,6 @@ Context::~Context() {
 const System& Context::getSystem() const {
     return impl->getSystem();
 
-}
-
-System& Context::getSystem() {
-    return impl->getSystem();
 }
 
 const Integrator& Context::getIntegrator() const {
@@ -204,7 +200,7 @@ void Context::setVelocities(const vector<Vec3>& velocities) {
 }
 
 void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
-    System& system = impl->getSystem();
+    const System& system = impl->getSystem();
     
     // Generate the list of Gaussian random numbers.
     
@@ -263,7 +259,7 @@ void Context::computeVirtualSites() {
 }
 
 void Context::reinitialize() {
-    System& system = impl->getSystem();
+    const System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
     integrator.cleanup();

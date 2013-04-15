@@ -47,7 +47,7 @@
 using namespace OpenMM;
 using namespace std;
 
-ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
+ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
         lastForceGroups(-1), platform(platform), platformData(NULL) {
     if (system.getNumParticles() == 0)

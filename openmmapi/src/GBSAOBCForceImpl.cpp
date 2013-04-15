@@ -38,7 +38,7 @@
 using namespace OpenMM;
 using std::vector;
 
-GBSAOBCForceImpl::GBSAOBCForceImpl(GBSAOBCForce& owner) : owner(owner) {
+GBSAOBCForceImpl::GBSAOBCForceImpl(const GBSAOBCForce& owner) : owner(owner) {
 }
 
 void GBSAOBCForceImpl::initialize(ContextImpl& context) {

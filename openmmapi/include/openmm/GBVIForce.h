@@ -228,7 +228,7 @@ public:
      */
     void setQuinticUpperBornRadiusLimit(double quinticUpperBornRadiusLimit);
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class ParticleInfo;
     NonbondedMethod nonbondedMethod;

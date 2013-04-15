@@ -45,9 +45,9 @@ namespace OpenMM {
 
 class AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
 public:
-    AmoebaGeneralizedKirkwoodForceImpl(AmoebaGeneralizedKirkwoodForce& owner);
+    AmoebaGeneralizedKirkwoodForceImpl(const AmoebaGeneralizedKirkwoodForce& owner);
     void initialize(ContextImpl& context);
-    AmoebaGeneralizedKirkwoodForce& getOwner() {
+    const AmoebaGeneralizedKirkwoodForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -63,7 +63,7 @@ public:
     }
     void updateParametersInContext(ContextImpl& context);
 private:
-    AmoebaGeneralizedKirkwoodForce& owner;
+    const AmoebaGeneralizedKirkwoodForce& owner;
     Kernel kernel;
 };
 

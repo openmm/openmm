@@ -43,7 +43,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 
-CustomExternalForceImpl::CustomExternalForceImpl(CustomExternalForce& owner) : owner(owner) {
+CustomExternalForceImpl::CustomExternalForceImpl(const CustomExternalForce& owner) : owner(owner) {
 }
 
 CustomExternalForceImpl::~CustomExternalForceImpl() {
@@ -54,7 +54,7 @@ void CustomExternalForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of bonds.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     vector<double> parameters;
     int numParameters = owner.getNumPerParticleParameters();
     for (int i = 0; i < owner.getNumParticles(); i++) {

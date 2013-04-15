@@ -230,7 +230,7 @@ private:
  */
 class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicBondForceKernel(name, platform),
+    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcHarmonicBondForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcHarmonicBondForceKernel();
@@ -261,7 +261,7 @@ private:
     int numBonds;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLArray* params;
 };
 
@@ -270,7 +270,7 @@ private:
  */
 class OpenCLCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    OpenCLCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomBondForceKernel(name, platform),
+    OpenCLCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomBondForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomBondForceKernel();
@@ -301,7 +301,7 @@ private:
     int numBonds;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
@@ -313,7 +313,7 @@ private:
  */
 class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicAngleForceKernel(name, platform),
+    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcHarmonicAngleForceKernel();
@@ -344,7 +344,7 @@ private:
     int numAngles;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLArray* params;
 };
 
@@ -353,7 +353,7 @@ private:
  */
 class OpenCLCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    OpenCLCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomAngleForceKernel(name, platform),
+    OpenCLCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomAngleForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomAngleForceKernel();
@@ -384,7 +384,7 @@ private:
     int numAngles;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
@@ -396,7 +396,7 @@ private:
  */
 class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcPeriodicTorsionForceKernel();
@@ -427,7 +427,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLArray* params;
 };
 
@@ -436,7 +436,7 @@ private:
  */
 class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcRBTorsionForceKernel(name, platform),
+    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcRBTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
     ~OpenCLCalcRBTorsionForceKernel();
@@ -467,7 +467,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLArray* params;
 };
 
@@ -476,7 +476,7 @@ private:
  */
 class OpenCLCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
-    OpenCLCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCMAPTorsionForceKernel(name, platform),
+    OpenCLCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
     }
     ~OpenCLCalcCMAPTorsionForceKernel();
@@ -500,7 +500,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLArray* coefficients;
     OpenCLArray* mapPositions;
     OpenCLArray* torsionMaps;
@@ -511,7 +511,7 @@ private:
  */
 class OpenCLCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    OpenCLCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomTorsionForceKernel(name, platform),
+    OpenCLCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomTorsionForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomTorsionForceKernel();
@@ -542,7 +542,7 @@ private:
     int numTorsions;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
@@ -554,7 +554,7 @@ private:
  */
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
+    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
             pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
             pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
@@ -633,7 +633,7 @@ private:
  */
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform),
+    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
             cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
@@ -668,7 +668,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -727,7 +727,7 @@ private:
  */
 class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
-    OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomGBForceKernel(name, platform),
+    OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomGBForceKernel(name, platform),
             hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
             valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
@@ -771,7 +771,7 @@ private:
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
-    System& system;
+    const System& system;
     cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
     std::string pairValueSrc, pairEnergySrc;
     std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
@@ -782,7 +782,7 @@ private:
  */
 class OpenCLCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    OpenCLCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomExternalForceKernel(name, platform),
+    OpenCLCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomExternalForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
     ~OpenCLCalcCustomExternalForceKernel();
@@ -813,7 +813,7 @@ private:
     int numParticles;
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    System& system;
+    const System& system;
     OpenCLParameterSet* params;
     OpenCLArray* globals;
     std::vector<std::string> globalParamNames;
@@ -825,7 +825,7 @@ private:
  */
 class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomHbondForceKernel(name, platform),
+    OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
             donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
             tabulatedFunctionParams(NULL), system(system) {
@@ -871,7 +871,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
-    System& system;
+    const System& system;
     cl::Kernel donorKernel, acceptorKernel;
 };
 
@@ -880,7 +880,7 @@ private:
  */
 class OpenCLCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
-    OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+    OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
             cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomCompoundBondForceKernel();
@@ -917,7 +917,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray*> tabulatedFunctions;
-    System& system;
+    const System& system;
 };
 
 /**

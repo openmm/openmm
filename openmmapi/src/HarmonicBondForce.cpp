@@ -61,7 +61,7 @@ void HarmonicBondForce::setBondParameters(int index, int particle1, int particle
     bonds[index].k = k;
 }
 
-ForceImpl* HarmonicBondForce::createImpl() {
+ForceImpl* HarmonicBondForce::createImpl() const {
     return new HarmonicBondForceImpl(*this);
 }
 

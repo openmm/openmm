@@ -41,7 +41,7 @@ using std::vector;
 bool AmoebaMultipoleForceImpl::initializedCovalentDegrees = false;
 int AmoebaMultipoleForceImpl::CovalentDegrees[]           = { 1,2,3,4,0,1,2,3};
 
-AmoebaMultipoleForceImpl::AmoebaMultipoleForceImpl(AmoebaMultipoleForce& owner) : owner(owner) {
+AmoebaMultipoleForceImpl::AmoebaMultipoleForceImpl(const AmoebaMultipoleForce& owner) : owner(owner) {
 }
 
 AmoebaMultipoleForceImpl::~AmoebaMultipoleForceImpl() {
@@ -49,7 +49,7 @@ AmoebaMultipoleForceImpl::~AmoebaMultipoleForceImpl() {
 
 void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     if (owner.getNumMultipoles() != system.getNumParticles())
         throw OpenMMException("AmoebaMultipoleForce must have exactly as many particles as the System it belongs to.");
 

@@ -39,7 +39,7 @@
 using namespace OpenMM;
 using std::vector;
 
-AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner) : owner(owner) {
+AndersenThermostatImpl::AndersenThermostatImpl(const AndersenThermostat& owner) : owner(owner) {
 }
 
 void AndersenThermostatImpl::initialize(ContextImpl& context) {

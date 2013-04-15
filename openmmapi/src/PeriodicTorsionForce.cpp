@@ -67,7 +67,7 @@ void PeriodicTorsionForce::setTorsionParameters(int index, int particle1, int pa
     periodicTorsions[index].k = k;
 }
 
-ForceImpl* PeriodicTorsionForce::createImpl() {
+ForceImpl* PeriodicTorsionForce::createImpl() const {
     return new PeriodicTorsionForceImpl(*this);
 }
 

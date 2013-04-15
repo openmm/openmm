@@ -92,7 +92,7 @@ void CMAPTorsionForce::setTorsionParameters(int index, int map, int a1, int a2, 
     torsions[index].b4 = b4;
 }
 
-ForceImpl* CMAPTorsionForce::createImpl() {
+ForceImpl* CMAPTorsionForce::createImpl() const {
     return new CMAPTorsionForceImpl(*this);
 }
 

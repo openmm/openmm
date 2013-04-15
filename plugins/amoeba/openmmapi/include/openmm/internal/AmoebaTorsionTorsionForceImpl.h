@@ -46,10 +46,10 @@ namespace OpenMM {
 
 class AmoebaTorsionTorsionForceImpl : public ForceImpl {
 public:
-    AmoebaTorsionTorsionForceImpl(AmoebaTorsionTorsionForce& owner);
+    AmoebaTorsionTorsionForceImpl(const AmoebaTorsionTorsionForce& owner);
     ~AmoebaTorsionTorsionForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaTorsionTorsionForce& getOwner() {
+    const AmoebaTorsionTorsionForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -64,7 +64,7 @@ public:
     OPENMM_EXPORT_AMOEBA static void reorderGrid( const TorsionTorsionGrid& grid, TorsionTorsionGrid& reorderedGrid );
 
 private:
-    AmoebaTorsionTorsionForce& owner;
+    const AmoebaTorsionTorsionForce& owner;
     Kernel kernel;
 };
 

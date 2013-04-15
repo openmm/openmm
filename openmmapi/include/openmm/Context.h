@@ -72,7 +72,7 @@ public:
      * @param system      the System which will be simulated
      * @param integrator  the Integrator which will be used to simulate the System
      */
-    Context(System& system, Integrator& integrator);
+    Context(const System& system, Integrator& integrator);
     /**
      * Construct a new Context in which to run a simulation, explicitly specifying what Platform should be used
      * to perform calculations.
@@ -81,7 +81,7 @@ public:
      * @param integrator  the Integrator which will be used to simulate the System
      * @param platform    the Platform to use for calculations
      */
-    Context(System& system, Integrator& integrator, Platform& platform);
+    Context(const System& system, Integrator& integrator, Platform& platform);
     /**
      * Construct a new Context in which to run a simulation, explicitly specifying what Platform should be used
      * to perform calculations and the values of platform-specific properties.
@@ -91,16 +91,12 @@ public:
      * @param platform    the Platform to use for calculations
      * @param properties  a set of values for platform-specific properties.  Keys are the property names.
      */
-    Context(System& system, Integrator& integrator, Platform& platform, const std::map<std::string, std::string>& properties);
+    Context(const System& system, Integrator& integrator, Platform& platform, const std::map<std::string, std::string>& properties);
     ~Context();
     /**
      * Get System being simulated in this context.
      */
     const System& getSystem() const;
-    /**
-     * Get System being simulated in this context.
-     */
-    System& getSystem();
     /**
      * Get Integrator being used to by this context.
      */

@@ -103,7 +103,7 @@ public:
      */
     void updateParametersInContext(Context& context);
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class AngleInfo;
     std::vector<AngleInfo> angles;

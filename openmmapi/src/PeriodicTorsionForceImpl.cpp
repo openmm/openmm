@@ -38,7 +38,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-PeriodicTorsionForceImpl::PeriodicTorsionForceImpl(PeriodicTorsionForce& owner) : owner(owner) {
+PeriodicTorsionForceImpl::PeriodicTorsionForceImpl(const PeriodicTorsionForce& owner) : owner(owner) {
 }
 
 PeriodicTorsionForceImpl::~PeriodicTorsionForceImpl() {

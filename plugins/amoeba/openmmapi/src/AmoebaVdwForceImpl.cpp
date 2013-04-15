@@ -45,14 +45,14 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaVdwForceImpl::AmoebaVdwForceImpl(AmoebaVdwForce& owner) : owner(owner) {
+AmoebaVdwForceImpl::AmoebaVdwForceImpl(const AmoebaVdwForce& owner) : owner(owner) {
 }
 
 AmoebaVdwForceImpl::~AmoebaVdwForceImpl() {
 }
 
 void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
 
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("AmoebaVdwForce must have exactly as many particles as the System it belongs to.");

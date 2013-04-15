@@ -40,6 +40,6 @@ AndersenThermostat::AndersenThermostat(double defaultTemperature, double default
     setRandomNumberSeed((int) time(NULL));
 }
 
-ForceImpl* AndersenThermostat::createImpl() {
+ForceImpl* AndersenThermostat::createImpl() const {
     return new AndersenThermostatImpl(*this);
 }

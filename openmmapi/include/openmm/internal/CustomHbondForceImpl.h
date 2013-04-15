@@ -50,10 +50,10 @@ namespace OpenMM {
 
 class OPENMM_EXPORT CustomHbondForceImpl : public ForceImpl {
 public:
-    CustomHbondForceImpl(CustomHbondForce& owner);
+    CustomHbondForceImpl(const CustomHbondForce& owner);
     ~CustomHbondForceImpl();
     void initialize(ContextImpl& context);
-    CustomHbondForce& getOwner() {
+    const CustomHbondForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -85,7 +85,7 @@ private:
     static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
             std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
             std::map<std::string, std::vector<int> >& dihedrals);
-    CustomHbondForce& owner;
+    const CustomHbondForce& owner;
     Kernel kernel;
 };
 

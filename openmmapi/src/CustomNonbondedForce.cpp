@@ -174,7 +174,7 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
     functions[index].max = max;
 }
 
-ForceImpl* CustomNonbondedForce::createImpl() {
+ForceImpl* CustomNonbondedForce::createImpl() const {
     return new CustomNonbondedForceImpl(*this);
 }
 

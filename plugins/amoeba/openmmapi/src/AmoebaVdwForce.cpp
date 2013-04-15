@@ -118,7 +118,7 @@ void AmoebaVdwForce::setNonbondedMethod(NonbondedMethod method) {
     nonbondedMethod = method;
 }
 
-ForceImpl* AmoebaVdwForce::createImpl() {
+ForceImpl* AmoebaVdwForce::createImpl() const {
     return new AmoebaVdwForceImpl(*this);
 }
 

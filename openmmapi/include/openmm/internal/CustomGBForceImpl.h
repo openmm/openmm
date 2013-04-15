@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class CustomGBForceImpl : public ForceImpl {
 public:
-    CustomGBForceImpl(CustomGBForce& owner);
+    CustomGBForceImpl(const CustomGBForce& owner);
     ~CustomGBForceImpl();
     void initialize(ContextImpl& context);
-    CustomGBForce& getOwner() {
+    const CustomGBForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,7 +61,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    CustomGBForce& owner;
+    const CustomGBForce& owner;
     Kernel kernel;
 };
 

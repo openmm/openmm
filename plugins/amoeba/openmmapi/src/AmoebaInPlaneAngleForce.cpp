@@ -97,7 +97,7 @@ double AmoebaInPlaneAngleForce::getAmoebaGlobalInPlaneAngleSextic( void ) const 
     return _globalSexticK;
 }
 
-ForceImpl* AmoebaInPlaneAngleForce::createImpl() {
+ForceImpl* AmoebaInPlaneAngleForce::createImpl() const {
     return new AmoebaInPlaneAngleForceImpl(*this);
 }
 

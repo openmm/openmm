@@ -62,7 +62,7 @@ public:
         frequency = freq;
     }
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     int frequency;
 };

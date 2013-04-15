@@ -149,7 +149,7 @@ void CustomCompoundBondForce::setFunctionParameters(int index, const std::string
     functions[index].max = max;
 }
 
-ForceImpl* CustomCompoundBondForce::createImpl() {
+ForceImpl* CustomCompoundBondForce::createImpl() const {
     return new CustomCompoundBondForceImpl(*this);
 }
 

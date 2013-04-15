@@ -119,7 +119,7 @@ public:
         randomNumberSeed = seed;
     }
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     double defaultPressure, temperature;
     int frequency, randomNumberSeed;

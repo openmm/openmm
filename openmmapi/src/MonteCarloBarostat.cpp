@@ -40,6 +40,6 @@ MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperatur
     setRandomNumberSeed((int) time(NULL));
 }
 
-ForceImpl* MonteCarloBarostat::createImpl() {
+ForceImpl* MonteCarloBarostat::createImpl() const {
     return new MonteCarloBarostatImpl(*this);
 }

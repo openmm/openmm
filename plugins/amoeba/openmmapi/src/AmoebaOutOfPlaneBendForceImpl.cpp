@@ -39,7 +39,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaOutOfPlaneBendForceImpl::AmoebaOutOfPlaneBendForceImpl(AmoebaOutOfPlaneBendForce& owner) : owner(owner) {
+AmoebaOutOfPlaneBendForceImpl::AmoebaOutOfPlaneBendForceImpl(const AmoebaOutOfPlaneBendForce& owner) : owner(owner) {
 }
 
 AmoebaOutOfPlaneBendForceImpl::~AmoebaOutOfPlaneBendForceImpl() {

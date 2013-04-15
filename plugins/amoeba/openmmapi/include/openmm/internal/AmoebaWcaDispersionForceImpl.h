@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_AMOEBA AmoebaWcaDispersionForceImpl : public ForceImpl {
 public:
-    AmoebaWcaDispersionForceImpl(AmoebaWcaDispersionForce& owner);
+    AmoebaWcaDispersionForceImpl(const AmoebaWcaDispersionForce& owner);
     ~AmoebaWcaDispersionForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaWcaDispersionForce& getOwner() {
+    const AmoebaWcaDispersionForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -82,7 +82,7 @@ public:
     void updateParametersInContext(ContextImpl& context);
 
 private:
-    AmoebaWcaDispersionForce& owner;
+    const AmoebaWcaDispersionForce& owner;
     Kernel kernel;
 };
 

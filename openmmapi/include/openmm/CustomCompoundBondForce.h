@@ -270,7 +270,7 @@ public:
      */
     void updateParametersInContext(Context& context);
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class BondInfo;
     class BondParameterInfo;

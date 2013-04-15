@@ -216,7 +216,7 @@ void CustomHbondForce::setFunctionParameters(int index, const std::string& name,
     functions[index].max = max;
 }
 
-ForceImpl* CustomHbondForce::createImpl() {
+ForceImpl* CustomHbondForce::createImpl() const {
     return new CustomHbondForceImpl(*this);
 }
 

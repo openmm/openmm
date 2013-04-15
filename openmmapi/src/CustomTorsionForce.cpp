@@ -118,7 +118,7 @@ void CustomTorsionForce::setTorsionParameters(int index, int particle1, int part
     torsions[index].particle4 = particle4;
 }
 
-ForceImpl* CustomTorsionForce::createImpl() {
+ForceImpl* CustomTorsionForce::createImpl() const {
     return new CustomTorsionForceImpl(*this);
 }
 

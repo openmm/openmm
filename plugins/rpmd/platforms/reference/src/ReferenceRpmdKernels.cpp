@@ -235,7 +235,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
 }
 
 double ReferenceIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
     vector<RealVec>& velData = extractVelocities(context);
     double energy = 0.0;

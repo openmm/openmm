@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class CustomExternalForceImpl : public ForceImpl {
 public:
-    CustomExternalForceImpl(CustomExternalForce& owner);
+    CustomExternalForceImpl(const CustomExternalForce& owner);
     ~CustomExternalForceImpl();
     void initialize(ContextImpl& context);
-    CustomExternalForce& getOwner() {
+    const CustomExternalForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,7 +61,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    CustomExternalForce& owner;
+    const CustomExternalForce& owner;
     Kernel kernel;
 };
 

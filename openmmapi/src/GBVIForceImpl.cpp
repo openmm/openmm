@@ -41,7 +41,7 @@
 using namespace OpenMM;
 using std::vector;
 
-GBVIForceImpl::GBVIForceImpl(GBVIForce& owner) : owner(owner) {
+GBVIForceImpl::GBVIForceImpl(const GBVIForce& owner) : owner(owner) {
 }
 
 void GBVIForceImpl::initialize(ContextImpl& context) {
@@ -49,7 +49,7 @@ void GBVIForceImpl::initialize(ContextImpl& context) {
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("GBVIForce must have exactly as many particles as the System it belongs to.");
     
-    System& system            = context.getSystem();
+    const System& system      = context.getSystem();
     int     numberOfParticles = owner.getNumParticles();
     int numberOfBonds         = owner.getNumBonds();
 
@@ -109,13 +109,14 @@ void GBVIForceImpl::initialize(ContextImpl& context) {
     kernel.getAs<CalcGBVIForceKernel>().initialize(context.getSystem(), owner, scaledRadii);
 }
 
+/*
 int GBVIForceImpl::getBondsFromForces(ContextImpl& context) {
 
     // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
     
-    System& system            = context.getSystem();
+    const System& system = context.getSystem();
     for (int i = 0; i < system.getNumForces(); i++) {
-        if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
+        if (dynamic_cast<const HarmonicBondForce*>(&system.getForce(i)) != NULL) {
             const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
             for (int j = 0; j < force.getNumBonds(); ++j) {
                 int particle1, particle2;
@@ -142,6 +143,7 @@ int GBVIForceImpl::getBondsFromForces(ContextImpl& context) {
 
     return 0;
 }
+*/
 
 #define GBVIDebug 0
 

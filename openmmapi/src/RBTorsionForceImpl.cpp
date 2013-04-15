@@ -38,7 +38,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-RBTorsionForceImpl::RBTorsionForceImpl(RBTorsionForce& owner) : owner(owner) {
+RBTorsionForceImpl::RBTorsionForceImpl(const RBTorsionForce& owner) : owner(owner) {
 }
 
 RBTorsionForceImpl::~RBTorsionForceImpl() {

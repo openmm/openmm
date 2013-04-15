@@ -99,7 +99,7 @@ void AmoebaOutOfPlaneBendForce::setOutOfPlaneBendParameters(int index, int parti
     outOfPlaneBends[index].k          = k;
 }
 
-ForceImpl* AmoebaOutOfPlaneBendForce::createImpl() {
+ForceImpl* AmoebaOutOfPlaneBendForce::createImpl() const {
     return new AmoebaOutOfPlaneBendForceImpl(*this);
 }
 

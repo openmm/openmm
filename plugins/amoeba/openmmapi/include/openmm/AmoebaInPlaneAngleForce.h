@@ -173,7 +173,7 @@ public:
     void updateParametersInContext(Context& context);
 
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
     double _globalCubicK, _globalQuarticK, _globalPenticK, _globalSexticK;
 private:
     class AngleInfo;

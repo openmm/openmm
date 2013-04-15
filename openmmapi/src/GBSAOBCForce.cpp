@@ -75,7 +75,7 @@ void GBSAOBCForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-ForceImpl* GBSAOBCForce::createImpl() {
+ForceImpl* GBSAOBCForce::createImpl() const {
     return new GBSAOBCForceImpl(*this);
 }
 

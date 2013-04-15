@@ -63,7 +63,7 @@ void HarmonicAngleForce::setAngleParameters(int index, int particle1, int partic
     angles[index].k = k;
 }
 
-ForceImpl* HarmonicAngleForce::createImpl() {
+ForceImpl* HarmonicAngleForce::createImpl() const {
     return new HarmonicAngleForceImpl(*this);
 }
 

@@ -43,7 +43,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 
-CustomAngleForceImpl::CustomAngleForceImpl(CustomAngleForce& owner) : owner(owner) {
+CustomAngleForceImpl::CustomAngleForceImpl(const CustomAngleForce& owner) : owner(owner) {
 }
 
 CustomAngleForceImpl::~CustomAngleForceImpl() {
@@ -53,8 +53,7 @@ void CustomAngleForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcCustomAngleForceKernel::Name(), context);
 
     // Check for errors in the specification of bonds.
-
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     vector<double> parameters;
     int numParameters = owner.getNumPerAngleParameters();
     for (int i = 0; i < owner.getNumAngles(); i++) {

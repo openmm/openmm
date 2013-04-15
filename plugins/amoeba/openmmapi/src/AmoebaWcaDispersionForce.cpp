@@ -127,7 +127,7 @@ void AmoebaWcaDispersionForce::setSlevy( double inputSlevy ){
     slevy = inputSlevy;
 }
 
-ForceImpl* AmoebaWcaDispersionForce::createImpl() {
+ForceImpl* AmoebaWcaDispersionForce::createImpl() const {
     return new AmoebaWcaDispersionForceImpl(*this);
 }
 

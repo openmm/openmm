@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class AmoebaPiTorsionForceImpl : public ForceImpl {
 public:
-    AmoebaPiTorsionForceImpl(AmoebaPiTorsionForce& owner);
+    AmoebaPiTorsionForceImpl(const AmoebaPiTorsionForce& owner);
     ~AmoebaPiTorsionForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaPiTorsionForce& getOwner() {
+    const AmoebaPiTorsionForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -63,7 +63,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    AmoebaPiTorsionForce& owner;
+    const AmoebaPiTorsionForce& owner;
     Kernel kernel;
 };
 

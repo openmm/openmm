@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class CustomBondForceImpl : public ForceImpl {
 public:
-    CustomBondForceImpl(CustomBondForce& owner);
+    CustomBondForceImpl(const CustomBondForce& owner);
     ~CustomBondForceImpl();
     void initialize(ContextImpl& context);
-    CustomBondForce& getOwner() {
+    const CustomBondForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -62,7 +62,7 @@ public:
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
 private:
-    CustomBondForce& owner;
+    const CustomBondForce& owner;
     Kernel kernel;
 };
 

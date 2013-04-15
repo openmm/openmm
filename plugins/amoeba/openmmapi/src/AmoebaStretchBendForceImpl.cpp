@@ -39,7 +39,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaStretchBendForceImpl::AmoebaStretchBendForceImpl(AmoebaStretchBendForce& owner) : owner(owner) {
+AmoebaStretchBendForceImpl::AmoebaStretchBendForceImpl(const AmoebaStretchBendForce& owner) : owner(owner) {
 }
 
 AmoebaStretchBendForceImpl::~AmoebaStretchBendForceImpl() {

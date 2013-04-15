@@ -38,7 +38,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-HarmonicAngleForceImpl::HarmonicAngleForceImpl(HarmonicAngleForce& owner) : owner(owner) {
+HarmonicAngleForceImpl::HarmonicAngleForceImpl(const HarmonicAngleForce& owner) : owner(owner) {
 }
 
 HarmonicAngleForceImpl::~HarmonicAngleForceImpl() {

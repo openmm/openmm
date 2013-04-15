@@ -43,7 +43,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 
-CustomGBForceImpl::CustomGBForceImpl(CustomGBForce& owner) : owner(owner) {
+CustomGBForceImpl::CustomGBForceImpl(const CustomGBForce& owner) : owner(owner) {
 }
 
 CustomGBForceImpl::~CustomGBForceImpl() {
@@ -54,7 +54,7 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of parameters and exclusions.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("CustomGBForce must have exactly as many particles as the System it belongs to.");
     vector<set<int> > exclusions(owner.getNumParticles());

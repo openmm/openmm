@@ -45,9 +45,9 @@ namespace OpenMM {
 
 class GBVIForceImpl : public ForceImpl {
 public:
-    GBVIForceImpl(GBVIForce& owner);
+    GBVIForceImpl(const GBVIForce& owner);
     void initialize(ContextImpl& context);
-    GBVIForce& getOwner() {
+    const GBVIForce& getOwner() const {
         return owner;
     }
     
@@ -68,7 +68,7 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    GBVIForce& owner;
+    const GBVIForce& owner;
     Kernel kernel;
 };
 

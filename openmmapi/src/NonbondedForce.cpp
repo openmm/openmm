@@ -145,7 +145,7 @@ void NonbondedForce::setExceptionParameters(int index, int particle1, int partic
     exceptions[index].epsilon = epsilon;
 }
 
-ForceImpl* NonbondedForce::createImpl() {
+ForceImpl* NonbondedForce::createImpl() const {
     return new NonbondedForceImpl(*this);
 }
 

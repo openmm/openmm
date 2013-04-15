@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class CustomNonbondedForceImpl : public ForceImpl {
 public:
-    CustomNonbondedForceImpl(CustomNonbondedForce& owner);
+    CustomNonbondedForceImpl(const CustomNonbondedForce& owner);
     ~CustomNonbondedForceImpl();
     void initialize(ContextImpl& context);
-    CustomNonbondedForce& getOwner() {
+    const CustomNonbondedForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,7 +61,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    CustomNonbondedForce& owner;
+    const CustomNonbondedForce& owner;
     Kernel kernel;
 };
 

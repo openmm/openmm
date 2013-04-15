@@ -75,7 +75,7 @@ double AmoebaBondForce::getAmoebaGlobalBondQuartic( void ) const {
     return _globalQuarticK;
 }
 
-ForceImpl* AmoebaBondForce::createImpl() {
+ForceImpl* AmoebaBondForce::createImpl() const {
     return new AmoebaBondForceImpl(*this);
 }
 

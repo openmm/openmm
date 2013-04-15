@@ -124,6 +124,6 @@ void GBVIForce::getBondParameters(int index, int& bondIndex1, int& bondIndex2, d
     bondLength = bonds[index].bondLength;
 }
 
-ForceImpl* GBVIForce::createImpl() {
+ForceImpl* GBVIForce::createImpl() const {
     return new GBVIForceImpl(*this);
 }

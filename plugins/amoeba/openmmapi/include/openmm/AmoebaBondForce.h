@@ -141,7 +141,7 @@ public:
 
 protected:
     double _globalQuarticK, _globalCubicK;
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class BondInfo;
     std::vector<BondInfo> bonds;

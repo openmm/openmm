@@ -40,7 +40,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaBondForceImpl::AmoebaBondForceImpl(AmoebaBondForce& owner) : owner(owner) {
+AmoebaBondForceImpl::AmoebaBondForceImpl(const AmoebaBondForce& owner) : owner(owner) {
 }
 
 AmoebaBondForceImpl::~AmoebaBondForceImpl() {

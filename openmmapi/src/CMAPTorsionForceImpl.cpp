@@ -41,7 +41,7 @@
 using namespace OpenMM;
 using namespace std;
 
-CMAPTorsionForceImpl::CMAPTorsionForceImpl(CMAPTorsionForce& owner) : owner(owner) {
+CMAPTorsionForceImpl::CMAPTorsionForceImpl(const CMAPTorsionForce& owner) : owner(owner) {
 }
 
 CMAPTorsionForceImpl::~CMAPTorsionForceImpl() {

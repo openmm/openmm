@@ -43,7 +43,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 
-CustomBondForceImpl::CustomBondForceImpl(CustomBondForce& owner) : owner(owner) {
+CustomBondForceImpl::CustomBondForceImpl(const CustomBondForce& owner) : owner(owner) {
 }
 
 CustomBondForceImpl::~CustomBondForceImpl() {
@@ -54,7 +54,7 @@ void CustomBondForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of bonds.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     vector<double> parameters;
     int numParameters = owner.getNumPerBondParameters();
     for (int i = 0; i < owner.getNumBonds(); i++) {

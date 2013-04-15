@@ -49,10 +49,10 @@ class System;
 
 class OPENMM_EXPORT NonbondedForceImpl : public ForceImpl {
 public:
-    NonbondedForceImpl(NonbondedForce& owner);
+    NonbondedForceImpl(const NonbondedForce& owner);
     ~NonbondedForceImpl();
     void initialize(ContextImpl& context);
-    NonbondedForce& getOwner() {
+    const NonbondedForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -83,7 +83,7 @@ private:
     class ErrorFunction;
     class EwaldErrorFunction;
     static int findZero(const ErrorFunction& f, int initialGuess);
-    NonbondedForce& owner;
+    const NonbondedForce& owner;
     Kernel kernel;
 };
 

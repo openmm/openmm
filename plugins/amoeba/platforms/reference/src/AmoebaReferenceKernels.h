@@ -43,7 +43,7 @@ class ReferenceCalcAmoebaBondForceKernel : public CalcAmoebaBondForceKernel {
 public:
     ReferenceCalcAmoebaBondForceKernel(std::string name, 
                                                const Platform& platform,
-                                               System& system);
+                                               const System& system);
     ~ReferenceCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
@@ -76,7 +76,7 @@ private:
     std::vector<RealOpenMM> kQuadratic;
     RealOpenMM globalBondCubic;
     RealOpenMM globalBondQuartic;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -84,7 +84,7 @@ private:
  */
 class ReferenceCalcAmoebaAngleForceKernel : public CalcAmoebaAngleForceKernel {
 public:
-    ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
@@ -120,7 +120,7 @@ private:
     RealOpenMM globalAngleQuartic;
     RealOpenMM globalAnglePentic;
     RealOpenMM globalAngleSextic;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -128,7 +128,7 @@ private:
  */
 class ReferenceCalcAmoebaInPlaneAngleForceKernel : public CalcAmoebaInPlaneAngleForceKernel {
 public:
-    ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
@@ -165,7 +165,7 @@ private:
     RealOpenMM globalInPlaneAngleQuartic;
     RealOpenMM globalInPlaneAnglePentic;
     RealOpenMM globalInPlaneAngleSextic;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -173,7 +173,7 @@ private:
  */
 class ReferenceCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
 public:
-    ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
@@ -207,7 +207,7 @@ private:
     std::vector<int>   particle5;
     std::vector<int>   particle6;
     std::vector<RealOpenMM> kTorsion;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -215,7 +215,7 @@ private:
  */
 class ReferenceCalcAmoebaStretchBendForceKernel : public CalcAmoebaStretchBendForceKernel {
 public:
-    ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
@@ -249,7 +249,7 @@ private:
     std::vector<RealOpenMM> lengthCBParameters;
     std::vector<RealOpenMM> angleParameters;
     std::vector<RealOpenMM> kParameters;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -257,7 +257,7 @@ private:
  */
 class ReferenceCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
 public:
-    ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
@@ -293,7 +293,7 @@ private:
     RealOpenMM globalOutOfPlaneBendAngleQuartic;
     RealOpenMM globalOutOfPlaneBendAnglePentic;
     RealOpenMM globalOutOfPlaneBendAngleSextic;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -301,7 +301,7 @@ private:
  */
 class ReferenceCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
 public:
-    ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
@@ -332,7 +332,7 @@ private:
     int numTorsionTorsionGrids;
     std::vector< std::vector< std::vector< std::vector<RealOpenMM> > > > torsionTorsionGrids;
 
-    System& system;
+    const System& system;
 };
 
 /**
@@ -340,7 +340,7 @@ private:
  */
 class ReferenceCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
 public:
-    ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
@@ -421,7 +421,7 @@ private:
     RealOpenMM cutoffDistance;
     std::vector<int> pmeGridDimension;
 
-    System& system;
+    const System& system;
 };
 
 /**
@@ -429,7 +429,7 @@ private:
  */
 class ReferenceCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
 public:
-    ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
@@ -467,7 +467,7 @@ private:
     std::vector<RealOpenMM> reductions;
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
-    System& system;
+    const System& system;
     NeighborList* neighborList;
 };
 
@@ -476,7 +476,7 @@ private:
  */
 class ReferenceCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
 public:
-    ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
@@ -515,7 +515,7 @@ private:
     RealOpenMM dispoff;
     RealOpenMM slevy;
     RealOpenMM totalMaximumDispersionEnergy;
-    System& system;
+    const System& system;
 };
 
 /**
@@ -523,7 +523,7 @@ private:
  */
 class ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
 public:
-    ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, System& system);
+    ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, const System& system);
     ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
@@ -649,7 +649,7 @@ private:
     RealOpenMM surfaceAreaFactor;
     int includeCavityTerm;
     int directPolarization;
-    System& system;
+    const System& system;
 };
 
 } // namespace OpenMM

@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class HarmonicBondForceImpl : public ForceImpl {
 public:
-    HarmonicBondForceImpl(HarmonicBondForce& owner);
+    HarmonicBondForceImpl(const HarmonicBondForce& owner);
     ~HarmonicBondForceImpl();
     void initialize(ContextImpl& context);
-    HarmonicBondForce& getOwner() {
+    const HarmonicBondForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -64,7 +64,7 @@ public:
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
 private:
-    HarmonicBondForce& owner;
+    const HarmonicBondForce& owner;
     Kernel kernel;
 };
 

@@ -71,7 +71,7 @@ public:
     }
 };
 
-CustomCompoundBondForceImpl::CustomCompoundBondForceImpl(CustomCompoundBondForce& owner) : owner(owner) {
+CustomCompoundBondForceImpl::CustomCompoundBondForceImpl(const CustomCompoundBondForce& owner) : owner(owner) {
 }
 
 CustomCompoundBondForceImpl::~CustomCompoundBondForceImpl() {
@@ -82,7 +82,7 @@ void CustomCompoundBondForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of parameters and exclusions.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     vector<int> particles;
     vector<double> parameters;
     int numBondParameters = owner.getNumPerBondParameters();

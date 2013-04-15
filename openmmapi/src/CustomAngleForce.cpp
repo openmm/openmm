@@ -116,7 +116,7 @@ void CustomAngleForce::setAngleParameters(int index, int particle1, int particle
     angles[index].particle3 = particle3;
 }
 
-ForceImpl* CustomAngleForce::createImpl() {
+ForceImpl* CustomAngleForce::createImpl() const {
     return new CustomAngleForceImpl(*this);
 }
 

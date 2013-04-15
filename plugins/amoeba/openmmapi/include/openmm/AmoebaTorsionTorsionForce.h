@@ -137,7 +137,7 @@ public:
     void setTorsionTorsionGrid(int index, const std::vector<std::vector<std::vector<double> > >& grid);
 
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class TorsionTorsionInfo;
     class TorsionTorsionGridInfo;

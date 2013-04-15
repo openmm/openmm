@@ -87,7 +87,7 @@ private:
     const AmoebaBondForce& force;
 };
 
-CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+CudaCalcAmoebaBondForceKernel::CudaCalcAmoebaBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
                 CalcAmoebaBondForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
@@ -184,7 +184,7 @@ private:
     const AmoebaAngleForce& force;
 };
 
-CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+CudaCalcAmoebaAngleForceKernel::CudaCalcAmoebaAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
             CalcAmoebaAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
@@ -285,7 +285,7 @@ private:
     const AmoebaInPlaneAngleForce& force;
 };
 
-CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+CudaCalcAmoebaInPlaneAngleForceKernel::CudaCalcAmoebaInPlaneAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
           CalcAmoebaInPlaneAngleForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
@@ -387,7 +387,7 @@ private:
     const AmoebaPiTorsionForce& force;
 };
 
-CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+CudaCalcAmoebaPiTorsionForceKernel::CudaCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
@@ -481,7 +481,7 @@ private:
     const AmoebaStretchBendForce& force;
 };
 
-CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+CudaCalcAmoebaStretchBendForceKernel::CudaCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
@@ -577,7 +577,7 @@ private:
     const AmoebaOutOfPlaneBendForce& force;
 };
 
-CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+CudaCalcAmoebaOutOfPlaneBendForceKernel::CudaCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), cu(cu), system(system), params(NULL) {
 }
 
@@ -677,7 +677,7 @@ private:
     const AmoebaTorsionTorsionForce& force;
 };
 
-CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+CudaCalcAmoebaTorsionTorsionForceKernel::CudaCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), cu(cu), system(system), gridValues(NULL), gridParams(NULL), torsionParams(NULL) {
 }
 
@@ -782,7 +782,7 @@ private:
     const AmoebaMultipoleForce& force;
 };
 
-CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
         CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false),
         multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL),
         field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL),
@@ -1821,7 +1821,7 @@ private:
     const AmoebaGeneralizedKirkwoodForce& force;
 };
 
-CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+CudaCalcAmoebaGeneralizedKirkwoodForceKernel::CudaCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
            CalcAmoebaGeneralizedKirkwoodForceKernel(name, platform), cu(cu), system(system), hasInitializedKernels(false), params(NULL), bornRadii(NULL), field(NULL),
            inducedField(NULL), inducedFieldPolar(NULL), inducedDipoleS(NULL), inducedDipolePolarS(NULL), bornSum(NULL), bornForce(NULL) {
 }
@@ -2071,7 +2071,7 @@ private:
     const AmoebaVdwForce& force;
 };
 
-CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) :
+CudaCalcAmoebaVdwForceKernel::CudaCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
         CalcAmoebaVdwForceKernel(name, platform), cu(cu), system(system), hasInitializedNonbonded(false), sigmaEpsilon(NULL),
         bondReductionAtoms(NULL), bondReductionFactors(NULL), tempPosq(NULL), tempForces(NULL), nonbonded(NULL) {
 }
@@ -2243,7 +2243,7 @@ private:
     const AmoebaWcaDispersionForce& force;
 };
 
-CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, System& system) : 
+CudaCalcAmoebaWcaDispersionForceKernel::CudaCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
            CalcAmoebaWcaDispersionForceKernel(name, platform), cu(cu), system(system), radiusEpsilon(NULL) {
 }
 

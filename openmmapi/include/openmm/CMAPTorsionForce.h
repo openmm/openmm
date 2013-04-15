@@ -149,7 +149,7 @@ public:
      */
     void setTorsionParameters(int index, int map, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4);
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     class MapInfo;
     class CMAPTorsionInfo;

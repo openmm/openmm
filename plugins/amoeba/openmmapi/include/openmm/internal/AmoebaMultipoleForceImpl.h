@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_AMOEBA AmoebaMultipoleForceImpl : public ForceImpl {
 public:
-    AmoebaMultipoleForceImpl(AmoebaMultipoleForce& owner);
+    AmoebaMultipoleForceImpl(const AmoebaMultipoleForce& owner);
     ~AmoebaMultipoleForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaMultipoleForce& getOwner() {
+    const AmoebaMultipoleForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -90,7 +90,7 @@ public:
  
 
 private:
-    AmoebaMultipoleForce& owner;
+    const AmoebaMultipoleForce& owner;
     Kernel kernel;
 
     static int CovalentDegrees[AmoebaMultipoleForce::CovalentEnd];

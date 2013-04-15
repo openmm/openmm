@@ -100,7 +100,7 @@ public:
         randomNumberSeed = seed;
     }
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     double defaultTemp, defaultFreq;
     int randomNumberSeed;

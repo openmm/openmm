@@ -49,10 +49,10 @@ class System;
 
 class OPENMM_EXPORT_AMOEBA AmoebaVdwForceImpl : public ForceImpl {
 public:
-    AmoebaVdwForceImpl(AmoebaVdwForce& owner);
+    AmoebaVdwForceImpl(const AmoebaVdwForce& owner);
     ~AmoebaVdwForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaVdwForce& getOwner() {
+    const AmoebaVdwForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -70,7 +70,7 @@ public:
     static double calcDispersionCorrection(const System& system, const AmoebaVdwForce& force);
     void updateParametersInContext(ContextImpl& context);
 private:
-    AmoebaVdwForce& owner;
+    const AmoebaVdwForce& owner;
     Kernel kernel;
 };
 

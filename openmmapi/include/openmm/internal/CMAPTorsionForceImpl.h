@@ -46,10 +46,10 @@ namespace OpenMM {
 
 class OPENMM_EXPORT CMAPTorsionForceImpl : public ForceImpl {
 public:
-    CMAPTorsionForceImpl(CMAPTorsionForce& owner);
+    CMAPTorsionForceImpl(const CMAPTorsionForce& owner);
     ~CMAPTorsionForceImpl();
     void initialize(ContextImpl& context);
-    CMAPTorsionForce& getOwner() {
+    const CMAPTorsionForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -65,7 +65,7 @@ public:
      */
     static void calcMapDerivatives(int size, const std::vector<double>& energy, std::vector<std::vector<double> >& c);
 private:
-    CMAPTorsionForce& owner;
+    const CMAPTorsionForce& owner;
     Kernel kernel;
 };
 

@@ -343,7 +343,7 @@ public:
     void updateParametersInContext(Context& context);
 
 protected:
-    ForceImpl* createImpl();
+    ForceImpl* createImpl() const;
 private:
     NonbondedMethod nonbondedMethod;
     PolarizationType polarizationType;

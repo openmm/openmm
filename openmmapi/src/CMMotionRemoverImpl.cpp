@@ -39,7 +39,7 @@
 using namespace OpenMM;
 using std::vector;
 
-CMMotionRemoverImpl::CMMotionRemoverImpl(CMMotionRemover& owner) : owner(owner) {
+CMMotionRemoverImpl::CMMotionRemoverImpl(const CMMotionRemover& owner) : owner(owner) {
 }
 
 void CMMotionRemoverImpl::initialize(ContextImpl& context) {

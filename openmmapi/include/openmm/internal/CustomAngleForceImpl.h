@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class CustomAngleForceImpl : public ForceImpl {
 public:
-    CustomAngleForceImpl(CustomAngleForce& owner);
+    CustomAngleForceImpl(const CustomAngleForce& owner);
     ~CustomAngleForceImpl();
     void initialize(ContextImpl& context);
-    CustomAngleForce& getOwner() {
+    const CustomAngleForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,7 +61,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    CustomAngleForce& owner;
+    const CustomAngleForce& owner;
     Kernel kernel;
 };
 

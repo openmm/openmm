@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class CustomTorsionForceImpl : public ForceImpl {
 public:
-    CustomTorsionForceImpl(CustomTorsionForce& owner);
+    CustomTorsionForceImpl(const CustomTorsionForce& owner);
     ~CustomTorsionForceImpl();
     void initialize(ContextImpl& context);
-    CustomTorsionForce& getOwner() {
+    const CustomTorsionForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -61,7 +61,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    CustomTorsionForce& owner;
+    const CustomTorsionForce& owner;
     Kernel kernel;
 };
 

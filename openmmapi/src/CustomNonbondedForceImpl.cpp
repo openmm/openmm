@@ -43,7 +43,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 
-CustomNonbondedForceImpl::CustomNonbondedForceImpl(CustomNonbondedForce& owner) : owner(owner) {
+CustomNonbondedForceImpl::CustomNonbondedForceImpl(const CustomNonbondedForce& owner) : owner(owner) {
 }
 
 CustomNonbondedForceImpl::~CustomNonbondedForceImpl() {
@@ -54,7 +54,7 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of parameters and exclusions.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("CustomNonbondedForce must have exactly as many particles as the System it belongs to.");
     vector<set<int> > exclusions(owner.getNumParticles());

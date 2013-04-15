@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class HarmonicAngleForceImpl : public ForceImpl {
 public:
-    HarmonicAngleForceImpl(HarmonicAngleForce& owner);
+    HarmonicAngleForceImpl(const HarmonicAngleForce& owner);
     ~HarmonicAngleForceImpl();
     void initialize(ContextImpl& context);
-    HarmonicAngleForce& getOwner() {
+    const HarmonicAngleForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -63,7 +63,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    HarmonicAngleForce& owner;
+    const HarmonicAngleForce& owner;
     Kernel kernel;
 };
 

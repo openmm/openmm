@@ -73,7 +73,7 @@ void RBTorsionForce::setTorsionParameters(int index, int particle1, int particle
     rbTorsions[index].c[5] = c5;
 }
 
-ForceImpl* RBTorsionForce::createImpl() {
+ForceImpl* RBTorsionForce::createImpl() const {
     return new RBTorsionForceImpl(*this);
 }
 

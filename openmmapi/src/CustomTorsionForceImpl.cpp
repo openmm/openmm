@@ -43,7 +43,7 @@ using std::set;
 using std::string;
 using std::stringstream;
 
-CustomTorsionForceImpl::CustomTorsionForceImpl(CustomTorsionForce& owner) : owner(owner) {
+CustomTorsionForceImpl::CustomTorsionForceImpl(const CustomTorsionForce& owner) : owner(owner) {
 }
 
 CustomTorsionForceImpl::~CustomTorsionForceImpl() {
@@ -54,7 +54,7 @@ void CustomTorsionForceImpl::initialize(ContextImpl& context) {
 
     // Check for errors in the specification of bonds.
 
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     vector<double> parameters;
     int numParameters = owner.getNumPerTorsionParameters();
     for (int i = 0; i < owner.getNumTorsions(); i++) {

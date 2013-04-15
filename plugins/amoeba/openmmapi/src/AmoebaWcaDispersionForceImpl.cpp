@@ -40,7 +40,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaWcaDispersionForceImpl::AmoebaWcaDispersionForceImpl(AmoebaWcaDispersionForce& owner) : owner(owner) {
+AmoebaWcaDispersionForceImpl::AmoebaWcaDispersionForceImpl(const AmoebaWcaDispersionForce& owner) : owner(owner) {
 }
 
 AmoebaWcaDispersionForceImpl::~AmoebaWcaDispersionForceImpl() {
@@ -48,7 +48,7 @@ AmoebaWcaDispersionForceImpl::~AmoebaWcaDispersionForceImpl() {
 
 void AmoebaWcaDispersionForceImpl::initialize(ContextImpl& context) {
  
-    System& system = context.getSystem();
+    const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("AmoebaWcaDispersionForce must have exactly as many particles as the System it belongs to.");
 

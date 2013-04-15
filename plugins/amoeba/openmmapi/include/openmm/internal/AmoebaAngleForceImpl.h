@@ -47,10 +47,10 @@ namespace OpenMM {
 
 class AmoebaAngleForceImpl : public ForceImpl {
 public:
-    AmoebaAngleForceImpl(AmoebaAngleForce& owner);
+    AmoebaAngleForceImpl(const AmoebaAngleForce& owner);
     ~AmoebaAngleForceImpl();
     void initialize(ContextImpl& context);
-    AmoebaAngleForce& getOwner() {
+    const AmoebaAngleForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -63,7 +63,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    AmoebaAngleForce& owner;
+    const AmoebaAngleForce& owner;
     Kernel kernel;
 };
 

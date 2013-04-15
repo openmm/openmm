@@ -38,7 +38,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-HarmonicBondForceImpl::HarmonicBondForceImpl(HarmonicBondForce& owner) : owner(owner) {
+HarmonicBondForceImpl::HarmonicBondForceImpl(const HarmonicBondForce& owner) : owner(owner) {
 }
 
 HarmonicBondForceImpl::~HarmonicBondForceImpl() {

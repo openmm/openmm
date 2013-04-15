@@ -37,6 +37,6 @@ using namespace OpenMM;
 CMMotionRemover::CMMotionRemover(int frequency) : frequency(frequency) {
 }
 
-ForceImpl* CMMotionRemover::createImpl() {
+ForceImpl* CMMotionRemover::createImpl() const {
     return new CMMotionRemoverImpl(*this);
 }

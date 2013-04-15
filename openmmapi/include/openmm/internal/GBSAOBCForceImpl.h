@@ -45,9 +45,9 @@ namespace OpenMM {
 
 class GBSAOBCForceImpl : public ForceImpl {
 public:
-    GBSAOBCForceImpl(GBSAOBCForce& owner);
+    GBSAOBCForceImpl(const GBSAOBCForce& owner);
     void initialize(ContextImpl& context);
-    GBSAOBCForce& getOwner() {
+    const GBSAOBCForce& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context) {
@@ -60,7 +60,7 @@ public:
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
 private:
-    GBSAOBCForce& owner;
+    const GBSAOBCForce& owner;
     Kernel kernel;
 };
 

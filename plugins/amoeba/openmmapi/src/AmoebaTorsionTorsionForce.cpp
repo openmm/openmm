@@ -79,6 +79,6 @@ void AmoebaTorsionTorsionForce::setTorsionTorsionGrid(int index, const TorsionTo
    torsionTorsionGrids[index] = grid;
 }
 
-ForceImpl* AmoebaTorsionTorsionForce::createImpl() {
+ForceImpl* AmoebaTorsionTorsionForce::createImpl() const {
     return new AmoebaTorsionTorsionForceImpl(*this);
 }

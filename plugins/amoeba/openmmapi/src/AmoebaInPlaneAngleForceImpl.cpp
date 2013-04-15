@@ -39,7 +39,7 @@ using std::pair;
 using std::vector;
 using std::set;
 
-AmoebaInPlaneAngleForceImpl::AmoebaInPlaneAngleForceImpl(AmoebaInPlaneAngleForce& owner) : owner(owner) {
+AmoebaInPlaneAngleForceImpl::AmoebaInPlaneAngleForceImpl(const AmoebaInPlaneAngleForce& owner) : owner(owner) {
 }
 
 AmoebaInPlaneAngleForceImpl::~AmoebaInPlaneAngleForceImpl() {
