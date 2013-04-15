@@ -1701,6 +1701,9 @@ void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const 
         constraintIndices[i][1] = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
+    vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+    findAnglesForCCMA(system, angles);
+    constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
 }
 
 void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -1711,14 +1714,9 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
     if (dynamics == 0 || stepSize != prevStepSize) {
         // Recreate the computation objects with the new parameters.
         
-        if (dynamics) {
+        if (dynamics)
             delete dynamics;
-            delete constraints;
-        }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(context.getSystem(), angles);
-        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
@@ -1760,6 +1758,9 @@ void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, cons
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+    findAnglesForCCMA(system, angles);
+    constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
 }
 
 void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
@@ -1772,19 +1773,14 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
     if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Recreate the computation objects with the new parameters.
         
-        if (dynamics) {
+        if (dynamics)
             delete dynamics;
-            delete constraints;
-        }
         RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
         dynamics = new ReferenceStochasticDynamics(
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(tau), 
                 static_cast<RealOpenMM>(temperature) );
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(context.getSystem(), angles);
-        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -1828,6 +1824,9 @@ void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, cons
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+    findAnglesForCCMA(system, angles);
+    constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
 }
 
 void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
@@ -1840,18 +1839,13 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
     if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Recreate the computation objects with the new parameters.
         
-        if (dynamics) {
+        if (dynamics)
             delete dynamics;
-            delete constraints;
-        }
         dynamics = new ReferenceBrownianDynamics(
                 context.getSystem().getNumParticles(), 
                 static_cast<RealOpenMM>(stepSize), 
                 static_cast<RealOpenMM>(friction), 
                 static_cast<RealOpenMM>(temperature) );
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(context.getSystem(), angles);
-        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -1895,6 +1889,9 @@ void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& syst
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+    findAnglesForCCMA(system, angles);
+    constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
 }
 
 double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -1907,15 +1904,10 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
     if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || errorTol != prevErrorTol) {
         // Recreate the computation objects with the new parameters.
 
-        if (dynamics) {
+        if (dynamics)
             delete dynamics;
-            delete constraints;
-        }
         RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
         dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) tau, (RealOpenMM) temperature, (RealOpenMM) errorTol);
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(context.getSystem(), angles);
-        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -1962,6 +1954,9 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
         constraintIndices[i][1] = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
+    vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+    findAnglesForCCMA(system, angles);
+    constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
 }
 
 double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
@@ -1972,14 +1967,9 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
     if (dynamics == 0 || errorTol != prevErrorTol) {
         // Recreate the computation objects with the new parameters.
 
-        if (dynamics) {
+        if (dynamics)
             delete dynamics;
-            delete constraints;
-        }
         dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), (RealOpenMM) errorTol);
-        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
-        findAnglesForCCMA(context.getSystem(), angles);
-        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevErrorTol = errorTol;
     }
