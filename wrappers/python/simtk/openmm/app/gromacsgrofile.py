@@ -116,28 +116,27 @@ class GromacsGroFile(object):
         ln       = 0
         frame    = 0
         for line in open(file):
-            sline = line.split()
             if ln == 0:
                 comms.append(line.strip())
             elif ln == 1:
                 na = int(line.strip())
             elif _is_gro_coord(line):
                 if frame == 0: # Create the list of residues, atom names etc. only if it's the first frame.
-                    # Name of the residue, for instance '153SOL1 -> SOL1' ; strips leading numbers
-                    thisresname = sub('^[0-9]*','',sline[0])
+                    (thisresnum, thisresname, thisatomname, thisatomnum) = [line[i*5:i*5+5].strip() for i in range(4)]
                     resname.append(thisresname)
-                    resid.append(int(sline[0].replace(thisresname,'')))
-                    atomname.append(sline[1])
-                    thiselem = sline[1]
+                    resid.append(int(thisresnum))
+                    atomname.append(thisatomname)
+                    thiselem = thisatomname
                     if len(thiselem) > 1:
                         thiselem = thiselem[0] + sub('[A-Z0-9]','',thiselem[1:])
                         try:
                             elements.append(elem.get_by_symbol(thiselem))
                         except KeyError:
                             elements.append(None)
-                pos = [float(i) for i in sline[-3:]]
+                pos = [float(line[20+i*8:28+i*8]) for i in range(3)]
                 xyz.append(Vec3(pos[0], pos[1], pos[2]))
             elif _is_gro_box(line) and ln == na + 2:
+                sline = line.split()
                 boxes.append([float(i) for i in sline]*nanometers)
                 xyzs.append(xyz*nanometers)
                 xyz = []

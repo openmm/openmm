@@ -439,6 +439,8 @@ class GromacsTopFile(object):
         boxSize = self.topology.getUnitCellDimensions()
         if boxSize is not None:
             sys.setDefaultPeriodicBoxVectors((boxSize[0], 0, 0), (0, boxSize[1], 0), (0, 0, boxSize[2]))
+        elif nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
+            raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
         sys.addForce(nb)
         if implicitSolvent is OBC2:
