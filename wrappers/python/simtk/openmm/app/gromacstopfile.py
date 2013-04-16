@@ -576,7 +576,7 @@ class GromacsTopFile(object):
                     dihedralType = fields[4]
                     reversedTypes = types[::-1]+(dihedralType,)
                     types = types+(dihedralType,)
-                    if (dihedralType in ('1', '2') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10):
+                    if (dihedralType in ('1', '2', '4', '9') and len(fields) > 7) or (dihedralType == '3' and len(fields) > 10):
                         paramsList = [fields]
                     else:
                         # Look for a matching dihedral type.
