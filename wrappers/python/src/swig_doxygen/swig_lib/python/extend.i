@@ -77,14 +77,38 @@
                       periodicBoxVectorsList=periodicBoxVectorsList,
                       paramMap=paramMap)
         return state
-  }
+  
+    def setState(self, state):
+        """
+        setState(Context self, State state)
+        
+        Copy information from a State object into this Context.  This restores the Context to
+        approximately the same state it was in when the State was created.  If the State does not include
+        a piece of information (e.g. positions or velocities), that aspect of the Context is
+        left unchanged.
 
-  %feature("docstring") createCheckpoint1 "Create a checkpoint recording the current state of the Context.
+        Even when all possible information is included in the State, the effect of calling this method
+        is still less complete than loadCheckpoint().  For example, it does not restore the internal
+        states of random number generators.  On the other hand, it has the advantage of not being hardware
+        specific.
+        """
+        self.setTime(state._simTime)
+        self.setPeriodicBoxVectors(state._periodicBoxVectorsList[0], state._periodicBoxVectorsList[1], state._periodicBoxVectorsList[2])
+        if state._coordList is not None:
+             self.setPositions(state._coordList)
+        if state._velList is not None:
+             self.setVelocities(state._velList)
+        if state._paramMap is not None:
+             for param in state._paramMap:
+                 self.setParameter(param, state._paramMap[param])
+  }
+  
+  %feature("docstring") createCheckpoint "Create a checkpoint recording the current state of the Context.
 This should be treated as an opaque block of binary data.  See loadCheckpoint() for more details.
 
 Returns: a string containing the checkpoint data
 "
-  std::string createCheckpoint1() {
+  std::string createCheckpoint() {
     std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
     self->createCheckpoint(stream);
     return stream.str();
