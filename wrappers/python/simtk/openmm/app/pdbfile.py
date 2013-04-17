@@ -263,7 +263,7 @@ class PDBFile(object):
         if modelIndex is not None:
             print >>file, "MODEL     %4d" % modelIndex
         for (chainIndex, chain) in enumerate(topology.chains()):
-            chainName = chr(ord('A')+chainIndex)
+            chainName = chr(ord('A')+chainIndex%26)
             residues = list(chain.residues())
             for (resIndex, res) in enumerate(residues):
                 if len(res.name) > 3:

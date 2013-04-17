@@ -137,7 +137,7 @@ class GromacsGroFile(object):
                 xyz.append(Vec3(pos[0], pos[1], pos[2]))
             elif _is_gro_box(line) and ln == na + 2:
                 sline = line.split()
-                boxes.append([float(i) for i in sline]*nanometers)
+                boxes.append(tuple([float(i) for i in sline])*nanometers)
                 xyzs.append(xyz*nanometers)
                 xyz = []
                 ln = -1
