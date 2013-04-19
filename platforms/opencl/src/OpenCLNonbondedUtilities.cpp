@@ -564,6 +564,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_SYMMETRIC"] = "1";
     defines["FORCE_WORK_GROUP_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
+    defines["CUTOFF"] = context.doubleToString(cutoff);
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
@@ -604,6 +605,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         index += 2; // The periodic box size arguments are set when the kernel is executed.
         kernel.setArg<cl_uint>(index++, interactingTiles->getSize());
         kernel.setArg<cl::Buffer>(index++, blockCenter->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, blockBoundingBox->getDeviceBuffer());
         kernel.setArg<cl::Buffer>(index++, interactingAtoms->getDeviceBuffer());
     }
     for (int i = 0; i < (int) params.size(); i++) {

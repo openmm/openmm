@@ -14,7 +14,8 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
 #endif
         __local real* restrict local_value,
 #ifdef USE_CUTOFF
-        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, __global const real4* restrict blockCenter, __global const int* restrict interactingAtoms
+        __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        unsigned int maxTiles, __global const real4* restrict blockCenter, __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #else
         unsigned int numTiles
 #endif
@@ -179,7 +180,10 @@ __kernel void computeN2Value(__global const real4* restrict posq, __local real4*
         if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
-            singlePeriodicCopy = tileIndices.y;
+            real4 blockSizeX = blockSize[x];
+            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
+                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
+                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
         }
         else
 #endif

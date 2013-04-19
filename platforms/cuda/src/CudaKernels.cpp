@@ -2055,6 +2055,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
         if (cu.getComputeCapability() >= 3.0 && !cu.getUseDoublePrecision())
             defines["ENABLE_SHUFFLE"] = "1";
         defines["CUTOFF_SQUARED"] = cu.doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
+        defines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
         defines["PREFACTOR"] = cu.doubleToString(prefactor);
         defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
@@ -2081,6 +2082,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             computeSumArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             computeSumArgs.push_back(&maxTiles);
             computeSumArgs.push_back(&nb.getBlockCenters().getDevicePointer());
+            computeSumArgs.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
             computeSumArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
@@ -2099,6 +2101,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             force1Args.push_back(cu.getInvPeriodicBoxSizePointer());
             force1Args.push_back(&maxTiles);
             force1Args.push_back(&nb.getBlockCenters().getDevicePointer());
+            force1Args.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
             force1Args.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
@@ -2112,8 +2115,8 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             maxTiles = nb.getInteractingTiles().getSize();
             computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
             force1Args[5] = &nb.getInteractingTiles().getDevicePointer();
-            computeSumArgs[9] = &nb.getInteractingAtoms().getDevicePointer();
-            force1Args[11] = &nb.getInteractingAtoms().getDevicePointer();
+            computeSumArgs[11] = &nb.getInteractingAtoms().getDevicePointer();
+            force1Args[12] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(computeBornSumKernel, &computeSumArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -2842,6 +2845,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairValueDefines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
             pairValueDefines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
+            pairValueDefines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+pairValueSrc, pairValueDefines);
             pairValueKernel = cu.getKernel(module, "computeN2Value");
             pairValueSrc = "";
@@ -2855,6 +2859,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             int endExclusionIndex = (cu.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairEnergyDefines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
             pairEnergyDefines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
+            pairEnergyDefines["CUTOFF"] = cu.doubleToString(nb.getCutoffDistance());
             CUmodule module = cu.createModule(CudaKernelSources::vectorOps+pairEnergySrc, pairEnergyDefines);
             pairEnergyKernel = cu.getKernel(module, "computeN2Energy");
             pairEnergySrc = "";
@@ -2878,6 +2883,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             pairValueArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             pairValueArgs.push_back(&maxTiles);
             pairValueArgs.push_back(&nb.getBlockCenters().getDevicePointer());
+            pairValueArgs.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
             pairValueArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
@@ -2918,6 +2924,7 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             pairEnergyArgs.push_back(cu.getInvPeriodicBoxSizePointer());
             pairEnergyArgs.push_back(&maxTiles);
             pairEnergyArgs.push_back(&nb.getBlockCenters().getDevicePointer());
+            pairEnergyArgs.push_back(&nb.getBlockBoundingBoxes().getDevicePointer());
             pairEnergyArgs.push_back(&nb.getInteractingAtoms().getDevicePointer());
         }
         else
@@ -2984,8 +2991,8 @@ double CudaCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFo
             maxTiles = nb.getInteractingTiles().getSize();
             pairValueArgs[4] = &nb.getInteractingTiles().getDevicePointer();
             pairEnergyArgs[5] = &nb.getInteractingTiles().getDevicePointer();
-            pairValueArgs[10] = &nb.getInteractingAtoms().getDevicePointer();
-            pairEnergyArgs[11] = &nb.getInteractingAtoms().getDevicePointer();
+            pairValueArgs[11] = &nb.getInteractingAtoms().getDevicePointer();
+            pairEnergyArgs[12] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
     cu.executeKernel(pairValueKernel, &pairValueArgs[0], nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());

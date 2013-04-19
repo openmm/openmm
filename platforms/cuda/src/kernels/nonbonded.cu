@@ -17,7 +17,8 @@ extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
-        , const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms
+        , const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        unsigned int maxTiles, const real4* __restrict__ blockCenter, const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
@@ -210,7 +211,10 @@ extern "C" __global__ void computeNonbonded(
         if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
-            singlePeriodicCopy = tileIndices.y;
+            real4 blockSizeX = blockSize[x];
+            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
+                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
+                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
         }
         else
 #endif

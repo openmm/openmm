@@ -507,6 +507,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["USE_SYMMETRIC"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
+    defines["CUTOFF"] = context.doubleToString(cutoff);
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
@@ -542,6 +543,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
         forceArgs.push_back(&maxTiles);
         forceArgs.push_back(&blockCenter->getDevicePointer());
+        forceArgs.push_back(&blockBoundingBox->getDevicePointer());
         forceArgs.push_back(&interactingAtoms->getDevicePointer());
     }
     for (int i = 0; i < (int) params.size(); i++)
