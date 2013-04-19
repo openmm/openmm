@@ -194,7 +194,8 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         // Sum the forces from all devices.
         
         CudaContext& cu = *data.contexts[0];
-        contextForces->upload(pinnedForceBuffer, false);
+        if (!cu.getPlatformData().peerAccessSupported)
+            contextForces->upload(pinnedForceBuffer, false);
         int bufferSize = 3*cu.getPaddedNumAtoms();
         int numBuffers = data.contexts.size()-1;
         void* args[] = {&cu.getForce().getDevicePointer(), &contextForces->getDevicePointer(), &bufferSize, &numBuffers};
