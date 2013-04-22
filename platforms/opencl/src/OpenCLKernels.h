@@ -1199,6 +1199,8 @@ private:
     OpenCLArray* kineticEnergy;
     OpenCLArray* uniformRandoms;
     OpenCLArray* randomSeed;
+    std::map<int, OpenCLArray*> savedForces;
+    std::set<int> validSavedForces;
     OpenCLParameterSet* perDofValues;
     mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;

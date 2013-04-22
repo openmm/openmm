@@ -4725,6 +4725,8 @@ OpenCLIntegrateCustomStepKernel::~OpenCLIntegrateCustomStepKernel() {
         delete randomSeed;
     if (perDofValues != NULL)
         delete perDofValues;
+    for (map<int, OpenCLArray*>::iterator iter = savedForces.begin(); iter != savedForces.end(); ++iter)
+        delete iter->second;
 }
 
 void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
@@ -4930,6 +4932,8 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
             invalidatesForces[step] = (stepType[step] == CustomIntegrator::ConstrainPositions || affectsForce.find(variable[step]) != affectsForce.end());
             if (forceGroup[step] == -2 && step > 0)
                 forceGroup[step] = forceGroup[step-1];
+            if (forceGroup[step] != -2 && savedForces.find(forceGroup[step]) == savedForces.end())
+                savedForces[forceGroup[step]] = new OpenCLArray(cl, cl.getForce().getSize(), cl.getForce().getElementSize(), "savedForces");
         }
         
         // Determine how each step will represent the position (as just a value, or a value plus a delta).
@@ -5218,7 +5222,18 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     // Loop over computation steps in the integrator and execute them.
 
     for (int i = 0; i < numSteps; i++) {
-        if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || context.getLastForceGroups() != forceGroup[i])) {
+        int lastForceGroups = context.getLastForceGroups();
+        if ((needsForces[i] || needsEnergy[i]) && (!forcesAreValid || lastForceGroups != forceGroup[i])) {
+            if (forcesAreValid && savedForces.find(lastForceGroups) != savedForces.end()) {
+                // The forces are still valid.  We just need a different force group right now.  Save the old
+                // forces in case we need them again.
+                
+                cl.getForce().copyTo(*savedForces[lastForceGroups]);
+                validSavedForces.insert(lastForceGroups);
+            }
+            else
+                validSavedForces.clear();
+            
             // Recompute forces and/or energy.  Figure out what is actually needed
             // between now and the next time they get invalidated again.
             
@@ -5235,11 +5250,18 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
                 if (j == i-1)
                     break;
             }
-            recordChangedParameters(context);
-            context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
-            if (computeEnergy)
-                cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+            if (!computeEnergy && validSavedForces.find(forceGroup[i]) != validSavedForces.end()) {
+                // We can just restore the forces we saved earlier.
+                
+                savedForces[forceGroup[i]]->copyTo(cl.getForce());
+            }
+            else {
+                recordChangedParameters(context);
+                context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroup[i]);
+                if (computeEnergy)
+                    cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
             forcesAreValid = true;
+            }
         }
         if (stepType[i] == CustomIntegrator::ComputePerDof && !merged[i]) {
             kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));

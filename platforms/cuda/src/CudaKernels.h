@@ -1185,6 +1185,8 @@ private:
     CudaArray* kineticEnergy;
     CudaArray* uniformRandoms;
     CudaArray* randomSeed;
+    std::map<int, CudaArray*> savedForces;
+    std::set<int> validSavedForces;
     CudaParameterSet* perDofValues;
     mutable std::vector<std::vector<float> > localPerDofValuesFloat;
     mutable std::vector<std::vector<double> > localPerDofValuesDouble;
