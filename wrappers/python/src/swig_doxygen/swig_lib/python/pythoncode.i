@@ -192,6 +192,8 @@ class State(_object):
            See the following for details:
            https://simtk.org/home/python_units
         """
+        if self._eK0 is None:
+            raise TypeError('Energy was not requested in getState() call, so it is not available.')
         return self._eK0 * unit.kilojoule_per_mole
 
     def getPotentialEnergy(self):
@@ -201,11 +203,15 @@ class State(_object):
            See the following for details:
            https://simtk.org/home/python_units
         """
+        if self._eP0 is None:
+            raise TypeError('Energy was not requested in getState() call, so it is not available.')
         return self._eP0 * unit.kilojoule_per_mole
 
     def getParameters(self):
         """Get a map containing the values of all parameters.
         """
+        if self._paramMap is None:
+            raise TypeError('Parameters were not requested in getState() call, so are not available.')
         return self._paramMap
 
 

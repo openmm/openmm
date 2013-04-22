@@ -338,6 +338,7 @@ Parameters:
       forces = []
       kineticEnergy = 0.0
       potentialEnergy = 0.0
+      params = {}
       types = 0
       try:
         positions = pythonState.getPositions().value_in_unit(unit.nanometers)
