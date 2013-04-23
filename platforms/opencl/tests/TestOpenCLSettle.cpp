@@ -47,7 +47,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 void testConstraints() {
     const int numMolecules = 10;

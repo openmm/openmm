@@ -50,7 +50,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 /**
  * Check that massless particles are handled correctly.

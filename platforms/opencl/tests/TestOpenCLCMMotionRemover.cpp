@@ -50,7 +50,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 Vec3 calcCM(const vector<Vec3>& values, System& system) {
     Vec3 cm;

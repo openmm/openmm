@@ -46,7 +46,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 class SortTrait : public OpenCLSort::SortTrait {
     int getDataSize() const {return 4;}

@@ -47,7 +47,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 void testGaussian() {
     int numAtoms = 5000;

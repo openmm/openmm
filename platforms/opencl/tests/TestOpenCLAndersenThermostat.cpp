@@ -48,7 +48,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 void testTemperature() {
     const int numParticles = 8;

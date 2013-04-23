@@ -49,7 +49,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 void testAngles() {
     // Create a system using a CustomAngleForce.

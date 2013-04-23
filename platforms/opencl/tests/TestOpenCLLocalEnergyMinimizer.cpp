@@ -45,7 +45,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 void testHarmonicBonds() {
     const int numParticles = 10;

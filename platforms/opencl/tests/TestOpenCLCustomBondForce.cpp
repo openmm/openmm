@@ -46,7 +46,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 const double TOL = 1e-5;
 

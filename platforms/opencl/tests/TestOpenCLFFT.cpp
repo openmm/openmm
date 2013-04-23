@@ -48,7 +48,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 template <class Real2>
 void testTransform() {

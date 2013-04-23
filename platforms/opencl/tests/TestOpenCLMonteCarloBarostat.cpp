@@ -49,7 +49,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLPlatform platform;
+static OpenCLPlatform platform;
 
 void testChangingBoxSize() {
     System system;
