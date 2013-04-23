@@ -2115,7 +2115,7 @@ double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeFor
             maxTiles = nb.getInteractingTiles().getSize();
             computeSumArgs[3] = &nb.getInteractingTiles().getDevicePointer();
             force1Args[5] = &nb.getInteractingTiles().getDevicePointer();
-            computeSumArgs[11] = &nb.getInteractingAtoms().getDevicePointer();
+            computeSumArgs[10] = &nb.getInteractingAtoms().getDevicePointer();
             force1Args[12] = &nb.getInteractingAtoms().getDevicePointer();
         }
     }
