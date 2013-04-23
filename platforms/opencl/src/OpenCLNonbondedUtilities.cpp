@@ -429,7 +429,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
     interactingAtoms = OpenCLArray::create<cl_int>(context, OpenCLContext::TileSize*maxTiles, "interactingAtoms");
     forceKernel.setArg<cl::Buffer>(7, interactingTiles->getDeviceBuffer());
     forceKernel.setArg<cl_uint>(11, maxTiles);
-    forceKernel.setArg<cl::Buffer>(13, interactingAtoms->getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(14, interactingAtoms->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactingTiles->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingAtoms->getDeviceBuffer());
     findInteractingBlocksKernel.setArg<cl_uint>(8, maxTiles);

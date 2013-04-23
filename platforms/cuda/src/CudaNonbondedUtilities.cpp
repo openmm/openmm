@@ -392,7 +392,7 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
         forceArgs[7] = &interactingTiles->getDevicePointer();
     findInteractingBlocksArgs[5] = &interactingTiles->getDevicePointer();
     if (forceArgs.size() > 0)
-        forceArgs[13] = &interactingAtoms->getDevicePointer();
+        forceArgs[14] = &interactingAtoms->getDevicePointer();
     findInteractingBlocksArgs[6] = &interactingAtoms->getDevicePointer();
     if (context.getUseDoublePrecision()) {
         vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
