@@ -140,7 +140,9 @@ class Topology(object):
         
         The built in residues.xml file containing definitions for standard amino acids and nucleotides is loaded automatically.
         This method can be used to load additional definitions for other residue types.  They will then be used in subsequent
-        calls to createStandardBonds().
+        calls to createStandardBonds().  This is a static method, so it affects subsequent calls on all Topology objects.
+        Also note that PDBFile calls createStandardBonds() automatically when a file is loaded, so the newly loaded definitions
+        will be used for any PDB file loaded after this is called.
         """
         tree = etree.parse(file)
         for residue in tree.getroot().findall('Residue'):
