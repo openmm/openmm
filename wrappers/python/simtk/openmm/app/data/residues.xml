@@ -1,6 +1,6 @@
 <Residues>
  <Residue name="A">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N9"/>
@@ -40,6 +40,7 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="ACE">
   <Bond from="C" to="CH3"/>
@@ -154,7 +155,7 @@
   <Bond from="HXT" to="OXT"/>
  </Residue>
  <Residue name="C">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N1"/>
@@ -191,6 +192,7 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="CYS">
   <Bond from="-C" to="N"/>
@@ -210,7 +212,7 @@
   <Bond from="HXT" to="OXT"/>
  </Residue>
  <Residue name="DA">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N9"/>
@@ -249,9 +251,10 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="DC">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N1"/>
@@ -287,9 +290,10 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="DG">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N9"/>
@@ -329,9 +333,10 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="DT">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N1"/>
@@ -369,6 +374,7 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="FOR">
   <Bond from="-C" to="N"/>
@@ -378,7 +384,7 @@
   <Bond from="H3" to="N"/>
  </Residue>
  <Residue name="G">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N9"/>
@@ -419,6 +425,7 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="GLN">
   <Bond from="-C" to="N"/>
@@ -812,7 +819,7 @@
   <Bond from="HXT" to="OXT"/>
  </Residue>
  <Residue name="U">
-  <Bond from="-OP3" to="P"/>
+  <Bond from="-O3'" to="P"/>
   <Bond from="C1'" to="C2'"/>
   <Bond from="C1'" to="H1'"/>
   <Bond from="C1'" to="N1"/>
@@ -848,6 +855,7 @@
   <Bond from="OP1" to="P"/>
   <Bond from="OP2" to="P"/>
   <Bond from="OP3" to="P"/>
+  <Bond from="HO5'" to="O5'"/>
  </Residue>
  <Residue name="UNK">
   <Bond from="-C" to="N"/>

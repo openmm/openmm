@@ -25,14 +25,15 @@
   <Atom name="O4'" alt1="O4*"/>
   <Atom name="O5'" alt1="O5*"/>
   <Atom name="H1'" alt1="H1*"/>
-  <Atom name="H2'" alt1="H2*" alt2="1H2*"/>
-  <Atom name="H2''" alt1="2H2*"/>
+  <Atom name="H2'" alt1="H2*" alt2="1H2*" alt3="1H2'"/>
+  <Atom name="H2''" alt1="2H2*" alt2="2H2'"/>
   <Atom name="H3'" alt1="H3*"/>
   <Atom name="H4'" alt1="H4*"/>
-  <Atom name="H5'" alt1="1H5*"/>
-  <Atom name="H5''" alt1="2H5*"/>
+  <Atom name="H5'" alt1="1H5*" alt2="1H5'"/>
+  <Atom name="H5''" alt1="2H5*" atl2="2H5'"/>
   <Atom name="HO2'" alt1="2HO*"/>
   <Atom name="HO3'" alt1="H3T"/>
+  <Atom name="HO5'" alt1="H5T"/>
  </Residue>
  <Residue name="GLY" type="Protein">
   <Atom name="HA2" alt1="2HA"/>
@@ -269,7 +270,7 @@
   <Atom name="H72" alt1="2H5M"/>
   <Atom name="H73" alt1="3H5M"/>
  </Residue>
- <Residue name="HOH" alt1="H20" alt2="WAT" alt3="SOL" alt4="TIP3">
+ <Residue name="HOH" alt1="H20" alt2="WAT" alt3="SOL" alt4="TIP3" alt5="TP3">
   <Atom name="O" alt1="OW" alt2="OH2"/>
   <Atom name="H1" alt1="HW1"/>
   <Atom name="H2" alt1="HW2"/>
