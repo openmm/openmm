@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -1005,8 +1005,13 @@ class GBSAOBCGenerator:
 
     @staticmethod
     def parseElement(element, ff):
-        generator = GBSAOBCGenerator()
-        ff._forces.append(generator)
+        existing = [f for f in ff._forces if isinstance(f, GBSAOBCGenerator)]
+        if len(existing) == 0:
+            generator = GBSAOBCGenerator()
+            ff._forces.append(generator)
+        else:
+            # Multiple <GBSAOBCForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
         for atom in element.findall('Atom'):
             types = ff._findAtomTypes(atom, 1)
             if types is not None:
