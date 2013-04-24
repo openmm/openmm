@@ -257,6 +257,7 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
 
     for (int i = threadIdx.x; i < BUFFER_SIZE; i += blockDim.x)
         buffer[i] = INVALID;
+    __syncthreads();
 }
 
 /**

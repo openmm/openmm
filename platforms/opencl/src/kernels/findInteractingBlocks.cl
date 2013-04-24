@@ -226,6 +226,7 @@ void storeInteractionData(unsigned short x, __local unsigned short* buffer, __lo
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += get_local_size(0))
         buffer[i] = INVALID;
+    barrier(CLK_LOCAL_MEM_FENCE);
 }
 
 /**
