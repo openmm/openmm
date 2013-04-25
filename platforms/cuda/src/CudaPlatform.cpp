@@ -195,15 +195,16 @@ CudaPlatform::PlatformData::PlatformData(const System& system, const string& dev
     
     // Determine whether peer-to-peer copying is supported, and enable it if so.
     
-    peerAccessSupported = true;
-    for (int i = 1; i < contexts.size(); i++) {
-        int canAccess;
-        cuDeviceCanAccessPeer(&canAccess, contexts[i]->getDevice(), contexts[0]->getDevice());
-        if (!canAccess) {
-            peerAccessSupported = false;
-            break;
-        }
-    }
+    peerAccessSupported = false; // Disable until I figure out why it usually makes things slower
+//    peerAccessSupported = true;
+//    for (int i = 1; i < contexts.size(); i++) {
+//        int canAccess;
+//        cuDeviceCanAccessPeer(&canAccess, contexts[i]->getDevice(), contexts[0]->getDevice());
+//        if (!canAccess) {
+//            peerAccessSupported = false;
+//            break;
+//        }
+//    }
     if (peerAccessSupported) {
         for (int i = 1; i < contexts.size(); i++) {
             contexts[0]->setAsCurrent();
