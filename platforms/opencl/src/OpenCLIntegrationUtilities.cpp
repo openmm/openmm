@@ -487,7 +487,6 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaConstraintMatrixColumn = OpenCLArray::create<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConverged = OpenCLArray::create<cl_int>(context, 2, "CcmaConverged");
         ccmaConvergedHostBuffer = OpenCLArray::create<cl_int>(context, 1, "CcmaConvergedHostBuffer", CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR);
-        ccmaConvergedHostMemory = (int*) context.getQueue().enqueueMapBuffer(ccmaConvergedHostBuffer->getDeviceBuffer(), CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, sizeof(cl_int));
         // Different communication mechanisms give optimal performance on AMD and on NVIDIA.
         string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
         ccmaUseDirectBuffer = (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.");
@@ -849,32 +848,33 @@ void OpenCLIntegrationUtilities::applyConstraints(bool constrainVelocities, doub
             ccmaForceKernel.setArg<cl_float>(7, (cl_float) tol);
         context.executeKernel(ccmaDirectionsKernel, ccmaAtoms->getSize());
         const int checkInterval = 4;
-        cl::Event event;
         int* converged = (int*) context.getPinnedBuffer();
+        int* ccmaConvergedHostMemory = (int*) context.getQueue().enqueueMapBuffer(ccmaConvergedHostBuffer->getDeviceBuffer(), CL_TRUE, CL_MAP_WRITE, 0, sizeof(cl_int));
         ccmaConvergedHostMemory[0] = 0;
+        context.getQueue().enqueueUnmapMemObject(ccmaConvergedHostBuffer->getDeviceBuffer(), ccmaConvergedHostMemory);
         for (int i = 0; i < 150; i++) {
             ccmaForceKernel.setArg<cl_int>(8, i);
             context.executeKernel(ccmaForceKernel, ccmaAtoms->getSize());
-            if ((i+1)%checkInterval == 0) {
-                if (ccmaUseDirectBuffer)
-                    context.getQueue().enqueueMarker(&event);
-                else
-                    context.getQueue().enqueueReadBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(cl_int), converged, NULL, &event);
-            }
+            cl::Event event;
+            if ((i+1)%checkInterval == 0 && !ccmaUseDirectBuffer)
+                context.getQueue().enqueueReadBuffer(ccmaConverged->getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(cl_int), converged, NULL, &event);
             ccmaMultiplyKernel.setArg<cl_int>(5, i);
             context.executeKernel(ccmaMultiplyKernel, ccmaAtoms->getSize());
             ccmaUpdateKernel.setArg<cl_int>(8, i);
             context.executeKernel(ccmaUpdateKernel, context.getNumAtoms());
             if ((i+1)%checkInterval == 0) {
-                event.wait();
                 if (ccmaUseDirectBuffer) {
-                    if (ccmaConvergedHostMemory[0])
-                        break;
+                    ccmaConvergedHostMemory = (int*) context.getQueue().enqueueMapBuffer(ccmaConvergedHostBuffer->getDeviceBuffer(), CL_FALSE, CL_MAP_READ, 0, sizeof(cl_int), NULL, &event);
+                    context.getQueue().flush();
+                    while (event.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() != CL_COMPLETE)
+                        ;
+                    converged[i%2] = ccmaConvergedHostMemory[0];
+                    context.getQueue().enqueueUnmapMemObject(ccmaConvergedHostBuffer->getDeviceBuffer(), ccmaConvergedHostMemory);
                 }
-                else {
-                    if (converged[i%2])
-                        break;
-                }
+                else
+                    event.wait();
+                if (converged[i%2])
+                    break;
             }
         }
     }
