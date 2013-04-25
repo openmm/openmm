@@ -38,8 +38,6 @@ extern "C" __global__ void applyPileThermostat(mixed4* velm, float4* random, uns
     for (int particle = (blockIdx.x*blockDim.x+threadIdx.x)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         mixed4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
         mixed invMass = particleVelm.w;
-        if (invMass == 0)
-            continue;
         mixed c3_0 = c2_0*SQRT(nkT*invMass);
         
         // Forward FFT.
@@ -76,7 +74,8 @@ extern "C" __global__ void applyPileThermostat(mixed4* velm, float4* random, uns
         // Inverse FFT.
         
         FFT_V_BACKWARD
-        velm[particle+indexInBlock*PADDED_NUM_ATOMS] = make_mixed4(SCALE*vreal[indexInBlock].x, SCALE*vreal[indexInBlock].y, SCALE*vreal[indexInBlock].z, particleVelm.w);
+        if (invMass != 0)
+            velm[particle+indexInBlock*PADDED_NUM_ATOMS] = make_mixed4(SCALE*vreal[indexInBlock].x, SCALE*vreal[indexInBlock].y, SCALE*vreal[indexInBlock].z, particleVelm.w);
         randomIndex += blockDim.x*gridDim.x;
     }
 }
@@ -102,12 +101,11 @@ extern "C" __global__ void integrateStep(mixed4* posq, mixed4* velm, long long* 
         int index = particle+indexInBlock*PADDED_NUM_ATOMS;
         int forceIndex = particle+indexInBlock*PADDED_NUM_ATOMS*3;
         mixed4 particleVelm = velm[index];
-        if (particleVelm.w == 0)
-            continue;
         particleVelm.x += forceScale*force[forceIndex]*(0.5f*dt*particleVelm.w);
         particleVelm.y += forceScale*force[forceIndex+PADDED_NUM_ATOMS]*(0.5f*dt*particleVelm.w);
         particleVelm.z += forceScale*force[forceIndex+PADDED_NUM_ATOMS*2]*(0.5f*dt*particleVelm.w);
-        velm[index] = particleVelm;
+        if (particleVelm.w != 0)
+            velm[index] = particleVelm;
     }
     
     // Evolve the free ring polymer by transforming to the frequency domain.
@@ -122,8 +120,6 @@ extern "C" __global__ void integrateStep(mixed4* posq, mixed4* velm, long long* 
     for (int particle = (blockIdx.x*blockDim.x+threadIdx.x)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         mixed4 particlePosq = posq[particle+indexInBlock*PADDED_NUM_ATOMS];
         mixed4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
-        if (particleVelm.w == 0)
-            continue;
         
         // Forward FFT.
         
@@ -159,8 +155,10 @@ extern "C" __global__ void integrateStep(mixed4* posq, mixed4* velm, long long* 
         
         FFT_Q_BACKWARD
         FFT_V_BACKWARD
-        posq[particle+indexInBlock*PADDED_NUM_ATOMS] = make_mixed4(SCALE*qreal[indexInBlock].x, SCALE*qreal[indexInBlock].y, SCALE*qreal[indexInBlock].z, particlePosq.w);
-        velm[particle+indexInBlock*PADDED_NUM_ATOMS] = make_mixed4(SCALE*vreal[indexInBlock].x, SCALE*vreal[indexInBlock].y, SCALE*vreal[indexInBlock].z, particleVelm.w);
+        if (particleVelm.w != 0) {
+            posq[particle+indexInBlock*PADDED_NUM_ATOMS] = make_mixed4(SCALE*qreal[indexInBlock].x, SCALE*qreal[indexInBlock].y, SCALE*qreal[indexInBlock].z, particlePosq.w);
+            velm[particle+indexInBlock*PADDED_NUM_ATOMS] = make_mixed4(SCALE*vreal[indexInBlock].x, SCALE*vreal[indexInBlock].y, SCALE*vreal[indexInBlock].z, particleVelm.w);
+        }
     }
 }
 
@@ -179,12 +177,11 @@ extern "C" __global__ void advanceVelocities(mixed4* velm, long long* force, mix
         int index = particle+indexInBlock*PADDED_NUM_ATOMS;
         int forceIndex = particle+indexInBlock*PADDED_NUM_ATOMS*3;
         mixed4 particleVelm = velm[index];
-        if (particleVelm.w == 0)
-            continue;
         particleVelm.x += forceScale*force[forceIndex]*(0.5f*dt*particleVelm.w);
         particleVelm.y += forceScale*force[forceIndex+PADDED_NUM_ATOMS]*(0.5f*dt*particleVelm.w);
         particleVelm.z += forceScale*force[forceIndex+PADDED_NUM_ATOMS*2]*(0.5f*dt*particleVelm.w);
-        velm[index] = particleVelm;
+        if (particleVelm.w != 0)
+            velm[index] = particleVelm;
     }
 }
 
