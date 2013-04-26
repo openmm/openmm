@@ -76,8 +76,6 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     numCopies = integrator.getNumCopies();
     numParticles = system.getNumParticles();
     workgroupSize = numCopies;
-    while (workgroupSize <= 128-numCopies)
-        workgroupSize += numCopies;
     if (numCopies != findFFTDimension(numCopies))
         throw OpenMMException("RPMDIntegrator: the number of copies must be a multiple of powers of 2, 3, and 5.");
     int paddedParticles = cu.getPaddedNumAtoms();
