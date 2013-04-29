@@ -20,7 +20,7 @@ __kernel void execFFT(__global const real2* restrict in, __global real2* restric
         for (int z = get_local_id(0); z < ZSIZE; z += get_local_size(0))
             data0[z] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+z];
 #else
-		if (index < XSIZE*ZSIZE)
+		if (index < XSIZE*YSIZE)
             data0[get_local_id(0)] = in[x*(YSIZE*ZSIZE)+y*ZSIZE+get_local_id(0)%ZSIZE];
 #endif
         barrier(CLK_LOCAL_MEM_FENCE);

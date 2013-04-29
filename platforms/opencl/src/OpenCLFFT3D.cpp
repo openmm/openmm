@@ -228,7 +228,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         source<<"out[y*(ZSIZE*XSIZE)+z*XSIZE+x] = data"<<(stage%2)<<"[z];\n";
     }
 	else {
-		source<<"if (index < XSIZE*ZSIZE)\n";
+		source<<"if (index < XSIZE*YSIZE)\n";
         source<<"out[y*(ZSIZE*XSIZE)+(get_local_id(0)%ZSIZE)*XSIZE+x] = data"<<(stage%2)<<"[get_local_id(0)];\n";
 	}
     source<<"barrier(CLK_GLOBAL_MEM_FENCE);";
