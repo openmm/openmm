@@ -65,17 +65,25 @@ for lambda_value in lambda_values:
    # Create argon system where first particle is alchemically modified by lambda_value.
    system = System()
    system.setDefaultPeriodicBoxVectors(Vec3(box_edge, 0, 0), Vec3(0, box_edge, 0), Vec3(0, 0, box_edge))
-   force = NonbondedSoftcoreForce()
+   force = CustomNonbondedForce("""4*epsilon*l12*(1/((alphaLJ*(1-l12) + (r/sigma)^6)^2) - 1/(alphaLJ*(1-l12) + (r/sigma)^6));
+                                   sigma=0.5*(sigma1+sigma2);
+                                   epsilon=sqrt(epsilon1*epsilon2);
+                                   alphaLJ=0.5;
+                                   l12=1-(1-lambda)*step(useLambda1+useLambda2-0.5)""")
+   force.addPerParticleParameter("sigma")
+   force.addPerParticleParameter("epsilon")
+   force.addPerParticleParameter("useLambda")
+   force.addGlobalParameter("lambda", lambda_value)
    force.setNonbondedMethod(NonbondedForce.CutoffPeriodic)
    force.setCutoffDistance(cutoff) 
    for particle_index in range(nparticles):
       system.addParticle(mass)
       if (particle_index == 0):
          # Add alchemically-modified particle.
-         force.addParticle(charge, sigma, epsilon, lambda_value)
+         force.addParticle([sigma, epsilon, 1])
       else:
          # Add normal particle.
-         force.addParticle(charge, sigma, epsilon)   
+         force.addParticle([sigma, epsilon, 0])
    system.addForce(force)
 
    # Add barostat.
