@@ -322,8 +322,6 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
-        findInteractingBlocksArgs.push_back(&blockCenter->getDevicePointer());
-        findInteractingBlocksArgs.push_back(&blockBoundingBox->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactionCount->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingTiles->getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingAtoms->getDevicePointer());
@@ -390,10 +388,10 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
     if (forceArgs.size() > 0)
         forceArgs[7] = &interactingTiles->getDevicePointer();
-    findInteractingBlocksArgs[5] = &interactingTiles->getDevicePointer();
+    findInteractingBlocksArgs[3] = &interactingTiles->getDevicePointer();
     if (forceArgs.size() > 0)
         forceArgs[14] = &interactingAtoms->getDevicePointer();
-    findInteractingBlocksArgs[6] = &interactingAtoms->getDevicePointer();
+    findInteractingBlocksArgs[4] = &interactingAtoms->getDevicePointer();
     if (context.getUseDoublePrecision()) {
         vector<double4> oldPositionsVec(numAtoms, make_double4(1e30, 1e30, 1e30, 0));
         oldPositions->upload(oldPositionsVec);

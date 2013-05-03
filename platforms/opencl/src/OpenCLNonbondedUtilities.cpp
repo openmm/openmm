@@ -339,22 +339,20 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         sortBoxDataKernel.setArg<cl::Buffer>(7, interactionCount->getDeviceBuffer());
         sortBoxDataKernel.setArg<cl::Buffer>(8, rebuildNeighborList->getDeviceBuffer());
         findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
-        findInteractingBlocksKernel.setArg<cl::Buffer>(2, blockCenter->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(3, blockBoundingBox->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(4, interactionCount->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactingTiles->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingAtoms->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(7, context.getPosq().getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl_uint>(8, interactingTiles->getSize());
-        findInteractingBlocksKernel.setArg<cl_uint>(9, startBlockIndex);
-        findInteractingBlocksKernel.setArg<cl_uint>(10, numBlocks);
-        findInteractingBlocksKernel.setArg<cl::Buffer>(11, sortedBlocks->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(12, sortedBlockCenter->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(13, sortedBlockBoundingBox->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(14, exclusionIndices->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(15, exclusionRowIndices->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(16, oldPositions->getDeviceBuffer());
-        findInteractingBlocksKernel.setArg<cl::Buffer>(17, rebuildNeighborList->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(2, interactionCount->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(3, interactingTiles->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(4, interactingAtoms->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(5, context.getPosq().getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl_uint>(6, interactingTiles->getSize());
+        findInteractingBlocksKernel.setArg<cl_uint>(7, startBlockIndex);
+        findInteractingBlocksKernel.setArg<cl_uint>(8, numBlocks);
+        findInteractingBlocksKernel.setArg<cl::Buffer>(9, sortedBlocks->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(10, sortedBlockCenter->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(11, sortedBlockBoundingBox->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(12, exclusionIndices->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(13, exclusionRowIndices->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(14, oldPositions->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(15, rebuildNeighborList->getDeviceBuffer());
     }
 }
 
@@ -430,9 +428,9 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
     forceKernel.setArg<cl::Buffer>(7, interactingTiles->getDeviceBuffer());
     forceKernel.setArg<cl_uint>(11, maxTiles);
     forceKernel.setArg<cl::Buffer>(14, interactingAtoms->getDeviceBuffer());
-    findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactingTiles->getDeviceBuffer());
-    findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingAtoms->getDeviceBuffer());
-    findInteractingBlocksKernel.setArg<cl_uint>(8, maxTiles);
+    findInteractingBlocksKernel.setArg<cl::Buffer>(3, interactingTiles->getDeviceBuffer());
+    findInteractingBlocksKernel.setArg<cl::Buffer>(4, interactingAtoms->getDeviceBuffer());
+    findInteractingBlocksKernel.setArg<cl_uint>(6, maxTiles);
     int numAtoms = context.getNumAtoms();
     if (context.getUseDoublePrecision()) {
         vector<mm_double4> oldPositionsVec(numAtoms, mm_double4(1e30, 1e30, 1e30, 0));
@@ -460,8 +458,8 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
         
         forceKernel.setArg<cl_uint>(5, startTileIndex);
         forceKernel.setArg<cl_uint>(6, numTiles);
-        findInteractingBlocksKernel.setArg<cl_uint>(9, startBlockIndex);
-        findInteractingBlocksKernel.setArg<cl_uint>(10, numBlocks);
+        findInteractingBlocksKernel.setArg<cl_uint>(7, startBlockIndex);
+        findInteractingBlocksKernel.setArg<cl_uint>(8, numBlocks);
     }
 }
 

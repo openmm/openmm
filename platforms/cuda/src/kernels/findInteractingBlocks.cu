@@ -17,7 +17,6 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
         pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
         pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        real4 firstPoint = pos;
 #endif
         real4 minPos = pos;
         real4 maxPos = pos;
@@ -25,9 +24,10 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
 #ifdef USE_PERIODIC
-            pos.x -= floor((pos.x-firstPoint.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            pos.y -= floor((pos.y-firstPoint.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            pos.z -= floor((pos.z-firstPoint.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+            real4 center = 0.5f*(maxPos+minPos);
+            pos.x -= floor((pos.x-center.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+            pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+            pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
             minPos = make_real4(min(minPos.x,pos.x), min(minPos.y,pos.y), min(minPos.z,pos.z), 0);
             maxPos = make_real4(max(maxPos.x,pos.x), max(maxPos.y,pos.y), max(maxPos.z,pos.z), 0);
@@ -264,9 +264,8 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */
-extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockBoundingBox, unsigned int* __restrict__ interactionCount, ushort2* __restrict__ interactingTiles,
-        unsigned int* __restrict__ interactingAtoms, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int startBlockIndex,
+extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int* __restrict__ interactionCount,
+        ushort2* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int startBlockIndex,
         unsigned int numBlocks, real2* __restrict__ sortedBlocks, const real4* __restrict__ sortedBlockCenter, const real4* __restrict__ sortedBlockBoundingBox,
         const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices, real4* __restrict__ oldPositions,
         const int* __restrict__ rebuildNeighborList) {
@@ -297,8 +296,8 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
             numAtoms = 0;
         real2 sortedKey = sortedBlocks[i];
         unsigned short x = (unsigned short) sortedKey.y;
-        real4 blockCenterX = blockCenter[x];
-        real4 blockSizeX = blockBoundingBox[x];
+        real4 blockCenterX = sortedBlockCenter[i];
+        real4 blockSizeX = sortedBlockBoundingBox[i];
 
         // Load exclusion data for block x.
         
