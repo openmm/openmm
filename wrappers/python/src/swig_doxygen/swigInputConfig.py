@@ -172,6 +172,7 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
 UNITS = {
 ("*", "getConstraintTolerance") : (None, ()),
 ("*", "getCutoffDistance") : ("unit.nanometers", ()),
+("*", "getSwitchingDistance") : ("unit.nanometers", ()),
 ("*", "getDefaultCollisionFrequency") : ("1/unit.picosecond", ()),
 ("*", "getDefaultPeriodicBoxVectors")
  : (None, ('unit.nanometer', 'unit.nanometer', 'unit.nanometer')),
