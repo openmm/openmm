@@ -33,6 +33,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
@@ -1830,6 +1831,8 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
         delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
+    if (forceCopy != NULL)
+        delete forceCopy;
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
@@ -1938,6 +1941,17 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
     }
     cl.addForce(new OpenCLCustomNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    
+    // Record information for the long range correction.
+    
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cl.getContextIndex() == 0) {
+        forceCopy = new CustomNonbondedForce(force);
+        hasInitializedLongRangeCorrection = false;
+    }
+    else {
+        longRangeCoefficient = 0.0;
+        hasInitializedLongRangeCorrection = true;
+    }
 }
 
 double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1949,10 +1963,20 @@ double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
                 changed = true;
             globalParamValues[i] = value;
         }
-        if (changed)
+        if (changed) {
             globals->upload(globalParamValues);
+            if (forceCopy != NULL) {
+                longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+                hasInitializedLongRangeCorrection = true;
+            }
+        }
     }
-    return 0.0;
+    if (!hasInitializedLongRangeCorrection) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+    }
+    mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+    return longRangeCoefficient/(boxSize.x*boxSize.y*boxSize.z);
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
@@ -1971,6 +1995,14 @@ void OpenCLCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
+    
+    // If necessary, recompute the long range correction.
+    
+    if (forceCopy != NULL) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+        *forceCopy = force;
+    }
     
     // Mark that the current reordering may be invalid.
     
