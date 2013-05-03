@@ -179,6 +179,34 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
+     * Get whether a switching is applied to the interaction.
+     */
+    bool getUseSwitchingFunction() const;
+    /**
+     * Set whether a switching is applied to the interaction.
+     */
+    void setUseSwitchingFunction(bool use);
+    /**
+     * Get the distance at which the switching function begins to reduce the interaction.  This must be
+     * less than the cutoff distance.
+     */
+    double getSwitchingDistance() const;
+    /**
+     * Set the distance at which the switching function begins to reduce the interaction.  This must be
+     * less than the cutoff distance.
+     */
+    void setSwitchingDistance(double distance);
+    /**
+     * Get whether to add a correction to the energy to compensate for the cutoff and switching function.
+     * This has no effect if periodic boundary conditions are not used.
+     */
+    bool getUseLongRangeCorrection() const;
+    /**
+     * Set whether to add a correction to the energy to compensate for the cutoff and switching function.
+     * This has no effect if periodic boundary conditions are not used.
+     */
+    void setUseLongRangeCorrection(bool use);
+    /**
      * Add a new per-particle parameter that the interaction may depend on.
      *
      * @param name     the name of the parameter
@@ -335,7 +363,8 @@ private:
     class ExclusionInfo;
     class FunctionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance;
+    double cutoffDistance, switchingDistance;
+    bool useSwitchingFunction, useLongRangeCorrection;
     std::string energyExpression;
     std::vector<PerParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;

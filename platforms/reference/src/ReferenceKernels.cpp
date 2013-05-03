@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -65,6 +65,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/SplineFitter.h"
@@ -1001,6 +1002,8 @@ ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKerne
     disposeIntArray(exclusionArray, numParticles);
     if (neighborList != NULL)
         delete neighborList;
+    if (forceCopy != NULL)
+        delete forceCopy;
 }
 
 void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
@@ -1059,18 +1062,32 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     forceExpression = expression.differentiate("r").optimize().createProgram();
     for (int i = 0; i < numParameters; i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
-    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+        globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
+    }
 
     // Delete the custom functions.
 
     for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
         delete iter->second;
+    
+    // Record information for the long range correction.
+    
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
+        forceCopy = new CustomNonbondedForce(force);
+        hasInitializedLongRangeCorrection = false;
+    }
+    else {
+        longRangeCoefficient = 0.0;
+        hasInitializedLongRangeCorrection = true;
+    }
 }
 
 double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     vector<RealVec>& posData = extractPositions(context);
     vector<RealVec>& forceData = extractForces(context);
+    RealVec& box = extractBoxSize(context);
     RealOpenMM energy = 0;
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
@@ -1079,16 +1096,27 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic) {
-        RealVec& box = extractBoxSize(context);
         double minAllowedSize = 2*nonbondedCutoff;
         if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         ixn.setPeriodic(box);
     }
-    map<string, double> globalParameters;
-    for (int i = 0; i < (int) globalParameterNames.size(); i++)
-        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, includeEnergy ? &energy : NULL);
+    bool globalParamsChanged = false;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++) {
+        double value = context.getParameter(globalParameterNames[i]);
+        if (globalParamValues[globalParameterNames[i]] != value)
+            globalParamsChanged = true;
+        globalParamValues[globalParameterNames[i]] = value;
+    }
+    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParamValues, forceData, 0, includeEnergy ? &energy : NULL);
+    
+    // Add in the long range correction.
+    
+    if (!hasInitializedLongRangeCorrection || (globalParamsChanged && forceCopy != NULL)) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+    }
+    energy += longRangeCoefficient/(box[0]*box[1]*box[2]);
     return energy;
 }
 
@@ -1105,6 +1133,14 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    
+    // If necessary, recompute the long range correction.
+    
+    if (forceCopy != NULL) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+        *forceCopy = force;
     }
 }
 

@@ -32,7 +32,12 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
+#include "openmm/internal/SplineFitter.h"
 #include "openmm/kernels.h"
+#include "lepton/CustomFunction.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/Parser.h"
+#include <cmath>
 #include <sstream>
 
 using namespace OpenMM;
@@ -57,6 +62,10 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
     const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("CustomNonbondedForce must have exactly as many particles as the System it belongs to.");
+    if (owner.getUseSwitchingFunction()) {
+        if (owner.getSwitchingDistance() < 0 || owner.getSwitchingDistance() >= owner.getCutoffDistance())
+            throw OpenMMException("CustomNonbondedForce: Switching distance must satisfy 0 <= r_switch < r_cutoff");
+    }
     vector<set<int> > exclusions(owner.getNumParticles());
     vector<double> parameters;
     int numParameters = owner.getNumPerParticleParameters();
@@ -126,4 +135,127 @@ map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {
 
 void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomNonbondedForceKernel>().copyParametersToContext(context, owner);
+}
+
+class CustomNonbondedForceImpl::TabulatedFunction : public Lepton::CustomFunction {
+public:
+    TabulatedFunction(double min, double max, const vector<double>& values) :
+            min(min), max(max), values(values) {
+        int numValues = values.size();
+        x.resize(numValues);
+        for (int i = 0; i < numValues; i++)
+            x[i] = min+i*(max-min)/(numValues-1);
+        SplineFitter::createNaturalSpline(x, values, derivs);
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    double evaluate(const double* arguments) const {
+        double t = arguments[0];
+        if (t < min || t > max)
+            return 0.0;
+        return SplineFitter::evaluateSpline(x, values, derivs, t);
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        double t = arguments[0];
+        if (t < min || t > max)
+            return 0.0;
+        return SplineFitter::evaluateSplineDerivative(x, values, derivs, t);
+    }
+    CustomFunction* clone() const {
+        return new TabulatedFunction(min, max, values);
+    }
+    double min, max;
+    vector<double> x, values, derivs;
+};
+
+double CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context) {
+    if (force.getNonbondedMethod() == CustomNonbondedForce::NoCutoff || force.getNonbondedMethod() == CustomNonbondedForce::CutoffNonPeriodic)
+        return 0.0;
+    
+    // Identify all particle classes (defined by parameters), and count the number of
+    // particles in each class.
+
+    map<vector<double>, int> classCounts;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        map<vector<double>, int>::iterator entry = classCounts.find(parameters);
+        if (entry == classCounts.end())
+            classCounts[parameters] = 1;
+        else
+            entry->second++;
+    }
+    
+    // Parse the energy expression.
+    
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        force.getFunctionParameters(i, name, values, min, max);
+        functions[name] = new TabulatedFunction(min, max, values);
+    }
+    Lepton::ExpressionProgram expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize().createProgram();
+
+    // Loop over all pairs of classes to compute the coefficient.
+
+    double sum = 0;
+    for (map<vector<double>, int>::const_iterator entry = classCounts.begin(); entry != classCounts.end(); ++entry) {
+        int count = (entry->second*(entry->second+1))/2;
+        sum += count*integrateInteraction(expression, entry->first, entry->first, force, context);
+    }
+    for (map<vector<double>, int>::const_iterator class1 = classCounts.begin(); class1 != classCounts.end(); ++class1)
+        for (map<vector<double>, int>::const_iterator class2 = classCounts.begin(); class2 != class1; ++class2) {
+            int count = class1->second*class2->second;
+            sum += count*integrateInteraction(expression, class1->first, class2->first, force, context);
+        }
+    int numParticles = force.getNumParticles();
+    int numInteractions = (numParticles*(numParticles+1))/2;
+    sum /= numInteractions;
+    return 2*M_PI*numParticles*numParticles*sum;
+}
+
+double CustomNonbondedForceImpl::integrateInteraction(const Lepton::ExpressionProgram& expression, const vector<double>& params1, const vector<double>& params2,
+        const CustomNonbondedForce& force, const Context& context) {
+    map<std::string, double> variables;
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        stringstream name1, name2;
+        name1 << force.getPerParticleParameterName(i) << 1;
+        name2 << force.getPerParticleParameterName(i) << 2;
+        variables[name1.str()] = params1[i];
+        variables[name2.str()] = params2[i];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        variables[name] = context.getParameter(name);
+    }
+    
+    // To integrate from r_cutoff to infinity, make the change of variables x=r_cutoff/r and integrate from 0 to 1.
+    // This introduces another r^2 into the integral, which along with the r^2 in the formula for the correction
+    // means we multiply the function by r^4.  Use the midpoint method.
+
+    double cutoff = force.getCutoffDistance();
+    variables["r"] = 2*cutoff;
+    double sum = expression.evaluate(variables);
+    int numPoints = 1;
+    for (int iteration = 0; iteration < 10; iteration++) {
+        double oldSum = sum;
+        double newSum = 0;
+        numPoints *= 3;
+        for (int i = 0; i < numPoints; i++) {
+            if (i%3 == 1)
+                continue;
+            double x = (i+0.5)/numPoints;
+            double r = cutoff/x;
+            variables["r"] = r;
+            double r2 = r*r;
+            newSum += expression.evaluate(variables)*r2*r2;
+        }
+        sum = newSum/numPoints + oldSum/3;
+        if (iteration > 2 && (fabs((sum-oldSum)/sum) < 1e-5 || sum == 0))
+            break;
+    }
+    return sum/cutoff;
 }

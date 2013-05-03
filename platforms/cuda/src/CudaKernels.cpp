@@ -33,6 +33,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
@@ -1818,6 +1819,8 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
         delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
         delete tabulatedFunctions[i];
+    if (forceCopy != NULL)
+        delete forceCopy;
 }
 
 void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
@@ -1927,6 +1930,17 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         cu.getNonbondedUtilities().addArgument(CudaNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(float), globals->getDevicePointer()));
     }
     cu.addForce(new CudaCustomNonbondedForceInfo(force));
+    
+    // Record information for the long range correction.
+    
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cu.getContextIndex() == 0) {
+        forceCopy = new CustomNonbondedForce(force);
+        hasInitializedLongRangeCorrection = false;
+    }
+    else {
+        longRangeCoefficient = 0.0;
+        hasInitializedLongRangeCorrection = true;
+    }
 }
 
 double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1938,10 +1952,20 @@ double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool in
                 changed = true;
             globalParamValues[i] = value;
         }
-        if (changed)
+        if (changed) {
             globals->upload(globalParamValues);
+            if (forceCopy != NULL) {
+                longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+                hasInitializedLongRangeCorrection = true;
+            }
+        }
     }
-    return 0.0;
+    if (!hasInitializedLongRangeCorrection) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+    }
+    double4 boxSize = cu.getPeriodicBoxSize();
+    return longRangeCoefficient/(boxSize.x*boxSize.y*boxSize.z);
 }
 
 void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
@@ -1961,6 +1985,14 @@ void CudaCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& co
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
+    
+    // If necessary, recompute the long range correction.
+    
+    if (forceCopy != NULL) {
+        longRangeCoefficient = CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner());
+        hasInitializedLongRangeCorrection = true;
+        *forceCopy = force;
+    }
     
     // Mark that the current reordering may be invalid.
     

@@ -586,7 +586,7 @@ private:
  */
 class ReferenceCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : CalcCustomNonbondedForceKernel(name, platform) {
+    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : CalcCustomNonbondedForceKernel(name, platform), forceCopy(NULL) {
     }
     ~ReferenceCalcCustomNonbondedForceKernel();
     /**
@@ -616,7 +616,10 @@ private:
     int numParticles;
     int **exclusionArray;
     RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    RealOpenMM nonbondedCutoff, periodicBoxSize[3], longRangeCoefficient;
+    bool hasInitializedLongRangeCorrection;
+    CustomNonbondedForce* forceCopy;
+    std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
     Lepton::ExpressionProgram energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;

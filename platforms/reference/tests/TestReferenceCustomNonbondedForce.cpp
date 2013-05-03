@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -337,6 +337,82 @@ void testCoulombLennardJones() {
     }
 }
 
+void testLongRangeCorrection() {
+    // Create a box of particles.
+
+    int gridSize = 5;
+    int numParticles = gridSize*gridSize*gridSize;
+    double boxSize = gridSize*0.7;
+    double cutoff = boxSize/3;
+    ReferencePlatform platform;
+    System standardSystem;
+    System customSystem;
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    NonbondedForce* standardNonbonded = new NonbondedForce();
+    CustomNonbondedForce* customNonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    customNonbonded->addPerParticleParameter("sigma");
+    customNonbonded->addPerParticleParameter("eps");
+    vector<Vec3> positions(numParticles);
+    int index = 0;
+    vector<double> params1(2);
+    params1[0] = 1.1;
+    params1[1] = 0.5;
+    vector<double> params2(2);
+    params2[0] = 1;
+    params2[1] = 1;
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                standardSystem.addParticle(1.0);
+                customSystem.addParticle(1.0);
+                if (index%2 == 0) {
+                    standardNonbonded->addParticle(0, params1[0], params1[1]);
+                    customNonbonded->addParticle(params1);
+                }
+                else {
+                    standardNonbonded->addParticle(0, params2[0], params2[1]);
+                    customNonbonded->addParticle(params2);
+                }
+                positions[index] = Vec3(i*boxSize/gridSize, j*boxSize/gridSize, k*boxSize/gridSize);
+                index++;
+            }
+    standardNonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    customNonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    standardNonbonded->setCutoffDistance(cutoff);
+    customNonbonded->setCutoffDistance(cutoff);
+    standardSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    customSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    standardNonbonded->setUseDispersionCorrection(true);
+    customNonbonded->setUseLongRangeCorrection(true);
+    standardSystem.addForce(standardNonbonded);
+    customSystem.addForce(customNonbonded);
+
+    // Compute the correction for the standard force.
+
+    Context context1(standardSystem, integrator1, platform);
+    context1.setPositions(positions);
+    double standardEnergy1 = context1.getState(State::Energy).getPotentialEnergy();
+    standardNonbonded->setUseDispersionCorrection(false);
+    context1.reinitialize();
+    context1.setPositions(positions);
+    double standardEnergy2 = context1.getState(State::Energy).getPotentialEnergy();
+
+    // Compute the correction for the custom force.
+
+    Context context2(customSystem, integrator2, platform);
+    context2.setPositions(positions);
+    double customEnergy1 = context2.getState(State::Energy).getPotentialEnergy();
+    customNonbonded->setUseLongRangeCorrection(false);
+    context2.reinitialize();
+    context2.setPositions(positions);
+    double customEnergy2 = context2.getState(State::Energy).getPotentialEnergy();
+
+    // See if they agree.
+
+    ASSERT_EQUAL_TOL(standardEnergy1-standardEnergy2, customEnergy1-customEnergy2, 1e-4);
+}
+
 int main() {
     try {
         testSimpleExpression();
@@ -346,6 +422,7 @@ int main() {
         testPeriodic();
         testTabulatedFunction();
         testCoulombLennardJones();
+        testLongRangeCorrection();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

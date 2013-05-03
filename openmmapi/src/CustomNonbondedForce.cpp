@@ -47,7 +47,8 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
+CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0),
+    switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
 }
 
 const string& CustomNonbondedForce::getEnergyFunction() const {
@@ -72,6 +73,30 @@ double CustomNonbondedForce::getCutoffDistance() const {
 
 void CustomNonbondedForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
+}
+
+bool CustomNonbondedForce::getUseSwitchingFunction() const {
+    return useSwitchingFunction;
+}
+
+void CustomNonbondedForce::setUseSwitchingFunction(bool use) {
+    useSwitchingFunction = use;
+}
+
+double CustomNonbondedForce::getSwitchingDistance() const {
+    return switchingDistance;
+}
+
+void CustomNonbondedForce::setSwitchingDistance(double distance) {
+    switchingDistance = distance;
+}
+
+bool CustomNonbondedForce::getUseLongRangeCorrection() const {
+    return useLongRangeCorrection;
+}
+
+void CustomNonbondedForce::setUseLongRangeCorrection(bool use) {
+    useLongRangeCorrection = use;
 }
 
 int CustomNonbondedForce::addPerParticleParameter(const string& name) {

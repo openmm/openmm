@@ -234,7 +234,7 @@ void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
     impl->applyVelocityConstraints(1e-5);
 }
 
-double Context::getParameter(const string& name) {
+double Context::getParameter(const string& name) const {
     return impl->getParameter(name);
 }
 

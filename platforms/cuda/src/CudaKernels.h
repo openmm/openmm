@@ -633,7 +633,7 @@ private:
 class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
     }
     ~CudaCalcCustomNonbondedForceKernel();
     /**
@@ -667,6 +667,9 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<CudaArray*> tabulatedFunctions;
+    double longRangeCoefficient;
+    bool hasInitializedLongRangeCorrection;
+    CustomNonbondedForce* forceCopy;
     const System& system;
 };
 

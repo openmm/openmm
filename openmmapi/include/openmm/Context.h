@@ -170,7 +170,7 @@ public:
      * 
      * @param name the name of the parameter to get
      */
-    double getParameter(const std::string& name);
+    double getParameter(const std::string& name) const;
     /**
      * Set the value of an adjustable parameter defined by a Force object in the System.
      * 

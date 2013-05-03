@@ -35,6 +35,7 @@
 #include "ForceImpl.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/Kernel.h"
+#include "lepton/ExpressionProgram.h"
 #include <utility>
 #include <map>
 #include <string>
@@ -60,7 +61,15 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
+    /**
+     * Compute the coefficient which, when divided by the periodic box volume, gives the
+     * long range correction to the energy.
+     */
+    static double calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context);
 private:
+    class TabulatedFunction;
+    static double integrateInteraction(const Lepton::ExpressionProgram& expression, const std::vector<double>& params1, const std::vector<double>& params2,
+            const CustomNonbondedForce& force, const Context& context);
     const CustomNonbondedForce& owner;
     Kernel kernel;
 };
