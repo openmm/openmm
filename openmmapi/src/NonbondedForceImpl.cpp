@@ -57,6 +57,10 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
     const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("NonbondedForce must have exactly as many particles as the System it belongs to.");
+    if (owner.getUseSwitchingFunction()) {
+        if (owner.getSwitchingDistance() < 0 || owner.getSwitchingDistance() >= owner.getCutoffDistance())
+            throw OpenMMException("NonbondedForce: Switching distance must satisfy 0 <= r_switch < r_cutoff");
+    }
     vector<set<int> > exceptions(owner.getNumParticles());
     for (int i = 0; i < owner.getNumExceptions(); i++) {
         int particle1, particle2;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,7 +47,8 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), rfDielectric(78.3), ewaldErrorTol(5e-4), useDispersionCorrection(true), recipForceGroup(-1) {
+NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
+        ewaldErrorTol(5e-4), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
@@ -64,6 +65,22 @@ double NonbondedForce::getCutoffDistance() const {
 
 void NonbondedForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
+}
+
+bool NonbondedForce::getUseSwitchingFunction() const {
+    return useSwitchingFunction;
+}
+
+void NonbondedForce::setUseSwitchingFunction(bool use) {
+    useSwitchingFunction = use;
+}
+
+double NonbondedForce::getSwitchingDistance() const {
+    return switchingDistance;
+}
+
+void NonbondedForce::setSwitchingDistance(double distance) {
+    switchingDistance = distance;
 }
 
 double NonbondedForce::getReactionFieldDielectric() const {

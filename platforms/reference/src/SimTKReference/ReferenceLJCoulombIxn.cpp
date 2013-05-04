@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -46,7 +46,7 @@ using OpenMM::RealVec;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulombIxn::ReferenceLJCoulombIxn( ) : cutoff(false), periodic(false), ewald(false), pme(false) {
+ReferenceLJCoulombIxn::ReferenceLJCoulombIxn( ) : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -90,6 +90,19 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
     krf = pow(cutoffDistance, -3.0)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
     crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
   }
+
+/**---------------------------------------------------------------------------------------
+
+   Set the force to use a switching function on the Lennard-Jones interaction.
+
+   @param distance            the switching distance
+
+   --------------------------------------------------------------------------------------- */
+
+void ReferenceLJCoulombIxn::setUseSwitchingFunction( RealOpenMM distance ) {
+    useSwitch = true;
+    switchingDistance = distance;
+}
 
   /**---------------------------------------------------------------------------------------
 
@@ -357,6 +370,12 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
        RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
        RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
+       RealOpenMM switchValue = 1, switchDeriv = 0;
+       if (useSwitch && r > switchingDistance) {
+           RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+           switchValue = 1+t*t*t*(-10+t*(15-t*6));
+           switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+       }
        RealOpenMM alphaR    = alphaEwald * r;
 
 
@@ -368,7 +387,12 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
                   sig2     *= sig2;
        RealOpenMM sig6      = sig2*sig2*sig2;
        RealOpenMM eps       = atomParameters[ii][EpsIndex]*atomParameters[jj][EpsIndex];
-                  dEdR     += eps*( twelve*sig6 - six )*sig6*inverseR*inverseR;
+                  dEdR     += switchValue*eps*( twelve*sig6 - six )*sig6*inverseR*inverseR;
+       vdwEnergy = eps*(sig6-one)*sig6;
+       if (useSwitch) {
+           dEdR -= vdwEnergy*switchDeriv*inverseR;
+           vdwEnergy *= switchValue;
+       }
 
        // accumulate forces
 
@@ -381,7 +405,6 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<RealVec>
        // accumulate energies
 
        realSpaceEwaldEnergy        = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
-       vdwEnergy                   = eps*(sig6-one)*sig6;
 
        totalVdwEnergy             += vdwEnergy;
        totalRealSpaceEwaldEnergy  += realSpaceEwaldEnergy;
@@ -554,18 +577,36 @@ void ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& at
 
     RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
     RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
+    RealOpenMM switchValue = 1, switchDeriv = 0;
+    if (useSwitch) {
+        RealOpenMM r = deltaR[0][ReferenceForce::RIndex];
+        if (r > switchingDistance) {
+            RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+            switchValue = 1+t*t*t*(-10+t*(15-t*6));
+            switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+        }
+    }
     RealOpenMM sig       = atomParameters[ii][SigIndex] +  atomParameters[jj][SigIndex];
     RealOpenMM sig2      = inverseR*sig;
                sig2     *= sig2;
     RealOpenMM sig6      = sig2*sig2*sig2;
 
     RealOpenMM eps       = atomParameters[ii][EpsIndex]*atomParameters[jj][EpsIndex];
-    RealOpenMM dEdR      = eps*( twelve*sig6 - six )*sig6;
-               if (cutoff)
-                   dEdR += (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2));
-               else
-                   dEdR += (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR);
-               dEdR     *= inverseR*inverseR;
+    RealOpenMM dEdR      = switchValue*eps*( twelve*sig6 - six )*sig6;
+    if (cutoff)
+        dEdR += (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2));
+    else
+        dEdR += (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR);
+    dEdR     *= inverseR*inverseR;
+    RealOpenMM energy = eps*(sig6-one)*sig6;
+    if (useSwitch) {
+        dEdR -= energy*switchDeriv*inverseR;
+        energy *= switchValue;
+    }
+    if (cutoff)
+        energy += (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR+krf*r2-crf));
+    else
+        energy += (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR);
 
     // accumulate forces
 
@@ -575,22 +616,13 @@ void ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, vector<RealVec>& at
        forces[jj][kk]   -= force;
     }
 
-    RealOpenMM energy = 0.0;
-
     // accumulate energies
 
-    if( totalEnergy || energyByAtom ) {
-        if (cutoff)
-            energy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR+krf*r2-crf));
-        else
-            energy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR);
-        energy += eps*(sig6-one)*sig6;
-        if( totalEnergy )
-           *totalEnergy += energy;
-        if( energyByAtom ){
-           energyByAtom[ii] += energy;
-           energyByAtom[jj] += energy;
-        }
+    if( totalEnergy )
+       *totalEnergy += energy;
+    if( energyByAtom ){
+       energyByAtom[ii] += energy;
+       energyByAtom[jj] += energy;
     }
   }
 

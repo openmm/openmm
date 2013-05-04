@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -35,12 +35,13 @@ class ReferenceLJCoulombIxn {
    private:
        
       bool cutoff;
+      bool useSwitch;
       bool periodic;
       bool ewald;
       bool pme;
       const OpenMM::NeighborList* neighborList;
       RealOpenMM periodicBoxSize[3];
-      RealOpenMM cutoffDistance;
+      RealOpenMM cutoffDistance, switchingDistance;
       RealOpenMM krf, crf;
       RealOpenMM alphaEwald;
       int numRx, numRy, numRz;
@@ -100,6 +101,16 @@ class ReferenceLJCoulombIxn {
          --------------------------------------------------------------------------------------- */
       
       void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set the force to use a switching function on the Lennard-Jones interaction.
+      
+         @param distance            the switching distance
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setUseSwitchingFunction( RealOpenMM distance );
       
       /**---------------------------------------------------------------------------------------
       

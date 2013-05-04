@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -179,11 +179,13 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
-     * Get whether a switching is applied to the interaction.
+     * Get whether a switching function is applied to the interaction.  If the nonbonded method is set
+     * to NoCutoff, this option is ignored.
      */
     bool getUseSwitchingFunction() const;
     /**
-     * Set whether a switching is applied to the interaction.
+     * Set whether a switching function is applied to the interaction.  If the nonbonded method is set
+     * to NoCutoff, this option is ignored.
      */
     void setUseSwitchingFunction(bool use);
     /**

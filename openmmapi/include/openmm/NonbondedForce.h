@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -65,6 +65,12 @@ namespace OpenMM {
  * This class provides a convenience method for this case called createExceptionsFromBonds().  You pass to it
  * a list of bonds and the scale factors to use for 1-4 interactions.  It identifies all pairs of particles which
  * are separated by 1, 2, or 3 bonds, then automatically creates exceptions for them.
+ * 
+ * When using a cutoff, by default Lennard-Jones interactions are sharply truncated at the cutoff distance.
+ * Optionally you can instead use a switching function to make the interaction smoothly go to zero over a finite
+ * distance range.  To enable this, call setUseSwitchingFunction().  You must also call setSwitchingDistance()
+ * to specify the distance at which the interaction should begin to decrease.  The switching distance must be
+ * less than the cutoff distance.
  */
 
 class OPENMM_EXPORT NonbondedForce : public Force {
@@ -138,6 +144,26 @@ public:
      * @param distance    the cutoff distance, measured in nm
      */
     void setCutoffDistance(double distance);
+    /**
+     * Get whether a switching function is applied to the Lennard-Jones interaction.  If the nonbonded method is set
+     * to NoCutoff, this option is ignored.
+     */
+    bool getUseSwitchingFunction() const;
+    /**
+     * Set whether a switching function is applied to the Lennard-Jones interaction.  If the nonbonded method is set
+     * to NoCutoff, this option is ignored.
+     */
+    void setUseSwitchingFunction(bool use);
+    /**
+     * Get the distance at which the switching function begins to reduce the Lennard-Jones interaction.  This must be
+     * less than the cutoff distance.
+     */
+    double getSwitchingDistance() const;
+    /**
+     * Set the distance at which the switching function begins to reduce the Lennard-Jones interaction.  This must be
+     * less than the cutoff distance.
+     */
+    void setSwitchingDistance(double distance);
     /**
      * Get the dielectric constant to use for the solvent in the reaction field approximation.
      */
@@ -301,8 +327,8 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, rfDielectric, ewaldErrorTol;
-    bool useDispersionCorrection;
+    double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol;
+    bool useSwitchingFunction, useDispersionCorrection;
     int recipForceGroup;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;

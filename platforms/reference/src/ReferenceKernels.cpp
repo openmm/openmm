@@ -867,10 +867,15 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     }
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
+    if (nonbondedMethod == NoCutoff) {
         neighborList = NULL;
-    else
+        useSwitchingFunction = false;
+    }
+    else {
         neighborList = new NeighborList();
+        useSwitchingFunction = force.getUseSwitchingFunction();
+        switchingDistance = force.getSwitchingDistance();
+    }
     if (nonbondedMethod == Ewald) {
         double alpha;
         NonbondedForceImpl::calcEwaldParameters(system, force, alpha, kmax[0], kmax[1], kmax[2]);
@@ -911,6 +916,8 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
         clj.setUsePME(ewaldAlpha, gridSize);
+    if (useSwitchingFunction)
+        clj.setUseSwitchingFunction(switchingDistance);
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, includeEnergy ? &energy : NULL, includeDirect, includeReciprocal);
     if (includeDirect) {
         ReferenceBondForce refBondForce;
