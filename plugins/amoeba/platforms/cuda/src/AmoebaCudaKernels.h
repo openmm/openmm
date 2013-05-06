@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -368,11 +368,12 @@ private:
         const char* getSortKey() const {return "value.y";}
     };
     void initializeScaleFactors();
+    void ensureMultipolesValid(ContextImpl& context);
     template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     double inducedEpsilon;
-    bool hasInitializedScaleFactors, hasInitializedFFT;
+    bool hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid;
     CudaContext& cu;
     const System& system;
     std::vector<int3> covalentFlagValues;
@@ -405,6 +406,7 @@ private:
     CudaArray* pmePhidp;
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
+    CudaArray* lastPositions;
     CudaSort* sort;
     cufftHandle fft;
     CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;

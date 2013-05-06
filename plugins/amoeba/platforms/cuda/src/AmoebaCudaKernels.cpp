@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -783,12 +783,12 @@ private:
 };
 
 CudaCalcAmoebaMultipoleForceKernel::CudaCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : 
-        CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false),
+        CalcAmoebaMultipoleForceKernel(name, platform), cu(cu), system(system), hasInitializedScaleFactors(false), hasInitializedFFT(false), multipolesAreValid(false),
         multipoleParticles(NULL), molecularDipoles(NULL), molecularQuadrupoles(NULL), labFrameDipoles(NULL), labFrameQuadrupoles(NULL),
         field(NULL), fieldPolar(NULL), inducedField(NULL), inducedFieldPolar(NULL), torque(NULL), dampingAndThole(NULL),
         inducedDipole(NULL), inducedDipolePolar(NULL), inducedDipoleErrors(NULL), polarizability(NULL), covalentFlags(NULL), polarizationGroupFlags(NULL),
         pmeGrid(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeIgrid(NULL), pmePhi(NULL),
-        pmePhid(NULL), pmePhip(NULL), pmePhidp(NULL), pmeAtomGridIndex(NULL), sort(NULL), gkKernel(NULL) {
+        pmePhid(NULL), pmePhip(NULL), pmePhidp(NULL), pmeAtomGridIndex(NULL), lastPositions(NULL), sort(NULL), gkKernel(NULL) {
 }
 
 CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
@@ -847,6 +847,8 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
         delete pmePhidp;
     if (pmeAtomGridIndex != NULL)
         delete pmeAtomGridIndex;
+    if (lastPositions != NULL)
+        delete lastPositions;
     if (sort != NULL)
         delete sort;
     if (hasInitializedFFT)
@@ -922,6 +924,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     multipoleParticles = CudaArray::create<int4>(cu, paddedNumAtoms, "multipoleParticles");
     molecularDipoles = CudaArray::create<float>(cu, 3*paddedNumAtoms, "molecularDipoles");
     molecularQuadrupoles = CudaArray::create<float>(cu, 5*paddedNumAtoms, "molecularQuadrupoles");
+    lastPositions = new CudaArray(cu, cu.getPosq().getSize(), cu.getPosq().getElementSize(), "lastPositions");
     dampingAndThole->upload(dampingAndTholeVec);
     polarizability->upload(polarizabilityVec);
     multipoleParticles->upload(multipoleParticlesVec);
@@ -1583,11 +1586,44 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
     void* mapTorqueArgs[] = {&cu.getForce().getDevicePointer(), &torque->getDevicePointer(),
         &cu.getPosq().getDevicePointer(), &multipoleParticles->getDevicePointer()};
     cu.executeKernel(mapTorqueKernel, mapTorqueArgs, cu.getNumAtoms());
+    
+    // Record the current atom positions so we can tell later if they have changed.
+    
+    cu.getPosq().copyTo(*lastPositions);
+    multipolesAreValid = true;
     return 0.0;
 }
 
+void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& context) {
+    if (multipolesAreValid) {
+        int numParticles = cu.getNumAtoms();
+        if (cu.getUseDoublePrecision()) {
+            vector<double4> pos1, pos2;
+            cu.getPosq().download(pos1);
+            lastPositions->download(pos2);
+            for (int i = 0; i < numParticles; i++)
+                if (pos1[i].x != pos2[i].x || pos1[i].y != pos2[i].y || pos1[i].z != pos2[i].z) {
+                    multipolesAreValid = false;
+                    break;
+                }
+        }
+        else {
+            vector<float4> pos1, pos2;
+            cu.getPosq().download(pos1);
+            lastPositions->download(pos2);
+            for (int i = 0; i < numParticles; i++)
+                if (pos1[i].x != pos2[i].x || pos1[i].y != pos2[i].y || pos1[i].z != pos2[i].z) {
+                    multipolesAreValid = false;
+                    break;
+                }
+        }
+    }
+    if (!multipolesAreValid)
+        context.calcForcesAndEnergy(false, false, -1);
+}
+
 void CudaCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
-    context.calcForcesAndEnergy(false, false, -1);
+    ensureMultipolesValid(context);
     int numPoints = inputGrid.size();
     int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     CudaArray points(cu, numPoints, 4*elementSize, "points");
@@ -1739,7 +1775,7 @@ void CudaCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextIm
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
-    context.calcForcesAndEnergy(false, false, -1);
+    ensureMultipolesValid(context);
     if (cu.getUseDoublePrecision())
         computeSystemMultipoleMoments<double, double4, double4>(context, outputMultipoleMoments);
     else if (cu.getUseMixedPrecision())
@@ -1801,6 +1837,7 @@ void CudaCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& co
     molecularQuadrupoles->upload(molecularQuadrupolesVec);
     cu.getPosq().upload(cu.getPinnedBuffer());
     cu.invalidateMolecules();
+    multipolesAreValid = false;
 }
 
 /* -------------------------------------------------------------------------- *
