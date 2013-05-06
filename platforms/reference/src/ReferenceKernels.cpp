@@ -1046,10 +1046,15 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     }
     nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
+    if (nonbondedMethod == NoCutoff) {
         neighborList = NULL;
-    else
+        useSwitchingFunction = false;
+    }
+    else {
         neighborList = new NeighborList();
+        useSwitchingFunction = force.getUseSwitchingFunction();
+        switchingDistance = force.getSwitchingDistance();
+    }
 
     // Create custom functions for the tabulated functions.
 
@@ -1115,6 +1120,8 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
             globalParamsChanged = true;
         globalParamValues[globalParameterNames[i]] = value;
     }
+    if (useSwitchingFunction)
+        ixn.setUseSwitchingFunction(switchingDistance);
     ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParamValues, forceData, 0, includeEnergy ? &energy : NULL);
     
     // Add in the long range correction.

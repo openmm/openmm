@@ -1940,6 +1940,15 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     compute << cl.getExpressionUtilities().createExpressions(forceExpressions, variables, functionDefinitions, prefix+"temp", prefix+"functionParams");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
+    if (force.getUseSwitchingFunction()) {
+        // Compute the switching coefficients.
+        
+        replacements["SWITCH_CUTOFF"] = cl.doubleToString(force.getSwitchingDistance());
+        replacements["SWITCH_C3"] = cl.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
+        replacements["SWITCH_C4"] = cl.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
+        replacements["SWITCH_C5"] = cl.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+    }
     string source = cl.replaceStrings(OpenCLKernelSources::customNonbonded, replacements);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {

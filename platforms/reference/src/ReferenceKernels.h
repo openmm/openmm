@@ -617,8 +617,8 @@ private:
     int numParticles;
     int **exclusionArray;
     RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff, periodicBoxSize[3], longRangeCoefficient;
-    bool hasInitializedLongRangeCorrection;
+    RealOpenMM nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
+    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;

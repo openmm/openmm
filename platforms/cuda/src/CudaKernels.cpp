@@ -1929,6 +1929,15 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     compute << cu.getExpressionUtilities().createExpressions(forceExpressions, variables, functionDefinitions, prefix+"temp", prefix+"functionParams");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["USE_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
+    if (force.getUseSwitchingFunction()) {
+        // Compute the switching coefficients.
+        
+        replacements["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
+        replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
+        replacements["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
+        replacements["SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+    }
     string source = cu.replaceStrings(CudaKernelSources::customNonbonded, replacements);
     cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {

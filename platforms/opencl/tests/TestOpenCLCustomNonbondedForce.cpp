@@ -407,6 +407,58 @@ void testParallelComputation() {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
+void testSwitchingFunction() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("10/r^2");
+    vector<double> params;
+    nonbonded->addParticle(params);
+    nonbonded->addParticle(params);
+    nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffNonPeriodic);
+    nonbonded->setCutoffDistance(2.0);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setSwitchingDistance(1.5);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    
+    // Compute the interaction at various distances.
+    
+    for (double r = 1.0; r < 2.5; r += 0.1) {
+        positions[1] = Vec3(r, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        
+        // See if the energy is correct.
+        
+        double expectedEnergy = 10/(r*r);
+        double switchValue;
+        if (r <= 1.5)
+            switchValue = 1;
+        else if (r >= 2.0)
+            switchValue = 0;
+        else {
+            double t = (r-1.5)/0.5;
+            switchValue = 1+t*t*t*(-10+t*(15-t*6));
+        }
+        ASSERT_EQUAL_TOL(switchValue*expectedEnergy, state.getPotentialEnergy(), TOL);
+        
+        // See if the force is the gradient of the energy.
+        
+        double delta = 1e-3;
+        positions[1] = Vec3(r-delta, 0, 0);
+        context.setPositions(positions);
+        double e1 = context.getState(State::Energy).getPotentialEnergy();
+        positions[1] = Vec3(r+delta, 0, 0);
+        context.setPositions(positions);
+        double e2 = context.getState(State::Energy).getPotentialEnergy();
+        ASSERT_EQUAL_TOL((e2-e1)/(2*delta), state.getForces()[0][0], 1e-3);
+    }
+}
+
 void testLongRangeCorrection() {
     // Create a box of particles.
 
@@ -495,6 +547,7 @@ int main(int argc, char* argv[]) {
         testTabulatedFunction();
         testCoulombLennardJones();
         testParallelComputation();
+        testSwitchingFunction();
         testLongRangeCorrection();
     }
     catch(const exception& e) {

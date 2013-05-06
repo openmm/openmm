@@ -38,10 +38,11 @@ class ReferenceCustomNonbondedIxn {
    private:
 
       bool cutoff;
+      bool useSwitch;
       bool periodic;
       const OpenMM::NeighborList* neighborList;
       RealOpenMM periodicBoxSize[3];
-      RealOpenMM cutoffDistance;
+      RealOpenMM cutoffDistance, switchingDistance;
       Lepton::ExpressionProgram energyExpression;
       Lepton::ExpressionProgram forceExpression;
       std::vector<std::string> paramNames;
@@ -95,6 +96,16 @@ class ReferenceCustomNonbondedIxn {
          --------------------------------------------------------------------------------------- */
 
       void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set the force to use a switching function.
+      
+         @param distance            the switching distance
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setUseSwitchingFunction( RealOpenMM distance );
 
       /**---------------------------------------------------------------------------------------
 

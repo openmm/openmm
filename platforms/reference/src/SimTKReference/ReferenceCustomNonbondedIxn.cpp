@@ -45,7 +45,7 @@ using OpenMM::RealVec;
 
 ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::ExpressionProgram& energyExpression,
         const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames) :
-            cutoff(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames) {
+            cutoff(false), useSwitch(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -93,6 +93,19 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
     cutoffDistance = distance;
     neighborList = &neighbors;
   }
+
+/**---------------------------------------------------------------------------------------
+
+   Set the force to use a switching function.
+
+   @param distance            the switching distance
+
+   --------------------------------------------------------------------------------------- */
+
+void ReferenceCustomNonbondedIxn::setUseSwitchingFunction( RealOpenMM distance ) {
+    useSwitch = true;
+    switchingDistance = distance;
+}
 
   /**---------------------------------------------------------------------------------------
 
@@ -228,13 +241,24 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
         ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR );
     else
         ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR );
-    if (cutoff && deltaR[ReferenceForce::RIndex] >= cutoffDistance)
+    RealOpenMM r = deltaR[ReferenceForce::RIndex];
+    if (cutoff && r >= cutoffDistance)
         return;
 
     // accumulate forces
 
-    variables["r"] = deltaR[ReferenceForce::RIndex];
+    variables["r"] = r;
     RealOpenMM dEdR = (RealOpenMM) (forceExpression.evaluate(variables)/(deltaR[ReferenceForce::RIndex]));
+    RealOpenMM energy = (RealOpenMM) energyExpression.evaluate(variables);
+    if (useSwitch) {
+        if (r > switchingDistance) {
+            RealOpenMM t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
+            RealOpenMM switchValue = 1+t*t*t*(-10+t*(15-t*6));
+            RealOpenMM switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
+            dEdR = switchValue*dEdR + energy*switchDeriv/r;
+            energy *= switchValue;
+        }
+    }
     for( int kk = 0; kk < 3; kk++ ){
        RealOpenMM force  = -dEdR*deltaR[kk];
        forces[ii][kk]   += force;
@@ -244,7 +268,6 @@ void ReferenceCustomNonbondedIxn::calculateOneIxn( int ii, int jj, vector<RealVe
     // accumulate energies
 
     if( totalEnergy || energyByAtom ) {
-        RealOpenMM energy = (RealOpenMM) energyExpression.evaluate(variables);
         if( totalEnergy )
            *totalEnergy += energy;
         if( energyByAtom ){
