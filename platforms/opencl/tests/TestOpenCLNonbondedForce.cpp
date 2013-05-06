@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -816,6 +816,61 @@ void testParallelComputation(bool useCutoff) {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
+void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(0, 1.2, 1);
+    nonbonded->addParticle(0, 1.4, 2);
+    nonbonded->setNonbondedMethod(method);
+    nonbonded->setCutoffDistance(2.0);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setSwitchingDistance(1.5);
+    nonbonded->setUseDispersionCorrection(false);
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    double eps = SQRT_TWO;
+    
+    // Compute the interaction at various distances.
+    
+    for (double r = 1.0; r < 2.5; r += 0.1) {
+        positions[1] = Vec3(r, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        
+        // See if the energy is correct.
+        
+        double x = 1.3/r;
+        double expectedEnergy = 4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0));
+        double switchValue;
+        if (r <= 1.5)
+            switchValue = 1;
+        else if (r >= 2.0)
+            switchValue = 0;
+        else {
+            double t = (r-1.5)/0.5;
+            switchValue = 1+t*t*t*(-10+t*(15-t*6));
+        }
+        ASSERT_EQUAL_TOL(switchValue*expectedEnergy, state.getPotentialEnergy(), TOL);
+        
+        // See if the force is the gradient of the energy.
+        
+        double delta = 1e-3;
+        positions[1] = Vec3(r-delta, 0, 0);
+        context.setPositions(positions);
+        double e1 = context.getState(State::Energy).getPotentialEnergy();
+        positions[1] = Vec3(r+delta, 0, 0);
+        context.setPositions(positions);
+        double e2 = context.getState(State::Energy).getPotentialEnergy();
+        ASSERT_EQUAL_TOL((e2-e1)/(2*delta), state.getForces()[0][0], 1e-3);
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
@@ -833,6 +888,8 @@ int main(int argc, char* argv[]) {
         testChangingParameters();
         testParallelComputation(false);
         testParallelComputation(true);
+        testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
+        testSwitchingFunction(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

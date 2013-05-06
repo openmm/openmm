@@ -33,8 +33,19 @@ if (!isExcluded || needCorrection) {
             sig2 *= sig2;
             real sig6 = sig2*sig2*sig2;
             real epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
-            tempForce = epssig6*(12.0f*sig6 - 6.0f) + prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
-            tempEnergy += epssig6*(sig6 - 1.0f) + prefactor*erfcAlphaR;
+            tempForce = epssig6*(12.0f*sig6 - 6.0f);
+            real ljEnergy = epssig6*(sig6 - 1.0f);
+            #if USE_LJ_SWITCH
+            if (r > LJ_SWITCH_CUTOFF) {
+                real x = r-LJ_SWITCH_CUTOFF;
+                real switchValue = 1+x*x*x*(LJ_SWITCH_C3+x*(LJ_SWITCH_C4+x*LJ_SWITCH_C5));
+                real switchDeriv = x*x*(3*LJ_SWITCH_C3+x*(4*LJ_SWITCH_C4+x*5*LJ_SWITCH_C5));
+                tempForce = tempForce*switchValue - ljEnergy*switchDeriv*r;
+                ljEnergy *= switchValue;
+            }
+            #endif
+            tempForce += prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
+            tempEnergy += ljEnergy + prefactor*erfcAlphaR;
 #else
             tempForce = prefactor*(erfcAlphaR+alphaR*expAlphaRSqr*TWO_OVER_SQRT_PI);
             tempEnergy += prefactor*erfcAlphaR;
@@ -58,7 +69,17 @@ if (!isExcluded || needCorrection) {
     real sig6 = sig2*sig2*sig2;
     real epssig6 = sig6*(sigmaEpsilon1.y*sigmaEpsilon2.y);
     tempForce = epssig6*(12.0f*sig6 - 6.0f);
-    tempEnergy += includeInteraction ? epssig6*(sig6 - 1) : 0;
+    real ljEnergy = includeInteraction ? epssig6*(sig6 - 1) : 0;
+    #if USE_LJ_SWITCH
+    if (r > LJ_SWITCH_CUTOFF) {
+        real x = r-LJ_SWITCH_CUTOFF;
+        real switchValue = 1+x*x*x*(LJ_SWITCH_C3+x*(LJ_SWITCH_C4+x*LJ_SWITCH_C5));
+        real switchDeriv = x*x*(3*LJ_SWITCH_C3+x*(4*LJ_SWITCH_C4+x*5*LJ_SWITCH_C5));
+        tempForce = tempForce*switchValue - ljEnergy*switchDeriv*r;
+        ljEnergy *= switchValue;
+    }
+    #endif
+    tempEnergy += ljEnergy;
   #endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF

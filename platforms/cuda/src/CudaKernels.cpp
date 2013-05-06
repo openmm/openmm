@@ -1438,6 +1438,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
+    defines["USE_LJ_SWITCH"] = (useCutoff && force.getUseSwitchingFunction() ? "1" : "0");
     if (useCutoff) {
         // Compute the reaction field constants.
 
@@ -1445,6 +1446,15 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         double reactionFieldC = (1.0 / force.getCutoffDistance())*(3.0*force.getReactionFieldDielectric())/(2.0*force.getReactionFieldDielectric()+1.0);
         defines["REACTION_FIELD_K"] = cu.doubleToString(reactionFieldK);
         defines["REACTION_FIELD_C"] = cu.doubleToString(reactionFieldC);
+        
+        // Compute the switching coefficients.
+        
+        if (force.getUseSwitchingFunction()) {
+            defines["LJ_SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
+            defines["LJ_SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
+            defines["LJ_SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));
+            defines["LJ_SWITCH_C5"] = cu.doubleToString(6/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 5.0));
+        }
     }
     if (force.getUseDispersionCorrection() && cu.getContextIndex() == 0)
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
