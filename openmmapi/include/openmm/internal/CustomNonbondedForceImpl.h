@@ -46,7 +46,7 @@ namespace OpenMM {
  * This is the internal implementation of CustomNonbondedForce.
  */
 
-class CustomNonbondedForceImpl : public ForceImpl {
+class OPENMM_EXPORT CustomNonbondedForceImpl : public ForceImpl {
 public:
     CustomNonbondedForceImpl(const CustomNonbondedForce& owner);
     ~CustomNonbondedForceImpl();
