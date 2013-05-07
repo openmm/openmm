@@ -83,6 +83,7 @@ private:
     class ErrorFunction;
     class EwaldErrorFunction;
     static int findZero(const ErrorFunction& f, int initialGuess);
+    static double evalIntegral(double r, double rs, double rc, double sigma);
     const NonbondedForce& owner;
     Kernel kernel;
 };

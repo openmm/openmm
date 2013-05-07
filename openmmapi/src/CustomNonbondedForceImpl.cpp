@@ -240,13 +240,11 @@ double CustomNonbondedForceImpl::integrateInteraction(const Lepton::ExpressionPr
     // means we multiply the function by r^4.  Use the midpoint method.
 
     double cutoff = force.getCutoffDistance();
-    variables["r"] = 2*cutoff;
-    double sum = expression.evaluate(variables);
+    double sum = 0;
     int numPoints = 1;
-    for (int iteration = 0; iteration < 10; iteration++) {
+    for (int iteration = 0; ; iteration++) {
         double oldSum = sum;
         double newSum = 0;
-        numPoints *= 3;
         for (int i = 0; i < numPoints; i++) {
             if (i%3 == 1)
                 continue;
@@ -259,6 +257,38 @@ double CustomNonbondedForceImpl::integrateInteraction(const Lepton::ExpressionPr
         sum = newSum/numPoints + oldSum/3;
         if (iteration > 2 && (fabs((sum-oldSum)/sum) < 1e-5 || sum == 0))
             break;
+        if (iteration == 8)
+            throw OpenMMException("CustomNonbondedForce: Long range correction did not converge.  Does the energy go to 0 faster than 1/r^2?");
+        numPoints *= 3;
     }
-    return sum/cutoff;
+    
+    // If a switching function is used, integrate over the switching interval.
+    
+    double sum2 = 0;
+    if (force.getUseSwitchingFunction()) {
+        double rswitch = force.getSwitchingDistance();
+        sum2 = 0;
+        numPoints = 1;
+        for (int iteration = 0; ; iteration++) {
+            double oldSum = sum2;
+            double newSum = 0;
+            for (int i = 0; i < numPoints; i++) {
+                if (i%3 == 1)
+                    continue;
+                double x = (i+0.5)/numPoints;
+                double r = rswitch+x*(cutoff-rswitch);
+                double switchValue = x*x*x*(10+x*(-15+x*6));
+                variables["r"] = r;
+                newSum += switchValue*expression.evaluate(variables)*r*r;
+            }
+            sum2 = newSum/numPoints + oldSum/3;
+            if (iteration > 2 && (fabs((sum2-oldSum)/sum2) < 1e-5 || sum2 == 0))
+                break;
+            if (iteration == 8)
+                throw OpenMMException("CustomNonbondedForce: Long range correction did not converge.  Is the energy finite everywhere in the switching interval?");
+            numPoints *= 3;
+        }
+        sum2 *= cutoff-rswitch;
+    }
+    return sum/cutoff+sum2;
 }

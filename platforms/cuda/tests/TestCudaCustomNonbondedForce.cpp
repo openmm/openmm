@@ -506,6 +506,10 @@ void testLongRangeCorrection() {
     customSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     standardNonbonded->setUseDispersionCorrection(true);
     customNonbonded->setUseLongRangeCorrection(true);
+    standardNonbonded->setUseSwitchingFunction(true);
+    customNonbonded->setUseSwitchingFunction(true);
+    standardNonbonded->setSwitchingDistance(0.8*cutoff);
+    customNonbonded->setSwitchingDistance(0.8*cutoff);
     standardSystem.addForce(standardNonbonded);
     customSystem.addForce(customNonbonded);
 

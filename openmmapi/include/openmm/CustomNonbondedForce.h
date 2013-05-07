@@ -80,6 +80,25 @@ namespace OpenMM {
  * if the labels 1 and 2 are reversed.  In contrast, if it depended on the difference sigma1-sigma2, the results would
  * be undefined, because reversing the labels 1 and 2 would change the energy.
  * 
+ * When using a cutoff, by default the interaction is sharply truncated at the cutoff distance.
+ * Optionally you can instead use a switching function to make the interaction smoothly go to zero over a finite
+ * distance range.  To enable this, call setUseSwitchingFunction().  You must also call setSwitchingDistance()
+ * to specify the distance at which the interaction should begin to decrease.  The switching distance must be
+ * less than the cutoff distance.  Of course, you could also incorporate the switching function directly into your
+ * energy expression, but there are several advantages to keeping it separate.  It makes your energy expression simpler
+ * to write and understand.  It allows you to use the same energy expression with or without a cutoff.  Also, when using
+ * a long range correction (see below), separating out the switching function allows the correction to be calculated
+ * more accurately.
+ * 
+ * Another optional feature of this class is to add a contribution to the energy which approximates the effect of all
+ * interactions beyond the cutoff in a periodic system.  When running a simulation at constant pressure, this can improve
+ * the quality of the result.  Call setUseLongRangeCorrection() to enable it.
+ * 
+ * Computing the long range correction takes negligible work in each time step, but it does require an expensive precomputation
+ * at the start of the simulation.  Furthermore, that precomputation must be repeated every time a global parameter changes
+ * (or when you modify per-particle parameters by calling updateParametersInContext()).  This means that if parameters change
+ * frequently, the long range correction can be very slow.  For this reason, it is disabled by default.
+ * 
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs, step, delta.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.  The names of per-particle parameters

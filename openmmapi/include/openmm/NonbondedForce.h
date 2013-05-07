@@ -71,6 +71,11 @@ namespace OpenMM {
  * distance range.  To enable this, call setUseSwitchingFunction().  You must also call setSwitchingDistance()
  * to specify the distance at which the interaction should begin to decrease.  The switching distance must be
  * less than the cutoff distance.
+ * 
+ * Another optional feature of this class (enabled by default) is to add a contribution to the energy which approximates
+ * the effect of all Lennard-Jones interactions beyond the cutoff in a periodic system.  When running a simulation
+ * at constant pressure, this can improve the quality of the result.  Call setUseDispersionCorrection() to set whether
+ * this should be used.
  */
 
 class OPENMM_EXPORT NonbondedForce : public Force {
