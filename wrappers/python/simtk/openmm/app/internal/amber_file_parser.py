@@ -12,7 +12,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
 Contributors: Christoph Klein, Michael R. Shirts
 
@@ -217,7 +217,7 @@ class PrmtopLoader(object):
         raw_masses=self._raw_data['MASS']
         for ii in range(self.getNumAtoms()):
             self._massList.append(float(raw_masses[ii]))
-        self._massList = units.Quantity(self._massList, units.amu)
+        self._massList = self._massList
         return self._massList
 
     def getCharges(self):
@@ -231,7 +231,7 @@ class PrmtopLoader(object):
         raw_charges=self._raw_data['CHARGE']
         for ii in range(self.getNumAtoms()):
             self._chargeList.append(float(raw_charges[ii])/18.2223)
-        self._chargeList = units.Quantity(self._chargeList, units.elementary_charge)
+        self._chargeList = self._chargeList
         return self._chargeList
 
     def getAtomName(self, iAtom):
@@ -300,6 +300,8 @@ class PrmtopLoader(object):
         except AttributeError:
             pass
         self._nonbondTerms=[]
+        lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
+        energyConversionFactor = units.kilocalorie_per_mole.conversion_factor_to(units.kilojoule_per_mole)
         for iAtom in range(self.getNumAtoms()):
             numTypes=self.getNumTypes()
             atomTypeIndexes=self._getAtomTypeIndexes()
@@ -315,8 +317,8 @@ class PrmtopLoader(object):
             except ZeroDivisionError:
                 rMin = 1.0
                 epsilon = 0.0
-            rVdw =    units.Quantity(rMin/2.0, units.angstrom)
-            epsilon = units.Quantity(epsilon, units.kilocalorie_per_mole)
+            rVdw = rMin/2.0*lengthConversionFactor
+            epsilon = epsilon*energyConversionFactor
             self._nonbondTerms.append( (rVdw, epsilon) )
         return self._nonbondTerms
 
@@ -324,6 +326,8 @@ class PrmtopLoader(object):
         forceConstant=self._raw_data["BOND_FORCE_CONSTANT"]
         bondEquil=self._raw_data["BOND_EQUIL_VALUE"]
         returnList=[]
+        forceConstConversionFactor = (units.kilocalorie_per_mole/(units.angstrom*units.angstrom)).conversion_factor_to(units.kilojoule_per_mole/(units.nanometer*units.nanometer))
+        lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         for ii in range(0,len(bondPointers),3):
              if int(bondPointers[ii])<0 or \
                 int(bondPointers[ii+1])<0:
@@ -331,11 +335,10 @@ class PrmtopLoader(object):
                                  % ((bondPointers[ii],
                                      bondPointers[ii+1]),))
              iType=int(bondPointers[ii+2])-1
-             forceConstUnit=units.kilocalorie_per_mole/(units.angstrom*units.angstrom)
              returnList.append((int(bondPointers[ii])/3,
                                 int(bondPointers[ii+1])/3,
-                                units.Quantity(float(forceConstant[iType]), forceConstUnit),
-                                units.Quantity(float(bondEquil[iType]), units.angstrom)))
+                                float(forceConstant[iType])*forceConstConversionFactor,
+                                float(bondEquil[iType])*lengthConversionFactor))
         return returnList
 
     def getBondsWithH(self):
@@ -370,6 +373,7 @@ class PrmtopLoader(object):
         anglePointers = self._raw_data["ANGLES_INC_HYDROGEN"] \
                        +self._raw_data["ANGLES_WITHOUT_HYDROGEN"]
         self._angleList=[]
+        forceConstConversionFactor = (units.kilocalorie_per_mole/(units.radian*units.radian)).conversion_factor_to(units.kilojoule_per_mole/(units.radian*units.radian))
         for ii in range(0,len(anglePointers),4):
              if int(anglePointers[ii])<0 or \
                 int(anglePointers[ii+1])<0 or \
@@ -379,12 +383,11 @@ class PrmtopLoader(object):
                                      anglePointers[ii+1],
                                      anglePointers[ii+2]),))
              iType=int(anglePointers[ii+3])-1
-             forceConstUnit=units.kilocalorie_per_mole/(units.radian*units.radian)
              self._angleList.append((int(anglePointers[ii])/3,
                                 int(anglePointers[ii+1])/3,
                                 int(anglePointers[ii+2])/3,
-                                units.Quantity(float(forceConstant[iType]), forceConstUnit),
-                                units.Quantity(float(angleEquil[iType])*180/math.pi, units.degree)))
+                                float(forceConstant[iType])*forceConstConversionFactor,
+                                float(angleEquil[iType])))
         return self._angleList
 
     def getDihedrals(self):
@@ -399,6 +402,7 @@ class PrmtopLoader(object):
         dihedralPointers = self._raw_data["DIHEDRALS_INC_HYDROGEN"] \
                           +self._raw_data["DIHEDRALS_WITHOUT_HYDROGEN"]
         self._dihedralList=[]
+        forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
         for ii in range(0,len(dihedralPointers),5):
              if int(dihedralPointers[ii])<0 or int(dihedralPointers[ii+1])<0:
                  raise Exception("Found negative dihedral atom pointers %s"
@@ -411,8 +415,8 @@ class PrmtopLoader(object):
                                 int(dihedralPointers[ii+1])/3,
                                 abs(int(dihedralPointers[ii+2]))/3,
                                 abs(int(dihedralPointers[ii+3]))/3,
-                                units.Quantity(float(forceConstant[iType]), units.kilocalorie_per_mole),
-                                units.Quantity(float(phase[iType])*180/math.pi, units.degree),
+                                float(forceConstant[iType])*forceConstConversionFactor,
+                                float(phase[iType]),
                                 int(0.5+float(periodicity[iType]))))
         return self._dihedralList
 
@@ -431,7 +435,7 @@ class PrmtopLoader(object):
                  (rVdwI, epsilonI) = nonbondTerms[iAtom]
                  (rVdwL, epsilonL) = nonbondTerms[lAtom]
                  rMin = (rVdwI+rVdwL)
-                 epsilon = units.sqrt(epsilonI*epsilonL)
+                 epsilon = math.sqrt(epsilonI*epsilonL)
                  returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon))
         return returnList
 
@@ -482,8 +486,9 @@ class PrmtopLoader(object):
                     screen[i] = 0.602256336067
                 else:
                     screen[i] = 0.5
+        lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
         for iAtom in range(len(radii)):
-            self._gb_List.append((float(radii[iAtom])*units.angstrom, float(screen[iAtom])))
+            self._gb_List.append((float(radii[iAtom])*lengthConversionFactor, float(screen[iAtom])))
         return self._gb_List
 
     def getBoxBetaAndDimensions(self):
@@ -612,8 +617,9 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         atomConstraints = [[]]*system.getNumParticles()
         for i in range(system.getNumConstraints()):
             c = system.getConstraintParameters(i)
-            atomConstraints[c[0]].append((c[1], c[2]))
-            atomConstraints[c[1]].append((c[0], c[2]))
+            distance = c[2].value_in_units(units.nanometer)
+            atomConstraints[c[0]].append((c[1], distance))
+            atomConstraints[c[1]].append((c[0], distance))
     for (iAtom, jAtom, kAtom, k, aMin) in prmtop.getAngles():
         if shake == 'h-angles':
             type1 = prmtop.getAtomType(iAtom)
@@ -634,7 +640,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
                     l2 = bond[1]
             
             # Compute the distance between atoms and add a constraint
-            length = units.sqrt(l1*l1 + l2*l2 - 2*l1*l2*units.cos(aMin))
+            length = math.sqrt(l1*l1 + l2*l2 - 2*l1*l2*math.cos(aMin))
             system.addConstraint(iAtom, kAtom, length)
         if flexibleConstraints or not constrained:
             force.addAngle(iAtom, jAtom, kAtom, aMin, 2*k)
@@ -715,7 +721,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     # Add Excluded Atoms
     excludedAtoms=prmtop.getExcludedAtoms()
-    excludeParams = (0.0*units.elementary_charge**2, 1.0*units.angstroms, 0.0*units.kilocalories_per_mole)
+    excludeParams = (0.0, 0.1, 0.0)
     for iAtom in range(prmtop.getNumAtoms()):
         for jAtom in excludedAtoms[iAtom]:
             if min((iAtom, jAtom), (jAtom, iAtom)) in excludedAtomPairs: continue            
@@ -771,13 +777,13 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             if len(waterO[res]) == 1 and len(waterH[res]) == 2:
                 if len(waterEP[res]) == 1:
                     # Four point water
-                    weightH = distOE[res]/units.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
+                    weightH = distOE[res]/math.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
                     system.setVirtualSite(waterEP[res][0], mm.ThreeParticleAverageSite(waterO[res][0], waterH[res][0], waterH[res][1], 1-weightH, weightH/2, weightH/2))
                 elif len(waterEP[res]) == 2:
                     # Five point water
-                    weightH = cosOOP*distOE[res]/units.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
+                    weightH = cosOOP*distOE[res]/math.sqrt(distOH[res]**2-(0.5*distHH[res])**2)
                     angleHOH = 2*math.asin(0.5*distHH[res]/distOH[res])
-                    lenCross = (distOH[res].value_in_unit(units.nanometer)**2)*math.sin(angleHOH)*units.nanometer
+                    lenCross = (distOH[res]**2)*math.sin(angleHOH)
                     weightCross = sinOOP*distOE[res]/lenCross
                     system.setVirtualSite(waterEP[res][0], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, weightCross))
                     system.setVirtualSite(waterEP[res][1], mm.OutOfPlaneSite(waterO[res][0], waterH[res][0], waterH[res][1], weightH/2, weightH/2, -weightCross))
@@ -960,5 +966,3 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-
-    
