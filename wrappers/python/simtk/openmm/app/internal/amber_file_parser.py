@@ -617,7 +617,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         atomConstraints = [[]]*system.getNumParticles()
         for i in range(system.getNumConstraints()):
             c = system.getConstraintParameters(i)
-            distance = c[2].value_in_units(units.nanometer)
+            distance = c[2].value_in_unit(units.nanometer)
             atomConstraints[c[0]].append((c[1], distance))
             atomConstraints[c[1]].append((c[0], distance))
     for (iAtom, jAtom, kAtom, k, aMin) in prmtop.getAngles():
