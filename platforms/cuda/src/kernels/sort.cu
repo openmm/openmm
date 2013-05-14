@@ -73,6 +73,7 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
         __syncthreads();
     }
     minimum = rangeBuffer[0];
+    __syncthreads();
     rangeBuffer[threadIdx.x] = maximum;
     __syncthreads();
     for (unsigned int step = 1; step < blockDim.x; step *= 2) {
