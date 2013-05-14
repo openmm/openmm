@@ -57,8 +57,8 @@ using OpenMM::RealVec;
 
 ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
                                                   int numberOfConstraints,
-                                                  int** atomIndices,
-                                                  RealOpenMM* distance,
+                                                  const vector<pair<int, int> >& atomIndices,
+                                                  const vector<RealOpenMM>& distance,
                                                   vector<RealOpenMM>& masses,
                                                   vector<AngleInfo>& angles,
                                                   RealOpenMM tolerance){
@@ -108,10 +108,10 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
                    continue;
                }
                double scale;
-               int atomj0 = _atomIndices[j][0];
-               int atomj1 = _atomIndices[j][1];
-               int atomk0 = _atomIndices[k][0];
-               int atomk1 = _atomIndices[k][1];
+               int atomj0 = _atomIndices[j].first;
+               int atomj1 = _atomIndices[j].second;
+               int atomk0 = _atomIndices[k].first;
+               int atomk1 = _atomIndices[k].second;
                RealOpenMM invMass0 = one/masses[atomj0];
                RealOpenMM invMass1 = one/masses[atomj1];
                int atoma, atomb, atomc;
@@ -146,7 +146,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
 
                bool foundConstraint = false;
                for (int other = 0; other < numberOfConstraints; other++) {
-                   if ((_atomIndices[other][0] == atoma && _atomIndices[other][1] == atomc) || (_atomIndices[other][0] == atomc && _atomIndices[other][1] == atoma)) {
+                   if ((_atomIndices[other].first == atoma && _atomIndices[other].second == atomc) || (_atomIndices[other].first == atomc && _atomIndices[other].second == atoma)) {
                        double d1 = _distance[j];
                        double d2 = _distance[k];
                        double d3 = _distance[other];
@@ -227,8 +227,6 @@ ReferenceCCMAAlgorithm::~ReferenceCCMAAlgorithm( ){
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _distanceTolerance, "distanceTolerance" );
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _reducedMasses, "reducedMasses" );
     }
-//    for (unsigned int i = 0; i < _matrices.size(); i++)
-//        SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(_matrices[i], "");
 }
 
 /**---------------------------------------------------------------------------------------
@@ -393,8 +391,8 @@ int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>&
    if( !_hasInitializedMasses ){
       _hasInitializedMasses = true;
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
-         int atomI          = _atomIndices[ii][0];
-         int atomJ          = _atomIndices[ii][1];
+         int atomI          = _atomIndices[ii].first;
+         int atomJ          = _atomIndices[ii].second;
          reducedMasses[ii]  = half/( inverseMasses[atomI] + inverseMasses[atomJ] );
       }
    }
@@ -404,8 +402,8 @@ int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>&
    RealOpenMM tolerance     = getTolerance();
               tolerance    *= two;
    for( int ii = 0; ii < _numberOfConstraints; ii++ ){
-      int atomI   = _atomIndices[ii][0];
-      int atomJ   = _atomIndices[ii][1];
+      int atomI   = _atomIndices[ii].first;
+      int atomJ   = _atomIndices[ii].second;
       r_ij[ii] = atomCoordinates[atomI] - atomCoordinates[atomJ];
       d_ij2[ii] = r_ij[ii].dot(r_ij[ii]);
    }
@@ -422,8 +420,8 @@ int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>&
       numberConverged  = 0;
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
 
-         int atomI   = _atomIndices[ii][0];
-         int atomJ   = _atomIndices[ii][1];
+         int atomI   = _atomIndices[ii].first;
+         int atomJ   = _atomIndices[ii].second;
 
          RealVec rp_ij = atomCoordinatesP[atomI] - atomCoordinatesP[atomJ];
          if (constrainingVelocities) {
@@ -466,8 +464,8 @@ int ReferenceCCMAAlgorithm::applyConstraints(int numberOfAtoms, vector<RealVec>&
       }
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
 
-         int atomI   = _atomIndices[ii][0];
-         int atomJ   = _atomIndices[ii][1];
+         int atomI   = _atomIndices[ii].first;
+         int atomJ   = _atomIndices[ii].second;
          RealVec dr = r_ij[ii]*constraintDelta[ii];
          atomCoordinatesP[atomI] += dr*inverseMasses[atomI];
          atomCoordinatesP[atomJ] -= dr*inverseMasses[atomJ];
@@ -515,8 +513,8 @@ int ReferenceCCMAAlgorithm::reportCCMA( int numberOfAtoms, vector<RealVec>& atom
    RealOpenMM tolerance = getTolerance();
    for( int ii = 0; ii < _numberOfConstraints; ii++ ){
 
-      int atomI   = _atomIndices[ii][0];
-      int atomJ   = _atomIndices[ii][1];
+      int atomI   = _atomIndices[ii].first;
+      int atomJ   = _atomIndices[ii].second;
 
       RealOpenMM rp2  = zero;
       for( int jj = 0; jj < 3; jj++ ){

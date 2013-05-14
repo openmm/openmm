@@ -40,8 +40,8 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
       RealOpenMM _tolerance;
 
       int _numberOfConstraints;
-      int** _atomIndices;
-      RealOpenMM* _distance;
+      std::vector<std::pair<int, int> > _atomIndices;
+      std::vector<RealOpenMM> _distance;
 
       std::vector<OpenMM::RealVec> _r_ij;
       RealOpenMM* _d_ij2;
@@ -72,7 +72,7 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
+      ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<RealOpenMM>& distance, std::vector<RealOpenMM>& masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
 

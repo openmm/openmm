@@ -316,14 +316,14 @@ void ReferenceApplyConstraintsKernel::initialize(const System& system) {
         inverseMasses[i] = 1.0/masses[i];
     }
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    constraintIndices.resize(numConstraints);
+    constraintDistances.resize(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
 }
@@ -331,10 +331,6 @@ void ReferenceApplyConstraintsKernel::initialize(const System& system) {
 ReferenceApplyConstraintsKernel::~ReferenceApplyConstraintsKernel() {
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
@@ -1729,10 +1725,6 @@ ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
         delete dynamics;
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
@@ -1741,14 +1733,14 @@ void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const 
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    vector<pair<int, int> > constraintIndices(numConstraints);
+    vector<RealOpenMM> constraintDistances(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
@@ -1785,10 +1777,6 @@ ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
         delete dynamics;
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
@@ -1797,14 +1785,14 @@ void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, cons
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    vector<pair<int, int> > constraintIndices(numConstraints);
+    vector<RealOpenMM> constraintDistances(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
@@ -1851,10 +1839,6 @@ ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
         delete dynamics;
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
@@ -1863,14 +1847,14 @@ void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, cons
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    vector<pair<int, int> > constraintIndices(numConstraints);
+    vector<RealOpenMM> constraintDistances(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
@@ -1916,10 +1900,6 @@ ReferenceIntegrateVariableLangevinStepKernel::~ReferenceIntegrateVariableLangevi
         delete dynamics;
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
@@ -1928,14 +1908,14 @@ void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& syst
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    vector<pair<int, int> > constraintIndices(numConstraints);
+    vector<RealOpenMM> constraintDistances(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
@@ -1982,10 +1962,6 @@ ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletSte
         delete dynamics;
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
@@ -1994,14 +1970,14 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    vector<pair<int, int> > constraintIndices(numConstraints);
+    vector<RealOpenMM> constraintDistances(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
@@ -2042,10 +2018,6 @@ ReferenceIntegrateCustomStepKernel::~ReferenceIntegrateCustomStepKernel() {
         delete dynamics;
     if (constraints)
         delete constraints;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (constraintDistances)
-        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const CustomIntegrator& integrator) {
@@ -2054,14 +2026,14 @@ void ReferenceIntegrateCustomStepKernel::initialize(const System& system, const 
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
-    constraintIndices = allocateIntArray(numConstraints, 2);
-    constraintDistances = new RealOpenMM[numConstraints];
+    vector<pair<int, int> > constraintIndices(numConstraints);
+    vector<RealOpenMM> constraintDistances(numConstraints);
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i][0] = particle1;
-        constraintIndices[i][1] = particle2;
+        constraintIndices[i].first = particle1;
+        constraintIndices[i].second = particle2;
         constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     perDofValues.resize(integrator.getNumPerDofVariables());

@@ -190,7 +190,7 @@ private:
 class ReferenceApplyConstraintsKernel : public ApplyConstraintsKernel {
 public:
     ReferenceApplyConstraintsKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
-            ApplyConstraintsKernel(name, platform), data(data), constraints(0), constraintDistances(0), constraintIndices(0) {
+            ApplyConstraintsKernel(name, platform), data(data), constraints(0) {
     }
     ~ReferenceApplyConstraintsKernel();
     /**
@@ -218,8 +218,8 @@ private:
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses;
     std::vector<RealOpenMM> inverseMasses;
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
+    std::vector<std::pair<int, int> > constraintIndices;
+    std::vector<RealOpenMM> constraintDistances;
     int numConstraints;
 };
 
@@ -871,7 +871,7 @@ private:
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
     ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0), constraintDistances(0), constraintIndices(0) {
+        data(data), dynamics(0), constraints(0) {
     }
     ~ReferenceIntegrateVerletStepKernel();
     /**
@@ -900,8 +900,6 @@ private:
     ReferenceVerletDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses;
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
     int numConstraints;
     double prevStepSize;
 };
@@ -912,7 +910,7 @@ private:
 class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0), constraintDistances(0), constraintIndices(0) {
+        data(data), dynamics(0), constraints(0) {
     }
     ~ReferenceIntegrateLangevinStepKernel();
     /**
@@ -941,8 +939,6 @@ private:
     ReferenceStochasticDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses;
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevStepSize;
 };
@@ -953,7 +949,7 @@ private:
 class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
     ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0), constraintDistances(0), constraintIndices(0) {
+        data(data), dynamics(0), constraints(0) {
     }
     ~ReferenceIntegrateBrownianStepKernel();
     /**
@@ -982,8 +978,6 @@ private:
     ReferenceBrownianDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses;
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevStepSize;
 };
@@ -994,7 +988,7 @@ private:
 class ReferenceIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
     ReferenceIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0), constraintDistances(0), constraintIndices(0) {
+        data(data), dynamics(0), constraints(0) {
     }
     ~ReferenceIntegrateVariableLangevinStepKernel();
     /**
@@ -1025,8 +1019,6 @@ private:
     ReferenceVariableStochasticDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses;
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevErrorTol;
 };
@@ -1037,7 +1029,7 @@ private:
 class ReferenceIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
     ReferenceIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0), constraintDistances(0), constraintIndices(0) {
+        data(data), dynamics(0), constraints(0) {
     }
     ~ReferenceIntegrateVariableVerletStepKernel();
     /**
@@ -1068,8 +1060,6 @@ private:
     ReferenceVariableVerletDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses;
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
     int numConstraints;
     double prevErrorTol;
 };
@@ -1080,7 +1070,7 @@ private:
 class ReferenceIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     ReferenceIntegrateCustomStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateCustomStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0), constraintDistances(0), constraintIndices(0) {
+        data(data), dynamics(0), constraints(0) {
     }
     ~ReferenceIntegrateCustomStepKernel();
     /**
@@ -1148,8 +1138,6 @@ private:
     ReferenceConstraintAlgorithm* constraints;
     std::vector<RealOpenMM> masses, globalValues;
     std::vector<std::vector<OpenMM::RealVec> > perDofValues; 
-    RealOpenMM* constraintDistances;
-    int** constraintIndices;
     int numConstraints;
 };
 
