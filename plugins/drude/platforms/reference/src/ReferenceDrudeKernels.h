@@ -84,7 +84,8 @@ private:
  */
 class ReferenceIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
-    ReferenceIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform) : IntegrateDrudeLangevinStepKernel(name, platform), constraints(NULL) {
+    ReferenceIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
+        IntegrateDrudeLangevinStepKernel(name, platform), data(data), constraints(NULL) {
     }
     ~ReferenceIntegrateDrudeLangevinStepKernel();
     /**
@@ -110,6 +111,7 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator);
 private:
+    ReferencePlatform::PlatformData& data;
     const DrudeForce* drudeForce;
     std::vector<int> normalParticles;
     std::vector<std::pair<int, int> > pairParticles;

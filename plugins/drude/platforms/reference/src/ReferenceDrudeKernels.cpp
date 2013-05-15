@@ -35,6 +35,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
+#include "SimTKReference/ReferenceVirtualSites.h"
 #include <set>
 
 using namespace OpenMM;
@@ -256,22 +257,23 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
 }
 
 void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
+    vector<RealVec>& pos = extractPositions(context);
+    vector<RealVec>& vel = extractVelocities(context);
+    vector<RealVec>& force = extractForces(context);
+    
     // Update velocities of ordinary particles.
     
     const RealOpenMM vscale = exp(-integrator.getStepSize()*integrator.getFriction());
     const RealOpenMM fscale = (1-vscale)/integrator.getFriction();
     const RealOpenMM kT = BOLTZ*integrator.getTemperature();
     const RealOpenMM noisescale = sqrt(2*kT*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
-    vector<RealVec>& pos = extractPositions(context);
-    vector<RealVec>& vel = extractVelocities(context);
-    vector<RealVec>& force = extractForces(context);
     for (int i = 0; i < (int) normalParticles.size(); i++) {
         int index = normalParticles[i];
         RealOpenMM invMass = particleInvMass[index];
         if (invMass != 0.0) {
             RealOpenMM sqrtInvMass = sqrt(invMass);
             for (int j = 0; j < 3; j++)
-                vel[i][j] = vscale*vel[i][j] + fscale*invMass*force[i][j] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                vel[index][j] = vscale*vel[index][j] + fscale*invMass*force[index][j] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         }
     }
     
@@ -284,18 +286,20 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     for (int i = 0; i < (int) pairParticles.size(); i++) {
         int p1 = pairParticles[i].first;
         int p2 = pairParticles[i].second;
+        RealOpenMM mass1fract = pairInvTotalMass[i]/particleInvMass[p1];
+        RealOpenMM mass2fract = pairInvTotalMass[i]/particleInvMass[p2];
         RealOpenMM sqrtInvTotalMass = sqrt(pairInvTotalMass[i]);
         RealOpenMM sqrtInvReducedMass = sqrt(pairInvReducedMass[i]);
-        RealVec cmVel = (vel[p2]+vel[p1])*0.5;
+        RealVec cmVel = vel[p1]*mass1fract+vel[p2]*mass2fract;
         RealVec relVel = vel[p2]-vel[p1];
         RealVec cmForce = force[p1]+force[p2];
-        RealVec relForce = force[p2]*(pairInvTotalMass[i]/particleInvMass[p1]) - force[p1]*(pairInvTotalMass[i]/particleInvMass[p2]);
+        RealVec relForce = force[p2]*mass1fract - force[p1]*mass2fract;
         for (int j = 0; j < 3; j++) {
             cmVel[j] = vscale*cmVel[j] + fscale*pairInvTotalMass[i]*cmForce[j] + noisescale*sqrtInvTotalMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
             relVel[j] = vscaleDrude*relVel[j] + fscaleDrude*pairInvReducedMass[i]*relForce[j] + noisescaleDrude*sqrtInvReducedMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         }
-        vel[p1] = cmVel-relVel*0.5;
-        vel[p2] = cmVel+relVel*0.5;
+        vel[p1] = cmVel-relVel*mass2fract;
+        vel[p2] = cmVel+relVel*mass1fract;
     }
 
     // Update the particle positions.
@@ -309,7 +313,8 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     
     // Apply constraints.
     
-    constraints->apply(numParticles, pos, xPrime, particleInvMass);
+    if (constraints != NULL)
+        constraints->apply(numParticles, pos, xPrime, particleInvMass);
     
     // Record the constrained positions and velocities.
     
@@ -320,6 +325,9 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
             pos[i] = xPrime[i];
         }
     }
+    ReferenceVirtualSites::computePositions(context.getSystem(), pos);
+    data.time += integrator.getStepSize();
+    data.stepCount++;
 }
 
 double ReferenceIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
@@ -335,7 +343,7 @@ double ReferenceIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextIm
     double timeShift = 0.5*integrator.getStepSize();
     for (int i = 0; i < numParticles; ++i) {
         if (particleInvMass[i] > 0)
-            shiftedVel[i] = velData[i]+forceData[i]*(timeShift/particleInvMass[i]);
+            shiftedVel[i] = velData[i]+forceData[i]*(timeShift*particleInvMass[i]);
         else
             shiftedVel[i] = velData[i];
     }

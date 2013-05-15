@@ -38,6 +38,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
@@ -67,7 +68,7 @@ void testSinglePair() {
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 0, 0);
-    DrudeLangevinIntegrator integ(temperature, 10.0, temperatureDrude, 10.0, 0.003);
+    DrudeLangevinIntegrator integ(temperature, 20.0, temperatureDrude, 20.0, 0.003);
     Platform& platform = Platform::getPlatformByName("Reference");
     Context context(system, integ, platform);
     context.setPositions(positions);
@@ -93,9 +94,89 @@ void testSinglePair() {
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
 }
 
+void testWater() {
+    // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
+    // and Drude particles.
+    
+    const int gridSize = 4;
+    const int numMolecules = gridSize*gridSize*gridSize;
+    const double spacing = 0.6;
+    const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    const double temperatureDrude = 10.0;
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    DrudeForce* drude = new DrudeForce();
+    system.addForce(nonbonded);
+    system.addForce(drude);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.0);
+    for (int i = 0; i < numMolecules; i++) {
+        int startIndex = system.getNumParticles();
+        system.addParticle(15.6); // O
+        system.addParticle(0.4);  // D
+        system.addParticle(1.0);  // H1
+        system.addParticle(1.0);  // H2
+        system.addParticle(0.0);  // M
+        nonbonded->addParticle(1.71636, 0.318395, 0.21094*4.184);
+        nonbonded->addParticle(-1.71636, 1, 0);
+        nonbonded->addParticle(0.55733, 1, 0);
+        nonbonded->addParticle(0.55733, 1, 0);
+        nonbonded->addParticle(-1.11466, 1, 0);
+        for (int j = 0; j < 5; j++)
+            for (int k = 0; k < j; k++)
+                nonbonded->addException(startIndex+j, startIndex+k, 0, 1, 0);
+        system.addConstraint(startIndex, startIndex+2, 0.09572);
+        system.addConstraint(startIndex, startIndex+3, 0.09572);
+        system.addConstraint(startIndex+2, startIndex+3, 0.15139);
+        system.setVirtualSite(startIndex+4, new ThreeParticleAverageSite(startIndex, startIndex+2, startIndex+3, 0.786646558, 0.106676721, 0.106676721));
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, 1.71636*1.71636/(100000*4.184), 1, 1);
+    }
+    vector<Vec3> positions;
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                Vec3 pos(i*spacing, j*spacing, k*spacing);
+                positions.push_back(pos);
+                positions.push_back(pos);
+                positions.push_back(pos+Vec3(0.09572, 0, 0));
+                positions.push_back(pos+Vec3(-0.023999, 0.092663, 0));
+                positions.push_back(pos);
+            }
+    
+    // Simulate it and check the temperature.
+    
+    DrudeLangevinIntegrator integ(temperature, 50.0, temperatureDrude, 50.0, 0.0005);
+    Platform& platform = Platform::getPlatformByName("Reference");
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    context.applyConstraints(1e-5);
+    
+    // Equilibrate.
+    
+    integ.step(500);
+    
+    // Compute the internal and center of mass temperatures.
+    
+    double ke = 0;
+    int numSteps = 2000;
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(1);
+        ke += context.getState(State::Energy).getKineticEnergy();
+    }
+    ke /= numSteps;
+    int numStandardDof = 3*3*numMolecules-system.getNumConstraints();
+    int numDrudeDof = 3*numMolecules;
+    int numDof = numStandardDof+numDrudeDof;
+    double expectedTemp = (numStandardDof*temperature+numDrudeDof*temperatureDrude)/numDof;
+    ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.02);
+}
+
 int main() {
     try {
         testSinglePair();
+        testWater();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

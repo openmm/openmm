@@ -52,9 +52,10 @@ extern "C" void initDrudeReferenceKernels() {
 }
 
 KernelImpl* ReferenceDrudeKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
+    ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     if (name == CalcDrudeForceKernel::Name())
         return new ReferenceCalcDrudeForceKernel(name, platform);
     if (name == IntegrateDrudeLangevinStepKernel::Name())
-        return new ReferenceIntegrateDrudeLangevinStepKernel(name, platform);
+        return new ReferenceIntegrateDrudeLangevinStepKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }
