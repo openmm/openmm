@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -124,6 +124,21 @@ public:
         data[0] *= rhs;
         data[1] *= rhs;
         data[2] *= rhs;
+        return *this;
+    }
+
+    // scalar division
+    Vec3 operator/(double rhs) const {
+        const Vec3& lhs = *this;
+        double scale = 1.0/rhs;
+        return Vec3(lhs[0]*scale, lhs[1]*scale, lhs[2]*scale);
+    }
+
+    Vec3& operator/=(double rhs) {
+        double scale = 1.0/rhs;
+        data[0] *= scale;
+        data[1] *= scale;
+        data[2] *= scale;
         return *this;
     }
     
