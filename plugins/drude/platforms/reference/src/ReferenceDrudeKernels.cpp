@@ -209,7 +209,6 @@ ReferenceIntegrateDrudeLangevinStepKernel::~ReferenceIntegrateDrudeLangevinStepK
 }
 
 void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system, const DrudeLangevinIntegrator& integrator, const DrudeForce& force) {
-    drudeForce = &force;
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
     
     // Identify particle pairs and ordinary particles.

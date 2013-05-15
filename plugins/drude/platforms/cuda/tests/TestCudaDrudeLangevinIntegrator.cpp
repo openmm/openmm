@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Reference implementation of DrudeLangevinIntegrator.
+ * This tests the CUDA implementation of DrudeLangevinIntegrator.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -47,6 +47,8 @@
 
 using namespace OpenMM;
 using namespace std;
+
+extern "C" OPENMM_EXPORT void registerDrudeCudaKernelFactories();
 
 void testSinglePair() {
     const double temperature = 300.0;
@@ -68,7 +70,7 @@ void testSinglePair() {
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 0, 0);
     DrudeLangevinIntegrator integ(temperature, 20.0, temperatureDrude, 20.0, 0.003);
-    Platform& platform = Platform::getPlatformByName("Reference");
+    Platform& platform = Platform::getPlatformByName("CUDA");
     Context context(system, integ, platform);
     context.setPositions(positions);
     
@@ -147,19 +149,19 @@ void testWater() {
     // Simulate it and check the temperature.
     
     DrudeLangevinIntegrator integ(temperature, 50.0, temperatureDrude, 50.0, 0.0005);
-    Platform& platform = Platform::getPlatformByName("Reference");
+    Platform& platform = Platform::getPlatformByName("CUDA");
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.applyConstraints(1e-5);
     
     // Equilibrate.
     
-    integ.step(500);
+    integ.step(1000);
     
     // Compute the internal and center of mass temperatures.
     
     double ke = 0;
-    int numSteps = 4000;
+    int numSteps = 10000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         ke += context.getState(State::Energy).getKineticEnergy();
@@ -172,8 +174,11 @@ void testWater() {
     ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.02);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        registerDrudeCudaKernelFactories();
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testSinglePair();
         testWater();
     }

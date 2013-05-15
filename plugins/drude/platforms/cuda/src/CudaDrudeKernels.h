@@ -1,5 +1,5 @@
-#ifndef REFERENCE_DRUDE_KERNELS_H_
-#define REFERENCE_DRUDE_KERNELS_H_
+#ifndef CUDA_DRUDE_KERNELS_H_
+#define CUDA_DRUDE_KERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,23 +32,21 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
 #include "openmm/DrudeKernels.h"
-#include "SimTKUtilities/RealVec.h"
-#include <utility>
-#include <vector>
-
-class ReferenceConstraintAlgorithm;
+#include "CudaContext.h"
+#include "CudaArray.h"
 
 namespace OpenMM {
 
 /**
  * This kernel is invoked by DrudeForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcDrudeForceKernel : public CalcDrudeForceKernel {
+class CudaCalcDrudeForceKernel : public CalcDrudeForceKernel {
 public:
-    ReferenceCalcDrudeForceKernel(std::string name, const Platform& platform) : CalcDrudeForceKernel(name, platform) {
+    CudaCalcDrudeForceKernel(std::string name, const Platform& platform, CudaContext& cu) :
+            CalcDrudeForceKernel(name, platform), cu(cu), particleParams(NULL), pairParams(NULL) {
     }
+    ~CudaCalcDrudeForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -73,21 +71,20 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const DrudeForce& force);
 private:
-    std::vector<int> particle, particle1, particle2, particle3, particle4;
-    std::vector<double> charge, polarizability, aniso12, aniso34;
-    std::vector<int> pair1, pair2;
-    std::vector<double> pairThole;
+    CudaContext& cu;
+    CudaArray* particleParams;
+    CudaArray* pairParams;
 };
 
 /**
  * This kernel is invoked by DrudeLangevinIntegrator to take one time step
  */
-class ReferenceIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
+class CudaIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
-    ReferenceIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
-        IntegrateDrudeLangevinStepKernel(name, platform), data(data), constraints(NULL) {
+    CudaIntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
+            IntegrateDrudeLangevinStepKernel(name, platform), cu(cu), normalParticles(NULL), pairParticles(NULL) {
     }
-    ~ReferenceIntegrateDrudeLangevinStepKernel();
+    ~CudaIntegrateDrudeLangevinStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -111,15 +108,13 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    std::vector<int> normalParticles;
-    std::vector<std::pair<int, int> > pairParticles;
-    std::vector<double> particleInvMass;
-    std::vector<double> pairInvTotalMass;
-    std::vector<double> pairInvReducedMass;
-    ReferenceConstraintAlgorithm* constraints;
+    CudaContext& cu;
+    double prevStepSize;
+    CudaArray* normalParticles;
+    CudaArray* pairParticles;
+    CUfunction kernel1, kernel2;
 };
 
 } // namespace OpenMM
 
-#endif /*REFERENCE_DRUDE_KERNELS_H_*/
+#endif /*CUDA_DRUDE_KERNELS_H_*/

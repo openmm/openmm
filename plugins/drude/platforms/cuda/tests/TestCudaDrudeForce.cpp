@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Reference implementation of DrudeForce.
+ * This tests the CUDA implementation of DrudeForce.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -47,11 +47,13 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" void registerDrudeCudaKernelFactories();
+
 void validateForce(System& system, vector<Vec3>& positions, double expectedEnergy) {
     // Given a System containing a Drude force, check that its energy has the expected value.
     
     VerletIntegrator integ(1.0);
-    Platform& platform = Platform::getPlatformByName("Reference");
+    Platform& platform = Platform::getPlatformByName("CUDA");
     Context context(system, integ, platform);
     context.setPositions(positions);
     State state = context.getState(State::Energy | State::Forces);
@@ -154,8 +156,11 @@ void testThole() {
     validateForce(system, positions, energySpring1+energySpring2+energyDipole);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        registerDrudeCudaKernelFactories();
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", std::string(argv[1]));
         testSingleParticle();
         testAnisotropicParticle();
         testThole();
