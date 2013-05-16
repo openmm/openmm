@@ -119,7 +119,7 @@ __device__ void prefixSum(short* sum, ushort2* temp) {
 }
 
 /**
- * This is called by findBlocksWithInteractions().  It compacts the list of blocks, identifies interactions
+ * This is called by findBlocksWithInteractions(). It compacts the list of blocks, identifies interactions
  * in them, and writes the result to global memory.
  */
 __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, short* sum, ushort2* temp, int* atoms, int& numAtoms,
@@ -261,8 +261,56 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
 }
 
 /**
- * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
- * mark them as non-interacting.
+ * Compare the bounding boxes for each pair of atom blocks (comprised of 32 atoms each), forming a tile. If the two
+ * atom blocks are sufficiently far apart, mark them as non-interacting. There are two stages in the algorithm.
+ *
+ * STAGE 1:
+ *
+ * A coarse grain atomblock against interacting atomblock neighbourlist is constructed. 
+ *
+ * Each threadblock first loads in some block X of interest. Each thread within the threadblock then loads 
+ * in a different atomblock Y. If Y has exclusions with X, then Y is not processed.  If the bounding boxes 
+ * of the two atomblocks are within the cutoff distance, then the two atomblocks are considered to be
+ * interacting and Y is added to the buffer for X. If during any given iteration an atomblock (or thread) 
+ * finds BUFFER_GROUP interacting blocks, the entire buffer is sent for compaction by storeInteractionData().
+ *
+ * STAGE 2:
+ *
+ * A fine grain atomblock against interacting atoms neighbourlist is constructed.
+ *
+ * The input is an atomblock list detailing the interactions with other atomblocks. The list of interacting 
+ * atom blocks are initially stored in the buffer array in shared memory. buffer is then compacted using 
+ * prefixSum. Afterwards, each threadblock processes one contiguous atomblock X. Each warp in a threadblock 
+ * processes a block Y to find the atoms that interact with any given atom in X. Once BUFFER_SIZE/WARP_SIZE 
+ * (eg. 16) atomblocks have been processed for a given X, the list of interacting atoms in these 16 blocks 
+ * are subsequently compacted. The process repeats until all atomblocks that interact with X are computed.
+ *
+ * [in] periodicBoxSize        - size of the rectangular periodic box
+ * [in] invPeriodicBoxSize     - inverse of the periodic box
+ * [in] blockCenter            - the center of each bounding box
+ * [in] blockBoundingBox       - bounding box of each atom block
+ * [out] interactionCount      - total number of tiles that have interactions
+ * [out] interactingTiles      - set of tiles that have interactions
+ * [out] interactingAtoms      - a list of atoms that interact with each atom block
+ * [in] posq                   - x,y,z coordinates of each atom and charge q
+ * [in] maxTiles               - maximum number of tiles to process, used for multi-GPUs
+ * [in] startBlockIndex        - first block to process, used for multi-GPUs,
+ * [in] numBlocks              - total number of atom blocks
+ * [in] sortedBlocks           - a sorted list of atom blocks based on volume
+ * [in] sortedBlockCenter      - sorted centers, duplicated for fast access to avoid indexing
+ * [in] sortedBlockBoundingBox - sorted bounding boxes, duplicated for fast access
+ * [in] exclusionIndices       - maps into exclusionRowIndices with the starting position for a given atom
+ * [in] exclusionRowIndices    - stores the a continuous list of exclusions
+ *           eg: block 0 is excluded from atom 3,5,6
+ *               block 1 is excluded from atom 3,4
+ *               block 2 is excluded from atom 1,3,5,6
+ *              exclusionIndices[0][3][5][8]
+ *           exclusionRowIndices[3][5][6][3][4][1][3][5][6]
+ *                         index 0  1  2  3  4  5  6  7  8 
+ * [out] oldPos                - stores the positions of the atoms in which this neighbourlist was built on
+ *                             - this is used to decide when to rebuild a neighbourlist
+ * [in] rebuildNeighbourList   - whether or not to execute this kernel
+ *
  */
 extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int* __restrict__ interactionCount,
         ushort2* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int startBlockIndex,
@@ -334,6 +382,9 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 int bufferIndex = valuesInBuffer*GROUP_SIZE+threadIdx.x;
                 buffer[bufferIndex] = y;
                 valuesInBuffer++;
+
+                // cuda-memcheck --tool racecheck will throw errors about this as 
+                // RAW/WAW/WAR race condition errors. But this is safe in all instances
                 if (!bufferFull && valuesInBuffer == BUFFER_GROUPS)
                     bufferFull = true;
             }
