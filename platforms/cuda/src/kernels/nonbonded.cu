@@ -11,7 +11,64 @@ typedef struct {
 } AtomData;
 
 /**
- * Compute nonbonded interactions.
+ * Compute nonbonded interactions. The kernel is separated into two parts,
+ * tiles with exclusions and tiles without exclusions. It relies heavily on 
+ * implicit warp-level synchronization. A tile is defined by two atom blocks 
+ * each of warpsize. Each warp computes a range of tiles.
+ * 
+ * Tiles with exclusions compute the entire set of interactions across
+ * atom blocks, equal to warpsize*warpsize. In order to avoid access conflicts 
+ * the forces are computed and accumulated diagonally in the manner shown below
+ * where, suppose
+ *
+ * [a-h] comprise atom block 1, [i-p] comprise atom block 2
+ *
+ * 1 denotes the first set of calculations within the warp
+ * 2 denotes the second set of calculations within the warp
+ * ... etc.
+ * 
+ *        threads
+ *     0 1 2 3 4 5 6 7
+ *         atom1 
+ * L    a b c d e f g h 
+ * o  i 1 2 3 4 5 6 7 8
+ * c  j 8 1 2 3 4 5 6 7
+ * a  k 7 8 1 2 3 4 5 6
+ * l  l 6 7 8 1 2 3 4 5
+ * D  m 5 6 7 8 1 2 3 4 
+ * a  n 4 5 6 7 8 1 2 3
+ * t  o 3 4 5 6 7 8 1 2
+ * a  p 2 3 4 5 6 7 8 1
+ *
+ * TODO: Implement shuffle as opposed to using nonbonded. 
+ *
+ * Tiles without exclusions read off directly from the neighbourlist interactingAtoms
+ * and follows the same force accumulation method. If more there are more interactingTiles
+ * than the size of the neighbourlist initially allocated, the neighbourlist is rebuilt
+ * and the full tileset.
+ *
+ * [out]forceBuffers    - forces on each atom to eventually be accumulated
+ * [out]energyBuffer    - energyBuffer to eventually be accumulated
+ * [in]posq             - x,y,z,charge 
+ * [in]exclusions       - 1024-bit flags denoting atom-atom exclusions for each tile
+ * [in]exclusionTiles   - x,y denotes the indices of tiles that have an exclusion
+ * [in]startTileIndex   - index into first tile to be processed
+ * [in]numTileIndices   - number of tiles this context is responsible for processing
+ * [in]ushort2 tiles    - x component lists the tiles that interact with each tile
+ *                      - y component not used currently
+ * [in]interactionCount - total number of tiles that have an interaction
+ * [in]maxTiles         - stores the size of the neighbourlist in case it needs 
+ *                      - to be expanded
+ * [in]periodicBoxSize  - size of the Periodic Box, last dimension (w) not used
+ * [in]invPeriodicBox   - inverse of the periodicBoxSize, pre-computed for speed
+ * [in]blockCenter      - the center of each block in euclidean coordinates
+ * [in]blockSize        - size of the each block, radiating from the center
+ *                      - x is half the distance of total length
+ *                      - y is half the distance of total width
+ *                      - z is half the distance of total height
+ *                      - w is not used
+ * [in]interactingAtoms - a list of interactions within a given tile     
+ *
  */
 extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
@@ -22,9 +79,9 @@ extern "C" __global__ void computeNonbonded(
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-    const unsigned int tbx = threadIdx.x - tgx;
+    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
+    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
+    const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     real energy = 0.0f;
     __shared__ AtomData localData[THREAD_BLOCK_SIZE];
 
@@ -162,6 +219,8 @@ extern "C" __global__ void computeNonbonded(
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
+                // cycles the indices
+                // 0 1 2 3 4 5 6 7 -> 1 2 3 4 5 6 7 0
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
         }
@@ -245,7 +304,7 @@ extern "C" __global__ void computeNonbonded(
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
 
-            // Load atom data for this tile.
+            // Load atom data for this tile. 
 
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
@@ -257,6 +316,7 @@ extern "C" __global__ void computeNonbonded(
 #endif
             atomIndices[threadIdx.x] = j;
             if (j < PADDED_NUM_ATOMS) {
+                // Load position of atom j from from global memory
                 real4 tempPosq = posq[j];
                 localData[localAtomIndex].x = tempPosq.x;
                 localData[localAtomIndex].y = tempPosq.y;
