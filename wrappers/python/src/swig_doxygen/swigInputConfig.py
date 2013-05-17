@@ -138,6 +138,9 @@ SKIP_METHODS = [('State',),
                 ('Platform', 'registerKernelFactory'),
                 ('IntegrateRPMDStepKernel',),
                 ('RPMDIntegrator',  'getState'),
+                ('DrudeForceImpl',),
+                ('CalcDrudeForceKernel',),
+                ('IntegrateDrudeLangevinStepKernel',),
                 ('XmlSerializer',  'serialize'),
                 ('XmlSerializer',  'deserialize'),
 ]
@@ -439,5 +442,7 @@ UNITS = {
 ("System", "getConstraintParameters") : (None, (None, None, 'unit.nanometer')),
 ("System", "getForce") : (None, ()),
 ("System", "getVirtualSite") : (None, ()),
+("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
+("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
 }
 
