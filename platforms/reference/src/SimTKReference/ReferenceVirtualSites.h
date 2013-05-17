@@ -36,7 +36,7 @@
 #include "../SimTKUtilities/RealVec.h"
 #include <vector>
 
-class ReferenceVirtualSites {
+class OPENMM_EXPORT ReferenceVirtualSites {
 public:
     /**
      * Compute the positions of all virtual sites.
