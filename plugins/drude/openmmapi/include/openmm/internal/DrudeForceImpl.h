@@ -47,7 +47,7 @@ class System;
  * This is the internal implementation of DrudeForce.
  */
 
-class OPENMM_EXPORT DrudeForceImpl : public ForceImpl {
+class OPENMM_EXPORT_DRUDE DrudeForceImpl : public ForceImpl {
 public:
     DrudeForceImpl(const DrudeForce& owner);
     ~DrudeForceImpl();
