@@ -114,15 +114,11 @@ class ForceField(object):
                         template.externalBonds.append(b)
                         template.atoms[b].externalBonds += 1
             for template in self._templates.values():
-                template.signature = _createResidueSignature([atom.element for atom in template.atoms])
-                if template.signature is None:
-                    sigString = None
+                signature = _createResidueSignature([atom.element for atom in template.atoms])
+                if signature in self._templateSignatures:
+                    self._templateSignatures[signature].append(template)
                 else:
-                    sigString = _signatureToString(template.signature)
-                if sigString in self._templateSignatures:
-                    self._templateSignatures[sigString].append(template)
-                else:
-                    self._templateSignatures[sigString] = [template]
+                    self._templateSignatures[signature] = [template]
             
             # Build sets of every atom type belonging to each class
             
@@ -260,20 +256,13 @@ class ForceField(object):
            particular force fields.
         Returns: the newly created System
         """
-        
-        # Record atom indices
-        
         data = ForceField._SystemData()
-        atomIndices = {}
-        for index, atom in enumerate(topology.atoms()):
-            data.atoms.append(atom)
-            atomIndices[atom] = index
+        data.atoms = list(topology.atoms())
 
         # Make a list of all bonds
         
         for bond in topology.bonds():
-            if bond[0] in atomIndices and bond[1] in atomIndices:
-                data.bonds.append(ForceField._BondData(atomIndices[bond[0]], atomIndices[bond[1]]))
+            data.bonds.append(ForceField._BondData(bond[0].index, bond[1].index))
 
         # Record which atoms are bonded to each other atom
         
@@ -294,19 +283,10 @@ class ForceField(object):
             for res in chain.residues():
                 template = None
                 matches = None
-                sig = _createResidueSignature([atom.element for atom in res.atoms()])
-                if sig is not None:
-                    signature = _signatureToString(sig)
-                    if signature in self._templateSignatures:
-                        for t in self._templateSignatures[signature]:
-                            matches = _matchResidue(res, t, bondedToAtom, atomIndices)
-                            if matches is not None:
-                                template = t
-                                break
-                if matches is None:
-                    # Check templates involving virtual sites
-                    for t in self._templateSignatures[None]:
-                        matches = _matchResidue(res, t, bondedToAtom, atomIndices)
+                signature = _createResidueSignature([atom.element for atom in res.atoms()])
+                if signature in self._templateSignatures:
+                    for t in self._templateSignatures[signature]:
+                        matches = _matchResidue(res, t, bondedToAtom)
                         if matches is not None:
                             template = t
                             break
@@ -421,7 +401,7 @@ class ForceField(object):
         
         for atom in data.virtualSites:
             site = data.virtualSites[atom]
-            index = atomIndices[atom]
+            index = atom.index
             if site.type == 'average2':
                 sys.setVirtualSite(index, mm.TwoParticleAverageSite(index+site.atoms[0], index+site.atoms[1], site.weights[0], site.weights[1]))
             elif site.type == 'average3':
@@ -448,8 +428,8 @@ def _createResidueSignature(elements):
     counts = {}
     for element in elements:
         if element is None:
-            return None # This residue contains "atoms" (probably virtual sites) that should match any element
-        if element in counts:
+            pass # This residue contains "atoms" (probably virtual sites) that should match any element
+        elif element in counts:
             counts[element] += 1
         else:
             counts[element] = 1
@@ -457,33 +437,28 @@ def _createResidueSignature(elements):
     for c in counts:
         sig.append((c, counts[c]))
     sig.sort(key=lambda x: -x[0].mass)
-    return sig
+    
+    # Convert it to a string.
 
-
-def _signatureToString(signature):
-    """Convert the signature returned by _createResidueSignature() to a string."""
     s = ''
-    for element, count in signature:
+    for element, count in sig:
         s += element.symbol+str(count)
     return s
 
 
-def _matchResidue(res, template, bondedToAtom, atomIndices):
+def _matchResidue(res, template, bondedToAtom):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
     
     Parameters:
      - res (Residue) The residue to check
      - template (_TemplateData) The template to compare it to
      - bondedToAtom (list) Enumerates which other atoms each atom is bonded to
-     - atomIndices (map) Maps from atoms to their indices in the System
     Returns: a list specifying which atom of the template each atom of the residue corresponds to,
     or None if it does not match the template
     """
     atoms = list(res.atoms())
     if len(atoms) != len(template.atoms):
         return None
-    residueAtomBonds = []
-    templateAtomBonds = []
     matches = len(atoms)*[0]
     hasMatch = len(atoms)*[False]
     
@@ -491,13 +466,13 @@ def _matchResidue(res, template, bondedToAtom, atomIndices):
     
     renumberAtoms = {}
     for i in range(len(atoms)):
-        renumberAtoms[atomIndices[atoms[i]]] = i
+        renumberAtoms[atoms[i].index] = i
     bondedTo = []
     externalBonds = []
     for atom in atoms:
-        bonds = [renumberAtoms[x] for x in bondedToAtom[atomIndices[atom]] if x in renumberAtoms]
+        bonds = [renumberAtoms[x] for x in bondedToAtom[atom.index] if x in renumberAtoms]
         bondedTo.append(bonds)
-        externalBonds.append(len([x for x in bondedToAtom[atomIndices[atom]] if x not in renumberAtoms]))
+        externalBonds.append(len([x for x in bondedToAtom[atom.index] if x not in renumberAtoms]))
     if _findAtomMatches(atoms, template, bondedTo, externalBonds, matches, hasMatch, 0):
         return matches
     return None
