@@ -139,31 +139,6 @@ SET(OPENMM_COPYRIGHT_YEARS "2008")
 # underbar separated list of dotted authors, no spaces or commas
 SET(OPENMM_AUTHORS "Peter.Eastman")
 
-# Get the subversion revision number if we can
-# It's possible that WIN32 installs use svnversion through cygwin
-# so we'll try for both svnversion.exe and svnversion. Note that
-# this will result in warnings if all you have is Tortoise without
-# Cygwin, and your "about" string will say "unknown" rather than
-# providing the SVN version of the source.
-
-FIND_PROGRAM (SVNVERSION_PROGRAM svnversion
-    PATHS "C:/cygwin/bin"
-)
-IF (SVNVERSION_PROGRAM)
-    EXEC_PROGRAM (${SVNVERSION_PROGRAM}
-                  ARGS \"${CMAKE_CURRENT_SOURCE_DIR}\"
-                  OUTPUT_VARIABLE OPENMM_SVN_REVISION)
-ELSE (SVNVERSION_PROGRAM)
-    MESSAGE (STATUS 
-      "Could not find 'svnversion' executable; 'about' will be wrong. (Cygwin provides one on Windows.)"
-    )
-    SET (OPENMM_SVN_REVISION unknown) 
-ENDIF (SVNVERSION_PROGRAM)
-
-# Remove colon from build version, for easier placement in directory names
-STRING(REPLACE ":" "_" OPENMM_SVN_REVISION ${OPENMM_SVN_REVISION})
-SET(OPENMM_SVN_REVISION "${OPENMM_SVN_REVISION}" CACHE STRING "subversion repository revision of OpenMM" FORCE)
-
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
                 -DOPENMM_MAJOR_VERSION=${OPENMM_MAJOR_VERSION}
                 -DOPENMM_MINOR_VERSION=${OPENMM_MINOR_VERSION}
@@ -183,12 +158,10 @@ ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
 SET(NEED_QUOTES TRUE)
 
 IF(NEED_QUOTES)
-   ADD_DEFINITIONS(-DOPENMM_SVN_REVISION="${OPENMM_SVN_REVISION}"
-                   -DOPENMM_COPYRIGHT_YEARS="${OPENMM_COPYRIGHT_YEARS}"
+   ADD_DEFINITIONS(-DOPENMM_COPYRIGHT_YEARS="${OPENMM_COPYRIGHT_YEARS}"
                    -DOPENMM_AUTHORS="${OPENMM_AUTHORS}")
 ELSE(NEED_QUOTES)
-   ADD_DEFINITIONS(-DOPENMM_SVN_REVISION=${OPENMM_SVN_REVISION}
-                   -DOPENMM_COPYRIGHT_YEARS=${OPENMM_COPYRIGHT_YEARS}
+   ADD_DEFINITIONS(-DOPENMM_COPYRIGHT_YEARS=${OPENMM_COPYRIGHT_YEARS}
                    -DOPENMM_AUTHORS=${OPENMM_AUTHORS})
 ENDIF(NEED_QUOTES)
 
