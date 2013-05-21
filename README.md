@@ -10,3 +10,7 @@ Getting Help
 ------------
 
 Need Help? Check out the [documentation](https://simtk.org/docman/?group_id=161) and [discussion forums](https://simtk.org/forums/viewforum.php?f=161).
+
+[C++ API Reference](https://simtk.org/api_docs/openmm/api5_0/c++/)
+
+[Python API Reference](https://simtk.org/api_docs/openmm/api5_0/python/)
