@@ -33,11 +33,12 @@ from __future__ import division
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-from simtk.openmm.app import Topology, PDBFile
-from simtk.openmm.app.forcefield import HAngles
+from simtk.openmm.app import Topology, PDBFile, ForceField
+from simtk.openmm.app.forcefield import HAngles, _createResidueSignature, _matchResidue, DrudeGenerator
+from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, VerletIntegrator, LocalEnergyMinimizer
-from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm
+from simtk.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm, sum
 import element as elem
 import os
 import random
@@ -516,7 +517,7 @@ class Modeller(object):
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
     
-    def addHydrogens(self, forcefield, pH=7.0, variants=None, hydrogenDefinitions=None):
+    def addHydrogens(self, forcefield, pH=7.0, variants=None):
         """Add missing hydrogens to the model.
         
         Some residues can exist in multiple forms depending on the pH and properties of the local environment.  These
@@ -763,3 +764,160 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = context.getState(getPositions=True).getPositions()
         return actualVariants
+    
+    def addExtraParticles(self, forcefield):
+        """Add missing extra particles to the model that are required by a force field.
+        
+        Some force fields use "extra particles" that do not represent actual atoms, but still need to be included in
+        the System.  Examples include lone pairs, Drude particles, and the virtual sites used in some water models
+        to adjust the charge distribution.  Extra particles can be recognized by the fact that their element is None.
+        
+        This method is primarily used to add extra particles, but it can also remove them.  It tries to match every
+        residue in the Topology to a template in the force field.  If there is no match, it will both add and remove
+        extra particles as necessary to make it match.
+        
+        Parameters:
+         - forcefield (ForceField) the ForceField defining what extra particles should be present
+        """
+        # Create copies of all residue templates that have had all extra points removed.
+        
+        templatesNoEP = {}
+        for resName, template in forcefield._templates.iteritems():
+            if any(atom.element is None for atom in template.atoms):
+                index = 0
+                newIndex = {}
+                newTemplate = ForceField._TemplateData(resName)
+                for i, atom in enumerate(template.atoms):
+                    if atom.element is not None:
+                        newIndex[i] = index
+                        index += 1
+                        newTemplate.atoms.append(ForceField._TemplateAtomData(atom.name, atom.type, atom.element))
+                for b1, b2 in template.bonds:
+                    if b1 in newIndex and b2 in newIndex:
+                        newTemplate.bonds.append((newIndex[b1], newIndex[b2]))
+                        newTemplate.atoms[newIndex[b1]].bondedTo.append(newIndex[b2])
+                        newTemplate.atoms[newIndex[b2]].bondedTo.append(newIndex[b1])
+                for b in template.externalBonds:
+                    if b in newIndex:
+                        newTemplate.externalBonds.append(newIndex[b])
+                templatesNoEP[template] = newTemplate
+        
+        # Record which atoms are bonded to each other atom, with and without extra particles.
+        
+        bondedToAtom = []
+        bondedToAtomNoEP = []
+        for atom in self.topology.atoms():
+            bondedToAtom.append(set())
+            if atom.element is not None:
+                bondedToAtomNoEP.append(set())
+        for atom1, atom2 in self.topology.bonds():
+            bondedToAtom[atom1.index].add(atom2.index)
+            bondedToAtom[atom2.index].add(atom1.index)
+            if atom1.element is not None and atom2.element is not None:
+                bondedToAtomNoEP[atom1.index].add(atom2.index)
+                bondedToAtomNoEP[atom2.index].add(atom1.index)
+        
+        # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
+        # need them for picking particle positions.
+        
+        drudeTypeMap = {}
+        for force in forcefield._forces:
+            if isinstance(force, DrudeGenerator):
+                for type in force.typeMap:
+                    drudeTypeMap[type] = force.typeMap[type][0]
+        
+        # Create the new Topology.
+        
+        newTopology = Topology()
+        newTopology.setUnitCellDimensions(deepcopy(self.topology.getUnitCellDimensions()))
+        newAtoms = {}
+        newPositions = []*nanometer
+        for chain in self.topology.chains():
+            newChain = newTopology.addChain()
+            for residue in chain.residues():
+                newResidue = newTopology.addResidue(residue.name, newChain)
+                
+                # Look for a matching template.
+                
+                matchFound = False
+                signature = _createResidueSignature([atom.element for atom in residue.atoms()])
+                if signature in forcefield._templateSignatures:
+                    for t in forcefield._templateSignatures[signature]:
+                        if _matchResidue(residue, t, bondedToAtom) is not None:
+                            matchFound = True
+                if matchFound:
+                    # Just copy the residue over.
+                    
+                    for atom in residue.atoms():
+                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                        newAtoms[atom] = newAtom
+                        newPositions.append(deepcopy(self.positions[atom.index]))
+                else:
+                    # There's no matching template.  Try to find one that matches based on everything except
+                    # extra points.
+                    
+                    template = None
+                    residueNoEP = Residue(residue.name, residue.index, residue.chain)
+                    residueNoEP._atoms = [atom for atom in residue.atoms() if atom.element is not None]
+                    if signature in forcefield._templateSignatures:
+                        for t in forcefield._templateSignatures[signature]:
+                            if t in templatesNoEP:
+                                matches = _matchResidue(residueNoEP, templatesNoEP[t], bondedToAtomNoEP)
+                                if matches is not None:
+                                    template = t;
+                                    # Record the corresponding atoms.
+                                    matchingAtoms = {}
+                                    for atom, match in zip(residueNoEP.atoms(), matches):
+                                        templateAtomName = t.atoms[match].name
+                                        for templateAtom in template.atoms:
+                                            if templateAtom.name == templateAtomName:
+                                                matchingAtoms[templateAtom] = atom
+                                    break
+                    if template is None:
+                        raise ValueError('Residue %d (%s) does not match any template defined by the ForceField.' % (residue.index+1, residue.name))
+                    
+                    # Add the regular atoms.
+                    
+                    for atom in residue.atoms():
+                        if atom.element is not None:
+                            newAtoms[atom] = newTopology.addAtom(atom.name, atom.element, newResidue)
+                            newPositions.append(deepcopy(self.positions[atom.index]))
+                    
+                    # Add the extra points.
+                    
+                    templateAtomPositions = len(template.atoms)*[None]
+                    for index, atom in enumerate(template.atoms):
+                        if atom in matchingAtoms:
+                            templateAtomPositions[index] = self.positions[matchingAtoms[atom].index]
+                    for index, atom in enumerate(template.atoms):
+                        if atom.element is None:
+                            newTopology.addAtom(atom.name, None, newResidue)
+                            position = None
+                            for site in template.virtualSites:
+                                if site.index == index:
+                                    # This is a virtual site.  Compute its position by the correct rule.
+                                    
+                                    if site.type == 'average2':
+                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]]
+                                    elif site.type == 'average3':
+                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                                    elif site.type == 'outOfPlane':
+                                        position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                            if position is None and atom.type in drudeTypeMap:
+                                # This is a Drude particle.  Put it on top of its parent atom.
+                                
+                                for atom2, pos in zip(template.atoms, templateAtomPositions):
+                                    if atom2.type in drudeTypeMap[atom.type]:
+                                        position = deepcopy(pos)
+                            if position is None:
+                                # We couldn't figure out the correct position.  As a wild guess, just put it at the center of the residue
+                                # and hope that energy minimization will fix it.
+                                
+                                knownPositions = [x for x in templateAtomPositions if x is not None]
+                                position = sum(knownPositions)/len(knownPositions)
+                            newPositions.append(position)
+        for bond in self.topology.bonds():
+            if bond[0] in newAtoms and bond[1] in newAtoms:
+                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+        self.topology = newTopology
+        self.positions = newPositions
