@@ -34,7 +34,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from simtk.openmm.app import Topology, PDBFile, ForceField
-from simtk.openmm.app.forcefield import HAngles, _createResidueSignature, _matchResidue
+from simtk.openmm.app.forcefield import HAngles, _createResidueSignature, _matchResidue, DrudeGenerator
 from simtk.openmm.app.topology import Residue
 from simtk.openmm.vec3 import Vec3
 from simtk.openmm import System, Context, NonbondedForce, VerletIntegrator, LocalEnergyMinimizer
@@ -817,6 +817,15 @@ class Modeller(object):
                 bondedToAtomNoEP[atom1.index].add(atom2.index)
                 bondedToAtomNoEP[atom2.index].add(atom1.index)
         
+        # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
+        # need them for picking particle positions.
+        
+        drudeTypeMap = {}
+        for force in forcefield._forces:
+            if isinstance(force, DrudeGenerator):
+                for type in force.typeMap:
+                    drudeTypeMap[type] = force.typeMap[type][0]
+        
         # Create the new Topology.
         
         newTopology = Topology()
@@ -894,6 +903,12 @@ class Modeller(object):
                                         position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
                                     elif site.type == 'outOfPlane':
                                         position = site.weights[0]*templateAtomPositions[index+site.atoms[0]] + site.weights[1]*templateAtomPositions[index+site.atoms[1]] + site.weights[2]*templateAtomPositions[index+site.atoms[2]]
+                            if position is None and atom.type in drudeTypeMap:
+                                # This is a Drude particle.  Put it on top of its parent atom.
+                                
+                                for atom2, pos in zip(template.atoms, templateAtomPositions):
+                                    if atom2.type in drudeTypeMap[atom.type]:
+                                        position = deepcopy(pos)
                             if position is None:
                                 # We couldn't figure out the correct position.  As a wild guess, just put it at the center of the residue
                                 # and hope that energy minimization will fix it.
