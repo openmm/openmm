@@ -872,21 +872,21 @@ int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
             platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
-        testCoulomb();
-        testLJ();
-        testExclusionsAnd14();
-        testCutoff();
-        testCutoff14();
-        testPeriodic();
+        //testCoulomb();
+        //testLJ();
+        //testExclusionsAnd14();
+        //testCutoff();
+        //testCutoff14();
+        //testPeriodic();
         testLargeSystem();
         //testBlockInteractions(false);
         //testBlockInteractions(true);
-        testDispersionCorrection();
-        testChangingParameters();
-        testParallelComputation(false);
-        testParallelComputation(true);
-        testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
-        testSwitchingFunction(NonbondedForce::PME);
+        //testDispersionCorrection();
+        //testChangingParameters();
+        //testParallelComputation(false);
+        //testParallelComputation(true);
+        //testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
+        //testSwitchingFunction(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

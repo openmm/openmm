@@ -445,6 +445,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         args << arguments[i].getName();
     }
     replacements["PARAMETER_ARGUMENTS"] = args.str();
+
+    /*
     stringstream loadLocal1;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1) {
@@ -456,6 +458,17 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+    */
+    stringstream loadLocal1;
+   
+    loadLocal1 << "tempSigmaEpsilon = sigmaEpsilon1;" << endl;
+    //for (int i = 0; i < (int) params.size(); i++) {
+    //    loadLocal1<<params[i].getType()<<" temp"<<params[i].getName()<<"="<<params[i].getName()<<"1;\n";
+    //}
+    //cout << loadLocal1.str() << endl;
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+
+    /*
     stringstream loadLocal2;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1) {
@@ -468,6 +481,40 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+    */
+
+    stringstream declareLocal2;
+    for(int i=0; i< (int) params.size(); i++) {
+        if (params[i].getNumComponents() == 1) {
+            //    loadLocal2<<params[i].getType()<<" "<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+        } else {
+            declareLocal2<<params[i].getType()<<" temp"<<params[i].getName()<<";\n";
+        }
+    }
+    replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
+
+    stringstream loadLocal2;
+    for(int i=0; i< (int) params.size(); i++) {
+        if (params[i].getNumComponents() == 1) {
+        //    loadLocal2<<params[i].getType()<<" "<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+        } else {
+            loadLocal2<<"temp"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+        }
+    }
+    /*
+    for (int i = 0; i < (int) params.size(); i++) {
+        if (params[i].getNumComponents() == 1) {
+            loadLocal2<<params[i].getType()<<" "<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+        }
+        else {
+            loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+            for (int j = 0; j < params[i].getNumComponents(); ++j)
+                loadLocal2<<params[i].getType()<<" "<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+        }
+    }
+    */
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+
     stringstream load1;
     for (int i = 0; i < (int) params.size(); i++) {
         load1 << params[i].getType();
@@ -478,6 +525,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         load1 << "[atom1];\n";
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
+
+    /*
     stringstream load2j;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1) {
@@ -494,6 +543,65 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+    */
+    stringstream load2j;
+    for (int i = 0; i < (int) params.size(); i++) {
+        /*
+        if (params[i].getNumComponents() == 1) {
+            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = "<<params[i].getName()<<";\n";
+        }
+        else {
+            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = make_"<<params[i].getType()<<"(";
+            for (int j = 0; j < params[i].getNumComponents(); ++j) {
+                if (j > 0)
+                    load2j<<", ";
+                load2j<<params[i].getName()<<"_"<<suffixes[j];
+            }
+            load2j<<");\n";
+        }*/
+        load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = temp"<<params[i].getName()<<";\n";
+    }
+    replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+
+    stringstream broadcastWarpData;
+    broadcastWarpData << "posq2.x = __shfl(tempPosq.x, j);\n";
+    broadcastWarpData << "posq2.y = __shfl(tempPosq.y, j);\n";
+    broadcastWarpData << "posq2.z = __shfl(tempPosq.z, j);\n";
+    broadcastWarpData << "posq2.w = __shfl(tempPosq.w, j);\n";
+
+    for(int i=0; i< (int) params.size();i++) {
+        broadcastWarpData << params[i].getType() << " temp" << params[i].getName() << ";\n";
+        for(int j=0; j < params[i].getNumComponents(); j++) {
+            string name;
+            if (params[i].getNumComponents() == 1) {
+                broadcastWarpData << "temp" << params[i].getName() << "=__shfl(" << params[i].getName() <<"1,j);\n";
+
+            } else {
+                broadcastWarpData << "temp" << params[i].getName()+"."+suffixes[j] << "=__shfl(" << params[i].getName()+"1."+suffixes[j] <<",j);\n";
+            }
+        }
+    }
+    replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
+
+    stringstream shuffleWarpData;
+    shuffleWarpData << "tempPosq.x = __shfl(tempPosq.x, tgx+1);\n";
+    shuffleWarpData << "tempPosq.y = __shfl(tempPosq.y, tgx+1);\n";
+    shuffleWarpData << "tempPosq.z = __shfl(tempPosq.z, tgx+1);\n";
+    shuffleWarpData << "tempPosq.w = __shfl(tempPosq.w, tgx+1);\n";
+    shuffleWarpData << "tempForces.x = __shfl(tempForces.x, tgx+1);\n";
+    shuffleWarpData << "tempForces.y = __shfl(tempForces.y, tgx+1);\n";
+    shuffleWarpData << "tempForces.z = __shfl(tempForces.z, tgx+1);\n";
+    shuffleWarpData << "tempsigmaEpsilon.x = __shfl(tempsigmaEpsilon.x, tgx+1);\n";
+    shuffleWarpData << "tempsigmaEpsilon.y = __shfl(tempsigmaEpsilon.y, tgx+1);\n";
+    /*
+    for(int i=0; i< (int) params.size(); i++) {
+        shuffleWarpData << params[i].getName() << "=__shfl(" << params[i].getName() << ", tgx+1);\n";
+    }
+    */
+    replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
+
+
+
     map<string, string> defines;
     if (useCutoff)
         defines["USE_CUTOFF"] = "1";
