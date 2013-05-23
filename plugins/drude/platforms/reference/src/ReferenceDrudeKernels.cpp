@@ -70,6 +70,40 @@ static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorith
     }
 }
 
+static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift, ReferenceConstraintAlgorithm* constraints) {
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    vector<RealVec>& posData = extractPositions(context);
+    vector<RealVec>& velData = extractVelocities(context);
+    vector<RealVec>& forceData = extractForces(context);
+    
+    // Compute the shifted velocities.
+    
+    vector<RealVec> shiftedVel(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        if (inverseMasses[i] > 0)
+            shiftedVel[i] = velData[i]+forceData[i]*(timeShift*inverseMasses[i]);
+        else
+            shiftedVel[i] = velData[i];
+    }
+    
+    // Apply constraints to them.
+    
+    if (constraints != NULL) {
+        constraints->setTolerance(1e-4);
+        constraints->applyToVelocities(numParticles, posData, shiftedVel, inverseMasses);
+    }
+    
+    // Compute the kinetic energy.
+    
+    double energy = 0.0;
+    for (int i = 0; i < numParticles; ++i)
+        if (inverseMasses[i] > 0)
+            energy += (shiftedVel[i].dot(shiftedVel[i]))/inverseMasses[i];
+    return 0.5*energy;
+}
+
+
 void ReferenceCalcDrudeForceKernel::initialize(const System& system, const DrudeForce& force) {
     // Initialize particle parameters.
     
@@ -330,35 +364,156 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
 }
 
 double ReferenceIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
-    const System& system = context.getSystem();
-    int numParticles = system.getNumParticles();
-    vector<RealVec>& posData = extractPositions(context);
-    vector<RealVec>& velData = extractVelocities(context);
-    vector<RealVec>& forceData = extractForces(context);
+    return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize(), constraints);
+}
+
+ReferenceIntegrateDrudeSCFStepKernel::~ReferenceIntegrateDrudeSCFStepKernel() {
+    if (constraints != NULL)
+        delete constraints;
+    if (minimizerPos != NULL)
+        lbfgs_free(minimizerPos);
+}
+
+void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
+    // Identify Drude particles.
     
-    // Compute the shifted velocities.
-    
-    vector<RealVec> shiftedVel(numParticles);
-    double timeShift = 0.5*integrator.getStepSize();
-    for (int i = 0; i < numParticles; ++i) {
-        if (particleInvMass[i] > 0)
-            shiftedVel[i] = velData[i]+forceData[i]*(timeShift*particleInvMass[i]);
-        else
-            shiftedVel[i] = velData[i];
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int p, p1, p2, p3, p4;
+        double charge, polarizability, aniso12, aniso34;
+        force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+        drudeParticles.push_back(p);
+    }
+
+    // Record particle masses.
+
+    vector<RealOpenMM> particleMass;
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        double mass = system.getParticleMass(i);
+        particleMass.push_back(mass);
+        particleInvMass.push_back(mass == 0.0 ? 0.0 : 1.0/mass);
     }
     
-    // Apply constraints to them.
+    // Prepare constraints.
     
-    if (constraints != NULL) {
-        constraints->setTolerance(1e-4);
-        constraints->applyToVelocities(numParticles, posData, shiftedVel, particleInvMass);
+    int numConstraints = system.getNumConstraints();
+    if (numConstraints > 0) {
+        vector<pair<int, int> > constraintIndices(numConstraints);
+        vector<RealOpenMM> constraintDistances(numConstraints);
+        for (int i = 0; i < numConstraints; ++i) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(i, particle1, particle2, distance);
+            constraintIndices[i].first = particle1;
+            constraintIndices[i].second = particle2;
+            constraintDistances[i] = static_cast<RealOpenMM>(distance);
+        }
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(system, angles);
+        constraints = new ReferenceCCMAAlgorithm(system.getNumParticles(), numConstraints, constraintIndices, constraintDistances, particleMass, angles, (RealOpenMM)integrator.getConstraintTolerance());
     }
     
-    // Compute the kinetic energy.
+    // Initialize the energy minimizer.
     
-    double energy = 0.0;
-    for (int i = 0; i < numParticles; ++i)
-        if (particleInvMass[i] > 0)
-            energy += (shiftedVel[i].dot(shiftedVel[i]))/particleInvMass[i];
-    return 0.5*energy;
+    minimizerPos = lbfgs_malloc(drudeParticles.size()*3);
+    if (minimizerPos == NULL)
+        throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
+    lbfgs_parameter_init(&minimizerParams);
+    minimizerParams.max_iterations = 0;
+    minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
+}
+
+void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    vector<RealVec>& pos = extractPositions(context);
+    vector<RealVec>& vel = extractVelocities(context);
+    vector<RealVec>& force = extractForces(context);
+    
+    // Update the positions and velocities.
+    
+    int numParticles = particleInvMass.size();
+    vector<RealVec> xPrime(numParticles);
+    RealOpenMM dt = integrator.getStepSize();
+    for (int i = 0; i < numParticles; i++) {
+        if (particleInvMass[i] != 0.0) {
+            vel[i] += force[i]*particleInvMass[i]*dt;
+            xPrime[i] = pos[i]+vel[i]*dt;
+        }
+    }
+        
+    // Apply constraints.
+    
+    if (constraints != NULL)
+        constraints->apply(numParticles, pos, xPrime, particleInvMass);
+    
+    // Record the constrained positions and velocities.
+    
+    RealOpenMM dtInv = 1.0/dt;
+    for (int i = 0; i < numParticles; i++) {
+        if (particleInvMass[i] != 0.0) {
+            vel[i] = (xPrime[i]-pos[i])*dtInv;
+            pos[i] = xPrime[i];
+        }
+    }
+    
+    // Update the positions of virtual sites and Drude particles.
+    
+    ReferenceVirtualSites::computePositions(context.getSystem(), pos);
+    minimize(context, integrator.getMinimizationErrorTolerance());
+    data.time += integrator.getStepSize();
+    data.stepCount++;
+}
+
+double ReferenceIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize(), constraints);
+}
+
+struct MinimizerData {
+    ContextImpl& context;
+    vector<int>& drudeParticles;
+    MinimizerData(ContextImpl& context, vector<int>& drudeParticles) : context(context), drudeParticles(drudeParticles) {}
+};
+
+static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
+    MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
+    ContextImpl& context = data->context;
+    vector<int>& drudeParticles = data->drudeParticles;
+    int numDrudeParticles = drudeParticles.size();
+
+    // Compute the force and energy for this configuration.
+
+    vector<RealVec>& pos = extractPositions(context);
+    vector<RealVec>& force = extractForces(context);
+    for (int i = 0; i < numDrudeParticles; i++)
+        pos[drudeParticles[i]] = RealVec(x[3*i], x[3*i+1], x[3*i+2]);
+    double energy = context.calcForcesAndEnergy(true, true);
+    for (int i = 0; i < numDrudeParticles; i++) {
+        RealVec f = force[drudeParticles[i]];
+        g[3*i] = -f[0];
+        g[3*i+1] = -f[1];
+        g[3*i+2] = -f[2];
+    }
+    return energy;
+}
+
+void ReferenceIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
+    // Record the initial positions and determine a normalization constant for scaling the tolerance.
+
+    vector<RealVec>& pos = extractPositions(context);
+    int numDrudeParticles = drudeParticles.size();
+    double norm = 0.0;
+    for (int i = 0; i < numDrudeParticles; i++) {
+        RealVec p = pos[drudeParticles[i]];
+        minimizerPos[3*i] = p[0];
+        minimizerPos[3*i+1] = p[1];
+        minimizerPos[3*i+2] = p[2];
+        norm += p.dot(p);
+    }
+    norm /= numDrudeParticles;
+    norm = (norm < 1 ? 1 : sqrt(norm));
+    minimizerParams.epsilon = tolerance/norm;
+    
+    // Perform the minimization.
+
+    lbfgsfloatval_t fx;
+    MinimizerData data(context, drudeParticles);
+    lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }
