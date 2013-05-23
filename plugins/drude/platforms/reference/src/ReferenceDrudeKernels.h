@@ -35,6 +35,7 @@
 #include "ReferencePlatform.h"
 #include "openmm/DrudeKernels.h"
 #include "SimTKUtilities/RealVec.h"
+#include "lbfgs.h"
 #include <utility>
 #include <vector>
 
@@ -118,6 +119,47 @@ private:
     std::vector<double> pairInvTotalMass;
     std::vector<double> pairInvReducedMass;
     ReferenceConstraintAlgorithm* constraints;
+};
+
+/**
+ * This kernel is invoked by DrudeSCFIntegrator to take one time step
+ */
+class ReferenceIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
+public:
+    ReferenceIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
+        IntegrateDrudeSCFStepKernel(name, platform), data(data), constraints(NULL), minimizerPos(NULL) {
+    }
+    ~ReferenceIntegrateDrudeSCFStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DrudeSCFIntegrator this kernel will be used for
+     * @param force      the DrudeForce to get particle parameters from
+     */
+    void initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force);
+    /**
+     * Execute the kernel.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param integrator     the DrudeSCFIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const DrudeSCFIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context     the context in which to execute this kernel
+     * @param integrator  the DrudeSCFIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator);
+private:
+    void minimize(ContextImpl& context, double tolerance);
+    ReferencePlatform::PlatformData& data;
+    std::vector<int> drudeParticles;
+    std::vector<double> particleInvMass;
+    ReferenceConstraintAlgorithm* constraints;
+    lbfgsfloatval_t *minimizerPos;
+    lbfgs_parameter_t minimizerParams;
 };
 
 } // namespace OpenMM

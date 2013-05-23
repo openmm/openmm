@@ -4554,7 +4554,7 @@ void CudaIntegrateCustomStepKernel::initialize(const System& system, const Custo
     numGlobalVariables = integrator.getNumGlobalVariables();
     int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
     globalValues = new CudaArray(cu, max(1, numGlobalVariables), elementSize, "globalVariables");
-    sumBuffer = new CudaArray(cu, 3*system.getNumParticles(), elementSize, "sumBuffer");
+    sumBuffer = new CudaArray(cu, ((3*system.getNumParticles()+3)/4)*4, elementSize, "sumBuffer");
     potentialEnergy = new CudaArray(cu, 1, cu.getEnergyBuffer().getElementSize(), "potentialEnergy");
     kineticEnergy = new CudaArray(cu, 1, elementSize, "kineticEnergy");
     perDofValues = new CudaParameterSet(cu, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cu.getUseDoublePrecision() || cu.getUseMixedPrecision());
@@ -5103,6 +5103,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
             kernelArgs[i][0][10] = &randomIndex;
             if (requiredUniform[i] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
+            cu.clearBuffer(*sumBuffer);
             cu.executeKernel(kernels[i][0], &kernelArgs[i][0][0], numAtoms);
             cu.executeKernel(kernels[i][1], &kernelArgs[i][1][0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
         }
@@ -5150,6 +5151,7 @@ double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context,
     int randomIndex = 0;
     kineticEnergyArgs[1] = &posCorrection;
     kineticEnergyArgs[10] = &randomIndex;
+    cu.clearBuffer(*sumBuffer);
     cu.executeKernel(kineticEnergyKernel, &kineticEnergyArgs[0], cu.getNumAtoms());
     void* args[] = {&sumBuffer->getDevicePointer(), &kineticEnergy->getDevicePointer()};
     cu.executeKernel(sumKineticEnergyKernel, args, CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);

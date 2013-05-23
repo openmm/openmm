@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -345,20 +345,20 @@ void testSum() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numParticles; i++) {
-        system.addParticle(1.5);
-        nb->addParticle(i%2 == 0 ? 1 : -1, 0.1, 1);
+        system.addParticle(i%10 == 0 ? 0.0 : 1.5);
+        nb->addParticle(i%2 == 0 ? 0.1 : -0.1, 0.1, 1);
         bool close = true;
         while (close) {
             positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
             close = false;
             for (int j = 0; j < i; ++j) {
                 Vec3 delta = positions[i]-positions[j];
-                if (delta.dot(delta) < 0.1)
+                if (delta.dot(delta) < 1)
                     close = true;
             }
         }
     }
-    CustomIntegrator integrator(0.01);
+    CustomIntegrator integrator(0.005);
     integrator.addGlobalVariable("ke", 0);
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
@@ -368,10 +368,8 @@ void testSum() {
     
     // See if the sum is being computed correctly.
     
-    State state = context.getState(State::Energy);
-    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
     for (int i = 0; i < 100; ++i) {
-        state = context.getState(State::Energy);
+        State state = context.getState(State::Energy);
         ASSERT_EQUAL_TOL(state.getKineticEnergy(), integrator.getGlobalVariable(0), 1e-5);
         integrator.step(1);
     }
