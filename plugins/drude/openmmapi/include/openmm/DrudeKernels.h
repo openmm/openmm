@@ -34,6 +34,7 @@
 
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
+#include "openmm/DrudeSCFIntegrator.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/Vec3.h"
@@ -106,6 +107,37 @@ public:
      * Compute the kinetic energy.
      */
     virtual double computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) = 0;
+};
+
+/**
+ * This kernel is invoked by DrudeSCFIntegrator to take one time step.
+ */
+class IntegrateDrudeSCFStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateDrudeSCFStep";
+    }
+    IntegrateDrudeSCFStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DrudeSCFIntegrator this kernel will be used for
+     * @param force      the DrudeForce to get particle parameters from
+     */
+    virtual void initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) = 0;
+    /**
+     * Execute the kernel.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param integrator     the DrudeSCFIntegrator this kernel is being used for
+     */
+    virtual void execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) = 0;
 };
 
 } // namespace OpenMM
