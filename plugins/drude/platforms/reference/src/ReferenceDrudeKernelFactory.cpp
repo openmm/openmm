@@ -1,12 +1,12 @@
 /* -------------------------------------------------------------------------- *
- *                              OpenMMAmoeba                                  *
+ *                              OpenMMDrude                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011 Stanford University and the Authors.           *
+ * Portions copyright (c) 2011-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,7 @@ extern "C" void initDrudeReferenceKernels() {
     ReferenceDrudeKernelFactory* factory = new ReferenceDrudeKernelFactory();
     platform.registerKernelFactory(CalcDrudeForceKernel::Name(), factory);
     platform.registerKernelFactory(IntegrateDrudeLangevinStepKernel::Name(), factory);
+    platform.registerKernelFactory(IntegrateDrudeSCFStepKernel::Name(), factory);
 }
 
 KernelImpl* ReferenceDrudeKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
@@ -57,5 +58,7 @@ KernelImpl* ReferenceDrudeKernelFactory::createKernelImpl(std::string name, cons
         return new ReferenceCalcDrudeForceKernel(name, platform);
     if (name == IntegrateDrudeLangevinStepKernel::Name())
         return new ReferenceIntegrateDrudeLangevinStepKernel(name, platform, data);
+    if (name == IntegrateDrudeSCFStepKernel::Name())
+        return new ReferenceIntegrateDrudeSCFStepKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

@@ -4786,7 +4786,7 @@ void OpenCLIntegrateCustomStepKernel::initialize(const System& system, const Cus
     numGlobalVariables = integrator.getNumGlobalVariables();
     int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
     globalValues = new OpenCLArray(cl, max(1, numGlobalVariables), elementSize, "globalVariables");
-    sumBuffer = new OpenCLArray(cl, 3*system.getNumParticles(), elementSize, "sumBuffer");
+    sumBuffer = new OpenCLArray(cl, ((3*system.getNumParticles()+3)/4)*4, elementSize, "sumBuffer");
     potentialEnergy = new OpenCLArray(cl, 1, cl.getEnergyBuffer().getElementSize(), "potentialEnergy");
     kineticEnergy = new OpenCLArray(cl, 1, elementSize, "kineticEnergy");
     perDofValues = new OpenCLParameterSet(cl, integrator.getNumPerDofVariables(), 3*system.getNumParticles(), "perDofVariables", false, cl.getUseDoublePrecision() || cl.getUseMixedPrecision());
@@ -5329,6 +5329,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[i][0].setArg<cl_uint>(10, integration.prepareRandomNumbers(requiredGaussian[i]));
             if (requiredUniform[i] > 0)
                 cl.executeKernel(randomKernel, numAtoms);
+            cl.clearBuffer(*sumBuffer);
             cl.executeKernel(kernels[i][0], numAtoms);
             cl.executeKernel(kernels[i][1], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
         }
@@ -5375,6 +5376,7 @@ double OpenCLIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
             cl.executeKernel(sumPotentialEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
         forcesAreValid = true;
     }
+    cl.clearBuffer(*sumBuffer);
     cl.executeKernel(kineticEnergyKernel, cl.getNumAtoms());
     cl.executeKernel(sumKineticEnergyKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
     if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {

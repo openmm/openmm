@@ -33,6 +33,16 @@
 extern "C" {
 #endif/*__cplusplus*/
 
+#ifdef _MSC_VER
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #define WINDOWS_EXPORT __declspec(dllexport)
+#else
+#define WINDOWS_EXPORT
+#endif
+#else
+#define WINDOWS_EXPORT
+#endif
+
 /*
  * The default precision of floating point values is 64bit (double).
  */
@@ -474,7 +484,7 @@ In this formula, ||.|| denotes the Euclidean norm.
  *                      minimization process terminates without an error. A
  *                      non-zero value indicates an error.
  */
-int lbfgs(
+int WINDOWS_EXPORT lbfgs(
     int n,
     lbfgsfloatval_t *x,
     lbfgsfloatval_t *ptr_fx,
@@ -492,7 +502,7 @@ int lbfgs(
  *
  *  @param  param       The pointer to the parameter structure.
  */
-void lbfgs_parameter_init(lbfgs_parameter_t *param);
+void WINDOWS_EXPORT lbfgs_parameter_init(lbfgs_parameter_t *param);
 
 /**
  * Allocate an array for variables.
@@ -505,7 +515,7 @@ void lbfgs_parameter_init(lbfgs_parameter_t *param);
  *  
  *  @param  n           The number of variables.
  */
-lbfgsfloatval_t* lbfgs_malloc(int n);
+lbfgsfloatval_t WINDOWS_EXPORT * lbfgs_malloc(int n);
 
 /**
  * Free an array of variables.
@@ -513,7 +523,7 @@ lbfgsfloatval_t* lbfgs_malloc(int n);
  *  @param  x           The array of variables allocated by ::lbfgs_malloc
  *                      function.
  */
-void lbfgs_free(lbfgsfloatval_t *x);
+void WINDOWS_EXPORT lbfgs_free(lbfgsfloatval_t *x);
 
 /** @} */
 
