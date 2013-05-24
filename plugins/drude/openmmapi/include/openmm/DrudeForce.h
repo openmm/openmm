@@ -125,7 +125,7 @@ public:
      */
     void setParticleParameters(int index, int particle, int particle1, int particle2, int particle3, int particle4, double charge, double polarizability, double aniso12, double aniso34);
     /**
-     * Add an interaction to the list of screenedPairs.
+     * Add an interaction to the list of screened pairs.
      *
      * @param particle1  the index within this Force of the first particle involved in the interaction
      * @param particle2  the index within this Force of the second particle involved in the interaction
@@ -152,10 +152,10 @@ public:
      */
     void setScreenedPairParameters(int index, int particle1, int particle2, double thole);
     /**
-     * Update the particle and screenedPair parameters in a Context to match those stored in this Force object.  This method
+     * Update the particle and screened pair parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() and setScreenedPairParameters() to modify this object's parameters, then call
-     * updateParametersInState() to copy them over to the Context.
+     * updateParametersInContext() to copy them over to the Context.
      * 
      * This method has several limitations.  It can be used to modify the numeric parameters associated with a particle or
      * screened pair (polarizability, thole, etc.), but not the identities of the particles they involve.  It also cannot

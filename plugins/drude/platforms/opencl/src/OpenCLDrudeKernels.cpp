@@ -184,7 +184,59 @@ double OpenCLCalcDrudeForceKernel::execute(ContextImpl& context, bool includeFor
 }
 
 void OpenCLCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, const DrudeForce& force) {
+    int numContexts = cl.getPlatformData().contexts.size();
     
+    // Set the particle parameters.
+    
+    int startParticleIndex = cl.getContextIndex()*force.getNumParticles()/numContexts;
+    int endParticleIndex = (cl.getContextIndex()+1)*force.getNumParticles()/numContexts;
+    int numParticles = endParticleIndex-startParticleIndex;
+    if (numParticles > 0) {
+        if (particleParams == NULL || numParticles != particleParams->getSize())
+            throw OpenMMException("updateParametersInContext: The number of Drude particles has changed");
+        vector<mm_float4> paramVector(numParticles);
+        for (int i = 0; i < numParticles; i++) {
+            int p, p1, p2, p3, p4;
+            double charge, polarizability, aniso12, aniso34;
+            force.getParticleParameters(startParticleIndex+i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+            double a1 = (p2 == -1 ? 1 : aniso12);
+            double a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34);
+            double a3 = 3-a1-a2;
+            double k3 = charge*charge/(polarizability*a3);
+            double k1 = charge*charge/(polarizability*a1) - k3;
+            double k2 = charge*charge/(polarizability*a2) - k3;
+            if (p2 == -1)
+                k1 = 0;
+            if (p3 == -1 || p4 == -1)
+                k2 = 0;
+            paramVector[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);
+        }
+        particleParams->upload(paramVector);
+    }
+    
+    // Set the pair parameters.
+    
+    int startPairIndex = cl.getContextIndex()*force.getNumScreenedPairs()/numContexts;
+    int endPairIndex = (cl.getContextIndex()+1)*force.getNumScreenedPairs()/numContexts;
+    int numPairs = endPairIndex-startPairIndex;
+    if (numPairs > 0) {
+        if (pairParams == NULL || numPairs != pairParams->getSize())
+            throw OpenMMException("updateParametersInContext: The number of screened pairs has changed");
+        vector<mm_float2> paramVector(numPairs);
+        for (int i = 0; i < numPairs; i++) {
+            int drude1, drude2;
+            double thole;
+            force.getScreenedPairParameters(startPairIndex+i, drude1, drude2, thole);
+            int p, p1, p2, p3, p4;
+            double charge1, charge2, polarizability1, polarizability2, aniso12, aniso34;
+            force.getParticleParameters(drude1, p, p1, p2, p3, p4, charge1, polarizability1, aniso12, aniso34);
+            force.getParticleParameters(drude2, p, p1, p2, p3, p4, charge2, polarizability2, aniso12, aniso34);
+            double screeningScale = thole/pow(polarizability1*polarizability2, 1.0/6.0);
+            double energyScale = ONE_4PI_EPS0*charge1*charge2;
+            paramVector[i] = mm_float2((float) screeningScale, (float) energyScale);
+        }
+        pairParams->upload(paramVector);
+    }
 }
 
 OpenCLIntegrateDrudeLangevinStepKernel::~OpenCLIntegrateDrudeLangevinStepKernel() {
