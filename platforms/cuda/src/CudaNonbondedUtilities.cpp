@@ -416,12 +416,6 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
 }
 
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
-    
-    map<string, string> defines;
-    if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision()) {
-        defines["ENABLE_SHUFFLE"] = "1";
-    }
-
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -463,12 +457,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
 
-    bool useShuffle;
-    if(defines.find("ENABLE_SHUFFLE") != defines.end()) {
-        useShuffle = true;
-    } else {
-        useShuffle = false;
-    }
+    bool useShuffle = (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision());
 
     // Part 1. Defines for on diagonal exclusion tiles
     stringstream loadLocal1;
@@ -589,6 +578,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     }
     replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
 
+    map<string, string> defines;
     if (useCutoff)
         defines["USE_CUTOFF"] = "1";
     if (usePeriodic)
@@ -597,6 +587,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
+    if (useShuffle)
+        defines["ENABLE_SHUFFLE"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["CUTOFF_SQUARED"] = context.doubleToString(cutoff*cutoff);
     defines["CUTOFF"] = context.doubleToString(cutoff);
