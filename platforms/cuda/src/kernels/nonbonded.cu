@@ -12,6 +12,7 @@ typedef struct {
 } AtomData;
 #endif
 
+#ifdef ENABLE_SHUFFLE
 //support for 64 bit shuffles
 static __inline__ __device__ float real_shfl(float var, int srcLane) {
     return __shfl(var, srcLane);
@@ -24,6 +25,7 @@ static __inline__ __device__ double real_shfl(double var, int srcLane) {
     lo = __shfl(lo, srcLane);
     return __hiloint2double( hi, lo );
 }
+#endif
 
 /**
  * Compute nonbonded interactions. The kernel is separated into two parts,
