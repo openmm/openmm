@@ -43,6 +43,7 @@ extern "C" void registerKernelFactories() {
         CudaDrudeKernelFactory* factory = new CudaDrudeKernelFactory();
         platform.registerKernelFactory(CalcDrudeForceKernel::Name(), factory);
         platform.registerKernelFactory(IntegrateDrudeLangevinStepKernel::Name(), factory);
+        platform.registerKernelFactory(IntegrateDrudeSCFStepKernel::Name(), factory);
     }
     catch (std::exception ex) {
         // Ignore
@@ -65,5 +66,7 @@ KernelImpl* CudaDrudeKernelFactory::createKernelImpl(std::string name, const Pla
         return new CudaCalcDrudeForceKernel(name, platform, cu);
     if (name == IntegrateDrudeLangevinStepKernel::Name())
         return new CudaIntegrateDrudeLangevinStepKernel(name, platform, cu);
+    if (name == IntegrateDrudeSCFStepKernel::Name())
+        return new CudaIntegrateDrudeSCFStepKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }
