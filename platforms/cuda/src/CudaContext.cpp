@@ -394,7 +394,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     // Write out the source to a temporary file.
     
     stringstream tempFileName;
-    tempFileName << "openmmTempKernel" << /*rand() <<*/ this; // Include a pointer to this context as part of the filename to avoid collisions.
+    tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
     string inputFile = (tempDir+tempFileName.str()+".cu");
     string outputFile = (tempDir+tempFileName.str()+".ptx");
     string logFile = (tempDir+tempFileName.str()+".log");
@@ -438,15 +438,15 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
             m<<"Error loading CUDA module: "<<getErrorString(result)<<" ("<<result<<")";
             throw OpenMMException(m.str());
         }
-        //remove(inputFile.c_str());
-        //remove(outputFile.c_str());
-        //remove(logFile.c_str());
+        remove(inputFile.c_str());
+        remove(outputFile.c_str());
+        remove(logFile.c_str());
         return module;
     }
     catch (...) {
-        //remove(inputFile.c_str());
-        //remove(outputFile.c_str());
-        //remove(logFile.c_str());
+        remove(inputFile.c_str());
+        remove(outputFile.c_str());
+        remove(logFile.c_str());
         throw;
     }
 }
