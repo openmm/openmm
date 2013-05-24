@@ -457,7 +457,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
 
-    bool useShuffle = (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision());
+    bool useShuffle = (context.getComputeCapability() >= 3.0);
 
     // Part 1. Defines for on diagonal exclusion tiles
     stringstream loadLocal1;
