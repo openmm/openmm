@@ -35,6 +35,7 @@
 #include "openmm/DrudeKernels.h"
 #include "CudaContext.h"
 #include "CudaArray.h"
+#include "lbfgs.h"
 
 namespace OpenMM {
 
@@ -112,6 +113,49 @@ private:
     double prevStepSize;
     CudaArray* normalParticles;
     CudaArray* pairParticles;
+    CUfunction kernel1, kernel2;
+};
+
+/**
+ * This kernel is invoked by DrudeSCFIntegrator to take one time step
+ */
+class CudaIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
+public:
+    CudaIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
+            IntegrateDrudeSCFStepKernel(name, platform), cu(cu) {
+    }
+    ~CudaIntegrateDrudeSCFStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DrudeSCFIntegrator this kernel will be used for
+     * @param force      the DrudeForce to get particle parameters from
+     */
+    void initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force);
+    /**
+     * Execute the kernel.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param integrator     the DrudeSCFIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const DrudeSCFIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context     the context in which to execute this kernel
+     * @param integrator  the DrudeSCFIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator);
+private:
+    class ReorderListener;
+    void minimize(ContextImpl& context, double tolerance);
+    CudaContext& cu;
+    double prevStepSize;
+    std::vector<int> drudeParticles;
+    std::vector<int> reorderedDrudeParticles;
+    lbfgsfloatval_t *minimizerPos;
+    lbfgs_parameter_t minimizerParams;
     CUfunction kernel1, kernel2;
 };
 

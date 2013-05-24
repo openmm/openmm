@@ -418,8 +418,9 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
     if (minimizerPos == NULL)
         throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
     lbfgs_parameter_init(&minimizerParams);
-    minimizerParams.max_iterations = 0;
     minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
+    if (sizeof(RealOpenMM) < 8)
+        minimizerParams.xtol = 1e-7;
 }
 
 void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {

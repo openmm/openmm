@@ -311,3 +311,212 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
 double CudaIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
+
+class CudaIntegrateDrudeSCFStepKernel::ReorderListener : public CudaContext::ReorderListener {
+public:
+    ReorderListener(CudaContext& cu, const vector<int>& drudeParticles, vector<int>& reorderedDrudeParticles) :
+            cu(cu), drudeParticles(drudeParticles), reorderedDrudeParticles(reorderedDrudeParticles) {
+    }
+    void execute() {
+        const vector<int>& order = cu.getAtomIndex();
+        int numParticles = order.size();
+        vector<int> inverseOrder(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            inverseOrder[order[i]] = i;
+        int numDrudeParticles = drudeParticles.size();
+        for (int i = 0; i < numDrudeParticles; i++)
+            reorderedDrudeParticles[i] = inverseOrder[drudeParticles[i]];
+    }
+private:
+    CudaContext& cu;
+    const vector<int>& drudeParticles;
+    vector<int>& reorderedDrudeParticles;
+};
+
+CudaIntegrateDrudeSCFStepKernel::~CudaIntegrateDrudeSCFStepKernel() {
+}
+
+void CudaIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
+    cu.getPlatformData().initializeContexts(system);
+    cu.setAsCurrent();
+
+    // Identify Drude particles.
+    
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int p, p1, p2, p3, p4;
+        double charge, polarizability, aniso12, aniso34;
+        force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+        drudeParticles.push_back(p);
+        reorderedDrudeParticles.push_back(p);
+    }
+    cu.addReorderListener(new ReorderListener(cu, drudeParticles, reorderedDrudeParticles));
+    
+    // Initialize the energy minimizer.
+    
+    minimizerPos = lbfgs_malloc(drudeParticles.size()*3);
+    if (minimizerPos == NULL)
+        throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
+    lbfgs_parameter_init(&minimizerParams);
+    minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;    
+
+    // Create the kernels.
+    
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    CUmodule module = cu.createModule(CudaKernelSources::verlet, defines, "");
+    kernel1 = cu.getKernel(module, "integrateVerletPart1");
+    kernel2 = cu.getKernel(module, "integrateVerletPart2");
+    prevStepSize = -1.0;
+}
+
+void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    cu.setAsCurrent();
+    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
+    int numAtoms = cu.getNumAtoms();
+    double dt = integrator.getStepSize();
+    if (dt != prevStepSize) {
+        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
+            vector<double2> stepSizeVec(1);
+            stepSizeVec[0] = make_double2(dt, dt);
+            cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        }
+        else {
+            vector<float2> stepSizeVec(1);
+            stepSizeVec[0] = make_float2((float) dt, (float) dt);
+            cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        }
+        prevStepSize = dt;
+    }
+
+    // Call the first integration kernel.
+
+    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
+    void* args1[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel1, args1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    void* args2[] = {&cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(), &posCorrection,
+            &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
+    cu.executeKernel(kernel2, args2, numAtoms);
+
+    // Update the positions of virtual sites and Drude particles.
+
+    integration.computeVirtualSites();
+    minimize(context, integrator.getMinimizationErrorTolerance());
+
+    // Update the time and step count.
+
+    cu.setTime(cu.getTime()+dt);
+    cu.setStepCount(cu.getStepCount()+1);
+}
+
+double CudaIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
+struct MinimizerData {
+    ContextImpl& context;
+    CudaContext& cu;
+    vector<int>& reorderedDrudeParticles;
+    MinimizerData(ContextImpl& context, CudaContext& cu, vector<int>& reorderedDrudeParticles) : context(context), cu(cu), reorderedDrudeParticles(reorderedDrudeParticles) {}
+};
+
+static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
+    MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
+    ContextImpl& context = data->context;
+    CudaContext& cu = data->cu;
+    vector<int>& reorderedDrudeParticles = data->reorderedDrudeParticles;
+    int numDrudeParticles = reorderedDrudeParticles.size();
+
+    // Set the particle positions.
+    
+    cu.getPosq().download(cu.getPinnedBuffer());
+    double4 periodicBoxSize = cu.getPeriodicBoxSize();
+    if (cu.getUseDoublePrecision()) {
+        double4* posq = (double4*) cu.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            double4& p = posq[reorderedDrudeParticles[i]];
+            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            p.x = x[3*i]+offset.x*periodicBoxSize.x;
+            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
+            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+        }
+    }
+    else {
+        float4* posq = (float4*) cu.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            float4& p = posq[reorderedDrudeParticles[i]];
+            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            p.x = x[3*i]+offset.x*periodicBoxSize.x;
+            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
+            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+        }
+    }
+    cu.getPosq().upload(cu.getPinnedBuffer());
+
+    // Compute the forces and energy for this configuration.
+
+    double energy = context.calcForcesAndEnergy(true, true);
+    long long* force = (long long*) cu.getPinnedBuffer();
+    cu.getForce().download(force);
+    double forceScale = -1.0/0x100000000;
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    for (int i = 0; i < numDrudeParticles; ++i) {
+        int index = reorderedDrudeParticles[i];
+        g[3*i] = forceScale*force[index];
+        g[3*i+1] = forceScale*force[index+paddedNumAtoms];
+        g[3*i+2] = forceScale*force[index+paddedNumAtoms*2];
+    }
+    return energy;
+}
+
+void CudaIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
+    // Record the initial positions.
+
+    int numDrudeParticles = reorderedDrudeParticles.size();
+    cu.getPosq().download(cu.getPinnedBuffer());
+    double4 periodicBoxSize = cu.getPeriodicBoxSize();
+    if (cu.getUseDoublePrecision()) {
+        double4* posq = (double4*) cu.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            double4 p = posq[reorderedDrudeParticles[i]];
+            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
+            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
+            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+        }
+    }
+    else {
+        float4* posq = (float4*) cu.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            float4 p = posq[reorderedDrudeParticles[i]];
+            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
+            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
+            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+        }
+        minimizerParams.xtol = 1e-7;
+    }
+    
+    // Determine a normalization constant for scaling the tolerance.
+    
+    double norm = 0.0;
+    for (int i = 0; i < 3*numDrudeParticles; i++)
+        norm += minimizerPos[i]*minimizerPos[i];
+    norm /= numDrudeParticles;
+    norm = (norm < 1 ? 1 : sqrt(norm));
+    minimizerParams.epsilon = tolerance/norm;
+    
+    // Perform the minimization.
+
+    lbfgsfloatval_t fx;
+    MinimizerData data(context, cu, reorderedDrudeParticles);
+    lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
+}

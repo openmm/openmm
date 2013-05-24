@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Reference implementation of DrudeSCFIntegrator.
+ * This tests the CUDA implementation of DrudeSCFIntegrator.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -47,6 +47,8 @@
 
 using namespace OpenMM;
 using namespace std;
+
+extern "C" OPENMM_EXPORT void registerDrudeCudaKernelFactories();
 
 void testWater() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
@@ -100,7 +102,7 @@ void testWater() {
     // Simulate it and check energy conservation and the total force on the Drude particles.
     
     DrudeSCFIntegrator integ(0.0005);
-    Platform& platform = Platform::getPlatformByName("Reference");
+    Platform& platform = Platform::getPlatformByName("CUDA");
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.applyConstraints(1e-5);
@@ -108,6 +110,7 @@ void testWater() {
     State state = context.getState(State::Energy);
     double initialEnergy;
     int numSteps = 1000;
+    double maxNorm = (platform.getPropertyValue(context, "CudaPrecision") == "double" ? 1.0 : 5.0);
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         state = context.getState(State::Energy | State::Forces);
@@ -120,12 +123,15 @@ void testWater() {
         for (int j = 1; j < (int) force.size(); j += 5)
             norm += sqrt(force[j].dot(force[j]));
         norm = (norm/numMolecules);
-        ASSERT(norm < 1.0);
+        ASSERT(norm < maxNorm);
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        registerDrudeCudaKernelFactories();
+        if (argc > 1)
+            Platform::getPlatformByName("CUDA").setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testWater();
     }
     catch(const std::exception& e) {
