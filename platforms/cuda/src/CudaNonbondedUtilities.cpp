@@ -416,6 +416,12 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
 }
 
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
+    
+    map<string, string> defines;
+    if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision()) {
+        defines["ENABLE_SHUFFLE"] = "1";
+    }
+
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -445,29 +451,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         args << arguments[i].getName();
     }
     replacements["PARAMETER_ARGUMENTS"] = args.str();
-    stringstream loadLocal1;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1) {
-            loadLocal1<<"localData[localAtomIndex]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
-        }
-        else {
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                loadLocal1<<"localData[localAtomIndex]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
-        }
-    }
-    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
-    stringstream loadLocal2;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1) {
-            loadLocal2<<"localData[localAtomIndex]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-        }
-        else {
-            loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                loadLocal2<<"localData[localAtomIndex]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
-        }
-    }
-    replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+
     stringstream load1;
     for (int i = 0; i < (int) params.size(); i++) {
         load1 << params[i].getType();
@@ -478,23 +462,133 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         load1 << "[atom1];\n";
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
-    stringstream load2j;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1) {
-            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = localData[atom2]."<<params[i].getName()<<";\n";
-        }
-        else {
-            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = make_"<<params[i].getType()<<"(";
-            for (int j = 0; j < params[i].getNumComponents(); ++j) {
-                if (j > 0)
-                    load2j<<", ";
-                load2j<<"localData[atom2]."<<params[i].getName()<<"_"<<suffixes[j];
+
+    bool useShuffle;
+    if(defines.find("ENABLE_SHUFFLE") != defines.end()) {
+        useShuffle = true;
+    } else {
+        useShuffle = false;
+    }
+
+    // Part 1. Defines for on diagonal exclusion tiles
+    stringstream loadLocal1;
+    if(useShuffle) {
+        // not needed if using shuffles as we can directly fetch from register
+    } else {
+        for (int i = 0; i < (int) params.size(); i++) {
+            if (params[i].getNumComponents() == 1) {
+                loadLocal1<<"localData[threadIdx.x]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
             }
-            load2j<<");\n";
+            else {
+                for (int j = 0; j < params[i].getNumComponents(); ++j)
+                    loadLocal1<<"localData[threadIdx.x]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
+            }
+        }
+    }
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+
+    stringstream broadcastWarpData;
+    if(useShuffle) {
+        broadcastWarpData << "posq2.x = real_shfl(shflPosq.x, j);\n";
+        broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
+        broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
+        broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
+        for(int i=0; i< (int) params.size();i++) {
+            broadcastWarpData << params[i].getType() << " shfl" << params[i].getName() << ";\n";
+            for(int j=0; j < params[i].getNumComponents(); j++) {
+                string name;
+                if (params[i].getNumComponents() == 1) {
+                    broadcastWarpData << "shfl" << params[i].getName() << "=real_shfl(" << params[i].getName() <<"1,j);\n";
+
+                } else {
+                    broadcastWarpData << "shfl" << params[i].getName()+"."+suffixes[j] << "=real_shfl(" << params[i].getName()+"1."+suffixes[j] <<",j);\n";
+                }
+            }
+        }
+    } else {
+        // not used if not shuffling
+    }
+    replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
+    
+    // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles. 
+    stringstream declareLocal2;
+    if(useShuffle) {
+        for(int i=0; i< (int) params.size(); i++) {
+            declareLocal2<<params[i].getType()<<" shfl"<<params[i].getName()<<";\n";
+        }
+    } else {
+        // not used if using shared memory
+    }
+    replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
+
+    stringstream loadLocal2;
+    if(useShuffle) {
+        for(int i=0; i< (int) params.size(); i++) {
+            loadLocal2<<"shfl"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+        }
+    } else {
+        for (int i = 0; i < (int) params.size(); i++) {
+            if (params[i].getNumComponents() == 1) {
+                loadLocal2<<"localData[threadIdx.x]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+            }
+            else {
+                loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+                for (int j = 0; j < params[i].getNumComponents(); ++j)
+                    loadLocal2<<"localData[threadIdx.x]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+            }
+        }
+    }
+    replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+   
+    stringstream load2j;
+    if(useShuffle) {
+        for(int i = 0; i < (int) params.size(); i++)
+            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = shfl"<<params[i].getName()<<";\n";
+    } else {
+        for (int i = 0; i < (int) params.size(); i++) {
+            if (params[i].getNumComponents() == 1) {
+                load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = localData[atom2]."<<params[i].getName()<<";\n";
+            }
+            else {
+                load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = make_"<<params[i].getType()<<"(";
+                for (int j = 0; j < params[i].getNumComponents(); ++j) {
+                    if (j > 0)
+                        load2j<<", ";
+                    load2j<<"localData[atom2]."<<params[i].getName()<<"_"<<suffixes[j];
+                }
+                load2j<<");\n";
+            }
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
-    map<string, string> defines;
+
+    stringstream shuffleWarpData;
+    if(useShuffle) {
+        shuffleWarpData << "shflPosq.x = real_shfl(shflPosq.x, tgx+1);\n";
+        shuffleWarpData << "shflPosq.y = real_shfl(shflPosq.y, tgx+1);\n";
+        shuffleWarpData << "shflPosq.z = real_shfl(shflPosq.z, tgx+1);\n";
+        shuffleWarpData << "shflPosq.w = real_shfl(shflPosq.w, tgx+1);\n";
+        shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
+        shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
+        shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
+        for(int i=0; i < (int) params.size(); i++) {
+            if(params[i].getNumComponents() == 1) {
+                shuffleWarpData<<"shfl"<<params[i].getName()<<"=real_shfl(shfl"<<params[i].getName()<<", tgx+1);\n";
+            } else {
+                for(int j=0;j<params[i].getNumComponents();j++) {
+                    // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
+                    shuffleWarpData<<"shfl"<<params[i].getName()
+                        <<"."<<suffixes[j]<<"=real_shfl(shfl"
+                        <<params[i].getName()<<"."<<suffixes[j]
+                        <<", tgx+1);\n";
+                }
+            }
+        }
+    } else {
+        // not used otherwise
+    }
+    replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
+
     if (useCutoff)
         defines["USE_CUTOFF"] = "1";
     if (usePeriodic)
@@ -519,8 +613,6 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
-        defines["ENABLE_SHUFFLE"] = "1";
     CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
 
