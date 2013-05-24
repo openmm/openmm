@@ -154,11 +154,49 @@ void testThole() {
     validateForce(system, positions, energySpring1+energySpring2+energyDipole);
 }
 
+void testChangingParameters() {
+    const double k = 1.5;
+    const double charge = 0.1;
+    const double alpha = charge*charge/k;
+    Platform& platform = Platform::getPlatformByName("Reference");
+    
+    // Create the system.
+    
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    DrudeForce* drude = new DrudeForce();
+    drude->addParticle(1, 0, -1, -1, -1, charge, alpha, 1, 1);
+    system.addForce(drude);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+    
+    // Check the energy.
+    
+    VerletIntegrator integ(1.0);
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(0.5*k*3*3, state.getPotentialEnergy(), 1e-5);
+    
+    // Modify the parameters.
+    
+    const double k2 = 2.2;
+    const double charge2 = 0.3;
+    const double alpha2 = charge2*charge2/k2;
+    drude->setParticleParameters(0, 1, 0, -1, -1, -1, charge2, alpha2, 1, 1);
+    drude->updateParametersInContext(context);
+    state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(0.5*k2*3*3, state.getPotentialEnergy(), 1e-5);
+}
+
 int main() {
     try {
         testSingleParticle();
         testAnisotropicParticle();
         testThole();
+        testChangingParameters();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
