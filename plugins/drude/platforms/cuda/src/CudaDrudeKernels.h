@@ -122,7 +122,7 @@ private:
 class CudaIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
     CudaIntegrateDrudeSCFStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
-            IntegrateDrudeSCFStepKernel(name, platform), cu(cu) {
+            IntegrateDrudeSCFStepKernel(name, platform), cu(cu), minimizerPos(NULL) {
     }
     ~CudaIntegrateDrudeSCFStepKernel();
     /**

@@ -42,6 +42,13 @@
 using namespace OpenMM;
 using namespace std;
 
+static void setPosqCorrectionArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
+    if (cl.getUseMixedPrecision())
+        kernel.setArg<cl::Buffer>(index, cl.getPosqCorrection().getDeviceBuffer());
+    else
+        kernel.setArg<void*>(index, NULL);
+}
+
 class OpenCLDrudeForceInfo : public OpenCLForceInfo {
 public:
     OpenCLDrudeForceInfo(const DrudeForce& force) : OpenCLForceInfo(0), force(force) {
@@ -309,4 +316,236 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
 
 double OpenCLIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
     return cl.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
+class OpenCLIntegrateDrudeSCFStepKernel::ReorderListener : public OpenCLContext::ReorderListener {
+public:
+    ReorderListener(OpenCLContext& cl, const vector<int>& drudeParticles, vector<int>& reorderedDrudeParticles) :
+            cl(cl), drudeParticles(drudeParticles), reorderedDrudeParticles(reorderedDrudeParticles) {
+    }
+    void execute() {
+        const vector<int>& order = cl.getAtomIndex();
+        int numParticles = order.size();
+        vector<int> inverseOrder(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            inverseOrder[order[i]] = i;
+        int numDrudeParticles = drudeParticles.size();
+        for (int i = 0; i < numDrudeParticles; i++)
+            reorderedDrudeParticles[i] = inverseOrder[drudeParticles[i]];
+    }
+private:
+    OpenCLContext& cl;
+    const vector<int>& drudeParticles;
+    vector<int>& reorderedDrudeParticles;
+};
+
+OpenCLIntegrateDrudeSCFStepKernel::~OpenCLIntegrateDrudeSCFStepKernel() {
+    if (minimizerPos != NULL)
+        lbfgs_free(minimizerPos);
+}
+
+void OpenCLIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
+    cl.getPlatformData().initializeContexts(system);
+
+    // Identify Drude particles.
+    
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int p, p1, p2, p3, p4;
+        double charge, polarizability, aniso12, aniso34;
+        force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+        drudeParticles.push_back(p);
+        reorderedDrudeParticles.push_back(p);
+    }
+    cl.addReorderListener(new ReorderListener(cl, drudeParticles, reorderedDrudeParticles));
+    
+    // Initialize the energy minimizer.
+    
+    minimizerPos = lbfgs_malloc(drudeParticles.size()*3);
+    if (minimizerPos == NULL)
+        throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
+    lbfgs_parameter_init(&minimizerParams);
+    minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;    
+
+    // Create the kernels.
+    
+    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet, "");
+    kernel1 = cl::Kernel(program, "integrateVerletPart1");
+    kernel2 = cl::Kernel(program, "integrateVerletPart2");
+    prevStepSize = -1.0;
+}
+
+void OpenCLIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
+    int numAtoms = cl.getNumAtoms();
+    double dt = integrator.getStepSize();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1.setArg<cl_int>(0, numAtoms);
+        kernel1.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel1, 3);
+        kernel1.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(6, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl_int>(0, numAtoms);
+        kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernel2, 3);
+        kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
+    }
+    if (dt != prevStepSize) {
+        if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+            vector<mm_double2> stepSizeVec(1);
+            stepSizeVec[0] = mm_double2(dt, dt);
+            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        }
+        else {
+            vector<mm_float2> stepSizeVec(1);
+            stepSizeVec[0] = mm_float2((cl_float) dt, (cl_float) dt);
+            cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        }
+        prevStepSize = dt;
+    }
+
+    // Call the first integration kernel.
+
+    cl.executeKernel(kernel1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    cl.executeKernel(kernel2, numAtoms);
+
+    // Update the positions of virtual sites and Drude particles.
+
+    integration.computeVirtualSites();
+    minimize(context, integrator.getMinimizationErrorTolerance());
+
+    // Update the time and step count.
+
+    cl.setTime(cl.getTime()+dt);
+    cl.setStepCount(cl.getStepCount()+1);
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cl.getQueue().flush();
+#endif
+}
+
+double OpenCLIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    return cl.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
+struct MinimizerData {
+    ContextImpl& context;
+    OpenCLContext& cl;
+    vector<int>& reorderedDrudeParticles;
+    MinimizerData(ContextImpl& context, OpenCLContext& cl, vector<int>& reorderedDrudeParticles) : context(context), cl(cl), reorderedDrudeParticles(reorderedDrudeParticles) {}
+};
+
+static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
+    MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
+    ContextImpl& context = data->context;
+    OpenCLContext& cl = data->cl;
+    vector<int>& reorderedDrudeParticles = data->reorderedDrudeParticles;
+    int numDrudeParticles = reorderedDrudeParticles.size();
+
+    // Set the particle positions.
+    
+    cl.getPosq().download(cl.getPinnedBuffer());
+    mm_double4 periodicBoxSize = cl.getPeriodicBoxSizeDouble();
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            mm_double4& p = posq[reorderedDrudeParticles[i]];
+            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            p.x = x[3*i]+offset.x*periodicBoxSize.x;
+            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
+            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+        }
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            mm_float4& p = posq[reorderedDrudeParticles[i]];
+            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            p.x = x[3*i]+offset.x*periodicBoxSize.x;
+            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
+            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+        }
+    }
+    cl.getPosq().upload(cl.getPinnedBuffer());
+
+    // Compute the forces and energy for this configuration.
+
+    double energy = context.calcForcesAndEnergy(true, true);
+    cl.getForce().download(cl.getPinnedBuffer());
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* force = (mm_double4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            int index = reorderedDrudeParticles[i];
+            g[3*i] = -force[index].x;
+            g[3*i+1] = -force[index].y;
+            g[3*i+2] = -force[index].z;
+        }
+    }
+    else {
+        mm_float4* force = (mm_float4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            int index = reorderedDrudeParticles[i];
+            g[3*i] = -force[index].x;
+            g[3*i+1] = -force[index].y;
+            g[3*i+2] = -force[index].z;
+        }
+    }
+    return energy;
+}
+
+void OpenCLIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
+    // Record the initial positions.
+
+    int numDrudeParticles = reorderedDrudeParticles.size();
+    cl.getPosq().download(cl.getPinnedBuffer());
+    mm_double4 periodicBoxSize = cl.getPeriodicBoxSizeDouble();
+    if (cl.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            mm_double4 p = posq[reorderedDrudeParticles[i]];
+            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
+            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
+            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+        }
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
+        for (int i = 0; i < numDrudeParticles; ++i) {
+            mm_float4 p = posq[reorderedDrudeParticles[i]];
+            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
+            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
+            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
+            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+        }
+        minimizerParams.xtol = 1e-7;
+    }
+    
+    // Determine a normalization constant for scaling the tolerance.
+    
+    double norm = 0.0;
+    for (int i = 0; i < 3*numDrudeParticles; i++)
+        norm += minimizerPos[i]*minimizerPos[i];
+    norm /= numDrudeParticles;
+    norm = (norm < 1 ? 1 : sqrt(norm));
+    minimizerParams.epsilon = tolerance/norm;
+    
+    // Perform the minimization.
+
+    lbfgsfloatval_t fx;
+    MinimizerData data(context, cl, reorderedDrudeParticles);
+    lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }

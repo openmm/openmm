@@ -334,6 +334,8 @@ private:
 };
 
 CudaIntegrateDrudeSCFStepKernel::~CudaIntegrateDrudeSCFStepKernel() {
+    if (minimizerPos != NULL)
+        lbfgs_free(minimizerPos);
 }
 
 void CudaIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
