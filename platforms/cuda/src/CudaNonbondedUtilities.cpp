@@ -415,11 +415,14 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
 }
 
+#include <map>
+
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
     
     map<string, string> defines;
-    if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
+    if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision()) {
         defines["ENABLE_SHUFFLE"] = "1";
+    }
 
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
@@ -462,7 +465,12 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
 
-    bool useShuffle = (defines["ENABLE_SHUFFLE"]=="1");
+    bool useShuffle;
+    if(defines.find("ENABLE_SHUFFLE") != defines.end()) {
+        useShuffle = true;
+    } else {
+        useShuffle = false;
+    }
 
     // Part 1. Defines for on diagonal exclusion tiles
     stringstream loadLocal1;
@@ -510,11 +518,6 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     if(useShuffle) {
         for(int i=0; i< (int) params.size(); i++) {
             declareLocal2<<params[i].getType()<<" shfl"<<params[i].getName()<<";\n";
-            //if (params[i].getNumComponents() == 1) {
-            //declareLocal2<<params[i].getType()<<" "<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-            //} else {
-            //    declareLocal2<<params[i].getType()<<" temp"<<params[i].getName()<<";\n";
-            //}
         }
     } else {
         // not used if using shared memory
@@ -576,8 +579,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
                 shuffleWarpData<<"shfl"<<params[i].getName()<<"=real_shfl(shfl"<<params[i].getName()<<", tgx+1);\n";
             } else {
                 for(int j=0;j<params[i].getNumComponents();j++) {
-                    // looks something like
-                    // shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
+                    // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
                     shuffleWarpData<<"shfl"<<params[i].getName()
                         <<"."<<suffixes[j]<<"=real_shfl(shfl"
                         <<params[i].getName()<<"."<<suffixes[j]
@@ -614,8 +616,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
-        defines["ENABLE_SHUFFLE"] = "1";
+    //if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
+    //    defines["ENABLE_SHUFFLE"] = "1";
     CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
 
