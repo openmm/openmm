@@ -415,8 +415,6 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     numTiles = (int) (endFraction*totalTiles)-startTileIndex;
 }
 
-#include <map>
-
 CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) {
     
     map<string, string> defines;
@@ -475,8 +473,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     // Part 1. Defines for on diagonal exclusion tiles
     stringstream loadLocal1;
     if(useShuffle) {
-        // not needed if using shuffles as we can directly fetch from
-        // LOAD_ATOM1_PARAMETERS
+        // not needed if using shuffles as we can directly fetch from register
     } else {
         for (int i = 0; i < (int) params.size(); i++) {
             if (params[i].getNumComponents() == 1) {
@@ -616,8 +613,6 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    //if (context.getComputeCapability() >= 3.0 && !context.getUseDoublePrecision())
-    //    defines["ENABLE_SHUFFLE"] = "1";
     CUmodule program = context.createModule(CudaKernelSources::vectorOps+context.replaceStrings(CudaKernelSources::nonbonded, replacements), defines);
     CUfunction kernel = context.getKernel(program, "computeNonbonded");
 
