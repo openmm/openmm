@@ -132,6 +132,7 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
 }
 
 void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
+    cu.setAsCurrent();
     CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
     
     // Loop over copies and compute the force on each one.
@@ -178,6 +179,15 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
 
     cu.setTime(cu.getTime()+dt);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
+    if (cu.getAtomsWereReordered() && cu.getNonbondedUtilities().getUsePeriodic()) {
+        // Atoms may have been translated into a different periodic box, so apply
+        // the same translation to all the beads.
+
+        int i = numCopies-1;
+        void* args[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+        cu.executeKernel(translateKernel, args, cu.getNumAtoms());
+    }
 }
 
 void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
@@ -188,13 +198,6 @@ void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         context.computeVirtualSites();
         context.updateContextState();
         context.calcForcesAndEnergy(true, false);
-        if (cu.getAtomsWereReordered() && cu.getNonbondedUtilities().getUsePeriodic()) {
-            // Atoms may have been translated into a different periodic box, so apply
-            // the same translation to all the beads.
-            
-            void* args[] = {&positions->getDevicePointer(), &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
-            cu.executeKernel(translateKernel, args, cu.getNumAtoms());
-        }
         void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
                 &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &positions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());

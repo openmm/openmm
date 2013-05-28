@@ -106,11 +106,6 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
-    cl.setAtomsWereReordered(false);
-    if (nb.getUseCutoff() && includeNonbonded && (cl.getMoleculesAreInvalid() || cl.getComputeForceCount()%100 == 0)) {
-        cl.reorderAtoms(!cl.getMoleculesAreInvalid());
-        nb.updateNeighborListSize();
-    }
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
     cl.clearAutoclearBuffers();
     if (includeNonbonded)
@@ -239,6 +234,7 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const vecto
     }
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
+    cl.reorderAtoms();
 }
 
 void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
@@ -342,8 +338,8 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     stream.write((char*) &time, sizeof(double));
     int stepCount = cl.getStepCount();
     stream.write((char*) &stepCount, sizeof(int));
-    int computeForceCount = cl.getComputeForceCount();
-    stream.write((char*) &computeForceCount, sizeof(int));
+    int stepsSinceReorder = cl.getStepsSinceReorder();
+    stream.write((char*) &stepsSinceReorder, sizeof(int));
     char* buffer = (char*) cl.getPinnedBuffer();
     cl.getPosq().download(buffer);
     stream.write(buffer, cl.getPosq().getSize()*cl.getPosq().getElementSize());
@@ -373,14 +369,14 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
         throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
-    int stepCount, computeForceCount;
+    int stepCount, stepsSinceReorder;
     stream.read((char*) &stepCount, sizeof(int));
-    stream.read((char*) &computeForceCount, sizeof(int));
+    stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
     for (int i = 0; i < (int) contexts.size(); i++) {
         contexts[i]->setTime(time);
         contexts[i]->setStepCount(stepCount);
-        contexts[i]->setComputeForceCount(computeForceCount);
+        contexts[i]->setStepsSinceReorder(stepsSinceReorder);
     }
     char* buffer = (char*) cl.getPinnedBuffer();
     stream.read(buffer, cl.getPosq().getSize()*cl.getPosq().getElementSize());
@@ -4296,6 +4292,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
 
     cl.setTime(cl.getTime()+dt);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     
     // Reduce UI lag.
     
@@ -4395,6 +4392,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     
     // Reduce UI lag.
     
@@ -4473,6 +4471,7 @@ void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     
     // Reduce UI lag.
     
@@ -4578,6 +4577,7 @@ double OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
     }
     cl.setTime(time);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     return dt;
 }
 
@@ -4691,6 +4691,7 @@ double OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     }
     cl.setTime(time);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     return dt;
 }
 
@@ -5354,6 +5355,7 @@ void OpenCLIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
 
     cl.setTime(cl.getTime()+integrator.getStepSize());
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     
     // Reduce UI lag.
     
@@ -5580,34 +5582,7 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-    if (cl.getAtomsWereReordered()) {
-        // The atoms were reordered since we saved the positions, so we need to fix them.
-        
-        const vector<int> atomOrder = cl.getAtomIndex();
-        int numAtoms = cl.getNumAtoms();
-        if (cl.getUseDoublePrecision()) {
-            mm_double4* pos = (mm_double4*) cl.getPinnedBuffer();
-            savedPositions->download(pos);
-            vector<mm_double4> fixedPos(cl.getPaddedNumAtoms());
-            for (int i = 0; i < numAtoms; i++)
-                fixedPos[lastAtomOrder[i]] = pos[i];
-            for (int i = 0; i < numAtoms; i++)
-                pos[i] = fixedPos[atomOrder[i]];
-            cl.getPosq().upload(pos);
-        }
-        else {
-            mm_float4* pos = (mm_float4*) cl.getPinnedBuffer();
-            savedPositions->download(pos);
-            vector<mm_float4> fixedPos(cl.getPaddedNumAtoms());
-            for (int i = 0; i < numAtoms; i++)
-                fixedPos[lastAtomOrder[i]] = pos[i];
-            for (int i = 0; i < numAtoms; i++)
-                pos[i] = fixedPos[atomOrder[i]];
-            cl.getPosq().upload(pos);
-        }
-    }
-    else
-        cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
 }
 
 OpenCLRemoveCMMotionKernel::~OpenCLRemoveCMMotionKernel() {

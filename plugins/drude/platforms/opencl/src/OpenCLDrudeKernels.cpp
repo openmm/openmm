@@ -364,32 +364,12 @@ void OpenCLIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
 
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
 }
 
 double OpenCLIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
     return cl.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
-
-class OpenCLIntegrateDrudeSCFStepKernel::ReorderListener : public OpenCLContext::ReorderListener {
-public:
-    ReorderListener(OpenCLContext& cl, const vector<int>& drudeParticles, vector<int>& reorderedDrudeParticles) :
-            cl(cl), drudeParticles(drudeParticles), reorderedDrudeParticles(reorderedDrudeParticles) {
-    }
-    void execute() {
-        const vector<int>& order = cl.getAtomIndex();
-        int numParticles = order.size();
-        vector<int> inverseOrder(numParticles);
-        for (int i = 0; i < numParticles; i++)
-            inverseOrder[order[i]] = i;
-        int numDrudeParticles = drudeParticles.size();
-        for (int i = 0; i < numDrudeParticles; i++)
-            reorderedDrudeParticles[i] = inverseOrder[drudeParticles[i]];
-    }
-private:
-    OpenCLContext& cl;
-    const vector<int>& drudeParticles;
-    vector<int>& reorderedDrudeParticles;
-};
 
 OpenCLIntegrateDrudeSCFStepKernel::~OpenCLIntegrateDrudeSCFStepKernel() {
     if (minimizerPos != NULL)
@@ -406,9 +386,7 @@ void OpenCLIntegrateDrudeSCFStepKernel::initialize(const System& system, const D
         double charge, polarizability, aniso12, aniso34;
         force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
         drudeParticles.push_back(p);
-        reorderedDrudeParticles.push_back(p);
     }
-    cl.addReorderListener(new ReorderListener(cl, drudeParticles, reorderedDrudeParticles));
     
     // Initialize the energy minimizer.
     
@@ -481,6 +459,7 @@ void OpenCLIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const Drud
 
     cl.setTime(cl.getTime()+dt);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
     
     // Reduce UI lag.
     
@@ -496,39 +475,36 @@ double OpenCLIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& cont
 struct MinimizerData {
     ContextImpl& context;
     OpenCLContext& cl;
-    vector<int>& reorderedDrudeParticles;
-    MinimizerData(ContextImpl& context, OpenCLContext& cl, vector<int>& reorderedDrudeParticles) : context(context), cl(cl), reorderedDrudeParticles(reorderedDrudeParticles) {}
+    vector<int>& drudeParticles;
+    MinimizerData(ContextImpl& context, OpenCLContext& cl, vector<int>& drudeParticles) : context(context), cl(cl), drudeParticles(drudeParticles) {}
 };
 
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
     MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
     ContextImpl& context = data->context;
     OpenCLContext& cl = data->cl;
-    vector<int>& reorderedDrudeParticles = data->reorderedDrudeParticles;
-    int numDrudeParticles = reorderedDrudeParticles.size();
+    vector<int>& drudeParticles = data->drudeParticles;
+    int numDrudeParticles = drudeParticles.size();
 
     // Set the particle positions.
     
     cl.getPosq().download(cl.getPinnedBuffer());
-    mm_double4 periodicBoxSize = cl.getPeriodicBoxSizeDouble();
     if (cl.getUseDoublePrecision()) {
         mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_double4& p = posq[reorderedDrudeParticles[i]];
-            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            p.x = x[3*i]+offset.x*periodicBoxSize.x;
-            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
-            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+            mm_double4& p = posq[drudeParticles[i]];
+            p.x = x[3*i];
+            p.y = x[3*i+1];
+            p.z = x[3*i+2];
         }
     }
     else {
         mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_float4& p = posq[reorderedDrudeParticles[i]];
-            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            p.x = x[3*i]+offset.x*periodicBoxSize.x;
-            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
-            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+            mm_float4& p = posq[drudeParticles[i]];
+            p.x = x[3*i];
+            p.y = x[3*i+1];
+            p.z = x[3*i+2];
         }
     }
     cl.getPosq().upload(cl.getPinnedBuffer());
@@ -540,7 +516,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     if (cl.getUseDoublePrecision()) {
         mm_double4* force = (mm_double4*) cl.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            int index = reorderedDrudeParticles[i];
+            int index = drudeParticles[i];
             g[3*i] = -force[index].x;
             g[3*i+1] = -force[index].y;
             g[3*i+2] = -force[index].z;
@@ -549,7 +525,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     else {
         mm_float4* force = (mm_float4*) cl.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            int index = reorderedDrudeParticles[i];
+            int index = drudeParticles[i];
             g[3*i] = -force[index].x;
             g[3*i+1] = -force[index].y;
             g[3*i+2] = -force[index].z;
@@ -561,27 +537,24 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 void OpenCLIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
     // Record the initial positions.
 
-    int numDrudeParticles = reorderedDrudeParticles.size();
+    int numDrudeParticles = drudeParticles.size();
     cl.getPosq().download(cl.getPinnedBuffer());
-    mm_double4 periodicBoxSize = cl.getPeriodicBoxSizeDouble();
     if (cl.getUseDoublePrecision()) {
         mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_double4 p = posq[reorderedDrudeParticles[i]];
-            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
-            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
-            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+            mm_double4 p = posq[drudeParticles[i]];
+            minimizerPos[3*i] = p.x;
+            minimizerPos[3*i+1] = p.y;
+            minimizerPos[3*i+2] = p.z;
         }
     }
     else {
         mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_float4 p = posq[reorderedDrudeParticles[i]];
-            mm_int4 offset = cl.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
-            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
-            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+            mm_float4 p = posq[drudeParticles[i]];
+            minimizerPos[3*i] = p.x;
+            minimizerPos[3*i+1] = p.y;
+            minimizerPos[3*i+2] = p.z;
         }
         minimizerParams.xtol = 1e-7;
     }
@@ -598,6 +571,6 @@ void OpenCLIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double to
     // Perform the minimization.
 
     lbfgsfloatval_t fx;
-    MinimizerData data(context, cl, reorderedDrudeParticles);
+    MinimizerData data(context, cl, drudeParticles);
     lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }

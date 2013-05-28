@@ -86,11 +86,6 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     cu.setAsCurrent();
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
-    cu.setAtomsWereReordered(false);
-    if (nb.getUseCutoff() && includeNonbonded && (cu.getMoleculesAreInvalid() || cu.getComputeForceCount()%100 == 0)) {
-        cu.reorderAtoms(!cu.getMoleculesAreInvalid());
-        nb.updateNeighborListSize();
-    }
     cu.setComputeForceCount(cu.getComputeForceCount()+1);
     cu.clearAutoclearBuffers();
     if (includeNonbonded)
@@ -220,6 +215,7 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
     }
     for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
         cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
+    cu.reorderAtoms();
 }
 
 void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
@@ -317,8 +313,8 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
     stream.write((char*) &time, sizeof(double));
     int stepCount = cu.getStepCount();
     stream.write((char*) &stepCount, sizeof(int));
-    int computeForceCount = cu.getComputeForceCount();
-    stream.write((char*) &computeForceCount, sizeof(int));
+    int stepsSinceReorder = cu.getStepsSinceReorder();
+    stream.write((char*) &stepsSinceReorder, sizeof(int));
     char* buffer = (char*) cu.getPinnedBuffer();
     cu.getPosq().download(buffer);
     stream.write(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
@@ -349,14 +345,14 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
         throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
-    int stepCount, computeForceCount;
+    int stepCount, stepsSinceReorder;
     stream.read((char*) &stepCount, sizeof(int));
-    stream.read((char*) &computeForceCount, sizeof(int));
+    stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
     for (int i = 0; i < (int) contexts.size(); i++) {
         contexts[i]->setTime(time);
         contexts[i]->setStepCount(stepCount);
-        contexts[i]->setComputeForceCount(computeForceCount);
+        contexts[i]->setStepsSinceReorder(stepsSinceReorder);
     }
     char* buffer = (char*) cu.getPinnedBuffer();
     stream.read(buffer, cu.getPosq().getSize()*cu.getPosq().getElementSize());
@@ -4134,6 +4130,7 @@ void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIn
 
     cu.setTime(cu.getTime()+dt);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
 }
 
 double CudaIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -4221,6 +4218,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
 
     cu.setTime(cu.getTime()+stepSize);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
 }
 
 double CudaIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
@@ -4283,6 +4281,7 @@ void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const Browni
 
     cu.setTime(cu.getTime()+stepSize);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
 }
 
 double CudaIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
@@ -4363,6 +4362,7 @@ double CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
     }
     cu.setTime(time);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
     return dt;
 }
 
@@ -4457,6 +4457,7 @@ double CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     }
     cu.setTime(time);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
     return dt;
 }
 
@@ -5129,6 +5130,7 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
 
     cu.setTime(cu.getTime()+integrator.getStepSize());
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
 }
 
 double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid) {
@@ -5359,40 +5361,12 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
 
 void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     cu.setAsCurrent();
-    if (cu.getAtomsWereReordered()) {
-        // The atoms were reordered since we saved the positions, so we need to fix them.
-        
-        const vector<int> atomOrder = cu.getAtomIndex();
-        int numAtoms = cu.getNumAtoms();
-        if (cu.getUseDoublePrecision()) {
-            double4* pos = (double4*) cu.getPinnedBuffer();
-            savedPositions->download(pos);
-            vector<double4> fixedPos(cu.getPaddedNumAtoms());
-            for (int i = 0; i < numAtoms; i++)
-                fixedPos[lastAtomOrder[i]] = pos[i];
-            for (int i = 0; i < numAtoms; i++)
-                pos[i] = fixedPos[atomOrder[i]];
-            cu.getPosq().upload(pos);
-        }
-        else {
-            float4* pos = (float4*) cu.getPinnedBuffer();
-            savedPositions->download(pos);
-            vector<float4> fixedPos(cu.getPaddedNumAtoms());
-            for (int i = 0; i < numAtoms; i++)
-                fixedPos[lastAtomOrder[i]] = pos[i];
-            for (int i = 0; i < numAtoms; i++)
-                pos[i] = fixedPos[atomOrder[i]];
-            cu.getPosq().upload(pos);
-        }
-    }
-    else {
-        int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-        CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
-        if (result != CUDA_SUCCESS) {
-            std::stringstream m;
-            m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-            throw OpenMMException(m.str());
-        }
+    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
+    CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions->getDevicePointer(), bytesToCopy);
+    if (result != CUDA_SUCCESS) {
+        std::stringstream m;
+        m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(m.str());
     }
 }
 
