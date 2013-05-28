@@ -66,7 +66,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 }
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData) :
-        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), atomsWereReordered(false), posq(NULL),
+        system(system), time(0.0), platformData(platformData), stepCount(0), computeForceCount(0), stepsSinceReorder(99999), atomsWereReordered(false), posq(NULL),
         posqCorrection(NULL), velm(NULL), forceBuffers(NULL), longForceBuffer(NULL), energyBuffer(NULL), atomIndexDevice(NULL), integration(NULL),
         expression(NULL), bonded(NULL), nonbonded(NULL), thread(NULL) {
     if (precision == "single") {
@@ -407,7 +407,6 @@ void OpenCLContext::initialize() {
         atomIndex[i] = i;
     atomIndexDevice->upload(atomIndex);
     findMoleculeGroups();
-    moleculesInvalid = false;
     nonbonded->initialize(system);
 }
 
@@ -826,11 +825,6 @@ void OpenCLContext::findMoleculeGroups() {
 }
 
 void OpenCLContext::invalidateMolecules() {
-    moleculesInvalid = true;
-}
-
-void OpenCLContext::validateMolecules() {
-    moleculesInvalid = false;
     if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
         return;
     bool valid = true;
@@ -930,24 +924,28 @@ void OpenCLContext::validateMolecules() {
     findMoleculeGroups();
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         reorderListeners[i]->execute();
+    reorderAtoms();
 }
 
-void OpenCLContext::reorderAtoms(bool enforcePeriodic) {
-    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff())
+void OpenCLContext::reorderAtoms() {
+    atomsWereReordered = false;
+    if (numAtoms == 0 || nonbonded == NULL || !nonbonded->getUseCutoff() || stepsSinceReorder < 100) {
+        stepsSinceReorder++;
         return;
-    if (moleculesInvalid)
-        validateMolecules();
+    }
     atomsWereReordered = true;
+    stepsSinceReorder = 0;
     if (useDoublePrecision)
-        reorderAtomsImpl<cl_double, mm_double4, cl_double, mm_double4>(enforcePeriodic);
+        reorderAtomsImpl<cl_double, mm_double4, cl_double, mm_double4>();
     else if (useMixedPrecision)
-        reorderAtomsImpl<cl_float, mm_float4, cl_double, mm_double4>(enforcePeriodic);
+        reorderAtomsImpl<cl_float, mm_float4, cl_double, mm_double4>();
     else
-        reorderAtomsImpl<cl_float, mm_float4, cl_float, mm_float4>(enforcePeriodic);
+        reorderAtomsImpl<cl_float, mm_float4, cl_float, mm_float4>();
+    nonbonded->updateNeighborListSize();
 }
 
 template <class Real, class Real4, class Mixed, class Mixed4>
-void OpenCLContext::reorderAtomsImpl(bool enforcePeriodic) {
+void OpenCLContext::reorderAtomsImpl() {
 
     // Find the range of positions and the number of bins along each axis.
 
@@ -1023,18 +1021,16 @@ void OpenCLContext::reorderAtomsImpl(bool enforcePeriodic) {
                     molPos[i].x -= dx;
                     molPos[i].y -= dy;
                     molPos[i].z -= dz;
-                    if (enforcePeriodic) {
-                        for (int j = 0; j < (int) atoms.size(); j++) {
-                            int atom = atoms[j]+mol.offsets[i];
-                            Real4 p = oldPosq[atom];
-                            p.x -= dx;
-                            p.y -= dy;
-                            p.z -= dz;
-                            oldPosq[atom] = p;
-                            posCellOffsets[atom].x -= xcell;
-                            posCellOffsets[atom].y -= ycell;
-                            posCellOffsets[atom].z -= zcell;
-                        }
+                    for (int j = 0; j < (int) atoms.size(); j++) {
+                        int atom = atoms[j]+mol.offsets[i];
+                        Real4 p = oldPosq[atom];
+                        p.x -= dx;
+                        p.y -= dy;
+                        p.z -= dz;
+                        oldPosq[atom] = p;
+                        posCellOffsets[atom].x -= xcell;
+                        posCellOffsets[atom].y -= ycell;
+                        posCellOffsets[atom].z -= zcell;
                     }
                 }
             }

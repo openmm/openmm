@@ -299,6 +299,18 @@ public:
         computeForceCount = count;
     }
     /**
+     * Get the number of time steps since the atoms were reordered.
+     */
+    int getStepsSinceReorder() const {
+        return stepsSinceReorder;
+    }
+    /**
+     * Set the number of time steps since the atoms were reordered.
+     */
+    void setStepsSinceReorder(int steps) {
+        stepsSinceReorder = steps;
+    }
+    /**
      * Get the number of atoms.
      */
     int getNumAtoms() const {
@@ -429,10 +441,8 @@ public:
     /**
      * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
      * together in the arrays.
-     * 
-     * @param enforcePeriodic    if true, the atom positions may be altered to enforce periodic boundary conditions
      */
-    void reorderAtoms(bool enforcePeriodic);
+    void reorderAtoms();
     /**
      * Add a listener that should be called whenever atoms get reordered.  The CudaContext
      * assumes ownership of the object, and deletes it when the context itself is deleted.
@@ -447,15 +457,9 @@ public:
     /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions
-     * and order to be revalidated the next to reorderAtoms() is called.
+     * and order to be revalidated.
      */
     void invalidateMolecules();
-    /**
-     * Get whether the current molecule definitions are valid.
-     */
-    bool getMoleculesAreInvalid() {
-        return moleculesInvalid;
-    }
 private:
     struct Molecule;
     struct MoleculeGroup;
@@ -472,7 +476,7 @@ private:
      * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
      */
     template <class Real, class Real4, class Mixed, class Mixed4>
-    void reorderAtomsImpl(bool enforcePeriodic);
+    void reorderAtomsImpl();
     static bool hasInitializedCuda;
     const System& system;
     double time, computeCapability;
@@ -481,11 +485,12 @@ private:
     int contextIndex;
     int stepCount;
     int computeForceCount;
+    int stepsSinceReorder;
     int numAtoms;
     int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered, moleculesInvalid;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, atomsWereReordered;
     std::string compiler, tempDir, gpuArchitecture;
     float4 periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxSize, invPeriodicBoxSize;

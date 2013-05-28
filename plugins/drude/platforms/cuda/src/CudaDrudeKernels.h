@@ -148,12 +148,10 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator);
 private:
-    class ReorderListener;
     void minimize(ContextImpl& context, double tolerance);
     CudaContext& cu;
     double prevStepSize;
     std::vector<int> drudeParticles;
-    std::vector<int> reorderedDrudeParticles;
     lbfgsfloatval_t *minimizerPos;
     lbfgs_parameter_t minimizerParams;
     CUfunction kernel1, kernel2;
