@@ -25,6 +25,16 @@ static __inline__ __device__ double real_shfl(double var, int srcLane) {
     lo = __shfl(lo, srcLane);
     return __hiloint2double( hi, lo );
 }
+
+static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
+    int hi, lo;
+    asm volatile("mov.b64 { %0, %1 }, %2;" : "=r"(lo), "=r"(hi) : "l"(var));
+    hi = __shfl(hi, srcLane);
+    lo = __shfl(lo, srcLane);
+    // unforunately there isn't an __nv_hiloint2long(hi,lo) intrinsic cast
+    int2 fuse; fuse.x = lo; fuse.y = hi;
+    return *reinterpret_cast<long long*>(&fuse);
+}
 #endif
 
 /**
