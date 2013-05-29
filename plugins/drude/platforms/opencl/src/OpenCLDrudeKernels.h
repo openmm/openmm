@@ -149,13 +149,11 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator);
 private:
-    class ReorderListener;
     void minimize(ContextImpl& context, double tolerance);
     OpenCLContext& cl;
     bool hasInitializedKernels;
     double prevStepSize;
     std::vector<int> drudeParticles;
-    std::vector<int> reorderedDrudeParticles;
     lbfgsfloatval_t *minimizerPos;
     lbfgs_parameter_t minimizerParams;
     cl::Kernel kernel1, kernel2;

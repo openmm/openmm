@@ -358,32 +358,12 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
 
     cu.setTime(cu.getTime()+stepSize);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
 }
 
 double CudaIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
     return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
-
-class CudaIntegrateDrudeSCFStepKernel::ReorderListener : public CudaContext::ReorderListener {
-public:
-    ReorderListener(CudaContext& cu, const vector<int>& drudeParticles, vector<int>& reorderedDrudeParticles) :
-            cu(cu), drudeParticles(drudeParticles), reorderedDrudeParticles(reorderedDrudeParticles) {
-    }
-    void execute() {
-        const vector<int>& order = cu.getAtomIndex();
-        int numParticles = order.size();
-        vector<int> inverseOrder(numParticles);
-        for (int i = 0; i < numParticles; i++)
-            inverseOrder[order[i]] = i;
-        int numDrudeParticles = drudeParticles.size();
-        for (int i = 0; i < numDrudeParticles; i++)
-            reorderedDrudeParticles[i] = inverseOrder[drudeParticles[i]];
-    }
-private:
-    CudaContext& cu;
-    const vector<int>& drudeParticles;
-    vector<int>& reorderedDrudeParticles;
-};
 
 CudaIntegrateDrudeSCFStepKernel::~CudaIntegrateDrudeSCFStepKernel() {
     if (minimizerPos != NULL)
@@ -401,9 +381,7 @@ void CudaIntegrateDrudeSCFStepKernel::initialize(const System& system, const Dru
         double charge, polarizability, aniso12, aniso34;
         force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
         drudeParticles.push_back(p);
-        reorderedDrudeParticles.push_back(p);
     }
-    cu.addReorderListener(new ReorderListener(cu, drudeParticles, reorderedDrudeParticles));
     
     // Initialize the energy minimizer.
     
@@ -469,6 +447,7 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
 
     cu.setTime(cu.getTime()+dt);
     cu.setStepCount(cu.getStepCount()+1);
+    cu.reorderAtoms();
 }
 
 double CudaIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
@@ -478,39 +457,36 @@ double CudaIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& contex
 struct MinimizerData {
     ContextImpl& context;
     CudaContext& cu;
-    vector<int>& reorderedDrudeParticles;
-    MinimizerData(ContextImpl& context, CudaContext& cu, vector<int>& reorderedDrudeParticles) : context(context), cu(cu), reorderedDrudeParticles(reorderedDrudeParticles) {}
+    vector<int>& drudeParticles;
+    MinimizerData(ContextImpl& context, CudaContext& cu, vector<int>& drudeParticles) : context(context), cu(cu), drudeParticles(drudeParticles) {}
 };
 
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
     MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
     ContextImpl& context = data->context;
     CudaContext& cu = data->cu;
-    vector<int>& reorderedDrudeParticles = data->reorderedDrudeParticles;
-    int numDrudeParticles = reorderedDrudeParticles.size();
+    vector<int>& drudeParticles = data->drudeParticles;
+    int numDrudeParticles = drudeParticles.size();
 
     // Set the particle positions.
     
     cu.getPosq().download(cu.getPinnedBuffer());
-    double4 periodicBoxSize = cu.getPeriodicBoxSize();
     if (cu.getUseDoublePrecision()) {
         double4* posq = (double4*) cu.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            double4& p = posq[reorderedDrudeParticles[i]];
-            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            p.x = x[3*i]+offset.x*periodicBoxSize.x;
-            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
-            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+            double4& p = posq[drudeParticles[i]];
+            p.x = x[3*i];
+            p.y = x[3*i+1];
+            p.z = x[3*i+2];
         }
     }
     else {
         float4* posq = (float4*) cu.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            float4& p = posq[reorderedDrudeParticles[i]];
-            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            p.x = x[3*i]+offset.x*periodicBoxSize.x;
-            p.y = x[3*i+1]+offset.y*periodicBoxSize.y;
-            p.z = x[3*i+2]+offset.z*periodicBoxSize.z;
+            float4& p = posq[drudeParticles[i]];
+            p.x = x[3*i];
+            p.y = x[3*i+1];
+            p.z = x[3*i+2];
         }
     }
     cu.getPosq().upload(cu.getPinnedBuffer());
@@ -523,7 +499,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     double forceScale = -1.0/0x100000000;
     int paddedNumAtoms = cu.getPaddedNumAtoms();
     for (int i = 0; i < numDrudeParticles; ++i) {
-        int index = reorderedDrudeParticles[i];
+        int index = drudeParticles[i];
         g[3*i] = forceScale*force[index];
         g[3*i+1] = forceScale*force[index+paddedNumAtoms];
         g[3*i+2] = forceScale*force[index+paddedNumAtoms*2];
@@ -534,27 +510,24 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 void CudaIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
     // Record the initial positions.
 
-    int numDrudeParticles = reorderedDrudeParticles.size();
+    int numDrudeParticles = drudeParticles.size();
     cu.getPosq().download(cu.getPinnedBuffer());
-    double4 periodicBoxSize = cu.getPeriodicBoxSize();
     if (cu.getUseDoublePrecision()) {
         double4* posq = (double4*) cu.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            double4 p = posq[reorderedDrudeParticles[i]];
-            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
-            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
-            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+            double4 p = posq[drudeParticles[i]];
+            minimizerPos[3*i] = p.x;
+            minimizerPos[3*i+1] = p.y;
+            minimizerPos[3*i+2] = p.z;
         }
     }
     else {
         float4* posq = (float4*) cu.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            float4 p = posq[reorderedDrudeParticles[i]];
-            int4 offset = cu.getPosCellOffsets()[reorderedDrudeParticles[i]];
-            minimizerPos[3*i] = p.x-offset.x*periodicBoxSize.x;
-            minimizerPos[3*i+1] = p.y-offset.y*periodicBoxSize.y;
-            minimizerPos[3*i+2] = p.z-offset.z*periodicBoxSize.z;
+            float4 p = posq[drudeParticles[i]];
+            minimizerPos[3*i] = p.x;
+            minimizerPos[3*i+1] = p.y;
+            minimizerPos[3*i+2] = p.z;
         }
         minimizerParams.xtol = 1e-7;
     }
@@ -571,6 +544,6 @@ void CudaIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tole
     // Perform the minimization.
 
     lbfgsfloatval_t fx;
-    MinimizerData data(context, cu, reorderedDrudeParticles);
+    MinimizerData data(context, cu, drudeParticles);
     lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }

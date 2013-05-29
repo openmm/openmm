@@ -190,6 +190,14 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
     cl.setTime(cl.getTime()+dt);
     cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
+    if (cl.getAtomsWereReordered() && cl.getNonbondedUtilities().getUsePeriodic()) {
+        // Atoms may have been translated into a different periodic box, so apply
+        // the same translation to all the beads.
+
+        translateKernel.setArg<cl_int>(3, numCopies-1);
+        cl.executeKernel(translateKernel, cl.getNumAtoms());
+    }
 }
 
 void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
@@ -199,13 +207,6 @@ void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         context.computeVirtualSites();
         context.updateContextState();
         context.calcForcesAndEnergy(true, false);
-        if (cl.getAtomsWereReordered() && cl.getNonbondedUtilities().getUsePeriodic()) {
-            // Atoms may have been translated into a different periodic box, so apply
-            // the same translation to all the beads.
-            
-            translateKernel.setArg<cl_int>(3, i);
-            cl.executeKernel(translateKernel, cl.getNumAtoms());
-        }
         copyFromContextKernel.setArg<cl_int>(7, i);
         cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
     }

@@ -739,12 +739,6 @@ void testChangingParameters() {
         nonbonded->getParticleParameters(i, charge, sigma, epsilon);
         nonbonded->setParticleParameters(i, 1.5*charge, 1.1*sigma, 1.7*epsilon);
     }
-    double total = 0;
-    for (int i = 0; i < numParticles; i++) {
-        double charge, sigma, epsilon;
-        nonbonded->getParticleParameters(i, charge, sigma, epsilon);
-        total += charge;
-    }
     nonbonded->updateParametersInContext(cuContext);
     nonbonded->updateParametersInContext(referenceContext);
     cuState = cuContext.getState(State::Forces | State::Energy);
