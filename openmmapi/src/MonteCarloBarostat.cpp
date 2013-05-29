@@ -35,7 +35,7 @@
 
 using namespace OpenMM;
 
-MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency, int anisotropic) :
+MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency, bool anisotropic) :
   defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), anisotropic(anisotropic) {
   setRandomNumberSeed((int) time(NULL));
 }
