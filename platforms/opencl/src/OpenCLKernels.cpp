@@ -5539,7 +5539,7 @@ OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
 void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
     savedPositions = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "savedPositions");
     cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
-    kernel = cl::Kernel(program, "scalePositions");
+    kernel = cl::Kernel(program, "scalePositionsXYZ");
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
@@ -5566,15 +5566,58 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 
         // Initialize the kernel arguments.
         
-        kernel.setArg<cl_int>(1, numMolecules);
-        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, moleculeAtoms->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(6, moleculeStartIndex->getDeviceBuffer());
+        kernel.setArg<cl_int>(3, numMolecules);
+        kernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(7, moleculeAtoms->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(8, moleculeStartIndex->getDeviceBuffer());
     }
     cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
     kernel.setArg<cl_float>(0, (cl_float) scale);
-    setPeriodicBoxSizeArg(cl, kernel, 2);
-    setInvPeriodicBoxSizeArg(cl, kernel, 3);
+    kernel.setArg<cl_float>(1, (cl_float) scale);
+    kernel.setArg<cl_float>(2, (cl_float) scale);
+    setPeriodicBoxSizeArg(cl, kernel, 4);
+    setInvPeriodicBoxSizeArg(cl, kernel, 5);
+    cl.executeKernel(kernel, cl.getNumAtoms());
+    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
+        cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
+    lastAtomOrder = cl.getAtomIndex();
+}
+
+void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinatesXYZ(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+
+        // Create the arrays with the molecule definitions.
+
+        vector<vector<int> > molecules = context.getMolecules();
+        numMolecules = molecules.size();
+        moleculeAtoms = OpenCLArray::create<int>(cl, cl.getNumAtoms(), "moleculeAtoms");
+        moleculeStartIndex = OpenCLArray::create<int>(cl, numMolecules+1, "moleculeStartIndex");
+        vector<int> atoms(moleculeAtoms->getSize());
+        vector<int> startIndex(moleculeStartIndex->getSize());
+        int index = 0;
+        for (int i = 0; i < numMolecules; i++) {
+            startIndex[i] = index;
+            for (int j = 0; j < (int) molecules[i].size(); j++)
+                atoms[index++] = molecules[i][j];
+        }
+        startIndex[numMolecules] = index;
+        moleculeAtoms->upload(atoms);
+        moleculeStartIndex->upload(startIndex);
+
+        // Initialize the kernel arguments.
+        
+        kernel.setArg<cl_int>(3, numMolecules);
+        kernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(7, moleculeAtoms->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(8, moleculeStartIndex->getDeviceBuffer());
+    }
+    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    kernel.setArg<cl_float>(0, (cl_float) scaleX);
+    kernel.setArg<cl_float>(1, (cl_float) scaleY);
+    kernel.setArg<cl_float>(2, (cl_float) scaleZ);
+    setPeriodicBoxSizeArg(cl, kernel, 4);
+    setInvPeriodicBoxSizeArg(cl, kernel, 5);
     cl.executeKernel(kernel, cl.getNumAtoms());
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);

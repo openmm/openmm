@@ -64,8 +64,9 @@ public:
      * @param defaultPressure   the default pressure acting on the system (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param anisotropic       switch to determine whether anisotropic barostat (independent xyz-coordinate scaling) is turned on.
      */
-    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25);
+    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25, int anisotropic = 0);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -73,6 +74,18 @@ public:
      */
     double getDefaultPressure() const {
         return defaultPressure;
+    }
+    /**
+     * Get the switch which specifies whether anisotropic barostat is turned on. 1 = On, 0 = Off
+     */
+    int getAnisotropic() const {
+        return anisotropic;
+    }
+    /**
+     * Set the switch which specifies whether anisotropic barostat is turned on. 1 = On, 0 = Off
+     */
+    void setAnisotropic(int aniso) {
+        anisotropic = aniso;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
@@ -122,7 +135,7 @@ protected:
     ForceImpl* createImpl() const;
 private:
     double defaultPressure, temperature;
-    int frequency, randomNumberSeed;
+    int frequency, anisotropic, randomNumberSeed;
 
         double GetTemperature() const {
             return temperature;

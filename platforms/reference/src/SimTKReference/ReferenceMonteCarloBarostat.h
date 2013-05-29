@@ -70,6 +70,20 @@ class ReferenceMonteCarloBarostat {
 
       /**---------------------------------------------------------------------------------------
 
+         Apply the barostat at the start of a time step, scaling x, y, and z coordinates independently.
+
+         @param atomPositions      atom positions
+         @param boxSize            the periodic box dimensions
+         @param scaleX             the factor by which to scale atomic x coordinates
+         @param scaleY             the factor by which to scale atomic y coordinates
+         @param scaleZ             the factor by which to scale atomic z coordinates
+
+         --------------------------------------------------------------------------------------- */
+
+      void applyBarostatXYZ(std::vector<OpenMM::RealVec>& atomPositions, const OpenMM::RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ);
+
+      /**---------------------------------------------------------------------------------------
+
          Restore atom positions to what they were before applyBarostat() was called.
 
          @param atomPositions      atom positions

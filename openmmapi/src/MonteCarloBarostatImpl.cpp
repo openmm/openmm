@@ -74,11 +74,36 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
+    
+    // Decide whether to scale coordinates or distort box.  
+    // If anisotropic parameter is set, scale the box with with 
+    // 50% chance (otherwise perform volume-preserving distortion).
     double deltaVolume = volumeScale*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale);
-    context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
+    if ((! owner.getAnisotropic()) || (genrand_real2(random) < 0.5)) {
+      kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale);
+      context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
+    } 
+    else {
+      deltaVolume = 0.0;
+      newVolume = volume;
+      double lengthScaleBack = std::pow(lengthScale, -1.0/2.0);
+      double lengthScaleX = lengthScaleBack;
+      double lengthScaleY = lengthScaleBack;
+      double lengthScaleZ = lengthScaleBack;
+      double randXYZ = 3.0 * genrand_real2(random);
+      // Randomly choose an axis to lengthen and shorten the other two in a volume-preserving way.
+      if (randXYZ < 1.0) {
+	lengthScaleX = lengthScale;
+      } else if (randXYZ < 2.0) {
+	lengthScaleY = lengthScale;
+      } else {
+	lengthScaleZ = lengthScale;
+      }
+      kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinatesXYZ(context, lengthScaleX, lengthScaleY, lengthScaleZ);
+      context.getOwner().setPeriodicBoxVectors(box[0]*lengthScaleX, box[1]*lengthScaleY, box[2]*lengthScaleZ);
+    }
 
     // Compute the energy of the modified system.
     

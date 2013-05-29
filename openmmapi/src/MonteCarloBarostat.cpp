@@ -35,9 +35,9 @@
 
 using namespace OpenMM;
 
-MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency) :
-        defaultPressure(defaultPressure), temperature(temperature), frequency(frequency) {
-    setRandomNumberSeed((int) time(NULL));
+MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency, int anisotropic) :
+  defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), anisotropic(anisotropic) {
+  setRandomNumberSeed((int) time(NULL));
 }
 
 ForceImpl* MonteCarloBarostat::createImpl() const {

@@ -88,7 +88,7 @@ void testChangingBoxSize() {
     ASSERT(ok);
 }
 
-void testIdealGas() {
+void testIdealGas(int aniso) {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
@@ -110,7 +110,7 @@ void testIdealGas() {
         system.addParticle(1.0);
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
-    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
+    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency, aniso);
     system.addForce(barostat);
 
     // Test it for three different temperatures.
@@ -132,8 +132,10 @@ void testIdealGas() {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
-            ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
-            ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
+	    if (!aniso) {
+	      ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
+	      ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
+	    }
             integrator.step(frequency);
         }
         volume /= steps;
@@ -208,7 +210,8 @@ void testRandomSeed() {
 int main() {
     try {
         testChangingBoxSize();
-        testIdealGas();
+        testIdealGas(0);
+        testIdealGas(1);
         testRandomSeed();
     }
     catch(const exception& e) {

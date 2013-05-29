@@ -1266,6 +1266,19 @@ public:
      */
     void scaleCoordinates(ContextImpl& context, double scale);
     /**
+     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
+     * This version scales the x, y, and z positions independently.
+     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
+     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
+     * is changed.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param scaleX     the scale factor by which to multiply particle x-coordinate
+     * @param scaleY     the scale factor by which to multiply particle y-coordinate
+     * @param scaleZ     the scale factor by which to multiply particle z-coordinate
+     */
+    void scaleCoordinatesXYZ(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
+    /**
      * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
      * scaleCoordinates() was last called.
      *
