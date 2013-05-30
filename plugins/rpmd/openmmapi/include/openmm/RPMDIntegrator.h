@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,7 @@
 #include "openmm/State.h"
 #include "openmm/Vec3.h"
 #include "openmm/internal/windowsExportRpmd.h"
+#include <map>
 
 namespace OpenMM {
 
@@ -52,6 +53,14 @@ namespace OpenMM {
  * to set them for specific copies of the System.  Similarly, you should retrieve state information
  * for particular copies by calling getState() on the Integrator.  Do not query the Context for
  * state information.
+ * 
+ * You can optionally specify a set of "ring polymer contractions", by which different force
+ * groups are evaluated on different numbers of copies, instead of computing every force on
+ * every copy.  This can be much more efficient, since different forces may vary widely in
+ * how many times they must be evaluated to produce sufficient accuracy.  For example, you
+ * might simulate a 32 copy ring polymer and evaluate bonded forces on every copy, but contract
+ * it down to only 6 copies for computing nonbonded interactions, and down to only a single
+ * copy (the centroid) for computing the reciprocal space part of PME.
  */
 
 class OPENMM_EXPORT_RPMD RPMDIntegrator : public Integrator {
@@ -65,6 +74,19 @@ public:
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
      */
     RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize);
+    /**
+     * Create a RPMDIntegrator.
+     *
+     * @param numCopies      the number of copies of the system that should be simulated
+     * @param temperature    the temperature of the heat bath (in Kelvin)
+     * @param frictionCoeff  the friction coefficient which couples the system to the heat bath (in inverse picoseconds)
+     * @param stepSize       the step size with which to integrator the system (in picoseconds)
+     * @param contractions   the ring polymer contractions to use for evaluating different force groups.  Each key in the
+     *                       map is the index of a force group, and the corresponding value is the number of copies to evaluate
+     *                       that force group on.  If no entry is provided for a force group (the default), it is evaluated
+     *                       independently on every copy.
+     */
+    RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize, const std::map<int, int>& contractions);
     /**
      * Get the number of copies of the system being simulated.
      */
@@ -121,6 +143,15 @@ public:
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
+    }
+    /**
+     * Get the ring polymer contractions to use for evaluating different force groups.  Each key in the
+     * map is the index of a force group, and the corresponding value is the number of copies to evaluate
+     * that force group on.  If no entry is provided for a force group, it is evaluated independently on
+     * every copy.
+     */
+    const std::map<int, int>& getContractions() const {
+        return contractions;
     }
     /**
      * Set the positions of all particles in one copy of the system.
@@ -182,6 +213,7 @@ protected:
 private:
     double temperature, friction;
     int numCopies, randomNumberSeed;
+    std::map<int, int> contractions;
     bool forcesAreValid, hasSetPosition, hasSetVelocity, isFirstStep;
     Kernel kernel;
 };
