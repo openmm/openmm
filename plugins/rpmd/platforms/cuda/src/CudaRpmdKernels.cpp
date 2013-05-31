@@ -169,7 +169,7 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
         replacements.clear();
         replacements["NUM_CONTRACTED_COPIES"] = cu.intToString(copies);
         replacements["POS_SCALE"] = cu.doubleToString(1.0/numCopies);
-        replacements["FORCE_SCALE"] = cu.doubleToString(1.0/copies);
+        replacements["FORCE_SCALE"] = cu.doubleToString(0x100000000/(double) copies);
         replacements["FFT_Q_FORWARD"] = createFFT(numCopies, "q", true);
         replacements["FFT_Q_BACKWARD"] = createFFT(copies, "q", false);
         replacements["FFT_F_FORWARD"] = createFFT(copies, "f", true);

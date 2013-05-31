@@ -48,6 +48,10 @@ OpenCLIntegrateRPMDStepKernel::~OpenCLIntegrateRPMDStepKernel() {
         delete positions;
     if (velocities != NULL)
         delete velocities;
+    if (contractedForces != NULL)
+        delete contractedForces;
+    if (contractedPositions != NULL)
+        delete contractedPositions;
 }
 
 void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
@@ -86,6 +90,34 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
             temp[i] = mm_float4(0, 0, 0, 1);
         velocities->upload(temp);
     }
+    
+    // Build a list of contractions.
+    
+    groupsNotContracted = -1;
+    const map<int, int>& contractions = integrator.getContractions();
+    int maxContractedCopies = 0;
+    for (map<int, int>::const_iterator iter = contractions.begin(); iter != contractions.end(); ++iter) {
+        int group = iter->first;
+        int copies = iter->second;
+        if (group < 0 || group > 31)
+            throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
+        if (copies < 0 || copies > numCopies)
+            throw OpenMMException("RPMDIntegrator: Number of copies for contraction cannot be greater than the total number of copies being simulated");
+        if (copies != numCopies) {
+            if (groupsByCopies.find(copies) == groupsByCopies.end()) {
+                groupsByCopies[copies] = 1<<group;
+                groupsNotContracted -= 1<<group;
+                if (copies > maxContractedCopies)
+                    maxContractedCopies = copies;
+            }
+            else
+                groupsByCopies[copies] |= 1<<group;
+        }
+    }
+    if (maxContractedCopies > 0) {
+        contractedForces = new OpenCLArray(cl, maxContractedCopies*paddedParticles, forceElementSize, "rpmdContractedForces");
+        contractedPositions = new OpenCLArray(cl, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
+    }
 
     // Create kernels.
     
@@ -109,6 +141,23 @@ void OpenCLIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     copyToContextKernel = cl::Kernel(program, "copyDataToContext");
     copyFromContextKernel = cl::Kernel(program, "copyDataFromContext");
     translateKernel = cl::Kernel(program, "applyCellTranslations");
+    
+    // Create kernels for doing contractions.
+    
+    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
+        int copies = iter->first;
+        replacements.clear();
+        replacements["NUM_CONTRACTED_COPIES"] = cl.intToString(copies);
+        replacements["POS_SCALE"] = cl.doubleToString(1.0/numCopies);
+        replacements["FORCE_SCALE"] = cl.doubleToString(1.0/copies);
+        replacements["FFT_Q_FORWARD"] = createFFT(numCopies, "q", true);
+        replacements["FFT_Q_BACKWARD"] = createFFT(copies, "q", false);
+        replacements["FFT_F_FORWARD"] = createFFT(copies, "f", true);
+        replacements["FFT_F_BACKWARD"] = createFFT(numCopies, "f", false);
+        program = cl.createProgram(cl.replaceStrings(OpenCLRpmdKernelSources::rpmdContraction, replacements), defines, "");
+        positionContractionKernels[copies] = cl::Kernel(program, "contractPositions");
+        forceContractionKernels[copies] = cl::Kernel(program, "contractForces");
+    }
 }
 
 void OpenCLIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
@@ -124,16 +173,20 @@ void OpenCLIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     translateKernel.setArg<cl::Buffer>(2, cl.getAtomIndexArray().getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(0, velocities->getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-    copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
     copyToContextKernel.setArg<cl::Buffer>(4, cl.getAtomIndexArray().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(3, velocities->getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-    copyFromContextKernel.setArg<cl::Buffer>(5, positions->getDeviceBuffer());
     copyFromContextKernel.setArg<cl::Buffer>(6, cl.getAtomIndexArray().getDeviceBuffer());
+    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
+        int copies = iter->first;
+        positionContractionKernels[copies].setArg<cl::Buffer>(0, positions->getDeviceBuffer());
+        positionContractionKernels[copies].setArg<cl::Buffer>(1, contractedPositions->getDeviceBuffer());
+        forceContractionKernels[copies].setArg<cl::Buffer>(0, forces->getDeviceBuffer());
+        forceContractionKernels[copies].setArg<cl::Buffer>(1, contractedForces->getDeviceBuffer());
+    }
 }
 
 void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -201,14 +254,50 @@ void OpenCLIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 }
 
 void OpenCLIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
+    // Compute forces from all groups that didn't have a specified contraction.
+
+    copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(1, forces->getDeviceBuffer());
+    copyFromContextKernel.setArg<cl::Buffer>(5, positions->getDeviceBuffer());
     for (int i = 0; i < numCopies; i++) {
         copyToContextKernel.setArg<cl_int>(5, i);
         cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
         context.computeVirtualSites();
         context.updateContextState();
-        context.calcForcesAndEnergy(true, false);
+        context.calcForcesAndEnergy(true, false, groupsNotContracted);
         copyFromContextKernel.setArg<cl_int>(7, i);
         cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
+    }
+    
+    // Now loop over contractions and compute forces from them.
+    
+    if (groupsByCopies.size() > 0) {
+        copyToContextKernel.setArg<cl::Buffer>(2, contractedPositions->getDeviceBuffer());
+        copyFromContextKernel.setArg<cl::Buffer>(1, contractedForces->getDeviceBuffer());
+        copyFromContextKernel.setArg<cl::Buffer>(5, contractedPositions->getDeviceBuffer());
+        for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
+            int copies = iter->first;
+            int groupFlags = iter->second;
+
+            // Find the contracted positions.
+
+            cl.executeKernel(positionContractionKernels[copies], numParticles*numCopies, workgroupSize);
+
+            // Compute forces.
+
+            for (int i = 0; i < copies; i++) {
+                copyToContextKernel.setArg<cl_int>(5, i);
+                cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
+                context.computeVirtualSites();
+                context.calcForcesAndEnergy(true, false, groupFlags);
+                copyFromContextKernel.setArg<cl_int>(7, i);
+                cl.executeKernel(copyFromContextKernel, cl.getNumAtoms());
+            }
+
+            // Apply the forces to the original copies.
+
+            cl.executeKernel(forceContractionKernels[copies], numParticles*numCopies, workgroupSize);
+        }
     }
 }
 
@@ -269,6 +358,7 @@ void OpenCLIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
 void OpenCLIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
     if (!hasInitializedKernel)
         initializeKernels(context);
+    copyToContextKernel.setArg<cl::Buffer>(2, positions->getDeviceBuffer());
     copyToContextKernel.setArg<cl_int>(5, copy);
     cl.executeKernel(copyToContextKernel, cl.getNumAtoms());
 }

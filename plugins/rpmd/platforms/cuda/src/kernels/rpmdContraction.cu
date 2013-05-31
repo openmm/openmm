@@ -87,7 +87,7 @@ extern "C" __global__ void contractForces(long long* force, long long* contracte
         
         int forceIndex = particle+indexInBlock*PADDED_NUM_ATOMS*3;
         if (indexInBlock < NUM_CONTRACTED_COPIES) {
-            freal[indexInBlock] = make_mixed3(contracted[forceIndex], contracted[forceIndex+PADDED_NUM_ATOMS], contracted[forceIndex+PADDED_NUM_ATOMS*2]);
+            freal[indexInBlock] = make_mixed3(contracted[forceIndex]*forceScale, contracted[forceIndex+PADDED_NUM_ATOMS]*forceScale, contracted[forceIndex+PADDED_NUM_ATOMS*2]*forceScale);
             fimag[indexInBlock] = make_mixed3(0);
         }
         __syncthreads();
@@ -114,8 +114,8 @@ extern "C" __global__ void contractForces(long long* force, long long* contracte
         
         // Store results.
         
-        force[forceIndex] = FORCE_SCALE*freal[indexInBlock].x;
-        force[forceIndex+PADDED_NUM_ATOMS] = FORCE_SCALE*freal[indexInBlock].y;
-        force[forceIndex+PADDED_NUM_ATOMS*2] = FORCE_SCALE*freal[indexInBlock].z;
+        force[forceIndex] = (long long) (FORCE_SCALE*freal[indexInBlock].x);
+        force[forceIndex+PADDED_NUM_ATOMS] = (long long) (FORCE_SCALE*freal[indexInBlock].y);
+        force[forceIndex+PADDED_NUM_ATOMS*2] = (long long) (FORCE_SCALE*freal[indexInBlock].z);
     }
 }

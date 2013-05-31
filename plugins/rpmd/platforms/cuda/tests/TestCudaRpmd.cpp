@@ -440,6 +440,7 @@ int main(int argc, char* argv[]) {
         testParaHydrogen();
         testCMMotionRemoval();
         testVirtualSites();
+        testContractions();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
