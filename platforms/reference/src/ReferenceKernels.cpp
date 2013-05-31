@@ -2143,20 +2143,12 @@ ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel(
 void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& barostat) {
 }
 
-void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     if (barostat == NULL)
         barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
     vector<RealVec>& posData = extractPositions(context);
     RealVec& boxSize = extractBoxSize(context);
-    barostat->applyBarostatXYZ(posData, boxSize, scale, scale, scale);
-}
-
-void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinatesXYZ(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
-    if (barostat == NULL)
-        barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
-    vector<RealVec>& posData = extractPositions(context);
-    RealVec& boxSize = extractBoxSize(context);
-    barostat->applyBarostatXYZ(posData, boxSize, scaleX, scaleY, scaleZ);
+    barostat->applyBarostat(posData, boxSize, scaleX, scaleY, scaleZ);
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {

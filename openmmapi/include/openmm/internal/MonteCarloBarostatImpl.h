@@ -35,6 +35,7 @@
 #include "ForceImpl.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/Kernel.h"
+#include "openmm/Vec3.h"
 #include "sfmt/SFMT.h"
 #include <string>
 
@@ -62,6 +63,28 @@ private:
     const MonteCarloBarostat& owner;
     int step, numAttempted, numAccepted;
     double volumeScale;
+    OpenMM_SFMT::SFMT random;
+    Kernel kernel;
+};
+
+class MonteCarloAnisotropicBarostatImpl : public ForceImpl {
+public:
+    MonteCarloAnisotropicBarostatImpl(const MonteCarloAnisotropicBarostat& owner);
+    void initialize(ContextImpl& context);
+    const MonteCarloAnisotropicBarostat& getOwner() const {
+        return owner;
+    }
+    void updateContextState(ContextImpl& context);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+        // This force doesn't apply forces to particles.
+        return 0.0;
+    }
+    std::map<std::string, Vec3> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
+private:
+    const MonteCarloAnisotropicBarostat& owner;
+    int step, numAttempted[3], numAccepted[3];
+    double volumeScale[3];
     OpenMM_SFMT::SFMT random;
     Kernel kernel;
 };

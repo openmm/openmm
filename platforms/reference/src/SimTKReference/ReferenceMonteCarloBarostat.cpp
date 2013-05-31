@@ -58,59 +58,13 @@ ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
 
   @param atomPositions      atom positions
   @param boxSize            the periodic box dimensions
-  @param scale              the factor by which to scale atom positions
+  @param scaleX             the factor by which to scale atom x-coordinates
+  @param scaleY             the factor by which to scale atom y-coordinates
+  @param scaleZ             the factor by which to scale atom z-coordinates
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scale) {
-    int numAtoms = savedAtomPositions[0].size();
-    for (int i = 0; i < numAtoms; i++)
-        for (int j = 0; j < 3; j++)
-            savedAtomPositions[j][i] = atomPositions[i][j];
-
-    // Loop over molecules.
-
-    for (int i = 0; i < (int) molecules.size(); i++) {
-        // Find the molecule center.
-
-        RealOpenMM pos[3] = {0, 0, 0};
-        for (int j = 0; j < (int) molecules[i].size(); j++) {
-            RealVec& atomPos = atomPositions[molecules[i][j]];
-            pos[0] += atomPos[0];
-            pos[1] += atomPos[1];
-            pos[2] += atomPos[2];
-        }
-        pos[0] /= molecules[i].size();
-        pos[1] /= molecules[i].size();
-        pos[2] /= molecules[i].size();
-
-        // Move it into the first periodic box.
-
-        int xcell = (int) floor(pos[0]/boxSize[0]);
-        int ycell = (int) floor(pos[1]/boxSize[1]);
-        int zcell = (int) floor(pos[2]/boxSize[2]);
-        RealOpenMM dx = xcell*boxSize[0];
-        RealOpenMM dy = ycell*boxSize[1];
-        RealOpenMM dz = zcell*boxSize[2];
-        pos[0] -= dx;
-        pos[1] -= dy;
-        pos[2] -= dz;
-
-        // Now scale the position of the molecule center.
-
-        dx = pos[0]*(scale-1)-dx;
-        dy = pos[1]*(scale-1)-dy;
-        dz = pos[2]*(scale-1)-dz;
-        for (int j = 0; j < (int) molecules[i].size(); j++) {
-            RealVec& atomPos = atomPositions[molecules[i][j]];
-            atomPos[0] += dx;
-            atomPos[1] += dy;
-            atomPos[2] += dz;
-        }
-    }
-}
-
-void ReferenceMonteCarloBarostat::applyBarostatXYZ(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)

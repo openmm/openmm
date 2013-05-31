@@ -5314,52 +5314,10 @@ void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const M
     cu.setAsCurrent();
     savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
     CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
-    kernel = cu.getKernel(module, "scalePositionsXYZ");
+    kernel = cu.getKernel(module, "scalePositions");
 }
 
-void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
-    cu.setAsCurrent();
-    if (!hasInitializedKernels) {
-        hasInitializedKernels = true;
-
-        // Create the arrays with the molecule definitions.
-
-        vector<vector<int> > molecules = context.getMolecules();
-        numMolecules = molecules.size();
-        moleculeAtoms = CudaArray::create<int>(cu, cu.getNumAtoms(), "moleculeAtoms");
-        moleculeStartIndex = CudaArray::create<int>(cu, numMolecules+1, "moleculeStartIndex");
-        vector<int> atoms(moleculeAtoms->getSize());
-        vector<int> startIndex(moleculeStartIndex->getSize());
-        int index = 0;
-        for (int i = 0; i < numMolecules; i++) {
-            startIndex[i] = index;
-            for (int j = 0; j < (int) molecules[i].size(); j++)
-                atoms[index++] = molecules[i][j];
-        }
-        startIndex[numMolecules] = index;
-        moleculeAtoms->upload(atoms);
-        moleculeStartIndex->upload(startIndex);
-
-        // Initialize the kernel arguments.
-        
-    }
-    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-    CUresult result = cuMemcpyDtoD(savedPositions->getDevicePointer(), cu.getPosq().getDevicePointer(), bytesToCopy);
-    if (result != CUDA_SUCCESS) {
-        std::stringstream m;
-        m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(m.str());
-    }        
-    float scalef = (float) scale;
-    void* args[] = {&scalef, &scalef, &scalef, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
-            &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
-    cu.executeKernel(kernel, args, cu.getNumAtoms());
-    for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
-        cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);
-    lastAtomOrder = cu.getAtomIndex();
-}
-
-void CudaApplyMonteCarloBarostatKernel::scaleCoordinatesXYZ(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     cu.setAsCurrent();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;

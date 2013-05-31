@@ -35,11 +35,20 @@
 
 using namespace OpenMM;
 
-MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency, bool anisotropic) :
-  defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), anisotropic(anisotropic) {
-  setRandomNumberSeed((int) time(NULL));
+MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency) :
+        defaultPressure(defaultPressure), temperature(temperature), frequency(frequency) {
+    setRandomNumberSeed((int) time(NULL));
 }
 
 ForceImpl* MonteCarloBarostat::createImpl() const {
     return new MonteCarloBarostatImpl(*this);
+}
+
+MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(Vec3 defaultPressure, double temperature, int frequency, bool scaleX, bool scaleY, bool scaleZ) :
+  defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ) {
+    setRandomNumberSeed((int) time(NULL));
+}
+
+ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {
+    return new MonteCarloAnisotropicBarostatImpl(*this);
 }

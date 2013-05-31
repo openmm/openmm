@@ -35,6 +35,7 @@
 #include "Force.h"
 #include <string>
 #include "internal/windowsExport.h"
+#include "Vec3.h"
 
 namespace OpenMM {
 
@@ -64,9 +65,8 @@ public:
      * @param defaultPressure   the default pressure acting on the system (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
-     * @param anisotropic       switch to determine whether anisotropic barostat (independent xyz-coordinate scaling) is turned on.
      */
-    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25, bool anisotropic = 0);
+    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -74,18 +74,6 @@ public:
      */
     double getDefaultPressure() const {
         return defaultPressure;
-    }
-    /**
-     * Get the switch which specifies whether anisotropic barostat is turned on. 1 = On, 0 = Off
-     */
-    int getAnisotropic() const {
-        return anisotropic;
-    }
-    /**
-     * Set the switch which specifies whether anisotropic barostat is turned on. 1 = On, 0 = Off
-     */
-    void setAnisotropic(bool aniso) {
-        anisotropic = aniso;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
@@ -136,7 +124,108 @@ protected:
 private:
     double defaultPressure, temperature;
     int frequency, randomNumberSeed;
-    bool anisotropic;
+
+        double GetTemperature() const {
+            return temperature;
+        }
+
+        void SetTemperature(double temperature) {
+            this->temperature = temperature;
+        }
+    };
+
+/**
+ * This class uses a Monte Carlo algorithm to adjust the size of the periodic box, simulating the
+ * effect of constant pressure.
+ *
+ * Compared to MonteCarloBarostat, this class scales the three axes of the simulation cell independently.
+ * The user supplies a Vec3 instead of a double to specify the pressure along each axis if desired.
+ *
+ * This class assumes the simulation is also being run at constant temperature, and requires you
+ * to specify the system temperature (since it affects the acceptance probability for Monte Carlo
+ * moves).  It does not actually perform temperature regulation, however.  You must use another
+ * mechanism along with it to maintain the temperature, such as LangevinIntegrator or AndersenThermostat.
+ */
+
+class OPENMM_EXPORT MonteCarloAnisotropicBarostat : public Force {
+public:
+    /**
+     * This is the name of the parameter which stores the current pressure acting on
+     * the system (in bar).
+     */
+    static const std::string& Pressure() {
+        static const std::string key = "MonteCarloPressure";
+        return key;
+    }
+    /**
+     * Create a MonteCarloAnisotropicBarostat.
+     *
+     * @param defaultPressure   the default pressure acting on each axis of the system (in bar)
+     * @param temperature       the temperature at which the system is being maintained (in Kelvin)
+     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleX            on/off switch for whether to scale the X axis
+     * @param scaleY            on/off switch for whether to scale the Y axis
+     * @param scaleZ            on/off switch for whether to scale the Z axis
+     */
+    MonteCarloAnisotropicBarostat(Vec3 defaultPressure, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
+    /**
+     * Get the default pressure acting on the system (in bar).
+     *
+     * @return the default pressure acting on the system, measured in bar.
+     */
+    Vec3 getDefaultPressure() const {
+        return defaultPressure;
+    }
+    /**
+     * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
+     * 0, the barostat is disabled.
+     */
+    int getFrequency() const {
+        return frequency;
+    }
+    /**
+     * Set the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
+     * 0, the barostat is disabled.
+     */
+    void setFrequency(int freq) {
+        frequency = freq;
+    }
+    /**
+     * Get the temperature at which the system is being maintained, measured in Kelvin.
+     */
+    double getTemperature() const {
+        return temperature;
+    }
+    /**
+     * Set the temperature at which the system is being maintained.
+     *
+     * @param temp     the system temperature, measured in Kelvin.
+     */
+    void setTemperature(double temp) {
+        temperature = temp;
+    }
+    /**
+     * Get the random number seed.  See setRandomNumberSeed() for details.
+     */
+    int getRandomNumberSeed() const {
+        return randomNumberSeed;
+    }
+    /**
+     * Set the random number seed.  It is guaranteed that if two simulations are run
+     * with different random number seeds, the sequence of Monte Carlo steps will be different.  On
+     * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
+     * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
+     * results on successive runs, even if those runs were initialized identically.
+     */
+    void setRandomNumberSeed(int seed) {
+        randomNumberSeed = seed;
+    }
+protected:
+    ForceImpl* createImpl() const;
+private:
+    Vec3 defaultPressure;
+    double temperature;
+    int frequency, randomNumberSeed;
 
         double GetTemperature() const {
             return temperature;

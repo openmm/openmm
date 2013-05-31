@@ -74,36 +74,11 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
-    
-    // Decide whether to scale coordinates or distort box.  
-    // If anisotropic parameter is set, scale the box with with 
-    // 50% chance (otherwise perform volume-preserving distortion).
     double deltaVolume = volumeScale*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
-    if ((! owner.getAnisotropic()) || (genrand_real2(random) < 0.5)) {
-      kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale);
-      context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
-    } 
-    else {
-      deltaVolume = 0.0;
-      newVolume = volume;
-      double lengthScaleBack = std::pow(lengthScale, -1.0/2.0);
-      double lengthScaleX = lengthScaleBack;
-      double lengthScaleY = lengthScaleBack;
-      double lengthScaleZ = lengthScaleBack;
-      double randXYZ = 3.0 * genrand_real2(random);
-      // Randomly choose an axis to lengthen and shorten the other two in a volume-preserving way.
-      if (randXYZ < 1.0) {
-	lengthScaleX = lengthScale;
-      } else if (randXYZ < 2.0) {
-	lengthScaleY = lengthScale;
-      } else {
-	lengthScaleZ = lengthScale;
-      }
-      kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinatesXYZ(context, lengthScaleX, lengthScaleY, lengthScaleZ);
-      context.getOwner().setPeriodicBoxVectors(box[0]*lengthScaleX, box[1]*lengthScaleY, box[2]*lengthScaleZ);
-    }
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
+    context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
 
     // Compute the energy of the modified system.
     
@@ -142,6 +117,106 @@ std::map<std::string, double> MonteCarloBarostatImpl::getDefaultParameters() {
 }
 
 std::vector<std::string> MonteCarloBarostatImpl::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(ApplyMonteCarloBarostatKernel::Name());
+    return names;
+}
+
+MonteCarloAnisotropicBarostatImpl::MonteCarloAnisotropicBarostatImpl(const MonteCarloBarostat& owner) : owner(owner), step(0) {
+}
+
+void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
+    Vec3 box[3];
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    double volume = box[0][0]*box[1][1]*box[2][2];
+    for (int i=0; i<3; i++) {
+        volumeScale[i] = 0.01*volume;
+        numAttempted[i] = 0;
+        numAccepted[i] = 0;
+    }
+    init_gen_rand(owner.getRandomNumberSeed(), random);
+}
+
+void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context) {
+    if (++step < owner.getFrequency() || owner.getFrequency() == 0)
+        return;
+    if (scaleX == 0 && scaleY == 0 && scaleZ == 0)
+        return;
+    step = 0;
+
+    // Compute the current potential energy.
+
+    double initialEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
+
+    // Choose which axis to modify at random.
+    double rnd = genrand_real2(random)*3.0;
+    int axis;
+    while (1) {
+        if (rnd < 1.0 && scaleX) {
+            axis = 0;
+            break;
+        } else if (rnd < 2.0 && scaleY) {
+            axis = 1;
+            break;
+        } else if (scaleZ) {
+            axis = 2;
+            break;
+        }
+    }
+
+    // Modify the periodic box size.
+
+    Vec3 box[3];
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    double volume = box[0][0]*box[1][1]*box[2][2];
+    double deltaVolume = volumeScale[axis]*2*(genrand_real2(random)-0.5);
+    double newVolume = volume+deltaVolume;
+    Vec3 lengthScale;
+    for (int i=0; i<3; i++)
+      lengthScale[i] = 1.0;
+    lengthScale[axis] = newVolume/volume;
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
+    context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
+
+    // Compute the energy of the modified system.
+    
+    double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
+    double pressure = context.getParameter(MonteCarloBarostat::Pressure())[axis]*(AVOGADRO*1e-25);
+    double kT = BOLTZ*owner.getTemperature();
+    double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
+    if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
+        // Reject the step.
+
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
+        context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume = newVolume;
+    }
+    else
+        numAccepted[axis]++;
+    numAttempted[axis]++;
+    if (numAttempted[axis] >= 10) {
+        if (numAccepted[axis] < 0.25*numAttempted[axis]) {
+            volumeScale[axis] /= 1.1;
+            numAttempted[axis] = 0;
+            numAccepted[axis] = 0;
+        }
+        else if (numAccepted[axis] > 0.75*numAttempted[axis]) {
+            volumeScale[axis] = std::min(volumeScale[axis]*1.1, volume*0.3);
+            numAttempted[axis] = 0;
+            numAccepted[axis] = 0;
+        }
+    }
+}
+
+std::map<std::string, double[3]> MonteCarloAnisotropicBarostatImpl::getDefaultParameters() {
+    std::map<std::string, double[3]> parameters;
+    parameters[MonteCarloBarostat::Pressure()] = getOwner().getDefaultPressure();
+    return parameters;
+}
+
+std::vector<std::string> MonteCarloAnisotropicBarostatImpl::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(ApplyMonteCarloBarostatKernel::Name());
     return names;
