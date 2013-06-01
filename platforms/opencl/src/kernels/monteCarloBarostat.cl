@@ -22,7 +22,7 @@ __kernel void scalePositions(float scaleX, float scaleY, float scaleZ, int numMo
         int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
         int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
         real4 delta = (real4) (xcell*periodicBoxSize.x, ycell*periodicBoxSize.y, zcell*periodicBoxSize.z, 0);
-	real4 scaleXYZ = (real4) (scaleX, scaleY, scaleZ, 1);
+        real4 scaleXYZ = (real4) (scaleX, scaleY, scaleZ, 1);
         center -= delta;
 
         // Now scale the position of the molecule center.

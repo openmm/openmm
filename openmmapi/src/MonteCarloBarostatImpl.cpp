@@ -64,13 +64,13 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
     step = 0;
-
+    
     // Compute the current potential energy.
-
+    
     double initialEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
-
+    
     // Modify the periodic box size.
-
+    
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -79,7 +79,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
-
+    
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
@@ -88,7 +88,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
-
+        
         kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         volume = newVolume;
@@ -145,33 +145,33 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     if (owner.getScaleX() == 0 && owner.getScaleY() == 0 && owner.getScaleZ() == 0)
         return;
     step = 0;
-
+    
     // Compute the current potential energy.
-
+    
     double initialEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
     double pressure;
-
+    
     // Choose which axis to modify at random.
     double rnd = genrand_real2(random)*3.0;
     int axis;
     while (1) {
         if (rnd < 1.0 && owner.getScaleX()) {
             axis = 0;
-	    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
+            pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
             break;
         } else if (rnd < 2.0 && owner.getScaleY()) {
             axis = 1;
-	    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
+            pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
             break;
         } else if (owner.getScaleZ()) {
             axis = 2;
-	    pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
+            pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
             break;
         }
     }
-
+    
     // Modify the periodic box size.
-
+    
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -179,11 +179,11 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     double newVolume = volume+deltaVolume;
     Vec3 lengthScale;
     for (int i=0; i<3; i++)
-      lengthScale[i] = 1.0;
+        lengthScale[i] = 1.0;
     lengthScale[axis] = newVolume/volume;
     kernel.getAs<ApplyMonteCarloAnisotropicBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
-
+    
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
@@ -191,7 +191,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
-
+        
         kernel.getAs<ApplyMonteCarloAnisotropicBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         volume = newVolume;

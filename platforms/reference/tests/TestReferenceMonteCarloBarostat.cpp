@@ -97,9 +97,9 @@ void testIdealGas(int aniso) {
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
-
+    
     // Create a gas of noninteracting particles.
-
+    
     ReferencePlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
@@ -112,32 +112,32 @@ void testIdealGas(int aniso) {
     }
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
     if (aniso)
-      MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
+        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
     system.addForce(barostat);
-
+    
     // Test it for three different temperatures.
-
+    
     for (int i = 0; i < 3; i++) {
         barostat->setTemperature(temp[i]);
         LangevinIntegrator integrator(temp[i], 0.1, 0.01);
         Context context(system, integrator, platform);
         context.setPositions(positions);
-
+        
         // Let it equilibrate.
-
+        
         integrator.step(10000);
-
+        
         // Now run it for a while and see if the volume is correct.
-
+        
         double volume = 0.0;
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
-	    if (!aniso) {
-	      ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
-	      ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
-	    }
+            if (!aniso) {
+                ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
+                ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
+            }
             integrator.step(frequency);
         }
         volume /= steps;
@@ -169,9 +169,9 @@ void testRandomSeed() {
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
         velocities[i] = Vec3(0, 0, 0);
     }
-
+    
     // Try twice with the same random seed.
-
+    
     barostat->setRandomNumberSeed(5);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -183,9 +183,9 @@ void testRandomSeed() {
     context.setVelocities(velocities);
     integrator.step(10);
     State state2 = context.getState(State::Positions);
-
+    
     // Try twice with a different random seed.
-
+    
     barostat->setRandomNumberSeed(10);
     context.reinitialize();
     context.setPositions(positions);
@@ -197,9 +197,9 @@ void testRandomSeed() {
     context.setVelocities(velocities);
     integrator.step(10);
     State state4 = context.getState(State::Positions);
-
+    
     // Compare the results.
-
+    
     for (int i = 0; i < numParticles; i++) {
         for (int j = 0; j < 3; j++) {
             ASSERT(state1.getPositions()[i][j] == state2.getPositions()[i][j]);
