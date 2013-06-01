@@ -5310,7 +5310,7 @@ CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
         delete moleculeStartIndex;
 }
 
-void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     cu.setAsCurrent();
     savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
     CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
@@ -5370,13 +5370,6 @@ void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context)
         m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }
-}
-
-void CudaApplyMonteCarloAnisotropicBarostatKernel::initialize(const System& system, const MonteCarloAnisotropicBarostat& thermostat) {
-    cu.setAsCurrent();
-    savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
-    CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
-    kernel = cu.getKernel(module, "scalePositions");
 }
 
 CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {

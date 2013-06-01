@@ -126,8 +126,8 @@ MonteCarloAnisotropicBarostatImpl::MonteCarloAnisotropicBarostatImpl(const Monte
 }
 
 void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
-    kernel = context.getPlatform().createKernel(ApplyMonteCarloAnisotropicBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloAnisotropicBarostatKernel>().initialize(context.getSystem(), owner);
+    kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -181,7 +181,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     for (int i=0; i<3; i++)
         lengthScale[i] = 1.0;
     lengthScale[axis] = newVolume/volume;
-    kernel.getAs<ApplyMonteCarloAnisotropicBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
     
     // Compute the energy of the modified system.
@@ -192,7 +192,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
         // Reject the step.
         
-        kernel.getAs<ApplyMonteCarloAnisotropicBarostatKernel>().restoreCoordinates(context);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         volume = newVolume;
     }
@@ -223,7 +223,7 @@ std::map<std::string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParam
 
 std::vector<std::string> MonteCarloAnisotropicBarostatImpl::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(ApplyMonteCarloAnisotropicBarostatKernel::Name());
+    names.push_back(ApplyMonteCarloBarostatKernel::Name());
     return names;
 }
 

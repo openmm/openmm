@@ -5536,7 +5536,7 @@ OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
         delete moleculeStartIndex;
 }
 
-void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     savedPositions = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "savedPositions");
     cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
     kernel = cl::Kernel(program, "scalePositions");

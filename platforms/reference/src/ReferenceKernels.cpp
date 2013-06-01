@@ -2140,7 +2140,7 @@ ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel(
         delete barostat;
 }
 
-void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& barostat) {
+void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& barostat) {
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
@@ -2154,9 +2154,6 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     vector<RealVec>& posData = extractPositions(context);
     barostat->restorePositions(posData);
-}
-
-void ReferenceApplyMonteCarloAnisotropicBarostatKernel::initialize(const System& system, const MonteCarloAnisotropicBarostat& barostat) {
 }
 
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {

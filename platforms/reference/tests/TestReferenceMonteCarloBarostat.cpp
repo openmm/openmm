@@ -112,7 +112,7 @@ void testIdealGas(int aniso) {
     }
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
     if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
+        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, pressure, pressure, temp[0], frequency);
     system.addForce(barostat);
     
     // Test it for three different temperatures.

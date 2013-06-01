@@ -35,7 +35,6 @@
 #include "Force.h"
 #include <string>
 #include "internal/windowsExport.h"
-#include "Vec3.h"
 
 namespace OpenMM {
 
@@ -176,21 +175,23 @@ public:
     /**
      * Create a MonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure   3-element vector specifying the default pressure acting on each axis (in bar)
+     * @param defaultPressureX  The default pressure acting on the X-axis (in bar)
+     * @param defaultPressureY  The default pressure acting on the Y-axis (in bar)
+     * @param defaultPressureZ  The default pressure acting on the Z-axis (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      * @param scaleX            on/off switch for whether to scale the X axis
      * @param scaleY            on/off switch for whether to scale the Y axis
      * @param scaleZ            on/off switch for whether to scale the Z axis
      */
-    MonteCarloAnisotropicBarostat(Vec3 defaultPressure, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
+    MonteCarloAnisotropicBarostat(double defaultPressureX, double defaultPressureY, double defaultPressureZ, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
     /**
      * Get the default pressure acting on the X-axis (in bar).
      *
      * @return the default pressure acting on the system, measured in bar.
      */
     double getDefaultPressureX() const {
-        return defaultPressure[0];
+        return defaultPressureX;
     }
     /**
      * Get the default pressure acting on the Y-axis (in bar).
@@ -198,7 +199,7 @@ public:
      * @return the default pressure acting on the system, measured in bar.
      */
     double getDefaultPressureY() const {
-        return defaultPressure[1];
+        return defaultPressureY;
     }
     /**
      * Get the default pressure acting on the Z-axis (in bar).
@@ -206,7 +207,7 @@ public:
      * @return the default pressure acting on the system, measured in bar.
      */
     double getDefaultPressureZ() const {
-        return defaultPressure[2];
+        return defaultPressureZ;
     }
     /**
      * Get the true/false flag for scaling the X-axis.
@@ -279,7 +280,7 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
-    Vec3 defaultPressure;
+    double defaultPressureX, defaultPressureY, defaultPressureZ;
     double temperature;
     bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;

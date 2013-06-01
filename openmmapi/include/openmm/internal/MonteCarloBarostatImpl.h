@@ -35,7 +35,6 @@
 #include "ForceImpl.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/Kernel.h"
-#include "openmm/Vec3.h"
 #include "sfmt/SFMT.h"
 #include <string>
 
