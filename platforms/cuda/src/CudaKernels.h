@@ -1287,6 +1287,29 @@ private:
 };
 
 /**
+ * This kernel is invoked by MonteCarloAnisotropicBarostat to adjust the periodic box volume
+ */
+class CudaApplyMonteCarloAnisotropicBarostatKernel : public CudaApplyMonteCarloBarostatKernel {
+public:
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param barostat   the MonteCarloAnisotropicBarostat this kernel will be used for
+     */
+    void initialize(const System& system, const MonteCarloAnisotropicBarostat& barostat);
+private:
+    CudaContext& cu;
+    bool hasInitializedKernels;
+    int numMolecules;
+    CudaArray* savedPositions;
+    CudaArray* moleculeAtoms;
+    CudaArray* moleculeStartIndex;
+    CUfunction kernel;
+    std::vector<int> lastAtomOrder;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {

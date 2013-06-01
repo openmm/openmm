@@ -79,7 +79,7 @@ public:
         // This force doesn't apply forces to particles.
         return 0.0;
     }
-    std::map<std::string, Vec3> getDefaultParameters();
+    std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
 private:
     const MonteCarloAnisotropicBarostat& owner;

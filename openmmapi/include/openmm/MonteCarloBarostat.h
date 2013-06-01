@@ -151,16 +151,32 @@ class OPENMM_EXPORT MonteCarloAnisotropicBarostat : public Force {
 public:
     /**
      * This is the name of the parameter which stores the current pressure acting on
-     * the system (in bar).
+     * the X-axis (in bar).
      */
-    static const std::string& Pressure() {
-        static const std::string key = "MonteCarloPressure";
+    static const std::string& PressureX() {
+        static const std::string key = "MonteCarloPressureX";
+        return key;
+    }
+    /**
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Y-axis (in bar).
+     */
+    static const std::string& PressureY() {
+        static const std::string key = "MonteCarloPressureY";
+        return key;
+    }
+    /**
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Z-axis (in bar).
+     */
+    static const std::string& PressureZ() {
+        static const std::string key = "MonteCarloPressureZ";
         return key;
     }
     /**
      * Create a MonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure   the default pressure acting on each axis of the system (in bar)
+     * @param defaultPressure   3-element vector specifying the default pressure acting on each axis (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      * @param scaleX            on/off switch for whether to scale the X axis
@@ -169,12 +185,52 @@ public:
      */
     MonteCarloAnisotropicBarostat(Vec3 defaultPressure, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
     /**
-     * Get the default pressure acting on the system (in bar).
+     * Get the default pressure acting on the X-axis (in bar).
      *
      * @return the default pressure acting on the system, measured in bar.
      */
-    Vec3 getDefaultPressure() const {
-        return defaultPressure;
+    double getDefaultPressureX() const {
+        return defaultPressure[0];
+    }
+    /**
+     * Get the default pressure acting on the Y-axis (in bar).
+     *
+     * @return the default pressure acting on the system, measured in bar.
+     */
+    double getDefaultPressureY() const {
+        return defaultPressure[1];
+    }
+    /**
+     * Get the default pressure acting on the Z-axis (in bar).
+     *
+     * @return the default pressure acting on the system, measured in bar.
+     */
+    double getDefaultPressureZ() const {
+        return defaultPressure[2];
+    }
+    /**
+     * Get the true/false flag for scaling the X-axis.
+     *
+     * @return the true/false flag for scaling the X-axis.
+     */
+    bool getScaleX() const {
+      return scaleX;
+    }
+    /**
+     * Get the true/false flag for scaling the Y-axis.
+     *
+     * @return the true/false flag for scaling the Y-axis.
+     */
+    bool getScaleY() const {
+      return scaleY;
+    }
+    /**
+     * Get the true/false flag for scaling the Z-axis.
+     *
+     * @return the true/false flag for scaling the Z-axis.
+     */
+    bool getScaleZ() const {
+      return scaleZ;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
@@ -225,6 +281,7 @@ protected:
 private:
     Vec3 defaultPressure;
     double temperature;
+    bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
 
         double GetTemperature() const {

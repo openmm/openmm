@@ -1208,6 +1208,22 @@ private:
 };
 
 /**
+ * This kernel is invoked by MonteCarloAnisotropicBarostat to adjust the periodic box volume
+ */
+class ReferenceApplyMonteCarloAnisotropicBarostatKernel : public ReferenceApplyMonteCarloBarostatKernel{
+public:
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param barostat   the MonteCarloAnisotropicBarostat this kernel will be used for
+     */
+    void initialize(const System& system, const MonteCarloAnisotropicBarostat& barostat);
+private:
+    ReferenceMonteCarloBarostat* barostat;
+};
+
+/**
  * This kernel is invoked to remove center of mass motion from the system.
  */
 class ReferenceRemoveCMMotionKernel : public RemoveCMMotionKernel {

@@ -2156,6 +2156,9 @@ void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& con
     barostat->restorePositions(posData);
 }
 
+void ReferenceApplyMonteCarloAnisotropicBarostatKernel::initialize(const System& system, const MonteCarloAnisotropicBarostat& barostat) {
+}
+
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
     frequency = force.getFrequency();
     masses.resize(system.getNumParticles());

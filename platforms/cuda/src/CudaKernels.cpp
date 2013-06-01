@@ -5372,6 +5372,13 @@ void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context)
     }
 }
 
+void CudaApplyMonteCarloAnisotropicBarostatKernel::initialize(const System& system, const MonteCarloAnisotropicBarostat& thermostat) {
+    cu.setAsCurrent();
+    savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
+    CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
+    kernel = cu.getKernel(module, "scalePositions");
+}
+
 CudaRemoveCMMotionKernel::~CudaRemoveCMMotionKernel() {
     cu.setAsCurrent();
     if (cmMomentum != NULL)
