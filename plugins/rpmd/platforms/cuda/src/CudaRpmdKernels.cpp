@@ -123,6 +123,8 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
             throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
         if (copies < 0 || copies > numCopies)
             throw OpenMMException("RPMDIntegrator: Number of copies for contraction cannot be greater than the total number of copies being simulated");
+        if (copies != findFFTDimension(copies))
+            throw OpenMMException("RPMDIntegrator: Number of copies for contraction must be a multiple of powers of 2, 3, and 5.");
         if (copies != numCopies) {
             if (groupsByCopies.find(copies) == groupsByCopies.end()) {
                 groupsByCopies[copies] = 1<<group;
