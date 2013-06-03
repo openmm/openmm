@@ -69,6 +69,10 @@ CudaIntegrateRPMDStepKernel::~CudaIntegrateRPMDStepKernel() {
         delete positions;
     if (velocities != NULL)
         delete velocities;
+    if (contractedForces != NULL)
+        delete contractedForces;
+    if (contractedPositions != NULL)
+        delete contractedPositions;
 }
 
 void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
@@ -106,6 +110,34 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
             temp[i] = make_float4(0, 0, 0, 1);
         velocities->upload(temp);
     }
+    
+    // Build a list of contractions.
+    
+    groupsNotContracted = -1;
+    const map<int, int>& contractions = integrator.getContractions();
+    int maxContractedCopies = 0;
+    for (map<int, int>::const_iterator iter = contractions.begin(); iter != contractions.end(); ++iter) {
+        int group = iter->first;
+        int copies = iter->second;
+        if (group < 0 || group > 31)
+            throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
+        if (copies < 0 || copies > numCopies)
+            throw OpenMMException("RPMDIntegrator: Number of copies for contraction cannot be greater than the total number of copies being simulated");
+        if (copies != numCopies) {
+            if (groupsByCopies.find(copies) == groupsByCopies.end()) {
+                groupsByCopies[copies] = 1<<group;
+                groupsNotContracted -= 1<<group;
+                if (copies > maxContractedCopies)
+                    maxContractedCopies = copies;
+            }
+            else
+                groupsByCopies[copies] |= 1<<group;
+        }
+    }
+    if (maxContractedCopies > 0) {
+        contractedForces = CudaArray::create<long long>(cu, maxContractedCopies*paddedParticles*3, "rpmdContractedForces");
+        contractedPositions = new CudaArray(cu, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
+    }
 
     // Create kernels.
     
@@ -129,6 +161,23 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
     copyToContextKernel = cu.getKernel(module, "copyDataToContext");
     copyFromContextKernel = cu.getKernel(module, "copyDataFromContext");
     translateKernel = cu.getKernel(module, "applyCellTranslations");
+    
+    // Create kernels for doing contractions.
+    
+    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
+        int copies = iter->first;
+        replacements.clear();
+        replacements["NUM_CONTRACTED_COPIES"] = cu.intToString(copies);
+        replacements["POS_SCALE"] = cu.doubleToString(1.0/numCopies);
+        replacements["FORCE_SCALE"] = cu.doubleToString(0x100000000/(double) copies);
+        replacements["FFT_Q_FORWARD"] = createFFT(numCopies, "q", true);
+        replacements["FFT_Q_BACKWARD"] = createFFT(copies, "q", false);
+        replacements["FFT_F_FORWARD"] = createFFT(copies, "f", true);
+        replacements["FFT_F_BACKWARD"] = createFFT(numCopies, "f", false);
+        module = cu.createModule(cu.replaceStrings(CudaKernelSources::vectorOps+CudaRpmdKernelSources::rpmdContraction, replacements), defines, "");
+        positionContractionKernels[copies] = cu.getKernel(module, "contractPositions");
+        forceContractionKernels[copies] = cu.getKernel(module, "contractForces");
+    }
 }
 
 void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -191,16 +240,48 @@ void CudaIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegr
 }
 
 void CudaIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
+    // Compute forces from all groups that didn't have a specified contraction.
+
     for (int i = 0; i < numCopies; i++) {
         void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &positions->getDevicePointer(),
                 &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
         context.computeVirtualSites();
         context.updateContextState();
-        context.calcForcesAndEnergy(true, false);
+        context.calcForcesAndEnergy(true, false, groupsNotContracted);
         void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &forces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
                 &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &positions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
         cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
+    }
+    
+    // Now loop over contractions and compute forces from them.
+    
+    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
+        int copies = iter->first;
+        int groupFlags = iter->second;
+        
+        // Find the contracted positions.
+        
+        void* contractPosArgs[] = {&positions->getDevicePointer(), &contractedPositions->getDevicePointer()};
+        cu.executeKernel(positionContractionKernels[copies], contractPosArgs, numParticles*numCopies, workgroupSize);
+
+        // Compute forces.
+
+        for (int i = 0; i < copies; i++) {
+            void* copyToContextArgs[] = {&velocities->getDevicePointer(), &cu.getVelm().getDevicePointer(), &contractedPositions->getDevicePointer(),
+                    &cu.getPosq().getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+            cu.executeKernel(copyToContextKernel, copyToContextArgs, cu.getNumAtoms());
+            context.computeVirtualSites();
+            context.calcForcesAndEnergy(true, false, groupFlags);
+            void* copyFromContextArgs[] = {&cu.getForce().getDevicePointer(), &contractedForces->getDevicePointer(), &cu.getVelm().getDevicePointer(),
+                   &velocities->getDevicePointer(), &cu.getPosq().getDevicePointer(), &contractedPositions->getDevicePointer(), &cu.getAtomIndexArray().getDevicePointer(), &i};
+            cu.executeKernel(copyFromContextKernel, copyFromContextArgs, cu.getNumAtoms());
+        }
+        
+        // Apply the forces to the original copies.
+        
+        void* contractForceArgs[] = {&forces->getDevicePointer(), &contractedForces->getDevicePointer()};
+        cu.executeKernel(forceContractionKernels[copies], contractForceArgs, numParticles*numCopies, workgroupSize);
     }
 }
 

@@ -355,6 +355,82 @@ void testVirtualSites() {
     ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 1e-2);
 }
 
+void testContractions() {
+    const int gridSize = 3;
+    const int numMolecules = gridSize*gridSize*gridSize;
+    const int numParticles = numMolecules*2;
+    const int numCopies = 10;
+    const double spacing = 2.0;
+    const double cutoff = 3.0;
+    const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setForceGroup(1);
+    nonbonded->setReciprocalSpaceForceGroup(2);
+    system.addForce(nonbonded);
+
+    // Create a cloud of molecules.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numMolecules; i++) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        nonbonded->addParticle(-0.2, 0.2, 0.2);
+        nonbonded->addParticle(0.2, 0.2, 0.2);
+        nonbonded->addException(2*i, 2*i+1, 0, 1, 0);
+        bonds->addBond(2*i, 2*i+1, 1.0, 10000.0);
+    }
+    map<int, int> contractions;
+    contractions[1] = 3;
+    contractions[2] = 1;
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001, contractions);
+    Platform& platform = Platform::getPlatformByName("CUDA");
+    Context context(system, integ, platform);
+    for (int copy = 0; copy < numCopies; copy++) {
+        for (int i = 0; i < gridSize; i++)
+            for (int j = 0; j < gridSize; j++)
+                for (int k = 0; k < gridSize; k++) {
+                    Vec3 pos = Vec3(spacing*(i+0.02*genrand_real2(sfmt)), spacing*(j+0.02*genrand_real2(sfmt)), spacing*(k+0.02*genrand_real2(sfmt)));
+                    int index = k+gridSize*(j+gridSize*i);
+                    positions[2*index] = pos;
+                    positions[2*index+1] = Vec3(pos[0]+1.0, pos[1], pos[2]);
+                }
+        integ.setPositions(copy, positions);
+    }
+
+    // Check the temperature.
+    
+    const int numSteps = 1000;
+    integ.step(1000);
+    vector<double> ke(numCopies, 0.0);
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(1);
+        vector<State> state(numCopies);
+        for (int j = 0; j < numCopies; j++)
+            state[j] = integ.getState(j, State::Velocities, true);
+        for (int j = 0; j < numParticles; j++) {
+            for (int k = 0; k < numCopies; k++) {
+                Vec3 v = state[k].getVelocities()[j];
+                ke[k] += 0.5*system.getParticleMass(j)*v.dot(v);
+            }
+        }
+    }
+    double meanKE = 0.0;
+    for (int i = 0; i < numCopies; i++)
+        meanKE += ke[i];
+    meanKE /= numSteps*numCopies;
+    double expectedKE = 0.5*numCopies*numParticles*3*BOLTZ*temperature;
+    ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 1e-2);
+}
+
 int main(int argc, char* argv[]) {
     try {
         registerRPMDCudaKernelFactories();
@@ -364,6 +440,7 @@ int main(int argc, char* argv[]) {
         testParaHydrogen();
         testCMMotionRemoval();
         testVirtualSites();
+        testContractions();
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
