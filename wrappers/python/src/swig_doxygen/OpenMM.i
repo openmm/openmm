@@ -31,6 +31,7 @@ namespace std {
   %template(vectorstring) vector<string>;
   %template(mapstringstring) map<string,string>;
   %template(mapstringdouble) map<string,double>;
+  %template(mapii) map<int,int>;
 };
 
 %include "windows.i"

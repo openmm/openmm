@@ -35,7 +35,7 @@
 #include "openmm/RpmdKernels.h"
 #include "OpenCLContext.h"
 #include "OpenCLArray.h"
-
+#include <map>
 namespace OpenMM {
 
 /**
@@ -45,7 +45,7 @@ namespace OpenMM {
 class OpenCLIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
     OpenCLIntegrateRPMDStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) :
-            IntegrateRPMDStepKernel(name, platform), cl(cl), hasInitializedKernel(false), forces(NULL), positions(NULL), velocities(NULL) {
+            IntegrateRPMDStepKernel(name, platform), cl(cl), hasInitializedKernel(false), forces(NULL), positions(NULL), velocities(NULL), contractedForces(NULL), contractedPositions(NULL) {
     }
     ~OpenCLIntegrateRPMDStepKernel();
     /**
@@ -90,10 +90,16 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernel;
     int numCopies, numParticles, workgroupSize;
+    std::map<int, int> groupsByCopies;
+    int groupsNotContracted;
     OpenCLArray* forces;
     OpenCLArray* positions;
     OpenCLArray* velocities;
+    OpenCLArray* contractedForces;
+    OpenCLArray* contractedPositions;
     cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
+    std::map<int, cl::Kernel> positionContractionKernels;
+    std::map<int, cl::Kernel> forceContractionKernels;
 };
 
 } // namespace OpenMM
