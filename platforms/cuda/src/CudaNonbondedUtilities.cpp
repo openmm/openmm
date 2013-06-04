@@ -254,7 +254,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             maxTiles = numTiles;
         if (maxTiles < 1)
             maxTiles = 1;
-        interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
+        interactingTiles = CudaArray::create<int>(context, maxTiles, "interactingTiles");
         interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
         interactionCount = CudaArray::create<unsigned int>(context, 1, "interactionCount");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
@@ -384,7 +384,7 @@ void CudaNonbondedUtilities::updateNeighborListSize() {
     delete interactingAtoms;
     interactingTiles = NULL; // Avoid an error in the destructor if the following allocation fails
     interactingAtoms = NULL;
-    interactingTiles = CudaArray::create<ushort2>(context, maxTiles, "interactingTiles");
+    interactingTiles = CudaArray::create<int>(context, maxTiles, "interactingTiles");
     interactingAtoms = CudaArray::create<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
     if (forceArgs.size() > 0)
         forceArgs[7] = &interactingTiles->getDevicePointer();

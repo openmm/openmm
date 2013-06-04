@@ -400,7 +400,7 @@ extern "C" __global__ void computeFixedField(
         const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, const ushort2* __restrict__ exclusionTiles,
         unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         const real* __restrict__ bornRadii, unsigned long long* __restrict__ gkFieldBuffers,
 #endif
@@ -569,10 +569,8 @@ extern "C" __global__ void computeFixedField(
         
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            ushort2 tileIndices = tiles[pos];
-            x = tileIndices.x;
-        }
+        if (numTiles <= maxTiles)
+            x = tiles[pos];
         else
 #endif
         {
