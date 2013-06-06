@@ -39,15 +39,23 @@
 #include <string>
 
 using namespace OpenMM;
-using std::string;
-using std::vector;
+using namespace std;
+
+RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize, const map<int, int>& contractions) :
+        numCopies(numCopies), contractions(contractions), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+    setTemperature(temperature);
+    setFriction(frictionCoeff);
+    setStepSize(stepSize);
+    setConstraintTolerance(1e-5);
+    setRandomNumberSeed((int) time(NULL));
+}
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
         numCopies(numCopies), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
-    setConstraintTolerance(1e-4);
+    setConstraintTolerance(1e-5);
     setRandomNumberSeed((int) time(NULL));
 }
 

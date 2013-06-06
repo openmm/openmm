@@ -282,16 +282,9 @@ def stripUnits(args):
             # JDC: End workaround.
             #arg=arg.value_in_unit_system(unit.md_unit_system)
         elif isinstance(arg, dict):
-            newArg = {}
-            for key in arg:
-                newKey = key
-                newValue = arg[key]
-                if not _is_string(newKey):
-                    newKey = stripUnits(newKey)
-                if not _is_string(newValue):
-                    newValue = stripUnits(newValue)
-                newArg[newKey] = newValue
-            arg = newArg
+            newKeys = stripUnits(arg.keys())
+            newValues = stripUnits(arg.values())
+            arg = dict(zip(newKeys, newValues))
         elif not _is_string(arg):
             try:
                 iter(arg)

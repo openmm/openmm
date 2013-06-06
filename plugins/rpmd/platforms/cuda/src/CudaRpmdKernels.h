@@ -35,6 +35,7 @@
 #include "openmm/RpmdKernels.h"
 #include "CudaContext.h"
 #include "CudaArray.h"
+#include <map>
 
 namespace OpenMM {
 
@@ -45,7 +46,7 @@ namespace OpenMM {
 class CudaIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
     CudaIntegrateRPMDStepKernel(std::string name, const Platform& platform, CudaContext& cu) :
-            IntegrateRPMDStepKernel(name, platform), cu(cu), forces(NULL), positions(NULL), velocities(NULL) {
+            IntegrateRPMDStepKernel(name, platform), cu(cu), forces(NULL), positions(NULL), velocities(NULL), contractedForces(NULL), contractedPositions(NULL) {
     }
     ~CudaIntegrateRPMDStepKernel();
     /**
@@ -88,10 +89,16 @@ private:
     std::string createFFT(int size, const std::string& variable, bool forward);
     CudaContext& cu;
     int numCopies, numParticles, workgroupSize;
+    std::map<int, int> groupsByCopies;
+    int groupsNotContracted;
     CudaArray* forces;
     CudaArray* positions;
     CudaArray* velocities;
+    CudaArray* contractedForces;
+    CudaArray* contractedPositions;
     CUfunction pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
+    std::map<int, CUfunction> positionContractionKernels;
+    std::map<int, CUfunction> forceContractionKernels;
 };
 
 } // namespace OpenMM

@@ -451,5 +451,6 @@ UNITS = {
 ("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("1/unit.picosecond", ()),
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
+("RPMDIntegrator", "getContractions") : (None, ()),
 }
 

@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceRpmdKernels.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
 
@@ -54,7 +55,11 @@ static vector<RealVec>& extractForces(ContextImpl& context) {
 ReferenceIntegrateRPMDStepKernel::~ReferenceIntegrateRPMDStepKernel() {
     if (fft != NULL)
         fftpack_destroy(fft);
+    for (map<int, fftpack*>::const_iterator iter = contractionFFT.begin(); iter != contractionFFT.end(); ++iter)
+        if (iter->second != NULL)
+            fftpack_destroy(iter->second);
 }
+
 void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
     int numCopies = integrator.getNumCopies();
     int numParticles = system.getNumParticles();
@@ -68,6 +73,41 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
     }
     fftpack_init_1d(&fft, numCopies);
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    
+    // Build a list of contractions.
+    
+    groupsNotContracted = -1;
+    const map<int, int>& contractions = integrator.getContractions();
+    int maxContractedCopies = 0;
+    for (map<int, int>::const_iterator iter = contractions.begin(); iter != contractions.end(); ++iter) {
+        int group = iter->first;
+        int copies = iter->second;
+        if (group < 0 || group > 31)
+            throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
+        if (copies < 0 || copies > numCopies)
+            throw OpenMMException("RPMDIntegrator: Number of copies for contraction cannot be greater than the total number of copies being simulated");
+        if (copies != numCopies) {
+            if (groupsByCopies.find(copies) == groupsByCopies.end()) {
+                groupsByCopies[copies] = 1<<group;
+                groupsNotContracted -= 1<<group;
+                contractionFFT[copies] = NULL;
+                fftpack_init_1d(&contractionFFT[copies], copies);
+                if (copies > maxContractedCopies)
+                    maxContractedCopies = copies;
+            }
+            else
+                groupsByCopies[copies] |= 1<<group;
+        }
+    }
+    
+    // Create workspace for doing contractions.
+    
+    contractedPositions.resize(maxContractedCopies);
+    contractedForces.resize(maxContractedCopies);
+    for (int i = 0; i < maxContractedCopies; i++) {
+        contractedPositions[i].resize(numParticles);
+        contractedForces[i].resize(numParticles);
+    }
 }
 
 void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -82,15 +122,8 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     
     // Loop over copies and compute the force on each one.
     
-    if (!forcesAreValid) {
-        for (int i = 0; i < numCopies; i++) {
-            pos = positions[i];
-            vel = velocities[i];
-            context.computeVirtualSites();
-            context.calcForcesAndEnergy(true, false);
-            forces[i] = f;
-        }
-    }
+    if (!forcesAreValid)
+        computeForces(context, integrator);
 
     // Apply the PILE-L thermostat.
     
@@ -176,16 +209,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     
     // Calculate forces based on the updated positions.
     
-    for (int i = 0; i < numCopies; i++) {
-        pos = positions[i];
-        vel = velocities[i];
-        context.computeVirtualSites();
-        context.updateContextState();
-        positions[i] = pos;
-        velocities[i] = vel;
-        context.calcForcesAndEnergy(true, false);
-        forces[i] = f;
-    }
+    computeForces(context, integrator);
 
     // Update velocities.
     
@@ -232,6 +256,90 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     // Update the time.
     
     context.setTime(context.getTime()+dt);
+}
+
+void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const RPMDIntegrator& integrator) {
+    const int totalCopies = positions.size();
+    const int numParticles = positions[0].size();
+    vector<RealVec>& pos = extractPositions(context);
+    vector<RealVec>& vel = extractVelocities(context);
+    vector<RealVec>& f = extractForces(context);
+    
+    // Compute forces from all groups that didn't have a specified contraction.
+    
+    for (int i = 0; i < totalCopies; i++) {
+        pos = positions[i];
+        vel = velocities[i];
+        context.computeVirtualSites();
+        context.updateContextState();
+        positions[i] = pos;
+        velocities[i] = vel;
+        context.calcForcesAndEnergy(true, false, groupsNotContracted);
+        forces[i] = f;
+    }
+    
+    // Now loop over contractions and compute forces from them.
+    
+    for (map<int, int>::const_iterator iter = groupsByCopies.begin(); iter != groupsByCopies.end(); ++iter) {
+        int copies = iter->first;
+        int groupFlags = iter->second;
+        fftpack* shortFFT = contractionFFT[copies];
+        
+        // Find the contracted positions.
+        
+        vector<t_complex> q(totalCopies);
+        const RealOpenMM scale1 = 1.0/totalCopies;
+        for (int particle = 0; particle < numParticles; particle++) {
+            for (int component = 0; component < 3; component++) {
+                // Transform to the frequency domain, set high frequency components to zero, and transform back.
+                
+                for (int k = 0; k < totalCopies; k++)
+                    q[k] = t_complex(positions[k][particle][component], 0.0);
+                fftpack_exec_1d(fft, FFTPACK_FORWARD, &q[0], &q[0]);
+                if (copies > 1) {
+                    int start = (copies+1)/2;
+                    int end = totalCopies-copies+start;
+                    for (int k = end; k < totalCopies; k++)
+                        q[k-(totalCopies-copies)] = q[k];
+                    fftpack_exec_1d(shortFFT, FFTPACK_BACKWARD, &q[0], &q[0]);
+                }
+                for (int k = 0; k < copies; k++)
+                    contractedPositions[k][particle][component] = scale1*q[k].re;
+            }
+        }
+        
+        // Compute forces.
+
+        for (int i = 0; i < copies; i++) {
+            pos = contractedPositions[i];
+            context.computeVirtualSites();
+            context.calcForcesAndEnergy(true, false, groupFlags);
+            contractedForces[i] = f;
+        }
+        
+        // Apply the forces to the original copies.
+        
+        const RealOpenMM scale2 = 1.0/copies;
+        for (int particle = 0; particle < numParticles; particle++) {
+            for (int component = 0; component < 3; component++) {
+                // Transform to the frequency domain, pad with zeros, and transform back.
+                
+                for (int k = 0; k < copies; k++)
+                    q[k] = t_complex(contractedForces[k][particle][component], 0.0);
+                if (copies > 1)
+                    fftpack_exec_1d(shortFFT, FFTPACK_FORWARD, &q[0], &q[0]);
+                int start = (copies+1)/2;
+                int end = totalCopies-copies+start;
+                for (int k = end; k < totalCopies; k++)
+                    q[k] = q[k-(totalCopies-copies)];
+                for (int k = start; k < end; k++)
+                    q[k] = t_complex(0, 0);
+                fftpack_exec_1d(fft, FFTPACK_BACKWARD, &q[0], &q[0]);
+                for (int k = 0; k < totalCopies; k++)
+                    forces[k][particle][component] = scale2*q[k].re;
+            }
+        }
+    }
 }
 
 double ReferenceIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
