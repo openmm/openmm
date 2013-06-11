@@ -278,7 +278,15 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    print >>file, "ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f  1.00  0.00" % (atomIndex%100000, atomName, resName, chainName, (resIndex+1)%10000, coords[0], coords[1], coords[2])
+                    if any(coord > 9999.999 for coord in coords):
+                        raise PDBFormatOverFlowError('Coordinates greater than'
+                            ' 9999.999 angstroms are not represntatable in'
+                            ' the fixed-width PDB format. Detected in ATOM'
+                            ' %5d %-4s %3s %s%4d' % (atomIndex%100000, atomName,
+                              resName, chainName, (resIndex+1)%10000))
+                    line = "ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f  1.00  0.00" % (atomIndex%100000, atomName, resName, c
+                    assert len(line) == 66, 'Fixed width overflow detected'
+                    print >>file, line
                     posIndex += 1
                     atomIndex += 1
                 if resIndex == len(residues)-1:
@@ -297,3 +305,5 @@ class PDBFile(object):
         """
         print >>file, "END"
 
+class PDBFormatOverFlowError(ValueError):
+    pass
