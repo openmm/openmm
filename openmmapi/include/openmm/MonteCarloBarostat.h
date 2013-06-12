@@ -138,7 +138,7 @@ private:
  * effect of constant pressure.
  *
  * Compared to MonteCarloBarostat, this class scales the three axes of the simulation cell independently.
- * The user supplies a Vec3 instead of a double to specify the pressure along each axis if desired.
+ * The user supplies three doubles to specify the pressure along each axis.
  *
  * This class assumes the simulation is also being run at constant temperature, and requires you
  * to specify the system temperature (since it affects the acceptance probability for Monte Carlo
