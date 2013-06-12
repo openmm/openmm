@@ -79,16 +79,16 @@ class Topology(object):
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain)
                 for atom in residue.atoms():
-                    if atom.index in atomSubset:
+                    if atom.index in atomIndices:
                         newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
                         atomMapping[atom] = newAtom
 
-        for atom1, atom2 in topology.bonds():
-            if atom1 in mapping and atom2 in mapping:
+        for atom1, atom2 in self.bonds():
+            if atom1 in atomMapping and atom2 in atomMapping:
                 # only add bonds between atoms that are in the subset
                 newTopology.addBond(atomMapping[atom1], atomMapping[atom2])
 
-        newTopology.setUnitCellDimensions(topology.getUnitCellDimensions)
+        newTopology.setUnitCellDimensions(self.getUnitCellDimensions())
 
         return newTopology
 

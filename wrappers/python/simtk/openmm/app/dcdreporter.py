@@ -68,10 +68,10 @@ class DCDReporter(object):
             if min(self._atomSubset) < 0:
                 raise ValueError('%s is an invalid index. it\'s less than '
                                  'zero!' % min(self._atomSubset))
-            if max(self._atomSubset) > max(atom.index for atom in simulation.topology.atom()):
+            if max(self._atomSubset) > max(atom.index for atom in simulation.topology.atoms()):
                 raise ValueError('%s is an invalid index. it\'s greater than '
                                  'the index of the last atom.' % max(self._atomSubset))
-            topology = simulation.topology.subset(atomSubset)
+            topology = simulation.topology.subset(self._atomSubset)
 
         else:
             topology = simulation.topology
@@ -99,12 +99,12 @@ class DCDReporter(object):
          - state (State) The current state of the simulation
         """
         if not self._is_initialized:
-            self._initialize()
-        a,b,c = state.getPeriodicBoxVectors()
+            self._initialize(simulation)
+        a, b, c = state.getPeriodicBoxVectors()
 
         positions = state.getPositions()
         if self._atomSubset is not None:
-            positions = [positions[i] for i in self._atomSubset]
+            positions = [positions[i].value_in_unit(nanometer) for i in self._atomSubset] * nanometer
 
         self._dcd.writeModel(positions, mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
 
