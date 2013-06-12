@@ -1,5 +1,5 @@
-#ifndef OPENMM_MONTECARLOBAROSTAT_H_
-#define OPENMM_MONTECARLOBAROSTAT_H_
+#ifndef OPENMM_MONTECARLOANISOTROPICBAROSTAT_H_
+#define OPENMM_MONTECARLOANISOTROPICBAROSTAT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Force.h"
+#include "Vec3.h"
 #include <string>
 #include "internal/windowsExport.h"
 
@@ -42,37 +43,83 @@ namespace OpenMM {
  * This class uses a Monte Carlo algorithm to adjust the size of the periodic box, simulating the
  * effect of constant pressure.
  *
+ * Compared to MonteCarloBarostat, this class scales the three axes of the simulation cell independently.
+ * The user supplies three doubles to specify the pressure along each axis.
+ *
  * This class assumes the simulation is also being run at constant temperature, and requires you
  * to specify the system temperature (since it affects the acceptance probability for Monte Carlo
  * moves).  It does not actually perform temperature regulation, however.  You must use another
  * mechanism along with it to maintain the temperature, such as LangevinIntegrator or AndersenThermostat.
  */
 
-class OPENMM_EXPORT MonteCarloBarostat : public Force {
+class OPENMM_EXPORT MonteCarloAnisotropicBarostat : public Force {
 public:
     /**
      * This is the name of the parameter which stores the current pressure acting on
-     * the system (in bar).
+     * the X-axis (in bar).
      */
-    static const std::string& Pressure() {
-        static const std::string key = "MonteCarloPressure";
+    static const std::string& PressureX() {
+        static const std::string key = "MonteCarloPressureX";
         return key;
     }
     /**
-     * Create a MonteCarloBarostat.
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Y-axis (in bar).
+     */
+    static const std::string& PressureY() {
+        static const std::string key = "MonteCarloPressureY";
+        return key;
+    }
+    /**
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Z-axis (in bar).
+     */
+    static const std::string& PressureZ() {
+        static const std::string key = "MonteCarloPressureZ";
+        return key;
+    }
+    /**
+     * Create a MonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure   the default pressure acting on the system (in bar)
+     * @param defaultPressure   The default pressure acting on each axis (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleX            on/off switch for whether to scale the X axis
+     * @param scaleY            on/off switch for whether to scale the Y axis
+     * @param scaleZ            on/off switch for whether to scale the Z axis
      */
-    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25);
+    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
     /**
-     * Get the default pressure acting on the system (in bar).
+     * Get the default pressure (in bar).
      *
      * @return the default pressure acting on the system, measured in bar.
      */
-    double getDefaultPressure() const {
+    Vec3 getDefaultPressure() const {
         return defaultPressure;
+    }
+    /**
+     * Get the true/false flag for scaling the X-axis.
+     *
+     * @return the true/false flag for scaling the X-axis.
+     */
+    bool getScaleX() const {
+      return scaleX;
+    }
+    /**
+     * Get the true/false flag for scaling the Y-axis.
+     *
+     * @return the true/false flag for scaling the Y-axis.
+     */
+    bool getScaleY() const {
+      return scaleY;
+    }
+    /**
+     * Get the true/false flag for scaling the Z-axis.
+     *
+     * @return the true/false flag for scaling the Z-axis.
+     */
+    bool getScaleZ() const {
+      return scaleZ;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
@@ -121,7 +168,9 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
-    double defaultPressure, temperature;
+    Vec3 defaultPressure;
+    double temperature;
+    bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
 
         double GetTemperature() const {
@@ -135,4 +184,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_MONTECARLOBAROSTAT_H_*/
+#endif /*OPENMM_MONTECARLOANISOTROPICBAROSTAT_H_*/

@@ -1,5 +1,5 @@
-#ifndef OPENMM_MONTECARLOBAROSTATIMPL_H_
-#define OPENMM_MONTECARLOBAROSTATIMPL_H_
+#ifndef OPENMM_MONTECARLOANISOTROPICBAROSTATIMPL_H_
+#define OPENMM_MONTECARLOANISOTROPICBAROSTATIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/Kernel.h"
 #include "sfmt/SFMT.h"
 #include <string>
@@ -41,14 +41,14 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of MonteCarloBarostat.
+ * This is the internal implementation of MonteCarloAnisotropicBarostat.
  */
 
-class MonteCarloBarostatImpl : public ForceImpl {
+class MonteCarloAnisotropicBarostatImpl : public ForceImpl {
 public:
-    MonteCarloBarostatImpl(const MonteCarloBarostat& owner);
+    MonteCarloAnisotropicBarostatImpl(const MonteCarloAnisotropicBarostat& owner);
     void initialize(ContextImpl& context);
-    const MonteCarloBarostat& getOwner() const {
+    const MonteCarloAnisotropicBarostat& getOwner() const {
         return owner;
     }
     void updateContextState(ContextImpl& context);
@@ -59,13 +59,13 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
 private:
-    const MonteCarloBarostat& owner;
-    int step, numAttempted, numAccepted;
-    double volumeScale;
+    const MonteCarloAnisotropicBarostat& owner;
+    int step, numAttempted[3], numAccepted[3];
+    double volumeScale[3];
     OpenMM_SFMT::SFMT random;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_MONTECARLOBAROSTATIMPL_H_*/
+#endif /*OPENMM_MONTECARLOANISOTROPICBAROSTATIMPL_H_*/

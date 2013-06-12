@@ -1,6 +1,3 @@
-#ifndef OPENMM_MONTECARLOBAROSTATIMPL_H_
-#define OPENMM_MONTECARLOBAROSTATIMPL_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,40 +29,17 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/Kernel.h"
-#include "sfmt/SFMT.h"
-#include <string>
+#include "openmm/MonteCarloAnisotropicBarostat.h"
+#include "openmm/internal/MonteCarloAnisotropicBarostatImpl.h"
+#include <ctime>
 
-namespace OpenMM {
+using namespace OpenMM;
 
-/**
- * This is the internal implementation of MonteCarloBarostat.
- */
+MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, int frequency, bool scaleX, bool scaleY, bool scaleZ) :
+        defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ) {
+    setRandomNumberSeed((int) time(NULL));
+}
 
-class MonteCarloBarostatImpl : public ForceImpl {
-public:
-    MonteCarloBarostatImpl(const MonteCarloBarostat& owner);
-    void initialize(ContextImpl& context);
-    const MonteCarloBarostat& getOwner() const {
-        return owner;
-    }
-    void updateContextState(ContextImpl& context);
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-        // This force doesn't apply forces to particles.
-        return 0.0;
-    }
-    std::map<std::string, double> getDefaultParameters();
-    std::vector<std::string> getKernelNames();
-private:
-    const MonteCarloBarostat& owner;
-    int step, numAttempted, numAccepted;
-    double volumeScale;
-    OpenMM_SFMT::SFMT random;
-    Kernel kernel;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_MONTECARLOBAROSTATIMPL_H_*/
+ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {
+    return new MonteCarloAnisotropicBarostatImpl(*this);
+}

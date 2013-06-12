@@ -43,12 +43,3 @@ MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperatur
 ForceImpl* MonteCarloBarostat::createImpl() const {
     return new MonteCarloBarostatImpl(*this);
 }
-
-MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, int frequency, bool scaleX, bool scaleY, bool scaleZ) :
-        defaultPressure(defaultPressure), temperature(temperature), frequency(frequency), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ) {
-    setRandomNumberSeed((int) time(NULL));
-}
-
-ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {
-    return new MonteCarloAnisotropicBarostatImpl(*this);
-}
