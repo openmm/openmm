@@ -278,13 +278,10 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    if any(coord > 9999.999 for coord in coords):
-                        raise PDBFormatOverFlowError('Coordinates greater than'
-                            ' 9999.999 angstroms are not represntatable in'
-                            ' the fixed-width PDB format. Detected in ATOM'
-                            ' %5d %-4s %3s %s%4d' % (atomIndex%100000, atomName,
-                              resName, chainName, (resIndex+1)%10000))
-                    line = "ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f  1.00  0.00" % (atomIndex%100000, atomName, resName, c
+                    line = "ATOM  %5d %-4s %3s %s%4d    %s%s%s  1.00  0.00" % (
+                        atomIndex%100000, atomName, resName, chainName,
+                        (resIndex+1)%10000, _format_83(coords[0]),
+                        _format_83(coords[1]), _format_83(coords[2]))
                     assert len(line) == 66, 'Fixed width overflow detected'
                     print >>file, line
                     posIndex += 1
@@ -305,5 +302,19 @@ class PDBFile(object):
         """
         print >>file, "END"
 
+
 class PDBFormatOverFlowError(ValueError):
     pass
+
+
+def _format_83(f):
+    """Format a single float into a string of width 8, with ideally 3 decimal
+    places of precision. If the number is a little too large, we can
+    gracefully degrade the precision by lopping off some of the decimal
+    places. If it's much too large, we throw a PDBFormatOverFlowError"""
+    if -999.999 < f < 9999.999:
+        return '%8.3f' % f
+    if -9999999 < f < 99999999:
+        return ('%8.3f' % f)[:8]
+    raise PDBFormatOverFlowError('coordinate "%s" could not be represnted '
+                                 'in a width-8 field' % f)
