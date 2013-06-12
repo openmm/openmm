@@ -215,9 +215,9 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
 
 std::map<std::string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParameters() {
     std::map<std::string, double> parameters;
-    parameters[MonteCarloAnisotropicBarostat::PressureX()] = getOwner().getDefaultPressureX();
-    parameters[MonteCarloAnisotropicBarostat::PressureY()] = getOwner().getDefaultPressureY();
-    parameters[MonteCarloAnisotropicBarostat::PressureZ()] = getOwner().getDefaultPressureZ();
+    parameters[MonteCarloAnisotropicBarostat::PressureX()] = getOwner().getDefaultPressure()[0];
+    parameters[MonteCarloAnisotropicBarostat::PressureY()] = getOwner().getDefaultPressure()[1];
+    parameters[MonteCarloAnisotropicBarostat::PressureZ()] = getOwner().getDefaultPressure()[2];
     return parameters;
 }
 

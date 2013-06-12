@@ -112,7 +112,7 @@ void testIdealGas(int aniso) {
     }
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
     if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, pressure, pressure, temp[0], frequency);
+        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
     system.addForce(barostat);
     
     // Test it for three different temperatures.
@@ -256,7 +256,7 @@ void testWater(int aniso) {
     system.addForce(nonbonded);
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, frequency);
     if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, pressure, pressure, temp, frequency);
+        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, frequency);
     system.addForce(barostat);
     
     // Simulate it and see if the density matches the expected value (1 g/mL).
