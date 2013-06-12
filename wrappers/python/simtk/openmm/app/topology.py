@@ -57,6 +57,41 @@ class Topology(object):
         self._bonds = []
         self._unitCellDimensions = None
         
+    def subset(self, atomIndices):
+        """Create a new Topology from a subset of the atoms in an existing
+        topology. The existing topology will not be altered.
+
+        Parameters:
+        - atomIndices (list) A list of the indices corresponding to the atoms
+          in that you'd like to retain.
+
+        Examples:
+        >>> pdb = PDBFile('1mbn.pdb')                           doctest: +SKIP
+        >>> newTopology = pdb.topology.subset([1,2,3])          doctest: +SKIP
+        >>> print len(list(newTopology.atoms()))                doctest: +SKIP
+        3
+        """
+        newTopology = self.__class__()
+        atomMapping = {}  # maps atoms in the old topology to those in the new
+
+        for chain in self.chains():
+            newChain = newTopology.addChain()
+            for residue in chain.residues():
+                newResidue = newTopology.addResidue(residue.name, newChain)
+                for atom in residue.atoms():
+                    if atom.index in atomSubset:
+                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue)
+                        atomMapping[atom] = newAtom
+
+        for atom1, atom2 in topology.bonds():
+            if atom1 in mapping and atom2 in mapping:
+                # only add bonds between atoms that are in the subset
+                newTopology.addBond(atomMapping[atom1], atomMapping[atom2])
+
+        newTopology.setUnitCellDimensions(topology.getUnitCellDimensions)
+
+        return newTopology
+
     def addChain(self):
         """Create a new Chain and add it to the Topology.
         
