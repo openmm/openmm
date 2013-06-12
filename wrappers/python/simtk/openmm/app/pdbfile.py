@@ -303,18 +303,14 @@ class PDBFile(object):
         print >>file, "END"
 
 
-class PDBFormatOverFlowError(ValueError):
-    pass
-
-
 def _format_83(f):
     """Format a single float into a string of width 8, with ideally 3 decimal
     places of precision. If the number is a little too large, we can
     gracefully degrade the precision by lopping off some of the decimal
-    places. If it's much too large, we throw a PDBFormatOverFlowError"""
+    places. If it's much too large, we throw a ValueError"""
     if -999.999 < f < 9999.999:
         return '%8.3f' % f
     if -9999999 < f < 99999999:
         return ('%8.3f' % f)[:8]
-    raise PDBFormatOverFlowError('coordinate "%s" could not be represnted '
-                                 'in a width-8 field' % f)
+    raise ValueError('coordinate "%s" could not be represnted '
+                     'in a width-8 field' % f)
