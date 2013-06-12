@@ -42,18 +42,18 @@ class DCDReporter(object):
     To use it, create a DCDReporter, then add it to the Simulation's list of reporters.
     """
     
-    def __init__(self, file, reportInterval, atomSubset=None):
+    def __init__(self, file, reportInterval, atomIndices=None):
         """Create a DCDReporter.
     
         Parameters:
          - file (string) The file to write to
          - reportInterval (int) The interval (in time steps) at which to write frames
-         - atomSubset (list) The indicies (zero-based) of the atoms you wish to
+         - atomIndices (list) The indicies (zero-based) of the atoms you wish to
            write to disk. If not supplied, all of the atoms will be written
            to the file (default)
         """
         self._reportInterval = reportInterval
-        self._atomSubset = atomSubset
+        self._atomIndices = atomIndices
         self._is_initialized = False
         self._out = open(file, 'wb')
         self._dcd = None
@@ -64,14 +64,14 @@ class DCDReporter(object):
         This is called before the first report is written, once we know the
         simulation we'll be reporting on. It sets up the file-like object
         """
-        if self._atomSubset is not None:
-            if min(self._atomSubset) < 0:
+        if self._atomIndices is not None:
+            if min(self._atomIndices) < 0:
                 raise ValueError('%s is an invalid index. it\'s less than '
-                                 'zero!' % min(self._atomSubset))
-            if max(self._atomSubset) > max(atom.index for atom in simulation.topology.atoms()):
+                                 'zero!' % min(self._atomIndices))
+            if max(self._atomIndices) > max(atom.index for atom in simulation.topology.atoms()):
                 raise ValueError('%s is an invalid index. it\'s greater than '
-                                 'the index of the last atom.' % max(self._atomSubset))
-            topology = simulation.topology.subset(self._atomSubset)
+                                 'the index of the last atom.' % max(self._atomIndices))
+            topology = simulation.topology.subset(self._atomIndices)
 
         else:
             topology = simulation.topology
@@ -103,8 +103,8 @@ class DCDReporter(object):
         a, b, c = state.getPeriodicBoxVectors()
 
         positions = state.getPositions()
-        if self._atomSubset is not None:
-            positions = [positions[i].value_in_unit(nanometer) for i in self._atomSubset] * nanometer
+        if self._atomIndices is not None:
+            positions = [positions[i].value_in_unit(nanometer) for i in self._atomIndices] * nanometer
 
         self._dcd.writeModel(positions, mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
 
