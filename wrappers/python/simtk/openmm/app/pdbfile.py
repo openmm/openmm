@@ -278,7 +278,12 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    print >>file, "ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f  1.00  0.00" % (atomIndex%100000, atomName, resName, chainName, (resIndex+1)%10000, coords[0], coords[1], coords[2])
+                    line = "ATOM  %5d %-4s %3s %s%4d    %s%s%s  1.00  0.00" % (
+                        atomIndex%100000, atomName, resName, chainName,
+                        (resIndex+1)%10000, _format_83(coords[0]),
+                        _format_83(coords[1]), _format_83(coords[2]))
+                    assert len(line) == 66, 'Fixed width overflow detected'
+                    print >>file, line
                     posIndex += 1
                     atomIndex += 1
                 if resIndex == len(residues)-1:
@@ -297,3 +302,15 @@ class PDBFile(object):
         """
         print >>file, "END"
 
+
+def _format_83(f):
+    """Format a single float into a string of width 8, with ideally 3 decimal
+    places of precision. If the number is a little too large, we can
+    gracefully degrade the precision by lopping off some of the decimal
+    places. If it's much too large, we throw a ValueError"""
+    if -999.999 < f < 9999.999:
+        return '%8.3f' % f
+    if -9999999 < f < 99999999:
+        return ('%8.3f' % f)[:8]
+    raise ValueError('coordinate "%s" could not be represnted '
+                     'in a width-8 field' % f)
