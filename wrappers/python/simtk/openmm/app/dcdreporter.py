@@ -31,6 +31,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
+from simtk.openmm.app import Topology
 import simtk.openmm as mm
 from simtk.openmm.app import DCDFile
 from simtk.unit import nanometer
@@ -41,17 +42,43 @@ class DCDReporter(object):
     To use it, create a DCDReporter, then add it to the Simulation's list of reporters.
     """
     
-    def __init__(self, file, reportInterval):
+    def __init__(self, file, reportInterval, atomIndices=None):
         """Create a DCDReporter.
     
         Parameters:
          - file (string) The file to write to
          - reportInterval (int) The interval (in time steps) at which to write frames
+         - atomIndices (list) The indicies (zero-based) of the atoms you wish to
+           write to disk. If not supplied, all of the atoms will be written
+           to the file (default)
         """
         self._reportInterval = reportInterval
+        self._atomIndices = atomIndices
+        self._is_initialized = False
         self._out = open(file, 'wb')
         self._dcd = None
-    
+
+    def _initialize(self, simulation):
+        """Delayed initialization
+
+        This is called before the first report is written, once we know the
+        simulation we'll be reporting on. It sets up the file-like object
+        """
+        if self._atomIndices is not None:
+            if min(self._atomIndices) < 0:
+                raise ValueError('%s is an invalid index. it\'s less than '
+                                 'zero!' % min(self._atomIndices))
+            if max(self._atomIndices) > max(atom.index for atom in simulation.topology.atoms()):
+                raise ValueError('%s is an invalid index. it\'s greater than '
+                                 'the index of the last atom.' % max(self._atomIndices))
+            topology = simulation.topology.subset(self._atomIndices)
+
+        else:
+            topology = simulation.topology
+
+        self._dcd = DCDFile(self._out, topology, simulation.integrator.getStepSize(), 0, self._reportInterval)    
+        self._is_initialized = True
+
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
         
@@ -71,10 +98,15 @@ class DCDReporter(object):
          - simulation (Simulation) The Simulation to generate a report for
          - state (State) The current state of the simulation
         """
-        if self._dcd is None:
-            self._dcd = DCDFile(self._out, simulation.topology, simulation.integrator.getStepSize(), 0, self._reportInterval)
-        a,b,c = state.getPeriodicBoxVectors()
-        self._dcd.writeModel(state.getPositions(), mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
-    
+        if not self._is_initialized:
+            self._initialize(simulation)
+        a, b, c = state.getPeriodicBoxVectors()
+
+        positions = state.getPositions()
+        if self._atomIndices is not None:
+            positions = [positions[i].value_in_unit(nanometer) for i in self._atomIndices] * nanometer
+
+        self._dcd.writeModel(positions, mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
+
     def __del__(self):
         self._out.close()
