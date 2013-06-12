@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/NonbondedForce.h"

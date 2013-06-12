@@ -77,7 +77,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     double deltaVolume = volumeScale*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
 
     // Compute the energy of the modified system.
