@@ -69,7 +69,7 @@ typedef struct {
  */
 extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ global_bornSum, const real4* __restrict__ posq, const float2* __restrict__ global_params,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         unsigned int maxTiles, const real4* __restrict__ blockCenter, const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms,
 #else
         unsigned int numTiles,
@@ -230,8 +230,7 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
-            ushort2 tileIndices = tiles[pos];
-            x = tileIndices.x;
+            x = tiles[pos];
             real4 blockSizeX = blockSize[x];
             singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
                                   0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
@@ -415,7 +414,7 @@ typedef struct {
 extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ global_bornForce,
         real* __restrict__ energyBuffer, const real4* __restrict__ posq, const real* __restrict__ global_bornRadii,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         unsigned int maxTiles, const real4* __restrict__ blockCenter, const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms,
 #else
         unsigned int numTiles,
@@ -586,8 +585,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
-            ushort2 tileIndices = tiles[pos];
-            x = tileIndices.x;
+            x = tiles[pos];
             real4 blockSizeX = blockSize[x];
             singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
                                   0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&

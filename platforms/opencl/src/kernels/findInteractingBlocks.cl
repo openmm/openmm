@@ -98,8 +98,8 @@ void prefixSum(__local short* sum, __local ushort2* temp) {
  * This is called by findBlocksWithInteractions().  It compacts the list of blocks, identifies interactions
  * in them, and writes the result to global memory.
  */
-void storeInteractionData(unsigned short x, __local unsigned short* buffer, __local short* sum, __local ushort2* temp, __local int* atoms, __local int* numAtoms,
-            __local int* baseIndex, __global unsigned int* interactionCount, __global ushort2* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
+void storeInteractionData(int x, __local unsigned short* buffer, __local short* sum, __local ushort2* temp, __local int* atoms, __local int* numAtoms,
+            __local int* baseIndex, __global unsigned int* interactionCount, __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
             real4 invPeriodicBoxSize, __global const real4* posq, __local real4* posBuffer, real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
     const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
                                      0.5f*periodicBoxSize.y-blockSizeX.y >= PADDED_CUTOFF &&
@@ -192,7 +192,7 @@ void storeInteractionData(unsigned short x, __local unsigned short* buffer, __lo
                 *numAtoms = atomsToStore-tilesToStore*TILE_SIZE;
             if (*baseIndex+tilesToStore <= maxTiles) {
                 if (get_local_id(0) < tilesToStore)
-                    interactingTiles[*baseIndex+get_local_id(0)] = (ushort2) (x, singlePeriodicCopy);
+                    interactingTiles[*baseIndex+get_local_id(0)] = x;
                 for (int i = get_local_id(0); i < tilesToStore*TILE_SIZE; i += get_local_size(0))
                     interactingAtoms[*baseIndex*TILE_SIZE+i] = (i < atomsToStore ? atoms[i] : NUM_ATOMS);
             }
@@ -216,7 +216,7 @@ void storeInteractionData(unsigned short x, __local unsigned short* buffer, __lo
         barrier(CLK_LOCAL_MEM_FENCE);
         if (*baseIndex < maxTiles) {
             if (get_local_id(0) == 0)
-                interactingTiles[*baseIndex] = (ushort2) (x, singlePeriodicCopy);
+                interactingTiles[*baseIndex] = x;
             if (get_local_id(0) < TILE_SIZE)
                 interactingAtoms[*baseIndex*TILE_SIZE+get_local_id(0)] = (get_local_id(0) < *numAtoms ? atoms[get_local_id(0)] : NUM_ATOMS);
         }
@@ -234,7 +234,7 @@ void storeInteractionData(unsigned short x, __local unsigned short* buffer, __lo
  * mark them as non-interacting.
  */
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, __global unsigned int* restrict interactionCount,
-        __global ushort2* restrict interactingTiles, __global unsigned int* restrict interactingAtoms, __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex,
+        __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms, __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex,
         unsigned int numBlocks, __global real2* restrict sortedBlocks, __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
         __global const int* restrict rebuildNeighborList) {
@@ -272,7 +272,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         if (get_local_id(0) == get_local_size(0)-1)
             numAtoms = 0;
         real2 sortedKey = sortedBlocks[i];
-        unsigned short x = (unsigned short) sortedKey.y;
+        int x = (int) sortedKey.y;
         real4 blockCenterX = sortedBlockCenter[i];
         real4 blockSizeX = sortedBlockBoundingBox[i];
 

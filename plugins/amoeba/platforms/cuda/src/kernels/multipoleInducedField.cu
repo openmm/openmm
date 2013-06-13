@@ -201,7 +201,7 @@ extern "C" __global__ void computeInducedField(
         unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const ushort2* __restrict__ exclusionTiles, 
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
-        const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real* __restrict__ inducedDipoleS,
         const real* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
@@ -339,10 +339,8 @@ extern "C" __global__ void computeInducedField(
         
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= maxTiles) {
-            ushort2 tileIndices = tiles[pos];
-            x = tileIndices.x;
-        }
+        if (numTiles <= maxTiles)
+            x = tiles[pos];
         else
 #endif
         {

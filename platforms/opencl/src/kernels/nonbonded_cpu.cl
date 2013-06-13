@@ -22,7 +22,7 @@ __kernel void computeNonbonded(
         __global real* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
-        , __global const ushort2* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         unsigned int maxTiles, __global const real4* restrict blockCenter, __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #endif
         PARAMETER_ARGUMENTS) {
@@ -234,8 +234,7 @@ __kernel void computeNonbonded(
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
-            ushort2 tileIndices = tiles[pos];
-            x = tileIndices.x;
+            x = tiles[pos];
             real4 blockSizeX = blockSize[x];
             singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
                                   0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
