@@ -122,8 +122,8 @@ __device__ void prefixSum(short* sum, ushort2* temp) {
  * This is called by findBlocksWithInteractions(). It compacts the list of blocks, identifies interactions
  * in them, and writes the result to global memory.
  */
-__device__ void storeInteractionData(unsigned short x, unsigned short* buffer, short* sum, ushort2* temp, int* atoms, int& numAtoms,
-            int& baseIndex, unsigned int* interactionCount, ushort2* interactingTiles, unsigned int* interactingAtoms, real4 periodicBoxSize,
+__device__ void storeInteractionData(int x, unsigned short* buffer, short* sum, ushort2* temp, int* atoms, int& numAtoms,
+            int& baseIndex, unsigned int* interactionCount, int* interactingTiles, unsigned int* interactingAtoms, real4 periodicBoxSize,
             real4 invPeriodicBoxSize, const real4* posq, real3* posBuffer, real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
     const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
                                      0.5f*periodicBoxSize.y-blockSizeX.y >= PADDED_CUTOFF &&
@@ -223,7 +223,7 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
                 numAtoms = atomsToStore-tilesToStore*TILE_SIZE;
             if (baseIndex+tilesToStore <= maxTiles) {
                 if (threadIdx.x < tilesToStore)
-                    interactingTiles[baseIndex+threadIdx.x] = make_ushort2(x, singlePeriodicCopy);
+                    interactingTiles[baseIndex+threadIdx.x] = x;
                 for (int i = threadIdx.x; i < tilesToStore*TILE_SIZE; i += blockDim.x)
                     interactingAtoms[baseIndex*TILE_SIZE+i] = (i < atomsToStore ? atoms[i] : NUM_ATOMS);
             }
@@ -247,7 +247,7 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
         __syncthreads();
         if (baseIndex < maxTiles) {
             if (threadIdx.x == 0)
-                interactingTiles[baseIndex] = make_ushort2(x, singlePeriodicCopy);
+                interactingTiles[baseIndex] = x;
             if (threadIdx.x < TILE_SIZE)
                 interactingAtoms[baseIndex*TILE_SIZE+threadIdx.x] = (threadIdx.x < numAtoms ? atoms[threadIdx.x] : NUM_ATOMS);
         }
@@ -290,7 +290,7 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
  * [in] blockCenter            - the center of each bounding box
  * [in] blockBoundingBox       - bounding box of each atom block
  * [out] interactionCount      - total number of tiles that have interactions
- * [out] interactingTiles      - set of tiles that have interactions
+ * [out] interactingTiles      - set of blocks that have interactions
  * [out] interactingAtoms      - a list of atoms that interact with each atom block
  * [in] posq                   - x,y,z coordinates of each atom and charge q
  * [in] maxTiles               - maximum number of tiles to process, used for multi-GPUs
@@ -313,7 +313,7 @@ __device__ void storeInteractionData(unsigned short x, unsigned short* buffer, s
  *
  */
 extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, unsigned int* __restrict__ interactionCount,
-        ushort2* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int startBlockIndex,
+        int* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int startBlockIndex,
         unsigned int numBlocks, real2* __restrict__ sortedBlocks, const real4* __restrict__ sortedBlockCenter, const real4* __restrict__ sortedBlockBoundingBox,
         const unsigned int* __restrict__ exclusionIndices, const unsigned int* __restrict__ exclusionRowIndices, real4* __restrict__ oldPositions,
         const int* __restrict__ rebuildNeighborList) {
@@ -343,7 +343,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
         if (threadIdx.x == blockDim.x-1)
             numAtoms = 0;
         real2 sortedKey = sortedBlocks[i];
-        unsigned short x = (unsigned short) sortedKey.y;
+        int x = (int) sortedKey.y;
         real4 blockCenterX = sortedBlockCenter[i];
         real4 blockSizeX = sortedBlockBoundingBox[i];
 
