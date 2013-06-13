@@ -84,8 +84,7 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
  * [in]exclusionTiles   - x,y denotes the indices of tiles that have an exclusion
  * [in]startTileIndex   - index into first tile to be processed
  * [in]numTileIndices   - number of tiles this context is responsible for processing
- * [in]ushort2 tiles    - x component lists the tiles that interact with each tile
- *                      - y component not used currently
+ * [in]int tiles        - the atom block for each tile
  * [in]interactionCount - total number of tiles that have an interaction
  * [in]maxTiles         - stores the size of the neighbourlist in case it needs 
  *                      - to be expanded
@@ -104,7 +103,7 @@ extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
 #ifdef USE_CUTOFF
-        , const ushort2* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         unsigned int maxTiles, const real4* __restrict__ blockCenter, const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms
 #endif
         PARAMETER_ARGUMENTS) {
@@ -338,8 +337,7 @@ extern "C" __global__ void computeNonbonded(
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
-            ushort2 tileIndices = tiles[pos];
-            x = tileIndices.x;
+            x = tiles[pos];
             real4 blockSizeX = blockSize[x];
             singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
                                   0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
