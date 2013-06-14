@@ -34,6 +34,8 @@
 
 #include "windowsExportCuda.h"
 #include "openmm/Vec3.h"
+#include <complex>
+#include <fftw3.h>
 #include <pthread.h>
 #include <vector>
 
@@ -48,11 +50,15 @@ public:
      */
     CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha);
     ~CpuPme();
-    double computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize);
+    double computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize, bool includeEnergy);
 private:
     int gridx, gridy, gridz, numParticles;
     double alpha;
-    std::vector<float> realGrid;
+    bool hasCreatedPlan;
+    std::vector<float> bsplineModuli[3];
+    float* realGrid;
+    fftwf_complex* complexGrid;
+    fftwf_plan forwardFFT, backwardFFT;
     std::vector<pthread_t> thread;
 };
 
