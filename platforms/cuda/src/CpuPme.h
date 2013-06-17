@@ -52,6 +52,8 @@ public:
     ~CpuPme();
     double computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize, bool includeEnergy);
 private:
+    static bool hasInitializedThreads;
+    static int numThreads;
     int gridx, gridy, gridz, numParticles;
     double alpha;
     bool hasCreatedPlan;
