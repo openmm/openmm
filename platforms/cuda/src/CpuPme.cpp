@@ -51,85 +51,43 @@ static float extractFloat(__m128 v, unsigned int element) {
     return f[element];
 }
 
-CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) :
-        gridx(gridx), gridy(gridy), gridz(gridz), numParticles(numParticles), alpha(alpha), hasCreatedPlan(false), realGrid(NULL), complexGrid(NULL) {
-    if (!hasInitializedThreads) {
-        numThreads = 4;
-        fftwf_init_threads();
-        hasInitializedThreads = true;
-    }
-    realGrid = (float*) fftwf_malloc(sizeof(float)*gridx*gridy*gridz);
-    complexGrid = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex)*gridx*gridy*(gridz/2+1));
-    fftwf_plan_with_nthreads(numThreads);
-    forwardFFT = fftwf_plan_dft_r2c_3d(gridx, gridy, gridz, realGrid, complexGrid, FFTW_MEASURE);
-    backwardFFT = fftwf_plan_dft_c2r_3d(gridx, gridy, gridz, complexGrid, realGrid, FFTW_MEASURE);
-    hasCreatedPlan = true;
+#ifdef __APPLE__
+   #include <sys/sysctl.h>
+   #include <dlfcn.h>
+#else
+   #ifdef WIN32
+      #include <windows.h>
+   #else
+      #include <dlfcn.h>
+      #include <unistd.h>
+   #endif
+#endif
 
-    // Initialize the b-spline moduli.
-
-    int maxSize = max(max(gridx, gridy), gridz);
-    vector<double> data(PME_ORDER);
-    vector<double> ddata(PME_ORDER);
-    vector<double> bsplinesData(maxSize);
-    data[PME_ORDER-1] = 0.0;
-    data[1] = 0.0;
-    data[0] = 1.0;
-    for (int i = 3; i < PME_ORDER; i++) {
-        double div = 1.0/(i-1.0);
-        data[i-1] = 0.0;
-        for (int j = 1; j < (i-1); j++)
-            data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
-        data[0] = div*data[0];
-    }
-
-    // Differentiate.
-
-    ddata[0] = -data[0];
-    for (int i = 1; i < PME_ORDER; i++)
-        ddata[i] = data[i-1]-data[i];
-    double div = 1.0/(PME_ORDER-1);
-    data[PME_ORDER-1] = 0.0;
-    for (int i = 1; i < (PME_ORDER-1); i++)
-        data[PME_ORDER-i-1] = div*(i*data[PME_ORDER-i-2]+(PME_ORDER-i)*data[PME_ORDER-i-1]);
-    data[0] = div*data[0];
-    for (int i = 0; i < maxSize; i++)
-        bsplinesData[i] = 0.0;
-    for (int i = 1; i <= PME_ORDER; i++)
-        bsplinesData[i] = data[i-1];
-
-    // Evaluate the actual bspline moduli for X/Y/Z.
-
-    bsplineModuli[0].resize(gridx);
-    bsplineModuli[1].resize(gridy);
-    bsplineModuli[2].resize(gridz);
-    for (int dim = 0; dim < 3; dim++) {
-        int ndata = bsplineModuli[dim].size();
-        vector<float>& moduli = bsplineModuli[dim];
-        for (int i = 0; i < ndata; i++) {
-            double sc = 0.0;
-            double ss = 0.0;
-            for (int j = 0; j < ndata; j++) {
-                double arg = (2.0*M_PI*i*j)/ndata;
-                sc += bsplinesData[j]*cos(arg);
-                ss += bsplinesData[j]*sin(arg);
-            }
-            moduli[i] = (float) (sc*sc+ss*ss);
-        }
-        for (int i = 0; i < ndata; i++)
-            if (moduli[i] < 1.0e-7f)
-                moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
-    }
-}
-
-CpuPme::~CpuPme() {
-    if (realGrid != NULL)
-        fftwf_free(realGrid);
-    if (complexGrid != NULL)
-        fftwf_free(complexGrid);
-    if (hasCreatedPlan) {
-        fftwf_destroy_plan(forwardFFT);
-        fftwf_destroy_plan(backwardFFT);
-    }
+static int getNumProcessors() {
+#ifdef __APPLE__
+    int ncpu;
+    size_t len = 4;
+    if (sysctlbyname("hw.logicalcpu", &ncpu, &len, NULL, 0) == 0)
+       return ncpu;
+    else
+       return 1;
+#else
+#ifdef WIN32
+    SYSTEM_INFO siSysInfo;
+    int ncpu;
+    GetSystemInfo(&siSysInfo);
+    ncpu = siSysInfo.dwNumberOfProcessors;
+    if (ncpu < 1)
+        ncpu = 1;
+    return ncpu;
+#else
+    long nProcessorsOnline = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nProcessorsOnline == -1)
+        return 1;
+    else
+        return (int) nProcessorsOnline;
+#endif
+#endif
 }
 
 static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
@@ -215,7 +173,7 @@ static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gri
     }
 }
 
-static float reciprocalEnergy(fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3 periodicBoxSize) {
+static float reciprocalEnergy(int start, int end, fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3 periodicBoxSize) {
     const unsigned int yzsize = gridy*gridz;
     const unsigned int zsizeHalf = gridz/2+1;
     const unsigned int yzsizeHalf = gridy*zsizeHalf;
@@ -226,8 +184,8 @@ static float reciprocalEnergy(fftwf_complex* grid, int gridx, int gridy, int gri
     const float invPeriodicBoxSizeZ = (float) (1.0/periodicBoxSize[2]);
     float energy = 0.0f;
 
-    int firstz = 1;
-    for (int kx = 0; kx < gridx; kx++) {
+    int firstz = (start == 0 ? 1 : 0);
+    for (int kx = start; kx < end; kx++) {
         int mx = (kx < (gridx+1)/2) ? kx : kx-gridx;
         float mhx = mx*invPeriodicBoxSizeX;
         float bx = scaleFactor*bsplineModuli[0][kx];
@@ -265,7 +223,7 @@ static float reciprocalEnergy(fftwf_complex* grid, int gridx, int gridy, int gri
     return energy;
 }
 
-static void reciprocalConvolution(fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3 periodicBoxSize) {
+static void reciprocalConvolution(int start, int end, fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3 periodicBoxSize) {
     const unsigned int zsize = gridz/2+1;
     const unsigned int yzsize = gridy*zsize;
     const float scaleFactor = (float) (M_PI*periodicBoxSize[0]*periodicBoxSize[1]*periodicBoxSize[2]);
@@ -274,8 +232,8 @@ static void reciprocalConvolution(fftwf_complex* grid, int gridx, int gridy, int
     const float invPeriodicBoxSizeY = (float) (1.0/periodicBoxSize[1]);
     const float invPeriodicBoxSizeZ = (float) (1.0/periodicBoxSize[2]);
 
-    int firstz = 1;
-    for (int kx = 0; kx < gridx; kx++) {
+    int firstz = (start == 0 ? 1 : 0);
+    for (int kx = start; kx < end; kx++) {
         int mx = (kx < (gridx+1)/2) ? kx : kx-gridx;
         float mhx = mx*invPeriodicBoxSizeX;
         float bx = scaleFactor*bsplineModuli[0][kx];
@@ -300,7 +258,7 @@ static void reciprocalConvolution(fftwf_complex* grid, int gridx, int gridy, int
     }
 }
 
-static void interpolateForces(float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
+static void interpolateForces(int start, int end, float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
     __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
     __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
     __m128 gridSize = _mm_set_ps(0, gridz, gridy, gridx);
@@ -308,7 +266,7 @@ static void interpolateForces(float* posq, float* force, float* grid, int gridx,
     __m128 one  = _mm_set1_ps(1);
     __m128 scale = _mm_set1_ps(1.0f/(PME_ORDER-1));
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = start; i < end; i++) {
         // Find the position relative to the nearest grid point.
         
         __m128 pos = _mm_load_ps(&posq[4*i]);
@@ -378,27 +336,188 @@ static void interpolateForces(float* posq, float* force, float* grid, int gridx,
     }
 }
 
+class CpuPme::ThreadData {
+public:
+    CpuPme& owner;
+    int index;
+    ThreadData(CpuPme& owner, int index) : owner(owner), index(index) {
+    }
+};
+
+static void* threadBody(void* args) {
+    CpuPme::ThreadData& data = *reinterpret_cast<CpuPme::ThreadData*>(args);
+    data.owner.runThread(data.index);
+    delete &data;
+    return 0;
+}
+
+CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) :
+        gridx(gridx), gridy(gridy), gridz(gridz), numParticles(numParticles), alpha(alpha), hasCreatedPlan(false), isFinished(false), realGrid(NULL), complexGrid(NULL) {
+    if (!hasInitializedThreads) {
+        numThreads = getNumProcessors();
+        fftwf_init_threads();
+        hasInitializedThreads = true;
+    }
+    // Initialize threads.
+    
+    pthread_cond_init(&startCondition, NULL);
+    pthread_cond_init(&endCondition, NULL);
+    pthread_mutex_init(&lock, NULL);
+    thread.resize(numThreads);
+    for (int i = 0; i < numThreads; i++) {
+        ThreadData* data = new ThreadData(*this, i);
+        threadData.push_back(data);
+        pthread_create(&thread[i], NULL, threadBody, data);
+    }
+
+    // Initialize FFTW.
+    
+    realGrid = (float*) fftwf_malloc(sizeof(float)*gridx*gridy*gridz);
+    complexGrid = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex)*gridx*gridy*(gridz/2+1));
+    fftwf_plan_with_nthreads(numThreads);
+    forwardFFT = fftwf_plan_dft_r2c_3d(gridx, gridy, gridz, realGrid, complexGrid, FFTW_MEASURE);
+    backwardFFT = fftwf_plan_dft_c2r_3d(gridx, gridy, gridz, complexGrid, realGrid, FFTW_MEASURE);
+    hasCreatedPlan = true;
+    
+    // Initialize the b-spline moduli.
+
+    int maxSize = max(max(gridx, gridy), gridz);
+    vector<double> data(PME_ORDER);
+    vector<double> ddata(PME_ORDER);
+    vector<double> bsplinesData(maxSize);
+    data[PME_ORDER-1] = 0.0;
+    data[1] = 0.0;
+    data[0] = 1.0;
+    for (int i = 3; i < PME_ORDER; i++) {
+        double div = 1.0/(i-1.0);
+        data[i-1] = 0.0;
+        for (int j = 1; j < (i-1); j++)
+            data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+        data[0] = div*data[0];
+    }
+
+    // Differentiate.
+
+    ddata[0] = -data[0];
+    for (int i = 1; i < PME_ORDER; i++)
+        ddata[i] = data[i-1]-data[i];
+    double div = 1.0/(PME_ORDER-1);
+    data[PME_ORDER-1] = 0.0;
+    for (int i = 1; i < (PME_ORDER-1); i++)
+        data[PME_ORDER-i-1] = div*(i*data[PME_ORDER-i-2]+(PME_ORDER-i)*data[PME_ORDER-i-1]);
+    data[0] = div*data[0];
+    for (int i = 0; i < maxSize; i++)
+        bsplinesData[i] = 0.0;
+    for (int i = 1; i <= PME_ORDER; i++)
+        bsplinesData[i] = data[i-1];
+
+    // Evaluate the actual bspline moduli for X/Y/Z.
+
+    bsplineModuli[0].resize(gridx);
+    bsplineModuli[1].resize(gridy);
+    bsplineModuli[2].resize(gridz);
+    for (int dim = 0; dim < 3; dim++) {
+        int ndata = bsplineModuli[dim].size();
+        vector<float>& moduli = bsplineModuli[dim];
+        for (int i = 0; i < ndata; i++) {
+            double sc = 0.0;
+            double ss = 0.0;
+            for (int j = 0; j < ndata; j++) {
+                double arg = (2.0*M_PI*i*j)/ndata;
+                sc += bsplinesData[j]*cos(arg);
+                ss += bsplinesData[j]*sin(arg);
+            }
+            moduli[i] = (float) (sc*sc+ss*ss);
+        }
+        for (int i = 0; i < ndata; i++)
+            if (moduli[i] < 1.0e-7f)
+                moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
+    }
+}
+
+CpuPme::~CpuPme() {
+    if (complexGrid != NULL)
+        fftwf_free(complexGrid);
+    if (hasCreatedPlan) {
+        fftwf_destroy_plan(forwardFFT);
+        fftwf_destroy_plan(backwardFFT);
+    }
+    isFinished = true;
+    pthread_cond_broadcast(&startCondition);
+    pthread_mutex_unlock(&lock);
+    for (int i = 0; i < thread.size(); i++)
+        pthread_join(thread[i], NULL);
+    pthread_mutex_destroy(&lock);
+    pthread_cond_destroy(&startCondition);
+    pthread_cond_destroy(&endCondition);
+}
+
 #include <sys/time.h>
 double diff(struct timeval t1, struct timeval t2) {
     return t2.tv_usec-t1.tv_usec+1e6*(t2.tv_sec-t1.tv_sec);
 }
 
+void CpuPme::runThread(int index) {
+    int particleStart = (index*numParticles)/numThreads;
+    int particleEnd = ((index+1)*numParticles)/numThreads;
+    int gridStart = (index*gridx)/numThreads;
+    int gridEnd = ((index+1)*gridx)/numThreads;
+    while (!isFinished) {
+        threadWait();
+        if (isFinished)
+            break;
+        if (includeEnergy) {
+            double threadEnergy = reciprocalEnergy(gridStart, gridEnd, &complexGrid[0], gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+            pthread_mutex_lock(&lock);
+            energy += threadEnergy;
+            pthread_mutex_unlock(&lock);
+            threadWait();
+        }
+        reciprocalConvolution(gridStart, gridEnd, complexGrid, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+        threadWait();
+        interpolateForces(particleStart, particleEnd, posq, force, realGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
+    }
+}
+
+void CpuPme::threadWait() {
+    pthread_mutex_lock(&lock);
+    waitCount++;
+    pthread_cond_signal(&endCondition);
+    pthread_cond_wait(&startCondition, &lock);
+    pthread_mutex_unlock(&lock);
+}
+
+void CpuPme::advanceThreads() {
+    pthread_mutex_lock(&lock);
+    waitCount = 0;
+    pthread_cond_broadcast(&startCondition);
+    while (waitCount < numThreads) {
+        pthread_cond_wait(&endCondition, &lock);
+    }
+    pthread_mutex_unlock(&lock);
+}
+
 double CpuPme::computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize, bool includeEnergy) {
+    this->posq = posq;
+    this->force = force;
+    this->periodicBoxSize = periodicBoxSize;
+    this->includeEnergy = includeEnergy;
+    energy = 0.0;
     struct timeval t1, t2, t3, t4, t5, t6, t7;
     gettimeofday(&t1, NULL);
-    spreadCharge(posq, &realGrid[0], gridx, gridy, gridz, numParticles, periodicBoxSize);
+    spreadCharge(posq, realGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
     gettimeofday(&t2, NULL);
     fftwf_execute_dft_r2c(forwardFFT, realGrid, complexGrid);
     gettimeofday(&t3, NULL);
     double energy = 0.0;
     if (includeEnergy)
-        energy = reciprocalEnergy(&complexGrid[0], gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+        advanceThreads(); // Signal threads to compute energy.
     gettimeofday(&t4, NULL);
-    reciprocalConvolution(&complexGrid[0], gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+    advanceThreads(); // Signal threads to perform reciprocal convolution.
     gettimeofday(&t5, NULL);
     fftwf_execute_dft_c2r(backwardFFT, complexGrid, realGrid);
     gettimeofday(&t6, NULL);
-    interpolateForces(posq, force, &realGrid[0], gridx, gridy, gridz, numParticles, periodicBoxSize);
+    advanceThreads(); // Signal threads to interpolate forces.
     gettimeofday(&t7, NULL);
     printf("time %g %g %g %g %g %g\n", diff(t1, t2), diff(t2, t3), diff(t3, t4), diff(t4, t5), diff(t5, t6), diff(t6, t7));
     return energy;

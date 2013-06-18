@@ -46,22 +46,36 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_CUDA CpuPme {
 public:
+    class ThreadData;
     /**
      */
     CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha);
     ~CpuPme();
     double computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize, bool includeEnergy);
+    void runThread(int index);
 private:
+    void threadWait();
+    void advanceThreads();
     static bool hasInitializedThreads;
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
     double alpha;
-    bool hasCreatedPlan;
+    bool hasCreatedPlan, isFinished;
     std::vector<float> bsplineModuli[3];
     float* realGrid;
     fftwf_complex* complexGrid;
     fftwf_plan forwardFFT, backwardFFT;
+    int waitCount;
+    pthread_cond_t startCondition, endCondition;
+    pthread_mutex_t lock;
     std::vector<pthread_t> thread;
+    std::vector<ThreadData*> threadData;
+    // The following variables are used to store information about the calculation currently being performed.
+    float energy;
+    float* posq;
+    float* force;
+    Vec3 periodicBoxSize;
+    bool includeEnergy;
 };
 
 } // namespace OpenMM
