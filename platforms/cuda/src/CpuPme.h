@@ -34,7 +34,6 @@
 
 #include "windowsExportCuda.h"
 #include "openmm/Vec3.h"
-#include <complex>
 #include <fftw3.h>
 #include <pthread.h>
 #include <vector>
@@ -46,12 +45,14 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_CUDA CpuPme {
 public:
+    class IO;
     class ThreadData;
     /**
      */
     CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha);
     ~CpuPme();
-    double computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize, bool includeEnergy);
+    void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy);
+    double finishComputation(IO& io);
     void runThread(int index);
 private:
     void threadWait();
@@ -60,22 +61,30 @@ private:
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
     double alpha;
-    bool hasCreatedPlan, isFinished;
+    bool hasCreatedPlan, isFinished, isDeleted;
+    std::vector<float> force;
     std::vector<float> bsplineModuli[3];
     float* realGrid;
     fftwf_complex* complexGrid;
     fftwf_plan forwardFFT, backwardFFT;
     int waitCount;
     pthread_cond_t startCondition, endCondition;
+    pthread_cond_t mainThreadStartCondition, mainThreadEndCondition;
     pthread_mutex_t lock;
+    pthread_t mainThread;
     std::vector<pthread_t> thread;
     std::vector<ThreadData*> threadData;
     // The following variables are used to store information about the calculation currently being performed.
     float energy;
     float* posq;
-    float* force;
     Vec3 periodicBoxSize;
     bool includeEnergy;
+};
+
+class CpuPme::IO {
+public:
+    virtual float* getPosq() = 0;
+    virtual void setForce(float* force) = 0;
 };
 
 } // namespace OpenMM

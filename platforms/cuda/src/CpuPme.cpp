@@ -220,7 +220,7 @@ static float reciprocalEnergy(int start, int end, fftwf_complex* grid, int gridx
             firstz = 0;
         }
     }
-    return energy;
+    return 0.5f*energy;
 }
 
 static void reciprocalConvolution(int start, int end, fftwf_complex* grid, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3 periodicBoxSize) {
@@ -348,12 +348,14 @@ public:
 static void* threadBody(void* args) {
     CpuPme::ThreadData& data = *reinterpret_cast<CpuPme::ThreadData*>(args);
     data.owner.runThread(data.index);
+    if (data.tempGrid != NULL)
+        fftwf_free(data.tempGrid);
     delete &data;
     return 0;
 }
 
 CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) :
-        gridx(gridx), gridy(gridy), gridz(gridz), numParticles(numParticles), alpha(alpha), hasCreatedPlan(false), isFinished(false), realGrid(NULL), complexGrid(NULL) {
+        gridx(gridx), gridy(gridy), gridz(gridz), numParticles(numParticles), alpha(alpha), hasCreatedPlan(false), isDeleted(false), force(4*numParticles), realGrid(NULL), complexGrid(NULL) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
         fftwf_init_threads();
@@ -363,6 +365,8 @@ CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) 
     
     pthread_cond_init(&startCondition, NULL);
     pthread_cond_init(&endCondition, NULL);
+    pthread_cond_init(&mainThreadStartCondition, NULL);
+    pthread_cond_init(&mainThreadEndCondition, NULL);
     pthread_mutex_init(&lock, NULL);
     thread.resize(numThreads);
     for (int i = 0; i < numThreads; i++) {
@@ -371,7 +375,8 @@ CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) 
         pthread_create(&thread[i], NULL, threadBody, data);
         data->tempGrid = (float*) fftwf_malloc(sizeof(float)*(gridx*gridy*gridz+3));
     }
-
+    pthread_create(&mainThread, NULL, threadBody, new ThreadData(*this, -1));
+    
     // Initialize FFTW.
     
     realGrid = threadData[0]->tempGrid;
@@ -444,7 +449,8 @@ CpuPme::~CpuPme() {
         fftwf_destroy_plan(forwardFFT);
         fftwf_destroy_plan(backwardFFT);
     }
-    isFinished = true;
+    isDeleted = true;
+    pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&startCondition);
     pthread_mutex_unlock(&lock);
     for (int i = 0; i < (int) thread.size(); i++)
@@ -452,11 +458,8 @@ CpuPme::~CpuPme() {
     pthread_mutex_destroy(&lock);
     pthread_cond_destroy(&startCondition);
     pthread_cond_destroy(&endCondition);
-    for (int i = 0; i < (int) threadData.size(); i++) {
-        if (threadData[i]->tempGrid != NULL)
-            fftwf_free(threadData[i]->tempGrid);
-        delete threadData[i];
-    }
+    pthread_cond_destroy(&mainThreadStartCondition);
+    pthread_cond_destroy(&mainThreadEndCondition);
 }
 
 #include <sys/time.h>
@@ -465,37 +468,76 @@ double diff(struct timeval t1, struct timeval t2) {
 }
 
 void CpuPme::runThread(int index) {
-    int particleStart = (index*numParticles)/numThreads;
-    int particleEnd = ((index+1)*numParticles)/numThreads;
-    int gridxStart = (index*gridx)/numThreads;
-    int gridxEnd = ((index+1)*gridx)/numThreads;
-    int gridSize = (gridx*gridy*gridz+3)/4;
-    int gridStart = 4*((index*gridSize)/numThreads);
-    int gridEnd = 4*(((index+1)*gridSize)/numThreads);
-    while (!isFinished) {
-        threadWait();
-        spreadCharge(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
-        threadWait();
-        int numGrids = threadData.size();
-        for (int i = gridStart; i < gridEnd; i += 4) {
-            __m128 sum = _mm_load_ps(&realGrid[i]);
-            for (int j = 1; j < numGrids; j++)
-                sum = _mm_add_ps(sum, _mm_load_ps(&threadData[j]->tempGrid[i]));
-            _mm_store_ps(&realGrid[i], sum);
-        }
-        threadWait();
-        if (isFinished)
-            break;
-        if (includeEnergy) {
-            double threadEnergy = reciprocalEnergy(gridxStart, gridxEnd, complexGrid, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+    if (index == -1) {
+        // This is the main thread that coordinates all the other ones.
+        
+        while (true) {
+            // Wait for the signal to start.
+            
             pthread_mutex_lock(&lock);
-            energy += threadEnergy;
+            pthread_cond_wait(&mainThreadStartCondition, &lock);
             pthread_mutex_unlock(&lock);
-            threadWait();
+            if (isDeleted)
+                return;
+            isFinished = false;
+            struct timeval t1, t2, t3, t4, t5, t6, t7;
+            gettimeofday(&t1, NULL);
+            advanceThreads(); // Signal threads to perform charge spreading.
+            advanceThreads(); // Signal threads to sum the charge grids.
+            gettimeofday(&t2, NULL);
+            fftwf_execute_dft_r2c(forwardFFT, realGrid, complexGrid);
+            gettimeofday(&t3, NULL);
+            if (includeEnergy)
+                advanceThreads(); // Signal threads to compute energy.
+            gettimeofday(&t4, NULL);
+            advanceThreads(); // Signal threads to perform reciprocal convolution.
+            gettimeofday(&t5, NULL);
+            fftwf_execute_dft_c2r(backwardFFT, complexGrid, realGrid);
+            gettimeofday(&t6, NULL);
+            advanceThreads(); // Signal threads to interpolate forces.
+            isFinished = true;
+            gettimeofday(&t7, NULL);
+            printf("time %g %g %g %g %g %g\n", diff(t1, t2), diff(t2, t3), diff(t3, t4), diff(t4, t5), diff(t5, t6), diff(t6, t7));
+            pthread_mutex_lock(&lock);
+            pthread_cond_signal(&mainThreadEndCondition);
+            pthread_mutex_unlock(&lock);
         }
-        reciprocalConvolution(gridxStart, gridxEnd, complexGrid, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
-        threadWait();
-        interpolateForces(particleStart, particleEnd, posq, force, realGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
+    }
+    else {
+        // This is a worker thread.
+        
+        int particleStart = (index*numParticles)/numThreads;
+        int particleEnd = ((index+1)*numParticles)/numThreads;
+        int gridxStart = (index*gridx)/numThreads;
+        int gridxEnd = ((index+1)*gridx)/numThreads;
+        int gridSize = (gridx*gridy*gridz+3)/4;
+        int gridStart = 4*((index*gridSize)/numThreads);
+        int gridEnd = 4*(((index+1)*gridSize)/numThreads);
+        while (true) {
+            threadWait();
+            if (isDeleted)
+                return;
+            spreadCharge(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
+            threadWait();
+            int numGrids = threadData.size();
+            for (int i = gridStart; i < gridEnd; i += 4) {
+                __m128 sum = _mm_load_ps(&realGrid[i]);
+                for (int j = 1; j < numGrids; j++)
+                    sum = _mm_add_ps(sum, _mm_load_ps(&threadData[j]->tempGrid[i]));
+                _mm_store_ps(&realGrid[i], sum);
+            }
+            threadWait();
+            if (includeEnergy) {
+                double threadEnergy = reciprocalEnergy(gridxStart, gridxEnd, complexGrid, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+                pthread_mutex_lock(&lock);
+                energy += threadEnergy;
+                pthread_mutex_unlock(&lock);
+                threadWait();
+            }
+            reciprocalConvolution(gridxStart, gridxEnd, complexGrid, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxSize);
+            threadWait();
+            interpolateForces(particleStart, particleEnd, posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
+        }
     }
 }
 
@@ -517,29 +559,22 @@ void CpuPme::advanceThreads() {
     pthread_mutex_unlock(&lock);
 }
 
-double CpuPme::computeForceAndEnergy(float* posq, float* force, Vec3 periodicBoxSize, bool includeEnergy) {
-    this->posq = posq;
-    this->force = force;
+void CpuPme::beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) {
+    posq = io.getPosq();
     this->periodicBoxSize = periodicBoxSize;
     this->includeEnergy = includeEnergy;
     energy = 0.0;
-    struct timeval t1, t2, t3, t4, t5, t6, t7;
-    gettimeofday(&t1, NULL);
-    advanceThreads(); // Signal threads to perform charge spreading.
-    advanceThreads(); // Signal threads to sum the charge grids.
-    gettimeofday(&t2, NULL);
-    fftwf_execute_dft_r2c(forwardFFT, realGrid, complexGrid);
-    gettimeofday(&t3, NULL);
-    double energy = 0.0;
-    if (includeEnergy)
-        advanceThreads(); // Signal threads to compute energy.
-    gettimeofday(&t4, NULL);
-    advanceThreads(); // Signal threads to perform reciprocal convolution.
-    gettimeofday(&t5, NULL);
-    fftwf_execute_dft_c2r(backwardFFT, complexGrid, realGrid);
-    gettimeofday(&t6, NULL);
-    advanceThreads(); // Signal threads to interpolate forces.
-    gettimeofday(&t7, NULL);
-    printf("time %g %g %g %g %g %g\n", diff(t1, t2), diff(t2, t3), diff(t3, t4), diff(t4, t5), diff(t5, t6), diff(t6, t7));
+    pthread_mutex_lock(&lock);
+    pthread_cond_signal(&mainThreadStartCondition);
+    pthread_mutex_unlock(&lock);
+}
+
+double CpuPme::finishComputation(IO& io) {
+    pthread_mutex_lock(&lock);
+    while (!isFinished) {
+        pthread_cond_wait(&mainThreadEndCondition, &lock);
+    }
+    pthread_mutex_unlock(&lock);
+    io.setForce(&force[0]);
     return energy;
 }
