@@ -16,7 +16,7 @@ Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
 Contributors: Christoph Klein, Michael R. Shirts
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -92,7 +92,7 @@ class PrmtopLoader(object):
     >>> import os, os.path
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
     >>> prmtop_filename = os.path.join(directory, 'alanine-dipeptide.prmtop')
-    >>> prmtop = PrmtopLoader(prmtop_filename)    
+    >>> prmtop = PrmtopLoader(prmtop_filename)
 
     """
     def __init__(self, inFilename):
@@ -101,7 +101,7 @@ class PrmtopLoader(object):
 
         ARGUMENTS
 
-        inFilename (string) - AMBER 'new-style' prmtop file, probably generated with one of the AMBER tleap/xleap/sleap        
+        inFilename (string) - AMBER 'new-style' prmtop file, probably generated with one of the AMBER tleap/xleap/sleap
 
         """
 
@@ -152,7 +152,7 @@ class PrmtopLoader(object):
            Parameter:
             - pointerLabel: a string matching one of the following:
 
-            NATOM  : total number of atoms 
+            NATOM  : total number of atoms
             NTYPES : total number of distinct atom types
             NBONH  : number of bonds containing hydrogen
             MBONA  : number of bonds not containing hydrogen
@@ -183,7 +183,7 @@ class PrmtopLoader(object):
             NMXRS  : number of atoms in the largest residue
             IFCAP  : set to 1 if the CAP option from edit was specified
         """
-        index = POINTER_LABEL_LIST.index(pointerLabel) 
+        index = POINTER_LABEL_LIST.index(pointerLabel)
         return float(self._raw_data['POINTERS'][index])
 
     def getNumAtoms(self):
@@ -350,7 +350,7 @@ class PrmtopLoader(object):
         bondPointers=self._raw_data["BONDS_INC_HYDROGEN"]
         self._bondListWithH = self._getBonds(bondPointers)
         return self._bondListWithH
-        
+
 
     def getBondsNoH(self):
         """Return list of bonded atom pairs, K, and Rmin for each bond with no hydrogen"""
@@ -509,11 +509,11 @@ class PrmtopLoader(object):
 def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmodel=None, soluteDielectric=1.0, solventDielectric=78.5, nonbondedCutoff=None, nonbondedMethod='NoCutoff', scee=1.2, scnb=2.0, mm=None, verbose=False, EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True):
     """
     Create an OpenMM System from an Amber prmtop file.
-    
+
     ARGUMENTS (specify  one or the other, but not both)
       prmtop_filename (String) - name of Amber prmtop file (new-style only)
       prmtop_loader (PrmtopLoader) - the loaded prmtop file
-      
+
     OPTIONAL ARGUMENTS
       shake (String) - if 'h-bonds', will SHAKE all bonds to hydrogen and water; if 'all-bonds', will SHAKE all bonds and water (default: None)
       gbmodel (String) - if 'OBC', OBC GBSA will be used; if 'GBVI', GB/VI will be used (default: None)
@@ -547,10 +547,10 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
     >>> prmtop_filename = os.path.join(directory, 'alanine-dipeptide.prmtop')
-    >>> system = readAmberSystem(prmtop_filename)    
+    >>> system = readAmberSystem(prmtop_filename)
 
     """
-    
+
     if prmtop_filename is None and prmtop_loader is None:
         raise Exception("Must specify a filename or loader")
     if prmtop_filename is not None and prmtop_loader is not None:
@@ -567,7 +567,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
     if prmtop.getIfPert()>0:
         raise Exception("perturbation not currently supported")
-        
+
     if prmtop.getIfBox()>1:
         raise Exception("only standard periodic boxes are currently supported")
 
@@ -596,9 +596,9 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
             if isWater[iAtom] and isWater[jAtom]:
                 system.addConstraint(iAtom, jAtom, rMin)
-            
+
     # Add harmonic bonds.
-    if verbose: print "Adding bonds..."    
+    if verbose: print "Adding bonds..."
     force = mm.HarmonicBondForce()
     if flexibleConstraints or (shake not in ('h-bonds', 'all-bonds', 'h-angles')):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
@@ -610,7 +610,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     system.addForce(force)
 
     # Add harmonic angles.
-    if verbose: print "Adding angles..."    
+    if verbose: print "Adding angles..."
     force = mm.HarmonicAngleForce()
     if shake == 'h-angles':
         numConstrainedBonds = system.getNumConstraints()
@@ -638,7 +638,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
                     l1 = bond[1]
                 elif bond[0] == kAtom:
                     l2 = bond[1]
-            
+
             # Compute the distance between atoms and add a constraint
             length = math.sqrt(l1*l1 + l2*l2 - 2*l1*l2*math.cos(aMin))
             system.addConstraint(iAtom, kAtom, length)
@@ -647,14 +647,14 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     system.addForce(force)
 
     # Add torsions.
-    if verbose: print "Adding torsions..."    
+    if verbose: print "Adding torsions..."
     force = mm.PeriodicTorsionForce()
     for (iAtom, jAtom, kAtom, lAtom, forceConstant, phase, periodicity) in prmtop.getDihedrals():
         force.addTorsion(iAtom, jAtom, kAtom, lAtom, periodicity, phase, forceConstant)
     system.addForce(force)
 
     # Add nonbonded interactions.
-    if verbose: print "Adding nonbonded interactions..."    
+    if verbose: print "Adding nonbonded interactions..."
     force = mm.NonbondedForce()
     if (prmtop.getIfBox() == 0):
         # System is non-periodic.
@@ -663,12 +663,12 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         elif nonbondedMethod == 'CutoffNonPeriodic':
             if nonbondedCutoff is None:
                 raise Exception("No cutoff value specified")
-            force.setNonbondedMethod(mm.NonbondedForce.CutoffNonPeriodic)            
+            force.setNonbondedMethod(mm.NonbondedForce.CutoffNonPeriodic)
             force.setCutoffDistance(nonbondedCutoff)
         else:
             raise Exception("Illegal nonbonded method for a non-periodic system")
     else:
-        # System is periodic. 
+        # System is periodic.
         # Set periodic box vectors for periodic system
         (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
         d0 = units.Quantity(0.0, units.angstroms)
@@ -676,16 +676,16 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
         yVec = units.Quantity((d0,   boxY, d0))
         zVec = units.Quantity((d0,   d0,   boxZ))
         system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
-        
+
         # Set cutoff.
         if nonbondedCutoff is None:
             # Compute cutoff automatically.
             min_box_width = min([boxX / units.nanometers, boxY / units.nanometers, boxZ / units.nanometers])
-            CLEARANCE_FACTOR = 0.97 # reduce the cutoff to be a bit smaller than 1/2 smallest box length            
+            CLEARANCE_FACTOR = 0.97 # reduce the cutoff to be a bit smaller than 1/2 smallest box length
             nonbondedCutoff = units.Quantity((min_box_width * CLEARANCE_FACTOR) / 2.0, units.nanometers)
         if nonbondedMethod != 'NoCutoff':
             force.setCutoffDistance(nonbondedCutoff)
-        
+
         # Set nonbonded method.
         if nonbondedMethod == 'NoCutoff':
             force.setNonbondedMethod(mm.NonbondedForce.NoCutoff)
@@ -724,7 +724,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
     excludeParams = (0.0, 0.1, 0.0)
     for iAtom in range(prmtop.getNumAtoms()):
         for jAtom in excludedAtoms[iAtom]:
-            if min((iAtom, jAtom), (jAtom, iAtom)) in excludedAtomPairs: continue            
+            if min((iAtom, jAtom), (jAtom, iAtom)) in excludedAtomPairs: continue
             force.addException(iAtom, jAtom, excludeParams[0], excludeParams[1], excludeParams[2])
 
     system.addForce(force)
@@ -812,7 +812,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             if gbmodel == 'OBC2':
                 gb.addParticle(charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1])
             else:
-                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1]])        
+                gb.addParticle([charges[iAtom], gb_parms[iAtom][0], gb_parms[iAtom][1]])
         system.addForce(gb)
         if nonbondedMethod == 'NoCutoff':
             gb.setNonbondedMethod(mm.NonbondedForce.NoCutoff)
@@ -835,7 +835,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
 
 def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbose=False, asNumpy=False):
     """
-    Read atomic coordinates (and optionally, box vectors) from Amber formatted coordinate file.    
+    Read atomic coordinates (and optionally, box vectors) from Amber formatted coordinate file.
 
     ARGUMENTS
 
@@ -852,13 +852,13 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
     Read coordinates in vacuum.
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-gbsa')
-    >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')    
+    >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
     >>> coordinates = readAmberCoordinates(crd_filename)
 
     Read coordinates in solvent.
 
     >>> directory = os.path.join(os.getenv('YANK_INSTALL_DIR'), 'test', 'systems', 'alanine-dipeptide-explicit')
-    >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')    
+    >>> crd_filename = os.path.join(directory, 'alanine-dipeptide.inpcrd')
     >>> [coordinates, box_vectors] = readAmberCoordinates(crd_filename, read_box=True)
 
     """
@@ -921,7 +921,7 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
             velocities = newvel
         # Assign units.
         velocities = units.Quantity(velocities, units.angstroms/units.picoseconds)
-            
+
     # Read box size if present
     box_vectors = None
     if (read_box):
@@ -943,20 +943,20 @@ def readAmberCoordinates(filename, read_box=False, read_velocities=False, verbos
             else:
                 a = units.Quantity(mm.Vec3(box_dimensions[0], 0.0, 0.0), units.angstroms)
                 b = units.Quantity(mm.Vec3(0.0, box_dimensions[1], 0.0), units.angstroms)
-                c = units.Quantity(mm.Vec3(0.0, 0.0, box_dimensions[2]), units.angstroms)            
+                c = units.Quantity(mm.Vec3(0.0, 0.0, box_dimensions[2]), units.angstroms)
             box_vectors = [a,b,c]
         else:
             raise Exception("Don't know what to do with box vectors: %s" % line)
 
     # Close file
     infile.close()
-    
+
     if box_vectors and velocities:
         return (coordinates, box_vectors, velocities)
     if box_vectors:
         return (coordinates, box_vectors)
     if velocities:
-        return (coordinates, velocities)    
+        return (coordinates, velocities)
     return coordinates
 
 #=============================================================================================
