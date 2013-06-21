@@ -272,7 +272,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         if (maxTiles < 1)
             maxTiles = 1;
         int numAtoms = context.getNumAtoms();
-        interactingTiles = OpenCLArray::create<mm_ushort2>(context, maxTiles, "interactingTiles");
+        interactingTiles = OpenCLArray::create<cl_int>(context, maxTiles, "interactingTiles");
         interactingAtoms = OpenCLArray::create<cl_int>(context, OpenCLContext::TileSize*maxTiles, "interactingAtoms");
         interactionCount = OpenCLArray::create<cl_uint>(context, 1, "interactionCount");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
@@ -423,7 +423,7 @@ void OpenCLNonbondedUtilities::updateNeighborListSize() {
     delete interactingAtoms;
     interactingTiles = NULL; // Avoid an error in the destructor if the following allocation fails
     interactingAtoms = NULL;
-    interactingTiles = OpenCLArray::create<mm_ushort2>(context, maxTiles, "interactingTiles");
+    interactingTiles = OpenCLArray::create<cl_int>(context, maxTiles, "interactingTiles");
     interactingAtoms = OpenCLArray::create<cl_int>(context, OpenCLContext::TileSize*maxTiles, "interactingAtoms");
     forceKernel.setArg<cl::Buffer>(7, interactingTiles->getDeviceBuffer());
     forceKernel.setArg<cl_uint>(11, maxTiles);
