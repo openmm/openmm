@@ -34,6 +34,7 @@
 #include "CudaSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include "CpuPme.h"
 #include <cufft.h>
 
 namespace OpenMM {
@@ -557,7 +558,7 @@ class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
             cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
-            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL) {
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), cpuPme(NULL), pmeio(NULL) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -596,6 +597,9 @@ private:
         const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
         const char* getSortKey() const {return "value.y";}
     };
+    class PmeIO;
+    class PmePreComputation;
+    class PmePostComputation;
     CudaContext& cu;
     bool hasInitializedFFT;
     CudaArray* sigmaEpsilon;
@@ -609,6 +613,8 @@ private:
     CudaArray* pmeAtomRange;
     CudaArray* pmeAtomGridIndex;
     CudaSort* sort;
+    CpuPme* cpuPme;
+    PmeIO* pmeio;
     cufftHandle fftForward;
     cufftHandle fftBackward;
     CUfunction ewaldSumsKernel;
