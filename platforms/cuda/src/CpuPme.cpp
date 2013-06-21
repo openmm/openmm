@@ -443,23 +443,25 @@ CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) 
 }
 
 CpuPme::~CpuPme() {
+    isDeleted = true;
+    pthread_mutex_lock(&lock);
+    pthread_cond_broadcast(&startCondition);
+    pthread_cond_broadcast(&mainThreadStartCondition);
+    pthread_mutex_unlock(&lock);
+    for (int i = 0; i < (int) thread.size(); i++)
+        pthread_join(thread[i], NULL);
+    pthread_join(mainThread, NULL);
+    pthread_mutex_destroy(&lock);
+    pthread_cond_destroy(&startCondition);
+    pthread_cond_destroy(&endCondition);
+    pthread_cond_destroy(&mainThreadStartCondition);
+    pthread_cond_destroy(&mainThreadEndCondition);
     if (complexGrid != NULL)
         fftwf_free(complexGrid);
     if (hasCreatedPlan) {
         fftwf_destroy_plan(forwardFFT);
         fftwf_destroy_plan(backwardFFT);
     }
-    isDeleted = true;
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
-    for (int i = 0; i < (int) thread.size(); i++)
-        pthread_join(thread[i], NULL);
-    pthread_mutex_destroy(&lock);
-    pthread_cond_destroy(&startCondition);
-    pthread_cond_destroy(&endCondition);
-    pthread_cond_destroy(&mainThreadStartCondition);
-    pthread_cond_destroy(&mainThreadEndCondition);
 }
 
 #include <sys/time.h>
@@ -471,15 +473,14 @@ void CpuPme::runThread(int index) {
     if (index == -1) {
         // This is the main thread that coordinates all the other ones.
         
+        pthread_mutex_lock(&lock);
         while (true) {
             // Wait for the signal to start.
             
-            pthread_mutex_lock(&lock);
             pthread_cond_wait(&mainThreadStartCondition, &lock);
-            pthread_mutex_unlock(&lock);
             if (isDeleted)
-                return;
-            isFinished = false;
+                break;
+            posq = io->getPosq();
             struct timeval t1, t2, t3, t4, t5, t6, t7;
             gettimeofday(&t1, NULL);
             advanceThreads(); // Signal threads to perform charge spreading.
@@ -498,10 +499,9 @@ void CpuPme::runThread(int index) {
             isFinished = true;
             gettimeofday(&t7, NULL);
             printf("time %g %g %g %g %g %g\n", diff(t1, t2), diff(t2, t3), diff(t3, t4), diff(t4, t5), diff(t5, t6), diff(t6, t7));
-            pthread_mutex_lock(&lock);
             pthread_cond_signal(&mainThreadEndCondition);
-            pthread_mutex_unlock(&lock);
         }
+        pthread_mutex_unlock(&lock);
     }
     else {
         // This is a worker thread.
@@ -516,7 +516,7 @@ void CpuPme::runThread(int index) {
         while (true) {
             threadWait();
             if (isDeleted)
-                return;
+                break;
             spreadCharge(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
             threadWait();
             int numGrids = threadData.size();
@@ -550,21 +550,20 @@ void CpuPme::threadWait() {
 }
 
 void CpuPme::advanceThreads() {
-    pthread_mutex_lock(&lock);
     waitCount = 0;
     pthread_cond_broadcast(&startCondition);
     while (waitCount < numThreads) {
         pthread_cond_wait(&endCondition, &lock);
     }
-    pthread_mutex_unlock(&lock);
 }
 
 void CpuPme::beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) {
-    posq = io.getPosq();
+    this->io = &io;
     this->periodicBoxSize = periodicBoxSize;
     this->includeEnergy = includeEnergy;
     energy = 0.0;
     pthread_mutex_lock(&lock);
+    isFinished = false;
     pthread_cond_signal(&mainThreadStartCondition);
     pthread_mutex_unlock(&lock);
 }

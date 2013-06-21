@@ -75,6 +75,7 @@ private:
     std::vector<pthread_t> thread;
     std::vector<ThreadData*> threadData;
     // The following variables are used to store information about the calculation currently being performed.
+    IO* io;
     float energy;
     float* posq;
     Vec3 periodicBoxSize;
