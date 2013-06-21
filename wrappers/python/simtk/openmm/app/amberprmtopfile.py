@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a
+Permission is hereby granted, free of charge, to any person obtaining a 
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -40,23 +40,23 @@ import simtk.unit as unit
 import simtk.openmm as mm
 
 # Enumerated values for implicit solvent model
-# Prefer to use strings now, but these are here for backwards compatibility
-HCT = 'HCT'
-OBC1 = 'OBC1'
-OBC2 = 'OBC2'
-GBn = 'GBn'
+
+HCT = object()
+OBC1 = object()
+OBC2 = object()
+GBn = object()
 
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""
-
+    
     def __init__(self, file):
         """Load a prmtop file."""
         top = Topology()
         ## The Topology read from the prmtop file
         self.topology = top
-
+        
         # Load the prmtop file
-
+        
         prmtop = amber_file_parser.PrmtopLoader(file)
         self._prmtop = prmtop
 
@@ -82,7 +82,7 @@ class AmberPrmtopFile(object):
                 atomName = atomReplacements[atomName]
 
             # Try to guess the element.
-
+            
             upper = atomName.upper()
             if upper.startswith('CL'):
                 element = elem.chlorine
@@ -96,17 +96,17 @@ class AmberPrmtopFile(object):
                 except KeyError:
                     element = None
             top.addAtom(atomName, element, r)
-
+        
         # Add bonds to the topology
-
+        
         atoms = list(top.atoms())
         for bond in prmtop.getBondsWithH():
             top.addBond(atoms[bond[0]], atoms[bond[1]])
         for bond in prmtop.getBondsNoH():
             top.addBond(atoms[bond[0]], atoms[bond[1]])
-
+        
         # Set the periodic box size.
-
+        
         if prmtop.getIfBox():
             top.setUnitCellDimensions(tuple(x.value_in_unit(unit.nanometer) for x in prmtop.getBoxBetaAndDimensions()[1:4])*unit.nanometer)
 
@@ -114,7 +114,7 @@ class AmberPrmtopFile(object):
                      constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, removeCMMotion=True,
                      ewaldErrorTolerance=0.0005):
         """Construct an OpenMM System representing the topology described by this prmtop file.
-
+        
         Parameters:
          - nonbondedMethod (object=NoCutoff) The method to use for nonbonded interactions.  Allowed values are
            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
@@ -122,8 +122,7 @@ class AmberPrmtopFile(object):
          - constraints (object=None) Specifies which bonds angles should be implemented with constraints.
            Allowed values are None, HBonds, AllBonds, or HAngles.
          - rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the constraints argument
-         - implicitSolvent (object=None) If not None, the implicit solvent
-           model to use.  Allowed values are 'HCT', 'OBC1', 'OBC2', or 'GBn'.
+         - implicitSolvent (object=None) If not None, the implicit solvent model to use.  Allowed values are HCT, OBC1, OBC2, or GBn.
          - soluteDielectric (float=1.0) The solute dielectric constant to use in the implicit solvent model.
          - solventDielectric (float=78.5) The solvent dielectric constant to use in the implicit solvent model.
          - removeCMMotion (boolean=True) If true, a CMMotionRemover will be added to the System
@@ -149,12 +148,21 @@ class AmberPrmtopFile(object):
             constraintString = constraintMap[constraints]
         else:
             raise ValueError('Illegal value for constraints')
-
-        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString,
-                                                nonbondedCutoff=nonbondedCutoff, nonbondedMethod=methodMap[nonbondedMethod],
-                                                flexibleConstraints=False, gbmodel=implicitSolvent,
-                                                soluteDielectric=soluteDielectric, solventDielectric=solventDielectric,
-                                                rigidWater=rigidWater)
+        if implicitSolvent is None:
+            implicitString = None
+        elif implicitSolvent == HCT:
+            implicitString = 'HCT'
+        elif implicitSolvent == OBC1:
+            implicitString = 'OBC1'
+        elif implicitSolvent == OBC2:
+            implicitString = 'OBC2'
+        elif implicitSolvent == GBn:
+            implicitString = 'GBn'
+        else:
+            raise ValueError('Illegal value for implicit solvent model')
+        sys = amber_file_parser.readAmberSystem(prmtop_loader=self._prmtop, shake=constraintString, nonbondedCutoff=nonbondedCutoff,
+                                                 nonbondedMethod=methodMap[nonbondedMethod], flexibleConstraints=False, gbmodel=implicitString,
+                                                 soluteDielectric=soluteDielectric, solventDielectric=solventDielectric, rigidWater=rigidWater)
         for force in sys.getForces():
             if isinstance(force, mm.NonbondedForce):
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)
