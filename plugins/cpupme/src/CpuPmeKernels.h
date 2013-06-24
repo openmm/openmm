@@ -66,6 +66,8 @@ private:
     bool hasCreatedPlan, isFinished, isDeleted;
     std::vector<float> force;
     std::vector<float> bsplineModuli[3];
+    std::vector<float> recipEterm;
+    Vec3 lastBoxSize;
     float* realGrid;
     fftwf_complex* complexGrid;
     fftwf_plan forwardFFT, backwardFFT;
