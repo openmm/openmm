@@ -1,5 +1,5 @@
-#ifndef OPENMM_CPU_PME_H_
-#define OPENMM_CPU_PME_H_
+#ifndef OPENMM_CPU_PME_KERNELS_H_
+#define OPENMM_CPU_PME_KERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,7 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "windowsExportCuda.h"
+#include "internal/windowsExportPme.h"
+#include "openmm/kernels.h"
 #include "openmm/Vec3.h"
 #include <fftw3.h>
 #include <pthread.h>
@@ -43,17 +44,18 @@ namespace OpenMM {
 /**
  */
 
-class OPENMM_EXPORT_CUDA CpuPme {
+class OPENMM_EXPORT_PME CpuCalcPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
 public:
-    class IO;
     class ThreadData;
-    /**
-     */
-    CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha);
-    ~CpuPme();
+    CpuCalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
+            hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL) {
+    }
+    void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha);
+    ~CpuCalcPmeReciprocalForceKernel();
     void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy);
     double finishComputation(IO& io);
     void runThread(int index);
+    static bool isProcessorSupported();
 private:
     void threadWait();
     void advanceThreads();
@@ -82,12 +84,6 @@ private:
     bool includeEnergy;
 };
 
-class CpuPme::IO {
-public:
-    virtual float* getPosq() = 0;
-    virtual void setForce(float* force) = 0;
-};
-
 } // namespace OpenMM
 
-#endif /*OPENMM_CPU_PME_H_*/
+#endif /*OPENMM_CPU_PME_KERNELS_H_*/

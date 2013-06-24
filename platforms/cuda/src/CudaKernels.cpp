@@ -1334,7 +1334,7 @@ private:
     const NonbondedForce& force;
 };
 
-class CudaCalcNonbondedForceKernel::PmeIO : public CpuPme::IO {
+class CudaCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
 public:
     PmeIO(CudaContext& cu, CUfunction addForcesKernel) : cu(cu), addForcesKernel(addForcesKernel), forceTemp(NULL) {
         int elementSize = (cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));        
@@ -1363,28 +1363,28 @@ private:
 
 class CudaCalcNonbondedForceKernel::PmePreComputation : public CudaContext::ForcePreComputation {
 public:
-    PmePreComputation(CudaContext& cu, CpuPme& pme, CpuPme::IO& io) : cu(cu), pme(pme), io(io) {
+    PmePreComputation(CudaContext& cu, Kernel& pme, CalcPmeReciprocalForceKernel::IO& io) : cu(cu), pme(pme), io(io) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         Vec3 boxSize(cu.getPeriodicBoxSize().x, cu.getPeriodicBoxSize().y, cu.getPeriodicBoxSize().z);
-        pme.beginComputation(io, boxSize, includeEnergy);
+        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxSize, includeEnergy);
     }
 private:
     CudaContext& cu;
-    CpuPme& pme;
-    CpuPme::IO& io;
+    Kernel pme;
+    CalcPmeReciprocalForceKernel::IO& io;
 };
 
 class CudaCalcNonbondedForceKernel::PmePostComputation : public CudaContext::ForcePostComputation {
 public:
-    PmePostComputation(CpuPme& pme, CpuPme::IO& io) : pme(pme), io(io) {
+    PmePostComputation(Kernel& pme, CalcPmeReciprocalForceKernel::IO& io) : pme(pme), io(io) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        return pme.finishComputation(io);
+        return pme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
     }
 private:
-    CpuPme& pme;
-    CpuPme::IO& io;
+    Kernel pme;
+    CalcPmeReciprocalForceKernel::IO& io;
 };
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
@@ -1411,8 +1411,6 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete pmeAtomGridIndex;
     if (sort != NULL)
         delete sort;
-    if (cpuPme != NULL)
-        delete cpuPme;
     if (pmeio != NULL)
         delete pmeio;
     if (hasInitializedFFT) {
@@ -1571,15 +1569,21 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         if (cu.getUseDoublePrecision())
             pmeDefines["USE_DOUBLE_PRECISION"] = "1";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
-        bool useCpuPme = false;
+        bool useCpuPme = true;
         if (useCpuPme) {
-            cpuPme = new CpuPme(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
-            CUfunction addForcesKernel = cu.getKernel(module, "addForces");
-            pmeio = new PmeIO(cu, addForcesKernel);
-            cu.addPreComputation(new PmePreComputation(cu, *cpuPme, *pmeio));
-            cu.addPostComputation(new PmePostComputation(*cpuPme, *pmeio));
+            try {
+                cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
+                cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
+                CUfunction addForcesKernel = cu.getKernel(module, "addForces");
+                pmeio = new PmeIO(cu, addForcesKernel);
+                cu.addPreComputation(new PmePreComputation(cu, cpuPme, *pmeio));
+                cu.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
+            }
+            catch (OpenMMException& ex) {
+                // The CPU PME plugin isn't available.
+            }
         }
-        else {
+        if (pmeio == NULL) {
             pmeGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
             pmeSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
             pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");

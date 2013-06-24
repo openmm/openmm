@@ -99,11 +99,12 @@ public:
 
 class OPENMM_EXPORT_CUDA CudaPlatform::PlatformData {
 public:
-    PlatformData(const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
+    PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
             const std::string& compilerProperty, const std::string& tempProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
+    ContextImpl* context;
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
     bool removeCM, peerAccessSupported;

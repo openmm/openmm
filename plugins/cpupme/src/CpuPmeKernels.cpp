@@ -32,7 +32,7 @@
 #ifdef WIN32
   #define _USE_MATH_DEFINES // Needed to get M_PI
 #endif
-#include "CpuPme.h"
+#include "CpuPmeKernels.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <cmath>
 #include <smmintrin.h>
@@ -42,14 +42,16 @@ using namespace std;
 
 static const int PME_ORDER = 5;
 
-bool CpuPme::hasInitializedThreads = false;
-int CpuPme::numThreads = 0;
+bool CpuCalcPmeReciprocalForceKernel::hasInitializedThreads = false;
+int CpuCalcPmeReciprocalForceKernel::numThreads = 0;
 
 static float extractFloat(__m128 v, unsigned int element) {
     float f[4];
     _mm_store_ps(f, v);
     return f[element];
 }
+
+// Define function to get the number of processors.
 
 #ifdef __APPLE__
    #include <sys/sysctl.h>
@@ -89,6 +91,23 @@ static int getNumProcessors() {
 #endif
 #endif
 }
+
+// Define a function to check the CPU's capabilities.
+
+#ifdef _WIN32
+#define cpuid __cpuid
+#else
+static void cpuid(int cpuInfo[4], int infoType){
+    __asm__ __volatile__ (
+        "cpuid":
+        "=a" (cpuInfo[0]),
+        "=b" (cpuInfo[1]),
+        "=c" (cpuInfo[2]),
+        "=d" (cpuInfo[3]) :
+        "a" (infoType)
+    );
+}
+#endif
 
 static void spreadCharge(int start, int end, float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
     float temp[4];
@@ -336,17 +355,17 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
     }
 }
 
-class CpuPme::ThreadData {
+class CpuCalcPmeReciprocalForceKernel::ThreadData {
 public:
-    CpuPme& owner;
+    CpuCalcPmeReciprocalForceKernel& owner;
     int index;
     float* tempGrid;
-    ThreadData(CpuPme& owner, int index) : owner(owner), index(index), tempGrid(NULL) {
+    ThreadData(CpuCalcPmeReciprocalForceKernel& owner, int index) : owner(owner), index(index), tempGrid(NULL) {
     }
 };
 
 static void* threadBody(void* args) {
-    CpuPme::ThreadData& data = *reinterpret_cast<CpuPme::ThreadData*>(args);
+    CpuCalcPmeReciprocalForceKernel::ThreadData& data = *reinterpret_cast<CpuCalcPmeReciprocalForceKernel::ThreadData*>(args);
     data.owner.runThread(data.index);
     if (data.tempGrid != NULL)
         fftwf_free(data.tempGrid);
@@ -354,13 +373,19 @@ static void* threadBody(void* args) {
     return 0;
 }
 
-CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) :
-        gridx(gridx), gridy(gridy), gridz(gridz), numParticles(numParticles), alpha(alpha), hasCreatedPlan(false), isDeleted(false), force(4*numParticles), realGrid(NULL), complexGrid(NULL) {
+void CpuCalcPmeReciprocalForceKernel::initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
         fftwf_init_threads();
         hasInitializedThreads = true;
     }
+    this->gridx = gridx;
+    this->gridy = gridy;
+    this->gridz = gridz;
+    this->numParticles = numParticles;
+    this->alpha = alpha;
+    force.resize(4*numParticles);
+    
     // Initialize threads.
     
     pthread_cond_init(&startCondition, NULL);
@@ -442,7 +467,7 @@ CpuPme::CpuPme(int gridx, int gridy, int gridz, int numParticles, double alpha) 
     }
 }
 
-CpuPme::~CpuPme() {
+CpuCalcPmeReciprocalForceKernel::~CpuCalcPmeReciprocalForceKernel() {
     isDeleted = true;
     pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&startCondition);
@@ -469,7 +494,7 @@ double diff(struct timeval t1, struct timeval t2) {
     return t2.tv_usec-t1.tv_usec+1e6*(t2.tv_sec-t1.tv_sec);
 }
 
-void CpuPme::runThread(int index) {
+void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
     if (index == -1) {
         // This is the main thread that coordinates all the other ones.
         
@@ -541,7 +566,7 @@ void CpuPme::runThread(int index) {
     }
 }
 
-void CpuPme::threadWait() {
+void CpuCalcPmeReciprocalForceKernel::threadWait() {
     pthread_mutex_lock(&lock);
     waitCount++;
     pthread_cond_signal(&endCondition);
@@ -549,7 +574,7 @@ void CpuPme::threadWait() {
     pthread_mutex_unlock(&lock);
 }
 
-void CpuPme::advanceThreads() {
+void CpuCalcPmeReciprocalForceKernel::advanceThreads() {
     waitCount = 0;
     pthread_cond_broadcast(&startCondition);
     while (waitCount < numThreads) {
@@ -557,7 +582,7 @@ void CpuPme::advanceThreads() {
     }
 }
 
-void CpuPme::beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) {
+void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) {
     this->io = &io;
     this->periodicBoxSize = periodicBoxSize;
     this->includeEnergy = includeEnergy;
@@ -568,7 +593,7 @@ void CpuPme::beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy) 
     pthread_mutex_unlock(&lock);
 }
 
-double CpuPme::finishComputation(IO& io) {
+double CpuCalcPmeReciprocalForceKernel::finishComputation(IO& io) {
     pthread_mutex_lock(&lock);
     while (!isFinished) {
         pthread_cond_wait(&mainThreadEndCondition, &lock);
@@ -576,4 +601,14 @@ double CpuPme::finishComputation(IO& io) {
     pthread_mutex_unlock(&lock);
     io.setForce(&force[0]);
     return energy;
+}
+
+bool CpuCalcPmeReciprocalForceKernel::isProcessorSupported() {
+    int cpuInfo[4];
+    cpuid(cpuInfo, 0);
+    if (cpuInfo[0] >= 1) {
+        cpuid(cpuInfo, 1);
+        return ((cpuInfo[2] & ((int) 1 << 19)) != 0); // Require SSE 4.1
+    }
+    return false;
 }
