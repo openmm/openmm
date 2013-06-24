@@ -231,6 +231,10 @@ CudaContext::~CudaContext() {
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         delete reorderListeners[i];
+    for (int i = 0; i < (int) preComputations.size(); i++)
+        delete preComputations[i];
+    for (int i = 0; i < (int) postComputations.size(); i++)
+        delete postComputations[i];
     if (pinnedBuffer != NULL)
         cuMemFreeHost(pinnedBuffer);
     if (posq != NULL)
@@ -1100,6 +1104,14 @@ void CudaContext::reorderAtomsImpl() {
 
 void CudaContext::addReorderListener(ReorderListener* listener) {
     reorderListeners.push_back(listener);
+}
+
+void CudaContext::addPreComputation(ForcePreComputation* computation) {
+    preComputations.push_back(computation);
+}
+
+void CudaContext::addPostComputation(ForcePostComputation* computation) {
+    postComputations.push_back(computation);
 }
 
 struct CudaContext::WorkThread::ThreadData {

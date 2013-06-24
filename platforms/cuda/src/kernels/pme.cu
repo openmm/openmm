@@ -266,8 +266,18 @@ void gridInterpolateForce(const real4* __restrict__ posq, unsigned long long* __
             }
         }
         real q = pos.w*EPSILON_FACTOR;
-        forceBuffers[atom] +=  static_cast<unsigned long long>((long long) (-q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x*0x100000000));
-        forceBuffers[atom+PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y*0x100000000));
-        forceBuffers[atom+2*PADDED_NUM_ATOMS] +=  static_cast<unsigned long long>((long long) (-q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z*0x100000000));
+        forceBuffers[atom] += static_cast<unsigned long long>((long long) (-q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x*0x100000000));
+        forceBuffers[atom+PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (-q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y*0x100000000));
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (-q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z*0x100000000));
+    }
+}
+
+extern "C" __global__
+void addForces(const real4* __restrict__ forces, unsigned long long* __restrict__ forceBuffers) {
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
+        real4 f = forces[atom];
+        forceBuffers[atom] += static_cast<unsigned long long>((long long) (f.x*0x100000000));
+        forceBuffers[atom+PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.y*0x100000000));
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += static_cast<unsigned long long>((long long) (f.z*0x100000000));
     }
 }

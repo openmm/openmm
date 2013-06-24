@@ -147,7 +147,7 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
             getPropertyDefaultValue(CudaTempDirectory()) : properties.find(CudaTempDirectory())->second);
     transform(blockingPropValue.begin(), blockingPropValue.end(), blockingPropValue.begin(), ::tolower);
     transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
-    context.setPlatformData(new PlatformData(context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, compilerPropValue, tempPropValue));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, compilerPropValue, tempPropValue));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -155,8 +155,8 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-CudaPlatform::PlatformData::PlatformData(const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& compilerProperty, const string& tempProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
+            const string& compilerProperty, const string& tempProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
