@@ -35,6 +35,7 @@
 #include "CpuPmeKernels.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <cmath>
+#include <cstring>
 #include <smmintrin.h>
 
 using namespace OpenMM;
@@ -114,7 +115,7 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
     __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
     __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
     __m128 gridSize = _mm_set_ps(0, gridz, gridy, gridx);
-    __m128 gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
+    __m128i gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
     __m128 one  = _mm_set1_ps(1);
     __m128 scale = _mm_set1_ps(1.0f/(PME_ORDER-1));
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
@@ -125,9 +126,9 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
         __m128 pos = _mm_load_ps(&posq[4*i]);
         __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, _mm_floor_ps(_mm_mul_ps(pos, invBoxSize))));
         __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
-        __m128 ti = _mm_cvttps_epi32(t);
+        __m128i ti = _mm_cvttps_epi32(t);
         __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
-        __m128 gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
+        __m128i gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
         
         // Compute the B-spline coefficients.
         
@@ -153,7 +154,7 @@ static void spreadCharge(int start, int end, float* posq, float* grid, int gridx
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
         float charge = epsilonFactor*posq[4*i+3];
-        __m128 zdata0to3 = _mm_set_epi32(_mm_extract_ps(data[3], 2), _mm_extract_ps(data[2], 2), _mm_extract_ps(data[1], 2), _mm_extract_ps(data[0], 2));
+        __m128 zdata0to3 = _mm_set_ps(extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
         float zdata4 = extractFloat(data[4], 2);
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndexX+ix;
@@ -281,7 +282,7 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
     __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
     __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
     __m128 gridSize = _mm_set_ps(0, gridz, gridy, gridx);
-    __m128 gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
+    __m128i gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
     __m128 one  = _mm_set1_ps(1);
     __m128 scale = _mm_set1_ps(1.0f/(PME_ORDER-1));
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
@@ -291,9 +292,9 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
         __m128 pos = _mm_load_ps(&posq[4*i]);
         __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, _mm_floor_ps(_mm_mul_ps(pos, invBoxSize))));
         __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
-        __m128 ti = _mm_cvttps_epi32(t);
+        __m128i ti = _mm_cvttps_epi32(t);
         __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
-        __m128 gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
+        __m128i gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
         
         // Compute the B-spline coefficients.
         
