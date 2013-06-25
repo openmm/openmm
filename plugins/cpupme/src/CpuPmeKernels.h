@@ -59,6 +59,7 @@ public:
 private:
     void threadWait();
     void advanceThreads();
+    static bool isAVXSupported();
     static bool hasInitializedThreads;
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
