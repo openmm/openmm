@@ -1,5 +1,5 @@
 #define GROUP_SIZE 256
-#define BUFFER_GROUPS 2
+#define BUFFER_GROUPS 3
 #define BUFFER_SIZE BUFFER_GROUPS*GROUP_SIZE
 #define WARP_SIZE 32
 #define INVALID 0xFFFF
@@ -299,11 +299,11 @@ __device__ void storeInteractionData(int x, unsigned short* buffer, short* sum, 
  * [in] sortedBlocks           - a sorted list of atom blocks based on volume
  * [in] sortedBlockCenter      - sorted centers, duplicated for fast access to avoid indexing
  * [in] sortedBlockBoundingBox - sorted bounding boxes, duplicated for fast access
- * [in] exclusionIndices       - maps into exclusionRowIndices with the starting position for a given atom
- * [in] exclusionRowIndices    - stores the a continuous list of exclusions
- *           eg: block 0 is excluded from atom 3,5,6
- *               block 1 is excluded from atom 3,4
- *               block 2 is excluded from atom 1,3,5,6
+ * [in] exclusionIndices       - maps into exclusionRowIndices with the starting position for a given block
+ * [in] exclusionRowIndices    - stores the a continuous list of exclusions for each block
+ *           eg: block 0 is excluded from blocks 3,5,6
+ *               block 1 is excluded from blocks 3,4
+ *               block 2 is excluded from blocks 1,3,5,6
  *              exclusionIndices[0][3][5][8]
  *           exclusionRowIndices[3][5][6][3][4][1][3][5][6]
  *                         index 0  1  2  3  4  5  6  7  8 
@@ -389,15 +389,15 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                     bufferFull = true;
             }
             __syncthreads();
-            if (bufferFull) {
-                storeInteractionData(x, buffer, sum, temp, atoms, numAtoms, globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, false);
+            const bool lastBlock = (base >= NUM_BLOCKS - GROUP_SIZE);
+            if (bufferFull || lastBlock) {
+                storeInteractionData(x, buffer, sum, temp, atoms, numAtoms, globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, lastBlock);
                 valuesInBuffer = 0;
                 if (threadIdx.x == 0)
                     bufferFull = false;
             }
             __syncthreads();
-        }
-        storeInteractionData(x, buffer, sum, temp, atoms, numAtoms, globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, true);
+        } 
     }
     
     // Record the positions the neighbor list is based on.

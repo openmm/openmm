@@ -315,15 +315,15 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     bufferFull = true;
             }
             barrier(CLK_LOCAL_MEM_FENCE);
-            if (bufferFull) {
-                storeInteractionData(x, buffer, sum, temp, atoms, &numAtoms, &globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, false);
+            const bool lastBlock = (base >= NUM_BLOCKS - GROUP_SIZE);
+            if (bufferFull || lastBlock) {
+                storeInteractionData(x, buffer, sum, temp, atoms, &numAtoms, &globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, lastBlock);
                 valuesInBuffer = 0;
                 if (get_local_id(0) == 0)
                     bufferFull = false;
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }
-        storeInteractionData(x, buffer, sum, temp, atoms, &numAtoms, &globalIndex, interactionCount, interactingTiles, interactingAtoms, periodicBoxSize, invPeriodicBoxSize, posq, posBuffer, blockCenterX, blockSizeX, maxTiles, true);
     }
     
     // Record the positions the neighbor list is based on.
