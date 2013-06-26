@@ -159,29 +159,42 @@ static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gr
         float charge = epsilonFactor*posq[4*i+3];
         __m128 zdata0to3 = _mm_set_ps(extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
         float zdata4 = extractFloat(data[4], 2);
-        for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xbase = gridIndexX+ix;
-            xbase -= (xbase >= gridx ? gridx : 0);
-            xbase = xbase*gridy*gridz;
-            float xdata = extractFloat(data[ix], 0);
-
-            for (int iy = 0; iy < PME_ORDER; iy++) {
-                int ybase = gridIndexY+iy;
-                ybase -= (ybase >= gridy ? gridy : 0);
-                ybase = xbase + ybase*gridz;
-                float multiplier = charge*xdata*extractFloat(data[iy], 1);
-
-                __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
-                if (gridIndexZ+4 < gridz)
+        if (gridIndexZ+4 < gridz) {
+            for (int ix = 0; ix < PME_ORDER; ix++) {
+                int xbase = gridIndexX+ix;
+                xbase -= (xbase >= gridx ? gridx : 0);
+                xbase = xbase*gridy*gridz;
+                float xdata = charge*extractFloat(data[ix], 0);
+                for (int iy = 0; iy < PME_ORDER; iy++) {
+                    int ybase = gridIndexY+iy;
+                    ybase -= (ybase >= gridy ? gridy : 0);
+                    ybase = xbase + ybase*gridz;
+                    float multiplier = xdata*extractFloat(data[iy], 1);
+                    __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
                     _mm_storeu_ps(&grid[ybase+gridIndexZ], _mm_add_ps(_mm_loadu_ps(&grid[ybase+gridIndexZ]), add0to3));
-                else {
+                    grid[ybase+zindex[4]] += multiplier*zdata4;
+                }
+            }
+        }
+        else {
+            for (int ix = 0; ix < PME_ORDER; ix++) {
+                int xbase = gridIndexX+ix;
+                xbase -= (xbase >= gridx ? gridx : 0);
+                xbase = xbase*gridy*gridz;
+                float xdata = charge*extractFloat(data[ix], 0);
+                for (int iy = 0; iy < PME_ORDER; iy++) {
+                    int ybase = gridIndexY+iy;
+                    ybase -= (ybase >= gridy ? gridy : 0);
+                    ybase = xbase + ybase*gridz;
+                    float multiplier = xdata*extractFloat(data[iy], 1);
+                    __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
                     _mm_store_ps(temp, add0to3);
                     grid[ybase+zindex[0]] += temp[0];
                     grid[ybase+zindex[1]] += temp[1];
                     grid[ybase+zindex[2]] += temp[2];
                     grid[ybase+zindex[3]] += temp[3];
+                    grid[ybase+zindex[4]] += multiplier*zdata4;
                 }
-                grid[ybase+zindex[4]] += multiplier*zdata4;
             }
         }
     }
@@ -231,29 +244,41 @@ static void spreadChargeAVX(int start, int end, float* posq, float* grid, int gr
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
-        int zindex[PME_ORDER];
-        for (int j = 0; j < PME_ORDER; j++) {
-            zindex[j] = gridIndexZ+j;
-            zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
-        }
         float charge = epsilonFactor*posq[4*i+3];
         __m256 zdata = _mm256_set_ps(0, 0, 0, extractFloat(data[4], 2), extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
-        for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xbase = gridIndexX+ix;
-            xbase -= (xbase >= gridx ? gridx : 0);
-            xbase = xbase*gridy*gridz;
-            float xdata = extractFloat(data[ix], 0);
-
-            for (int iy = 0; iy < PME_ORDER; iy++) {
-                int ybase = gridIndexY+iy;
-                ybase -= (ybase >= gridy ? gridy : 0);
-                ybase = xbase + ybase*gridz;
-                float multiplier = charge*xdata*extractFloat(data[iy], 1);
-
-                __m256 add = _mm256_mul_ps(zdata, _mm256_set1_ps(multiplier));
-                if (gridIndexZ+5 < gridz)
-                    _mm256_maskstore_ps(&grid[ybase+gridIndexZ], mask, _mm256_add_ps(_mm256_loadu_ps(&grid[ybase+gridIndexZ]), add));
-                else {
+        if (gridIndexZ+5 < gridz) {
+            for (int ix = 0; ix < PME_ORDER; ix++) {
+                int xbase = gridIndexX+ix;
+                xbase -= (xbase >= gridx ? gridx : 0);
+                xbase = xbase*gridy*gridz;
+                float xdata = charge*extractFloat(data[ix], 0);
+                for (int iy = 0; iy < PME_ORDER; iy++) {
+                    int ybase = gridIndexY+iy;
+                    ybase -= (ybase >= gridy ? gridy : 0);
+                    ybase = xbase + ybase*gridz;
+                    float multiplier = xdata*extractFloat(data[iy], 1);
+                    __m256 add = _mm256_mul_ps(zdata, _mm256_set1_ps(multiplier));
+                    _mm256_maskstore_ps(&grid[ybase+gridIndexZ], mask, _mm256_add_ps(_mm256_maskload_ps(&grid[ybase+gridIndexZ], mask), add));
+                }
+            }
+        }
+        else {
+            int zindex[PME_ORDER];
+            for (int j = 0; j < PME_ORDER; j++) {
+                zindex[j] = gridIndexZ+j;
+                zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+            }
+            for (int ix = 0; ix < PME_ORDER; ix++) {
+                int xbase = gridIndexX+ix;
+                xbase -= (xbase >= gridx ? gridx : 0);
+                xbase = xbase*gridy*gridz;
+                float xdata = charge*extractFloat(data[ix], 0);
+                for (int iy = 0; iy < PME_ORDER; iy++) {
+                    int ybase = gridIndexY+iy;
+                    ybase -= (ybase >= gridy ? gridy : 0);
+                    ybase = xbase + ybase*gridz;
+                    float multiplier = xdata*extractFloat(data[iy], 1);
+                    __m256 add = _mm256_mul_ps(zdata, _mm256_set1_ps(multiplier));
                     _mm256_store_ps(temp, add);
                     grid[ybase+zindex[0]] += temp[0];
                     grid[ybase+zindex[1]] += temp[1];
