@@ -46,10 +46,8 @@ static const int PME_ORDER = 5;
 bool CpuCalcPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcPmeReciprocalForceKernel::numThreads = 0;
 
-static float extractFloat(__m128 v, unsigned int element) {
-    float f[4];
-    _mm_store_ps(f, v);
-    return f[element];
+static float extractFloat(__m128& v, unsigned int element) {
+    return _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, element)));
 }
 
 // Define function to get the number of processors.
@@ -153,6 +151,11 @@ static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gr
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        int zindex[PME_ORDER];
+        for (int j = 0; j < PME_ORDER; j++) {
+            zindex[j] = gridIndexZ+j;
+            zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+        }
         float charge = epsilonFactor*posq[4*i+3];
         __m128 zdata0to3 = _mm_set_ps(extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
         float zdata4 = extractFloat(data[4], 2);
@@ -173,21 +176,12 @@ static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gr
                     _mm_storeu_ps(&grid[ybase+gridIndexZ], _mm_add_ps(_mm_loadu_ps(&grid[ybase+gridIndexZ]), add0to3));
                 else {
                     _mm_store_ps(temp, add0to3);
-                    int zindex = gridIndexZ;
-                    grid[ybase+zindex] += temp[0];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[1];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[2];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[3];
+                    grid[ybase+zindex[0]] += temp[0];
+                    grid[ybase+zindex[1]] += temp[1];
+                    grid[ybase+zindex[2]] += temp[2];
+                    grid[ybase+zindex[3]] += temp[3];
                 }
-                int zindex = gridIndexZ+4;
-                zindex -= (zindex >= gridz ? gridz : 0);
-                grid[ybase+zindex] += multiplier*zdata4;
+                grid[ybase+zindex[4]] += multiplier*zdata4;
             }
         }
     }
@@ -237,6 +231,11 @@ static void spreadChargeAVX(int start, int end, float* posq, float* grid, int gr
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        int zindex[PME_ORDER];
+        for (int j = 0; j < PME_ORDER; j++) {
+            zindex[j] = gridIndexZ+j;
+            zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+        }
         float charge = epsilonFactor*posq[4*i+3];
         __m256 zdata = _mm256_set_ps(0, 0, 0, extractFloat(data[4], 2), extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
         for (int ix = 0; ix < PME_ORDER; ix++) {
@@ -256,20 +255,11 @@ static void spreadChargeAVX(int start, int end, float* posq, float* grid, int gr
                     _mm256_maskstore_ps(&grid[ybase+gridIndexZ], mask, _mm256_add_ps(_mm256_loadu_ps(&grid[ybase+gridIndexZ]), add));
                 else {
                     _mm256_store_ps(temp, add);
-                    int zindex = gridIndexZ;
-                    grid[ybase+zindex] += temp[0];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[1];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[2];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[3];
-                    zindex++;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    grid[ybase+zindex] += temp[4];
+                    grid[ybase+zindex[0]] += temp[0];
+                    grid[ybase+zindex[1]] += temp[1];
+                    grid[ybase+zindex[2]] += temp[2];
+                    grid[ybase+zindex[3]] += temp[3];
+                    grid[ybase+zindex[4]] += temp[4];
                 }
             }
         }
@@ -421,6 +411,11 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
         int gridIndexX = _mm_extract_epi32(gridIndex, 0);
         int gridIndexY = _mm_extract_epi32(gridIndex, 1);
         int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
+        int zindex[PME_ORDER];
+        for (int j = 0; j < PME_ORDER; j++) {
+            zindex[j] = gridIndexZ+j;
+            zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+        }
         __m128 zdata[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++)
             zdata[j] = _mm_set_ps(0, extractFloat(ddata[j], 2), extractFloat(data[j], 2), extractFloat(data[j], 2));
@@ -442,15 +437,13 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
                 __m128 xydata = _mm_mul_ps(xdata, _mm_set_ps(0, dy, ddy, dy));
 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
-                    int zindex = gridIndexZ+iz;
-                    zindex -= (zindex >= gridz ? gridz : 0);
-                    __m128 gridValue = _mm_set1_ps(grid[ybase+zindex]);
+                    __m128 gridValue = _mm_set1_ps(grid[ybase+zindex[iz]]);
                     f = _mm_add_ps(f, _mm_mul_ps(xydata, _mm_mul_ps(zdata[iz], gridValue)));
                 }
             }
         }
         f = _mm_mul_ps(invBoxSize, _mm_mul_ps(gridSize, _mm_mul_ps(f, _mm_set1_ps(-epsilonFactor*posq[4*i+3]))));
-        _mm_store_ps(&force[4*i], _mm_add_ps(_mm_load_ps(&force[4*i]), f));        
+        _mm_store_ps(&force[4*i], f);        
     }
 }
 
@@ -647,9 +640,9 @@ void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
             if (isDeleted)
                 break;
             if (useAVX)
-                spreadChargeSSE(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
-            else
                 spreadChargeAVX(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
+            else
+                spreadChargeSSE(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
             threadWait();
             int numGrids = threadData.size();
             for (int i = gridStart; i < gridEnd; i += 4) {
