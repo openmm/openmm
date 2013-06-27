@@ -364,9 +364,9 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         mixed yaksYd = zaksZd*xaksXd - xaksZd*zaksXd;
         mixed zaksYd = xaksZd*yaksXd - yaksZd*xaksXd;
 
-        mixed axlng = SQRT(xaksXd*xaksXd + yaksXd*yaksXd + zaksXd*zaksXd);
-        mixed aylng = SQRT(xaksYd*xaksYd + yaksYd*yaksYd + zaksYd*zaksYd);
-        mixed azlng = SQRT(xaksZd*xaksZd + yaksZd*yaksZd + zaksZd*zaksZd);
+        mixed axlng = sqrt(xaksXd*xaksXd + yaksXd*yaksXd + zaksXd*zaksXd);
+        mixed aylng = sqrt(xaksYd*xaksYd + yaksYd*yaksYd + zaksYd*zaksYd);
+        mixed azlng = sqrt(xaksZd*xaksZd + yaksZd*yaksZd + zaksZd*zaksZd);
         mixed trns11 = xaksXd / axlng;
         mixed trns21 = yaksXd / axlng;
         mixed trns31 = zaksXd / axlng;
@@ -392,13 +392,13 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         //                                        --- Step2  A2' ---
 
         float rc = 0.5f*params.y;
-        mixed rb = SQRT(params.x*params.x-rc*rc);
+        mixed rb = sqrt(params.x*params.x-rc*rc);
         mixed ra = rb*(m1+m2)*invTotalMass;
         rb -= ra;
         mixed sinphi = za1d/ra;
-        mixed cosphi = SQRT(1-sinphi*sinphi);
+        mixed cosphi = sqrt(1-sinphi*sinphi);
         mixed sinpsi = (zb1d-zc1d) / (2*rc*cosphi);
-        mixed cospsi = SQRT(1-sinpsi*sinpsi);
+        mixed cospsi = sqrt(1-sinpsi*sinpsi);
 
         mixed ya2d =   ra*cosphi;
         mixed xb2d = - rc*cospsi;
@@ -406,7 +406,7 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         mixed yc2d = - rb*cosphi + rc*sinpsi*sinphi;
         mixed xb2d2 = xb2d*xb2d;
         mixed hh2 = 4.0f*xb2d2 + (yb2d-yc2d)*(yb2d-yc2d) + (zb1d-zc1d)*(zb1d-zc1d);
-        mixed deltx = 2.0f*xb2d + SQRT(4.0f*xb2d2 - hh2 + params.y*params.y);
+        mixed deltx = 2.0f*xb2d + sqrt(4.0f*xb2d2 - hh2 + params.y*params.y);
         xb2d -= deltx*0.5f;
 
         //                                        --- Step3  al,be,ga ---
@@ -416,11 +416,11 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         mixed gamma = xb0d*yb1d - xb1d*yb0d + xc0d*yc1d - xc1d*yc0d;
 
         mixed al2be2 = alpha*alpha + beta*beta;
-        mixed sintheta = (alpha*gamma - beta*SQRT(al2be2 - gamma*gamma)) / al2be2;
+        mixed sintheta = (alpha*gamma - beta*sqrt(al2be2 - gamma*gamma)) / al2be2;
 
         //                                        --- Step4  A3' ---
 
-        mixed costheta = SQRT(1-sintheta*sintheta);
+        mixed costheta = sqrt(1-sintheta*sintheta);
         mixed xa3d = - ya2d*sintheta;
         mixed ya3d =   ya2d*costheta;
         mixed za3d = za1d;

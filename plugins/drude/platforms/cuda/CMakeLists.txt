@@ -14,7 +14,6 @@
 
 IF (APPLE)
     SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-    SET (CMAKE_OSX_SYSROOT "/Developer/SDKs/MacOSX10.6.sdk")
 ENDIF (APPLE)
 
 # The source is organized into subdirectories, but we handle them all from
