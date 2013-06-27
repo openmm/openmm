@@ -334,6 +334,10 @@ OpenCLContext::~OpenCLContext() {
         delete forces[i];
     for (int i = 0; i < (int) reorderListeners.size(); i++)
         delete reorderListeners[i];
+    for (int i = 0; i < (int) preComputations.size(); i++)
+        delete preComputations[i];
+    for (int i = 0; i < (int) postComputations.size(); i++)
+        delete postComputations[i];
     if (pinnedBuffer != NULL)
         delete pinnedBuffer;
     if (posq != NULL)
@@ -1104,6 +1108,14 @@ void OpenCLContext::reorderAtomsImpl() {
 
 void OpenCLContext::addReorderListener(ReorderListener* listener) {
     reorderListeners.push_back(listener);
+}
+
+void OpenCLContext::addPreComputation(ForcePreComputation* computation) {
+    preComputations.push_back(computation);
+}
+
+void OpenCLContext::addPostComputation(ForcePostComputation* computation) {
+    postComputations.push_back(computation);
 }
 
 struct OpenCLContext::WorkThread::ThreadData {

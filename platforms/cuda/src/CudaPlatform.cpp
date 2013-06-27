@@ -86,15 +86,15 @@ CudaPlatform::CudaPlatform() {
     platformProperties.push_back(CudaDeviceIndex());
     platformProperties.push_back(CudaDeviceName());
     platformProperties.push_back(CudaUseBlockingSync());
-    platformProperties.push_back(UseCpuPme());
     platformProperties.push_back(CudaPrecision());
+    platformProperties.push_back(CudaUseCpuPme());
     platformProperties.push_back(CudaCompiler());
     platformProperties.push_back(CudaTempDirectory());
     setPropertyDefaultValue(CudaDeviceIndex(), "");
     setPropertyDefaultValue(CudaDeviceName(), "");
     setPropertyDefaultValue(CudaUseBlockingSync(), "true");
     setPropertyDefaultValue(CudaPrecision(), "single");
-    setPropertyDefaultValue(UseCpuPme(), "false");
+    setPropertyDefaultValue(CudaUseCpuPme(), "false");
 #ifdef _MSC_VER
     char* bindir = getenv("CUDA_BIN_PATH");
     string nvcc = (bindir == NULL ? "nvcc.exe" : string(bindir)+"\\nvcc.exe");
@@ -143,8 +143,8 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
             getPropertyDefaultValue(CudaUseBlockingSync()) : properties.find(CudaUseBlockingSync())->second);
     string precisionPropValue = (properties.find(CudaPrecision()) == properties.end() ?
             getPropertyDefaultValue(CudaPrecision()) : properties.find(CudaPrecision())->second);
-    string cpuPmePropValue = (properties.find(UseCpuPme()) == properties.end() ?
-            getPropertyDefaultValue(UseCpuPme()) : properties.find(UseCpuPme())->second);
+    string cpuPmePropValue = (properties.find(CudaUseCpuPme()) == properties.end() ?
+            getPropertyDefaultValue(CudaUseCpuPme()) : properties.find(CudaUseCpuPme())->second);
     const string& compilerPropValue = (properties.find(CudaCompiler()) == properties.end() ?
             getPropertyDefaultValue(CudaCompiler()) : properties.find(CudaCompiler())->second);
     const string& tempPropValue = (properties.find(CudaTempDirectory()) == properties.end() ?
@@ -167,7 +167,6 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
             const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
     bool blocking = (blockingProperty == "true");
-    useCpuPme = (cpuPmeProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
     while ((nextPos = deviceIndexProperty.find_first_of(", ", searchPos)) != string::npos) {
@@ -195,11 +194,12 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         CHECK_RESULT(cuDeviceGetName(name, 1000, contexts[i]->getDevice()), "Error querying device name");
         deviceName << name;
     }
+    useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
     propertyValues[CudaPlatform::CudaDeviceIndex()] = deviceIndex.str();
     propertyValues[CudaPlatform::CudaDeviceName()] = deviceName.str();
     propertyValues[CudaPlatform::CudaUseBlockingSync()] = blocking ? "true" : "false";
     propertyValues[CudaPlatform::CudaPrecision()] = precisionProperty;
-    propertyValues[CudaPlatform::UseCpuPme()] = useCpuPme ? "true" : "false";
+    propertyValues[CudaPlatform::CudaUseCpuPme()] = useCpuPme ? "true" : "false";
     propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
     contextEnergy.resize(contexts.size());

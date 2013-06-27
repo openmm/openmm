@@ -1337,8 +1337,7 @@ private:
 class CudaCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
 public:
     PmeIO(CudaContext& cu, CUfunction addForcesKernel) : cu(cu), addForcesKernel(addForcesKernel), forceTemp(NULL) {
-        int elementSize = (cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));        
-        forceTemp = new CudaArray(cu, cu.getNumAtoms(), elementSize, "PmeForce");
+        forceTemp = CudaArray::create<float4>(cu, cu.getNumAtoms(), "PmeForce");
     }
     ~PmeIO() {
         if (forceTemp != NULL)
@@ -1570,6 +1569,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             pmeDefines["USE_DOUBLE_PRECISION"] = "1";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
         if (cu.getPlatformData().useCpuPme) {
+            // Create the CPU PME kernel.
+            
             try {
                 cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
                 cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
@@ -1728,7 +1729,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 }
 
 double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
-    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (cosSinSums != NULL && includeReciprocal) {
         void* sumsArgs[] = {&cu.getEnergyBuffer().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums->getDevicePointer(), cu.getPeriodicBoxSizePointer()};
         cu.executeKernel(ewaldSumsKernel, sumsArgs, cosSinSums->getSize());
@@ -1774,6 +1774,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         cu.executeKernel(pmeInterpolateForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
 
     }
+    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (dispersionCoefficient != 0.0 && includeDirect) {
         double4 boxSize = cu.getPeriodicBoxSize();
         energy += dispersionCoefficient/(boxSize.x*boxSize.y*boxSize.z);

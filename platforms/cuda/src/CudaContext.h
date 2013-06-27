@@ -457,7 +457,7 @@ public:
         return reorderListeners;
     }
     /**
-     * Add a pre-computation that should be called at the very start of force and energy evalutations.
+     * Add a pre-computation that should be called at the very start of force and energy evaluations.
      * The CudaContext assumes ownership of the object, and deletes it when the context itself is deleted.
      */
     void addPreComputation(ForcePreComputation* computation);
@@ -468,7 +468,7 @@ public:
         return preComputations;
     }
     /**
-     * Add a post-computation that should be called at the very end of force and energy evalutations.
+     * Add a post-computation that should be called at the very end of force and energy evaluations.
      * The CudaContext assumes ownership of the object, and deletes it when the context itself is deleted.
      */
     void addPostComputation(ForcePostComputation* computation);

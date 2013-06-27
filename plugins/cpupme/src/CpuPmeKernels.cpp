@@ -514,11 +514,6 @@ CpuCalcPmeReciprocalForceKernel::~CpuCalcPmeReciprocalForceKernel() {
     }
 }
 
-#include <sys/time.h>
-double diff(struct timeval t1, struct timeval t2) {
-    return t2.tv_usec-t1.tv_usec+1e6*(t2.tv_sec-t1.tv_sec);
-}
-
 void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
     if (index == -1) {
         // This is the main thread that coordinates all the other ones.
@@ -531,26 +526,17 @@ void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
             if (isDeleted)
                 break;
             posq = io->getPosq();
-            struct timeval t1, t2, t3, t4, t5, t6, t7;
-            gettimeofday(&t1, NULL);
             advanceThreads(); // Signal threads to perform charge spreading.
             advanceThreads(); // Signal threads to sum the charge grids.
-            gettimeofday(&t2, NULL);
             fftwf_execute_dft_r2c(forwardFFT, realGrid, complexGrid);
-            gettimeofday(&t3, NULL);
             if (lastBoxSize != periodicBoxSize)
                 advanceThreads(); // Signal threads to compute the reciprocal scale factors.
             if (includeEnergy)
                 advanceThreads(); // Signal threads to compute energy.
-            gettimeofday(&t4, NULL);
             advanceThreads(); // Signal threads to perform reciprocal convolution.
-            gettimeofday(&t5, NULL);
             fftwf_execute_dft_c2r(backwardFFT, complexGrid, realGrid);
-            gettimeofday(&t6, NULL);
             advanceThreads(); // Signal threads to interpolate forces.
             isFinished = true;
-            gettimeofday(&t7, NULL);
-            printf("time %g %g %g %g %g %g\n", diff(t1, t2), diff(t2, t3), diff(t3, t4), diff(t4, t5), diff(t5, t6), diff(t6, t7));
             lastBoxSize = periodicBoxSize;
             pthread_cond_signal(&mainThreadEndCondition);
         }

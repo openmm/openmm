@@ -84,8 +84,8 @@ public:
     /**
      * This is the name of the parameter for selecting whether to use the CPU based PME calculation.
      */
-    static const std::string& UseCpuPme() {
-        static const std::string key = "UseCpuPme";
+    static const std::string& CudaUseCpuPme() {
+        static const std::string key = "CudaUseCpuPme";
         return key;
     }
     /**
