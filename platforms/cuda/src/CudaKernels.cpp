@@ -1569,8 +1569,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         if (cu.getUseDoublePrecision())
             pmeDefines["USE_DOUBLE_PRECISION"] = "1";
         CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
-        bool useCpuPme = true;
-        if (useCpuPme) {
+        if (cu.getPlatformData().useCpuPme) {
             try {
                 cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cu.getPlatformData().context);
                 cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
