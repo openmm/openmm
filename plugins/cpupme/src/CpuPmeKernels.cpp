@@ -36,7 +36,7 @@
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <cmath>
 #include <cstring>
-#include <immintrin.h>
+#include <smmintrin.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -46,9 +46,7 @@ static const int PME_ORDER = 5;
 bool CpuCalcPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcPmeReciprocalForceKernel::numThreads = 0;
 
-static float extractFloat(__m128& v, unsigned int element) {
-    return _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, element)));
-}
+#define EXTRACT_FLOAT(v, element) _mm_cvtss_f32(_mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, element)))
 
 // Define function to get the number of processors.
 
@@ -108,7 +106,7 @@ static void cpuid(int cpuInfo[4], int infoType){
 }
 #endif
 
-static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
+static void spreadCharge(int start, int end, float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
     float temp[4];
     __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
     __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
@@ -157,19 +155,19 @@ static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gr
             zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
         }
         float charge = epsilonFactor*posq[4*i+3];
-        __m128 zdata0to3 = _mm_set_ps(extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
-        float zdata4 = extractFloat(data[4], 2);
+        __m128 zdata0to3 = _mm_set_ps(EXTRACT_FLOAT(data[3], 2), EXTRACT_FLOAT(data[2], 2), EXTRACT_FLOAT(data[1], 2), EXTRACT_FLOAT(data[0], 2));
+        float zdata4 = EXTRACT_FLOAT(data[4], 2);
         if (gridIndexZ+4 < gridz) {
             for (int ix = 0; ix < PME_ORDER; ix++) {
                 int xbase = gridIndexX+ix;
                 xbase -= (xbase >= gridx ? gridx : 0);
                 xbase = xbase*gridy*gridz;
-                float xdata = charge*extractFloat(data[ix], 0);
+                float xdata = charge*EXTRACT_FLOAT(data[ix], 0);
                 for (int iy = 0; iy < PME_ORDER; iy++) {
                     int ybase = gridIndexY+iy;
                     ybase -= (ybase >= gridy ? gridy : 0);
                     ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*extractFloat(data[iy], 1);
+                    float multiplier = xdata*EXTRACT_FLOAT(data[iy], 1);
                     __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
                     _mm_storeu_ps(&grid[ybase+gridIndexZ], _mm_add_ps(_mm_loadu_ps(&grid[ybase+gridIndexZ]), add0to3));
                     grid[ybase+zindex[4]] += multiplier*zdata4;
@@ -181,12 +179,12 @@ static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gr
                 int xbase = gridIndexX+ix;
                 xbase -= (xbase >= gridx ? gridx : 0);
                 xbase = xbase*gridy*gridz;
-                float xdata = charge*extractFloat(data[ix], 0);
+                float xdata = charge*EXTRACT_FLOAT(data[ix], 0);
                 for (int iy = 0; iy < PME_ORDER; iy++) {
                     int ybase = gridIndexY+iy;
                     ybase -= (ybase >= gridy ? gridy : 0);
                     ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*extractFloat(data[iy], 1);
+                    float multiplier = xdata*EXTRACT_FLOAT(data[iy], 1);
                     __m128 add0to3 = _mm_mul_ps(zdata0to3, _mm_set1_ps(multiplier));
                     _mm_store_ps(temp, add0to3);
                     grid[ybase+zindex[0]] += temp[0];
@@ -194,97 +192,6 @@ static void spreadChargeSSE(int start, int end, float* posq, float* grid, int gr
                     grid[ybase+zindex[2]] += temp[2];
                     grid[ybase+zindex[3]] += temp[3];
                     grid[ybase+zindex[4]] += multiplier*zdata4;
-                }
-            }
-        }
-    }
-}
-
-static void spreadChargeAVX(int start, int end, float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3 periodicBoxSize) {
-    float temp[8];
-    __m128 boxSize = _mm_set_ps(0, (float) periodicBoxSize[2], (float) periodicBoxSize[1], (float) periodicBoxSize[0]);
-    __m128 invBoxSize = _mm_set_ps(0, (float) (1/periodicBoxSize[2]), (float) (1/periodicBoxSize[1]), (float) (1/periodicBoxSize[0]));
-    __m128 gridSize = _mm_set_ps(0, gridz, gridy, gridx);
-    __m128i gridSizeInt = _mm_set_epi32(0, gridz, gridy, gridx);
-    __m128 one  = _mm_set1_ps(1);
-    __m128 scale = _mm_set1_ps(1.0f/(PME_ORDER-1));
-    __m256i mask = _mm256_set_epi32(0, 0, 0, -1, -1, -1, -1, -1);
-    const float epsilonFactor = sqrt(ONE_4PI_EPS0);
-    memset(grid, 0, sizeof(float)*gridx*gridy*gridz);
-    for (int i = start; i < end; i++) {
-        // Find the position relative to the nearest grid point.
-        
-        __m128 pos = _mm_load_ps(&posq[4*i]);
-        __m128 posInBox = _mm_sub_ps(pos, _mm_mul_ps(boxSize, _mm_floor_ps(_mm_mul_ps(pos, invBoxSize))));
-        __m128 t = _mm_mul_ps(_mm_mul_ps(posInBox, invBoxSize), gridSize);
-        __m128i ti = _mm_cvttps_epi32(t);
-        __m128 dr = _mm_sub_ps(t, _mm_cvtepi32_ps(ti));
-        __m128i gridIndex = _mm_sub_epi32(ti, _mm_and_si128(gridSizeInt, _mm_cmpeq_epi32(ti, gridSizeInt)));
-        
-        // Compute the B-spline coefficients.
-        
-        __m128 data[PME_ORDER];
-        data[PME_ORDER-1] = _mm_setzero_ps();
-        data[1] = dr;
-        data[0] = _mm_sub_ps(one, dr);
-        for (int j = 3; j < PME_ORDER; j++) {
-            __m128 div = _mm_set1_ps(1.0f/(j-1));
-            data[j-1] = _mm_mul_ps(_mm_mul_ps(div, dr), data[j-2]);
-            for (int k = 1; k < j-1; k++)
-                data[j-k-1] = _mm_mul_ps(div, _mm_add_ps(_mm_mul_ps(_mm_add_ps(dr, _mm_set1_ps(k)), data[j-k-2]), _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(j-k), dr), data[j-k-1])));
-            data[0] = _mm_mul_ps(_mm_mul_ps(div, _mm_sub_ps(one, dr)), data[0]);
-        }
-        data[PME_ORDER-1] = _mm_mul_ps(_mm_mul_ps(scale, dr), data[PME_ORDER-2]);
-        for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = _mm_mul_ps(scale, _mm_add_ps(_mm_mul_ps(_mm_add_ps(dr, _mm_set1_ps(j)), data[PME_ORDER-j-2]), _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(PME_ORDER-j), dr), data[PME_ORDER-j-1])));
-        data[0] = _mm_mul_ps(_mm_mul_ps(scale, _mm_sub_ps(one, dr)), data[0]);
-        
-        // Spread the charges.
-        
-        int gridIndexX = _mm_extract_epi32(gridIndex, 0);
-        int gridIndexY = _mm_extract_epi32(gridIndex, 1);
-        int gridIndexZ = _mm_extract_epi32(gridIndex, 2);
-        float charge = epsilonFactor*posq[4*i+3];
-        __m256 zdata = _mm256_set_ps(0, 0, 0, extractFloat(data[4], 2), extractFloat(data[3], 2), extractFloat(data[2], 2), extractFloat(data[1], 2), extractFloat(data[0], 2));
-        if (gridIndexZ+5 < gridz) {
-            for (int ix = 0; ix < PME_ORDER; ix++) {
-                int xbase = gridIndexX+ix;
-                xbase -= (xbase >= gridx ? gridx : 0);
-                xbase = xbase*gridy*gridz;
-                float xdata = charge*extractFloat(data[ix], 0);
-                for (int iy = 0; iy < PME_ORDER; iy++) {
-                    int ybase = gridIndexY+iy;
-                    ybase -= (ybase >= gridy ? gridy : 0);
-                    ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*extractFloat(data[iy], 1);
-                    __m256 add = _mm256_mul_ps(zdata, _mm256_set1_ps(multiplier));
-                    _mm256_maskstore_ps(&grid[ybase+gridIndexZ], mask, _mm256_add_ps(_mm256_maskload_ps(&grid[ybase+gridIndexZ], mask), add));
-                }
-            }
-        }
-        else {
-            int zindex[PME_ORDER];
-            for (int j = 0; j < PME_ORDER; j++) {
-                zindex[j] = gridIndexZ+j;
-                zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
-            }
-            for (int ix = 0; ix < PME_ORDER; ix++) {
-                int xbase = gridIndexX+ix;
-                xbase -= (xbase >= gridx ? gridx : 0);
-                xbase = xbase*gridy*gridz;
-                float xdata = charge*extractFloat(data[ix], 0);
-                for (int iy = 0; iy < PME_ORDER; iy++) {
-                    int ybase = gridIndexY+iy;
-                    ybase -= (ybase >= gridy ? gridy : 0);
-                    ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*extractFloat(data[iy], 1);
-                    __m256 add = _mm256_mul_ps(zdata, _mm256_set1_ps(multiplier));
-                    _mm256_store_ps(temp, add);
-                    grid[ybase+zindex[0]] += temp[0];
-                    grid[ybase+zindex[1]] += temp[1];
-                    grid[ybase+zindex[2]] += temp[2];
-                    grid[ybase+zindex[3]] += temp[3];
-                    grid[ybase+zindex[4]] += temp[4];
                 }
             }
         }
@@ -443,22 +350,22 @@ static void interpolateForces(int start, int end, float* posq, float* force, flo
         }
         __m128 zdata[PME_ORDER];
         for (int j = 0; j < PME_ORDER; j++)
-            zdata[j] = _mm_set_ps(0, extractFloat(ddata[j], 2), extractFloat(data[j], 2), extractFloat(data[j], 2));
+            zdata[j] = _mm_set_ps(0, EXTRACT_FLOAT(ddata[j], 2), EXTRACT_FLOAT(data[j], 2), EXTRACT_FLOAT(data[j], 2));
         __m128 f = _mm_set1_ps(0);
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndexX+ix;
             xbase -= (xbase >= gridx ? gridx : 0);
             xbase = xbase*gridy*gridz;
-            float dx = extractFloat(data[ix], 0);
-            float ddx = extractFloat(ddata[ix], 0);
+            float dx = EXTRACT_FLOAT(data[ix], 0);
+            float ddx = EXTRACT_FLOAT(ddata[ix], 0);
             __m128 xdata = _mm_set_ps(0, dx, dx, ddx);
 
             for (int iy = 0; iy < PME_ORDER; iy++) {
                 int ybase = gridIndexY+iy;
                 ybase -= (ybase >= gridy ? gridy : 0);
                 ybase = xbase + ybase*gridz;
-                float dy = extractFloat(data[iy], 1);
-                float ddy = extractFloat(ddata[iy], 1);
+                float dy = EXTRACT_FLOAT(data[iy], 1);
+                float ddy = EXTRACT_FLOAT(ddata[iy], 1);
                 __m128 xydata = _mm_mul_ps(xdata, _mm_set_ps(0, dy, ddy, dy));
 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
@@ -652,7 +559,6 @@ void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
     else {
         // This is a worker thread.
         
-        bool useAVX = isAVXSupported();
         int particleStart = (index*numParticles)/numThreads;
         int particleEnd = ((index+1)*numParticles)/numThreads;
         int gridxStart = (index*gridx)/numThreads;
@@ -664,10 +570,7 @@ void CpuCalcPmeReciprocalForceKernel::runThread(int index) {
             threadWait();
             if (isDeleted)
                 break;
-            if (useAVX)
-                spreadChargeAVX(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
-            else
-                spreadChargeSSE(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
+            spreadCharge(particleStart, particleEnd, posq, threadData[index]->tempGrid, gridx, gridy, gridz, numParticles, periodicBoxSize);
             threadWait();
             int numGrids = threadData.size();
             for (int i = gridStart; i < gridEnd; i += 4) {
@@ -738,16 +641,6 @@ bool CpuCalcPmeReciprocalForceKernel::isProcessorSupported() {
     if (cpuInfo[0] >= 1) {
         cpuid(cpuInfo, 1);
         return ((cpuInfo[2] & ((int) 1 << 19)) != 0); // Require SSE 4.1
-    }
-    return false;
-}
-
-bool CpuCalcPmeReciprocalForceKernel::isAVXSupported() {
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        return ((cpuInfo[2] & ((int) 1 << 28)) != 0);
     }
     return false;
 }
