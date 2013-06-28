@@ -824,6 +824,7 @@ def readAmberSystem(prmtop_filename=None, prmtop_loader=None, shake=None, gbmode
             gb.setCutoffDistance(nonbondedCutoff)
         else:
             raise Exception("Illegal nonbonded method for use with GBSA")
+        force.setReactionFieldDielectric(1.0)
 
     # TODO: Add GBVI terms?
 
