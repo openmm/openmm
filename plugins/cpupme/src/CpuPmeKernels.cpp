@@ -397,15 +397,15 @@ static void* threadBody(void* args) {
     return 0;
 }
 
-void CpuCalcPmeReciprocalForceKernel::initialize(int gridx, int gridy, int gridz, int numParticles, double alpha) {
+void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
         fftwf_init_threads();
         hasInitializedThreads = true;
     }
-    this->gridx = gridx;
-    this->gridy = gridy;
-    this->gridz = gridz;
+    gridx = findFFTDimension(xsize);
+    gridy = findFFTDimension(ysize);
+    gridz = findFFTDimension(zsize);
     this->numParticles = numParticles;
     this->alpha = alpha;
     force.resize(4*numParticles);
@@ -629,4 +629,21 @@ bool CpuCalcPmeReciprocalForceKernel::isProcessorSupported() {
         return ((cpuInfo[2] & ((int) 1 << 19)) != 0); // Require SSE 4.1
     }
     return false;
+}
+
+int CpuCalcPmeReciprocalForceKernel::findFFTDimension(int minimum) {
+    if (minimum < 1)
+        return 1;
+    while (true) {
+        // Attempt to factor the current value.
+
+        int unfactored = minimum;
+        for (int factor = 2; factor < 12; factor++) {
+            while (unfactored > 1 && unfactored%factor == 0)
+                unfactored /= factor;
+        }
+        if (unfactored == 1)
+            return minimum;
+        minimum++;
+    }
 }

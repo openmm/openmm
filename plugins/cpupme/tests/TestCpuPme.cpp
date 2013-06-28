@@ -83,6 +83,7 @@ void testPME() {
     force->setNonbondedMethod(NonbondedForce::PME);
     force->setCutoffDistance(cutoff);
     force->setReciprocalSpaceForceGroup(1);
+    force->setEwaldErrorTolerance(1e-4);
     
     // Compute the reciprocal space forces with the reference platform.
     
@@ -116,9 +117,9 @@ void testPME() {
     
     // See if they match.
     
-    ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), energy+ewaldSelfEnergy, 1e-4);
+    ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), energy+ewaldSelfEnergy, 1e-3);
     for (int i = 0; i < numParticles; i++)
-        ASSERT_EQUAL_VEC(refState.getForces()[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 1e-4);
+        ASSERT_EQUAL_VEC(refState.getForces()[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 1e-3);
 }
 
 int main(int argc, char* argv[]) {

@@ -42,6 +42,8 @@
 namespace OpenMM {
 
 /**
+ * This is an optimized CPU implementation of CalcPmeReciprocalForceKernel.  It is both
+ * vectorized (requiring SSE 4.1) and multithreaded.  It uses FFTW to perform the FFTs.
  */
 
 class OPENMM_EXPORT_PME CpuCalcPmeReciprocalForceKernel : public CalcPmeReciprocalForceKernel {
@@ -50,15 +52,53 @@ public:
     CpuCalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : CalcPmeReciprocalForceKernel(name, platform),
             hasCreatedPlan(false), isDeleted(false), realGrid(NULL), complexGrid(NULL) {
     }
-    void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha);
+    /**
+     * Initialize the kernel.
+     * 
+     * @param gridx        the x size of the PME grid
+     * @param gridy        the y size of the PME grid
+     * @param gridz        the z size of the PME grid
+     * @param numParticles the number of particles in the system
+     * @param alpha        the Ewald blending parameter
+     */
+    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha);
     ~CpuCalcPmeReciprocalForceKernel();
+    /**
+     * Begin computing the force and energy.
+     * 
+     * @param io               an object that coordinates data transfer
+     * @param periodicBoxSize  the size of the periodic box (measured in nm)
+     * @param includeEnergy    true if potential energy should be computed
+     */
     void beginComputation(IO& io, Vec3 periodicBoxSize, bool includeEnergy);
+    /**
+     * Finish computing the force and energy.
+     * 
+     * @param io   an object that coordinates data transfer
+     * @return the potential energy due to the PME reciprocal space interactions
+     */
     double finishComputation(IO& io);
+    /**
+     * This routine contains the code executed by each thread.
+     */
     void runThread(int index);
+    /**
+     * Get whether the current CPU supports all features needed by this kernel.
+     */
     static bool isProcessorSupported();
 private:
+    /**
+     * This is called by the worker threads to wait until the master thread instructs them to advance.
+     */
     void threadWait();
+    /**
+     * This is called by the master thread to instruct all the worker threads to advance.
+     */
     void advanceThreads();
+    /**
+     * Select a size for one grid dimension that FFTW can handle efficiently.
+     */
+    int findFFTDimension(int minimum);
     static bool hasInitializedThreads;
     static int numThreads;
     int gridx, gridy, gridz, numParticles;
