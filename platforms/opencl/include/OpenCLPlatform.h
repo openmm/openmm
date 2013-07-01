@@ -87,17 +87,25 @@ public:
         static const std::string key = "OpenCLPrecision";
         return key;
     }
+    /**
+     * This is the name of the parameter for selecting whether to use the CPU based PME calculation.
+     */
+    static const std::string& OpenCLUseCpuPme() {
+        static const std::string key = "OpenCLUseCpuPme";
+        return key;
+    }
 };
 
 class OPENMM_EXPORT_OPENCL OpenCLPlatform::PlatformData {
 public:
-    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty);
+    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty, const std::string& cpuPmeProperty);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
+    ContextImpl* context;
     std::vector<OpenCLContext*> contexts;
     std::vector<double> contextEnergy;
-    bool removeCM;
+    bool removeCM, useCpuPme;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;

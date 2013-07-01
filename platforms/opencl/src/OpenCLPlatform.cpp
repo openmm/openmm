@@ -31,6 +31,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
+#include <algorithm>
 #include <sstream>
 
 using namespace OpenMM;
@@ -78,11 +79,13 @@ OpenCLPlatform::OpenCLPlatform() {
     platformProperties.push_back(OpenCLPlatformIndex());
     platformProperties.push_back(OpenCLPlatformName());
     platformProperties.push_back(OpenCLPrecision());
+    platformProperties.push_back(OpenCLUseCpuPme());
     setPropertyDefaultValue(OpenCLDeviceIndex(), "");
     setPropertyDefaultValue(OpenCLDeviceName(), "");
     setPropertyDefaultValue(OpenCLPlatformIndex(), "");
     setPropertyDefaultValue(OpenCLPlatformName(), "");
     setPropertyDefaultValue(OpenCLPrecision(), "single");
+    setPropertyDefaultValue(OpenCLUseCpuPme(), "false");
 }
 
 double OpenCLPlatform::getSpeed() const {
@@ -112,7 +115,15 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
             getPropertyDefaultValue(OpenCLDeviceIndex()) : properties.find(OpenCLDeviceIndex())->second);
     string precisionPropValue = (properties.find(OpenCLPrecision()) == properties.end() ?
             getPropertyDefaultValue(OpenCLPrecision()) : properties.find(OpenCLPrecision())->second);
-    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue));
+    string cpuPmePropValue = (properties.find(OpenCLUseCpuPme()) == properties.end() ?
+            getPropertyDefaultValue(OpenCLUseCpuPme()) : properties.find(OpenCLUseCpuPme())->second);
+    transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
+    transform(cpuPmePropValue.begin(), cpuPmePropValue.end(), cpuPmePropValue.begin(), ::tolower);
+    vector<string> pmeKernelName;
+    pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
+    if (!supportsKernels(pmeKernelName))
+        cpuPmePropValue = "false";
+    context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -121,7 +132,7 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
-        const string& precisionProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+        const string& precisionProperty, const string& cpuPmeProperty) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
     int platformIndex = 0;
     if (platformPropValue.length() > 0)
         stringstream(platformPropValue) >> platformIndex;
@@ -150,6 +161,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
         deviceIndex << contexts[i]->getDeviceIndex();
         deviceName << contexts[i]->getDevice().getInfo<CL_DEVICE_NAME>();
     }
+    useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex.str();
     propertyValues[OpenCLPlatform::OpenCLDeviceName()] = deviceName.str();
     propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = contexts[0]->intToString(platformIndex);
@@ -157,6 +169,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     cl::Platform::get(&platforms);
     propertyValues[OpenCLPlatform::OpenCLPlatformName()] = platforms[platformIndex].getInfo<CL_PLATFORM_NAME>();
     propertyValues[OpenCLPlatform::OpenCLPrecision()] = precisionProperty;
+    propertyValues[OpenCLPlatform::OpenCLUseCpuPme()] = useCpuPme ? "true" : "false";
     contextEnergy.resize(contexts.size());
 }
 
