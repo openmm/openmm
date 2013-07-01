@@ -104,10 +104,12 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    cl.clearAutoclearBuffers();
+    for (vector<OpenCLContext::ForcePreComputation*>::iterator iter = cl.getPreComputations().begin(); iter != cl.getPreComputations().end(); ++iter)
+        (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     bool includeNonbonded = ((groups&(1<<nb.getForceGroup())) != 0);
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
-    cl.clearAutoclearBuffers();
     if (includeNonbonded)
         nb.prepareInteractions();
 }
@@ -117,8 +119,10 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
     if ((groups&(1<<cl.getNonbondedUtilities().getForceGroup())) != 0)
         cl.getNonbondedUtilities().computeInteractions();
     cl.reduceForces();
+    double sum = 0.0;
+    for (vector<OpenCLContext::ForcePostComputation*>::iterator iter = cl.getPostComputations().begin(); iter != cl.getPostComputations().end(); ++iter)
+        sum += (*iter)->computeForceAndEnergy(includeForces, includeEnergy, groups);
     cl.getIntegrationUtilities().distributeForcesFromVirtualSites();
-    double sum = 0.0f;
     if (includeEnergy) {
         OpenCLArray& energyArray = cl.getEnergyBuffer();
         if (cl.getUseDoublePrecision()) {
@@ -1323,6 +1327,58 @@ private:
     const NonbondedForce& force;
 };
 
+class OpenCLCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
+public:
+    PmeIO(OpenCLContext& cl, cl::Kernel addForcesKernel) : cl(cl), addForcesKernel(addForcesKernel), forceTemp(NULL) {
+        forceTemp = OpenCLArray::create<mm_float4>(cl, cl.getNumAtoms(), "PmeForce");
+        addForcesKernel.setArg<cl::Buffer>(0, forceTemp->getDeviceBuffer());
+    }
+    ~PmeIO() {
+        if (forceTemp != NULL)
+            delete forceTemp;
+    }
+    float* getPosq() {
+        cl.getPosq().download(posq);
+        return (float*) &posq[0];
+    }
+    void setForce(float* force) {
+        forceTemp->upload(force);
+        addForcesKernel.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
+        cl.executeKernel(addForcesKernel, cl.getNumAtoms());
+    }
+private:
+    OpenCLContext& cl;
+    vector<mm_float4> posq;
+    OpenCLArray* forceTemp;
+    cl::Kernel addForcesKernel;
+};
+
+class OpenCLCalcNonbondedForceKernel::PmePreComputation : public OpenCLContext::ForcePreComputation {
+public:
+    PmePreComputation(OpenCLContext& cl, Kernel& pme, CalcPmeReciprocalForceKernel::IO& io) : cl(cl), pme(pme), io(io) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        Vec3 boxSize(cl.getPeriodicBoxSize().x, cl.getPeriodicBoxSize().y, cl.getPeriodicBoxSize().z);
+        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxSize, includeEnergy);
+    }
+private:
+    OpenCLContext& cl;
+    Kernel pme;
+    CalcPmeReciprocalForceKernel::IO& io;
+};
+
+class OpenCLCalcNonbondedForceKernel::PmePostComputation : public OpenCLContext::ForcePostComputation {
+public:
+    PmePostComputation(Kernel& pme, CalcPmeReciprocalForceKernel::IO& io) : pme(pme), io(io) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        return pme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
+    }
+private:
+    Kernel pme;
+    CalcPmeReciprocalForceKernel::IO& io;
+};
+
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
     if (sigmaEpsilon != NULL)
         delete sigmaEpsilon;
@@ -1350,6 +1406,8 @@ OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
         delete sort;
     if (fft != NULL)
         delete fft;
+    if (pmeio != NULL)
+        delete pmeio;
 }
 
 void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -1430,7 +1488,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     else
         dispersionCoefficient = 0.0;
     alpha = 0;
-    if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+    if (force.getNonbondedMethod() == NonbondedForce::Ewald && cl.getContextIndex() == 0) {
         // Compute the Ewald parameters.
 
         int kmaxx, kmaxy, kmaxz;
@@ -1438,7 +1496,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = cl.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
+        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
 
         // Create the reciprocal space kernels.
 
@@ -1454,7 +1512,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2));
         cosSinSums = new OpenCLArray(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), elementSize, "cosSinSums");
     }
-    else if (force.getNonbondedMethod() == NonbondedForce::PME) {
+    else if (force.getNonbondedMethod() == NonbondedForce::PME && cl.getContextIndex() == 0) {
         // Compute the PME parameters.
 
         int gridSizeX, gridSizeY, gridSizeZ;
@@ -1465,7 +1523,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = cl.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        ewaldSelfEnergy = (cl.getContextIndex() == 0 ? -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI) : 0.0);
+        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/sqrt(M_PI);
         pmeDefines["PME_ORDER"] = cl.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cl.intToString(numParticles);
         pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(alpha*alpha));
@@ -1476,92 +1534,109 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
         if (deviceIsCpu)
             pmeDefines["DEVICE_IS_CPU"] = "1";
-
-        // Create required data structures.
-
-        int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-        cl.addAutoclearBuffer(*pmeGrid);
-        pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
-        pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
-        pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
-        pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
-        pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
-        pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-        pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
-        sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
-        fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
-
-        // Initialize the b-spline moduli.
-
-        int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
-        vector<double> data(PmeOrder);
-        vector<double> ddata(PmeOrder);
-        vector<double> bsplines_data(maxSize);
-        data[PmeOrder-1] = 0.0;
-        data[1] = 0.0;
-        data[0] = 1.0;
-        for (int i = 3; i < PmeOrder; i++) {
-            double div = 1.0/(i-1.0);
-            data[i-1] = 0.0;
-            for (int j = 1; j < (i-1); j++)
-                data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
-            data[0] = div*data[0];
+        if (cl.getPlatformData().useCpuPme) {
+            // Create the CPU PME kernel.
+            
+            try {
+                cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
+                cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha);
+                cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
+                cl::Kernel addForcesKernel = cl::Kernel(program, "addForces");
+                pmeio = new PmeIO(cl, addForcesKernel);
+                cl.addPreComputation(new PmePreComputation(cl, cpuPme, *pmeio));
+                cl.addPostComputation(new PmePostComputation(cpuPme, *pmeio));
+            }
+            catch (OpenMMException& ex) {
+                // The CPU PME plugin isn't available.
+            }
         }
+        if (pmeio == NULL) {
+            // Create required data structures.
 
-        // Differentiate.
+            int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+            pmeGrid = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
+            cl.addAutoclearBuffer(*pmeGrid);
+            pmeGrid2 = new OpenCLArray(cl, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
+            pmeBsplineModuliX = new OpenCLArray(cl, gridSizeX, elementSize, "pmeBsplineModuliX");
+            pmeBsplineModuliY = new OpenCLArray(cl, gridSizeY, elementSize, "pmeBsplineModuliY");
+            pmeBsplineModuliZ = new OpenCLArray(cl, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+            pmeBsplineTheta = new OpenCLArray(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
+            pmeAtomRange = OpenCLArray::create<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
+            pmeAtomGridIndex = OpenCLArray::create<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
+            sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
+            fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
 
-        ddata[0] = -data[0];
-        for (int i = 1; i < PmeOrder; i++)
-            ddata[i] = data[i-1]-data[i];
-        double div = 1.0/(PmeOrder-1);
-        data[PmeOrder-1] = 0.0;
-        for (int i = 1; i < (PmeOrder-1); i++)
-            data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
-        data[0] = div*data[0];
-        for (int i = 0; i < maxSize; i++)
-            bsplines_data[i] = 0.0;
-        for (int i = 1; i <= PmeOrder; i++)
-            bsplines_data[i] = data[i-1];
+            // Initialize the b-spline moduli.
 
-        // Evaluate the actual bspline moduli for X/Y/Z.
+            int maxSize = max(max(gridSizeX, gridSizeY), gridSizeZ);
+            vector<double> data(PmeOrder);
+            vector<double> ddata(PmeOrder);
+            vector<double> bsplines_data(maxSize);
+            data[PmeOrder-1] = 0.0;
+            data[1] = 0.0;
+            data[0] = 1.0;
+            for (int i = 3; i < PmeOrder; i++) {
+                double div = 1.0/(i-1.0);
+                data[i-1] = 0.0;
+                for (int j = 1; j < (i-1); j++)
+                    data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+                data[0] = div*data[0];
+            }
 
-        for(int dim = 0; dim < 3; dim++) {
-            int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
-            vector<cl_double> moduli(ndata);
-            for (int i = 0; i < ndata; i++) {
-                double sc = 0.0;
-                double ss = 0.0;
-                for (int j = 0; j < ndata; j++) {
-                    double arg = (2.0*M_PI*i*j)/ndata;
-                    sc += bsplines_data[j]*cos(arg);
-                    ss += bsplines_data[j]*sin(arg);
+            // Differentiate.
+
+            ddata[0] = -data[0];
+            for (int i = 1; i < PmeOrder; i++)
+                ddata[i] = data[i-1]-data[i];
+            double div = 1.0/(PmeOrder-1);
+            data[PmeOrder-1] = 0.0;
+            for (int i = 1; i < (PmeOrder-1); i++)
+                data[PmeOrder-i-1] = div*(i*data[PmeOrder-i-2]+(PmeOrder-i)*data[PmeOrder-i-1]);
+            data[0] = div*data[0];
+            for (int i = 0; i < maxSize; i++)
+                bsplines_data[i] = 0.0;
+            for (int i = 1; i <= PmeOrder; i++)
+                bsplines_data[i] = data[i-1];
+
+            // Evaluate the actual bspline moduli for X/Y/Z.
+
+            for(int dim = 0; dim < 3; dim++) {
+                int ndata = (dim == 0 ? gridSizeX : dim == 1 ? gridSizeY : gridSizeZ);
+                vector<cl_double> moduli(ndata);
+                for (int i = 0; i < ndata; i++) {
+                    double sc = 0.0;
+                    double ss = 0.0;
+                    for (int j = 0; j < ndata; j++) {
+                        double arg = (2.0*M_PI*i*j)/ndata;
+                        sc += bsplines_data[j]*cos(arg);
+                        ss += bsplines_data[j]*sin(arg);
+                    }
+                    moduli[i] = (float) (sc*sc+ss*ss);
                 }
-                moduli[i] = (float) (sc*sc+ss*ss);
-            }
-            for (int i = 0; i < ndata; i++)
-            {
-                if (moduli[i] < 1.0e-7)
-                    moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
-            }
-            if (cl.getUseDoublePrecision()) {
-                if (dim == 0)
-                    pmeBsplineModuliX->upload(moduli);
-                else if (dim == 1)
-                    pmeBsplineModuliY->upload(moduli);
-                else
-                    pmeBsplineModuliZ->upload(moduli);
-            }
-            else {
-                vector<float> modulif(ndata);
                 for (int i = 0; i < ndata; i++)
-                    modulif[i] = (float) moduli[i];
-                if (dim == 0)
-                    pmeBsplineModuliX->upload(modulif);
-                else if (dim == 1)
-                    pmeBsplineModuliY->upload(modulif);
-                else
-                    pmeBsplineModuliZ->upload(modulif);
+                {
+                    if (moduli[i] < 1.0e-7)
+                        moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
+                }
+                if (cl.getUseDoublePrecision()) {
+                    if (dim == 0)
+                        pmeBsplineModuliX->upload(moduli);
+                    else if (dim == 1)
+                        pmeBsplineModuliY->upload(moduli);
+                    else
+                        pmeBsplineModuliZ->upload(moduli);
+                }
+                else {
+                    vector<float> modulif(ndata);
+                    for (int i = 0; i < ndata; i++)
+                        modulif[i] = (float) moduli[i];
+                    if (dim == 0)
+                        pmeBsplineModuliX->upload(modulif);
+                    else if (dim == 1)
+                        pmeBsplineModuliY->upload(modulif);
+                    else
+                        pmeBsplineModuliZ->upload(modulif);
+                }
             }
         }
     }
@@ -1650,7 +1725,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
        }
     }
-    if (cosSinSums != NULL && cl.getContextIndex() == 0 && includeReciprocal) {
+    if (cosSinSums != NULL && includeReciprocal) {
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
         mm_double4 recipBoxSize = mm_double4(2*M_PI/boxSize.x, 2*M_PI/boxSize.y, 2*M_PI/boxSize.z, 0.0);
         double recipCoefficient = ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z);
@@ -1669,7 +1744,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         cl.executeKernel(ewaldSumsKernel, cosSinSums->getSize());
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
-    if (pmeGrid != NULL && cl.getContextIndex() == 0 && includeReciprocal) {
+    if (pmeGrid != NULL && includeReciprocal) {
         setPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 4);
         setInvPeriodicBoxSizeArg(cl, pmeUpdateBsplinesKernel, 5);
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
