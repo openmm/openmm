@@ -5,6 +5,7 @@ try:
 except:
     pass
 
+import sys
 import math
 RMIN_PER_SIGMA=math.pow(2, 1/6.0)
 RVDW_PER_SIGMA=math.pow(2, 1/6.0)/2.0
@@ -273,6 +274,9 @@ def stripUnits(args):
     """
     newArgList=[]
     for arg in args:
+        if 'numpy' in sys.modules and isinstance(arg, numpy.ndarray):
+            arg = arg.tolist()
+
         if unit.is_quantity(arg):
             # JDC: Ugly workaround for OpenMM using 'bar' for fundamental pressure unit.
             if arg.unit.is_compatible(unit.bar):
