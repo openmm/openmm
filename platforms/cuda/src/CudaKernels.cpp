@@ -4842,7 +4842,8 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         for (int step = 1; step < numSteps; step++) {
             if (needsForces[step] || needsEnergy[step])
                 continue;
-            if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
+            if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal &&
+                    !usesVariable(expression[step], "uniform") && !usesVariable(expression[step], "gaussian"))
                 merged[step] = true;
             if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
@@ -4867,9 +4868,9 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                     numUniform += numAtoms*usesVariable(expression[j], "uniform");
                     compute << "{\n";
                     if (numGaussian > 0)
-                        compute << "float4 gaussian = gaussianValues[gaussianIndex];\n";
+                        compute << "float4 gaussian = gaussianValues[gaussianIndex+index];\n";
                     if (numUniform > 0)
-                        compute << "float4 uniform = uniformValues[uniformIndex];\n";
+                        compute << "float4 uniform = uniformValues[uniformIndex+index];\n";
                     for (int i = 0; i < 3; i++)
                         compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j], i, integrator, forceName[j], energyName[j]);
                     if (variable[j] == "x") {
@@ -4889,9 +4890,9 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                         }
                     }
                     if (numGaussian > 0)
-                        compute << "gaussianIndex += blockDim.x*gridDim.x;\n";
+                        compute << "gaussianIndex += NUM_ATOMS;\n";
                     if (numUniform > 0)
-                        compute << "uniformIndex += blockDim.x*gridDim.x;\n";
+                        compute << "uniformIndex += NUM_ATOMS;\n";
                     compute << "}\n";
                 }
                 map<string, string> replacements;
