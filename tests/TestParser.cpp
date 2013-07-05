@@ -175,6 +175,7 @@ int main() {
         verifyEvaluation("5*2", 10.0);
         verifyEvaluation("2*3+4*5", 26.0);
         verifyEvaluation("2^-3", 0.125);
+        verifyEvaluation("1e+2", 100.0);
         verifyEvaluation("-x", 2.0, 3.0, -2.0);
         verifyEvaluation("y^-x", 3.0, 2.0, 0.125);
         verifyEvaluation("1/-x", 3.0, 2.0, -1.0/3.0);
