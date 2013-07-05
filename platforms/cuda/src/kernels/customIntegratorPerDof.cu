@@ -34,11 +34,12 @@ inline __device__ mixed4 convertFromDouble4(double4 a) {
 extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ posDelta,
         mixed4* __restrict__ velm, const long long* __restrict__ force, const mixed2* __restrict__ dt, const mixed* __restrict__ globals,
         const mixed* __restrict__ params, mixed* __restrict__ sum, const float4* __restrict__ gaussianValues,
-        unsigned int randomIndex, const float4* __restrict__ uniformValues, const real* __restrict__ energy
+        unsigned int gaussianIndex, const float4* __restrict__ uniformValues, const real* __restrict__ energy
         PARAMETER_ARGUMENTS) {
     mixed stepSize = dt[0].y;
     int index = blockIdx.x*blockDim.x+threadIdx.x;
-    randomIndex += index;
+    gaussianIndex += index;
+    int uniformIndex = index;
     const double forceScale = 1.0/0xFFFFFFFF;
     while (index < NUM_ATOMS) {
 #ifdef LOAD_POS_AS_DELTA
@@ -50,11 +51,8 @@ extern "C" __global__ void computePerDof(real4* __restrict__ posq, real4* __rest
         double4 f = make_double4(forceScale*force[index], forceScale*force[index+PADDED_NUM_ATOMS], forceScale*force[index+PADDED_NUM_ATOMS*2], 0.0);
         double mass = 1.0/velocity.w;
         if (velocity.w != 0.0) {
-            float4 gaussian = gaussianValues[randomIndex];
-            float4 uniform = uniformValues[index];
             COMPUTE_STEP
         }
-        randomIndex += blockDim.x*gridDim.x;
         index += blockDim.x*gridDim.x;
     }
 }

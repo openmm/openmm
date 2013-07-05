@@ -26,11 +26,12 @@ void storePos(__global real4* restrict posq, __global real4* restrict posqCorrec
 __kernel void computePerDof(__global real4* restrict posq, __global real4* restrict posqCorrection, __global mixed4* restrict posDelta,
         __global mixed4* restrict velm, __global const real4* restrict force, __global const mixed2* restrict dt, __global const mixed* restrict globals,
         __global const mixed* restrict params, __global mixed* restrict sum, __global const float4* restrict gaussianValues,
-        unsigned int randomIndex, __global const float4* restrict uniformValues, __global const real* restrict energy
+        unsigned int gaussianIndex, __global const float4* restrict uniformValues, __global const real* restrict energy
         PARAMETER_ARGUMENTS) {
     mixed stepSize = dt[0].y;
     int index = get_global_id(0);
-    randomIndex += index;
+    gaussianIndex += index;
+    int uniformIndex = index;
     while (index < NUM_ATOMS) {
 #ifdef LOAD_POS_AS_DELTA
         mixed4 position = loadPos(posq, posqCorrection, index)+posDelta[index];
@@ -41,11 +42,8 @@ __kernel void computePerDof(__global real4* restrict posq, __global real4* restr
         real4 f = force[index];
         mixed mass = 1/velocity.w;
         if (velocity.w != 0.0) {
-            float4 gaussian = gaussianValues[randomIndex];
-            float4 uniform = uniformValues[index];
             COMPUTE_STEP
         }
-        randomIndex += get_global_size(0);
         index += get_global_size(0);
     }
 }
