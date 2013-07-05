@@ -52,10 +52,10 @@ __kernel void applyPositionDeltas(__global real4* restrict posq, __global real4*
     }
 }
 
-__kernel void generateRandomNumbers(__global float4* restrict random, __global uint4* restrict seed) {
+__kernel void generateRandomNumbers(int numValues, __global float4* restrict random, __global uint4* restrict seed) {
     uint4 state = seed[get_global_id(0)];
     unsigned int carry = 0;
-    for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
+    for (int index = get_global_id(0); index < numValues; index += get_global_size(0)) {
         // Generate three uniform random numbers.
 
         state.x = state.x * 69069 + 1;
