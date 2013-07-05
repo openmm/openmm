@@ -4844,8 +4844,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
                 merged[step] = true;
-            if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof &&
-                    !usesVariable(expression[step], "uniform"))
+            if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
         }
         
@@ -5123,7 +5122,8 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
 
     // Loop over computation steps in the integrator and execute them.
 
-    void* randomArgs[] = {&uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
+    int maxUniformRandoms = uniformRandoms->getSize();
+    void* randomArgs[] = {&maxUniformRandoms, &uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     for (int i = 0; i < numSteps; i++) {
         int lastForceGroups = context.getLastForceGroups();

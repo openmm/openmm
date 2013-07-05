@@ -5072,8 +5072,7 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 continue;
             if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
                 merged[step] = true;
-            if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof &&
-                    !usesVariable(expression[step], "uniform"))
+            if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
         }
         
@@ -5235,8 +5234,9 @@ void OpenCLIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         randomSeed->upload(seed);
         cl::Program randomProgram = cl.createProgram(OpenCLKernelSources::customIntegrator, defines);
         randomKernel = cl::Kernel(randomProgram, "generateRandomNumbers");
-        randomKernel.setArg<cl::Buffer>(0, uniformRandoms->getDeviceBuffer());
-        randomKernel.setArg<cl::Buffer>(1, randomSeed->getDeviceBuffer());
+        randomKernel.setArg<cl_int>(0, maxUniformRandoms);
+        randomKernel.setArg<cl::Buffer>(1, uniformRandoms->getDeviceBuffer());
+        randomKernel.setArg<cl::Buffer>(2, randomSeed->getDeviceBuffer());
         
         // Create the kernel for summing the potential energy.
 
