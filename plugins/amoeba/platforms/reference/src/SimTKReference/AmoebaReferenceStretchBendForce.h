@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceStretchBendForce_H__
 #define __AmoebaReferenceStretchBendForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

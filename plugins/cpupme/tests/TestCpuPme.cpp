@@ -41,7 +41,7 @@
 #include "openmm/VerletIntegrator.h"
 #include "openmm/internal/ContextImpl.h"
 #include "../src/CpuPmeKernels.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>

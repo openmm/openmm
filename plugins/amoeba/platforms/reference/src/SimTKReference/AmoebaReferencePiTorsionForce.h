@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferencePiTorsionForce_H__
 #define __AmoebaReferencePiTorsionForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

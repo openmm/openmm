@@ -28,7 +28,7 @@
 
 #include "openmm/OpenMMException.h"
 #include "ObcParameters.h"
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "SimTKOpenMMCommon.h"
 
 using std::vector;
 

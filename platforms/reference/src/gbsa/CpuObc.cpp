@@ -28,8 +28,8 @@
 #include <cmath>
 #include <cstdio>
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "../SimTKReference/ReferenceForce.h"
+#include "SimTKOpenMMCommon.h"
+#include "ReferenceForce.h"
 #include "CpuObc.h"
 
 using namespace OpenMM;

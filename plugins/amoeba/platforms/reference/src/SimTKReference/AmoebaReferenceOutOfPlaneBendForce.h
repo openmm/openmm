@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceOutOfPlaneBendForce_H__
 #define __AmoebaReferenceOutOfPlaneBendForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

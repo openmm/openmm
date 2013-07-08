@@ -43,7 +43,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/BrownianIntegrator.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>

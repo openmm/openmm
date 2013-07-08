@@ -36,7 +36,7 @@
 #include "CudaExpressionUtilities.h"
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
 using namespace std;

@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceBondForce_H__
 #define __AmoebaReferenceBondForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

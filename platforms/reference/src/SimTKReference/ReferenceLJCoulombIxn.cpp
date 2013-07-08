@@ -26,9 +26,9 @@
 #include <sstream>
 #include <complex>
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "../SimTKUtilities/SimTKOpenMMLog.h"
-#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMCommon.h"
+#include "SimTKOpenMMLog.h"
+#include "SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"
 #include "PME.h"

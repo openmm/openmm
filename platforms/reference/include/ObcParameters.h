@@ -22,44 +22,43 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __GBVIParameters_H__
-#define __GBVIParameters_H__
+#ifndef __ObcParameters_H__
+#define __ObcParameters_H__
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "SimTKOpenMMCommon.h"
 
 // ---------------------------------------------------------------------------------------
 
-class GBVIParameters {
+class ObcParameters {
 
    public:
 
-    /** 
-     * This is an enumeration of the different methods that may be used for scaling of the Born radii.
-     */
-    enum BornRadiusScalingMethod {
-        /**
-         * No scaling method is applied.
-         */
-        NoScaling          = 0,
-        /**
-         * Use quintic spline scaling function
-         */
-        QuinticSpline       = 1
-    };  
+       // OBC types
+
+       enum ObcType { ObcTypeI, ObcTypeII };
 
    private:
 
+      // OBC constants & parameters
+   
       int _numberOfAtoms;
 
       RealOpenMM _solventDielectric;
       RealOpenMM _soluteDielectric;
       RealOpenMM _electricConstant;
+      RealOpenMM _probeRadius;
+      RealOpenMM _pi4Asolv;
 
-      // parameter vectors
+      RealOpenMM _dielectricOffset;
+      RealOpenMM _alphaObc;
+      RealOpenMM _betaObc;
+      RealOpenMM _gammaObc;
+      ObcType _obcType;
+
+      // scaled radius factors (S_kk in HCT paper)
 
       RealOpenMMVector _atomicRadii;
-      RealOpenMMVector _scaledRadii;
-      RealOpenMMVector _gammaParameters;
+      RealOpenMMVector _scaledRadiusFactors;
 
       // cutoff and periodic boundary conditions
       
@@ -68,29 +67,35 @@ class GBVIParameters {
       RealOpenMM _periodicBoxSize[3];
       RealOpenMM _cutoffDistance;
 
-      int _bornRadiusScalingMethod;
-      RealOpenMM _quinticLowerLimitFactor;
-      RealOpenMM _quinticUpperBornRadiusLimit;
+      /**---------------------------------------------------------------------------------------
+      
+         Set solvent dielectric 
+      
+         @param dielectricOffset         solvent dielectric
+
+         --------------------------------------------------------------------------------------- */
+      
+      void setDielectricOffset( RealOpenMM dielectricOffset );
 
    public:
 
       /**---------------------------------------------------------------------------------------
       
-         GBVIParameters constructor (Simbios) 
+         ObcParameters constructor 
       
          @param numberOfAtoms       number of atoms
       
          --------------------------------------------------------------------------------------- */
       
-       GBVIParameters( int numberOfAtoms );
+       ObcParameters( int numberOfAtoms, ObcParameters::ObcType obcType = ObcTypeII );
 
       /**---------------------------------------------------------------------------------------
       
-         GBVIParameters destructor (Simbios) 
+         ObcParameters destructor 
       
          --------------------------------------------------------------------------------------- */
       
-       ~GBVIParameters( );
+       ~ObcParameters( );
 
       /**---------------------------------------------------------------------------------------
       
@@ -111,6 +116,37 @@ class GBVIParameters {
          --------------------------------------------------------------------------------------- */
 
       RealOpenMM getElectricConstant( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get probe radius (Simbios) 
+      
+         @return probeRadius
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getProbeRadius( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set probe radius (Simbios) 
+      
+         @param probeRadius   probe radius
+      
+         --------------------------------------------------------------------------------------- */
+
+      void setProbeRadius( RealOpenMM probeRadius );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get pi4Asolv:  used in ACE approximation for nonpolar term  
+            ((RealOpenMM) M_PI)*4.0f*0.0049f*1000.0f; (Simbios) 
+      
+         @return pi4Asolv
+      
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getPi4Asolv( void ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -154,23 +190,83 @@ class GBVIParameters {
 
       /**---------------------------------------------------------------------------------------
       
-         Return scaled radii
+         Get OBC type
+      
+         @return OBC type
+      
+         --------------------------------------------------------------------------------------- */
+      
+      ObcParameters::ObcType getObcType( void ) const;
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Set OBC type specific parameters
+      
+         @param obcType OBC type (ObcTypeI or ObcTypeII -- Eq. 7 or 8)
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setObcTypeParameters( ObcParameters::ObcType obcType );
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get alpha OBC (Eqs. 6 & 7) in Proteins paper
+      
+         @return alphaObc
+      
+         --------------------------------------------------------------------------------------- */
+      
+      RealOpenMM getAlphaObc( void ) const;
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get beta OBC (Eqs. 6 & 7) in Proteins paper
+      
+         @return betaObc
+      
+         --------------------------------------------------------------------------------------- */
+      
+      RealOpenMM getBetaObc( void ) const;
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get gamma OBC (Eqs. 6 & 7) in Proteins paper
+      
+         @return gammaObc
+      
+         --------------------------------------------------------------------------------------- */
+      
+      RealOpenMM getGammaObc( void ) const;
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get solvent dielectric 
+      
+         @return dielectricOffset dielectric offset
+      
+         --------------------------------------------------------------------------------------- */
+      
+      RealOpenMM getDielectricOffset( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+      
+         Return OBC scale factors
       
          @return array
       
          --------------------------------------------------------------------------------------- */
       
-      const RealOpenMMVector& getScaledRadii( void ) const;
+      const RealOpenMMVector& getScaledRadiusFactors( void ) const;
         
       /**---------------------------------------------------------------------------------------
       
-         Return scaled radii
+         Return OBC scale factors
       
          @return array
       
          --------------------------------------------------------------------------------------- */
       
-      void setScaledRadii( const RealOpenMMVector& scaledRadii );
+      void setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );
         
       /**---------------------------------------------------------------------------------------
       
@@ -192,25 +288,6 @@ class GBVIParameters {
 
       void setAtomicRadii( const RealOpenMMVector& atomicRadii );
 
-      /**---------------------------------------------------------------------------------------
-      
-         Get GammaParameters array
-      
-         @return array of gamma values
-      
-         --------------------------------------------------------------------------------------- */
-
-      const RealOpenMMVector& getGammaParameters( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set GammaParameters array
-      
-         @param gammaParameters   array of gamma parameters
-      
-         --------------------------------------------------------------------------------------- */
-
-      void setGammaParameters( const RealOpenMMVector& gammaParameters );
 
       /**---------------------------------------------------------------------------------------
 
@@ -248,7 +325,7 @@ class GBVIParameters {
 
          --------------------------------------------------------------------------------------- */
 
-      void setPeriodic( OpenMM::RealVec& boxSize );
+      void setPeriodic( const OpenMM::RealVec& boxSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -266,76 +343,8 @@ class GBVIParameters {
 
       const RealOpenMM* getPeriodicBox();
 
-      /**---------------------------------------------------------------------------------------
-      
-         Get tau prefactor
-      
-         @return (1/e1 - 1/e0), where e1 = solute dielectric, e0 = solvent dielectric
-      
-         --------------------------------------------------------------------------------------- */
-      
-      RealOpenMM getTau( void ) const;
-      
-    /**---------------------------------------------------------------------------------------
-    
-       Get bornRadiusScalingMethod
-    
-       @return bornRadiusScalingMethod
-    
-       --------------------------------------------------------------------------------------- */
-    
-    int getBornRadiusScalingMethod( void ) const;
-    
-    /**---------------------------------------------------------------------------------------
-    
-       Set bornRadiusScalingMethod 
-    
-       @param bornRadiusScalingMethod bornRadiusScalingMethod
-    
-       --------------------------------------------------------------------------------------- */
-    
-    void setBornRadiusScalingMethod( int bornRadiusScalingMethod );
-    
-    /**---------------------------------------------------------------------------------------
-    
-       Get quinticLowerLimitFactor
-    
-       @return quinticLowerLimitFactor
-    
-       --------------------------------------------------------------------------------------- */
-    
-    RealOpenMM getQuinticLowerLimitFactor( void ) const;
-    
-    /**---------------------------------------------------------------------------------------
-    
-       Set quinticLowerLimitFactor 
-    
-       @param quinticLowerLimitFactor quinticLowerLimitFactor
-    
-       --------------------------------------------------------------------------------------- */
-    
-    void setQuinticLowerLimitFactor( RealOpenMM quinticLowerLimitFactor );
-    
-    /**---------------------------------------------------------------------------------------
-    
-       Get quinticUpperBornRadiusLimit
-    
-       @return quinticUpperBornRadiusLimit
-    
-       --------------------------------------------------------------------------------------- */
-    
-    RealOpenMM getQuinticUpperBornRadiusLimit( void ) const;
-    
-    /**---------------------------------------------------------------------------------------
-    
-       Set quinticUpperBornRadiusLimit 
-    
-       @param quinticUpperBornRadiusLimit quinticUpperBornRadiusLimit
-    
-       --------------------------------------------------------------------------------------- */
-    
-    void setQuinticUpperBornRadiusLimit( RealOpenMM quinticUpperSplineLimit );
-
 };
    
-#endif // __GBVIParameters_H__
+// ---------------------------------------------------------------------------------------
+
+#endif // __ObcParameters_H__

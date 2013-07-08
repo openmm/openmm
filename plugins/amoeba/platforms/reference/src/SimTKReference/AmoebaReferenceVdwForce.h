@@ -25,9 +25,9 @@
 #ifndef __AmoebaReferenceVdwForce_H__
 #define __AmoebaReferenceVdwForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include "openmm/Vec3.h"
-#include "SimTKReference/ReferenceNeighborList.h"
+#include "ReferenceNeighborList.h"
 #include <string>
 #include <vector>
 
