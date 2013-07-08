@@ -64,7 +64,7 @@ void verifySorting(vector<float> array) {
 
     System system;
     system.addParticle(0.0);
-    CudaPlatform::PlatformData platformData(system, "", "true", platform.getPropertyDefaultValue("CudaPrecision"),
+    CudaPlatform::PlatformData platformData(NULL, system, "", "true", platform.getPropertyDefaultValue("CudaPrecision"), "false",
             platform.getPropertyDefaultValue(CudaPlatform::CudaCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaTempDirectory()));
     CudaContext& context = *platformData.contexts[0];
     context.initialize();

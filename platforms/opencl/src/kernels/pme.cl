@@ -391,3 +391,8 @@ __kernel void gridInterpolateForce(__global const real4* restrict posq, __global
         forceBuffers[atom] = totalForce;
     }
 }
+
+__kernel void addForces(__global const real4* restrict forces, __global real4* restrict forceBuffers) {
+    for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0))
+        forceBuffers[atom] += forces[atom];
+}
