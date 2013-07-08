@@ -36,7 +36,7 @@
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLKernelSources.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <set>
 
 using namespace OpenMM;

@@ -34,8 +34,8 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/RpmdKernels.h"
-#include "SimTKUtilities/RealVec.h"
-#include "SimTKReference/fftpack.h"
+#include "RealVec.h"
+#include "fftpack.h"
 
 namespace OpenMM {
 

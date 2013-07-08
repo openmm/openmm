@@ -44,8 +44,8 @@
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMRealType.h"
+#include "SimTKOpenMMUtilities.h"
 #include <cmath>
 #include <set>
 

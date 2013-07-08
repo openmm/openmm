@@ -45,7 +45,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "CudaArray.h"
 #include "CudaNonbondedUtilities.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>

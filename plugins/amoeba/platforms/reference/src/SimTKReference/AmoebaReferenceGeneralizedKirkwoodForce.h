@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceGeneralizedKirkwoodForce_H__
 #define __AmoebaReferenceGeneralizedKirkwoodForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 using namespace OpenMM;
