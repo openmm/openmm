@@ -4752,22 +4752,6 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         defines["SUM_BUFFER_SIZE"] = "0";
         defines["SUM_OUTPUT_INDEX"] = "0";
         
-        // Initialize the random number generator.
-        
-        uniformRandoms = CudaArray::create<float4>(cu, cu.getNumAtoms(), "uniformRandoms");
-        randomSeed = CudaArray::create<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
-        vector<int4> seed(randomSeed->getSize());
-        unsigned int r = integrator.getRandomNumberSeed()+1;
-        for (int i = 0; i < randomSeed->getSize(); i++) {
-            seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-            seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
-        }
-        randomSeed->upload(seed);
-        CUmodule randomProgram = cu.createModule(CudaKernelSources::customIntegrator, defines);
-        randomKernel = cu.getKernel(randomProgram, "generateRandomNumbers");
-        
         // Build a list of all variables that affect the forces, so we can tell which
         // steps invalidate them.
         
@@ -4858,10 +4842,10 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         for (int step = 1; step < numSteps; step++) {
             if (needsForces[step] || needsEnergy[step])
                 continue;
-            if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal)
+            if (stepType[step-1] == CustomIntegrator::ComputeGlobal && stepType[step] == CustomIntegrator::ComputeGlobal &&
+                    !usesVariable(expression[step], "uniform") && !usesVariable(expression[step], "gaussian"))
                 merged[step] = true;
-            if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof &&
-                    !usesVariable(expression[step], "uniform"))
+            if (stepType[step-1] == CustomIntegrator::ComputePerDof && stepType[step] == CustomIntegrator::ComputePerDof)
                 merged[step] = true;
         }
         
@@ -4880,7 +4864,13 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 }
                 int numGaussian = 0, numUniform = 0;
                 for (int j = step; j < numSteps && (j == step || merged[j]); j++) {
+                    numGaussian += numAtoms*usesVariable(expression[j], "gaussian");
+                    numUniform += numAtoms*usesVariable(expression[j], "uniform");
                     compute << "{\n";
+                    if (numGaussian > 0)
+                        compute << "float4 gaussian = gaussianValues[gaussianIndex+index];\n";
+                    if (numUniform > 0)
+                        compute << "float4 uniform = uniformValues[uniformIndex+index];\n";
                     for (int i = 0; i < 3; i++)
                         compute << createPerDofComputation(stepType[j] == CustomIntegrator::ComputePerDof ? variable[j] : "", expression[j], i, integrator, forceName[j], energyName[j]);
                     if (variable[j] == "x") {
@@ -4899,9 +4889,11 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                             compute << "perDofValues"<<cu.intToString(i+1)<<"[3*index+2] = perDofz"<<cu.intToString(i+1)<<";\n";
                         }
                     }
+                    if (numGaussian > 0)
+                        compute << "gaussianIndex += NUM_ATOMS;\n";
+                    if (numUniform > 0)
+                        compute << "uniformIndex += NUM_ATOMS;\n";
                     compute << "}\n";
-                    numGaussian += numAtoms*usesVariable(expression[j], "gaussian");
-                    numUniform += numAtoms*usesVariable(expression[j], "uniform");
                 }
                 map<string, string> replacements;
                 replacements["COMPUTE_STEP"] = compute.str();
@@ -4931,9 +4923,9 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
                 args1.push_back(&globalValues->getDevicePointer());
                 args1.push_back(&contextParameterValues->getDevicePointer());
                 args1.push_back(&sumBuffer->getDevicePointer());
-                args1.push_back(&integration.getRandom().getDevicePointer());
                 args1.push_back(NULL);
-                args1.push_back(&uniformRandoms->getDevicePointer());
+                args1.push_back(NULL);
+                args1.push_back(NULL);
                 args1.push_back(&potentialEnergy->getDevicePointer());
                 for (int i = 0; i < (int) perDofValues->getBuffers().size(); i++)
                     args1.push_back(&perDofValues->getBuffers()[i].getMemory());
@@ -5000,6 +4992,25 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
             }
         }
         
+        // Initialize the random number generator.
+        
+        int maxUniformRandoms = 1;
+        for (int i = 0; i < (int) requiredUniform.size(); i++)
+            maxUniformRandoms = max(maxUniformRandoms, requiredUniform[i]);
+        uniformRandoms = CudaArray::create<float4>(cu, maxUniformRandoms, "uniformRandoms");
+        randomSeed = CudaArray::create<int4>(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, "randomSeed");
+        vector<int4> seed(randomSeed->getSize());
+        unsigned int r = integrator.getRandomNumberSeed()+1;
+        for (int i = 0; i < randomSeed->getSize(); i++) {
+            seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+            seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        }
+        randomSeed->upload(seed);
+        CUmodule randomProgram = cu.createModule(CudaKernelSources::customIntegrator, defines);
+        randomKernel = cu.getKernel(randomProgram, "generateRandomNumbers");
+        
         // Create the kernel for summing the potential energy.
 
         defines["SUM_OUTPUT_INDEX"] = "0";
@@ -5042,7 +5053,7 @@ void CudaIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context, 
         kineticEnergyArgs.push_back(&globalValues->getDevicePointer());
         kineticEnergyArgs.push_back(&contextParameterValues->getDevicePointer());
         kineticEnergyArgs.push_back(&sumBuffer->getDevicePointer());
-        kineticEnergyArgs.push_back(&integration.getRandom().getDevicePointer());
+        kineticEnergyArgs.push_back(NULL);
         kineticEnergyArgs.push_back(NULL);
         kineticEnergyArgs.push_back(&uniformRandoms->getDevicePointer());
         kineticEnergyArgs.push_back(&potentialEnergy->getDevicePointer());
@@ -5112,7 +5123,8 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
 
     // Loop over computation steps in the integrator and execute them.
 
-    void* randomArgs[] = {&uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
+    int maxUniformRandoms = uniformRandoms->getSize();
+    void* randomArgs[] = {&maxUniformRandoms, &uniformRandoms->getDevicePointer(), &randomSeed->getDevicePointer()};
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     for (int i = 0; i < numSteps; i++) {
         int lastForceGroups = context.getLastForceGroups();
@@ -5161,7 +5173,9 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         if (stepType[i] == CustomIntegrator::ComputePerDof && !merged[i]) {
             int randomIndex = integration.prepareRandomNumbers(requiredGaussian[i]);
             kernelArgs[i][0][1] = &posCorrection;
+            kernelArgs[i][0][9] = &integration.getRandom().getDevicePointer();
             kernelArgs[i][0][10] = &randomIndex;
+            kernelArgs[i][0][11] = &uniformRandoms->getDevicePointer();
             if (requiredUniform[i] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
             cu.executeKernel(kernels[i][0], &kernelArgs[i][0][0], numAtoms);
@@ -5176,7 +5190,9 @@ void CudaIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegrat
         else if (stepType[i] == CustomIntegrator::ComputeSum) {
             int randomIndex = integration.prepareRandomNumbers(requiredGaussian[i]);
             kernelArgs[i][0][1] = &posCorrection;
+            kernelArgs[i][0][9] = &integration.getRandom().getDevicePointer();
             kernelArgs[i][0][10] = &randomIndex;
+            kernelArgs[i][0][11] = &uniformRandoms->getDevicePointer();
             if (requiredUniform[i] > 0)
                 cu.executeKernel(randomKernel, &randomArgs[0], numAtoms);
             cu.clearBuffer(*sumBuffer);
@@ -5227,6 +5243,7 @@ double CudaIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& context,
     CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
     int randomIndex = 0;
     kineticEnergyArgs[1] = &posCorrection;
+    kineticEnergyArgs[9] = &cu.getIntegrationUtilities().getRandom().getDevicePointer();
     kineticEnergyArgs[10] = &randomIndex;
     cu.clearBuffer(*sumBuffer);
     cu.executeKernel(kineticEnergyKernel, &kineticEnergyArgs[0], cu.getNumAtoms());

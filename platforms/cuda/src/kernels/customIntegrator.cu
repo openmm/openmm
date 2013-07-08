@@ -52,10 +52,10 @@ extern "C" __global__ void applyPositionDeltas(real4* __restrict__ posq, real4* 
     }
 }
 
-extern "C" __global__ void generateRandomNumbers(float4* __restrict__ random, uint4* __restrict__ seed) {
+extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restrict__ random, uint4* __restrict__ seed) {
     uint4 state = seed[blockIdx.x*blockDim.x+threadIdx.x];
     unsigned int carry = 0;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numValues; index += blockDim.x*gridDim.x) {
         // Generate three uniform random numbers.
 
         state.x = state.x * 69069 + 1;
