@@ -557,7 +557,7 @@ public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
             pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
+            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -596,6 +596,9 @@ private:
         const char* getMaxValue() const {return "(int2) (INT_MAX, INT_MAX)";}
         const char* getSortKey() const {return "value.y";}
     };
+    class PmeIO;
+    class PmePreComputation;
+    class PmePostComputation;
     OpenCLContext& cl;
     bool hasInitializedKernel;
     OpenCLArray* sigmaEpsilon;
@@ -611,6 +614,8 @@ private:
     OpenCLArray* pmeAtomGridIndex;
     OpenCLSort* sort;
     OpenCLFFT3D* fft;
+    Kernel cpuPme;
+    PmeIO* pmeio;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
     cl::Kernel pmeGridIndexKernel;

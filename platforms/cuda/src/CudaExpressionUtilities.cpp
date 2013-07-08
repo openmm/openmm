@@ -181,7 +181,7 @@ void CudaExpressionUtilities::processExpression(stringstream& out, const Express
             out << "ASIN(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ACOS:
-            out << "ACSO(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << "ACOS(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ATAN:
             out << "ATAN(" << getTempName(node.getChildren()[0], temps) << ")";
