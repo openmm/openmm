@@ -747,7 +747,8 @@ void CudaContext::findMoleculeGroups() {
             for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
                 vector<int> particles;
                 forces[i]->getParticlesInGroup(j, particles);
-                molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
+                if (particles.size() > 0)
+                    molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
             }
     }
 
