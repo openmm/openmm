@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceForce_H__
 #define __AmoebaReferenceForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include "openmm/Vec3.h"
 #include <vector>
 

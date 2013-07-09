@@ -40,7 +40,7 @@
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>

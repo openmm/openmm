@@ -31,8 +31,8 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "AmoebaReferenceMultipoleForce.h"
-#include "SimTKReference/ReferenceNeighborList.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "ReferenceNeighborList.h"
+#include "SimTKOpenMMRealType.h"
 
 namespace OpenMM {
 

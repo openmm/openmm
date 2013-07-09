@@ -33,9 +33,9 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "SimTKReference/ReferenceCCMAAlgorithm.h"
-#include "SimTKReference/ReferenceVirtualSites.h"
+#include "SimTKOpenMMUtilities.h"
+#include "ReferenceCCMAAlgorithm.h"
+#include "ReferenceVirtualSites.h"
 #include <set>
 
 using namespace OpenMM;

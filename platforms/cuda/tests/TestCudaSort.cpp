@@ -34,9 +34,9 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/CudaArray.h"
-#include "../src/CudaContext.h"
-#include "../src/CudaSort.h"
+#include "CudaArray.h"
+#include "CudaContext.h"
+#include "CudaSort.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
 #include <iostream>

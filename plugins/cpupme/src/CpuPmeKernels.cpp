@@ -33,7 +33,7 @@
   #define _USE_MATH_DEFINES // Needed to get M_PI
 #endif
 #include "CpuPmeKernels.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <cmath>
 #include <cstring>
 #include <smmintrin.h>

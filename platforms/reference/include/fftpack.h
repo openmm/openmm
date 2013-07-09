@@ -14,7 +14,7 @@
 * drop a line to lindahl@cbr.su.se and let me know about it!
 */
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "SimTKOpenMMCommon.h"
 
 #ifndef _FFTPACK_H_
 #define _FFTPACK_H_
