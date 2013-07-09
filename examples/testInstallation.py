@@ -13,7 +13,7 @@ except ImportError as err:
 # Create a System for the tests.
 
 pdb = PDBFile('input.pdb')
-forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
+forcefield = ForceField('amoeba2009.xml')
 system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
 
 # List all installed platforms and compute forces with each one.

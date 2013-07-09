@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "openmm/NonbondedForce.h"
@@ -89,7 +90,7 @@ void testChangingBoxSize() {
     ASSERT(ok);
 }
 
-void testIdealGas() {
+void testIdealGas(int aniso) {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
@@ -111,6 +112,8 @@ void testIdealGas() {
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
+    if (aniso)
+        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
     system.addForce(barostat);
 
     // Test it for three different temperatures.
@@ -132,8 +135,13 @@ void testIdealGas() {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
-            ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
-            ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
+	    
+	    // Ratios will only be correct if box deformations are isotropic.
+	    
+	    if (!aniso) {
+	      ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
+	      ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
+	    }
             integrator.step(frequency);
         }
         volume /= steps;
@@ -204,7 +212,7 @@ void testRandomSeed() {
     }
 }
 
-void testWater() {
+void testWater(int aniso) {
     const int gridSize = 8;
     const int numMolecules = gridSize*gridSize*gridSize;
     const int frequency = 10;
@@ -251,6 +259,8 @@ void testWater() {
     }
     system.addForce(nonbonded);
     MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, frequency);
+    if (aniso)
+        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, frequency);
     system.addForce(barostat);
 
     // Simulate it and see if the density matches the expected value (1 g/mL).
@@ -276,9 +286,11 @@ int main(int argc, char* argv[]) {
         if (argc > 1)
             platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
         testChangingBoxSize();
-        testIdealGas();
+        testIdealGas(0);
+        testIdealGas(1);
         testRandomSeed();
-        testWater();
+        testWater(0);
+        testWater(1);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
