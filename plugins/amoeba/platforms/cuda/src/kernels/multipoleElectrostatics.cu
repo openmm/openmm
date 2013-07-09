@@ -3,8 +3,10 @@
 typedef struct {
     real4 posq;
     real3 force, dipole, inducedDipole, inducedDipolePolar;
+#ifdef INCLUDE_QUADRUPOLES
     real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ;
+#endif
     float thole, damp;
 } AtomData;
 
@@ -18,11 +20,13 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.dipole.x = labFrameDipole[atom*3];
     data.dipole.y = labFrameDipole[atom*3+1];
     data.dipole.z = labFrameDipole[atom*3+2];
+#ifdef INCLUDE_QUADRUPOLES
     data.quadrupoleXX = labFrameQuadrupole[atom*5];
     data.quadrupoleXY = labFrameQuadrupole[atom*5+1];
     data.quadrupoleXZ = labFrameQuadrupole[atom*5+2];
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
+#endif
     data.inducedDipole.x = inducedDipole[atom*3];
     data.inducedDipole.y = inducedDipole[atom*3+1];
     data.inducedDipole.z = inducedDipole[atom*3+2];
@@ -92,11 +96,13 @@ extern "C" __global__ void computeElectrostatics(
 
             localData[threadIdx.x].posq = data.posq;
             localData[threadIdx.x].dipole = data.dipole;
+#ifdef INCLUDE_QUADRUPOLES
             localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
             localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
             localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
             localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
             localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
+#endif
             localData[threadIdx.x].inducedDipole = data.inducedDipole;
             localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
             localData[threadIdx.x].thole = data.thole;
