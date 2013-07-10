@@ -110,7 +110,7 @@ void testIdealGas() {
         system.addParticle(1.0);
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, pressure, pressure, temp[0], frequency);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
     system.addForce(barostat);
     
     // Test it for three different temperatures.
@@ -140,6 +140,77 @@ void testIdealGas() {
     }
 }
 
+void testIdealGasAxis(int axis) {
+    // Test scaling just one axis.
+    const int numParticles = 64;
+    const int frequency = 10;
+    const int steps = 1000;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp[] = {300.0, 600.0, 1000.0};
+    const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+    const bool scaleX = (axis == 0);
+    const bool scaleY = (axis == 1);
+    const bool scaleZ = (axis == 2);
+    double boxX;
+    double boxY;
+    double boxZ;
+    
+    // Create a gas of noninteracting particles.
+    
+    ReferencePlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
+    }
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency, scaleX, scaleY, scaleZ);
+    system.addForce(barostat);
+    
+    // Test it for three different temperatures.
+    
+    for (int i = 0; i < 3; i++) {
+        barostat->setTemperature(temp[i]);
+        LangevinIntegrator integrator(temp[i], 0.1, 0.01);
+        Context context(system, integrator, platform);
+        context.setPositions(positions);
+        
+        // Let it equilibrate.
+        
+        integrator.step(10000);
+        
+        // Now run it for a while and see if the volume is correct.
+        
+        double volume = 0.0;
+        for (int j = 0; j < steps; ++j) {
+            Vec3 box[3];
+            context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+	    boxX = box[0][0];
+	    boxY = box[1][1];
+	    boxZ = box[2][2];
+            volume += box[0][0]*box[1][1]*box[2][2];
+            integrator.step(frequency);
+        }
+        volume /= steps;
+        double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
+        ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+	if (!scaleX) {
+	  ASSERT(boxX == initialLength);
+	}
+	if (!scaleY) {
+	  ASSERT(boxY == 0.5*initialLength);
+	}
+	if (!scaleZ) {
+	  ASSERT(boxZ == 2*initialLength);
+	}
+    }
+}
+
 void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
@@ -155,7 +226,7 @@ void testRandomSeed() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(pressure, temp, 1);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, 1);
     system.addForce(barostat);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
@@ -206,6 +277,9 @@ void testRandomSeed() {
 int main() {
     try {
         testIdealGas();
+	testIdealGasAxis(0);
+	testIdealGasAxis(1);
+	testIdealGasAxis(2);
         testRandomSeed();
     }
     catch(const exception& e) {

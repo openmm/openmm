@@ -91,6 +91,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
             pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
             break;
         }
+	rnd = genrand_real2(random)*3.0;
     }
     
     // Modify the periodic box size.

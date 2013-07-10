@@ -30,11 +30,10 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the CUDA implementation of MonteCarloBarostat.
+ * This tests the CUDA implementation of MonteCarloAnisotropicBarostat.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
@@ -90,7 +89,7 @@ void testChangingBoxSize() {
     ASSERT(ok);
 }
 
-void testIdealGas(int aniso) {
+void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
@@ -111,9 +110,7 @@ void testIdealGas(int aniso) {
         system.addParticle(1.0);
         positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
     }
-    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp[0], frequency);
-    if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency);
     system.addForce(barostat);
     
     // Test it for three different temperatures.
@@ -135,15 +132,81 @@ void testIdealGas(int aniso) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
-            if (!aniso) {
-                ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
-                ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
-            }
             integrator.step(frequency);
         }
         volume /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+    }
+}
+
+void testIdealGasAxis(int axis) {
+    // Test scaling just one axis.
+    const int numParticles = 64;
+    const int frequency = 10;
+    const int steps = 1000;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp[] = {300.0, 600.0, 1000.0};
+    const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+    const bool scaleX = (axis == 0);
+    const bool scaleY = (axis == 1);
+    const bool scaleZ = (axis == 2);
+    double boxX;
+    double boxY;
+    double boxZ;
+    
+    // Create a gas of noninteracting particles.
+    
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
+    }
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp[0], frequency, scaleX, scaleY, scaleZ);
+    system.addForce(barostat);
+    
+    // Test it for three different temperatures.
+    
+    for (int i = 0; i < 3; i++) {
+        barostat->setTemperature(temp[i]);
+        LangevinIntegrator integrator(temp[i], 0.1, 0.01);
+        Context context(system, integrator, platform);
+        context.setPositions(positions);
+        
+        // Let it equilibrate.
+        
+        integrator.step(10000);
+        
+        // Now run it for a while and see if the volume is correct.
+        
+        double volume = 0.0;
+        for (int j = 0; j < steps; ++j) {
+            Vec3 box[3];
+            context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+	    boxX = box[0][0];
+	    boxY = box[1][1];
+	    boxZ = box[2][2];
+            volume += box[0][0]*box[1][1]*box[2][2];
+            integrator.step(frequency);
+        }
+        volume /= steps;
+        double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
+        ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+	if (!scaleX) {
+	  ASSERT(boxX == initialLength);
+	}
+	if (!scaleY) {
+	  ASSERT(boxY == 0.5*initialLength);
+	}
+	if (!scaleZ) {
+	  ASSERT(boxZ == 2*initialLength);
+	}
     }
 }
 
@@ -161,7 +224,7 @@ void testRandomSeed() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
-    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, 1);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, 1);
     system.addForce(barostat);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
@@ -209,55 +272,41 @@ void testRandomSeed() {
     }
 }
 
-void testWater(int aniso) {
-    const int gridSize = 8;
-    const int numMolecules = gridSize*gridSize*gridSize;
+void testIce() {
+    const int numMolecules = 432;
     const int frequency = 10;
     const int steps = 400;
     const double temp = 273.15;
     const double pressure = 3;
-    const double spacing = 0.32;
     const double angle = 109.47*M_PI/180;
     const double dOH = 0.1;
     const double dHH = dOH*2*std::sin(0.5*angle);
     
     // Create a box of SPC water molecules.
-    
     System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
+    system.setDefaultPeriodicBoxVectors(Vec3(2.7042, 0, 0), Vec3(0, 2.3419, 0), Vec3(0, 0, 2.2080));
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     nonbonded->setUseDispersionCorrection(true);
-    vector<Vec3> positions;
-    Vec3 offset1(dOH, 0, 0);
-    Vec3 offset2(dOH*std::cos(angle), dOH*std::sin(angle), 0);
-    for (int i = 0; i < gridSize; ++i) {
-        for (int j = 0; j < gridSize; ++j) {
-            for (int k = 0; k < gridSize; ++k) {
-                int firstParticle = system.getNumParticles();
-                system.addParticle(16.0);
-                system.addParticle(1.0);
-                system.addParticle(1.0);
-                nonbonded->addParticle(-0.82, 0.316557, 0.650194);
-                nonbonded->addParticle(0.41, 1, 0);
-                nonbonded->addParticle(0.41, 1, 0);
-                Vec3 pos = Vec3(spacing*i, spacing*j, spacing*k);
-                positions.push_back(pos);
-                positions.push_back(pos+offset1);
-                positions.push_back(pos+offset2);
-                system.addConstraint(firstParticle, firstParticle+1, dOH);
-                system.addConstraint(firstParticle, firstParticle+2, dOH);
-                system.addConstraint(firstParticle+1, firstParticle+2, dHH);
-                nonbonded->addException(firstParticle, firstParticle+1, 0, 1, 0);
-                nonbonded->addException(firstParticle, firstParticle+2, 0, 1, 0);
-                nonbonded->addException(firstParticle+1, firstParticle+2, 0, 1, 0);
-            }
-        }
+    for (int i = 0; i < numMolecules; ++i) {
+      int firstParticle = system.getNumParticles();
+      system.addParticle(16.0);
+      system.addParticle(1.0);
+      system.addParticle(1.0);
+      nonbonded->addParticle(-0.82, 0.316557, 0.650194);
+      nonbonded->addParticle(0.41, 1, 0);
+      nonbonded->addParticle(0.41, 1, 0);
+      system.addConstraint(firstParticle, firstParticle+1, dOH);
+      system.addConstraint(firstParticle, firstParticle+2, dOH);
+      system.addConstraint(firstParticle+1, firstParticle+2, dHH);
+      nonbonded->addException(firstParticle, firstParticle+1, 0, 1, 0);
+      nonbonded->addException(firstParticle, firstParticle+2, 0, 1, 0);
+      nonbonded->addException(firstParticle+1, firstParticle+2, 0, 1, 0);
     }
+    vector<Vec3> positions(system.getNumParticles());
+    #include "ice_ih.dat"
     system.addForce(nonbonded);
-    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, frequency);
-    if (aniso)
-        MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, frequency);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, frequency);
     system.addForce(barostat);
     
     // Simulate it and see if the density matches the expected value (1 g/mL).
@@ -275,7 +324,7 @@ void testWater(int aniso) {
     }
     volume /= steps;
     double density = numMolecules*18/(AVOGADRO*volume*1e-21);
-    ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.02);
+    ASSERT_USUALLY_EQUAL_TOL(0.913, density, 0.02);
 }
 
 int main(int argc, char* argv[]) {
@@ -283,11 +332,12 @@ int main(int argc, char* argv[]) {
         if (argc > 1)
             platform.setPropertyDefaultValue("CudaPrecision", string(argv[1]));
         testChangingBoxSize();
-        testIdealGas(0);
-        testIdealGas(1);
+        testIdealGas();
+        testIdealGasAxis(0);
+        testIdealGasAxis(1);
+        testIdealGasAxis(2);
         testRandomSeed();
-        testWater(0);
-        testWater(1);
+        testIce();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
