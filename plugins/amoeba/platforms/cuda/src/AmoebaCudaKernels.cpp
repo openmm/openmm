@@ -778,6 +778,17 @@ public:
         }
         return true;
     }
+    int getNumParticleGroups() {
+        return 7*force.getNumMultipoles();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        int particle = index/7;
+        int type = index-7*particle;
+        force.getCovalentMap(particle, AmoebaMultipoleForce::CovalentType(type), particles);
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        return ((group1%7) == (group2%7));
+    }
 private:
     const AmoebaMultipoleForce& force;
 };
