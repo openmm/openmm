@@ -25,7 +25,7 @@
 #define __ReferenceLincsAlgorithm_H__
 
 #include "ReferenceConstraintAlgorithm.h"
-#include "../SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

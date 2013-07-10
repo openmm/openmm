@@ -45,7 +45,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "OpenCLArray.h"
 #include "OpenCLNonbondedUtilities.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>

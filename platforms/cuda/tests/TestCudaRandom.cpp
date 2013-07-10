@@ -34,14 +34,14 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/CudaArray.h"
-#include "../src/CudaContext.h"
-#include "../src/CudaIntegrationUtilities.h"
+#include "CudaArray.h"
+#include "CudaContext.h"
+#include "CudaIntegrationUtilities.h"
 #include "openmm/System.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/VerletIntegrator.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <iostream>
 
 using namespace OpenMM;

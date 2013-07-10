@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceWcaDispersionForce_H__
 #define __AmoebaReferenceWcaDispersionForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include "openmm/Vec3.h"
 #include <string>
 #include <vector>

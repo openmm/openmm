@@ -27,7 +27,7 @@
 
 #include <vector>
 
-#include "../SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include "GBVIParameters.h"
 
 // ---------------------------------------------------------------------------------------

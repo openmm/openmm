@@ -25,7 +25,7 @@
 #ifndef __AmoebaReferenceAngleForce_H__
 #define __AmoebaReferenceAngleForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

@@ -43,7 +43,7 @@
 #include "openmm/System.h"
 #include "openmm/RPMDIntegrator.h"
 #include "openmm/VirtualSite.h"
-#include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
