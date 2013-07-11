@@ -34,6 +34,8 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
+#include "openmm/CustomExternalForce.h"
+#include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
@@ -272,59 +274,155 @@ void testRandomSeed() {
     }
 }
 
-void testIce() {
-    const int numMolecules = 432;
-    const int frequency = 10;
-    const int steps = 400;
-    const double temp = 273.15;
-    const double pressure = 3;
-    const double angle = 109.47*M_PI/180;
-    const double dOH = 0.1;
-    const double dHH = dOH*2*std::sin(0.5*angle);
-    
-    // Create a box of SPC water molecules.
-    System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(2.7042, 0, 0), Vec3(0, 2.3419, 0), Vec3(0, 0, 2.2080));
-    NonbondedForce* nonbonded = new NonbondedForce();
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    nonbonded->setUseDispersionCorrection(true);
-    for (int i = 0; i < numMolecules; ++i) {
-      int firstParticle = system.getNumParticles();
-      system.addParticle(16.0);
-      system.addParticle(1.0);
-      system.addParticle(1.0);
-      nonbonded->addParticle(-0.82, 0.316557, 0.650194);
-      nonbonded->addParticle(0.41, 1, 0);
-      nonbonded->addParticle(0.41, 1, 0);
-      system.addConstraint(firstParticle, firstParticle+1, dOH);
-      system.addConstraint(firstParticle, firstParticle+2, dOH);
-      system.addConstraint(firstParticle+1, firstParticle+2, dHH);
-      nonbonded->addException(firstParticle, firstParticle+1, 0, 1, 0);
-      nonbonded->addException(firstParticle, firstParticle+2, 0, 1, 0);
-      nonbonded->addException(firstParticle+1, firstParticle+2, 0, 1, 0);
+void testEinsteinCrystal() {
+  /* 
+     
+     Run a constant pressure simulation on an anisotropic Einstein crystal
+     using isotropic and anisotropic barostats.  There are a total of 15 simulations:
+
+     1) 3 pressures: 9.0, 10.0, 11.0 bar, for each of the following groups:
+     2) 3 groups of simulations that scale just one axis: x, y, z
+     3) 1 group of simulations that scales all three axes in the anisotropic barostat
+     4) 1 group of simulations that scales all three axes in the isotropic barostat
+
+     Results that we will check:
+
+     a) In each group of simulations, the volume should decrease with increasing pressure
+     b) In the three simulation groups that scale just one axis, the compressibility (i.e. incremental volume change
+     with increasing pressure) should go like kx > ky > kz (because the spring constant is largest in the z-direction)
+     c) The anisotropic barostat should produce the same result as the isotropic barostat when all three axes are scaled
+     
+   */
+
+  const int numParticles = 64;
+  const int frequency = 10;
+  const int equil = 10000;
+  const int steps = 10000;
+  const double pressure = 10.0;
+  const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+  const double temp = 300.0; // Only test one temperature since we're looking at three pressures.
+  const double pres3[] = {9.0, 10.0, 11.0};
+  const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
+  const double initialLength = std::pow(initialVolume, 1.0/3.0);
+  vector<double> initialPositions(3);
+  // All results.
+  double results[] = {0.0, 0.0, 0.0, 0.0, 0.0, 
+		      0.0, 0.0, 0.0, 0.0, 0.0,
+		      0.0, 0.0, 0.0, 0.0, 0.0};
+  int simNum = 0;
+  // Run four groups of anisotropic simulations; scaling just x, y, z, then all three.
+  for (int a = 0; a < 4; a++) {
+    // Test barostat for three different pressures.
+    for (int p = 0; p < 3; p++) {
+      // Create a system of noninteracting particles attached by harmonic springs to their initial positions.
+      System system;
+      system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, initialLength, 0), Vec3(0, 0, initialLength));
+      vector<Vec3> positions(numParticles);
+      OpenMM_SFMT::SFMT sfmt;
+      init_gen_rand(0, sfmt);
+      // Anisotropic force constants.
+      CustomExternalForce* force = new CustomExternalForce("0.005*(x-x0)^2 + 0.01*(y-y0)^2 + 0.02*(z-z0)^2");
+      force->addPerParticleParameter("x0");
+      force->addPerParticleParameter("y0");
+      force->addPerParticleParameter("z0");
+      for (int i = 0; i < numParticles; ++i) {
+	system.addParticle(1.0);
+	positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
+	initialPositions[0] = positions[i][0];
+	initialPositions[1] = positions[i][1];
+	initialPositions[2] = positions[i][2];
+	force->addParticle(i, initialPositions);
+      }
+      system.addForce(force);
+      // Create the barostat.
+      MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pres3[p], pres3[p], pres3[p]), temp, frequency, (a==0||a==3), (a==1||a==3), (a==2||a==3));
+      system.addForce(barostat);
+      barostat->setTemperature(temp);
+      LangevinIntegrator integrator(temp, 0.1, 0.01);
+      Context context(system, integrator, platform);
+      context.setPositions(positions);
+      // Let it equilibrate.
+      integrator.step(equil);
+      // Now run it for a while and see if the volume is correct.
+      double volume = 0.0;
+      for (int j = 0; j < steps; ++j) {
+	Vec3 box[3];
+	context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+	volume += box[0][0]*box[1][1]*box[2][2];
+	integrator.step(frequency);
+      }
+      volume /= steps;
+      results[simNum] = volume;
+      simNum += 1;
     }
-    vector<Vec3> positions(system.getNumParticles());
-    #include "ice_ih.dat"
-    system.addForce(nonbonded);
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, frequency);
+  }
+  for (int p = 0; p < 3; p++) {
+    // Create a system of noninteracting particles attached by harmonic springs to their initial positions.
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, initialLength, 0), Vec3(0, 0, initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    // Anisotropic force constants.
+    CustomExternalForce* force = new CustomExternalForce("0.005*(x-x0)^2 + 0.01*(y-y0)^2 + 0.02*(z-z0)^2");
+    force->addPerParticleParameter("x0");
+    force->addPerParticleParameter("y0");
+    force->addPerParticleParameter("z0");
+    for (int i = 0; i < numParticles; ++i) {
+      system.addParticle(1.0);
+      positions[i] = Vec3(((i/16)%4+0.5)*initialLength/4, ((i/4)%4+0.5)*initialLength/4, (i%4+0.5)*initialLength/4);
+      initialPositions[0] = positions[i][0];
+      initialPositions[1] = positions[i][1];
+      initialPositions[2] = positions[i][2];
+      force->addParticle(i, initialPositions);
+    }
+    system.addForce(force);
+    // Create the barostat.
+    MonteCarloBarostat* barostat = new MonteCarloBarostat(pres3[p], temp, frequency);
     system.addForce(barostat);
-    
-    // Simulate it and see if the density matches the expected value (1 g/mL).
-    
-    LangevinIntegrator integrator(temp, 1.0, 0.002);
+    barostat->setTemperature(temp);
+    LangevinIntegrator integrator(temp, 0.1, 0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    integrator.step(2000);
+    // Let it equilibrate.
+    integrator.step(equil);
+    // Now run it for a while and see if the volume is correct.
     double volume = 0.0;
     for (int j = 0; j < steps; ++j) {
-        Vec3 box[3];
-        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
-        volume += box[0][0]*box[1][1]*box[2][2];
-        integrator.step(frequency);
+      Vec3 box[3];
+      context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+      volume += box[0][0]*box[1][1]*box[2][2];
+      integrator.step(frequency);
     }
     volume /= steps;
-    double density = numMolecules*18/(AVOGADRO*volume*1e-21);
-    ASSERT_USUALLY_EQUAL_TOL(0.913, density, 0.02);
+    results[simNum] = volume;
+    simNum += 1;
+  }
+
+  /*
+  for (int j = 0; j < 15; j++) {
+    printf("%.6f\n",results[j]);
+  }
+  */
+
+  // Check to see if volumes decrease with increasing pressure.
+  ASSERT(results[0] > results[1]);
+  ASSERT(results[1] > results[2]);
+  ASSERT(results[3] > results[4]);
+  ASSERT(results[4] > results[5]);
+  ASSERT(results[6] > results[7]);
+  ASSERT(results[7] > results[8]);
+
+  // Check to see if incremental volume changes with increasing pressure go like kx > ky > kz.
+  ASSERT((results[0] - results[1]) > (results[3] - results[4]));
+  ASSERT((results[1] - results[2]) > (results[4] - results[5]));
+  ASSERT((results[3] - results[4]) > (results[6] - results[7]));
+  ASSERT((results[4] - results[5]) > (results[7] - results[8]));
+  
+  // Check to see if the volumes are equal for isotropic and anisotropic (all axis).
+  ASSERT_USUALLY_EQUAL_TOL(results[9], results[12], 3/std::sqrt((double) steps));
+  ASSERT_USUALLY_EQUAL_TOL(results[10], results[13], 3/std::sqrt((double) steps));
+  ASSERT_USUALLY_EQUAL_TOL(results[11], results[14], 3/std::sqrt((double) steps));
 }
 
 int main(int argc, char* argv[]) {
@@ -337,7 +435,7 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(1);
         testIdealGasAxis(2);
         testRandomSeed();
-        testIce();
+        testEinsteinCrystal();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
