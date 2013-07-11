@@ -1,18 +1,12 @@
 find_program(PYTHON_EXECUTABLE NAMES python)
 
-#############################################
-### Copy all source files to staging area ###
-#############################################
-
-# OPENMM_PYTHON_STAGING_DIR is a staging area for python, swig, and C files in the python package we are making.
-set(OPENMM_PYTHON_STAGING_DIR "${CMAKE_BINARY_DIR}/python"
-    CACHE PATH "Temporary staging area for Python API wrappers")
-mark_as_advanced(OPENMM_PYTHON_STAGING_DIR)
-
 # Create package directory structure
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/unit)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/swig_lib/python)
+
+# Record the SWIG configuration file.
+ADD_SWIG_CONFIG_FILE("${CMAKE_CURRENT_SOURCE_DIR}/src/swig_doxygen/openmmSwigInputConfig.py")
 
 ##############################################################################
 ### Identify files that need to be copied from source area to staging area ###
@@ -132,14 +126,15 @@ add_custom_command(
     OUTPUT ${SWIG_INPUT_FILES_REF}
     COMMAND ${PYTHON_EXECUTABLE} "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
         -i "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml"
-        -c swigInputConfig.py
+        -c "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/config"
         -d OpenMM_docstring.i
         -o OpenMM_headers.i
         -a swig_lib/python/pythonprepend.i
         -z swig_lib/python/pythonappend.i
     WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
     DEPENDS
-        "${SWIG_OPENMM_DIR}/swigInputConfig.py"
+        CopySwigConfigFiles
+        ${OPENMM_SWIG_CONFIG_FILES}
         "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
         "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml/index.xml"
     COMMENT "Creating OpenMM Python swig input files..."
