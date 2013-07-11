@@ -11,6 +11,8 @@ import sys, os
 import time
 import getopt
 import re
+import shutil
+import imp
 import xml.etree.ElementTree as etree
 
 #
@@ -115,7 +117,7 @@ def getClassMethodList(classNode, skipMethods):
 class SwigInputBuilder:
     def __init__(self,
                  inputDirname,
-                 configFilename,
+                 configDirname,
                  outputFilename=None,
                  docstringFilename=None,
                  pythonprependFilename=None,
@@ -123,9 +125,32 @@ class SwigInputBuilder:
                  skipAdditionalMethods=[]):
         self.nodeByID={}
 
-        self.configModule = __import__(os.path.splitext(configFilename)[0])
+        # Load the configuration modules
 
-        self.skipMethods=self.configModule.SKIP_METHODS[:]
+        self.MISSING_BASE_CLASSES = {}
+        self.DOC_STRINGS = {}
+        self.SKIP_METHODS = []
+        self.NO_OUTPUT_ARGS = []
+        self.STEAL_OWNERSHIP = {}
+        self.UNITS = {}
+        configFilenames = [os.path.join(configDirname, f) for f in os.listdir(configDirname)]
+        configFilenames = [f for f in configFilenames if os.path.isfile(f)]
+        for filename in configFilenames:
+            configModule = imp.load_source('config.'+filename, filename)
+            if 'MISSING_BASE_CLASSES' in dir(configModule):
+                self.MISSING_BASE_CLASSES.update(configModule.MISSING_BASE_CLASSES)
+            if 'DOC_STRINGS' in dir(configModule):
+                self.DOC_STRINGS.update(configModule.DOC_STRINGS)
+            if 'SKIP_METHODS' in dir(configModule):
+                self.SKIP_METHODS += configModule.SKIP_METHODS
+            if 'NO_OUTPUT_ARGS' in dir(configModule):
+                self.NO_OUTPUT_ARGS += configModule.NO_OUTPUT_ARGS
+            if 'STEAL_OWNERSHIP' in dir(configModule):
+                self.STEAL_OWNERSHIP.update(configModule.STEAL_OWNERSHIP)
+            if 'UNITS' in dir(configModule):
+                self.UNITS.update(configModule.UNITS)
+
+        self.skipMethods=self.SKIP_METHODS[:]
         for skipMethod in skipAdditionalMethods:
             items=skipMethod.split('::')
             if len(items)==3:
@@ -263,9 +288,9 @@ class SwigInputBuilder:
                     docstring = getNodeText(dNode).strip().replace('"', '\\"')
                     self.fOutDocstring.write('%%feature("docstring") %s "%s";\n' % (className, docstring))
             self.fOut.write("class %s" % className)
-            if className in self.configModule.MISSING_BASE_CLASSES:
+            if className in self.MISSING_BASE_CLASSES:
                 self.fOut.write(" : public %s" %
-                                self.configModule.MISSING_BASE_CLASSES[className])
+                                self.MISSING_BASE_CLASSES[className])
 
             for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
                 if "refid" in baseNodePnt.attrib:
@@ -344,9 +369,9 @@ class SwigInputBuilder:
             if isConstructors or isDestructor: continue
 
             key = (shortClassName, methName)
-            if key in self.configModule.DOC_STRINGS:
+            if key in self.DOC_STRINGS:
                 self.fOut.write('%%feature("autodoc", "%s") %s;\n' %
-                                (self.configModule.DOC_STRINGS[key], methName))
+                                (self.DOC_STRINGS[key], methName))
 
             paramList=findNodes(memberNode, 'param')
             for pNode in paramList:
@@ -358,7 +383,7 @@ class SwigInputBuilder:
                 key = (shortClassName, methName, pName)
                 if pType.find('&')>=0 and \
                    'const' not in pType.split():
-                    if key not in self.configModule.NO_OUTPUT_ARGS:
+                    if key not in self.NO_OUTPUT_ARGS:
                         eType = pType.split()[0]
                         if shortClassName in self._enumByClassname and \
                            eType in self._enumByClassname[shortClassName]:
@@ -398,8 +423,8 @@ class SwigInputBuilder:
                len(paramList) and \
                mArgsstring.find('=0')<0:
                 key=(shortClassName, methName)
-                if key in self.configModule.STEAL_OWNERSHIP:
-                    for argNum in self.configModule.STEAL_OWNERSHIP[key]:
+                if key in self.STEAL_OWNERSHIP:
+                    for argNum in self.STEAL_OWNERSHIP[key]:
                         self.fOutPythonprepend.write("%pythonprepend")
                         self.fOutPythonprepend.write(" OpenMM::%s::%s%s %%{\n"
                                                      % (shortClassName,
@@ -428,10 +453,10 @@ class SwigInputBuilder:
                 addText=''
                 returnType = getText("type", memberNode)
 
-                if key in self.configModule.UNITS:
-                    valueUnits=self.configModule.UNITS[key]
-                elif ("*", methName) in self.configModule.UNITS:
-                    valueUnits=self.configModule.UNITS[("*", methName)]
+                if key in self.UNITS:
+                    valueUnits=self.UNITS[key]
+                elif ("*", methName) in self.UNITS:
+                    valueUnits=self.UNITS[("*", methName)]
                 elif methName.startswith('get') and returnType not in ('void', 'int', 'bool', 'std::string', 'const std::string &'):
                     s = 'do not know how to add units to %s %s::%s' \
                         % (returnType, shortClassName, methName)
@@ -459,8 +484,8 @@ class SwigInputBuilder:
                                      % (addText, INDENT, index, index, vUnit)
                         index+=1
 
-                if key in self.configModule.STEAL_OWNERSHIP:
-                    for argNum in self.configModule.STEAL_OWNERSHIP[key]:
+                if key in self.STEAL_OWNERSHIP:
+                    for argNum in self.STEAL_OWNERSHIP[key]:
                         addText = "%s%sargs[%s].thisown=0\n" \
                                 % (addText, INDENT, argNum)
 
@@ -480,7 +505,7 @@ class SwigInputBuilder:
 
                         if pType.find('&')>=0 and \
                           'const' not in pType.split() and \
-                          key not in self.configModule.NO_OUTPUT_ARGS and \
+                          key not in self.NO_OUTPUT_ARGS and \
                           len(valueUnits[1])>0:
                             try:
                                 unitType=valueUnits[1][outputIndex]
@@ -550,7 +575,7 @@ class SwigInputBuilder:
 def parseCommandLine():
     opts, args_proper = getopt.getopt(sys.argv[1:], 'hi:c:o:d:a:z:s:')
     inputDirname = None
-    configFilename = None
+    configDirname = None
     outputFilename = ""
     docstringFilename = ""
     pythonprependFilename = ""
@@ -559,23 +584,23 @@ def parseCommandLine():
     for option, parameter in opts:
         if option=='-h': usageError()
         if option=='-i': inputDirname = parameter
-        if option=='-c': configFilename=parameter
+        if option=='-c': configDirname = parameter
         if option=='-o': outputFilename = parameter
         if option=='-d': docstringFilename = parameter
         if option=='-a': pythonprependFilename=parameter
         if option=='-z': pythonappendFilename=parameter
         if option=='-s': skipAdditionalMethods.append(parameter)
     if not inputDirname: usageError()
-    if not configFilename: usageError()
-    return (args_proper, inputDirname, configFilename, outputFilename,
+    if not configDirname: usageError()
+    return (args_proper, inputDirname, configDirname, outputFilename,
             docstringFilename,
             pythonprependFilename, pythonappendFilename, skipAdditionalMethods)
 
 def main():
-    (args_proper, inputDirname, configFilename, outputFilename,
+    (args_proper, inputDirname, configDirname, outputFilename,
      docstringFilename, pythonprependFilename, pythonappendFilename,
      skipAdditionalMethods) = parseCommandLine()
-    sBuilder = SwigInputBuilder(inputDirname, configFilename, outputFilename,
+    sBuilder = SwigInputBuilder(inputDirname, configDirname, outputFilename,
                                 docstringFilename, pythonprependFilename,
                                 pythonappendFilename, skipAdditionalMethods)
     #print "Calling writeSwigFile\n"
@@ -588,7 +613,7 @@ def main():
 def usageError():
     sys.stdout.write('usage: %s -i xmlHeadersFilename \\\n' \
          % os.path.basename(sys.argv[0]))
-    sys.stdout.write('       %s -c inputConfigFilename\n' \
+    sys.stdout.write('       %s -c inputConfigDirname\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))
     sys.stdout.write('       %s[-o swigInputDirname]\n' \
          % (' '*len(os.path.basename(sys.argv[0]))))

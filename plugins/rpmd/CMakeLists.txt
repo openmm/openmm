@@ -85,6 +85,9 @@ INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src/SimTKReference)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src)
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/reference/src/SimTKReference)
 
+# Record the SWIG configuration file.
+ADD_SWIG_CONFIG_FILE("${CMAKE_CURRENT_SOURCE_DIR}/rpmdSwigInputConfig.py")
+
 # ----------------------------------------------------------------------------
 
 # If API_RPMD wrappers are being generated, and add them to the build.

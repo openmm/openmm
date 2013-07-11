@@ -34,6 +34,7 @@ IF(NOT cmv EQUAL "2.4") # This whole file...
 
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
+INCLUDE(SwigPython)
 
 # Older cmake versions do not have cmake_policy command
 # Cmake 2.4.5, the default cmake on red hat linux, has the
