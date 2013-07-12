@@ -33,7 +33,7 @@
 #define __ReferenceVirtualSites_H__
 
 #include "openmm/System.h"
-#include "../SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include <vector>
 
 class OPENMM_EXPORT ReferenceVirtualSites {

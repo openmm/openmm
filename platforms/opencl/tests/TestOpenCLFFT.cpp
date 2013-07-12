@@ -34,11 +34,11 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/OpenCLArray.h"
-#include "../src/OpenCLContext.h"
-#include "../src/OpenCLFFT3D.h"
-#include "../src/OpenCLSort.h"
-#include "../src/SimTKReference/fftpack.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
+#include "OpenCLFFT3D.h"
+#include "OpenCLSort.h"
+#include "fftpack.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
 #include <iostream>

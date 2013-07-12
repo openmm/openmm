@@ -32,7 +32,7 @@
 #include "ReferenceRpmdKernels.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
-#include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 
 using namespace OpenMM;
 using namespace std;

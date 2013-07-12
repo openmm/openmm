@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
- * Contributors: Pande Group
+/* Portions copyright (c) 2010 Stanford University and Simbios.
+ * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,57 +22,66 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferencePairIxn_H__
-#define __ReferencePairIxn_H__
+#ifndef __ReferenceMonteCarloBarostat_H__
+#define __ReferenceMonteCarloBarostat_H__
 
-#include "../../../../openmmapi/include/openmm/internal/windowsExport.h"
+#include "SimTKOpenMMCommon.h"
+#include <utility>
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
-class OPENMM_EXPORT ReferencePairIxn {
+class ReferenceMonteCarloBarostat {
 
    private:
+
+       std::vector<RealOpenMM> savedAtomPositions[3];
+       std::vector<std::vector<int> > molecules;
 
    public:
 
       /**---------------------------------------------------------------------------------------
-      
+
          Constructor
-      
+
          --------------------------------------------------------------------------------------- */
 
-       ReferencePairIxn( );
+       ReferenceMonteCarloBarostat(int numAtoms, const std::vector<std::vector<int> >& molecules);
 
       /**---------------------------------------------------------------------------------------
-      
+
          Destructor
-      
+
          --------------------------------------------------------------------------------------- */
 
-       ~ReferencePairIxn( );
+       ~ReferenceMonteCarloBarostat();
 
       /**---------------------------------------------------------------------------------------
-      
-         Calculate pair ixn
-      
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-         @param fixedParameters  non-atom parameters
-         @param forces           force array (forces added)
-         @param energyByAtom     atom energy
-         @param totalEnergy      total energy
-            
+
+         Apply the barostat at the start of a time step, scaling x, y, and z coordinates independently.
+
+         @param atomPositions      atom positions
+         @param boxSize            the periodic box dimensions
+         @param scaleX             the factor by which to scale atomic x coordinates
+         @param scaleY             the factor by which to scale atomic y coordinates
+         @param scaleZ             the factor by which to scale atomic z coordinates
+
          --------------------------------------------------------------------------------------- */
-          
-      virtual void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;
-      
+
+      void applyBarostat(std::vector<OpenMM::RealVec>& atomPositions, const OpenMM::RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ);
+
+      /**---------------------------------------------------------------------------------------
+
+         Restore atom positions to what they were before applyBarostat() was called.
+
+         @param atomPositions      atom positions
+
+         --------------------------------------------------------------------------------------- */
+
+      void restorePositions(std::vector<OpenMM::RealVec>& atomPositions);
+
 };
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __ReferencePairIxn_H__
+#endif // __ReferenceMonteCarloBarostat_H__

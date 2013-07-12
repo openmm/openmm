@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2010 Stanford University and Simbios.
+/* Portions copyright (c) 2009 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -22,66 +22,71 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceMonteCarloBarostat_H__
-#define __ReferenceMonteCarloBarostat_H__
+#ifndef __ReferenceConstraintAlgorithm_H__
+#define __ReferenceConstraintAlgorithm_H__
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include <utility>
-#include <vector>
+#include "SimTKOpenMMCommon.h"
+#include "openmm/internal/windowsExport.h"
 
-// ---------------------------------------------------------------------------------------
+/**
+ * This abstract class defines the interface which constraint algorithms must implement.
+ */
+class OPENMM_EXPORT ReferenceConstraintAlgorithm {
+public:
 
-class ReferenceMonteCarloBarostat {
-
-   private:
-
-       std::vector<RealOpenMM> savedAtomPositions[3];
-       std::vector<std::vector<int> > molecules;
-
-   public:
+    virtual ~ReferenceConstraintAlgorithm() {};
 
       /**---------------------------------------------------------------------------------------
 
-         Constructor
+         Get the constraint tolerance
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceMonteCarloBarostat(int numAtoms, const std::vector<std::vector<int> >& molecules);
+    virtual RealOpenMM getTolerance() const = 0;
 
       /**---------------------------------------------------------------------------------------
 
-         Destructor
+         Set the constraint tolerance
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceMonteCarloBarostat();
+    virtual void setTolerance(RealOpenMM tolerance) = 0;
 
       /**---------------------------------------------------------------------------------------
 
-         Apply the barostat at the start of a time step, scaling x, y, and z coordinates independently.
+         Apply constraint algorithm
 
-         @param atomPositions      atom positions
-         @param boxSize            the periodic box dimensions
-         @param scaleX             the factor by which to scale atomic x coordinates
-         @param scaleY             the factor by which to scale atomic y coordinates
-         @param scaleZ             the factor by which to scale atomic z coordinates
+         @param numberOfAtoms    number of atoms
+         @param atomCoordinates  atom coordinates
+         @param atomCoordinatesP atom coordinates prime
+         @param inverseMasses    1/mass
+
+         @return SimTKOpenMMCommon::DefaultReturn if converge; else
+          return SimTKOpenMMCommon::ErrorReturn
 
          --------------------------------------------------------------------------------------- */
 
-      void applyBarostat(std::vector<OpenMM::RealVec>& atomPositions, const OpenMM::RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ);
+    virtual int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                     std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses) = 0;
 
       /**---------------------------------------------------------------------------------------
 
-         Restore atom positions to what they were before applyBarostat() was called.
+         Apply constraint algorithm to velocities.
 
-         @param atomPositions      atom positions
+         @param numberOfAtoms    number of atoms
+         @param atomCoordinates  atom coordinates
+         @param velocities       atom velocities
+         @param inverseMasses    1/mass
+
+         @return SimTKOpenMMCommon::DefaultReturn if converge; else
+          return SimTKOpenMMCommon::ErrorReturn
 
          --------------------------------------------------------------------------------------- */
 
-      void restorePositions(std::vector<OpenMM::RealVec>& atomPositions);
-
+    virtual int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) = 0;
 };
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __ReferenceMonteCarloBarostat_H__
+#endif // __ReferenceConstraintAlgorithm_H__

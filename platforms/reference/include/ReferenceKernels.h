@@ -34,8 +34,8 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/kernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
-#include "SimTKReference/ReferenceNeighborList.h"
+#include "SimTKOpenMMRealType.h"
+#include "ReferenceNeighborList.h"
 #include "lepton/ExpressionProgram.h"
 
 class CpuObc;

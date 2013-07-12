@@ -24,7 +24,7 @@
 #ifndef __AmoebaReferenceMultipoleForce_H__
 #define __AmoebaReferenceMultipoleForce_H__
 
-#include "SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
 #include <map>

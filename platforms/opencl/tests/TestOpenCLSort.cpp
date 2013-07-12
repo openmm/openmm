@@ -34,9 +34,9 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/OpenCLArray.h"
-#include "../src/OpenCLContext.h"
-#include "../src/OpenCLSort.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
+#include "OpenCLSort.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
 #include <iostream>

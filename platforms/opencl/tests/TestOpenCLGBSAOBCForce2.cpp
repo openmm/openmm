@@ -58,7 +58,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include "OpenMM.h"
 
 #if TEST_PLATFORM == TEST_OPENCL_PLATFORM

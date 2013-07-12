@@ -1,7 +1,7 @@
 #ifndef OPENMM_REFERENCE_NEIGHBORLIST_H_
 #define OPENMM_REFERENCE_NEIGHBORLIST_H_
 
-#include "../SimTKUtilities/RealVec.h"
+#include "RealVec.h"
 #include "openmm/internal/windowsExport.h"
 #include <set>
 #include <vector>

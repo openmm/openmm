@@ -25,9 +25,9 @@
 #include <string.h>
 #include <sstream>
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "../SimTKUtilities/SimTKOpenMMLog.h"
+#include "SimTKOpenMMCommon.h"
+#include "SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMLog.h"
 #include "ReferenceCCMAAlgorithm.h"
 #include "ReferenceDynamics.h"
 #include "quern.h"

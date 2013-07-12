@@ -27,7 +27,7 @@
 #include "OpenCLFFT3D.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLKernelSources.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <map>
 #include <sstream>
 #include <string>
