@@ -5402,14 +5402,14 @@ CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
         delete moleculeStartIndex;
 }
 
-void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     cu.setAsCurrent();
     savedPositions = new CudaArray(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
     CUmodule module = cu.createModule(CudaKernelSources::monteCarloBarostat);
     kernel = cu.getKernel(module, "scalePositions");
 }
 
-void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     cu.setAsCurrent();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -5442,9 +5442,11 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
         m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
         throw OpenMMException(m.str());
     }        
-    float scalef = (float) scale;
-    void* args[] = {&scalef, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
-            &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
+    float scalefX = (float) scaleX;
+    float scalefY = (float) scaleY;
+    float scalefZ = (float) scaleZ;
+    void* args[] = {&scalefX, &scalefY, &scalefZ, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), 
+		    &cu.getPosq().getDevicePointer(), &moleculeAtoms->getDevicePointer(), &moleculeStartIndex->getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
     for (int i = 0; i < (int) cu.getPosCellOffsets().size(); i++)
         cu.getPosCellOffsets()[i] = make_int4(0, 0, 0, 0);

@@ -58,11 +58,13 @@ ReferenceMonteCarloBarostat::~ReferenceMonteCarloBarostat( ) {
 
   @param atomPositions      atom positions
   @param boxSize            the periodic box dimensions
-  @param scale              the factor by which to scale atom positions
+  @param scaleX             the factor by which to scale atom x-coordinates
+  @param scaleY             the factor by which to scale atom y-coordinates
+  @param scaleZ             the factor by which to scale atom z-coordinates
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scale) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, const RealVec& boxSize, RealOpenMM scaleX, RealOpenMM scaleY, RealOpenMM scaleZ) {
     int numAtoms = savedAtomPositions[0].size();
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)
@@ -98,9 +100,9 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<RealVec>& atomPositions, 
 
         // Now scale the position of the molecule center.
 
-        dx = pos[0]*(scale-1)-dx;
-        dy = pos[1]*(scale-1)-dy;
-        dz = pos[2]*(scale-1)-dz;
+        dx = pos[0]*(scaleX-1)-dx;
+        dy = pos[1]*(scaleY-1)-dy;
+        dz = pos[2]*(scaleZ-1)-dz;
         for (int j = 0; j < (int) molecules[i].size(); j++) {
             RealVec& atomPos = atomPositions[molecules[i][j]];
             atomPos[0] += dx;

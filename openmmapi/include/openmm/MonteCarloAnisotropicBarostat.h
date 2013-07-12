@@ -1,5 +1,5 @@
-#ifndef OPENMM_MONTECARLOBAROSTAT_H_
-#define OPENMM_MONTECARLOBAROSTAT_H_
+#ifndef OPENMM_MONTECARLOANISOTROPICBAROSTAT_H_
+#define OPENMM_MONTECARLOANISOTROPICBAROSTAT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Force.h"
+#include "Vec3.h"
 #include <string>
 #include "internal/windowsExport.h"
 
@@ -42,37 +43,80 @@ namespace OpenMM {
  * This class uses a Monte Carlo algorithm to adjust the size of the periodic box, simulating the
  * effect of constant pressure.
  *
+ * This class is similar to MonteCarloBarostat, but each Monte Carlo move is applied to only one axis
+ * of the periodic box (unlike MonteCarloBarostat, which scales the entire box isotropically).  This
+ * means that the box may change shape as well as size over the course of the simulation.  It also
+ * allows you to specify a different pressure for each axis of the box, or to keep the box size fixed
+ * along certain axes while still allowing it to change along others.
+ * 
  * This class assumes the simulation is also being run at constant temperature, and requires you
  * to specify the system temperature (since it affects the acceptance probability for Monte Carlo
  * moves).  It does not actually perform temperature regulation, however.  You must use another
  * mechanism along with it to maintain the temperature, such as LangevinIntegrator or AndersenThermostat.
  */
 
-class OPENMM_EXPORT MonteCarloBarostat : public Force {
+class OPENMM_EXPORT MonteCarloAnisotropicBarostat : public Force {
 public:
     /**
      * This is the name of the parameter which stores the current pressure acting on
-     * the system (in bar).
+     * the X-axis (in bar).
      */
-    static const std::string& Pressure() {
-        static const std::string key = "MonteCarloPressure";
+    static const std::string& PressureX() {
+        static const std::string key = "MonteCarloPressureX";
         return key;
     }
     /**
-     * Create a MonteCarloBarostat.
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Y-axis (in bar).
+     */
+    static const std::string& PressureY() {
+        static const std::string key = "MonteCarloPressureY";
+        return key;
+    }
+    /**
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Z-axis (in bar).
+     */
+    static const std::string& PressureZ() {
+        static const std::string key = "MonteCarloPressureZ";
+        return key;
+    }
+    /**
+     * Create a MonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure   the default pressure acting on the system (in bar)
+     * @param defaultPressure   The default pressure acting on each axis (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleX            whether to allow the X dimension of the periodic box to change size
+     * @param scaleY            whether to allow the Y dimension of the periodic box to change size
+     * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
      */
-    MonteCarloBarostat(double defaultPressure, double temperature, int frequency = 25);
+    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
     /**
-     * Get the default pressure acting on the system (in bar).
+     * Get the default pressure (in bar).
      *
-     * @return the default pressure acting on the system, measured in bar.
+     * @return the default pressure acting along each axis, measured in bar.
      */
-    double getDefaultPressure() const {
+    const Vec3& getDefaultPressure() const {
         return defaultPressure;
+    }
+    /**
+     * Get whether to allow the X dimension of the periodic box to change size.
+     */
+    bool getScaleX() const {
+      return scaleX;
+    }
+    /**
+     * Get whether to allow the Y dimension of the periodic box to change size.
+     */
+    bool getScaleY() const {
+      return scaleY;
+    }
+    /**
+     * Get whether to allow the Z dimension of the periodic box to change size.
+     */
+    bool getScaleZ() const {
+      return scaleZ;
     }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
@@ -121,10 +165,12 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
-    double defaultPressure, temperature;
+    Vec3 defaultPressure;
+    double temperature;
+    bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_MONTECARLOBAROSTAT_H_*/
+#endif /*OPENMM_MONTECARLOANISOTROPICBAROSTAT_H_*/

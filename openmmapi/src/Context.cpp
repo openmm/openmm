@@ -53,7 +53,7 @@ Context::Context(const System& system, Integrator& integrator, Platform& platfor
 }
 
 Context::~Context() {
-	delete impl;
+    delete impl;
 }
 
 const System& Context::getSystem() const {
