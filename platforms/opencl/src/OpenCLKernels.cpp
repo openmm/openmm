@@ -5626,13 +5626,13 @@ OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
         delete moleculeStartIndex;
 }
 
-void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     savedPositions = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "savedPositions");
     cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
     kernel = cl::Kernel(program, "scalePositions");
 }
 
-void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -5656,15 +5656,17 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 
         // Initialize the kernel arguments.
         
-        kernel.setArg<cl_int>(1, numMolecules);
-        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, moleculeAtoms->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(6, moleculeStartIndex->getDeviceBuffer());
+        kernel.setArg<cl_int>(3, numMolecules);
+        kernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(7, moleculeAtoms->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(8, moleculeStartIndex->getDeviceBuffer());
     }
     cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
-    kernel.setArg<cl_float>(0, (cl_float) scale);
-    setPeriodicBoxSizeArg(cl, kernel, 2);
-    setInvPeriodicBoxSizeArg(cl, kernel, 3);
+    kernel.setArg<cl_float>(0, (cl_float) scaleX);
+    kernel.setArg<cl_float>(1, (cl_float) scaleY);
+    kernel.setArg<cl_float>(2, (cl_float) scaleZ);
+    setPeriodicBoxSizeArg(cl, kernel, 4);
+    setInvPeriodicBoxSizeArg(cl, kernel, 5);
     cl.executeKernel(kernel, cl.getNumAtoms());
     for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);

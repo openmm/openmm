@@ -31,6 +31,10 @@
 
 
 /* Convert python tuple to C++ Vec3 object*/
+%typemap(typecheck) Vec3 {
+  // typemap -- %typemap(typecheck) Vec3
+  $1 = (PySequence_Length($input) >= 3 ? 1 : 0);
+}
 %typemap(in) Vec3 {
   // typemap -- %typemap(in) Vec3
   double x, y, z;
@@ -49,6 +53,10 @@
   Py_DECREF(o);
 
   $1 = OpenMM::Vec3(x, y, z);
+}
+%typemap(typecheck) const Vec3& {
+  // typemap -- %typemap(typecheck) Vec3
+  $1 = (PySequence_Length($input) >= 3 ? 1 : 0);
 }
 %typemap(in) const Vec3& (OpenMM::Vec3 myVec) {
   // typemap -- %typemap(in) Vec3
@@ -69,6 +77,13 @@
 
   myVec = OpenMM::Vec3(x, y, z);
   $1 = &myVec;
+}
+%typemap(out) Vec3 {
+  PyObject* mm = PyImport_AddModule("simtk.openmm");
+  PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
+  PyObject* args = Py_BuildValue("(d,d,d)", ($1)[0], ($1)[1], ($1)[2]);
+  $result = PyObject_CallObject(vec3, args);
+  Py_DECREF(args);
 }
 
 /* Convert C++ (Vec3&, Vec3&, Vec3&) object to python tuple or tuples */

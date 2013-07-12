@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,6 +53,8 @@ void OPENMM_EXPORT throwException(const char* file, int line, const std::string&
 #define ASSERT_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
 
 #define ASSERT_EQUAL_VEC(expected, found, tol) {double _norm_ = std::sqrt((expected).dot(expected)); double _scale_ = _norm_ > 1.0 ? _norm_ : 1.0; if ((std::abs(((expected)[0])-((found)[0]))/_scale_ > (tol)) || (std::abs(((expected)[1])-((found)[1]))/_scale_ > (tol)) || (std::abs(((expected)[2])-((found)[2]))/_scale_ > (tol))) {std::stringstream details; details << " Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_USUALLY_TRUE(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "(This test is stochastic and may occasionally fail)");};
 
 #define ASSERT_USUALLY_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found)<<" (This test is stochastic and may occasionally fail)"; throwException(__FILE__, __LINE__, details.str());}};
 

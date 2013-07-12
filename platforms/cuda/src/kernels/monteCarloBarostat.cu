@@ -1,8 +1,8 @@
 /**
- * Scale the particle positions.
+ * Scale the particle positions with each axis independent
  */
 
-extern "C" __global__ void scalePositions(float scale, int numMolecules, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4* __restrict__ posq,
+extern "C" __global__ void scalePositions(float scaleX, float scaleY, float scaleZ, int numMolecules, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4* __restrict__ posq,
         const int* __restrict__ moleculeAtoms, const int* __restrict__ moleculeStartIndex) {
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numMolecules; index += blockDim.x*gridDim.x) {
         int first = moleculeStartIndex[index];
@@ -35,9 +35,9 @@ extern "C" __global__ void scalePositions(float scale, int numMolecules, real4 p
 
         // Now scale the position of the molecule center.
 
-        delta.x = center.x*(scale-1)-delta.x;
-        delta.y = center.y*(scale-1)-delta.y;
-        delta.z = center.z*(scale-1)-delta.z;
+        delta.x = center.x*(scaleX-1)-delta.x;
+        delta.y = center.y*(scaleY-1)-delta.y;
+        delta.z = center.z*(scaleZ-1)-delta.z;
         for (int atom = first; atom < last; atom++) {
             real4 pos = posq[moleculeAtoms[atom]];
             pos.x += delta.x;
