@@ -16,7 +16,7 @@
   <H name="HOP3" parent="OP3"/>
  </Residue>
  <Residue name="ACE">
-  <H name="H" parent="C"/>
+  <H name="H" parent="C" terminal="C"/>
   <H name="H1" parent="CH3"/>
   <H name="H2" parent="CH3"/>
   <H name="H3" parent="CH3"/>
@@ -313,7 +313,7 @@
   <H name="H1" parent="C"/>
   <H name="H2" parent="C"/>
   <H name="H3" parent="C"/>
-  <H name="HN2" parent="N"/>
+  <H name="HN2" parent="N" terminal="N"/>
  </Residue>
  <Residue name="ORN">
   <H name="H" parent="N"/>
