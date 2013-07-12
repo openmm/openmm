@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Lee-Ping Wang, Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -47,7 +47,7 @@ def _isint(word):
 
     @param[in] word String (for instance, '123', '153.0', '2.', '-354')
     @return answer Boolean which specifies whether the string is an integer (only +/- sign followed by digits)
-    
+
     """
     return match('^[-+]?[0-9]+$',word)
 
@@ -57,7 +57,7 @@ def _isfloat(word):
 
     @param[in] word String (for instance, '123', '153.0', '2.', '-354')
     @return answer Boolean which specifies whether the string is any number
-    
+
     """
     return match('^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$',word)
 
@@ -65,7 +65,7 @@ def _is_gro_coord(line):
     """ Determines whether a line contains GROMACS data or not
 
     @param[in] line The line to be tested
-    
+
     """
     sline = line.split()
     if len(sline) == 6 or len(sline) == 9:
@@ -79,7 +79,7 @@ def _is_gro_box(line):
     """ Determines whether a line contains a GROMACS box vector or not
 
     @param[in] line The line to be tested
-    
+
     """
     sline = line.split()
     if len(sline) == 9 and all([_isfloat(i) for i in sline]):
@@ -91,16 +91,16 @@ def _is_gro_box(line):
 
 class GromacsGroFile(object):
     """GromacsGroFile parses a Gromacs .gro file and constructs a set of atom positions from it.
-    
+
     A .gro file also contains some topological information, such as elements and residue names,
     but not enough to construct a full Topology object.  This information is recorded and stored
     in the object's public fields."""
-    
+
     def __init__(self, file):
         """Load a .gro file.
-        
+
         The atom positions can be retrieved by calling getPositions().
-        
+
         Parameters:
          - file (string) the name of the file to load
         """
@@ -145,7 +145,7 @@ class GromacsGroFile(object):
             else:
                 raise Exception("Unexpected line in .gro file: "+line)
             ln += 1
-            
+
         ## The atom positions read from the file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = xyzs[0]
         ## A list containing the element of each atom stored in the file
@@ -159,14 +159,14 @@ class GromacsGroFile(object):
         self._positions = xyzs
         self._unitCellDimensions = boxes
         self._numpyPositions = None
-    
+
     def getNumFrames(self):
         """Get the number of frames stored in the file."""
         return len(self._positions)
-    
+
     def getPositions(self, asNumpy=False, frame=0):
         """Get the atomic positions.
-        
+
         Parameters:
          - asNumpy (boolean=False) if true, the values are returned as a numpy array instead of a list of Vec3s
          - frame (int=0) the index of the frame for which to get positions
@@ -178,10 +178,10 @@ class GromacsGroFile(object):
                 self._numpyPositions[frame] = Quantity(numpy.array(self._positions[frame].value_in_unit(nanometers)), nanometers)
             return self._numpyPositions[frame]
         return self._positions[frame]
-    
+
     def getUnitCellDimensions(self, frame=0):
         """Get the dimensions of the crystallographic unit cell.
-        
+
         Parameters:
          - frame (int=0) the index of the frame for which to get the unit cell dimensions
         """

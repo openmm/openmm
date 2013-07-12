@@ -10,7 +10,7 @@ Portions copyright (c) 2012-2013 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Robert McGibbon
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -35,7 +35,7 @@ import simtk.openmm as mm
 import simtk.unit as unit
 from simtk.openmm.app import PDBFile
 import math
-    
+
 class StateDataReporter(object):
     """StateDataReporter outputs information about a simulation, such as energy and temperature, to a file.
 

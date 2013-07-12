@@ -12,7 +12,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -260,7 +260,7 @@ class PdbStructure(object):
         """Establish first and last residues, atoms, etc."""
         for model in self.models:
             model._finalize()
-    
+
     def get_unit_cell_dimensions(self):
         """Get the dimensions of the crystallographic unit cell (may be None)."""
         return self._unit_cell_dimensions
@@ -547,12 +547,12 @@ class Residue(object):
         ...
         >>> for atom in res:
         ...     print atom
-        ATOM    188  N   CYS A  42      40.714  -5.292  12.123  1.00 11.29           N  
-        ATOM    189  CA  CYS A  42      39.736  -5.883  12.911  1.00 10.01           C  
-        ATOM    190  C   CYS A  42      40.339  -6.654  14.087  1.00 22.28           C  
-        ATOM    191  O   CYS A  42      41.181  -7.530  13.859  1.00 13.70           O  
-        ATOM    192  CB  CYS A  42      38.949  -6.825  12.002  1.00  9.67           C  
-        ATOM    193  SG  CYS A  42      37.557  -7.514  12.922  1.00 20.12           S  
+        ATOM    188  N   CYS A  42      40.714  -5.292  12.123  1.00 11.29           N
+        ATOM    189  CA  CYS A  42      39.736  -5.883  12.911  1.00 10.01           C
+        ATOM    190  C   CYS A  42      40.339  -6.654  14.087  1.00 22.28           C
+        ATOM    191  O   CYS A  42      41.181  -7.530  13.859  1.00 13.70           O
+        ATOM    192  CB  CYS A  42      38.949  -6.825  12.002  1.00  9.67           C
+        ATOM    193  SG  CYS A  42      37.557  -7.514  12.922  1.00 20.12           S
         """
         for atom in self.iter_atoms():
             yield atom
