@@ -448,6 +448,7 @@ class GromacsTopFile(object):
             gb.setSoluteDielectric(soluteDielectric)
             gb.setSolventDielectric(solventDielectric)
             sys.addForce(gb)
+            nb.setReactionFieldDielectric(1.0)
         elif implicitSolvent is not None:
             raise ValueError('Illegal value for implicitSolvent')
         bonds = None

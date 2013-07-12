@@ -1,5 +1,5 @@
-#ifndef OPENMM_REFERENCEKERNELS_H_
-#define OPENMM_REFERENCEKERNELS_H_
+#ifndef OPENMM_OPENCLKERNELS_H_
+#define OPENMM_OPENCLKERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -13,44 +13,28 @@
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
- * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files (the "Software"), *
- * to deal in the Software without restriction, including without limitation  *
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
- * and/or sell copies of the Software, and to permit persons to whom the      *
- * Software is furnished to do so, subject to the following conditions:       *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
  *                                                                            *
- * The above copyright notice and this permission notice shall be included in *
- * all copies or substantial portions of the Software.                        *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
  *                                                                            *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
- * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
- * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
+#include "OpenCLFFT3D.h"
+#include "OpenCLParameterSet.h"
+#include "OpenCLSort.h"
 #include "openmm/kernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
-#include "SimTKReference/ReferenceNeighborList.h"
-#include "lepton/ExpressionProgram.h"
-
-class CpuObc;
-class CpuGBVI;
-class ReferenceAndersenThermostat;
-class ReferenceCustomCompoundBondIxn;
-class ReferenceCustomHbondIxn;
-class ReferenceBrownianDynamics;
-class ReferenceStochasticDynamics;
-class ReferenceConstraintAlgorithm;
-class ReferenceMonteCarloBarostat;
-class ReferenceVariableStochasticDynamics;
-class ReferenceVariableVerletDynamics;
-class ReferenceVerletDynamics;
-class ReferenceCustomDynamics;
+#include "openmm/System.h"
 
 namespace OpenMM {
 
@@ -59,13 +43,13 @@ namespace OpenMM {
  * Platform a chance to clear buffers and do other initialization at the beginning, and to do any
  * necessary work at the end to determine the final results.
  */
-class ReferenceCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
+class OpenCLCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    ReferenceCalcForcesAndEnergyKernel(std::string name, const Platform& platform) : CalcForcesAndEnergyKernel(name, platform) {
+    OpenCLCalcForcesAndEnergyKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcForcesAndEnergyKernel(name, platform), cl(cl) {
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      */
     void initialize(const System& system);
@@ -93,16 +77,16 @@ public:
      */
     double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
 private:
-    std::vector<RealVec> savedForces;
+   OpenCLContext& cl;
 };
 
 /**
  * This kernel provides methods for setting and retrieving various state data: time, positions,
  * velocities, and forces.
  */
-class ReferenceUpdateStateDataKernel : public UpdateStateDataKernel {
+class OpenCLUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
-    ReferenceUpdateStateDataKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : UpdateStateDataKernel(name, platform), data(data) {
+    OpenCLUpdateStateDataKernel(std::string name, const Platform& platform, OpenCLContext& cl) : UpdateStateDataKernel(name, platform), cl(cl) {
     }
     /**
      * Initialize the kernel.
@@ -181,18 +165,17 @@ public:
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
-    ReferencePlatform::PlatformData& data;
+    OpenCLContext& cl;
 };
 
 /**
  * This kernel modifies the positions of particles to enforce distance constraints.
  */
-class ReferenceApplyConstraintsKernel : public ApplyConstraintsKernel {
+class OpenCLApplyConstraintsKernel : public ApplyConstraintsKernel {
 public:
-    ReferenceApplyConstraintsKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
-            ApplyConstraintsKernel(name, platform), data(data), constraints(0) {
+    OpenCLApplyConstraintsKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyConstraintsKernel(name, platform),
+            cl(cl), hasInitializedKernel(false) {
     }
-    ~ReferenceApplyConstraintsKernel();
     /**
      * Initialize the kernel.
      *
@@ -214,21 +197,17 @@ public:
      */
     void applyToVelocities(ContextImpl& context, double tol);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    std::vector<RealOpenMM> inverseMasses;
-    std::vector<std::pair<int, int> > constraintIndices;
-    std::vector<RealOpenMM> constraintDistances;
-    int numConstraints;
+    OpenCLContext& cl;
+    bool hasInitializedKernel;
+    cl::Kernel applyDeltasKernel;
 };
 
 /**
  * This kernel recomputes the positions of virtual sites.
  */
-class ReferenceVirtualSitesKernel : public VirtualSitesKernel {
+class OpenCLVirtualSitesKernel : public VirtualSitesKernel {
 public:
-    ReferenceVirtualSitesKernel(std::string name, const Platform& platform) : VirtualSitesKernel(name, platform) {
+    OpenCLVirtualSitesKernel(std::string name, const Platform& platform, OpenCLContext& cl) : VirtualSitesKernel(name, platform), cl(cl) {
     }
     /**
      * Initialize the kernel.
@@ -242,19 +221,22 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void computePositions(ContextImpl& context);
+private:
+    OpenCLContext& cl;
 };
 
 /**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
+class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    ReferenceCalcHarmonicBondForceKernel(std::string name, const Platform& platform) : CalcHarmonicBondForceKernel(name, platform) {
+    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcHarmonicBondForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
-    ~ReferenceCalcHarmonicBondForceKernel();
+    ~OpenCLCalcHarmonicBondForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HarmonicBondForce this kernel will be used for
      */
@@ -277,18 +259,21 @@ public:
     void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
 private:
     int numBonds;
-    int **bondIndexArray;
-    RealOpenMM **bondParamArray;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLArray* params;
 };
 
 /**
  * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+class OpenCLCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    ReferenceCalcCustomBondForceKernel(std::string name, const Platform& platform) : CalcCustomBondForceKernel(name, platform) {
+    OpenCLCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomBondForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomBondForceKernel();
+    ~OpenCLCalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -314,23 +299,27 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
 private:
     int numBonds;
-    int **bondIndexArray;
-    RealOpenMM **bondParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    ReferenceCalcHarmonicAngleForceKernel(std::string name, const Platform& platform) : CalcHarmonicAngleForceKernel(name, platform) {
+    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
-    ~ReferenceCalcHarmonicAngleForceKernel();
+    ~OpenCLCalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HarmonicAngleForce this kernel will be used for
      */
@@ -353,18 +342,21 @@ public:
     void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
 private:
     int numAngles;
-    int **angleIndexArray;
-    RealOpenMM **angleParamArray;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLArray* params;
 };
 
 /**
  * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
+class OpenCLCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    ReferenceCalcCustomAngleForceKernel(std::string name, const Platform& platform) : CalcCustomAngleForceKernel(name, platform) {
+    OpenCLCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomAngleForceKernel();
+    ~OpenCLCalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -390,23 +382,27 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
 private:
     int numAngles;
-    int **angleIndexArray;
-    RealOpenMM **angleParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    ReferenceCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform) : CalcPeriodicTorsionForceKernel(name, platform) {
+    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
-    ~ReferenceCalcPeriodicTorsionForceKernel();
+    ~OpenCLCalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the PeriodicTorsionForce this kernel will be used for
      */
@@ -429,21 +425,24 @@ public:
     void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLArray* params;
 };
 
 /**
  * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    ReferenceCalcRBTorsionForceKernel(std::string name, const Platform& platform) : CalcRBTorsionForceKernel(name, platform) {
+    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcRBTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
     }
-    ~ReferenceCalcRBTorsionForceKernel();
+    ~OpenCLCalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the RBTorsionForce this kernel will be used for
      */
@@ -466,17 +465,21 @@ public:
     void copyParametersToContext(ContextImpl& context, const RBTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLArray* params;
 };
 
 /**
  * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+class OpenCLCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
-    ReferenceCalcCMAPTorsionForceKernel(std::string name, const Platform& platform) : CalcCMAPTorsionForceKernel(name, platform) {
+    OpenCLCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
     }
+    ~OpenCLCalcCMAPTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -494,19 +497,24 @@ public:
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
-    std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
-    std::vector<int> torsionMaps;
-    std::vector<std::vector<int> > torsionIndices;
+    int numTorsions;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLArray* coefficients;
+    OpenCLArray* mapPositions;
+    OpenCLArray* torsionMaps;
 };
 
 /**
  * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+class OpenCLCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    ReferenceCalcCustomTorsionForceKernel(std::string name, const Platform& platform) : CalcCustomTorsionForceKernel(name, platform) {
+    OpenCLCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomTorsionForceKernel();
+    ~OpenCLCalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -532,23 +540,29 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
 private:
     int numTorsions;
-    int **torsionIndexArray;
-    RealOpenMM **torsionParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-class ReferenceCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    ReferenceCalcNonbondedForceKernel(std::string name, const Platform& platform) : CalcNonbondedForceKernel(name, platform) {
+    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
+            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
+            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL), pmeio(NULL) {
     }
-    ~ReferenceCalcNonbondedForceKernel();
+    ~OpenCLCalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the NonbondedForce this kernel will be used for
      */
@@ -559,6 +573,7 @@ public:
      * @param context        the context in which to execute this kernel
      * @param includeForces  true if forces should be calculated
      * @param includeEnergy  true if the energy should be calculated
+     * @param includeDirect  true if direct space interactions should be included
      * @param includeReciprocal  true if reciprocal space interactions should be included
      * @return the potential energy due to the force
      */
@@ -571,25 +586,62 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
-    int numParticles, num14;
-    int **exclusionArray, **bonded14IndexArray;
-    RealOpenMM **particleParamArray, **bonded14ParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, dispersionCoefficient;
-    int kmax[3], gridSize[3];
-    bool useSwitchingFunction;
-    std::vector<std::set<int> > exclusions;
-    NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    class SortTrait : public OpenCLSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "INT_MIN";}
+        const char* getMaxKey() const {return "INT_MAX";}
+        const char* getMaxValue() const {return "(int2) (INT_MAX, INT_MAX)";}
+        const char* getSortKey() const {return "value.y";}
+    };
+    class PmeIO;
+    class PmePreComputation;
+    class PmePostComputation;
+    OpenCLContext& cl;
+    bool hasInitializedKernel;
+    OpenCLArray* sigmaEpsilon;
+    OpenCLArray* exceptionParams;
+    OpenCLArray* cosSinSums;
+    OpenCLArray* pmeGrid;
+    OpenCLArray* pmeGrid2;
+    OpenCLArray* pmeBsplineModuliX;
+    OpenCLArray* pmeBsplineModuliY;
+    OpenCLArray* pmeBsplineModuliZ;
+    OpenCLArray* pmeBsplineTheta;
+    OpenCLArray* pmeAtomRange;
+    OpenCLArray* pmeAtomGridIndex;
+    OpenCLSort* sort;
+    OpenCLFFT3D* fft;
+    Kernel cpuPme;
+    PmeIO* pmeio;
+    cl::Kernel ewaldSumsKernel;
+    cl::Kernel ewaldForcesKernel;
+    cl::Kernel pmeGridIndexKernel;
+    cl::Kernel pmeAtomRangeKernel;
+    cl::Kernel pmeZIndexKernel;
+    cl::Kernel pmeUpdateBsplinesKernel;
+    cl::Kernel pmeSpreadChargeKernel;
+    cl::Kernel pmeFinishSpreadChargeKernel;
+    cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeInterpolateForceKernel;
+    std::map<std::string, std::string> pmeDefines;
+    std::vector<std::pair<int, int> > exceptionAtoms;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    bool hasCoulomb, hasLJ;
+    static const int PmeOrder = 5;
 };
 
 /**
  * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : CalcCustomNonbondedForceKernel(name, platform), forceCopy(NULL) {
+    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
+            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
     }
-    ~ReferenceCalcCustomNonbondedForceKernel();
+    ~OpenCLCalcCustomNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -614,31 +666,32 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    int numParticles;
-    int **exclusionArray;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
-    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
+    OpenCLContext& cl;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    OpenCLArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    double longRangeCoefficient;
+    bool hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
-    std::map<std::string, double> globalParamValues;
-    std::vector<std::set<int> > exclusions;
-    Lepton::ExpressionProgram energyExpression, forceExpression;
-    std::vector<std::string> parameterNames, globalParameterNames;
-    NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    const System& system;
 };
 
 /**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
-class ReferenceCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
+class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
-    ReferenceCalcGBSAOBCForceKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceKernel(name, platform) {
+    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl),
+            hasCreatedKernels(false), params(NULL), bornSum(NULL), longBornSum(NULL), bornRadii(NULL), bornForce(NULL),
+            longBornForce(NULL), obcChain(NULL) {
     }
-    ~ReferenceCalcGBSAOBCForceKernel();
+    ~OpenCLCalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
@@ -660,50 +713,33 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
 private:
-    CpuObc* obc;
-    std::vector<RealOpenMM> charges;
-    bool isPeriodic;
-};
-
-/**
- * This kernel is invoked by GBVIForce to calculate the forces acting on the system.
- */
-class ReferenceCalcGBVIForceKernel : public CalcGBVIForceKernel {
-public:
-    ReferenceCalcGBVIForceKernel(std::string name, const Platform& platform) : CalcGBVIForceKernel(name, platform) {
-    }
-    ~ReferenceCalcGBVIForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system       the System this kernel will be applied to
-     * @param force        the GBVIForce this kernel will be used for
-     * @param scaled radii the scaled radii (Eq. 5 of Labute paper)
-     */
-    void initialize(const System& system, const GBVIForce& force, const std::vector<double> & scaledRadii);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    CpuGBVI * gbvi;
-    std::vector<RealOpenMM> charges;
-    bool isPeriodic;
+    double prefactor;
+    bool hasCreatedKernels;
+    int maxTiles;
+    OpenCLContext& cl;
+    OpenCLArray* params;
+    OpenCLArray* bornSum;
+    OpenCLArray* longBornSum;
+    OpenCLArray* bornRadii;
+    OpenCLArray* bornForce;
+    OpenCLArray* longBornForce;
+    OpenCLArray* obcChain;
+    cl::Kernel computeBornSumKernel;
+    cl::Kernel reduceBornSumKernel;
+    cl::Kernel force1Kernel;
+    cl::Kernel reduceBornForceKernel;
 };
 
 /**
  * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
-    ReferenceCalcCustomGBForceKernel(std::string name, const Platform& platform) : CalcCustomGBForceKernel(name, platform) {
+    OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomGBForceKernel(name, platform),
+            hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
+            valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~ReferenceCalcCustomGBForceKernel();
+    ~OpenCLCalcCustomGBForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -728,32 +764,36 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
-    int numParticles;
-    bool isPeriodic;
-    RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff;
-    std::vector<std::set<int> > exclusions;
-    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
-    std::vector<Lepton::ExpressionProgram> valueExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions;
-    std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
-    std::vector<Lepton::ExpressionProgram> energyExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions;
-    std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
-    NonbondedMethod nonbondedMethod;
-    NeighborList* neighborList;
+    bool hasInitializedKernels, needParameterGradient;
+    int maxTiles, numComputedValues;
+    OpenCLContext& cl;
+    OpenCLParameterSet* params;
+    OpenCLParameterSet* computedValues;
+    OpenCLParameterSet* energyDerivs;
+    OpenCLArray* longEnergyDerivs;
+    OpenCLArray* globals;
+    OpenCLArray* valueBuffers;
+    OpenCLArray* longValueBuffers;
+    OpenCLArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
+    const System& system;
+    cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    std::string pairValueSrc, pairEnergySrc;
+    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
 };
 
 /**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+class OpenCLCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    ReferenceCalcCustomExternalForceKernel(std::string name, const Platform& platform) : CalcCustomExternalForceKernel(name, platform) {
+    OpenCLCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomExternalForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
     }
-    ~ReferenceCalcCustomExternalForceKernel();
+    ~OpenCLCalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -779,20 +819,26 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
     int numParticles;
-    std::vector<int> particles;
-    RealOpenMM **particleParamArray;
-    Lepton::ExpressionProgram energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
-    std::vector<std::string> parameterNames, globalParameterNames;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    const System& system;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
+class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    ReferenceCalcCustomHbondForceKernel(std::string name, const Platform& platform) : CalcCustomHbondForceKernel(name, platform), ixn(NULL) {
+    OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomHbondForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
+            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
+            tabulatedFunctionParams(NULL), system(system) {
     }
-    ~ReferenceCalcCustomHbondForceKernel();
+    ~OpenCLCalcCustomHbondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -817,24 +863,35 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
-    int numDonors, numAcceptors, numParticles;
-    bool isPeriodic;
-    int **exclusionArray;
-    RealOpenMM **donorParamArray, **acceptorParamArray;
-    RealOpenMM nonbondedCutoff;
-    ReferenceCustomHbondIxn* ixn;
-    std::vector<std::set<int> > exclusions;
-    std::vector<std::string> globalParameterNames;
+    int numDonors, numAcceptors;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    OpenCLParameterSet* donorParams;
+    OpenCLParameterSet* acceptorParams;
+    OpenCLArray* globals;
+    OpenCLArray* donors;
+    OpenCLArray* acceptors;
+    OpenCLArray* donorBufferIndices;
+    OpenCLArray* acceptorBufferIndices;
+    OpenCLArray* donorExclusions;
+    OpenCLArray* acceptorExclusions;
+    OpenCLArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    const System& system;
+    cl::Kernel donorKernel, acceptorKernel;
 };
 
 /**
  * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
  */
-class ReferenceCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
+class OpenCLCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
-    ReferenceCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform) : CalcCustomCompoundBondForceKernel(name, platform), ixn(NULL) {
+    OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~ReferenceCalcCustomCompoundBondForceKernel();
+    ~OpenCLCalcCustomCompoundBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -858,32 +915,38 @@ public:
      * @param force      the CustomCompoundBondForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
+
 private:
-    int numBonds, numParticles;
-    RealOpenMM **bondParamArray;
-    ReferenceCustomCompoundBondIxn* ixn;
-    std::vector<std::string> globalParameterNames;
+    int numBonds;
+    OpenCLContext& cl;
+    OpenCLParameterSet* params;
+    OpenCLArray* globals;
+    OpenCLArray* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray*> tabulatedFunctions;
+    const System& system;
 };
 
 /**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
-class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
+class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false) {
     }
-    ~ReferenceIntegrateVerletStepKernel();
+    ~OpenCLIntegrateVerletStepKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the VerletIntegrator this kernel will be used for
      */
     void initialize(const System& system, const VerletIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      */
@@ -896,33 +959,31 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceVerletDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
+    OpenCLContext& cl;
     double prevStepSize;
+    bool hasInitializedKernels;
+    cl::Kernel kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by LangevinIntegrator to take one time step.
  */
-class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), params(NULL) {
     }
-    ~ReferenceIntegrateLangevinStepKernel();
+    ~OpenCLIntegrateLangevinStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the LangevinIntegrator this kernel will be used for
      */
     void initialize(const System& system, const LangevinIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
@@ -935,33 +996,32 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceStochasticDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
+    OpenCLContext& cl;
     double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
+    OpenCLArray* params;
+    cl::Kernel kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by BrownianIntegrator to take one time step.
  */
-class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), prevTemp(-1), prevFriction(-1), prevStepSize(-1) {
     }
-    ~ReferenceIntegrateBrownianStepKernel();
+    ~OpenCLIntegrateBrownianStepKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the BrownianIntegrator this kernel will be used for
      */
     void initialize(const System& system, const BrownianIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
@@ -974,64 +1034,21 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceBrownianDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
+    OpenCLContext& cl;
     double prevTemp, prevFriction, prevStepSize;
-};
-
-/**
- * This kernel is invoked by VariableLangevinIntegrator to take one time step.
- */
-class ReferenceIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
-public:
-    ReferenceIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
-    }
-    ~ReferenceIntegrateVariableLangevinStepKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the VariableLangevinIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableLangevinIntegrator this kernel is being used for
-     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-     * @return the size of the step that was taken
-     */
-    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableLangevinIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
-private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceVariableStochasticDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
-    double prevTemp, prevFriction, prevErrorTol;
+    bool hasInitializedKernels;
+    cl::Kernel kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by VariableVerletIntegrator to take one time step.
  */
-class ReferenceIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
-    ReferenceIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false) {
     }
-    ~ReferenceIntegrateVariableVerletStepKernel();
+    ~OpenCLIntegrateVariableVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1056,23 +1073,63 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceVariableVerletDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses;
-    int numConstraints;
-    double prevErrorTol;
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int blockSize;
+    cl::Kernel kernel1, kernel2, selectSizeKernel;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), params(NULL) {
+    }
+    ~OpenCLIntegrateVariableLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the size of the step that was taken
+     */
+    double execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int blockSize;
+    OpenCLArray* params;
+    cl::Kernel kernel1, kernel2, selectSizeKernel;
+    double prevTemp, prevFriction, prevErrorTol;
 };
 
 /**
  * This kernel is invoked by CustomIntegrator to take one time step.
  */
-class ReferenceIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
+class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
-    ReferenceIntegrateCustomStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateCustomStepKernel(name, platform),
-        data(data), dynamics(0), constraints(0) {
+    OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
+            kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
     }
-    ~ReferenceIntegrateCustomStepKernel();
+    ~OpenCLIntegrateCustomStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1133,49 +1190,83 @@ public:
      */
     void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
 private:
-    ReferencePlatform::PlatformData& data;
-    ReferenceCustomDynamics* dynamics;
-    ReferenceConstraintAlgorithm* constraints;
-    std::vector<RealOpenMM> masses, globalValues;
-    std::vector<std::vector<OpenMM::RealVec> > perDofValues; 
-    int numConstraints;
+    class ReorderListener;
+    std::string createGlobalComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator, const std::string& energyName);
+    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
+    void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    void recordChangedParameters(ContextImpl& context);
+    OpenCLContext& cl;
+    double prevStepSize;
+    int numGlobalVariables;
+    bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
+    mutable bool localValuesAreCurrent;
+    OpenCLArray* globalValues;
+    OpenCLArray* contextParameterValues;
+    OpenCLArray* sumBuffer;
+    OpenCLArray* potentialEnergy;
+    OpenCLArray* kineticEnergy;
+    OpenCLArray* uniformRandoms;
+    OpenCLArray* randomSeed;
+    std::map<int, OpenCLArray*> savedForces;
+    std::set<int> validSavedForces;
+    OpenCLParameterSet* perDofValues;
+    mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
+    mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
+    std::vector<float> contextValuesFloat;
+    std::vector<double> contextValuesDouble;
+    std::vector<float> contextValues;
+    std::vector<std::vector<cl::Kernel> > kernels;
+    cl::Kernel sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    std::vector<CustomIntegrator::ComputationType> stepType;
+    std::vector<bool> needsForces;
+    std::vector<bool> needsEnergy;
+    std::vector<bool> invalidatesForces;
+    std::vector<bool> merged;
+    std::vector<int> forceGroup;
+    std::vector<int> requiredGaussian;
+    std::vector<int> requiredUniform;
+    std::vector<std::string> parameterNames;
 };
 
 /**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
-class ReferenceApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    ReferenceApplyAndersenThermostatKernel(std::string name, const Platform& platform) : ApplyAndersenThermostatKernel(name, platform), thermostat(0) {
+    OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyAndersenThermostatKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), atomGroups(NULL) {
     }
-    ~ReferenceApplyAndersenThermostatKernel();
+    ~OpenCLApplyAndersenThermostatKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param thermostat the AndersenThermostat this kernel will be used for
      */
     void initialize(const System& system, const AndersenThermostat& thermostat);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      */
     void execute(ContextImpl& context);
 private:
-    ReferenceAndersenThermostat* thermostat;
-    std::vector<std::vector<int> > particleGroups;
-    std::vector<RealOpenMM> masses;
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int randomSeed;
+    OpenCLArray* atomGroups;
+    cl::Kernel kernel;
 };
 
 /**
  * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
  */
-class ReferenceApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+class OpenCLApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
-    ReferenceApplyMonteCarloBarostatKernel(std::string name, const Platform& platform) : ApplyMonteCarloBarostatKernel(name, platform), barostat(NULL) {
+    OpenCLApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyMonteCarloBarostatKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
-    ~ReferenceApplyMonteCarloBarostatKernel();
+    ~OpenCLApplyMonteCarloBarostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1201,35 +1292,44 @@ public:
      */
     void restoreCoordinates(ContextImpl& context);
 private:
-    ReferenceMonteCarloBarostat* barostat;
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int numMolecules;
+    OpenCLArray* savedPositions;
+    OpenCLArray* moleculeAtoms;
+    OpenCLArray* moleculeStartIndex;
+    cl::Kernel kernel;
+    std::vector<int> lastAtomOrder;
 };
 
 /**
  * This kernel is invoked to remove center of mass motion from the system.
  */
-class ReferenceRemoveCMMotionKernel : public RemoveCMMotionKernel {
+class OpenCLRemoveCMMotionKernel : public RemoveCMMotionKernel {
 public:
-    ReferenceRemoveCMMotionKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : RemoveCMMotionKernel(name, platform), data(data) {
+    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLContext& cl) : RemoveCMMotionKernel(name, platform), cl(cl), cmMomentum(NULL) {
     }
+    ~OpenCLRemoveCMMotionKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the CMMotionRemover this kernel will be used for
      */
     void initialize(const System& system, const CMMotionRemover& force);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      */
     void execute(ContextImpl& context);
 private:
-    ReferencePlatform::PlatformData& data;
-    std::vector<double> masses;
+    OpenCLContext& cl;
     int frequency;
+    OpenCLArray* cmMomentum;
+    cl::Kernel kernel1, kernel2;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_REFERENCEKERNELS_H_*/
+#endif /*OPENMM_OPENCLKERNELS_H_*/

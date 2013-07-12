@@ -26,8 +26,8 @@
 #include <sstream>
 #include <stdio.h>
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
-#include "../SimTKReference/ReferenceForce.h"
+#include "SimTKOpenMMCommon.h"
+#include "ReferenceForce.h"
 #include "CpuGBVI.h"
 
 using namespace std;

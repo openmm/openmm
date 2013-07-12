@@ -64,6 +64,14 @@ using namespace OpenMM;
 
 %include OpenMM_headers.i
 
+%pythoncode %{
+  # when we import * from the python module, we only want to import the
+  # actual classes, and not the swigregistration methods, which have already
+  # been called, and are now unneeded by the user code, and only pollute the
+  # namespace
+  __all__ = [k for k in locals().keys() if not k.endswith('_swigregister')]
+%}
+
 /*
 %extend OpenMM::XmlSerializer {
     %template(XmlSerializer_serialize_AndersenThermostat) XmlSerializer::serialize<AndersenThermostat>;

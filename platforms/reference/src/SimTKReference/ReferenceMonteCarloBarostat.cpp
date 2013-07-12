@@ -25,7 +25,7 @@
 #include <string.h>
 #include <sstream>
 
-#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 #include "ReferenceMonteCarloBarostat.h"
 
 using namespace std;

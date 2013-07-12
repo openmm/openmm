@@ -1,3 +1,6 @@
+#ifndef OPENMM_CPUPMEKERNELFACTORY_H_
+#define OPENMM_CPUPMEKERNELFACTORY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,23 +32,19 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifndef __ReferenceVirtualSites_H__
-#define __ReferenceVirtualSites_H__
+#include "openmm/KernelFactory.h"
 
-#include "openmm/System.h"
-#include "../SimTKUtilities/RealVec.h"
-#include <vector>
+namespace OpenMM {
 
-class OPENMM_EXPORT ReferenceVirtualSites {
+/**
+ * This KernelFactory creates kernels for the CPU implementation of PME.
+ */
+
+class CpuPmeKernelFactory : public KernelFactory {
 public:
-    /**
-     * Compute the positions of all virtual sites.
-     */
-    static void computePositions(const OpenMM::System& system, std::vector<OpenMM::RealVec>& atomCoordinates);
-    /**
-     * Distribute forces from virtual sites to the atoms they are based on.
-     */
-    static void distributeForces(const OpenMM::System& system, const std::vector<OpenMM::RealVec>& atomCoordinates, std::vector<OpenMM::RealVec>& forces);
+    KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
 };
 
-#endif // __ReferenceVirtualSites_H__
+} // namespace OpenMM
+
+#endif /*OPENMM_CPUPMEKERNELFACTORY_H_*/

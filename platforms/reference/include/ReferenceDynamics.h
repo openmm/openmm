@@ -26,7 +26,7 @@
 #define __ReferenceDynamics_H__
 
 #include "ReferenceConstraintAlgorithm.h"
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "SimTKOpenMMCommon.h"
 #include "openmm/System.h"
 #include <cstddef>
 #include <vector>

@@ -33,8 +33,8 @@
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
 #include "openmm/internal/ContextImpl.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
-#include "SimTKUtilities/RealVec.h"
+#include "SimTKOpenMMRealType.h"
+#include "RealVec.h"
 #include <vector>
 
 using namespace OpenMM;

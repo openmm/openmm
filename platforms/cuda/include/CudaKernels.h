@@ -1,5 +1,5 @@
-#ifndef OPENMM_OPENCLKERNELS_H_
-#define OPENMM_OPENCLKERNELS_H_
+#ifndef OPENMM_CUDAKERNELS_H_
+#define OPENMM_CUDAKERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -27,14 +27,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLPlatform.h"
-#include "OpenCLArray.h"
-#include "OpenCLContext.h"
-#include "OpenCLFFT3D.h"
-#include "OpenCLParameterSet.h"
-#include "OpenCLSort.h"
+#include "CudaPlatform.h"
+#include "CudaArray.h"
+#include "CudaContext.h"
+#include "CudaParameterSet.h"
+#include "CudaSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include <cufft.h>
 
 namespace OpenMM {
 
@@ -43,9 +43,9 @@ namespace OpenMM {
  * Platform a chance to clear buffers and do other initialization at the beginning, and to do any
  * necessary work at the end to determine the final results.
  */
-class OpenCLCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
+class CudaCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    OpenCLCalcForcesAndEnergyKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcForcesAndEnergyKernel(name, platform), cl(cl) {
+    CudaCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcForcesAndEnergyKernel(name, platform), cu(cu) {
     }
     /**
      * Initialize the kernel.
@@ -77,16 +77,16 @@ public:
      */
     double finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups);
 private:
-   OpenCLContext& cl;
+   CudaContext& cu;
 };
 
 /**
  * This kernel provides methods for setting and retrieving various state data: time, positions,
  * velocities, and forces.
  */
-class OpenCLUpdateStateDataKernel : public UpdateStateDataKernel {
+class CudaUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
-    OpenCLUpdateStateDataKernel(std::string name, const Platform& platform, OpenCLContext& cl) : UpdateStateDataKernel(name, platform), cl(cl) {
+    CudaUpdateStateDataKernel(std::string name, const Platform& platform, CudaContext& cu) : UpdateStateDataKernel(name, platform), cu(cu) {
     }
     /**
      * Initialize the kernel.
@@ -165,16 +165,16 @@ public:
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
 };
 
 /**
  * This kernel modifies the positions of particles to enforce distance constraints.
  */
-class OpenCLApplyConstraintsKernel : public ApplyConstraintsKernel {
+class CudaApplyConstraintsKernel : public ApplyConstraintsKernel {
 public:
-    OpenCLApplyConstraintsKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyConstraintsKernel(name, platform),
-            cl(cl), hasInitializedKernel(false) {
+    CudaApplyConstraintsKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyConstraintsKernel(name, platform),
+            cu(cu), hasInitializedKernel(false) {
     }
     /**
      * Initialize the kernel.
@@ -197,17 +197,17 @@ public:
      */
     void applyToVelocities(ContextImpl& context, double tol);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
     bool hasInitializedKernel;
-    cl::Kernel applyDeltasKernel;
+    CUfunction applyDeltasKernel;
 };
 
 /**
  * This kernel recomputes the positions of virtual sites.
  */
-class OpenCLVirtualSitesKernel : public VirtualSitesKernel {
+class CudaVirtualSitesKernel : public VirtualSitesKernel {
 public:
-    OpenCLVirtualSitesKernel(std::string name, const Platform& platform, OpenCLContext& cl) : VirtualSitesKernel(name, platform), cl(cl) {
+    CudaVirtualSitesKernel(std::string name, const Platform& platform, CudaContext& cu) : VirtualSitesKernel(name, platform), cu(cu) {
     }
     /**
      * Initialize the kernel.
@@ -222,18 +222,18 @@ public:
      */
     void computePositions(ContextImpl& context);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
 };
 
 /**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
+class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcHarmonicBondForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
+    CudaCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicBondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
-    ~OpenCLCalcHarmonicBondForceKernel();
+    ~CudaCalcHarmonicBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -260,20 +260,20 @@ public:
 private:
     int numBonds;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLArray* params;
+    CudaArray* params;
 };
 
 /**
  * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
-    OpenCLCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomBondForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
+    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomBondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~OpenCLCalcCustomBondForceKernel();
+    ~CudaCalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -300,23 +300,23 @@ public:
 private:
     int numBonds;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLParameterSet* params;
-    OpenCLArray* globals;
+    CudaParameterSet* params;
+    CudaArray* globals;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
+    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcHarmonicAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
-    ~OpenCLCalcHarmonicAngleForceKernel();
+    ~CudaCalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -343,20 +343,20 @@ public:
 private:
     int numAngles;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLArray* params;
+    CudaArray* params;
 };
 
 /**
  * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
+class CudaCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
-    OpenCLCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomAngleForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
+    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~OpenCLCalcCustomAngleForceKernel();
+    ~CudaCalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -383,23 +383,23 @@ public:
 private:
     int numAngles;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLParameterSet* params;
-    OpenCLArray* globals;
+    CudaParameterSet* params;
+    CudaArray* globals;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
+    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL) {
     }
-    ~OpenCLCalcPeriodicTorsionForceKernel();
+    ~CudaCalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -426,20 +426,20 @@ public:
 private:
     int numTorsions;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLArray* params;
+    CudaArray* params;
 };
 
 /**
  * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+class CudaCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcRBTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL) {
+    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcRBTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params1(NULL), params2(NULL) {
     }
-    ~OpenCLCalcRBTorsionForceKernel();
+    ~CudaCalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -466,20 +466,21 @@ public:
 private:
     int numTorsions;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLArray* params;
+    CudaArray* params1;
+    CudaArray* params2;
 };
 
 /**
  * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+class CudaCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
-    OpenCLCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
+    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCMAPTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), coefficients(NULL), mapPositions(NULL), torsionMaps(NULL) {
     }
-    ~OpenCLCalcCMAPTorsionForceKernel();
+    ~CudaCalcCMAPTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -499,22 +500,22 @@ public:
 private:
     int numTorsions;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLArray* coefficients;
-    OpenCLArray* mapPositions;
-    OpenCLArray* torsionMaps;
+    CudaArray* coefficients;
+    CudaArray* mapPositions;
+    CudaArray* torsionMaps;
 };
 
 /**
  * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
-    OpenCLCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomTorsionForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
+    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~OpenCLCalcCustomTorsionForceKernel();
+    ~CudaCalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -541,25 +542,24 @@ public:
 private:
     int numTorsions;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLParameterSet* params;
-    OpenCLArray* globals;
+    CudaParameterSet* params;
+    CudaArray* globals;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), pmeGrid(NULL),
-            pmeGrid2(NULL), pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL),
-            pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
+    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
+            cu(cu), hasInitializedFFT(false), sigmaEpsilon(NULL), exceptionParams(NULL), cosSinSums(NULL), directPmeGrid(NULL), reciprocalPmeGrid(NULL),
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL),  pmeAtomRange(NULL), pmeAtomGridIndex(NULL), sort(NULL), pmeio(NULL) {
     }
-    ~OpenCLCalcNonbondedForceKernel();
+    ~CudaCalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -586,44 +586,48 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
 private:
-    class SortTrait : public OpenCLSort::SortTrait {
+    class SortTrait : public CudaSort::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
         const char* getKeyType() const {return "int";}
         const char* getMinKey() const {return "INT_MIN";}
         const char* getMaxKey() const {return "INT_MAX";}
-        const char* getMaxValue() const {return "(int2) (INT_MAX, INT_MAX)";}
+        const char* getMaxValue() const {return "make_int2(INT_MAX, INT_MAX)";}
         const char* getSortKey() const {return "value.y";}
     };
-    OpenCLContext& cl;
-    bool hasInitializedKernel;
-    OpenCLArray* sigmaEpsilon;
-    OpenCLArray* exceptionParams;
-    OpenCLArray* cosSinSums;
-    OpenCLArray* pmeGrid;
-    OpenCLArray* pmeGrid2;
-    OpenCLArray* pmeBsplineModuliX;
-    OpenCLArray* pmeBsplineModuliY;
-    OpenCLArray* pmeBsplineModuliZ;
-    OpenCLArray* pmeBsplineTheta;
-    OpenCLArray* pmeAtomRange;
-    OpenCLArray* pmeAtomGridIndex;
-    OpenCLSort* sort;
-    OpenCLFFT3D* fft;
-    cl::Kernel ewaldSumsKernel;
-    cl::Kernel ewaldForcesKernel;
-    cl::Kernel pmeGridIndexKernel;
-    cl::Kernel pmeAtomRangeKernel;
-    cl::Kernel pmeZIndexKernel;
-    cl::Kernel pmeUpdateBsplinesKernel;
-    cl::Kernel pmeSpreadChargeKernel;
-    cl::Kernel pmeFinishSpreadChargeKernel;
-    cl::Kernel pmeConvolutionKernel;
-    cl::Kernel pmeInterpolateForceKernel;
+    class PmeIO;
+    class PmePreComputation;
+    class PmePostComputation;
+    CudaContext& cu;
+    bool hasInitializedFFT;
+    CudaArray* sigmaEpsilon;
+    CudaArray* exceptionParams;
+    CudaArray* cosSinSums;
+    CudaArray* directPmeGrid;
+    CudaArray* reciprocalPmeGrid;
+    CudaArray* pmeBsplineModuliX;
+    CudaArray* pmeBsplineModuliY;
+    CudaArray* pmeBsplineModuliZ;
+    CudaArray* pmeAtomRange;
+    CudaArray* pmeAtomGridIndex;
+    CudaSort* sort;
+    Kernel cpuPme;
+    PmeIO* pmeio;
+    cufftHandle fftForward;
+    cufftHandle fftBackward;
+    CUfunction ewaldSumsKernel;
+    CUfunction ewaldForcesKernel;
+    CUfunction pmeGridIndexKernel;
+    CUfunction pmeSpreadChargeKernel;
+    CUfunction pmeFinishSpreadChargeKernel;
+    CUfunction pmeEvalEnergyKernel;
+    CUfunction pmeConvolutionKernel;
+    CUfunction pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     double ewaldSelfEnergy, dispersionCoefficient, alpha;
+    int interpolateForceThreads;
     bool hasCoulomb, hasLJ;
     static const int PmeOrder = 5;
 };
@@ -631,12 +635,12 @@ private:
 /**
  * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
  */
-class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
+    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), forceCopy(NULL), system(system) {
     }
-    ~OpenCLCalcCustomNonbondedForceKernel();
+    ~CudaCalcCustomNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -661,13 +665,13 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
-    OpenCLContext& cl;
-    OpenCLParameterSet* params;
-    OpenCLArray* globals;
-    OpenCLArray* tabulatedFunctionParams;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray*> tabulatedFunctions;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
     double longRangeCoefficient;
     bool hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
@@ -677,13 +681,12 @@ private:
 /**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
-class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
+class CudaCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
-    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl),
-            hasCreatedKernels(false), params(NULL), bornSum(NULL), longBornSum(NULL), bornRadii(NULL), bornForce(NULL),
-            longBornForce(NULL), obcChain(NULL) {
+    CudaCalcGBSAOBCForceKernel(std::string name, const Platform& platform, CudaContext& cu) : CalcGBSAOBCForceKernel(name, platform), cu(cu),
+            hasCreatedKernels(false), params(NULL), bornSum(NULL), bornRadii(NULL), bornForce(NULL), obcChain(NULL) {
     }
-    ~OpenCLCalcGBSAOBCForceKernel();
+    ~CudaCalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -711,30 +714,29 @@ private:
     double prefactor;
     bool hasCreatedKernels;
     int maxTiles;
-    OpenCLContext& cl;
-    OpenCLArray* params;
-    OpenCLArray* bornSum;
-    OpenCLArray* longBornSum;
-    OpenCLArray* bornRadii;
-    OpenCLArray* bornForce;
-    OpenCLArray* longBornForce;
-    OpenCLArray* obcChain;
-    cl::Kernel computeBornSumKernel;
-    cl::Kernel reduceBornSumKernel;
-    cl::Kernel force1Kernel;
-    cl::Kernel reduceBornForceKernel;
+    CudaContext& cu;
+    CudaArray* params;
+    CudaArray* bornSum;
+    CudaArray* bornRadii;
+    CudaArray* bornForce;
+    CudaArray* obcChain;
+    CUfunction computeBornSumKernel;
+    CUfunction reduceBornSumKernel;
+    CUfunction force1Kernel;
+    CUfunction reduceBornForceKernel;
+    std::vector<void*> computeSumArgs, force1Args;
 };
 
 /**
  * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
  */
-class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+class CudaCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
-    OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomGBForceKernel(name, platform),
-            hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
-            valueBuffers(NULL), longValueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+    CudaCalcCustomGBForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomGBForceKernel(name, platform),
+            hasInitializedKernels(false), cu(cu), params(NULL), computedValues(NULL), energyDerivs(NULL), longEnergyDerivs(NULL), globals(NULL),
+            valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~OpenCLCalcCustomGBForceKernel();
+    ~CudaCalcCustomGBForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -761,21 +763,21 @@ public:
 private:
     bool hasInitializedKernels, needParameterGradient;
     int maxTiles, numComputedValues;
-    OpenCLContext& cl;
-    OpenCLParameterSet* params;
-    OpenCLParameterSet* computedValues;
-    OpenCLParameterSet* energyDerivs;
-    OpenCLArray* longEnergyDerivs;
-    OpenCLArray* globals;
-    OpenCLArray* valueBuffers;
-    OpenCLArray* longValueBuffers;
-    OpenCLArray* tabulatedFunctionParams;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaParameterSet* computedValues;
+    CudaParameterSet* energyDerivs;
+    CudaArray* longEnergyDerivs;
+    CudaArray* globals;
+    CudaArray* valueBuffers;
+    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray*> tabulatedFunctions;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     const System& system;
-    cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    CUfunction pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    std::vector<void*> pairValueArgs, perParticleValueArgs, pairEnergyArgs, perParticleEnergyArgs, gradientChainRuleArgs;
     std::string pairValueSrc, pairEnergySrc;
     std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
 };
@@ -783,12 +785,12 @@ private:
 /**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+class CudaCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
-    OpenCLCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomExternalForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), system(system), params(NULL), globals(NULL) {
+    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomExternalForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), system(system), params(NULL), globals(NULL) {
     }
-    ~OpenCLCalcCustomExternalForceKernel();
+    ~CudaCalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -815,25 +817,24 @@ public:
 private:
     int numParticles;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
+    CudaContext& cu;
     const System& system;
-    OpenCLParameterSet* params;
-    OpenCLArray* globals;
+    CudaParameterSet* params;
+    CudaArray* globals;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
+    std::vector<float> globalParamValues;
 };
 
 /**
  * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
  */
-class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
+class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomHbondForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
-            tabulatedFunctionParams(NULL), system(system) {
+    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomHbondForceKernel(name, platform),
+            hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
+            globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~OpenCLCalcCustomHbondForceKernel();
+    ~CudaCalcCustomHbondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -860,33 +861,32 @@ public:
 private:
     int numDonors, numAcceptors;
     bool hasInitializedKernel;
-    OpenCLContext& cl;
-    OpenCLParameterSet* donorParams;
-    OpenCLParameterSet* acceptorParams;
-    OpenCLArray* globals;
-    OpenCLArray* donors;
-    OpenCLArray* acceptors;
-    OpenCLArray* donorBufferIndices;
-    OpenCLArray* acceptorBufferIndices;
-    OpenCLArray* donorExclusions;
-    OpenCLArray* acceptorExclusions;
-    OpenCLArray* tabulatedFunctionParams;
+    CudaContext& cu;
+    CudaParameterSet* donorParams;
+    CudaParameterSet* acceptorParams;
+    CudaArray* globals;
+    CudaArray* donors;
+    CudaArray* acceptors;
+    CudaArray* donorExclusions;
+    CudaArray* acceptorExclusions;
+    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray*> tabulatedFunctions;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
+    std::vector<void*> donorArgs, acceptorArgs;
     const System& system;
-    cl::Kernel donorKernel, acceptorKernel;
+    CUfunction donorKernel, acceptorKernel;
 };
 
 /**
  * This kernel is invoked by CustomCompoundBondForce to calculate the forces acting on the system.
  */
-class OpenCLCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
+class CudaCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
-    OpenCLCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
-            cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+    CudaCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomCompoundBondForceKernel(name, platform),
+            cu(cu), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
-    ~OpenCLCalcCustomCompoundBondForceKernel();
+    ~CudaCalcCustomCompoundBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -913,25 +913,24 @@ public:
 
 private:
     int numBonds;
-    OpenCLContext& cl;
-    OpenCLParameterSet* params;
-    OpenCLArray* globals;
-    OpenCLArray* tabulatedFunctionParams;
+    CudaContext& cu;
+    CudaParameterSet* params;
+    CudaArray* globals;
+    CudaArray* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray*> tabulatedFunctions;
+    std::vector<float> globalParamValues;
+    std::vector<CudaArray*> tabulatedFunctions;
     const System& system;
 };
 
 /**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
-class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
+class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
+    CudaIntegrateVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVerletStepKernel(name, platform), cu(cu) {
     }
-    ~OpenCLIntegrateVerletStepKernel();
+    ~CudaIntegrateVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -954,21 +953,19 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
     double prevStepSize;
-    bool hasInitializedKernels;
-    cl::Kernel kernel1, kernel2;
+    CUfunction kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by LangevinIntegrator to take one time step.
  */
-class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), params(NULL) {
+    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateLangevinStepKernel(name, platform), cu(cu), params(NULL) {
     }
-    ~OpenCLIntegrateLangevinStepKernel();
+    ~CudaIntegrateLangevinStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      *
@@ -991,22 +988,20 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
-    bool hasInitializedKernels;
-    OpenCLArray* params;
-    cl::Kernel kernel1, kernel2;
+    CudaArray* params;
+    CUfunction kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by BrownianIntegrator to take one time step.
  */
-class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), prevTemp(-1), prevFriction(-1), prevStepSize(-1) {
+    CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateBrownianStepKernel(name, platform), cu(cu) {
     }
-    ~OpenCLIntegrateBrownianStepKernel();
+    ~CudaIntegrateBrownianStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1029,21 +1024,19 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
     double prevTemp, prevFriction, prevStepSize;
-    bool hasInitializedKernels;
-    cl::Kernel kernel1, kernel2;
+    CUfunction kernel1, kernel2;
 };
 
 /**
  * This kernel is invoked by VariableVerletIntegrator to take one time step.
  */
-class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
-    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
+    CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableVerletStepKernel(name, platform), cu(cu) {
     }
-    ~OpenCLIntegrateVariableVerletStepKernel();
+    ~CudaIntegrateVariableVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1068,21 +1061,20 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
+    CudaContext& cu;
     int blockSize;
-    cl::Kernel kernel1, kernel2, selectSizeKernel;
+    CUfunction kernel1, kernel2, selectSizeKernel;
 };
 
 /**
  * This kernel is invoked by VariableLangevinIntegrator to take one time step.
  */
-class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
-    OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), params(NULL) {
+    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateVariableLangevinStepKernel(name, platform),
+            cu(cu), params(NULL) {
     }
-    ~OpenCLIntegrateVariableLangevinStepKernel();
+    ~CudaIntegrateVariableLangevinStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      *
@@ -1107,24 +1099,23 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator);
 private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
+    CudaContext& cu;
     int blockSize;
-    OpenCLArray* params;
-    cl::Kernel kernel1, kernel2, selectSizeKernel;
+    CudaArray* params;
+    CUfunction kernel1, kernel2, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
 
 /**
  * This kernel is invoked by CustomIntegrator to take one time step.
  */
-class OpenCLIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
+class CudaIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
-    OpenCLIntegrateCustomStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateCustomStepKernel(name, platform), cl(cl),
+    CudaIntegrateCustomStepKernel(std::string name, const Platform& platform, CudaContext& cu) : IntegrateCustomStepKernel(name, platform), cu(cu),
             hasInitializedKernels(false), localValuesAreCurrent(false), globalValues(NULL), contextParameterValues(NULL), sumBuffer(NULL), potentialEnergy(NULL),
             kineticEnergy(NULL), uniformRandoms(NULL), randomSeed(NULL), perDofValues(NULL) {
     }
-    ~OpenCLIntegrateCustomStepKernel();
+    ~CudaIntegrateCustomStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1190,28 +1181,29 @@ private:
     std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, int component, CustomIntegrator& integrator, const std::string& forceName, const std::string& energyName);
     void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
     void recordChangedParameters(ContextImpl& context);
-    OpenCLContext& cl;
+    CudaContext& cu;
     double prevStepSize;
     int numGlobalVariables;
     bool hasInitializedKernels, deviceValuesAreCurrent, modifiesParameters, keNeedsForce;
     mutable bool localValuesAreCurrent;
-    OpenCLArray* globalValues;
-    OpenCLArray* contextParameterValues;
-    OpenCLArray* sumBuffer;
-    OpenCLArray* potentialEnergy;
-    OpenCLArray* kineticEnergy;
-    OpenCLArray* uniformRandoms;
-    OpenCLArray* randomSeed;
-    std::map<int, OpenCLArray*> savedForces;
+    CudaArray* globalValues;
+    CudaArray* contextParameterValues;
+    CudaArray* sumBuffer;
+    CudaArray* potentialEnergy;
+    CudaArray* kineticEnergy;
+    CudaArray* uniformRandoms;
+    CudaArray* randomSeed;
+    std::map<int, CudaArray*> savedForces;
     std::set<int> validSavedForces;
-    OpenCLParameterSet* perDofValues;
-    mutable std::vector<std::vector<cl_float> > localPerDofValuesFloat;
-    mutable std::vector<std::vector<cl_double> > localPerDofValuesDouble;
+    CudaParameterSet* perDofValues;
+    mutable std::vector<std::vector<float> > localPerDofValuesFloat;
+    mutable std::vector<std::vector<double> > localPerDofValuesDouble;
     std::vector<float> contextValuesFloat;
     std::vector<double> contextValuesDouble;
-    std::vector<float> contextValues;
-    std::vector<std::vector<cl::Kernel> > kernels;
-    cl::Kernel sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
+    std::vector<std::vector<CUfunction> > kernels;
+    std::vector<std::vector<std::vector<void*> > > kernelArgs;
+    std::vector<void*> kineticEnergyArgs;
+    CUfunction sumPotentialEnergyKernel, randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
     std::vector<CustomIntegrator::ComputationType> stepType;
     std::vector<bool> needsForces;
     std::vector<bool> needsEnergy;
@@ -1226,12 +1218,12 @@ private:
 /**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
-class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyAndersenThermostatKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), atomGroups(NULL) {
+    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyAndersenThermostatKernel(name, platform), cu(cu),
+            atomGroups(NULL) {
     }
-    ~OpenCLApplyAndersenThermostatKernel();
+    ~CudaApplyAndersenThermostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1246,22 +1238,21 @@ public:
      */
     void execute(ContextImpl& context);
 private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
+    CudaContext& cu;
     int randomSeed;
-    OpenCLArray* atomGroups;
-    cl::Kernel kernel;
+    CudaArray* atomGroups;
+    CUfunction kernel;
 };
 
 /**
  * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
  */
-class OpenCLApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
-    OpenCLApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyMonteCarloBarostatKernel(name, platform), cl(cl),
+    CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
             hasInitializedKernels(false), savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
-    ~OpenCLApplyMonteCarloBarostatKernel();
+    ~CudaApplyMonteCarloBarostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1287,24 +1278,24 @@ public:
      */
     void restoreCoordinates(ContextImpl& context);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
     bool hasInitializedKernels;
     int numMolecules;
-    OpenCLArray* savedPositions;
-    OpenCLArray* moleculeAtoms;
-    OpenCLArray* moleculeStartIndex;
-    cl::Kernel kernel;
+    CudaArray* savedPositions;
+    CudaArray* moleculeAtoms;
+    CudaArray* moleculeStartIndex;
+    CUfunction kernel;
     std::vector<int> lastAtomOrder;
 };
 
 /**
  * This kernel is invoked to remove center of mass motion from the system.
  */
-class OpenCLRemoveCMMotionKernel : public RemoveCMMotionKernel {
+class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
 public:
-    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLContext& cl) : RemoveCMMotionKernel(name, platform), cl(cl), cmMomentum(NULL) {
+    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaContext& cu) : RemoveCMMotionKernel(name, platform), cu(cu), cmMomentum(NULL) {
     }
-    ~OpenCLRemoveCMMotionKernel();
+    ~CudaRemoveCMMotionKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      *
@@ -1319,12 +1310,13 @@ public:
      */
     void execute(ContextImpl& context);
 private:
-    OpenCLContext& cl;
+    CudaContext& cu;
     int frequency;
-    OpenCLArray* cmMomentum;
-    cl::Kernel kernel1, kernel2;
+    CudaArray* cmMomentum;
+    CUfunction kernel1, kernel2;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_OPENCLKERNELS_H_*/
+#endif /*OPENMM_CUDAKERNELS_H_*/
+

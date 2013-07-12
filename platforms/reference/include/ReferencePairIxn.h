@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2009 Stanford University and Simbios.
- * Contributors: Peter Eastman
+/* Portions copyright (c) 2006 Stanford University and Simbios.
+ * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,71 +22,57 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceConstraintAlgorithm_H__
-#define __ReferenceConstraintAlgorithm_H__
+#ifndef __ReferencePairIxn_H__
+#define __ReferencePairIxn_H__
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "openmm/internal/windowsExport.h"
 
-/**
- * This abstract class defines the interface which constraint algorithms must implement.
- */
-class OPENMM_EXPORT ReferenceConstraintAlgorithm {
-public:
+// ---------------------------------------------------------------------------------------
 
-    virtual ~ReferenceConstraintAlgorithm() {};
+class OPENMM_EXPORT ReferencePairIxn {
+
+   private:
+
+   public:
 
       /**---------------------------------------------------------------------------------------
-
-         Get the constraint tolerance
-
+      
+         Constructor
+      
          --------------------------------------------------------------------------------------- */
 
-    virtual RealOpenMM getTolerance() const = 0;
+       ReferencePairIxn( );
 
       /**---------------------------------------------------------------------------------------
-
-         Set the constraint tolerance
-
+      
+         Destructor
+      
          --------------------------------------------------------------------------------------- */
 
-    virtual void setTolerance(RealOpenMM tolerance) = 0;
+       ~ReferencePairIxn( );
 
       /**---------------------------------------------------------------------------------------
-
-         Apply constraint algorithm
-
+      
+         Calculate pair ixn
+      
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
-         @param atomCoordinatesP atom coordinates prime
-         @param inverseMasses    1/mass
-
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
+         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
+         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
+         @param fixedParameters  non-atom parameters
+         @param forces           force array (forces added)
+         @param energyByAtom     atom energy
+         @param totalEnergy      total energy
+            
          --------------------------------------------------------------------------------------- */
-
-    virtual int apply(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& atomCoordinatesP, std::vector<RealOpenMM>& inverseMasses) = 0;
-
-      /**---------------------------------------------------------------------------------------
-
-         Apply constraint algorithm to velocities.
-
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param velocities       atom velocities
-         @param inverseMasses    1/mass
-
-         @return SimTKOpenMMCommon::DefaultReturn if converge; else
-          return SimTKOpenMMCommon::ErrorReturn
-
-         --------------------------------------------------------------------------------------- */
-
-    virtual int applyToVelocities(int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
-                     std::vector<OpenMM::RealVec>& velocities, std::vector<RealOpenMM>& inverseMasses) = 0;
+          
+      virtual void calculatePairIxn( int numberOfAtoms, std::vector<OpenMM::RealVec>& atomCoordinates,
+                            RealOpenMM** atomParameters, int** exclusions,
+                            RealOpenMM* fixedParameters, std::vector<OpenMM::RealVec>& forces,
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;
+      
 };
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __ReferenceConstraintAlgorithm_H__
+#endif // __ReferencePairIxn_H__

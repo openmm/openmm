@@ -36,7 +36,7 @@
 #include "CudaForceInfo.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernelSources.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 #include <set>
 
 using namespace OpenMM;

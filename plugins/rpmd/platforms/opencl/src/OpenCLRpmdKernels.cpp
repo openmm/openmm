@@ -36,7 +36,7 @@
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLFFT3D.h"
 #include "OpenCLNonbondedUtilities.h"
-#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
 using namespace std;

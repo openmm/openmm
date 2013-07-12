@@ -34,9 +34,9 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "../src/OpenCLArray.h"
-#include "../src/OpenCLContext.h"
-#include "../src/OpenCLSort.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
+#include "OpenCLSort.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
 #include <iostream>
@@ -64,7 +64,7 @@ void verifySorting(vector<float> array) {
 
     System system;
     system.addParticle(0.0);
-    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"));
+    OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false");
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     OpenCLArray data(context, array.size(), sizeof(float), "sortData");
