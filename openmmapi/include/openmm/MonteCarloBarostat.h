@@ -123,15 +123,7 @@ protected:
 private:
     double defaultPressure, temperature;
     int frequency, randomNumberSeed;
-
-        double GetTemperature() const {
-            return temperature;
-        }
-
-        void SetTemperature(double temperature) {
-            this->temperature = temperature;
-        }
-    };
+};
 
 } // namespace OpenMM
 
