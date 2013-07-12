@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -43,9 +43,12 @@ namespace OpenMM {
  * This class uses a Monte Carlo algorithm to adjust the size of the periodic box, simulating the
  * effect of constant pressure.
  *
- * Compared to MonteCarloBarostat, this class scales the three axes of the simulation cell independently.
- * The user supplies three doubles to specify the pressure along each axis.
- *
+ * This class is similar to MonteCarloBarostat, but each Monte Carlo move is applied to only one axis
+ * of the periodic box (unlike MonteCarloBarostat, which scales the entire box isotropically).  This
+ * means that the box may change shape as well as size over the course of the simulation.  It also
+ * allows you to specify a different pressure for each axis of the box, or to keep the box size fixed
+ * along certain axes while still allowing it to change along others.
+ * 
  * This class assumes the simulation is also being run at constant temperature, and requires you
  * to specify the system temperature (since it affects the acceptance probability for Monte Carlo
  * moves).  It does not actually perform temperature regulation, however.  You must use another
@@ -84,39 +87,33 @@ public:
      * @param defaultPressure   The default pressure acting on each axis (in bar)
      * @param temperature       the temperature at which the system is being maintained (in Kelvin)
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
-     * @param scaleX            on/off switch for whether to scale the X axis
-     * @param scaleY            on/off switch for whether to scale the Y axis
-     * @param scaleZ            on/off switch for whether to scale the Z axis
+     * @param scaleX            whether to allow the X dimension of the periodic box to change size
+     * @param scaleY            whether to allow the Y dimension of the periodic box to change size
+     * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
      */
     MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double temperature, int frequency = 25, bool scaleX = 1, bool scaleY = 1, bool scaleZ = 1);
     /**
      * Get the default pressure (in bar).
      *
-     * @return the default pressure acting on the system, measured in bar.
+     * @return the default pressure acting along each axis, measured in bar.
      */
-    Vec3 getDefaultPressure() const {
+    const Vec3& getDefaultPressure() const {
         return defaultPressure;
     }
     /**
-     * Get the true/false flag for scaling the X-axis.
-     *
-     * @return the true/false flag for scaling the X-axis.
+     * Get whether to allow the X dimension of the periodic box to change size.
      */
     bool getScaleX() const {
       return scaleX;
     }
     /**
-     * Get the true/false flag for scaling the Y-axis.
-     *
-     * @return the true/false flag for scaling the Y-axis.
+     * Get whether to allow the Y dimension of the periodic box to change size.
      */
     bool getScaleY() const {
       return scaleY;
     }
     /**
-     * Get the true/false flag for scaling the Z-axis.
-     *
-     * @return the true/false flag for scaling the Z-axis.
+     * Get whether to allow the Z dimension of the periodic box to change size.
      */
     bool getScaleZ() const {
       return scaleZ;
@@ -172,15 +169,7 @@ private:
     double temperature;
     bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
-
-        double GetTemperature() const {
-            return temperature;
-        }
-
-        void SetTemperature(double temperature) {
-            this->temperature = temperature;
-        }
-    };
+};
 
 } // namespace OpenMM
 

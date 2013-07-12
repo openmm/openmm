@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2010-2013 Stanford University and the Authors.      *
+ * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -65,7 +65,7 @@ void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
 void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context) {
     if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
-    if (owner.getScaleX() == 0 && owner.getScaleY() == 0 && owner.getScaleZ() == 0)
+    if (!owner.getScaleX() && !owner.getScaleY() && !owner.getScaleZ())
         return;
     step = 0;
     
@@ -75,23 +75,26 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     double pressure;
     
     // Choose which axis to modify at random.
-    double rnd = genrand_real2(random)*3.0;
     int axis;
-    while (1) {
-        if (rnd < 1.0 && owner.getScaleX()) {
-            axis = 0;
-            pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
-            break;
-        } else if (rnd < 2.0 && owner.getScaleY()) {
-            axis = 1;
-            pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
-            break;
+    while (true) {
+        double rnd = genrand_real2(random)*3.0;
+        if (rnd < 1.0) {
+            if (owner.getScaleX()) {
+                axis = 0;
+                pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureX())*(AVOGADRO*1e-25);
+                break;
+            }
+        } else if (rnd < 2.0) {
+            if (owner.getScaleY()) {
+                axis = 1;
+                pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureY())*(AVOGADRO*1e-25);
+                break;
+            }
         } else if (owner.getScaleZ()) {
             axis = 2;
             pressure = context.getParameter(MonteCarloAnisotropicBarostat::PressureZ())*(AVOGADRO*1e-25);
             break;
         }
-	rnd = genrand_real2(random)*3.0;
     }
     
     // Modify the periodic box size.
@@ -101,9 +104,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     double volume = box[0][0]*box[1][1]*box[2][2];
     double deltaVolume = volumeScale[axis]*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
-    Vec3 lengthScale;
-    for (int i=0; i<3; i++)
-        lengthScale[i] = 1.0;
+    Vec3 lengthScale(1.0, 1.0, 1.0);
     lengthScale[axis] = newVolume/volume;
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale[0], box[1]*lengthScale[1], box[2]*lengthScale[2]);
