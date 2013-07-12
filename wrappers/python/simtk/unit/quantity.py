@@ -10,7 +10,7 @@ In particular, there is no underlying set of 'canonical' base
 units, whereas in Scientific.Physics.PhysicalQuantities all
 units are secretly in terms of SI units.  Also, it is easier
 to add new fundamental dimensions to simtk.dimensions.  You
-might want to make new dimensions for, say, "currency" or 
+might want to make new dimensions for, say, "currency" or
 "information".
 
 Some features of this implementation:
@@ -23,15 +23,15 @@ Some features of this implementation:
     ones are predefined.
   * Conversion factors between units are applied transitively, so all
     possible conversions are available.
-  * I want dimensioned Quantities that are compatible with numpy arrays, 
-    but do not necessarily require the python numpy package. In other 
-    words, Quantities can be based on either numpy arrays or on built in 
+  * I want dimensioned Quantities that are compatible with numpy arrays,
+    but do not necessarily require the python numpy package. In other
+    words, Quantities can be based on either numpy arrays or on built in
     python types.
-  * Units are NOT necessarily stored in terms of SI units internally. 
-    This is very important for me, because one important application 
-    area for us is at the molecular scale. Using SI units internally 
-    can lead to exponent overflow in commonly used molecular force 
-    calculations. Internally, all unit systems are equally fundamental 
+  * Units are NOT necessarily stored in terms of SI units internally.
+    This is very important for me, because one important application
+    area for us is at the molecular scale. Using SI units internally
+    can lead to exponent overflow in commonly used molecular force
+    calculations. Internally, all unit systems are equally fundamental
     in SimTK.
 
 Two possible enhancements that have not been implemented are
@@ -49,7 +49,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -81,7 +81,7 @@ from unit import Unit, is_unit, dimensionless
 
 class Quantity(object):
     """Physical quantity, such as 1.3 meters per second.
-    
+
     Quantities contain both a value, such as 1.3; and a unit,
     such as 'meters per second'.
 
@@ -92,7 +92,7 @@ class Quantity(object):
             Note - unit conversions will cause tuples to be converted to lists
       4 - lists of tuples of numbers, lists of lists of ... etc. of numbers
       5 - numpy.arrays
-    
+
     Create numpy.arrays with units using the Quantity constructor, not the
     multiply operator.  e.g.
 
@@ -104,11 +104,11 @@ class Quantity(object):
 
     because numpy.arrays already overload the multiply operator for EVERYTHING.
     """
-    
+
     def __init__(self, value=None, unit=None):
         """
         Create a new Quantity from a value and a unit.
-        
+
         Parameters
          - value: (any type, usually a number) Measure of this quantity
          - unit: (Unit) the physical unit, e.g. simtk.unit.meters.
@@ -161,18 +161,18 @@ class Quantity(object):
                 else:
                     # Non-Quantity, non container
                     # Wrap in a dimensionless Quantity
-                    unit = dimensionless   
+                    unit = dimensionless
         # Accept simple scalar quantities as units
         if is_quantity(unit):
             value = value * unit._value
             unit = unit.unit
         # Use empty list for unspecified values
         if value == None:
-            value = []        
-        
+            value = []
+
         self._value = value
         self.unit = unit
-        
+
     def __getstate__(self):
         state = dict()
         state['_value'] = self._value
@@ -204,33 +204,33 @@ class Quantity(object):
         """
         ret_val = getattr(self._value, attribute)
         return ret_val
-        
+
     def __str__(self):
         """Printable string version of this Quantity.
-        
+
         Returns a string consisting of quantity number followed by unit abbreviation.
         """
         return str(self._value) + ' ' + str(self.unit.get_symbol())
-        
+
     def __repr__(self):
         """
         """
         return (Quantity.__name__ + '(value=' + repr(self._value) + ', unit=' +
                 str(self.unit) + ')')
-        
+
     def format(self, format_spec):
         return format_spec % self._value + ' ' + str(self.unit.get_symbol())
 
     def __add__(self, other):
         """Add two Quantities.
-        
+
         Only Quantities with the same dimensions (e.g. length)
         can be added.  Raises TypeError otherwise.
-        
+
         Parameters
          - self: left hand member of sum
          - other: right hand member of sum
-         
+
         Returns a new Quantity that is the sum of the two arguments.
         """
         # can only add using like units
@@ -242,14 +242,14 @@ class Quantity(object):
 
     def __sub__(self, other):
         """Subtract two Quantities.
-        
+
         Only Quantities with the same dimensions (e.g. length)
         can be subtracted.  Raises TypeError otherwise.
-        
+
         Parameters
          - self: left hand member (a) of a - b.
          - other: right hand member (b) of a - b.
-         
+
         Returns a new Quantity that is the difference of the two arguments.
         """
         if not self.unit.is_compatible(other.unit):
@@ -257,7 +257,7 @@ class Quantity(object):
         value = self._value - other.value_in_unit(self.unit)
         unit = self.unit
         return Quantity(value, unit)
-        
+
     def __eq__(self, other):
         """
         """
@@ -266,7 +266,7 @@ class Quantity(object):
         if not self.unit.is_compatible(other.unit):
             return False
         return self.value_in_unit(other.unit) == other._value
-            
+
     def __ne__(self, other):
         """
         """
@@ -274,21 +274,21 @@ class Quantity(object):
 
     def __lt__(self, other):
         """Compares two quantities.
-        
+
         Raises TypeError if the Quantities are of different dimension (e.g. length vs. mass)
-        
+
         Returns True if self < other, False otherwise.
         """
         return self._value < other.value_in_unit(self.unit)
 
     def __ge__(self, other):
-        return self._value >= (other.value_in_unit(self.unit))     
+        return self._value >= (other.value_in_unit(self.unit))
     def __gt__(self, other):
-        return self._value > (other.value_in_unit(self.unit))     
+        return self._value > (other.value_in_unit(self.unit))
     def __le__(self, other):
-        return self._value <= (other.value_in_unit(self.unit))     
+        return self._value <= (other.value_in_unit(self.unit))
     def __lt__(self, other):
-        return self._value < (other.value_in_unit(self.unit))     
+        return self._value < (other.value_in_unit(self.unit))
 
     _reduce_cache = {}
 
@@ -296,7 +296,7 @@ class Quantity(object):
         """
         Combine similar component units and scale, to form an
         equal Quantity in simpler units.
-        
+
         Returns underlying value type if unit is dimensionless.
         """
         key = (self.unit, guide_unit)
@@ -353,7 +353,7 @@ class Quantity(object):
 
     def __mul__(self, other):
         """Multiply a quantity by another object
-        
+
         Returns a new Quantity that is the product of the self * other,
         unless the resulting unit is dimensionless, in which case the
         underlying value type is returned, instead of a Quantity.
@@ -373,12 +373,12 @@ class Quantity(object):
         else:
             # print "quantity * scalar"
             return self._change_units_with_factor(self.unit, other, post_multiply=False)
-        
+
     # value type might not be commutative for multiplication
     def __rmul__(self, other):
         """Multiply a scalar by a Quantity
-        
-        Returns a new Quantity with the same units as self, but with the value 
+
+        Returns a new Quantity with the same units as self, but with the value
         multiplied by other.
         """
         if is_unit(other):
@@ -391,7 +391,7 @@ class Quantity(object):
             # print "scalar * quantity"
             return self._change_units_with_factor(self.unit, other, post_multiply=True)
             # return Quantity(other * self._value, self.unit)
-        
+
     def __truediv__(self, other):
         """Divide a Quantity by another object
 
@@ -416,7 +416,7 @@ class Quantity(object):
 
     def __rtruediv__(self, other):
         """Divide a scalar by a quantity.
-        
+
         Returns a new Quantity.  The resulting units are the inverse of the self argument units.
         """
         if is_unit(other):
@@ -433,17 +433,17 @@ class Quantity(object):
 
     def __pow__(self, exponent):
         """Raise a Quantity to a power.
-        
+
         Generally both the value and the unit of the Quantity are affected by this operation.
 
         Returns a new Quantity equal to self**exponent.
         """
         return Quantity(pow(self._value, exponent), pow(self.unit, exponent))
-        
+
     def sqrt(self):
         """
         Returns square root of a Quantity.
-        
+
         Raises ArithmeticError if component exponents are not even.
         This behavior can be changed if you present a reasonable real life case to me.
         """
@@ -458,25 +458,25 @@ class Quantity(object):
     def __abs__(self):
         """
         Return absolute value of a Quantity.
-        
+
         The unit is unchanged.  A negative value of self will result in a positive value
         in the result.
         """
         return Quantity(abs(self._value), self.unit)
-        
+
     def __pos__(self):
         """
         Returns a reference to self.
         """
         return Quantity(+(self._value), self.unit)
-        
+
     def __neg__(self):
         """Negate a Quantity.
-        
+
         Returns a new Quantity with a different sign on the value.
         """
         return Quantity(-(self._value), self.unit)
-        
+
     def __nonzero__(self):
         """Returns True if value underlying Quantity is zero, False otherwise.
         """
@@ -490,7 +490,7 @@ class Quantity(object):
         return Quantity(int(self._value), self.unit)
     def __long__(self):
         return Quantity(int(self._value), self.unit)
-       
+
     def value_in_unit(self, unit):
         """
         Returns underlying value, in the specified units.
@@ -510,7 +510,7 @@ class Quantity(object):
             return result._value
         else:
             return result # dimensionless
-        
+
     def in_unit_system(self, system):
         """
         Returns a new Quantity equal to this one, expressed in a particular unit system.
@@ -525,7 +525,7 @@ class Quantity(object):
 
         If the units are the same as those in self, a reference to self is returned.
         Raises a TypeError if the new unit is not compatible with the original unit.
-        
+
         The post_multiply argument is used in case the multiplication operation is not commutative.
           i.e. result = factor * value when post_multiply is False
           and  result = value * factor when post_multiply is True
@@ -534,7 +534,7 @@ class Quantity(object):
             raise TypeError('Unit "%s" is not compatible with Unit "%s".' % (self.unit, other_unit))
         f = self.unit.conversion_factor_to(other_unit)
         return self._change_units_with_factor(other_unit, f)
-            
+
     def _change_units_with_factor(self, new_unit, factor, post_multiply=True):
         # numpy arrays cannot be compared with 1.0, so just "try"
         factor_is_identity = False
@@ -555,7 +555,7 @@ class Quantity(object):
                 if post_multiply:
                     value = self._value * factor # works for number, numpy.array, or vec3, e.g.
                 else:
-                    value = factor * self._value # works for number, numpy.array, or vec3, e.g.                    
+                    value = factor * self._value # works for number, numpy.array, or vec3, e.g.
                 result = Quantity(value, new_unit)
             except TypeError:
                 # list * float fails with TypeError
@@ -614,7 +614,7 @@ class Quantity(object):
         """
         assert not is_quantity(self._value[key])
         return Quantity(self._value[key], self.unit)
-        
+
     def __setitem__(self, key, value):
         # Delegate slices to one-at-a time ___setitem___
         if isinstance(key, slice): # slice
@@ -629,13 +629,13 @@ class Quantity(object):
                 raise TypeError('Unit "%s" is not compatible with Unit "%s".' % (self.unit, value.unit))
             self._value[key] = value / self.unit
             assert not is_quantity(self._value[key])
-        
+
     def __delitem__(self, key):
         del(self._value[key])
 
     def __contains__(self, item):
         return self._value.__contains__(item.value_in_unit(self.unit))
-        
+
     def __iter__(self):
         for item in self._value:
             yield Quantity(item, self.unit)

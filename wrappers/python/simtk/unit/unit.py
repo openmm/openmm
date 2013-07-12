@@ -13,7 +13,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -51,7 +51,7 @@ class Unit(object):
     """
     def __init__(self, base_or_scaled_units):
         """Create a new Unit.
-        
+
         Parameters:
          - self (Unit) The newly created Unit.
          - base_or_scaled_units (dict) Keys are BaseUnits or ScaledUnits.  Values are exponents (numbers).
@@ -113,7 +113,7 @@ class Unit(object):
         new_base_unit.define_conversion_factor_to(parent_base_unit, true_scale)
         new_unit = Unit({new_base_unit: 1.0})
         return new_unit
-        
+
     def iter_base_dimensions(self):
         """
         Yields (BaseDimension, exponent) tuples comprising this unit.
@@ -130,7 +130,7 @@ class Unit(object):
         """
         Yields (BaseUnit, exponent) tuples comprising this unit, including those BaseUnits
         found within ScaledUnits.
-        
+
         There might be multiple BaseUnits with the same dimension.
         """
         for dimension in sorted(self._all_base_units.iterkeys()):
@@ -146,7 +146,7 @@ class Unit(object):
             for unit in sorted(self._top_base_units[dimension].iterkeys()):
                 exponent = self._top_base_units[dimension][unit]
                 yield (unit, exponent)
-            
+
     def iter_scaled_units(self):
         for unit, exponent in self._scaled_units:
             yield (unit, exponent)
@@ -169,7 +169,7 @@ class Unit(object):
             # print scaled_unit.factor
             factor *= scaled_unit.factor ** exponent
         return factor
-        
+
     def __eq__(self, other):
         if not is_unit(other):
             return False
@@ -180,9 +180,9 @@ class Unit(object):
 
     def __lt__(self, other):
         """Compare two Units.
-        
+
         Raises a TypeError if the units have different dimensions.
-        
+
         Returns True if self < other, False otherwise.
         """
         if not self.is_compatible(other):
@@ -202,12 +202,12 @@ class Unit(object):
 
     # def __mul__(self, other):
     # See unit_operators.py for Unit.__mul__ operator
-    
+
     def __truediv__(self, other):
         """Divide a Unit by another object.
-        
+
         Returns a composite Unit if other is another Unit.
-        
+
         Returns a Quantity otherwise.  UNLESS other is a Quantity AND
         the resulting unit type is dimensionless, in which case the underlying
         value type of the Quantity is returned.
@@ -223,7 +223,7 @@ class Unit(object):
 
     def __pow__(self, exponent):
         """Raise a Unit to a power.
-        
+
         Returns a new Unit with different exponents on the BaseUnits.
         """
         if self in Unit._pow_cache:
@@ -241,7 +241,7 @@ class Unit(object):
     def sqrt(self):
         """
         Returns square root of a unit.
-        
+
         Raises ArithmeticError if component exponents are not even.
         This behavior can be changed if you present a reasonable real life case to me.
         """
@@ -280,7 +280,7 @@ class Unit(object):
     def __str__(self):
         """Returns the human-readable name of this unit"""
         return self.get_name()
-        
+
     def __repr__(self):
         """
         Returns a unit name (string) for this Unit, composed of its various
@@ -321,7 +321,7 @@ class Unit(object):
             Unit._is_compatible_cache[self] = {}
         Unit._is_compatible_cache[self][other] = result
         return result
-    
+
     _is_dimensionless_cache = {}
 
     def is_dimensionless(self):
@@ -336,7 +336,7 @@ class Unit(object):
                 return False
         Unit._is_dimensionless_cache[self] = True
         return True
-        
+
     # Performance
     _conversion_factor_cache = {}
 
@@ -344,7 +344,7 @@ class Unit(object):
         """
         Returns conversion factor for computing all of the common dimensions
         between self and other from self base units to other base units.
-        
+
         The two units need not share all of the same dimensions.  In case they
         do not, the conversion factor applies only to the BaseUnits of self
         that correspond to different BaseUnits in other.
@@ -352,7 +352,7 @@ class Unit(object):
         This method requires strict compatibility between the two units.
         """
         factor = 1.0
-        if (self is other): 
+        if (self is other):
             return factor
         if self in Unit._conversion_factor_cache:
             if other in Unit._conversion_factor_cache[self]:
@@ -385,9 +385,9 @@ class Unit(object):
     def in_unit_system(self, system):
         """
         Returns a new Unit with the same dimensions as this one, expressed in a particular unit system.
-        
+
         Strips off any ScaledUnits in the Unit, leaving only BaseUnits.
-        
+
         Parameters
          - system: a dictionary of (BaseDimension, BaseUnit) pairs
         """
@@ -402,7 +402,7 @@ class Unit(object):
         # emit positive exponents first
         pos = ""
         pos_count = 0
-        for unit, power in self.iter_base_or_scaled_units():            
+        for unit, power in self.iter_base_or_scaled_units():
             if power > 0:
                 pos_count += 1
                 if pos_count > 1: pos += " "
@@ -413,7 +413,7 @@ class Unit(object):
         neg = ""
         neg_count = 0
         simple_denominator = True
-        for unit, power in self.iter_base_or_scaled_units():            
+        for unit, power in self.iter_base_or_scaled_units():
             if power < 0:
                 neg_count += 1
                 if neg_count > 1: neg += " "
@@ -421,7 +421,7 @@ class Unit(object):
                 if power != -1.0:
                     neg += "**%g" % -power
                     simple_denominator = False
-        # Format of denominator depends on number of terms 
+        # Format of denominator depends on number of terms
         if 0 == neg_count:
             neg_string = ""
         elif 1 == neg_count and simple_denominator:
@@ -450,7 +450,7 @@ class Unit(object):
         # emit positive exponents first
         pos = ""
         pos_count = 0
-        for unit, power in self.iter_base_or_scaled_units():            
+        for unit, power in self.iter_base_or_scaled_units():
             if power > 0:
                 pos_count += 1
                 if pos_count > 1: pos += "*"
@@ -461,7 +461,7 @@ class Unit(object):
         neg = ""
         neg_count = 0
         simple_denominator = True
-        for unit, power in self.iter_base_or_scaled_units():            
+        for unit, power in self.iter_base_or_scaled_units():
             if power < 0:
                 neg_count += 1
                 if neg_count > 1: neg += "*"
@@ -469,7 +469,7 @@ class Unit(object):
                 if power != -1.0:
                     neg += "**%g" % -power
                     simple_denominator = False
-        # Format of denominator depends on number of terms 
+        # Format of denominator depends on number of terms
         if 0 == neg_count:
             neg_string = ""
         elif 1 == neg_count and simple_denominator:
@@ -491,7 +491,7 @@ class Unit(object):
 class ScaledUnit(object):
     """
     ScaledUnit is like a BaseUnit, but it is based on another Unit.
-    
+
     ScaledUnit and BaseUnit are both used in the internals of Unit.  They
     should only be used during the construction of Units.
     """
@@ -536,10 +536,10 @@ class ScaledUnit(object):
         l = list(self.iter_base_dimensions())
         l.sort()
         return tuple(l)
-        
+
     def get_conversion_factor_to_base_units(self):
         return self.factor
-        
+
     def conversion_factor_to(self, other):
         # Create fake unit based on base units
         if self is other:
@@ -557,7 +557,7 @@ class ScaledUnit(object):
         """Compare two ScaledUnits.
         """
         return hash(self) < hash(other)
-        
+
     def __str__(self):
         """Returns a string with the name of this ScaledUnit
         """
@@ -610,7 +610,7 @@ class UnitSystem(object):
         # except ArithmeticError:
         #     e=sys.exc_info[1]
             raise ArithmeticError("UnitSystem is not a valid basis set.  " + str(e))
-    
+
     def __iter__(self):
         for unit in self.units:
             yield unit
@@ -667,14 +667,14 @@ class UnitSystem(object):
 def is_unit(x):
     """
     Returns True if x is a Unit, False otherwise.
-    
+
     Examples
-    
+
     >>> is_unit(16)
     False
     """
     return isinstance(x, Unit)
-    
+
 dimensionless = Unit({})
 
 # run module directly for testing

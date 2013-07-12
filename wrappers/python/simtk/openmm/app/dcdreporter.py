@@ -10,7 +10,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -34,16 +34,16 @@ __version__ = "1.0"
 import simtk.openmm as mm
 from simtk.openmm.app import DCDFile
 from simtk.unit import nanometer
-    
+
 class DCDReporter(object):
     """DCDReporter outputs a series of frames from a Simulation to a DCD file.
-    
+
     To use it, create a DCDReporter, then add it to the Simulation's list of reporters.
     """
-    
+
     def __init__(self, file, reportInterval):
         """Create a DCDReporter.
-    
+
         Parameters:
          - file (string) The file to write to
          - reportInterval (int) The interval (in time steps) at which to write frames
@@ -51,10 +51,10 @@ class DCDReporter(object):
         self._reportInterval = reportInterval
         self._out = open(file, 'wb')
         self._dcd = None
-    
+
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
-        
+
         Parameters:
          - simulation (Simulation) The Simulation to generate a report for
         Returns: A five element tuple.  The first element is the number of steps until the
@@ -63,10 +63,10 @@ class DCDReporter(object):
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
         return (steps, True, False, False, False)
-    
+
     def report(self, simulation, state):
         """Generate a report.
-        
+
         Parameters:
          - simulation (Simulation) The Simulation to generate a report for
          - state (State) The current state of the simulation
@@ -75,6 +75,6 @@ class DCDReporter(object):
             self._dcd = DCDFile(self._out, simulation.topology, simulation.integrator.getStepSize(), 0, self._reportInterval)
         a,b,c = state.getPeriodicBoxVectors()
         self._dcd.writeModel(state.getPositions(), mm.Vec3(a[0].value_in_unit(nanometer), b[1].value_in_unit(nanometer), c[2].value_in_unit(nanometer))*nanometer)
-    
+
     def __del__(self):
         self._out.close()

@@ -13,7 +13,7 @@ Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
-Permission is hereby granted, free of charge, to any person obtaining a 
+Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -49,7 +49,7 @@ from unit_definitions import *
 def sin(angle):
     """
     Examples
-    
+
     >>> sin(90*degrees)
     1.0
     """
@@ -67,7 +67,7 @@ def sinh(angle):
 def cos(angle):
     """
     Examples
-    
+
     >>> cos(180*degrees)
     -1.0
     """
@@ -102,10 +102,10 @@ def acos(x):
     0.0 rad
     """
     return math.acos(x) * radians
-    
+
 def acosh(x):
     return math.acosh(x) * radians
-    
+
 def asin(x):
     return math.asin(x) * radians
 
@@ -114,10 +114,10 @@ def asinh(x):
 
 def atan(x):
     return math.atan(x) * radians
-    
+
 def atanh(x):
     return math.atanh(x) * radians
-    
+
 def atan2(x, y):
     return math.atan2(x, y) * radians
 
