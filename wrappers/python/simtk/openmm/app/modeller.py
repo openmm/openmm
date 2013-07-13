@@ -734,9 +734,8 @@ class Modeller(object):
                                     else:
                                         delta = Vec3(random.random(), random.random(), random.random())*nanometer
                                     delta *= 0.1*nanometer/norm(delta)
-                                    if len(expected) > 1:
-                                        delta += 0.05*Vec3(random.random(), random.random(), random.random())*nanometer
-                                        delta *= 0.1*nanometer/norm(delta)
+                                    delta += 0.05*Vec3(random.random(), random.random(), random.random())*nanometer
+                                    delta *= 0.1*nanometer/norm(delta)
                                     newPositions.append(self.positions[parent.index]+delta)
                                     newTopology.addBond(newAtom, newH)
                 else:
